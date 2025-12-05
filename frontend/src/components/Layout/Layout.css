@@ -1,0 +1,22 @@
+.sidebar {
+  border-right: 1px solid var(--border-color);
+  overflow-y: auto;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar a {
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.sidebar a:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}

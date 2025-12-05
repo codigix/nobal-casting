@@ -1,0 +1,146 @@
+.audit-trail {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+}
+
+.audit-header {
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #667eea;
+}
+
+.audit-header h4 {
+  margin: 0;
+  color: #333;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.audit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.audit-item {
+  background: white;
+  padding: 12px;
+  border-radius: 6px;
+  border-left: 4px solid #667eea;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.audit-item label {
+  display: block;
+  font-weight: 600;
+  font-size: 12px;
+  color: #667eea;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+}
+
+.audit-item p {
+  margin: 0;
+  color: #333;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-draft {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-received {
+  background: #cce5ff;
+  color: #004085;
+}
+
+.status-evaluated {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.status-accepted {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-sent {
+  background: #cce5ff;
+  color: #004085;
+}
+
+.status-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-completed {
+  background: #d4edda;
+  color: #155724;
+}
+
+.audit-note {
+  color: #666;
+  font-style: italic;
+  padding: 10px;
+  background: white;
+  border-radius: 4px;
+  border-left: 3px solid #999;
+}
+
+.audit-note small {
+  font-size: 12px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .audit-trail {
+    background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
+    border-color: #444;
+  }
+
+  .audit-header h4 {
+    color: #e0e0e0;
+  }
+
+  .audit-item {
+    background: #1e1e1e;
+    border-left-color: #667eea;
+  }
+
+  .audit-item label {
+    color: #667eea;
+  }
+
+  .audit-item p {
+    color: #e0e0e0;
+  }
+
+  .audit-note {
+    color: #b0b0b0;
+    background: #252525;
+    border-left-color: #666;
+  }
+}

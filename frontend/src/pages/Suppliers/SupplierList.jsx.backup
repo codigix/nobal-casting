@@ -1,0 +1,834 @@
+﻿import { useState, useEffect } from 'react'
+import Button from '../../components/Button/Button'
+import Badge from '../../components/Badge/Badge'
+import Alert from '../../components/Alert/Alert'
+import SearchableSelect from '../../components/SearchableSelect'
+import { suppliersAPI } from '../../services/api'
+import { Plus, Edit2, Trash2, X, Check } from 'lucide-react'
+
+export default function SupplierList() {
+  const [suppliers, setSuppliers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [formError, setFormError] = useState('')
+  
+  const [filters, setFilters] = useState({
+    search: '',
+    status: 'all',
+    group: ''
+  })
+
+  const [formData, setFormData] = useState({
+    name: '',
+    supplier_group: '',
+    gstin: '',
+    email: '',
+    phone: '',
+    payment_terms_days: 30,
+    lead_time_days: 7,
+    rating: 0,
+    is_active: true
+  })
+
+  const supplierGroups = [
+    { label: 'Raw Materials', value: 'Raw Materials' },
+    { label: 'Components', value: 'Components' },
+    { label: 'Services', value: 'Services' },
+    { label: 'Tools', value: 'Tools' }
+  ]
+
+  const statusOptions = [
+    { label: 'All Status', value: 'all' },
+    { label: 'Active', value: 'true' },
+    { label: 'Inactive', value: 'false' }
+  ]
+
+  useEffect(() => {
+    fetchSuppliers()
+  }, [])
+
+  const fetchSuppliers = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await suppliersAPI.list()
+      setSuppliers(response.data.data || [])
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to fetch suppliers')
+      console.error('Error fetching suppliers:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getFilteredSuppliers = () => {
+    return suppliers.filter(supplier => {
+      if (filters.search) {
+        const search = filters.search.toLowerCase()
+        if (!supplier.name?.toLowerCase().includes(search) &&
+            !supplier.supplier_id?.toLowerCase().includes(search) &&
+            !supplier.gstin?.toLowerCase().includes(search)) {
+          return false
+        }
+      }
+
+      if (filters.status !== 'all') {
+        if (supplier.is_active !== (filters.status === 'true')) return false
+      }
+
+      if (filters.group && supplier.supplier_group !== filters.group) return false
+
+      return true
+    })
+  }
+
+  const filteredSuppliers = getFilteredSuppliers()
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      supplier_group: '',
+      gstin: '',
+      email: '',
+      phone: '',
+      payment_terms_days: 30,
+      lead_time_days: 7,
+      rating: 0,
+      is_active: true
+    })
+    setEditingId(null)
+    setFormError('')
+  }
+
+  const handleAddClick = () => {
+    resetForm()
+    setShowAddForm(true)
+  }
+
+  const handleEditClick = (supplier) => {
+    setFormData({
+      name: supplier.name || '',
+      supplier_group: supplier.supplier_group || '',
+      gstin: supplier.gstin || '',
+      email: supplier.email || '',
+      phone: supplier.phone || '',
+      payment_terms_days: supplier.payment_terms_days || 30,
+      lead_time_days: supplier.lead_time_days || 7,
+      rating: supplier.rating || 0,
+      is_active: supplier.is_active !== false
+    })
+    setEditingId(supplier.supplier_id)
+  }
+
+  const validateForm = () => {
+    if (!formData.name.trim()) {
+      setFormError('Supplier name is required')
+      return false
+    }
+    if (!formData.gstin.trim()) {
+      setFormError('GSTIN is required')
+      return false
+    }
+    return true
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError(null)
+    setFormError('')
+
+    if (!validateForm()) return
+
+    try {
+      if (editingId) {
+        await suppliersAPI.update(editingId, formData)
+        setSuccess('Supplier updated successfully')
+      } else {
+        await suppliersAPI.create(formData)
+        setSuccess('Supplier created successfully')
+      }
+
+      resetForm()
+      setShowAddForm(false)
+      setEditingId(null)
+      fetchSuppliers()
+
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      setFormError(err.response?.data?.error || 'Failed to save supplier')
+    }
+  }
+
+  const handleCancel = () => {
+    resetForm()
+    setShowAddForm(false)
+    setEditingId(null)
+  }
+
+  const handleDelete = async (supplierId) => {
+    if (!window.confirm('Are you sure you want to delete this supplier?')) return
+
+    try {
+      await suppliersAPI.delete(supplierId)
+      setSuccess('Supplier deleted successfully')
+      fetchSuppliers()
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to delete supplier')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600 font-medium">Loading suppliers...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6 p-5">
+      {success && (
+        <Alert variant="success">{success}</Alert>
+      )}
+
+      {error && (
+        <Alert variant="danger">{error}</Alert>
+      )}
+
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900">Suppliers</h1>
+            <p className="text-gray-600 mt-1">Manage your supplier network and relationships</p>
+          </div>
+          <Button
+            onClick={handleAddClick}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              backgroundColor: '#2196F3',
+              color: 'white',
+              padding: '10px 20px',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '600'
+            }}
+          >
+            <Plus size={18} />
+            Add New Supplier
+          </Button>
+        </div>
+      </div>
+
+      <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '20px', border: '1px solid #e0e0e0' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '8px' }}>Search</label>
+            <input
+              type="text"
+              placeholder="Name, ID, or GSTIN..."
+              value={filters.search}
+              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '6px',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontFamily: 'inherit'
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '8px' }}>Status</label>
+            <SearchableSelect
+              value={filters.status}
+              onChange={(val) => setFilters({ ...filters, status: val })}
+              options={statusOptions}
+              placeholder="All Status"
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '8px' }}>Group</label>
+            <SearchableSelect
+              value={filters.group}
+              onChange={(val) => setFilters({ ...filters, group: val })}
+              options={[{ label: 'All Groups', value: '' }, ...supplierGroups]}
+              placeholder="All Groups"
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <Button
+              onClick={() => setFilters({ search: '', status: 'all', group: '' })}
+              style={{
+                width: '100%',
+                padding: '6px',
+                backgroundColor: '#f5f5f5',
+                color: '#333',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '500'
+              }}
+            >
+              Reset Filters
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {showAddForm && (
+        <div style={{ backgroundColor: '#f9f9f9', borderRadius: '8px', padding: '24px', border: '4px solid #2196F3', borderLeft: '4px solid #2196F3' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#333' }}>Add New Supplier</h3>
+            <button
+              onClick={handleCancel}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <X size={20} color="#666" />
+            </button>
+          </div>
+
+          {formError && (
+            <Alert variant="danger" style={{ marginBottom: '16px' }}>{formError}</Alert>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>Supplier Name *</label>
+                <input
+                  type="text"
+                  placeholder="e.g., ABC Industries"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>GSTIN *</label>
+                <input
+                  type="text"
+                  placeholder="e.g., 27AABCT1234H1Z0"
+                  value={formData.gstin}
+                  onChange={(e) => setFormData({ ...formData, gstin: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>Email</label>
+                <input
+                  type="email"
+                  placeholder="supplier@example.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>Phone</label>
+                <input
+                  type="tel"
+                  placeholder="+91-XXXXXXXXXX"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>Supplier Group</label>
+                <SearchableSelect
+                  value={formData.supplier_group}
+                  onChange={(val) => setFormData({ ...formData, supplier_group: val })}
+                  options={supplierGroups}
+                  placeholder="Select group"
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>Rating (0-5)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="5"
+                  step="0.1"
+                  value={formData.rating}
+                  onChange={(e) => setFormData({ ...formData, rating: parseFloat(e.target.value) || 0 })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>Payment Terms (Days)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.payment_terms_days}
+                  onChange={(e) => setFormData({ ...formData, payment_terms_days: parseInt(e.target.value) || 0 })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '6px' }}>Lead Time (Days)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.lead_time_days}
+                  onChange={(e) => setFormData({ ...formData, lead_time_days: parseInt(e.target.value) || 0 })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+              <input
+                type="checkbox"
+                id="is_active"
+                checked={formData.is_active}
+                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+              />
+              <label htmlFor="is_active" style={{ fontSize: '14px', color: '#333', cursor: 'pointer' }}>Active Supplier</label>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <Button
+                type="button"
+                onClick={handleCancel}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#f0f0f0',
+                  color: '#333',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#4CAF50',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+              >
+                Create Supplier
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {filteredSuppliers.length === 0 ? (
+        <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '40px', textAlign: 'center', border: '1px solid #e0e0e0' }}>
+          <p style={{ fontSize: '16px', color: '#666', marginBottom: '16px' }}>No suppliers found</p>
+          <p style={{ fontSize: '14px', color: '#999', marginBottom: '20px' }}>Try adjusting your filters or create a new supplier</p>
+          <Button
+            onClick={handleAddClick}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#2196F3',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '600',
+              display: 'inline-block'
+            }}
+          >
+            Create First Supplier
+          </Button>
+        </div>
+      ) : (
+        <div style={{ backgroundColor: 'white', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e0e0e0' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f5f5f5', borderBottom: '2px solid #e0e0e0' }}>
+                <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#666' }}>Name</th>
+                <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#666' }}>ID</th>
+                <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#666' }}>GSTIN</th>
+                <th style={{ padding: '16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#666' }}>Group</th>
+                <th style={{ padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#666' }}>Rating</th>
+                <th style={{ padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#666' }}>Lead Time</th>
+                <th style={{ padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#666' }}>Status</th>
+                <th style={{ padding: '16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#666' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSuppliers.map((supplier) => (
+                editingId === supplier.supplier_id ? (
+                  <tr key={`edit-${supplier.supplier_id}`} style={{ backgroundColor: '#fafafa', borderBottom: '1px solid #e0e0e0' }}>
+                    <td colSpan="8" style={{ padding: '16px' }}>
+                      <form onSubmit={handleSubmit}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '4px' }}>Name *</label>
+                            <input
+                              type="text"
+                              value={formData.name}
+                              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                              style={{
+                                width: '100%',
+                                padding: '8px 10px',
+                                border: '1px solid #2196F3',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                fontFamily: 'inherit',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '4px' }}>GSTIN *</label>
+                            <input
+                              type="text"
+                              value={formData.gstin}
+                              onChange={(e) => setFormData({ ...formData, gstin: e.target.value })}
+                              style={{
+                                width: '100%',
+                                padding: '8px 10px',
+                                border: '1px solid #2196F3',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                fontFamily: 'inherit',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '4px' }}>Email</label>
+                            <input
+                              type="email"
+                              value={formData.email}
+                              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                              style={{
+                                width: '100%',
+                                padding: '8px 10px',
+                                border: '1px solid #2196F3',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                fontFamily: 'inherit',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '4px' }}>Phone</label>
+                            <input
+                              type="tel"
+                              value={formData.phone}
+                              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                              style={{
+                                width: '100%',
+                                padding: '8px 10px',
+                                border: '1px solid #2196F3',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                fontFamily: 'inherit',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '4px' }}>Group</label>
+                            <SearchableSelect
+                              value={formData.supplier_group}
+                              onChange={(val) => setFormData({ ...formData, supplier_group: val })}
+                              options={supplierGroups}
+                              placeholder="Select group"
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '4px' }}>Rating</label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="5"
+                              step="0.1"
+                              value={formData.rating}
+                              onChange={(e) => setFormData({ ...formData, rating: parseFloat(e.target.value) || 0 })}
+                              style={{
+                                width: '100%',
+                                padding: '8px 10px',
+                                border: '1px solid #2196F3',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                fontFamily: 'inherit',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '4px' }}>Payment Terms</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={formData.payment_terms_days}
+                              onChange={(e) => setFormData({ ...formData, payment_terms_days: parseInt(e.target.value) || 0 })}
+                              style={{
+                                width: '100%',
+                                padding: '8px 10px',
+                                border: '1px solid #2196F3',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                fontFamily: 'inherit',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ fontSize: '11px', fontWeight: '600', color: '#666', display: 'block', marginBottom: '4px' }}>Lead Time</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={formData.lead_time_days}
+                              onChange={(e) => setFormData({ ...formData, lead_time_days: parseInt(e.target.value) || 0 })}
+                              style={{
+                                width: '100%',
+                                padding: '8px 10px',
+                                border: '1px solid #2196F3',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                fontFamily: 'inherit',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                          <input
+                            type="checkbox"
+                            id={`is_active_${supplier.supplier_id}`}
+                            checked={formData.is_active}
+                            onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                            style={{ width: '14px', height: '14px', cursor: 'pointer' }}
+                          />
+                          <label htmlFor={`is_active_${supplier.supplier_id}`} style={{ fontSize: '12px', color: '#333', cursor: 'pointer' }}>Active Supplier</label>
+                        </div>
+
+                        {formError && (
+                          <Alert variant="danger" style={{ marginBottom: '12px', fontSize: '12px' }}>{formError}</Alert>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          <button
+                            type="button"
+                            onClick={handleCancel}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#f44336',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <X size={14} />
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#4CAF50',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <Check size={14} />
+                            Save Changes
+                          </button>
+                        </div>
+                      </form>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={supplier.supplier_id} style={{ borderBottom: '1px solid #e0e0e0', '&:hover': { backgroundColor: '#fafafa' } }}>
+                    <td style={{ padding: '16px', fontSize: '14px', color: '#333', fontWeight: '500' }}>
+                      {supplier.name}
+                    </td>
+                    <td style={{ padding: '16px', fontSize: '13px', color: '#666', fontFamily: 'monospace' }}>
+                      {supplier.supplier_id}
+                    </td>
+                    <td style={{ padding: '16px', fontSize: '13px', color: '#666', fontFamily: 'monospace' }}>
+                      {supplier.gstin || '-'}
+                    </td>
+                    <td style={{ padding: '16px', fontSize: '13px', color: '#666' }}>
+                      {supplier.supplier_group || '-'}
+                    </td>
+                    <td style={{ padding: '16px', fontSize: '13px', color: '#666', textAlign: 'center' }}>
+                      {supplier.rating ? `⭐ ${Number(supplier.rating).toFixed(1)}` : '—'}
+                    </td>
+                    <td style={{ padding: '16px', fontSize: '13px', color: '#666', textAlign: 'center' }}>
+                      {supplier.lead_time_days || 0} days
+                    </td>
+                    <td style={{ padding: '16px', textAlign: 'center' }}>
+                      <Badge variant={supplier.is_active ? 'success' : 'warning'}>
+                        {supplier.is_active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </td>
+                    <td style={{ padding: '16px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                        <button
+                          onClick={() => handleEditClick(supplier)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#2196F3',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Edit2 size={14} />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(supplier.supplier_id)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#f44336',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Trash2 size={14} />
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}

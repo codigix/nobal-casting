@@ -1,0 +1,20 @@
+.layout-wrapper {
+  display: flex;
+  min-height: 100vh;
+}
+
+.layout-content {
+  flex: 1;
+  margin-left: 260px;
+  margin-top: 70px;
+  overflow-y: auto;
+  background-color: var(--bg-primary);
+  padding: 0;
+}
+
+@media (max-width: 768px) {
+  .layout-content {
+    margin-left: 0;
+    margin-top: 70px;
+  }
+}
