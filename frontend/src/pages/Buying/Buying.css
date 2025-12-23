@@ -136,21 +136,18 @@
 }
 
 .form-group label {
-  font-size: 13px;
+  font-size: 10px;
   font-weight: var(--font-medium);
   color: var(--text-primary);
 }
 
 .form-group input,
-.form-group select,
 .form-group textarea {
   padding: var(--spacing-2) var(--spacing-3);
-  border: 1px solid var(--input-border);
-  border-radius: var(--radius-md);
   background: var(--input-bg);
   color: var(--input-text);
   font-family: var(--font-primary);
-  font-size: 13px;
+  font-size: 12px;
   transition: all var(--transition-base);
 }
 
@@ -160,7 +157,6 @@
 }
 
 .form-group input:focus,
-.form-group select:focus,
 .form-group textarea:focus {
   outline: none;
   border-color: var(--primary-500);
@@ -431,9 +427,9 @@ button[title]:hover::before {
 /* Status Badges */
 .badge {
   display: inline-block;
-  padding: var(--spacing-1) var(--spacing-3);
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 10px;
   font-weight: var(--font-semibold);
   text-transform: uppercase;
   letter-spacing: var(--letter-spacing-wide);

@@ -3,7 +3,7 @@
 -- ============================================
 -- This script adds all missing departments and their tables
 
-USE aluminium_erp;
+USE nobalcasting;
 
 -- ============================================
 -- UPDATE USERS TABLE - ADD DEPARTMENT & ROLE

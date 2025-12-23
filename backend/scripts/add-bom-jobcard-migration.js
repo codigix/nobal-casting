@@ -7,7 +7,7 @@ const config = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'aluminium_erp',
+  database: process.env.DB_NAME || 'nobalcasting',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -72,6 +72,7 @@ async function runMigration() {
       `CREATE TABLE IF NOT EXISTS job_card (
         job_card_id VARCHAR(50) PRIMARY KEY,
         work_order_id VARCHAR(50),
+        operation VARCHAR(255),
         machine_id VARCHAR(100),
         operator_id VARCHAR(100),
         planned_quantity DECIMAL(18,6),
@@ -92,6 +93,9 @@ async function runMigration() {
         INDEX idx_operator_id (operator_id),
         INDEX idx_created_at (created_at)
       )`,
+      
+      // Add operation column to existing job_card table if it doesn't exist
+      `ALTER TABLE job_card ADD COLUMN IF NOT EXISTS operation VARCHAR(255) AFTER work_order_id`,
 
       // Create BOM Operations table
       `CREATE TABLE IF NOT EXISTS bom_operation (

@@ -1,5 +1,5 @@
 -- Add tax_template_id column to purchase_order if it doesn't exist
-USE aluminium_erp;
+USE nobalcasting;
 
 -- Check and add tax_template_id column if it doesn't exist
 ALTER TABLE purchase_order 

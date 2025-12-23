@@ -104,7 +104,7 @@ const ToolMasterList = () => {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Tool Master</h1>
+            <h1 className="text-xl font-bold text-gray-900">Tool Master</h1>
             <p className="text-gray-600 mt-1">Manage tools and equipment</p>
           </div>
           <button
@@ -117,7 +117,7 @@ const ToolMasterList = () => {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+          <div className="bg-red-50 border border-red-200 text-red-700 p-2 rounded-lg mb-6">
             {error}
           </div>
         )}
@@ -139,37 +139,37 @@ const ToolMasterList = () => {
         {/* Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {loading ? (
-            <div className="p-8 text-center text-gray-500">Loading...</div>
+            <div className="p-3 text-center text-gray-500">Loading...</div>
           ) : (
             <table className="w-full">
               <thead className="bg-gray-100 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Tool Name</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Tool Code</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Type</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Location</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Cost</th>
-                  <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Tool Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Tool Code</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Location</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Cost</th>
+                  <th className="px-6 py-3 text-center text-xs font-semibold  text-gray-900">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {filteredTools.length > 0 ? (
                   filteredTools.map(tool => (
                     <tr key={tool.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm text-gray-900 font-medium">{tool.toolName}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{tool.toolCode}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{tool.toolType}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{tool.location}</td>
-                      <td className="px-6 py-4">
+                      <td className="p-2 text-sm text-gray-900 font-medium">{tool.toolName}</td>
+                      <td className="p-2 text-sm text-gray-600">{tool.toolCode}</td>
+                      <td className="p-2 text-sm text-gray-600">{tool.toolType}</td>
+                      <td className="p-2 text-sm text-gray-600">{tool.location}</td>
+                      <td className="p-2">
                         <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
                           tool.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                         }`}>
                           {tool.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 font-medium">₹{tool.cost}</td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="p-2 text-sm text-gray-900 font-medium">₹{tool.cost}</td>
+                      <td className="p-2 text-center">
                         <div className="flex justify-center gap-2">
                           <button
                             onClick={() => handleOpenModal(tool)}

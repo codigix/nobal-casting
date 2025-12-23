@@ -164,6 +164,16 @@ export const getItemsList = async () => {
   return response.data
 }
 
+export const getItemDetails = async (itemCode) => {
+  const response = await api.get(`/items/${itemCode}`)
+  return response.data
+}
+
+export const getUOMList = async () => {
+  const response = await api.get('/items/uoms')
+  return response.data
+}
+
 // Operations
 export const getOperationsList = async () => {
   const response = await api.get('/production/operations')
@@ -255,5 +265,63 @@ export const deleteWarehouse = async (name) => {
 // Employees
 export const getEmployees = async () => {
   const response = await api.get('/hr/employees')
+  return response.data
+}
+
+// Sales Orders
+export const getSalesOrders = async (filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/selling/sales-orders?${params}`)
+  return response.data
+}
+
+// Time Logs
+export const getTimeLogs = async (filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/production/time-logs?${params}`)
+  return response.data
+}
+
+export const createTimeLog = async (data) => {
+  const response = await api.post('/production/time-logs', data)
+  return response.data
+}
+
+export const deleteTimeLog = async (id) => {
+  const response = await api.delete(`/production/time-logs/${id}`)
+  return response.data
+}
+
+// Rejections
+export const getRejections = async (filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/production/rejections?${params}`)
+  return response.data
+}
+
+export const createRejection = async (data) => {
+  const response = await api.post('/production/rejections', data)
+  return response.data
+}
+
+export const deleteRejection = async (id) => {
+  const response = await api.delete(`/production/rejections/${id}`)
+  return response.data
+}
+
+// Downtimes
+export const getDowntimes = async (filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/production/downtimes?${params}`)
+  return response.data
+}
+
+export const createDowntime = async (data) => {
+  const response = await api.post('/production/downtimes', data)
+  return response.data
+}
+
+export const deleteDowntime = async (id) => {
+  const response = await api.delete(`/production/downtimes/${id}`)
   return response.data
 }

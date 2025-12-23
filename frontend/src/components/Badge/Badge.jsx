@@ -7,7 +7,7 @@
   }
 
   return (
-    <span className={`${variants[variant]} ${className}`.trim()} {...props}>
+    <span className={`text-capitalize ${variants[variant]} ${className}`.trim()} {...props}>
       {children}
     </span>
   )

@@ -76,7 +76,7 @@ export default function BuyingAnalytics() {
     <div className="buying-container">
       {/* Header Section */}
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-neutral-900 dark:text-neutral-100">Buying Analytics</h2>
+        <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">Buying Analytics</h2>
         <p className="text-neutral-600 dark:text-neutral-400 mt-1">Real-time insights and performance metrics for procurement</p>
       </div>
 
@@ -116,7 +116,7 @@ export default function BuyingAnalytics() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">Total POs</p>
-              <p className="text-3xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">{summary?.purchase_orders?.total_pos || 0}</p>
+              <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">{summary?.purchase_orders?.total_pos || 0}</p>
             </div>
             <Truck className="w-12 h-12 text-blue-500 opacity-20" />
           </div>
@@ -127,7 +127,7 @@ export default function BuyingAnalytics() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">Total PO Value</p>
-              <p className="text-3xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">₹{summary?.purchase_orders?.total_value?.toLocaleString() || 0}</p>
+              <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">₹{summary?.purchase_orders?.total_value?.toLocaleString() || 0}</p>
             </div>
             <DollarSign className="w-12 h-12 text-green-500 opacity-20" />
           </div>
@@ -138,7 +138,7 @@ export default function BuyingAnalytics() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">Total Invoices</p>
-              <p className="text-3xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">{summary?.invoices?.total_invoices || 0}</p>
+              <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">{summary?.invoices?.total_invoices || 0}</p>
             </div>
             <FileText className="w-12 h-12 text-orange-500 opacity-20" />
           </div>
@@ -149,7 +149,7 @@ export default function BuyingAnalytics() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">Paid Amount</p>
-              <p className="text-3xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">₹{summary?.invoices?.paid_amount?.toLocaleString() || 0}</p>
+              <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">₹{summary?.invoices?.paid_amount?.toLocaleString() || 0}</p>
             </div>
             <Package className="w-12 h-12 text-purple-500 opacity-20" />
           </div>
@@ -215,19 +215,27 @@ export default function BuyingAnalytics() {
             <Card>
               <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-6">Invoice Status</h3>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart
-                  data={[
-                    { status: 'Draft', count: summary?.invoices?.draft_count || 0 },
-                    { status: 'Submitted', count: summary?.invoices?.submitted_count || 0 },
-                    { status: 'Paid', count: summary?.invoices?.paid_count || 0 }
-                  ]}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="status" stroke="#6b7280" />
-                  <YAxis stroke="#6b7280" />
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Draft', value: summary?.invoices?.draft_count || 0 },
+                      { name: 'Submitted', value: summary?.invoices?.submitted_count || 0 },
+                      { name: 'Paid', value: summary?.invoices?.paid_count || 0 }
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {COLORS.map((color, index) => (
+                      <Cell key={`cell-${index}`} fill={color} />
+                    ))}
+                  </Pie>
                   <Tooltip />
-                  <Bar dataKey="count" fill="#3B82F6" />
-                </BarChart>
+                </PieChart>
               </ResponsiveContainer>
             </Card>
           </div>
@@ -241,21 +249,21 @@ export default function BuyingAnalytics() {
               <table className="w-full">
                 <thead className="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-neutral-900 dark:text-neutral-100">Supplier</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-neutral-900 dark:text-neutral-100">POs</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-neutral-900 dark:text-neutral-100">Total Value</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-neutral-900 dark:text-neutral-100">Avg Value</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-neutral-900 dark:text-neutral-100">Completion Rate</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">Supplier</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">POs</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">Total Value</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">Avg Value</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">Completion Rate</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
                   {topSuppliers.map((supplier) => (
                     <tr key={supplier.supplier_id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
-                      <td className="px-6 py-4 text-sm text-neutral-900 dark:text-neutral-100 font-medium">{supplier.supplier_name}</td>
-                      <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">{supplier.po_count}</td>
-                      <td className="px-6 py-4 text-sm text-neutral-900 dark:text-neutral-100 font-semibold">₹{supplier.total_value?.toLocaleString()}</td>
-                      <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-400">₹{supplier.avg_po_value?.toLocaleString()}</td>
-                      <td className="px-6 py-4 text-sm">
+                      <td className="p-2 text-sm text-neutral-900 dark:text-neutral-100 font-medium">{supplier.supplier_name}</td>
+                      <td className="p-2 text-xs text-neutral-600 dark:text-neutral-400">{supplier.po_count}</td>
+                      <td className="p-2 text-sm text-neutral-900 dark:text-neutral-100 font-semibold">₹{supplier.total_value?.toLocaleString()}</td>
+                      <td className="p-2 text-xs text-neutral-600 dark:text-neutral-400">₹{supplier.avg_po_value?.toLocaleString()}</td>
+                      <td className="p-2 text-sm">
                         <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs font-semibold">
                           {supplier.completion_rate}%
                         </span>
@@ -354,19 +362,19 @@ export default function BuyingAnalytics() {
             </ResponsiveContainer>
             <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <p className="text-sm text-neutral-600 dark:text-neutral-400">Current (0-30)</p>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400">Current (0-30)</p>
                 <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.current?.toLocaleString() || 0}</p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-neutral-600 dark:text-neutral-400">30-60 Days</p>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400">30-60 Days</p>
                 <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.thirty_to_sixty?.toLocaleString() || 0}</p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-neutral-600 dark:text-neutral-400">60-90 Days</p>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400">60-90 Days</p>
                 <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.sixty_to_ninety?.toLocaleString() || 0}</p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-neutral-600 dark:text-neutral-400">90+ Days</p>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400">90+ Days</p>
                 <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.above_ninety?.toLocaleString() || 0}</p>
               </div>
             </div>

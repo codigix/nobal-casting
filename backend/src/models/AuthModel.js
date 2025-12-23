@@ -1,5 +1,4 @@
 import bcrypt from 'bcryptjs'
-import { v4 as uuidv4 } from 'uuid'
 
 class AuthModel {
   constructor(db) {
@@ -7,7 +6,7 @@ class AuthModel {
   }
 
   // Register new user
-  async register(email, fullName, password, department = 'buying', role = 'staff', phone = null) {
+  async register(email, fullName, password, department = 'manufacturing', role = 'staff', phone = null) {
     try {
       // Check if user already exists
       const [existing] = await this.db.query('SELECT * FROM users WHERE email = ?', [email])
@@ -16,11 +15,7 @@ class AuthModel {
       }
 
       // Validate department
-      const validDepartments = [
-        'buying', 'selling', 'inventory', 'production', 
-        'toolroom', 'quality', 'dispatch', 'accounts', 
-        'hr', 'admin'
-      ]
+      const validDepartments = ['inventory', 'manufacturing', 'admin']
       if (!validDepartments.includes(department)) {
         throw new Error('Invalid department')
       }
@@ -81,7 +76,7 @@ class AuthModel {
         user_id: user.user_id,
         email: user.email,
         full_name: user.full_name,
-        department: user.department || 'buying',
+        department: user.department || 'manufacturing',
         role: user.role || 'staff',
         is_active: user.is_active
       }
@@ -104,7 +99,7 @@ class AuthModel {
         user_id: user.user_id,
         email: user.email,
         full_name: user.full_name,
-        department: user.department || 'buying',
+        department: user.department || 'manufacturing',
         role: user.role || 'staff',
         is_active: user.is_active
       }

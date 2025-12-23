@@ -1,0 +1,95 @@
+✓ workstation_type column already exists
+
+Updating 74 workstations...
+  ✓ BUFFING → BUFFING - MACHINE
+  ✓ CNC-01 → CNC - Machine
+  ✓ CNC-02 → CNC - Machine
+  ✓ CNC-03 → CNC - Machine
+  ✓ CNC-04 → CNC - Machine
+  ✓ CNC-05 → CNC - Machine
+  ✓ CNC-06 → CNC - Machine
+  ✓ CNC-07 → CNC - Machine
+  ✓ CORE M/C - 01 → Core preparation m/c
+  ✓ CORE M/C - 02 → Core preparation m/c
+  ✓ CORE M/C - 03 → Core preparation m/c
+  ✓ CORE M/C -01 → Core preparation m/c
+  ✓ CORE MIC - 02 → Core preparation m/c
+  ✓ Core Mic-01 → Core preparation m/c
+  ✓ Core Mic-02 → Core preparation m/c
+  ✓ Core Mic-03 → Core preparation m/c
+  ✓ DCM - T5 → CNC - Machine
+  ✓ DCM - T7 → CNC - Machine
+  ✓ DCM 01 → CNC - Machine
+  ✓ DCM 02 → CNC - Machine
+  ✓ DCM 03 → CNC - Machine
+  ✓ DCM 05 → CNC - Machine
+  ✓ DCM 08 → CNC - Machine
+  ✓ DCM 09 → CNC - Machine
+  ✓ DCM 10 → CNC - Machine
+  ✓ DCM 13 → CNC - Machine
+  ✓ DCM 14 → CNC - Machine
+  ✓ DCM 15 → CNC - Machine
+  ✓ DCM 16 → CNC - Machine
+  ✓ DCM 18 → CNC - Machine
+  ✓ DCM 19 → CNC - Machine
+  ✓ DCM 20 → CNC - Machine
+  ✓ DCM 24 → CNC - Machine
+  ✓ DCM T1 → CNC - Machine
+  ✓ DCM T2 → CNC - Machine
+  ✓ DCM T3 → CNC - Machine
+  ✓ DCM T4 → CNC - Machine
+  ✓ DCM T5 → CNC - Machine
+  ✓ DCM T6 → CNC - Machine
+  ✓ DCM T7 → CNC - Machine
+  ✓ DCM V1 → CNC - Machine
+  ✓ DCM V2 → CNC - Machine
+  ✓ DCM V3 → CNC - Machine
+  ✓ DCM V4 → CNC - Machine
+  ✓ HEAT TREATMENT FURNACE → HT - Furnace
+  ✓ ID → Inspection Table
+  ✓ Inspection Table - 01 → Inspection Table
+  ✓ KEEPER ASSY → KEEPER ASSY
+  ✓ Lathe Machine → LATHE MACHINE
+  ✓ Line - 01 → Line
+  ✓ line - 01 Unit 3 → Line
+  ✓ Line - 02 → Line
+  ✓ Line - 3 → Line
+  ✓ Line -01 Unit 2 → Line
+  ✓ line -02 → Line
+  ✓ LINE-2 → Line
+  ✓ MANUAL → MANUAL
+  ✓ NUT BOLT ASSY → BOLT FITMENT ASSY
+  ✓ OUTSOURCE → OUT SOURCES
+  ✓ Sample Line → Line
+  ✓ SAND → Core preparation m/c
+  ✓ Shot Blasting M/C-01 → Shot Blasting M/C
+  ✓ VMC -01 → VMC - Machine
+  ✓ VMC -04 → VMC - Machine
+  ✓ vmc -05 → VMC - Machine
+  ✓ VMC-02 → VMC - Machine
+  ✓ Welding Station - 01 → Welding Station
+  ✓ WLT - Machine - 01 → WLT - Machine
+  ✓ WS001 → Sample Workstation
+  ✓ WS002 → Sample Workstation
+  ✓ WS003 → Sample Workstation
+  ✓ WS004 → Sample Workstation
+  ✓ WS005 → Sample Workstation
+  ✓ WS006 → Sample Workstation
+
+Summary by type:
+  BOLT FITMENT ASSY: 1
+  BUFFING - MACHINE: 1
+  CNC - Machine: 35
+  Core preparation m/c: 9
+  HT - Furnace: 1
+  Inspection Table: 2
+  KEEPER ASSY: 1
+  LATHE MACHINE: 1
+  Line: 8
+  MANUAL: 1
+  OUT SOURCES: 1
+  Sample Workstation: 6
+  Shot Blasting M/C: 1
+  VMC - Machine: 4
+  Welding Station: 1
+  WLT - Machine: 1

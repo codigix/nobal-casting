@@ -1,414 +1,935 @@
 import { useState, useEffect } from 'react'
-import Card from '../../components/Card/Card'
-import Badge from '../../components/Badge/Badge'
+import axios from 'axios'
 import Button from '../../components/Button/Button'
 import DataTable from '../../components/Table/DataTable'
-import AdvancedFilters from '../../components/AdvancedFilters'
-import { useNavigate } from 'react-router-dom'
-import { Plus, Eye, Package, CheckCircle, XCircle, Download, TrendingUp, AlertCircle, Info } from 'lucide-react'
-import CreateGRNModal from '../../components/Buying/CreateGRNModal'
 import Alert from '../../components/Alert/Alert'
+import Card from '../../components/Card/Card'
+import Badge from '../../components/Badge/Badge'
+
+import { CheckCircle, XCircle, Clock, AlertCircle, Eye, Package, ArrowRight, Info, Save, MapPin, Zap, Plus, Grid3x3, List } from 'lucide-react'
+import Modal from '../../components/Modal/Modal'
+import InventoryApprovalModal from '../../components/Buying/InventoryApprovalModal'
+import CreateGRNModal from '../../components/Buying/CreateGRNModal'
 import './Buying.css'
 
 export default function PurchaseReceipts() {
-  const navigate = useNavigate()
   const [grns, setGrns] = useState([])
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [selectedGRNs, setSelectedGRNs] = useState(new Set())
-  const [filters, setFilters] = useState({
-    status: '',
-    po_no: '',
-    search: ''
-  })
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
-  const [metrics, setMetrics] = useState({
-    total: 0,
-    pending: 0,
-    inspecting: 0,
-    approved: 0,
-    rejected: 0,
-    totalValue: 0
-  })
+  const [selectedGRN, setSelectedGRN] = useState(null)
+  const [showDetails, setShowDetails] = useState(false)
+  const [showApprovalForm, setShowApprovalForm] = useState(false)
+  const [showInventoryApprovalModal, setShowInventoryApprovalModal] = useState(false)
+  const [showStorageForm, setShowStorageForm] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [rejectionReason, setRejectionReason] = useState('')
+  const [approvalItems, setApprovalItems] = useState([])
+  const [stats, setStats] = useState({ pending: 0, inspecting: 0, awaiting: 0, approved: 0 })
+  const [warehouses, setWarehouses] = useState([])
+  const [storageData, setStorageData] = useState({})
+  const [viewMode, setViewMode] = useState('table')
 
   useEffect(() => {
-    fetchGRNs()
-  }, [filters])
+    fetchGRNRequests()
+  }, [])
 
-  const fetchGRNs = async () => {
-    setLoading(true)
-    setError(null)
+  useEffect(() => {
+    fetchWarehouses()
+  }, [])
+
+  const fetchGRNRequests = async () => {
     try {
-      const query = new URLSearchParams(
-        Object.entries(filters).filter(([, v]) => v)
-      )
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/grn-requests?${query}`)
-      const data = await res.json()
-      if (data.success) {
-        const grnData = data.data || []
-        setGrns(grnData)
-        calculateMetrics(grnData)
-      } else {
-        setError(data.error || 'Failed to fetch receipts')
-      }
-    } catch (error) {
-      console.error('Error fetching GRNs:', error)
-      setError('Error fetching purchase receipts')
+      setLoading(true)
+      const response = await axios.get('/api/grn-requests')
+      const data = response.data.data || []
+      setGrns(data)
+
+      setStats({
+        pending: data.filter(g => g.status === 'pending').length,
+        inspecting: data.filter(g => g.status === 'inspecting').length,
+        awaiting: data.filter(g => g.status === 'awaiting_inventory_approval').length,
+        approved: data.filter(g => g.status === 'approved').length
+      })
+
+      setError(null)
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to fetch GRN requests')
     } finally {
       setLoading(false)
     }
   }
 
-  const calculateMetrics = (data) => {
-    const newMetrics = {
-      total: data.length,
-      pending: 0,
-      inspecting: 0,
-      approved: 0,
-      rejected: 0,
-      totalValue: 0
-    }
-
-    data.forEach((grn) => {
-      if (grn.status === 'pending') newMetrics.pending++
-      else if (grn.status === 'inspecting' || grn.status === 'awaiting_inventory_approval') newMetrics.inspecting++
-      else if (grn.status === 'approved' || grn.status === 'accepted') newMetrics.approved++
-      else if (grn.status === 'rejected' || grn.status === 'sent_back') newMetrics.rejected++
-    })
-
-    setMetrics(newMetrics)
-  }
-
-  const getStatusColor = (status) => {
-    const colors = {
-      pending: 'warning',                  // Yellow - Action Required
-      inspecting: 'info',                  // Blue - Under Inspection
-      awaiting_inventory_approval: 'info', // Blue - Awaiting Inventory
-      approved: 'success',                 // Green - Approved
-      rejected: 'danger',                  // Red - Rejected
-      sent_back: 'warning',                // Yellow - Sent Back
-      draft: 'warning',
-      submitted: 'info',
-      inspected: 'info',
-      accepted: 'success'
-    }
-    return colors[status] || 'secondary'
-  }
-
-  const handleSelectGRN = (grnId) => {
-    const newSelected = new Set(selectedGRNs)
-    if (newSelected.has(grnId)) {
-      newSelected.delete(grnId)
-    } else {
-      newSelected.add(grnId)
-    }
-    setSelectedGRNs(newSelected)
-  }
-
-  const handleSelectAll = () => {
-    if (selectedGRNs.size === grns.length) {
-      setSelectedGRNs(new Set())
-    } else {
-      setSelectedGRNs(new Set(grns.map(g => g.id)))
+  const fetchWarehouses = async () => {
+    try {
+      const response = await axios.get('/api/stock/warehouses')
+      const warehouseData = response.data.data || []
+      console.log('Warehouses loaded:', warehouseData)
+      setWarehouses(warehouseData)
+    } catch (err) {
+      console.error('Error fetching warehouses:', err)
+      setError('Failed to load warehouses. Please refresh the page.')
     }
   }
 
-  const exportToCSV = () => {
-    const headers = ['GRN Number', 'PO Number', 'Supplier', 'Receipt Date', 'Items', 'Status', 'Created Date']
-    const data = grns.map(g => [
-      g.grn_no,
-      g.po_no,
-      g.supplier_name,
-      g.receipt_date ? new Date(g.receipt_date).toLocaleDateString() : '-',
-      g.total_items,
-      g.status?.replace('_', ' ').toUpperCase(),
-      g.created_at ? new Date(g.created_at).toLocaleDateString() : '-'
-    ])
-
-    let csv = headers.join(',') + '\n'
-    data.forEach(row => {
-      csv += row.map(cell => `"${cell}"`).join(',') + '\n'
-    })
-
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `grn-reports-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
+  const handleStartInspection = async (grnId) => {
+    try {
+      const response = await axios.post(`/api/grn-requests/${grnId}/start-inspection`)
+      setSuccess('Inspection started')
+      fetchGRNRequests()
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to start inspection')
+    }
   }
 
+  const handleApprove = async (grnId) => {
+    if (approvalItems.length === 0) {
+      setError('Please add accepted items')
+      return
+    }
 
+    try {
+      const response = await axios.post(`/api/grn-requests/${grnId}/approve`, {
+        approvedItems: approvalItems
+      })
+      setSuccess('GRN approved and stock entry created')
+      setShowApprovalForm(false)
+      setApprovalItems([])
+      fetchGRNRequests()
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to approve GRN')
+    }
+  }
 
-  const StatCard = ({ label, value, icon: Icon, color, onClick }) => (
-    <div
-      onClick={onClick}
-      className={`bg-white dark:bg-neutral-800 rounded-lg p-6 border-l-4 transition-all hover:shadow-lg ${onClick ? 'cursor-pointer' : ''}`}
-      style={{ borderLeftColor: { primary: '#3b82f6', success: '#10b981', warning: '#f59e0b', danger: '#ef4444', info: '#0284c7' }[color] }}
-    >
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-            {label}
-          </p>
-          <p className="text-3xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">{value}</p>
-        </div>
-        <Icon size={28} className="text-neutral-400 dark:text-neutral-600" />
+  const handleReject = async (grnId) => {
+    if (!rejectionReason.trim()) {
+      setError('Please provide rejection reason')
+      return
+    }
+
+    try {
+      await axios.post(`/api/grn-requests/${grnId}/reject`, {
+        reason: rejectionReason
+      })
+      setSuccess('GRN rejected')
+      setShowDetails(false)
+      setRejectionReason('')
+      fetchGRNRequests()
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to reject GRN')
+    }
+  }
+
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      pending: {
+        icon: <Clock size={16} />,
+        label: 'Pending',
+        colorClass: 'text-amber-500'
+      },
+      inspecting: {
+        icon: <AlertCircle size={16} />,
+        label: 'Inspecting',
+        colorClass: 'text-blue-500'
+      },
+      awaiting_inventory_approval: {
+        icon: <AlertCircle size={16} />,
+        label: 'Awaiting Approval',
+        colorClass: 'text-purple-500'
+      },
+      approved: {
+        icon: <CheckCircle size={16} />,
+        label: 'Approved',
+        colorClass: 'text-emerald-500'
+      },
+      rejected: {
+        icon: <XCircle size={16} />,
+        label: 'Rejected',
+        colorClass: 'text-red-500'
+      },
+      sent_back: {
+        icon: <ArrowRight size={16} />,
+        label: 'Sent Back',
+        colorClass: 'text-amber-500'
+      }
+    }
+    
+    const config = statusConfig[status] || { icon: null, label: status, colorClass: 'text-neutral-500' }
+    
+    return (
+      <div className={`flex items-center gap-2 ${config.colorClass} font-medium`}>
+        <span className="flex items-center">
+          {config.icon}
+        </span>
+        <span className='text-sm'>{config.label}</span>
       </div>
-    </div>
-  )
+    )
+  }
+
+  const handleApprovalItemChange = (itemId, field, value) => {
+    setApprovalItems(prev => {
+      const existing = prev.find(item => item.id === itemId)
+      const numValue = ['accepted_qty', 'rejected_qty'].includes(field) ? Number(value) || 0 : value
+
+      if (existing) {
+        return prev.map(item =>
+          item.id === itemId ? { ...item, [field]: numValue } : item
+        )
+      } else {
+        return [...prev, { id: itemId, [field]: numValue }]
+      }
+    })
+  }
+
+  const handleStorageDataChange = (itemId, field, value) => {
+    const finalValue = field === 'valuation_rate' ? (Number(value) || 0) : value
+
+    setStorageData(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        [field]: finalValue
+      }
+    }))
+  }
+
+  const handleApproveAndStore = async () => {
+    if (approvalItems.length === 0) {
+      setError('Please add accepted items')
+      return
+    }
+
+    const warehouseAssigned = approvalItems.every(item => {
+      return storageData[item.id]?.warehouse_id
+    })
+
+    if (!warehouseAssigned) {
+      setError('Please assign warehouse location for all items')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const approvedItemsWithStorage = approvalItems.map(item => {
+        const warehouseId = storageData[item.id]?.warehouse_id
+        const selectedWarehouse = warehouses.find(w => String(w.id) === String(warehouseId))
+
+        if (!selectedWarehouse) {
+          throw new Error(`Warehouse not found for item ${item.id}`)
+        }
+
+        const processedItem = {
+          id: item.id,
+          accepted_qty: Number(item.accepted_qty) || 0,
+          rejected_qty: Number(item.rejected_qty) || 0,
+          qc_status: item.qc_status || 'pass',
+          bin_rack: storageData[item.id]?.bin_rack || '',
+          batch_no: storageData[item.id]?.batch_no || '',
+          valuation_rate: Number(storageData[item.id]?.valuation_rate) || 0,
+          warehouse_name: selectedWarehouse.warehouse_name
+        }
+
+        console.log(`Item ${processedItem.id}:`, {
+          accepted: processedItem.accepted_qty,
+          rejected: processedItem.rejected_qty,
+          total: processedItem.accepted_qty + processedItem.rejected_qty,
+          warehouse: processedItem.warehouse_name
+        })
+
+        return processedItem
+      })
+
+      console.log('Sending approval data:', approvedItemsWithStorage)
+
+      const response = await axios.post(`/api/grn-requests/${selectedGRN.id}/inventory-approve`, {
+        approvedItems: approvedItemsWithStorage
+      })
+      setSuccess('✓ GRN approved! Materials stored in inventory. Stock entries created automatically.')
+      setShowApprovalForm(false)
+      setShowStorageForm(false)
+      setApprovalItems([])
+      setStorageData({})
+      fetchGRNRequests()
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      console.error('Approval error:', err)
+      setError(err.response?.data?.error || err.message || 'Failed to approve and store GRN')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const columns = [
-    { 
-      key: 'grn_no', 
-      label: 'GRN #', 
-      width: '12%',
-      render: (val) => (
-        <span className="font-semibold text-primary-600 dark:text-primary-400">
-          {val}
-        </span>
-      )
+    { key: 'grn_no', label: 'GRN Number' },
+    { key: 'po_no', label: 'PO Number' },
+    { key: 'supplier_name', label: 'Supplier' },
+    {
+      key: 'receipt_date',
+      label: 'Receipt Date',
+      render: (value, row) => row && row.receipt_date ? new Date(row.receipt_date).toLocaleDateString() : '-'
     },
-    { 
-      key: 'po_no', 
-      label: 'PO #', 
-      width: '12%',
-      render: (val) => (
-        <span className="font-medium text-neutral-900 dark:text-neutral-100">
-          {val || 'N/A'}
-        </span>
-      )
+    {
+      key: 'status',
+      label: 'Status',
+      render: (value, row) => row ? getStatusBadge(row.status) : '-'
     },
-    { 
-      key: 'supplier_name', 
-      label: 'Supplier', 
-      width: '14%',
-      render: (val) => (
-        <span className="text-neutral-700 dark:text-neutral-300">
-          {val || 'N/A'}
-        </span>
-      )
+    {
+      key: 'total_items',
+      label: 'Items'
     },
-    { 
-      key: 'receipt_date', 
-      label: 'Receipt Date', 
-      width: '12%',
-      render: (val) => val ? new Date(val).toLocaleDateString() : '-'
+    {
+      key: 'total_accepted',
+      label: 'Accepted Qty'
     },
-    { 
-      key: 'total_items', 
-      label: 'Items', 
-      width: '8%',
-      render: (val) => (
-        <span className="font-semibold text-neutral-900 dark:text-neutral-100">
-          {val || 0}
-        </span>
-      )
-    },
-    { 
-      key: 'status', 
-      label: 'Status', 
-      width: '16%',
-      render: (val) => <Badge color={getStatusColor(val)}>{val?.replace(/_/g, ' ').toUpperCase()}</Badge>
-    },
-    { 
-      key: 'created_at', 
-      label: 'Created', 
-      width: '12%',
-      render: (val) => val ? new Date(val).toLocaleDateString() : '-'
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (value, row) => {
+        if (!row) return null
+        return (
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              className="btn-primary py-1 px-2 text-xs"
+              onClick={() => {
+                setSelectedGRN(row)
+                setShowDetails(true)
+              }}
+              title="View GRN details"
+            >
+              <Eye size={14} className="inline mr-1" /> View
+            </button>
+            {row.status === 'awaiting_inventory_approval' && (
+              <button
+                type="button"
+                className="btn-success p-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded font-medium z-10"
+                onClick={() => {
+                  setSelectedGRN(row)
+                  if (row.items && row.items.length > 0) {
+                    setApprovalItems(row.items.map(item => ({
+                      id: item.id,
+                      accepted_qty: Number(item.received_qty) || 0,
+                      rejected_qty: 0,
+                      qc_status: 'pass'
+                    })))
+                  }
+                  setShowApprovalForm(true)
+                }}
+                title="Inspect, approve, and store items"
+              >
+                <CheckCircle size={14} className="inline mr-1" /> Approve
+              </button>
+            )}
+            {(row.status === 'approved' || row.status === 'accepted') && (
+              <button
+                className="btn-success py-1 px-2 text-xs bg-emerald-500 text-white rounded font-medium cursor-not-allowed opacity-70"
+                disabled
+                title="Item stored in warehouse"
+              >
+                <CheckCircle size={14} className="inline mr-1" /> ✓ Stored
+              </button>
+            )}
+            {row.status === 'rejected' && (
+              <button
+                className="btn-danger py-1 px-2 text-xs bg-red-500 text-white rounded font-medium cursor-not-allowed opacity-70"
+                disabled
+                title="GRN was rejected"
+              >
+                <XCircle size={14} className="inline mr-1" /> Rejected
+              </button>
+            )}
+          </div>
+        )
+      }
     }
   ]
 
-  const renderActions = (row) => (
-    <div className="flex flex-wrap items-center gap-1">
-      <Button
-        size="sm"
-        variant="icon"
-        onClick={() => navigate(`/buying/grn-requests/${row.grn_no}`)}
-        title="View GRN Details"
-        className="flex items-center justify-center p-2"
-      >
-        <Eye size={16} />
-      </Button>
-      <Button
-        size="sm"
-        variant="icon-info"
-        onClick={exportToCSV}
-        title="Export Details"
-        className="flex items-center justify-center p-2"
-      >
-        <Download size={16} />
-      </Button>
-    </div>
-  )
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-800 mb-4">
+            <Package size={32} className="text-neutral-400 dark:text-neutral-600 animate-pulse" />
+          </div>
+          <p className="text-neutral-600 dark:text-neutral-400 font-medium">Loading GRN requests...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="buying-container">
-      <CreateGRNModal 
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={() => {
-          fetchGRNs()
-          setSuccess('GRN created successfully')
-          setTimeout(() => setSuccess(null), 3000)
-        }}
-      />
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-4 sm:p-6 lg:p-3">
+      <div className="max-w-7xl mx-auto">
+        {/* Header Section */}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+            <div className='flex gap-3'>
+              <Package size={32} className="text-amber-500" />
+              <div>
+                <h1 className="text-xl font-black text-neutral-900 dark:text-white flex items-center gap-3">
+                Goods Receipt Notes
+              </h1>
+                            <p className="text-neutral-600 dark:text-neutral-400">Manage incoming material receipts and inventory approvals</p>
 
-      {/* Header Section */}
-      <div className="flex justify-between items-start mb-8">
-        <div>
-          <h2 className="text-3xl font-bold text-neutral-900 dark:text-neutral-100">Goods Receipt Notes</h2>
-          <p className="text-neutral-600 dark:text-neutral-400 mt-1">Track incoming goods from suppliers and create GRNs for inventory processing</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center text-xs justify-center gap-2 p-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-md shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 whitespace-nowrap"
+            >
+              <Plus size={15} />
+              Create GRN
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            onClick={() => setShowCreateModal(true)}
-            variant="primary"
-            className="flex items-center gap-2"
-          >
-            <Plus size={20} /> Create GRN
-          </Button>
-          <Button 
-            onClick={exportToCSV}
-            variant="secondary"
-            disabled={grns.length === 0}
-            className="flex items-center gap-2"
-          >
-            <Download size={20} /> Export
-          </Button>
+
+        {/* Metrics Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <MetricCard
+            title="Pending Inspection"
+            count={stats.pending}
+            icon={<Clock size={15} />}
+            trend="Awaiting QC"
+            bgColor="from-orange-50 to-amber-50"
+            darkBgColor="dark:from-orange-950/20 dark:to-amber-950/20"
+            iconColor="text-orange-500"
+          />
+          <MetricCard
+            title="Under Inspection"
+            count={stats.inspecting}
+            icon={<AlertCircle size={15} />}
+            trend="In Progress"
+            bgColor="from-blue-50 to-cyan-50"
+            darkBgColor="dark:from-blue-950/20 dark:to-cyan-950/20"
+            iconColor="text-blue-500"
+          />
+          <MetricCard
+            title="Awaiting Approval"
+            count={stats.awaiting}
+            icon={<Info size={15} />}
+            trend="Ready to approve"
+            bgColor="from-purple-50 to-pink-50"
+            darkBgColor="dark:from-purple-950/20 dark:to-pink-950/20"
+            iconColor="text-purple-500"
+          />
+          <MetricCard
+            title="Approved & Stored"
+            count={stats.approved}
+            icon={<CheckCircle size={15} />}
+            trend="Successfully stored"
+            bgColor="from-emerald-50 to-green-50"
+            darkBgColor="dark:from-emerald-950/20 dark:to-green-950/20"
+            iconColor="text-emerald-500"
+          />
+        </div>
+
+        {/* Alerts */}
+        {error && <Alert type="danger">{error}</Alert>}
+        {success && <Alert type="success">{success}</Alert>}
+
+        {/* Main Content Card */}
+        <div className=" dark:bg-neutral-900 rounded-lg  dark:border-neutral-800  overflow-hidden">
+          {/* Card Header */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-neutral-900 dark:text-white">GRN Requests</h2>
+            {grns.length > 0 && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`p-2 rounded-md transition-all ${viewMode === 'table' ? 'bg-amber-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
+                  title="Table view"
+                >
+                  <List size={15} />
+                </button>
+                <button
+                  onClick={() => setViewMode('card')}
+                  className={`p-2 rounded-md transition-all ${viewMode === 'card' ? 'bg-amber-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
+                  title="Card view"
+                >
+                  <Grid3x3 size={15} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Card Body */}
+          <div className="mt-3">
+            {grns.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 px-4">
+                <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-4 mb-4">
+                  <Package size={48} className="text-neutral-400 dark:text-neutral-600" />
+                </div>
+                <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">No GRN Requests Found</h3>
+                <p className="text-neutral-600 dark:text-neutral-400 text-center max-w-md">
+                  No GRN requests available
+                </p>
+              </div>
+            ) : viewMode === 'table' ? (
+              <div className="overflow-x-auto">
+                <DataTable columns={columns} data={grns} />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {grns.map(grn => (
+                  <div key={grn.id} className="bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow">
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 p-4 border-b border-neutral-200 dark:border-neutral-700">
+                      <div className="flex items-start justify-between text-sm">
+                        <div>
+                          <h3 className="font-semibold text-neutral-900 dark:text-white text-md">{grn.grn_no}</h3>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">{grn.supplier_name}</p>
+                        </div>
+                        {getStatusBadge(grn.status)}
+                      </div>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">PO Number</p>
+                          <p className="text-xs font-semibold  text-neutral-900 dark:text-white">{grn.po_no}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Receipt Date</p>
+                          <p className="text-xs font-semibold  text-neutral-900 dark:text-white">{new Date(grn.receipt_date).toLocaleDateString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Total Items</p>
+                          <p className="text-xs font-semibold  text-neutral-900 dark:text-white">{grn.items?.length || 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Accepted Qty</p>
+                          <p className="text-xs font-semibold  text-neutral-900 dark:text-white">{grn.total_accepted || 0}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          type="button"
+                          className="flex-1 btn-primary text-xs py-2 px-3"
+                          onClick={() => {
+                            setSelectedGRN(grn)
+                            setShowDetails(true)
+                          }}
+                        >
+                          <Eye size={14} style={{ marginRight: '4px' }} /> View
+                        </button>
+                        {grn.status === 'awaiting_inventory_approval' && (
+                          <button
+                            type="button"
+                            className="flex-1 btn-success text-xs py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-medium"
+                            onClick={() => {
+                              setSelectedGRN(grn)
+                              if (grn.items && grn.items.length > 0) {
+                                setApprovalItems(grn.items.map(item => ({
+                                  id: item.id,
+                                  accepted_qty: Number(item.received_qty) || 0,
+                                  rejected_qty: 0,
+                                  qc_status: 'pass'
+                                })))
+                              }
+                              setShowApprovalForm(true)
+                            }}
+                          >
+                            <CheckCircle size={14} className="inline mr-1" /> Approve
+                          </button>
+                        )}
+                        {(grn.status === 'approved' || grn.status === 'accepted') && (
+                          <button
+                            className="flex-1 btn-success text-xs py-2 px-3 bg-emerald-500 text-white rounded font-medium cursor-not-allowed opacity-70"
+                            disabled
+                          >
+                            <CheckCircle size={14} className="inline mr-1" /> ✓ Stored
+                          </button>
+                        )}
+                        {grn.status === 'rejected' && (
+                          <button
+                            className="flex-1 btn-danger text-xs py-2 px-3 bg-red-500 text-white rounded font-medium cursor-not-allowed opacity-70"
+                            disabled
+                          >
+                            <XCircle size={14} className="inline mr-1" /> Rejected
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Workflow Instructions */}
-      <Card className="mb-8 p-4 bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500">
-        <div className="flex gap-3 items-start">
-          <Info size={20} className="text-amber-700 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+      <Modal
+        isOpen={showDetails && !showApprovalForm}
+        onClose={() => {
+          setShowDetails(false)
+          setRejectionReason('')
+        }}
+        title={selectedGRN ? `GRN Details - ${selectedGRN.grn_no}` : 'GRN Details'}
+        size="2xl"
+        footer={
+          <div className="flex gap-2 justify-between w-full">
+            {selectedGRN?.status === 'inspecting' && (
+              <Button
+                variant="danger"
+                onClick={() => {
+                  if (!rejectionReason.trim()) {
+                    setError('Please provide rejection reason')
+                    return
+                  }
+                  handleReject(selectedGRN.id)
+                }}
+              >
+                <XCircle size={16} className="inline mr-1" />
+                Reject GRN
+              </Button>
+            )}
+            <div className="ml-auto">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowDetails(false)
+                  setRejectionReason('')
+                }}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        }
+      >
+        {selectedGRN && (
           <div>
-            <p className="font-semibold text-amber-900 dark:text-amber-300 text-sm mb-2">GRN Workflow</p>
-            <ol className="text-xs text-amber-800 dark:text-amber-200 space-y-1 list-decimal list-inside">
-              <li>Receive goods from supplier</li>
-              <li>Create GRN from Purchase Order</li>
-              <li>Send to Inventory department for material inspection</li>
-              <li>Inventory inspects and assigns warehouse locations</li>
-              <li>Stock entries created automatically</li>
-            </ol>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-5 flex gap-3 items-start">
+              <div>
+                <p className="m-0 text-sm text-green-900 font-medium">
+                  <strong>GRN Status:</strong> {getStatusBadge(selectedGRN.status)}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-5 mb-6">
+              <div>
+                <p className="mb-2 text-xs text-gray-500 font-semibold uppercase">PO Number</p>
+                <p className="m-0 text-base font-semibold text-gray-900">{selectedGRN.po_no}</p>
+              </div>
+              <div>
+                <p className="mb-2 text-xs text-gray-500 font-semibold uppercase">Supplier</p>
+                <p className="m-0 text-base font-semibold text-gray-900">{selectedGRN.supplier_name}</p>
+              </div>
+              <div>
+                <p className="mb-2 text-xs text-gray-500 font-semibold uppercase">Receipt Date</p>
+                <p className="m-0 text-base font-semibold text-gray-900">
+                  {new Date(selectedGRN.receipt_date).toLocaleDateString()}
+                </p>
+              </div>
+              <div>
+                <p className="mb-2 text-xs text-gray-500 font-semibold uppercase">Total Items</p>
+                <p className="m-0 text-base font-semibold text-gray-900">{(selectedGRN.items || []).length}</p>
+              </div>
+            </div>
+
+            {selectedGRN.rejection_reason && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-5">
+                <p className="m-0 text-sm text-red-900 font-medium">
+                  <strong>Rejection Reason:</strong> {selectedGRN.rejection_reason}
+                </p>
+              </div>
+            )}
+
+            <div className="mb-5">
+              <h4 className="mb-3 text-xs font-semibold  text-gray-900">
+                📦 Received Items
+              </h4>
+              <div className="border border-gray-200 rounded overflow-hidden">
+                <table className="w-full border-collapse border border-gray-200 text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                      <th className="px-3 py-2.5 text-left font-semibold text-gray-700">Item Code</th>
+                      <th className="px-3 py-2.5 text-left font-semibold text-gray-700">Item Name</th>
+                      <th className="px-3 py-2.5 text-right font-semibold text-gray-700">Qty</th>
+                      <th className="px-3 py-2.5 text-left font-semibold text-gray-700">Unit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(selectedGRN.items || []).map((item, idx) => (
+                      <tr key={idx} className="border-b border-gray-200">
+                        <td className="px-3 py-2.5 text-gray-900 font-medium">{item.item_code}</td>
+                        <td className="px-3 py-2.5 text-gray-900">{item.item_name}</td>
+                        <td className="px-3 py-2.5 text-right text-gray-900 font-semibold">{item.received_qty}</td>
+                        <td className="px-3 py-2.5 text-gray-600">{item.unit}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {selectedGRN.status === 'inspecting' && (
+              <div>
+                <h4 className="mt-5 mb-3 text-xs font-semibold  text-gray-900">
+                  Rejection Reason (if rejecting)
+                </h4>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Enter reason for rejection..."
+                  className="w-full min-h-20 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            )}
           </div>
-        </div>
-      </Card>
+        )}
+      </Modal>
 
-      {/* Error & Success Alerts */}
-      {error && <Alert type="danger">{error}</Alert>}
-      {success && <Alert type="success">{success}</Alert>}
-
-      {/* Stats Dashboard */}
-      {!loading && grns.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-          <StatCard
-            label="Total GRNs"
-            value={metrics.total}
-            icon={Package}
-            color="primary"
-            onClick={() => setFilters({ status: '', po_no: '', search: '' })}
-          />
-          <StatCard
-            label="Pending"
-            value={metrics.pending}
-            icon={AlertCircle}
-            color="warning"
-            onClick={() => setFilters({ status: 'pending', po_no: '', search: '' })}
-          />
-          <StatCard
-            label="Inspecting"
-            value={metrics.inspecting}
-            icon={TrendingUp}
-            color="info"
-            onClick={() => setFilters({ status: 'inspecting', po_no: '', search: '' })}
-          />
-          <StatCard
-            label="Approved"
-            value={metrics.approved}
-            icon={CheckCircle}
-            color="success"
-            onClick={() => setFilters({ status: 'approved', po_no: '', search: '' })}
-          />
-          <StatCard
-            label="Rejected"
-            value={metrics.rejected}
-            icon={XCircle}
-            color="danger"
-            onClick={() => setFilters({ status: 'rejected', po_no: '', search: '' })}
-          />
-        </div>
-      )}
-
-      {/* Main Content Card */}
-      <Card>
-        <AdvancedFilters 
-          filters={filters}
-          onFilterChange={setFilters}
-          filterConfig={[
-            {
-              key: 'status',
-              label: 'Status',
-              type: 'select',
-              options: [
-                { value: 'pending', label: 'Pending' },
-                { value: 'inspecting', label: 'Inspecting' },
-                { value: 'awaiting_inventory_approval', label: 'Awaiting Inventory Approval' },
-                { value: 'approved', label: 'Approved' },
-                { value: 'rejected', label: 'Rejected' },
-                { value: 'sent_back', label: 'Sent Back' }
-              ]
-            },
-            {
-              key: 'po_no',
-              label: 'PO Number',
-              type: 'text',
-              placeholder: 'Enter PO number...'
-            },
-            {
-              key: 'search',
-              label: 'Search',
-              type: 'text',
-              placeholder: 'GRN #, Supplier...'
-            }
-          ]}
-          onApply={fetchGRNs}
-          onReset={() => {
-            setFilters({ status: '', po_no: '', search: '' })
-          }}
-          showPresets={true}
-        />
-
-        {loading ? (
-          <div className="py-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-            <p className="text-neutral-600 dark:text-neutral-400 mt-4">Loading GRNs...</p>
-          </div>
-        ) : grns.length === 0 ? (
-          <div className="py-12 text-center">
-            <Package size={48} className="mx-auto text-neutral-400 dark:text-neutral-600 mb-4" />
-            <p className="text-neutral-600 dark:text-neutral-400">No GRN records found</p>
-            <Button 
-              onClick={() => setShowCreateModal(true)}
-              variant="primary"
-              className="mt-4 inline-flex items-center gap-2"
+      <Modal
+        isOpen={showApprovalForm}
+        onClose={() => {
+          setShowApprovalForm(false)
+          setShowStorageForm(false)
+          setApprovalItems([])
+          setStorageData({})
+        }}
+        title={selectedGRN ? `Approve & Store - ${selectedGRN.grn_no}` : 'Approve & Store GRN'}
+        size="3xl"
+        footer={
+          <div className="flex gap-2 justify-end w-full">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowApprovalForm(false)
+                setShowStorageForm(false)
+                setApprovalItems([])
+                setStorageData({})
+              }}
             >
-              <Plus size={16} /> Create First GRN
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleApproveAndStore}
+              disabled={loading}
+            >
+              {loading ? 'Processing...' : (<><Save size={16} className="inline mr-1" />Approve & Store</>)}
             </Button>
           </div>
-        ) : (
-          <DataTable 
-            columns={columns}
-            data={grns}
-            renderActions={renderActions}
-            filterable={true}
-            sortable={true}
-            pageSize={10}
-          />
+        }
+      >
+        {selectedGRN && (
+          <div>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5 text-sm text-amber-900">
+              <p className="m-0 font-medium">
+                ⚠️ <strong>Note:</strong> Review quantities and assign warehouse locations for each item.
+              </p>
+            </div>
+
+            <div className="mb-5">
+              <h4 className="mb-3 text-xs font-semibold  text-gray-900">
+                Items for Approval
+              </h4>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-200 text-xs">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                      <th className="px-3 py-2.5 text-left font-semibold text-gray-700 min-w-30">Item</th>
+                      <th className="px-3 py-2.5 text-center font-semibold text-gray-700 min-w-24">Received Qty</th>
+                      <th className="px-3 py-2.5 text-center font-semibold text-gray-700 min-w-24">Accept Qty</th>
+                      <th className="px-3 py-2.5 text-center font-semibold text-gray-700 min-w-24">Reject Qty</th>
+                      <th className="px-3 py-2.5 text-center font-semibold text-gray-700 min-w-20">QC Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(selectedGRN.items || []).map((item, idx) => {
+                      const approvalItem = approvalItems.find(ai => ai.id === item.id) || {}
+                      return (
+                        <tr key={idx} className="border-b border-gray-200">
+                          <td className=" px-6 py-6 text-gray-900 font-medium">
+                            <div>{item.item_code}</div>
+                            <div className="text-xs text-gray-600">{item.item_name}</div>
+                          </td>
+                          <td className=" px-6 py-6 text-center text-gray-900 font-semibold">
+                            {item.received_qty}
+                          </td>
+                          <td className=" px-6 py-6">
+                            <input
+                              type="number"
+                              min="0"
+                              max={item.received_qty}
+                              value={approvalItem.accepted_qty || 0}
+                              onChange={(e) => handleApprovalItemChange(item.id, 'accepted_qty', e.target.value)}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-center text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </td>
+                          <td className=" px-6 py-6">
+                            <input
+                              type="number"
+                              min="0"
+                              max={item.received_qty}
+                              value={approvalItem.rejected_qty || 0}
+                              onChange={(e) => handleApprovalItemChange(item.id, 'rejected_qty', e.target.value)}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-center text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </td>
+                          <td className=" px-6 py-6 text-center">
+                            <select
+                              value={approvalItem.qc_status || 'pass'}
+                              onChange={(e) => handleApprovalItemChange(item.id, 'qc_status', e.target.value)}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                              <option value="pass">Pass</option>
+                              <option value="fail">Fail</option>
+                              <option value="rework">Rework</option>
+                            </select>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <h4 className="mb-3 text-xs font-semibold  text-gray-900">
+                Storage Information
+              </h4>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-200 text-xs">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                      <th className="px-3 py-2.5 text-left font-semibold text-gray-700 min-w-30">Item</th>
+                      <th className="px-3 py-2.5 text-left font-semibold text-gray-700 min-w-36">Warehouse</th>
+                      <th className="px-3 py-2.5 text-left font-semibold text-gray-700 min-w-24">Bin/Rack</th>
+                      <th className="px-3 py-2.5 text-left font-semibold text-gray-700 min-w-24">Batch No</th>
+                      <th className="px-3 py-2.5 text-right font-semibold text-gray-700 min-w-24">Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(selectedGRN.items || []).map((item, idx) => {
+                      const storage = storageData[item.id] || {}
+                      const hasWarehouse = storage.warehouse_id
+                      return (
+                        <tr key={idx} className="border-b border-gray-200">
+                          <td className=" px-6 py-6 text-gray-900 font-medium">
+                            <div>{item.item_code}</div>
+                            <div className="text-xs text-gray-600">{item.item_name}</div>
+                          </td>
+                          <td className=" px-6 py-6">
+                            <select
+                              value={storage.warehouse_id || ''}
+                              onChange={(e) => handleStorageDataChange(item.id, 'warehouse_id', e.target.value)}
+                              className={`w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${hasWarehouse ? 'bg-green-50' : 'bg-white'}`}
+                            >
+                              <option value="">Select Warehouse {warehouses.length === 0 ? '(Loading...)' : ''}</option>
+                              {warehouses.length === 0 ? (
+                                <option disabled>No warehouses available</option>
+                              ) : (
+                                warehouses.map(wh => (
+                                  <option key={wh.id} value={wh.id}>{wh.warehouse_name}</option>
+                                ))
+                              )}
+                            </select>
+                          </td>
+                          <td className=" px-6 py-6">
+                            <input
+                              type="text"
+                              placeholder="e.g., A-12-3"
+                              value={storage.bin_rack || ''}
+                              onChange={(e) => handleStorageDataChange(item.id, 'bin_rack', e.target.value)}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </td>
+                          <td className=" px-6 py-6">
+                            <input
+                              type="text"
+                              placeholder={item.batch_no || 'Batch #'}
+                              value={storage.batch_no || item.batch_no || ''}
+                              onChange={(e) => handleStorageDataChange(item.id, 'batch_no', e.target.value)}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </td>
+                          <td className=" px-6 py-6 text-right">
+                            <input
+                              type="number"
+                              placeholder="0.00"
+                              value={storage.valuation_rate || ''}
+                              onChange={(e) => handleStorageDataChange(item.id, 'valuation_rate', e.target.value)}
+                              min="0"
+                              step="0.01"
+                              className="w-24 px-2 py-1 border border-gray-300 rounded text-xs text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-900">
+              <p className="m-0 font-medium">
+                ⚠️ <strong>Required Fields:</strong> Warehouse location must be assigned for all accepted items before approval.
+              </p>
+            </div>
+          </div>
         )}
-      </Card>
+      </Modal>
+
+      {showInventoryApprovalModal && selectedGRN && (
+        <InventoryApprovalModal
+          grn={selectedGRN}
+          onClose={() => {
+            setShowInventoryApprovalModal(false)
+            setSelectedGRN(null)
+          }}
+          onSuccess={(updatedGRN) => {
+            setSuccess('GRN approved and items stored in inventory')
+            setShowInventoryApprovalModal(false)
+            setSelectedGRN(null)
+            fetchGRNRequests()
+            setTimeout(() => setSuccess(null), 3000)
+          }}
+        />
+      )}
+
+      <CreateGRNModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={(newGRN) => {
+          setSuccess('✓ GRN Request created successfully!')
+          setShowCreateModal(false)
+          fetchGRNRequests()
+          setTimeout(() => setSuccess(null), 3000)
+        }}
+      />
+    </div>
+  )
+}
+
+function MetricCard({ title, count, icon, trend, bgColor, darkBgColor, iconColor }) {
+  return (
+    <div className={`bg-gradient-to-br flex justify-between items-center w-full h-[100px] ${bgColor} ${darkBgColor} rounded-md p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}>
+
+      <div>
+        <div className="text-xl font-black text-neutral-900 dark:text-white mb-1">
+          {count}
+        </div>
+        <div className="text-xs font-semibold  text-neutral-700 dark:text-neutral-300 ">
+          {title}
+        </div>
+        {trend && (
+          <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
+            {trend}
+          </div>
+        )}
+      </div>
+      <div className="flex items-start justify-between mb-2">
+        <div className={`p-3 rounded-lg bg-white dark:bg-neutral-800/50 ${iconColor}`}>
+          {icon}
+        </div>
+      </div>
     </div>
   )
 }

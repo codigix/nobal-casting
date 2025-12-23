@@ -201,14 +201,15 @@ class ProductionController {
           await this.productionModel.createJobCard({
             job_card_id: jc_id,
             work_order_id: wo_id,
-            machine_id: null,
-            operator_id: null,
+            operation: operation.operation || '',
+            machine_id: operation.workstation || '',
+            operator_id: '',
             planned_quantity: quantity,
             scheduled_start_date: planned_start_date,
             scheduled_end_date: planned_end_date,
             status: 'Open',
             created_by: req.user?.username || 'system',
-            notes: `Operation: ${operation.operation}, Workstation: ${operation.workstation || 'N/A'}, Time: ${operation.time || 0}h`
+            notes: operation.notes || ''
           })
         }
       }
@@ -315,9 +316,32 @@ class ProductionController {
 
       if (operations && Array.isArray(operations)) {
         await this.productionModel.deleteAllWorkOrderOperations(wo_id)
+        
+        // Delete existing job cards for this work order to recreate them
+        await this.productionModel.deleteJobCardsByWorkOrder(wo_id)
+
         if (operations.length > 0) {
           for (let i = 0; i < operations.length; i++) {
             await this.productionModel.addWorkOrderOperation(wo_id, { ...operations[i], sequence: i + 1 })
+          }
+
+          // Recreate Job Cards
+          for (let i = 0; i < operations.length; i++) {
+            const operation = operations[i]
+            const jc_id = `JC-${Date.now()}-${i + 1}`
+            await this.productionModel.createJobCard({
+              job_card_id: jc_id,
+              work_order_id: wo_id,
+              operation: operation.operation || '',
+              machine_id: operation.workstation || '',
+              operator_id: '',
+              planned_quantity: quantity,
+              scheduled_start_date: planned_start_date,
+              scheduled_end_date: planned_end_date,
+              status: 'Open',
+              created_by: req.user?.username || 'system',
+              notes: operation.notes || ''
+            })
           }
         }
       }
@@ -330,6 +354,32 @@ class ProductionController {
       res.status(500).json({
         success: false,
         message: 'Error updating work order',
+        error: error.message
+      })
+    }
+  }
+
+  async deleteWorkOrder(req, res) {
+    try {
+      const { wo_id } = req.params
+
+      const success = await this.productionModel.deleteWorkOrder(wo_id)
+
+      if (!success) {
+        return res.status(404).json({
+          success: false,
+          message: 'Work order not found'
+        })
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Work order deleted successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error deleting work order',
         error: error.message
       })
     }
@@ -832,7 +882,7 @@ class ProductionController {
 
   async createBOM(req, res) {
     try {
-      const { item_code, product_name, description, quantity, uom, status, revision, effective_date, lines, operations, scrapItems } = req.body
+      const { item_code, product_name, description, quantity, uom, status, revision, effective_date, lines, operations, scrapItems, rawMaterials, total_cost } = req.body
 
       if (!item_code) {
         return res.status(400).json({
@@ -852,6 +902,7 @@ class ProductionController {
         status: status || 'Draft',
         revision: revision || 1,
         effective_date,
+        total_cost: total_cost || 0,
         created_by: req.user?.username || 'system'
       })
 
@@ -873,6 +924,12 @@ class ProductionController {
         }
       }
 
+      if (rawMaterials && rawMaterials.length > 0) {
+        for (let i = 0; i < rawMaterials.length; i++) {
+          await this.productionModel.addBOMRawMaterial(bom_id, { ...rawMaterials[i], sequence: i + 1 })
+        }
+      }
+
       res.status(201).json({
         success: true,
         message: 'BOM created successfully',
@@ -888,9 +945,10 @@ class ProductionController {
   }
 
   async updateBOM(req, res) {
+    const db = req.app.locals.db
     try {
       const { bom_id } = req.params
-      const { item_code, description, quantity, uom, status, revision, effective_date, lines, operations, scrapItems } = req.body
+      const { item_code, description, quantity, uom, status, revision, effective_date, lines, operations, scrapItems, rawMaterials, total_cost } = req.body
 
       const bom = await this.productionModel.updateBOM(bom_id, {
         item_code,
@@ -899,7 +957,8 @@ class ProductionController {
         uom,
         status,
         revision,
-        effective_date
+        effective_date,
+        total_cost: total_cost || 0
       })
 
       if (lines && Array.isArray(lines) && lines.length > 0) {
@@ -923,9 +982,66 @@ class ProductionController {
         }
       }
 
+      if (rawMaterials && Array.isArray(rawMaterials) && rawMaterials.length > 0) {
+        await this.productionModel.deleteAllBOMRawMaterials(bom_id)
+        for (let i = 0; i < rawMaterials.length; i++) {
+          await this.productionModel.addBOMRawMaterial(bom_id, { ...rawMaterials[i], sequence: i + 1 })
+        }
+      }
+
+      // Update all related sales orders with the new BOM data
+      try {
+        const [salesOrders] = await db.execute(
+          'SELECT sales_order_id FROM selling_sales_order WHERE bom_id = ? AND deleted_at IS NULL',
+          [bom_id]
+        )
+
+        if (salesOrders && salesOrders.length > 0) {
+          const updatedBOM = await this.productionModel.getBOMDetails(bom_id)
+          const bomFinishedGoods = (updatedBOM.lines || []).filter(item => 
+            item.component_type === 'FG' || item.fg_sub_assembly === 'FG'
+          )
+          const bomRawMaterials = updatedBOM.rawMaterials || []
+          const bomOperations = updatedBOM.operations || []
+
+          // Convert BOM raw materials to sales order items format
+          const salesOrderItems = (bomRawMaterials || []).map(material => ({
+            item_code: material.item_code || material.component_code || '',
+            item_name: material.item_name || material.component_description || '',
+            field_description: material.component_description || material.description || '',
+            qty: material.quantity || 0,
+            rate: material.rate || 0,
+            amount: (material.quantity || 0) * (material.rate || 0),
+            item_group: material.item_group || 'Uncategorized',
+            warehouse: material.warehouse || ''
+          }))
+
+          for (const so of salesOrders) {
+            await db.execute(
+              `UPDATE selling_sales_order SET 
+                bom_finished_goods = ?, 
+                bom_raw_materials = ?, 
+                bom_operations = ?,
+                items = ?,
+                updated_at = NOW()
+               WHERE sales_order_id = ?`,
+              [
+                JSON.stringify(bomFinishedGoods),
+                JSON.stringify(bomRawMaterials),
+                JSON.stringify(bomOperations),
+                JSON.stringify(salesOrderItems),
+                so.sales_order_id
+              ]
+            )
+          }
+        }
+      } catch (syncErr) {
+        console.error('Error syncing BOM to sales orders:', syncErr)
+      }
+
       res.status(200).json({
         success: true,
-        message: 'BOM updated successfully',
+        message: 'BOM updated successfully and synced to all related sales orders',
         data: bom
       })
     } catch (error) {
@@ -1219,6 +1335,329 @@ class ProductionController {
       res.status(500).json({
         success: false,
         message: 'Error deleting workstation',
+        error: error.message
+      })
+    }
+  }
+
+  // ============= ANALYTICS =============
+
+  async getProductionDashboard(req, res) {
+    try {
+      const { date } = req.query
+      const dashboard = await this.productionModel.getProductionDashboard(date)
+      res.status(200).json({
+        success: true,
+        data: dashboard
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching production dashboard',
+        error: error.message
+      })
+    }
+  }
+
+  async getMachineUtilization(req, res) {
+    try {
+      const { date_from, date_to } = req.query
+      const machineUtilization = await this.productionModel.getMachineUtilization(date_from, date_to)
+      res.status(200).json({
+        success: true,
+        data: machineUtilization
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching machine utilization',
+        error: error.message
+      })
+    }
+  }
+
+  async getOperatorEfficiency(req, res) {
+    try {
+      const { date_from, date_to } = req.query
+      const operatorEfficiency = await this.productionModel.getOperatorEfficiency(date_from, date_to)
+      res.status(200).json({
+        success: true,
+        data: operatorEfficiency
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching operator efficiency',
+        error: error.message
+      })
+    }
+  }
+
+  async recordRejection(req, res) {
+    try {
+      const { job_card_id, operator_name, machine, rejection_reason, quantity, notes } = req.body
+
+      if (!job_card_id || !rejection_reason || !quantity) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: job_card_id, rejection_reason, quantity'
+        })
+      }
+
+      const rejection = await this.productionModel.recordRejection({
+        job_card_id,
+        operator_name,
+        machine,
+        rejection_reason,
+        quantity,
+        notes
+      })
+
+      res.status(201).json({
+        success: true,
+        message: 'Rejection recorded successfully',
+        data: rejection
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error recording rejection',
+        error: error.message
+      })
+    }
+  }
+
+  async getRejectionAnalysis(req, res) {
+    try {
+      const { date_from, date_to } = req.query
+      const analysis = await this.productionModel.getRejectionAnalysis(date_from, date_to)
+      res.status(200).json({
+        success: true,
+        data: analysis
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching rejection analysis',
+        error: error.message
+      })
+    }
+  }
+
+  async createTimeLog(req, res) {
+    try {
+      const { job_card_id, employee_id, operator_name, shift, from_time, to_time, completed_qty, accepted_qty, rejected_qty, scrap_qty, time_in_minutes } = req.body
+
+      if (!job_card_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required field: job_card_id'
+        })
+      }
+
+      const timeLog = await this.productionModel.createTimeLog({
+        job_card_id,
+        employee_id,
+        operator_name,
+        shift,
+        from_time,
+        to_time,
+        completed_qty,
+        accepted_qty,
+        rejected_qty,
+        scrap_qty,
+        time_in_minutes
+      })
+
+      res.status(201).json({
+        success: true,
+        message: 'Time log created successfully',
+        data: timeLog
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error creating time log',
+        error: error.message
+      })
+    }
+  }
+
+  async getTimeLogs(req, res) {
+    try {
+      const { job_card_id } = req.query
+
+      const timeLogs = await this.productionModel.getTimeLogs(job_card_id)
+
+      res.json({
+        success: true,
+        data: timeLogs || []
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching time logs',
+        error: error.message
+      })
+    }
+  }
+
+  async deleteTimeLog(req, res) {
+    try {
+      const { id } = req.params
+
+      await this.productionModel.deleteTimeLog(id)
+
+      res.json({
+        success: true,
+        message: 'Time log deleted successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error deleting time log',
+        error: error.message
+      })
+    }
+  }
+
+  async createRejection(req, res) {
+    try {
+      const { job_card_id, rejection_reason, rejected_qty, notes } = req.body
+
+      if (!job_card_id || !rejection_reason || rejected_qty === undefined) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: job_card_id, rejection_reason, quantity'
+        })
+      }
+
+      const rejection = await this.productionModel.createRejection({
+        job_card_id,
+        rejection_reason,
+        rejected_qty,
+        notes
+      })
+
+      res.status(201).json({
+        success: true,
+        message: 'Rejection entry created successfully',
+        data: rejection
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error creating rejection',
+        error: error.message
+      })
+    }
+  }
+
+  async getRejections(req, res) {
+    try {
+      const { job_card_id } = req.query
+
+      const rejections = await this.productionModel.getRejections(job_card_id)
+
+      res.json({
+        success: true,
+        data: rejections || []
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching rejections',
+        error: error.message
+      })
+    }
+  }
+
+  async deleteRejection(req, res) {
+    try {
+      const { id } = req.params
+
+      await this.productionModel.deleteRejection(id)
+
+      res.json({
+        success: true,
+        message: 'Rejection entry deleted successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error deleting rejection',
+        error: error.message
+      })
+    }
+  }
+
+  async createDowntime(req, res) {
+    try {
+      const { job_card_id, downtime_type, downtime_reason, from_time, to_time, duration_minutes } = req.body
+
+      if (!job_card_id || !downtime_type || !from_time || !to_time) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: job_card_id, downtime_type, from_time, to_time'
+        })
+      }
+
+      const downtime = await this.productionModel.createDowntime({
+        job_card_id,
+        downtime_type,
+        downtime_reason,
+        from_time,
+        to_time,
+        duration_minutes
+      })
+
+      res.status(201).json({
+        success: true,
+        message: 'Downtime entry created successfully',
+        data: downtime
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error creating downtime',
+        error: error.message
+      })
+    }
+  }
+
+  async getDowntimes(req, res) {
+    try {
+      const { job_card_id } = req.query
+
+      const downtimes = await this.productionModel.getDowntimes(job_card_id)
+
+      res.json({
+        success: true,
+        data: downtimes || []
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching downtimes',
+        error: error.message
+      })
+    }
+  }
+
+  async deleteDowntime(req, res) {
+    try {
+      const { id } = req.params
+
+      await this.productionModel.deleteDowntime(id)
+
+      res.json({
+        success: true,
+        message: 'Downtime entry deleted successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error deleting downtime',
         error: error.message
       })
     }

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Edit2, Trash2, Clock } from 'lucide-react'
-import './Production.css'
 
 export default function Operations() {
   const navigate = useNavigate()
@@ -62,7 +61,7 @@ export default function Operations() {
   }
 
   const handleEdit = (operation) => {
-    navigate(`/production/operations/form/${operation.name}`, { state: { operation } })
+    navigate(`/manufacturing/operations/${operation.name}`, { state: { operation } })
   }
 
   const filteredOperations = operations.filter(op => 
@@ -85,107 +84,121 @@ export default function Operations() {
   }
 
   return (
-    <div className="production-container">
-      <div className="production-header">
-        <div>
-          <h1>⚙️ Operations</h1>
-          <p className="header-subtitle">Manage manufacturing operations and sub-operations</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100  px-6 py-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
+                ⚙️
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Operations</h1>
+                <p className="text-xs text-gray-600 mt-0">Manage manufacturing operations</p>
+              </div>
+            </div>
+          </div>
+          <button 
+            onClick={() => navigate('/manufacturing/operations/new')}
+            className="btn-primary flex items-center gap-2 bg-gradient-to-br from-orange-400 to-orange-600"
+          >
+            <Plus size={16} /> New operation
+          </button>
         </div>
-        <button
-          onClick={() => navigate('/production/operations/form')}
-          className="btn-submit"
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
-          <Plus size={18} /> Add Operation
-        </button>
-      </div>
 
-      {success && <div className="alert alert-success">✓ {success}</div>}
-      {error && <div className="alert alert-error">✕ {error}</div>}
+        {success && (
+          <div className="mb-2 p-2 pl-3 bg-green-50 border-l-4 border-green-400 rounded text-xs text-green-800 flex gap-2">
+            <span>✓</span>
+            <span>{success}</span>
+          </div>
+        )}
 
-      <div className="filter-section">
-        <div className="filter-group">
-          <label>Search</label>
+        {error && (
+          <div className="mb-2 p-2 pl-3 bg-red-50 border-l-4 border-red-400 rounded text-xs text-red-800 flex gap-2">
+            <span>✕</span>
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className="bg-white rounded-lg shadow-sm p-3 mb-3">
+          <label className="text-xs font-semibold text-gray-700 block mb-1">Search</label>
           <input 
             type="text" 
-            placeholder="Search operation name or workstation..." 
+            placeholder="Search name or workstation..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
         </div>
-      </div>
 
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#666' }}>
-          <p>Loading operations...</p>
-        </div>
-      ) : filteredOperations.length > 0 ? (
-        <div style={{ overflowX: 'auto' }}>
-          <table className="entries-table">
-            <thead>
-              <tr>
-                <th style={{ width: '20%' }}>ID</th>
-                <th style={{ width: '25%' }}>Operation Name</th>
-                <th style={{ width: '25%' }}>Default Workstation</th>
-                <th style={{ width: '15%' }}>Last Updated</th>
-                <th style={{ width: '15%' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredOperations.map((op) => (
-                <tr key={op.name}>
-                  <td>
-                    <strong>{op.name}</strong>
-                  </td>
-                  <td>{op.operation_name || op.name}</td>
-                  <td>
-                    {op.default_workstation ? (
-                      <span style={{ color: '#666' }}>{op.default_workstation}</span>
-                    ) : (
-                      <span style={{ color: '#999' }}>-</span>
-                    )}
-                  </td>
-                  <td>
-                    <span style={{ fontSize: '0.9rem', color: '#666' }}>
-                      {formatDate(op.modified)}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button 
-                        className="btn-edit"
-                        onClick={() => handleEdit(op)}
-                        title="Edit operation"
-                        style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button 
-                        className="btn-delete"
-                        onClick={() => handleDelete(op.name)}
-                        title="Delete operation"
-                        style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div style={{ padding: '16px', textAlign: 'right', color: '#666', fontSize: '0.9rem' }}>
-            {filteredOperations.length} of {operations.length} operations
+        {loading ? (
+          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+            <div className="text-3xl mb-2">⏳</div>
+            <div className="text-xs text-gray-600">Loading operations...</div>
           </div>
-        </div>
-      ) : (
-        <div style={{ textAlign: 'center', padding: '60px 20px', background: '#f9fafb', borderRadius: '8px', color: '#666' }}>
-          <p>{search ? 'No operations found matching your search' : 'No operations created yet'}</p>
-          <p style={{ fontSize: '0.9rem', marginTop: '8px', color: '#999' }}>
-            {!search && <button onClick={() => navigate('/production/operations/form')} style={{ color: '#3b82f6', cursor: 'pointer', border: 'none', background: 'none', textDecoration: 'underline' }}>Create your first operation</button>}
-          </p>
-        </div>
-      )}
+        ) : filteredOperations.length > 0 ? (
+          <>
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                      <th className="px-3 py-2 text-left text-gray-700 font-semibold">ID</th>
+                      <th className="px-3 py-2 text-left text-gray-700 font-semibold">Operation Name</th>
+                      <th className="px-3 py-2 text-left text-gray-700 font-semibold">Default Workstation</th>
+                      <th className="px-3 py-2 text-left text-gray-700 font-semibold">Last Updated</th>
+                      <th className="px-3 py-2 text-center text-gray-700 font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredOperations.map((op, idx) => (
+                      <tr key={op.name} className={`border-b border-gray-200 hover:bg-gray-50 transition ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                        <td className="px-3 py-2 font-semibold text-gray-900">{op.name}</td>
+                        <td className="px-3 py-2 text-gray-700">{op.operation_name || op.name}</td>
+                        <td className="px-3 py-2 text-gray-700">{op.default_workstation || '-'}</td>
+                        <td className="px-3 py-2 text-gray-700">{formatDate(op.modified)}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex gap-1 justify-center">
+                            <button 
+                              onClick={() => handleEdit(op)}
+                              title="Edit"
+                              className="p-1 hover:bg-orange-50 rounded transition"
+                            >
+                              <Edit2 size={14} className="text-orange-600" />
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(op.name)}
+                              title="Delete"
+                              className="p-1 hover:bg-red-50 rounded transition"
+                            >
+                              <Trash2 size={14} className="text-red-600" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="mt-2 px-3 py-2 text-right text-xs text-gray-600">
+              Showing {filteredOperations.length} of {operations.length} operations
+            </div>
+          </>
+        ) : (
+          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+            <div className="text-3xl mb-2">📭</div>
+            <div className="text-xs font-semibold  text-gray-900">
+              {search ? 'No operations found' : 'No operations created yet'}
+            </div>
+            <div className="text-xs text-gray-600 mt-1">
+              {search 
+                ? 'Try adjusting your search terms' 
+                : 'Create your first operation to get started'}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

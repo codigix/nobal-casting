@@ -156,7 +156,7 @@ export default function ViewSalesOrderModal({ isOpen, orderId, onClose }) {
             </h3>
             <div>
               {order.items.map((item, idx) => {
-                const amount = (item.qty || 0) * (item.rate || 0)
+                const amount = (parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0)
                 return (
                   <div key={idx} style={{
                     border: '1px solid #e5e7eb',
@@ -211,7 +211,7 @@ export default function ViewSalesOrderModal({ isOpen, orderId, onClose }) {
                           Rate (₹)
                         </label>
                         <p style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1f2937' }}>
-                          ₹{(item.rate || 0).toFixed(2)}
+                          ₹{parseFloat(item.rate || 0).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -242,7 +242,7 @@ export default function ViewSalesOrderModal({ isOpen, orderId, onClose }) {
                       alignItems: 'center'
                     }}>
                       <p style={{ margin: 0, fontSize: '0.9rem', color: '#6b7280' }}>
-                        {item.qty} × ₹{(item.rate || 0).toFixed(2)}
+                        {item.qty} × ₹{parseFloat(item.rate || 0).toFixed(2)}
                       </p>
                       <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#10b981' }}>
                         ₹{amount.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}

@@ -1,6 +1,7 @@
-import { v4 as uuidv4 } from 'uuid'
-
 export class PurchaseReceiptModel {
+  generateId() {
+    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  }
   constructor(db) {
     this.db = db
   }
@@ -30,7 +31,7 @@ export class PurchaseReceiptModel {
              (grn_item_id, grn_no, item_code, received_qty, accepted_qty, warehouse_code, batch_no, quality_inspection_required)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-              uuidv4(),
+              this.generateId(),
               grn_no,
               item.item_code || null,
               item.received_qty || 0,
@@ -184,7 +185,7 @@ export class PurchaseReceiptModel {
         await this.db.execute(
           `INSERT INTO stock (stock_id, item_code, warehouse_code, qty_on_hand, qty_available)
            VALUES (?, ?, ?, ?, ?)`,
-          [uuidv4(), item_code, warehouse_code, qty, qty]
+          [this.generateId(), item_code, warehouse_code, qty, qty]
         )
       }
 
@@ -192,7 +193,7 @@ export class PurchaseReceiptModel {
       await this.db.execute(
         `INSERT INTO stock_ledger (ledger_id, item_code, warehouse_code, voucher_type, voucher_no, qty_change)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [uuidv4(), item_code, warehouse_code, voucher_type, voucher_no, qty]
+        [this.generateId(), item_code, warehouse_code, voucher_type, voucher_no, qty]
       )
 
       return { success: true }

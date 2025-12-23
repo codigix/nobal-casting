@@ -1,5 +1,3 @@
-import { v4 as uuidv4 } from 'uuid'
-
 export class CustomerModel {
   constructor(db) {
     this.db = db
@@ -11,12 +9,13 @@ export class CustomerModel {
     try {
       await this.db.execute(
         `INSERT INTO customer 
-         (customer_id, name, customer_group, gstin, contact_person_id, address_id, 
+         (customer_id, name, customer_type, customer_group, gstin, contact_person_id, address_id, 
           billing_address_id, shipping_address_id, pan, credit_limit, payment_terms_days, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           customer_id,
           data.name,
+          data.customer_type || 'other',
           data.customer_group || null,
           data.gstin || null,
           data.contact_person_id || null,

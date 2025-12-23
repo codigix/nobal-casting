@@ -4,7 +4,7 @@ const pool = createPool({
   host: 'localhost',
   user: 'erp_user',
   password: 'erp_password',
-  database: 'aluminium_erp'
+  database: 'nobalcasting'
 })
 
 async function checkTables() {
@@ -13,7 +13,7 @@ async function checkTables() {
     const [rows] = await conn.query('SHOW TABLES')
     conn.release()
     
-    console.log('Existing tables in aluminium_erp database:')
+    console.log('Existing tables in nobalcasting database:')
     rows.forEach(row => {
       console.log('  -', Object.values(row)[0])
     })

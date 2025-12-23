@@ -139,7 +139,7 @@ const MaintenanceSchedule = () => {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <Clock className="w-8 h-8 text-orange-600" />
               Maintenance Management
             </h1>
@@ -155,7 +155,7 @@ const MaintenanceSchedule = () => {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center gap-2">
+          <div className="bg-red-50 border border-red-200 text-red-700 p-2 rounded-lg mb-6 flex items-center gap-2">
             <AlertCircle className="w-5 h-5" />
             {error}
           </div>
@@ -202,35 +202,35 @@ const MaintenanceSchedule = () => {
 
           {/* Table */}
           {loading ? (
-            <div className="p-8 text-center text-gray-500">Loading...</div>
+            <div className="p-3 text-center text-gray-500">Loading...</div>
           ) : (
             <table className="w-full">
               <thead className="bg-gray-100 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Tool ID</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Maintenance Type</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Scheduled Date</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Cost</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-                  <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Tool ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Maintenance Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Scheduled Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Cost</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Status</th>
+                  <th className="px-6 py-3 text-center text-xs font-semibold  text-gray-900">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {filteredMaintenance.length > 0 ? (
                   filteredMaintenance.map(item => (
                     <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm text-gray-900 font-medium">{item.toolId}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{item.maintenanceType}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
+                      <td className="p-2 text-sm text-gray-900 font-medium">{item.toolId}</td>
+                      <td className="p-2 text-sm text-gray-600">{item.maintenanceType}</td>
+                      <td className="p-2 text-sm text-gray-600">
                         {new Date(item.scheduledDate).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 font-medium">₹{item.cost}</td>
-                      <td className="px-6 py-4">
+                      <td className="p-2 text-sm text-gray-900 font-medium">₹{item.cost}</td>
+                      <td className="p-2">
                         <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(item.status)}`}>
                           {item.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="p-2 text-center">
                         <div className="flex justify-center gap-2">
                           <button
                             onClick={() => handleOpenModal(item)}

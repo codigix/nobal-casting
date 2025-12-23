@@ -199,7 +199,7 @@ export default function SupplierList() {
       <div>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900">Suppliers</h1>
+            <h1 className="text-xl font-bold text-gray-900">Suppliers</h1>
             <p className="text-gray-600 mt-1">Manage your supplier network and relationships</p>
           </div>
           <Button
@@ -357,13 +357,13 @@ export default function SupplierList() {
               <Button
                 type="button"
                 onClick={handleCancel}
-                className="px-5 py-2.5 bg-gray-200 text-gray-800 border border-gray-300 rounded-md text-sm font-semibold hover:bg-gray-300"
+                className="px-5 py-2.5 bg-gray-200 text-gray-800 border border-gray-300 rounded-md text-xs font-semibold  hover:bg-gray-300"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                className="px-5 py-2.5 bg-green-600 text-white rounded-md text-sm font-semibold hover:bg-green-700"
+                className="px-5 py-2.5 bg-green-600 text-white rounded-md text-xs font-semibold  hover:bg-green-700"
               >
                 Create Supplier
               </Button>
@@ -378,14 +378,14 @@ export default function SupplierList() {
           <p className="text-sm text-gray-500 mb-5">Try adjusting your filters or create a new supplier</p>
           <Button
             onClick={handleAddClick}
-            className="inline-block px-5 py-2.5 bg-blue-500 text-white rounded-md text-sm font-semibold hover:bg-blue-600"
+            className="inline-block px-5 py-2.5 bg-blue-500 text-white rounded-md text-xs font-semibold  hover:bg-blue-600"
           >
             Create First Supplier
           </Button>
         </div>
       ) : (
         <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
-          <table className="w-full border-collapse">
+          <table className="w-full border-collapse border border-gray-200">
             <thead>
               <tr className="bg-gray-100 border-b-2 border-gray-200">
                 <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600">Name</th>
@@ -535,14 +535,14 @@ export default function SupplierList() {
                       <div className="flex gap-2 justify-center">
                         <button
                           onClick={() => handleEditClick(supplier)}
-                          className="px-3 py-1.5 bg-blue-500 text-white rounded-sm text-xs font-semibold flex items-center gap-1 hover:bg-blue-600"
+                          className="p-2 bg-blue-500 text-white rounded-sm text-xs font-semibold flex items-center gap-1 hover:bg-blue-600"
                         >
                           <Edit2 size={14} />
                           Edit
                         </button>
                         <button
                           onClick={() => handleDelete(supplier.supplier_id)}
-                          className="px-3 py-1.5 bg-red-500 text-white rounded-sm text-xs font-semibold flex items-center gap-1 hover:bg-red-600"
+                          className="p-2 bg-red-500 text-white rounded-sm text-xs font-semibold flex items-center gap-1 hover:bg-red-600"
                         >
                           <Trash2 size={14} />
                           Delete

@@ -231,7 +231,7 @@ export default function RFQs() {
 
       <div className="flex-between mb-6">
         <div>
-          <h2 className="text-3xl font-bold text-neutral-900 dark:text-neutral-100">Request for Quotation (RFQ)</h2>
+          <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">Request for Quotation (RFQ)</h2>
           <p className="text-neutral-600 dark:text-neutral-400 mt-1">Send RFQs to suppliers and manage their responses</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)} variant="primary" className="flex items-center gap-2">

@@ -371,7 +371,7 @@ export default function EmployeeList() {
 
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-3xl font-bold text-[var(--text-primary)]">Employees</h2>
+          <h2 className="text-xl font-bold text-[var(--text-primary)]">Employees</h2>
           <Button variant="primary" onClick={handleAddClick}>
             + Add New Employee
           </Button>

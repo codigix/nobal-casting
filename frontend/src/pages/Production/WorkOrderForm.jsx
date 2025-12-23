@@ -1,867 +1,847 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Save, X, Settings, Plus, Trash2 } from 'lucide-react'
-import * as productionService from '../../services/productionService'
+import { Save, X, Plus, Trash2, AlertCircle, CheckCircle, Package, Factory, Boxes, Edit2 } from 'lucide-react'
 import SearchableSelect from '../../components/SearchableSelect'
-import './Production.css'
+import * as productionService from '../../services/productionService'
+import api from '../../services/api'
 
 export default function WorkOrderForm() {
   const navigate = useNavigate()
   const { id } = useParams()
+  const searchParams = new URLSearchParams(window.location.search)
+  const isReadOnly = searchParams.get('readonly') === 'true'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
-  const [activeTab, setActiveTab] = useState('production-item')
+
   const [items, setItems] = useState([])
-  const [bomsData, setBOMsData] = useState([])
-  const [requiredItems, setRequiredItems] = useState([])
-  const [operationsData, setOperationsData] = useState([])
-  const [warehouses, setWarehouses] = useState([])
+  const [bomOperations, setBomOperations] = useState([])
+  const [bomMaterials, setBomMaterials] = useState([])
+  const [availableBoms, setAvailableBoms] = useState([])
+  const [jobCards, setJobCards] = useState([])
+  const [bomQuantity, setBomQuantity] = useState(1)
+  const [editingMaterialId, setEditingMaterialId] = useState(null)
+  const [editingOperationId, setEditingOperationId] = useState(null)
 
   const [formData, setFormData] = useState({
-    series: 'MFG-WO-.YYYY.-',
-    company: 'codigix infotech',
+    work_order_id: '',
+    naming_series: 'MFG-WO-.YYYY.-',
+    company: '',
     item_to_manufacture: '',
-    bom_no: '',
-    qty_to_manufacture: '',
-    project: '',
-    sales_order: '',
-    source_warehouse: '',
-    target_warehouse: '',
-    wip_warehouse: '',
-    scrap_warehouse: '',
-    allow_alternative_item: false,
-    use_multi_level_bom: true,
-    skip_material_transfer_to_wip: false,
-    update_consumed_material_cost: true,
-    priority: 'medium',
-    notes: '',
-    planned_start_date: '',
+    qty_to_manufacture: 1,
+    sales_order_id: '',
+    bom_id: '',
+    planned_start_date: new Date().toISOString().split('T')[0],
     planned_end_date: '',
-    actual_start_date: '',
-    actual_end_date: '',
-    expected_delivery_date: ''
+    priority: 'medium',
+    status: 'draft',
+    notes: ''
   })
 
   useEffect(() => {
     fetchItems()
-    fetchBOMs()
-    fetchWarehouses()
     if (id) {
       fetchWorkOrderDetails(id)
+      fetchJobCards(id)
     }
   }, [id])
 
+  const fetchJobCards = async (workOrderId) => {
+    try {
+      const response = await productionService.getJobCards({ work_order_id: workOrderId })
+      setJobCards(response.data || [])
+    } catch (err) {
+      console.error('Failed to fetch job cards:', err)
+    }
+  }
+
   const fetchItems = async () => {
     try {
-      const response = await productionService.getItemsList()
-      setItems(response.data || [])
+      const response = await productionService.getItems()
+      const allItems = response.data || []
+      
+      const finishedGoodItems = allItems.filter(item => 
+        item.item_group === 'Finished Good' || 
+        item.item_group === 'Finished Goods' ||
+        item.fg_sub_assembly === 'FG' ||
+        item.item_group === 'Sub Assembly' ||
+        item.item_group === 'Sub Assemblies' ||
+        item.fg_sub_assembly === 'SA'
+      )
+      
+      console.log(`Filtered ${finishedGoodItems.length} Finished Good items from ${allItems.length} total items`)
+      setItems(finishedGoodItems)
     } catch (err) {
       console.error('Failed to fetch items:', err)
-    }
-  }
-
-  const getItemOptions = () => {
-    return items.map(item => ({
-      label: `${item.item_code} - ${item.item_name}`,
-      value: item.item_code
-    }))
-  }
-
-  const fetchBOMs = async () => {
-    try {
-      const response = await productionService.getBOMs({ status: 'active' })
-      setBOMsData(response.data || [])
-    } catch (err) {
-      console.error('Failed to fetch BOMs:', err)
-    }
-  }
-
-  const fetchWarehouses = async () => {
-    try {
-      const response = await productionService.getWarehouses()
-      const warehouseList = response.data || []
-      const warehouseOptions = warehouseList.map(wh => ({
-        label: `${wh.warehouse_name || wh.name}`,
-        value: wh.warehouse_name || wh.name
-      }))
-      setWarehouses(warehouseOptions)
-    } catch (err) {
-      console.error('Failed to fetch warehouses:', err)
+      setError('Failed to load items')
     }
   }
 
   const fetchWorkOrderDetails = async (workOrderId) => {
     try {
-      const response = await productionService.getWorkOrder(workOrderId)
-      setFormData(response.data)
-    } catch (err) {
-      console.error('Failed to fetch work order details:', err)
-    }
-  }
-
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }))
-    setError(null)
-
-    if (name === 'item_to_manufacture' && value) {
-      fetchBOMsForItem(value)
-    }
-
-    if (name === 'bom_no' && value) {
-      fetchBOMDetailsAndPopulate(value)
-    }
-  }
-
-  const fetchBOMsForItem = async (itemCode) => {
-    try {
       setLoading(true)
-      const response = await productionService.getBOMs({ item_code: itemCode, status: 'active' })
-      const bomsForItem = response.data || []
+      const response = await productionService.getWorkOrder(workOrderId)
+      const woData = response.data || response
       
-      if (bomsForItem.length > 0) {
-        const firstBOM = bomsForItem[0]
-        setFormData(prev => ({
-          ...prev,
-          bom_no: firstBOM.bom_id
-        }))
-        
-        await fetchBOMDetailsAndPopulate(firstBOM.bom_id)
-      } else {
-        setFormData(prev => ({
-          ...prev,
-          bom_no: ''
-        }))
-        setRequiredItems([])
-        setOperationsData([])
+      console.log('Fetched Work Order Data:', woData)
+      
+      setFormData(prev => ({
+        ...prev,
+        work_order_id: woData.wo_id || woData.work_order_id || '',
+        item_to_manufacture: woData.item_code || woData.item_to_manufacture || '',
+        qty_to_manufacture: woData.quantity || woData.qty_to_manufacture || 1,
+        sales_order_id: woData.sales_order_id || '',
+        bom_id: woData.bom_id || woData.bom_no || '',
+        planned_start_date: woData.planned_start_date ? woData.planned_start_date.split('T')[0] : new Date().toISOString().split('T')[0],
+        planned_end_date: woData.planned_end_date ? woData.planned_end_date.split('T')[0] : '',
+        priority: woData.priority || 'medium',
+        status: woData.status || 'draft',
+        notes: woData.notes || ''
+      }))
+      
+      if (woData.bom_id || woData.bom_no) {
+        await fetchBOMDetails(woData.bom_id || woData.bom_no)
       }
+      
       setError(null)
     } catch (err) {
-      console.error('Failed to fetch BOMs for item:', err)
-      setError('Failed to fetch BOMs for the selected item')
+      console.error('Failed to fetch work order:', err)
+      setError(`Failed to load work order: ${err.message}`)
     } finally {
       setLoading(false)
     }
   }
 
-  const fetchBOMDetailsAndPopulate = async (bomId) => {
+  const fetchBOMDetails = async (bomId) => {
+    if (!bomId || bomId.trim() === '') {
+      setBomOperations([])
+      setBomMaterials([])
+      return
+    }
+
     try {
       setLoading(true)
       const response = await productionService.getBOMDetails(bomId)
-      const bomData = response.data
+      const bomData = response.data || response
 
-      let itemsMap = {}
-      try {
-        const itemsResponse = await productionService.getItems()
-        const itemsData = itemsResponse.data || []
-        itemsMap = itemsData.reduce((acc, item) => {
-          acc[item.item_code] = item
-          return acc
-        }, {})
-      } catch (err) {
-        console.error('Failed to fetch items:', err)
-      }
+      console.log('BOM Data fetched:', bomData)
+      setBomQuantity(bomData.quantity || 1)
 
-      if (bomData.lines && Array.isArray(bomData.lines)) {
-        const requiredItemsFromBOM = bomData.lines.map(line => {
-          let defaultWarehouse = ''
-          const itemData = itemsMap[line.component_code]
-          if (itemData && itemData.default_warehouse) {
-            defaultWarehouse = itemData.default_warehouse
-          } else if (itemData && itemData.warehouse) {
-            defaultWarehouse = itemData.warehouse
-          }
+      const operations = (bomData.operations || []).map((op, idx) => ({
+        id: Date.now() + idx,
+        operation_name: op.operation_name || op.operation || '',
+        workstation: op.workstation || op.workstation_type || '',
+        operation_time: op.operation_time || op.time_in_hours || 0,
+        operating_cost: op.operating_cost || op.cost || 0
+      }))
 
-          return {
-            id: Date.now() + Math.random(),
-            item_code: line.component_code,
-            source_warehouse: defaultWarehouse,
-            required_qty: line.quantity,
-            transferred_qty: '0.000',
-            consumed_qty: '0.000',
-            returned_qty: '0.000'
-          }
-        })
-        setRequiredItems(requiredItemsFromBOM)
-      }
+      const rawMaterials = (bomData.bom_raw_materials || bomData.rawMaterials || []).map((rm, idx) => ({
+        id: Date.now() + idx,
+        item_code: rm.item_code || '',
+        item_name: rm.item_name || rm.description || '',
+        quantity: rm.qty || rm.quantity || 0,
+        uom: rm.uom || '',
+        required_qty: rm.qty || rm.quantity || 0,
+        source_warehouse: rm.source_warehouse || '',
+        issued_qty: 0,
+        consumed_qty: 0
+      }))
 
-      if (bomData.operations && Array.isArray(bomData.operations)) {
-        const operationsFromBOM = bomData.operations.map(op => ({
-          id: Date.now() + Math.random(),
-          operation: op.operation_name || op.operation,
-          completed_qty: '0.000',
-          process_loss_qty: '0.000',
-          bom: bomData.bom_id,
-          workstation: op.workstation || '',
-          time: op.time || ''
-        }))
-        setOperationsData(operationsFromBOM)
-      }
-
+      setBomOperations(operations)
+      setBomMaterials(rawMaterials)
       setError(null)
     } catch (err) {
       console.error('Failed to fetch BOM details:', err)
-      setError('Failed to fetch BOM details')
+      setError(`Failed to fetch BOM ${bomId}: ${err.message}`)
+      setBomOperations([])
+      setBomMaterials([])
     } finally {
       setLoading(false)
     }
   }
 
-  const handleAddRequiredItem = () => {
-    setRequiredItems([
-      ...requiredItems,
-      {
-        id: Date.now(),
-        item_code: '',
-        source_warehouse: '',
-        required_qty: '',
-        transferred_qty: '0.000',
-        consumed_qty: '0.000',
-        returned_qty: '0.000'
-      }
-    ])
-  }
-
-  const handleRemoveRequiredItem = (id) => {
-    setRequiredItems(requiredItems.filter(item => item.id !== id))
-  }
-
-  const handleRequiredItemChange = (id, field, value) => {
-    setRequiredItems(requiredItems.map(item =>
-      item.id === id ? { ...item, [field]: value } : item
-    ))
-  }
-
-  const handleAddOperation = () => {
-    setOperationsData([
-      ...operationsData,
-      {
-        id: Date.now(),
-        operation: '',
-        completed_qty: '0.000',
-        process_loss_qty: '0.000',
-        bom: '',
-        workstation: '',
-        time: ''
-      }
-    ])
-  }
-
-  const handleRemoveOperation = (id) => {
-    setOperationsData(operationsData.filter(item => item.id !== id))
-  }
-
-  const handleOperationChange = (id, field, value) => {
-    setOperationsData(operationsData.map(item =>
-      item.id === id ? { ...item, [field]: value } : item
-    ))
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
+  const handleInputChange = async (e) => {
+    if (isReadOnly) return
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
     setError(null)
 
+    if (name === 'bom_id' && value) {
+      fetchBOMDetails(value)
+    }
+
+    if (name === 'sales_order_id' && value) {
+      await fetchBOMFromSalesOrder(value)
+    }
+  }
+
+  const fetchBOMFromSalesOrder = async (salesOrderId) => {
+    if (!salesOrderId || salesOrderId.trim() === '') {
+      setFormData(prev => ({
+        ...prev,
+        bom_id: ''
+      }))
+      setBomOperations([])
+      setBomMaterials([])
+      return
+    }
+
+    setLoading(true)
     try {
-      if (!formData.item_to_manufacture || !formData.bom_no || !formData.qty_to_manufacture) {
-        throw new Error('Please fill all required fields')
+      console.log('Fetching BOM for Sales Order:', salesOrderId)
+      
+      const response = await api.get(`/selling/sales-orders/${salesOrderId}`)
+      const soData = response.data?.data || response.data
+      
+      console.log('Sales Order data:', soData)
+
+      const bomId = soData.bom_id || ''
+      
+      console.log('BOM ID from Sales Order:', bomId)
+
+      if (bomId) {
+        setFormData(prev => ({
+          ...prev,
+          bom_id: bomId
+        }))
+        await fetchBOMDetails(bomId)
+        setSuccess(`BOM ${bomId} auto-fetched from Sales Order ${salesOrderId}`)
+        setTimeout(() => setSuccess(null), 3000)
+      } else {
+        console.log('No BOM ID found in Sales Order')
+        setError(`Sales Order ${salesOrderId} has no BOM ID. Please enter BOM ID manually.`)
+        setFormData(prev => ({
+          ...prev,
+          bom_id: ''
+        }))
+      }
+    } catch (err) {
+      console.error('Error fetching Sales Order:', err)
+      setError(`Failed to fetch Sales Order ${salesOrderId}`)
+      setFormData(prev => ({
+        ...prev,
+        bom_id: ''
+      }))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleItemSelect = async (itemCode) => {
+    setFormData(prev => ({
+      ...prev,
+      item_to_manufacture: itemCode
+    }))
+    setError(null)
+    setAvailableBoms([])
+
+    if (!itemCode) {
+      setFormData(prev => ({
+        ...prev,
+        sales_order_id: '',
+        bom_id: ''
+      }))
+      setBomOperations([])
+      setBomMaterials([])
+      return
+    }
+
+    setLoading(true)
+    let fetchedSalesOrderId = ''
+
+    try {
+      // Fetch sales order by item code
+      try {
+        const soResponse = await api.get(`/selling/sales-orders/item/${itemCode}`)
+        const soData = soResponse.data?.data || soResponse.data
+        if (soData && soData.sales_order_id) {
+          fetchedSalesOrderId = soData.sales_order_id
+          console.log('Sales Order found for item:', fetchedSalesOrderId)
+        }
+      } catch (err) {
+        console.error('Error fetching sales order by item:', err)
+      }
+      
+      // Fetch all BOMs for the item
+      let boms = []
+      try {
+        const bomResponse = await productionService.getBOMs({ item_code: itemCode })
+        boms = bomResponse.data || []
+        setAvailableBoms(boms)
+      } catch (err) {
+        console.error('Error fetching BOMs:', err)
+      }
+      
+      console.log('Fetching data for item:', itemCode)
+      
+      const response = await api.get(`/production-planning/item/${itemCode}`)
+      const data = response.data?.data || response.data
+      
+      console.log('Production plan data fetched:', data)
+
+      if (data) {
+        const plan = data
+        const fgItem = plan.fg_items?.[0] || {}
+        
+        console.log('Plan full data:', plan)
+        console.log('FG item data:', fgItem)
+        
+        let bomNo = fgItem.bom_no || plan.bom_id || ''
+        
+        if (!bomNo && boms.length > 0) {
+          bomNo = boms[0].bom_id || boms[0].name || ''
+          console.log('BOM fetched by item code:', bomNo)
+        }
+        
+        console.log('Final resolved:', {
+          sales_order_id: plan.sales_order_id,
+          production_plan_id: plan.plan_id,
+          bom_id: bomNo
+        })
+
+        const soId = fetchedSalesOrderId || plan.sales_order_id || ''
+        setFormData(prev => ({
+          ...prev,
+          item_to_manufacture: itemCode,
+          sales_order_id: soId,
+          bom_id: bomNo
+        }))
+
+        if (bomNo) {
+          await fetchBOMDetails(bomNo)
+        }
+
+        setSuccess(`Auto-filled: SO ${soId || 'N/A'} | BOM ${bomNo || 'N/A'}`)
+        setTimeout(() => setSuccess(null), 4000)
+      } else {
+        console.log('No production plan found for item')
+        
+        let bomNo = ''
+        if (boms.length > 0) {
+          bomNo = boms[0].bom_id || boms[0].name || ''
+        }
+
+        const successMsg = `Item selected: ${itemCode}${fetchedSalesOrderId ? ` (SO: ${fetchedSalesOrderId})` : ''}. ${!fetchedSalesOrderId ? 'No sales order found. ' : ''}${bomNo ? 'BOM auto-selected' : 'Enter BOM ID manually'}`
+        setSuccess(successMsg)
+        setTimeout(() => setSuccess(null), 4000)
+        setFormData(prev => ({
+          ...prev,
+          sales_order_id: fetchedSalesOrderId,
+          bom_id: bomNo
+        }))
+
+        if (bomNo) {
+          await fetchBOMDetails(bomNo)
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching production plan data:', err)
+      const successMsg = `Item selected: ${itemCode}${fetchedSalesOrderId ? ` (SO: ${fetchedSalesOrderId})` : ''}. Could not auto-fetch data - enter BOM ID manually`
+      setSuccess(successMsg)
+      setTimeout(() => setSuccess(null), 4000)
+      if (fetchedSalesOrderId) {
+        setFormData(prev => ({
+          ...prev,
+          sales_order_id: fetchedSalesOrderId
+        }))
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateMaterial = (id, field, value) => {
+    setBomMaterials(prev => prev.map(mat => 
+      mat.id === id ? { ...mat, [field]: value } : mat
+    ))
+  }
+
+  const updateOperation = (id, field, value) => {
+    setBomOperations(prev => prev.map(op => 
+      op.id === id ? { ...op, [field]: value } : op
+    ))
+  }
+
+  const createJobCardsFromOperations = async () => {
+    if (!id) {
+      setError('Please save the work order first before creating job cards')
+      return
+    }
+
+    if (bomOperations.length === 0) {
+      setError('No operations found in BOM')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const jobCardsToCreate = bomOperations.map((op, idx) => ({
+        work_order_id: id,
+        operation_name: op.operation_name,
+        workstation_type: op.workstation,
+        planned_quantity: formData.qty_to_manufacture,
+        sequence: idx + 1
+      }))
+
+      const createdCards = []
+      for (const jc of jobCardsToCreate) {
+        const response = await productionService.createJobCard(jc)
+        if (response.success || response.data) {
+          createdCards.push(response.data || response)
+        }
       }
 
+      setSuccess(`Created ${createdCards.length} job cards successfully`)
+      setTimeout(() => setSuccess(null), 3000)
+      
+      await fetchJobCards(id)
+    } catch (err) {
+      console.error('Error creating job cards:', err)
+      setError(`Failed to create job cards: ${err.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSubmit = async () => {
+    if (!formData.item_to_manufacture) {
+      setError('Please select an item to manufacture')
+      return
+    }
+    if (!formData.qty_to_manufacture || formData.qty_to_manufacture <= 0) {
+      setError('Please enter a valid quantity')
+      return
+    }
+    if (!formData.bom_id) {
+      setError('Please enter a BOM ID')
+      return
+    }
+
+    setLoading(true)
+    try {
       const payload = {
         item_code: formData.item_to_manufacture,
-        bom_no: formData.bom_no,
+        bom_no: formData.bom_id,
         quantity: parseFloat(formData.qty_to_manufacture),
         priority: formData.priority,
         notes: formData.notes,
-        planned_start_date: formData.planned_start_date,
-        planned_end_date: formData.planned_end_date,
-        actual_start_date: formData.actual_start_date,
-        actual_end_date: formData.actual_end_date,
-        expected_delivery_date: formData.expected_delivery_date,
-        required_items: requiredItems,
-        operations: operationsData
+        planned_start_date: formData.planned_start_date ? new Date(formData.planned_start_date).toISOString().slice(0, 19).replace('T', ' ') : null,
+        planned_end_date: formData.planned_end_date ? new Date(formData.planned_end_date).toISOString().slice(0, 19).replace('T', ' ') : null,
+        sales_order_id: formData.sales_order_id,
+        operations: bomOperations.map(op => ({
+          operation: op.operation_name,
+          workstation: op.workstation,
+          time: op.operation_time
+        })),
+        required_items: bomMaterials.map(mat => ({
+          item_code: mat.item_code,
+          source_warehouse: mat.source_warehouse || 'Stores - NC',
+          required_qty: (mat.required_qty / bomQuantity) * parseFloat(formData.qty_to_manufacture)
+        }))
       }
 
+      let response
       if (id) {
-        await productionService.updateWorkOrder(id, payload)
-        setSuccess('Work order updated successfully')
+        response = await productionService.updateWorkOrder(id, payload)
       } else {
-        await productionService.createWorkOrder(payload)
-        setSuccess('Work order and job cards created successfully')
+        response = await productionService.createWorkOrder(payload)
       }
 
-      setTimeout(() => {
-        navigate('/production/work-orders')
-      }, 1500)
+      if (response.success) {
+        setSuccess(`Work order ${id ? 'updated' : 'created'} successfully`)
+        setTimeout(() => {
+          navigate('/manufacturing/work-orders')
+        }, 2000)
+      } else {
+        setError(response.message || 'Failed to save work order')
+      }
     } catch (err) {
-      setError(err.message || 'Failed to save work order')
+      console.error('Error saving work order:', err)
+      setError(`Failed to save work order: ${err.message}`)
     } finally {
       setLoading(false)
     }
   }
 
-  const tabs = [
-    { id: 'production-item', label: 'Production Item' },
-    { id: 'configuration', label: 'Configuration' },
-    { id: 'operations', label: 'Operations' },
-    { id: 'more-info', label: 'More Info' }
-  ]
-
   return (
-    <div className="production-container">
-      <div className="production-header">
-        <div>
-          <h1>📦 {id ? 'Edit' : 'Create'} Work Order</h1>
-          <p className="header-subtitle">Create and manage manufacturing work orders</p>
-        </div>
-        <button onClick={() => navigate('/production/work-orders')} className="btn-cancel">
-          <X size={18} /> Back
-        </button>
-      </div>
-
-      {success && <div className="alert alert-success">✓ {success}</div>}
-      {error && <div className="alert alert-error">✕ {error}</div>}
-
-      <form onSubmit={handleSubmit} className="pp-form">
-        <div className="tabs-container">
-          <div className="tabs-header">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                type="button"
-                className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                {tab.label}
-              </button>
-            ))}
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-5xl mx-auto">
+        <div className="bg-white rounded-lg shadow">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center gap-3">
+              <Factory className="w-8 h-8 text-blue-600" />
+              <h1 className="text-2xl font-bold text-gray-900">
+                {isReadOnly ? 'View Work Order' : (id ? 'Edit Work Order' : 'Create Work Order')}
+              </h1>
+            </div>
+            <button
+              onClick={() => navigate('/manufacturing/work-orders')}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X size={24} />
+            </button>
           </div>
 
-          <div className="tabs-content">
-            {activeTab === 'production-item' && (
-              <div className="tab-pane">
-                <div className="form-grid-2">
-                  <div className="form-group">
-                    <label>Series *</label>
-                    <input type="text" name="series" value={formData.series} readOnly />
-                  </div>
-                  <div className="form-group">
-                    <label>Company *</label>
-                    <input type="text" name="company" value={formData.company}  />
-                  </div>
-                </div>
-
-                <div className="form-grid-2">
-                  <div className="form-group">
-                    <label>Item To Manufacture *</label>
-                    <select
-                      name="item_to_manufacture"
-                      value={formData.item_to_manufacture}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value="">Select Item</option>
-                      {items.map(item => (
-                        <option key={item.item_code} value={item.item_code}>
-                          {item.item_code} - {item.item_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Qty To Manufacture *</label>
-                    <input
-                      type="number"
-                      name="qty_to_manufacture"
-                      value={formData.qty_to_manufacture}
-                      onChange={handleInputChange}
-                      required
-                      step="0.01"
-                    />
-                  </div>
-                </div>
-
-                <div className="form-grid-2">
-                  <div className="form-group">
-                    <label>BOM No *</label>
-                    <select
-                      name="bom_no"
-                      value={formData.bom_no}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value="">Select BOM</option>
-                      {bomsData.map(bom => (
-                        <option key={bom.bom_id} value={bom.bom_id}>
-                          {bom.bom_id}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Project</label>
-                    <input type="text" name="project" value={formData.project} onChange={handleInputChange} />
-                  </div>
-                </div>
-
-                <div style={{ marginTop: '30px', marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                    <h3 style={{ margin: 0 }}>Required Items</h3>
-                    <button
-                      type="button"
-                      onClick={handleAddRequiredItem}
-                      className="btn-submit"
-                      style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.9rem' }}
-                    >
-                      <Plus size={16} /> Add Row
-                    </button>
-                  </div>
-                  
-                  <div style={{ overflowX: 'auto' }}>
-                    <table className="entries-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead>
-                        <tr>
-                          <th style={{ width: '50px', textAlign: 'center' }}>
-                            <input type="checkbox" />
-                          </th>
-                          <th style={{  textAlign: 'center' }}>No.</th>
-                          <th >Item Code</th>
-                          <th >Source Warehouse</th>
-                          <th >Required Qty</th>
-                          <th >Transferred Qty</th>
-                          <th >Consumed Qty</th>
-                          <th >Returned Qty</th>
-                          <th style={{ width: '50px', textAlign: 'center' }}>
-                            <Settings size={16} />
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {requiredItems.length > 0 ? (
-                          requiredItems.map((item, index) => (
-                            <tr key={item.id}>
-                              <td style={{ textAlign: 'center' }}>
-                                <input type="checkbox" />
-                              </td>
-                              <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{index + 1}</td>
-                              <td>
-                                <select
-                                  value={item.item_code}
-                                  onChange={(e) => handleRequiredItemChange(item.id, 'item_code', e.target.value)}
-                                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                                >
-                                  <option value="">Select item</option>
-                                  {items.map(itemOpt => (
-                                    <option key={itemOpt.item_code} value={itemOpt.item_code}>
-                                      {itemOpt.item_code} - {itemOpt.item_name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </td>
-                              <td>
-                                <select
-                                  value={item.source_warehouse}
-                                  onChange={(e) => handleRequiredItemChange(item.id, 'source_warehouse', e.target.value)}
-                                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                                >
-                                  <option value="">Select warehouse</option>
-                                  {warehouses.map(wh => (
-                                    <option key={wh.value} value={wh.value}>
-                                      {wh.label}
-                                    </option>
-                                  ))}
-                                </select>
-                              </td>
-                              <td>
-                                <input
-                                  type="number"
-                                  value={item.required_qty}
-                                  onChange={(e) => handleRequiredItemChange(item.id, 'required_qty', e.target.value)}
-                                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                                  placeholder="0.000"
-                                  step="0.01"
-                                />
-                              </td>
-                              <td>
-                                <input
-                                  type="number"
-                                  value={item.transferred_qty}
-                                  onChange={(e) => handleRequiredItemChange(item.id, 'transferred_qty', e.target.value)}
-                                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                                  placeholder="0.000"
-                                  step="0.01"
-                                  readOnly
-                                />
-                              </td>
-                              <td>
-                                <input
-                                  type="number"
-                                  value={item.consumed_qty}
-                                  onChange={(e) => handleRequiredItemChange(item.id, 'consumed_qty', e.target.value)}
-                                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                                  placeholder="0.000"
-                                  step="0.01"
-                                  readOnly
-                                />
-                              </td>
-                              <td>
-                                <input
-                                  type="number"
-                                  value={item.returned_qty}
-                                  onChange={(e) => handleRequiredItemChange(item.id, 'returned_qty', e.target.value)}
-                                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                                  placeholder="0.000"
-                                  step="0.01"
-                                  readOnly
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center' }}>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveRequiredItem(item.id)}
-                                  className="btn-delete"
-                                  style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#dc2626' }}
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan="9" style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
-                              No items added yet. Click "Add Row" to add required items.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+          <div className="p-6 space-y-6">
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-red-900">{error}</p>
                 </div>
               </div>
             )}
 
-            {activeTab === 'configuration' && (
-              <div className="tab-pane">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginBottom: '30px' }}>
-                  <div>
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        name="use_multi_level_bom"
-                        checked={formData.use_multi_level_bom}
-                        onChange={handleInputChange}
-                      />
-                      <span>Use Multi-Level BOM</span>
-                    </label>
-                    <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '8px', margin: '8px 0 0 0' }}>Plan material for sub-assemblies</p>
-                  </div>
-                  <div>
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        name="update_consumed_material_cost"
-                        checked={formData.update_consumed_material_cost}
-                        onChange={handleInputChange}
-                      />
-                      <span>Update Consumed Material Cost In Project</span>
-                    </label>
-                  </div>
-                </div>
-
-                <h3 style={{ marginBottom: '20px', fontSize: '1rem', fontWeight: '600' }}>Warehouse</h3>
-                
-                <div className="form-grid-2">
-                  <div>
-                    <SearchableSelect
-                      label="Source Warehouse *"
-                      value={formData.source_warehouse}
-                      onChange={(value) => setFormData(prev => ({ ...prev, source_warehouse: value }))}
-                      options={warehouses}
-                      placeholder="Search warehouses..."
-                      required
-                    />
-                    <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '8px' }}>This is a location where raw materials are available.</p>
-                  </div>
-                  <div>
-                    <SearchableSelect
-                      label="Target Warehouse *"
-                      value={formData.target_warehouse}
-                      onChange={(value) => setFormData(prev => ({ ...prev, target_warehouse: value }))}
-                      options={warehouses}
-                      placeholder="Search warehouses..."
-                      required
-                    />
-                    <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '8px' }}>This is a location where final product stored.</p>
-                  </div>
-                </div>
-
-                <div className="form-grid-2">
-                  <div>
-                    <SearchableSelect
-                      label="Work-in-Progress Warehouse *"
-                      value={formData.wip_warehouse}
-                      onChange={(value) => setFormData(prev => ({ ...prev, wip_warehouse: value }))}
-                      options={warehouses}
-                      placeholder="Search warehouses..."
-                      required
-                    />
-                    <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '8px' }}>This is a location where operations are executed.</p>
-                  </div>
-                  <div>
-                    <SearchableSelect
-                      label="Scrap Warehouse"
-                      value={formData.scrap_warehouse}
-                      onChange={(value) => setFormData(prev => ({ ...prev, scrap_warehouse: value }))}
-                      options={warehouses}
-                      placeholder="Search warehouses..."
-                    />
-                    <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '8px' }}>This is a location where scraped materials are stored.</p>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: '30px' }}>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      name="allow_alternative_item"
-                      checked={formData.allow_alternative_item}
-                      onChange={handleInputChange}
-                    />
-                    <span>Allow Alternative Item</span>
-                  </label>
-                  <label className="checkbox-label" style={{ marginTop: '15px' }}>
-                    <input
-                      type="checkbox"
-                      name="skip_material_transfer_to_wip"
-                      checked={formData.skip_material_transfer_to_wip}
-                      onChange={handleInputChange}
-                    />
-                    <span>Skip Material Transfer to WIP Warehouse</span>
-                  </label>
+            {success && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-green-900">{success}</p>
                 </div>
               </div>
             )}
 
-            {activeTab === 'operations' && (
-              <div className="tab-pane">
-                <h3 style={{ marginBottom: '20px' }}>Operations</h3>
-                
-                <div style={{ marginBottom: '30px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '500' }}>Operations</h4>
-                    <button
-                      type="button"
-                      onClick={handleAddOperation}
-                      className="btn-submit"
-                      style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.9rem' }}
-                    >
-                      <Plus size={16} /> Add Row
-                    </button>
-                  </div>
-                  
-                  <div style={{ overflowX: 'auto' }}>
-                    <table className="entries-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead>
-                        <tr>
-                          <th style={{ width: '50px', textAlign: 'center' }}>
-                            <input type="checkbox" />
-                          </th>
-                          <th style={{ width: '60px', textAlign: 'center' }}>No.</th>
-                          <th >Operation <span style={{ color: '#dc2626' }}>*</span></th>
-                          <th >Completed Qty</th>
-                          <th >Process Loss Qty</th>
-                          <th >BOM</th>
-                          <th >Workstation</th>
-                          <th style={{ minWidth: '100px' }}>Time <span style={{ color: '#dc2626' }}>*</span></th>
-                          <th style={{ width: '50px', textAlign: 'center' }}>
-                            <Settings size={16} />
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {operationsData.length > 0 ? (
-                          operationsData.map((op, index) => (
-                            <tr key={op.id}>
-                              <td style={{ textAlign: 'center' }}>
-                                <input type="checkbox" />
-                              </td>
-                              <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{index + 1}</td>
-                              <td>
-                                <input
-                                  type="text"
-                                  value={op.operation}
-                                  onChange={(e) => handleOperationChange(op.id, 'operation', e.target.value)}
-                                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                                  placeholder="Enter operation"
-                                  required
-                                />
-                              </td>
-                              <td>
-                                <input
-                                  type="number"
-                                  value={op.completed_qty}
-                                  onChange={(e) => handleOperationChange(op.id, 'completed_qty', e.target.value)}
-                                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                                  placeholder="0.000"
-                                  step="0.01"
-                                />
-                              </td>
-                              <td>
-                                <input
-                                  type="number"
-                                  value={op.process_loss_qty}
-                                  onChange={(e) => handleOperationChange(op.id, 'process_loss_qty', e.target.value)}
-                                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                                  placeholder="0.000"
-                                  step="0.01"
-                                />
-                              </td>
-                              <td>
-                                <input
-                                  type="text"
-                                  value={op.bom}
-                                  onChange={(e) => handleOperationChange(op.id, 'bom', e.target.value)}
-                                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                                  placeholder="Enter BOM"
-                                />
-                              </td>
-                              <td>
-                                <input
-                                  type="text"
-                                  value={op.workstation}
-                                  onChange={(e) => handleOperationChange(op.id, 'workstation', e.target.value)}
-                                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                                  placeholder="Enter workstation"
-                                />
-                              </td>
-                              <td>
-                                <input
-                                  type="number"
-                                  value={op.time}
-                                  onChange={(e) => handleOperationChange(op.id, 'time', e.target.value)}
-                                  style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                                  placeholder="0.000"
-                                  step="0.01"
-                                  required
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center' }}>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveOperation(op.id)}
-                                  className="btn-delete"
-                                  style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#dc2626' }}
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan="9" style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
-                              No operations added yet. Click "Add Row" to add operations.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Item to Manufacture */}
+              <div>
+                <label className="block text-xs font-semibold  text-gray-700 mb-2">
+                  Item to Manufacture *
+                </label>
+                <SearchableSelect
+                  value={formData.item_to_manufacture}
+                  onChange={isReadOnly ? undefined : handleItemSelect}
+                  options={items.map(item => ({
+                    value: item.item_code,
+                    label: item.item_code
+                  }))}
+                  placeholder="Search and select item..."
+                  isClearable={!isReadOnly}
+                  isDisabled={isReadOnly}
+                />
+              </div>
 
-                <h3 style={{ marginBottom: '20px', marginTop: '40px' }}>Time</h3>
-                
-                <div className="form-grid-2">
-                  <div className="form-group">
-                    <label>Planned Start Date <span style={{ color: '#dc2626' }}>*</span></label>
-                    <input
-                      type="datetime-local"
-                      name="planned_start_date"
-                      value={formData.planned_start_date}
-                      onChange={handleInputChange}
-                    />
-                    <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '8px' }}>Asia/Kolkata</p>
-                  </div>
-                  <div className="form-group">
-                    <label>Actual Start Date</label>
-                    <input
-                      type="datetime-local"
-                      name="actual_start_date"
-                      value={formData.actual_start_date}
-                      onChange={handleInputChange}
-                    />
-                    <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '8px' }}>Asia/Kolkata</p>
-                  </div>
-                </div>
+              {/* Quantity */}
+              <div>
+                <label className="block text-xs font-semibold  text-gray-700 mb-2">
+                  Quantity to Manufacture *
+                </label>
+                <input
+                  type="number"
+                  name="qty_to_manufacture"
+                  value={formData.qty_to_manufacture}
+                  onChange={handleInputChange}
+                  placeholder="Enter quantity"
+                  disabled={isReadOnly}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isReadOnly ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+                />
+              </div>
 
-                <div className="form-grid-2">
-                  <div className="form-group">
-                    <label>Planned End Date</label>
-                    <input
-                      type="datetime-local"
-                      name="planned_end_date"
-                      value={formData.planned_end_date}
-                      onChange={handleInputChange}
-                    />
-                    <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '8px' }}>Asia/Kolkata</p>
-                  </div>
-                  <div className="form-group">
-                    <label>Actual End Date</label>
-                    <input
-                      type="datetime-local"
-                      name="actual_end_date"
-                      value={formData.actual_end_date}
-                      onChange={handleInputChange}
-                    />
-                    <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '8px' }}>Asia/Kolkata</p>
-                  </div>
-                </div>
+              {/* Sales Order ID */}
+              <div>
+                <label className="block text-xs font-semibold  text-gray-700 mb-2">
+                  Sales Order ID
+                </label>
+                <input
+                  type="text"
+                  name="sales_order_id"
+                  value={formData.sales_order_id}
+                  onChange={handleInputChange}
+                  placeholder="e.g., SO-123456"
+                  disabled={isReadOnly}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isReadOnly ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+                />
+              </div>
 
-                <div className="form-group">
-                  <label>Expected Delivery Date</label>
-                  <input
-                    type="date"
-                    name="expected_delivery_date"
-                    value={formData.expected_delivery_date}
-                    onChange={handleInputChange}
+              {/* BOM ID */}
+              <div>
+                <label className="block text-xs font-semibold  text-gray-700 mb-2">
+                  BOM ID *
+                </label>
+                {availableBoms.length > 0 ? (
+                  <SearchableSelect
+                    value={formData.bom_id}
+                    onChange={isReadOnly ? undefined : (value) => {
+                      handleInputChange({ target: { name: 'bom_id', value } })
+                    }}
+                    options={availableBoms.map(bom => ({
+                      value: bom.bom_id,
+                      label: `${bom.bom_id} (${bom.status})`
+                    }))}
+                    placeholder="Select BOM..."
+                    isDisabled={isReadOnly}
                   />
+                ) : (
+                  <input
+                    type="text"
+                    name="bom_id"
+                    value={formData.bom_id}
+                    onChange={handleInputChange}
+                    placeholder="e.g., BOM-123456"
+                    disabled={isReadOnly}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isReadOnly ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+                  />
+                )}
+              </div>
+
+              {/* Priority */}
+              <div>
+                <label className="block text-xs font-semibold  text-gray-700 mb-2">
+                  Priority
+                </label>
+                <select
+                  name="priority"
+                  value={formData.priority}
+                  onChange={handleInputChange}
+                  disabled={isReadOnly}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isReadOnly ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+
+              {/* Planned Start Date */}
+              <div>
+                <label className="block text-xs font-semibold  text-gray-700 mb-2">
+                  Planned Start Date
+                </label>
+                <input
+                  type="date"
+                  name="planned_start_date"
+                  value={formData.planned_start_date}
+                  onChange={handleInputChange}
+                  disabled={isReadOnly}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isReadOnly ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+                />
+              </div>
+
+              {/* Planned End Date */}
+              <div>
+                <label className="block text-xs font-semibold  text-gray-700 mb-2">
+                  Planned End Date
+                </label>
+                <input
+                  type="date"
+                  name="planned_end_date"
+                  value={formData.planned_end_date}
+                  onChange={handleInputChange}
+                  disabled={isReadOnly}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isReadOnly ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+                />
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-xs font-semibold  text-gray-700 mb-2">
+                Notes
+              </label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleInputChange}
+                placeholder="Enter any additional notes..."
+                rows="3"
+                disabled={isReadOnly}
+                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isReadOnly ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+              />
+            </div>
+
+            {/* Operations Section */}
+            {bomOperations.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Factory size={20} className="text-blue-600" />
+                  Operations
+                </h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-gray-100 border border-gray-200">
+                        <th className="px-3 py-2 text-left font-semibold text-gray-700">No.</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Operation <span className="text-red-500">*</span></th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700">Completed Qty</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700">Process Loss Qty</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-700">BOM</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Workstation</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700">Time <span className="text-red-500">*</span></th>
+                        <th className="px-3 py-2 text-center font-semibold text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bomOperations.map((op, idx) => (
+                        <tr key={op.id} className={`border border-gray-200 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
+                          <td className="px-3 py-2 text-gray-900 font-medium">{idx + 1}</td>
+                          <td className="px-3 py-2 text-gray-900 font-medium">{op.operation_name || '-'}</td>
+                          <td className="px-3 py-2 text-right">
+                            <input
+                              type="number"
+                              value={op.completed_qty || 0}
+                              onChange={(e) => updateOperation(op.id, 'completed_qty', parseFloat(e.target.value) || 0)}
+                              disabled={isReadOnly}
+                              className={`w-20 px-2 py-1 border border-gray-300 rounded text-right text-sm ${isReadOnly ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'}`}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <input
+                              type="number"
+                              value={op.process_loss_qty || 0}
+                              onChange={(e) => updateOperation(op.id, 'process_loss_qty', parseFloat(e.target.value) || 0)}
+                              disabled={isReadOnly}
+                              className={`w-20 px-2 py-1 border border-gray-300 rounded text-right text-sm ${isReadOnly ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'}`}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-gray-900">{formData.bom_id || '-'}</td>
+                          <td className="px-3 py-2 text-gray-900">{op.workstation || '-'}</td>
+                          <td className="px-3 py-2 text-right">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={op.operation_time || 0}
+                              onChange={(e) => updateOperation(op.id, 'operation_time', parseFloat(e.target.value) || 0)}
+                              disabled={isReadOnly}
+                              className={`w-20 px-2 py-1 border border-gray-300 rounded text-right text-sm ${isReadOnly ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'}`}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {!isReadOnly && (
+                              <button
+                                onClick={() => setEditingOperationId(editingOperationId === op.id ? null : op.id)}
+                                className="p-1 hover:bg-blue-100 rounded transition"
+                              >
+                                <Edit2 size={14} className="text-blue-600" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
 
-            {activeTab === 'more-info' && (
-              <div className="tab-pane">
-                <div className="form-group">
-                  <label>Priority</label>
-                  <select name="priority" value={formData.priority} onChange={handleInputChange}>
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Notes</label>
-                  <textarea name="notes" value={formData.notes} onChange={handleInputChange} rows="6" />
+            {/* Materials/Required Items Section */}
+            {bomMaterials.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Boxes size={20} className="text-purple-600" />
+                  Required Items
+                </h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-gray-100 border border-gray-200">
+                        <th className="px-3 py-2 text-center font-semibold text-gray-700 w-10">No.</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Item Code</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Source Warehouse</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700">Required Qty</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700">Transferred Qty</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700">Consumed Qty</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-700">Returned Qty</th>
+                        <th className="px-3 py-2 text-center font-semibold text-gray-700 w-12">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bomMaterials.map((mat, idx) => (
+                        <tr key={mat.id} className={`border border-gray-200 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
+                          <td className="px-3 py-2 text-center text-gray-900 font-medium">{idx + 1}</td>
+                          <td className="px-3 py-2 text-gray-900 font-medium">{mat.item_code || '-'}</td>
+                          <td className="px-3 py-2">
+                            <input
+                              type="text"
+                              value={mat.source_warehouse || ''}
+                              onChange={(e) => updateMaterial(mat.id, 'source_warehouse', e.target.value)}
+                              disabled={isReadOnly}
+                              placeholder="Warehouse"
+                              className={`w-40 px-2 py-1 border border-gray-300 rounded text-sm ${isReadOnly ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'}`}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <input
+                              type="number"
+                              step="0.001"
+                              value={mat.required_qty || 0}
+                              onChange={(e) => updateMaterial(mat.id, 'required_qty', parseFloat(e.target.value) || 0)}
+                              disabled={isReadOnly}
+                              className={`w-24 px-2 py-1 border border-gray-300 rounded text-right text-sm ${isReadOnly ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'}`}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <input
+                              type="number"
+                              step="0.001"
+                              value={mat.transferred_qty || 0}
+                              onChange={(e) => updateMaterial(mat.id, 'transferred_qty', parseFloat(e.target.value) || 0)}
+                              disabled={isReadOnly}
+                              className={`w-24 px-2 py-1 border border-gray-300 rounded text-right text-sm ${isReadOnly ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'}`}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <input
+                              type="number"
+                              step="0.001"
+                              value={mat.consumed_qty || 0}
+                              onChange={(e) => updateMaterial(mat.id, 'consumed_qty', parseFloat(e.target.value) || 0)}
+                              disabled={isReadOnly}
+                              className={`w-24 px-2 py-1 border border-gray-300 rounded text-right text-sm ${isReadOnly ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'}`}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <input
+                              type="number"
+                              step="0.001"
+                              value={mat.returned_qty || 0}
+                              onChange={(e) => updateMaterial(mat.id, 'returned_qty', parseFloat(e.target.value) || 0)}
+                              disabled={isReadOnly}
+                              className={`w-24 px-2 py-1 border border-gray-300 rounded text-right text-sm ${isReadOnly ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'}`}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {!isReadOnly && (
+                              <button
+                                onClick={() => setEditingMaterialId(editingMaterialId === mat.id ? null : mat.id)}
+                                className="p-1 hover:bg-blue-100 rounded transition"
+                              >
+                                <Edit2 size={14} className="text-blue-600" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 justify-end pt-6 border-t border-gray-200">
+              <button
+                onClick={() => navigate('/manufacturing/work-orders')}
+                className={`px-6 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition ${isReadOnly ? '' : ''}`}
+              >
+                {isReadOnly ? 'Close' : 'Cancel'}
+              </button>
+              {!isReadOnly && (
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition flex items-center gap-2"
+                >
+                  <Save size={18} />
+                  {loading ? 'Saving...' : 'Save Work Order'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
-
-        <div className="form-actions">
-          <button type="button" onClick={() => navigate('/production/work-orders')} className="btn-cancel">
-            Cancel
-          </button>
-          <button type="submit" disabled={loading} className="btn-submit">
-            <Save size={18} /> {loading ? 'Saving...' : 'Save Work Order'}
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   )
 }

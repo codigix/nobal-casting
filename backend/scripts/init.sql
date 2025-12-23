@@ -1,6 +1,6 @@
 ﻿-- Create database and select it
-CREATE DATABASE IF NOT EXISTS aluminium_erp;
-USE aluminium_erp;
+CREATE DATABASE IF NOT EXISTS nobalcasting;
+USE nobalcasting;
 
 -- ============================================
 -- USER AUTHENTICATION

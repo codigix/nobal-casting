@@ -7,6 +7,7 @@ import Alert from '../../components/Alert/Alert'
 import { ArrowLeft, CheckCircle, XCircle, Clock, Package, User, ChevronRight, Truck, Home, FileCheck, AlertCircle } from 'lucide-react'
 import ItemInspectionModal from '../../components/Buying/ItemInspectionModal'
 import InspectionApprovalModal from '../../components/Buying/InspectionApprovalModal'
+import QCApprovalModal from '../../components/Buying/QCApprovalModal'
 import InventoryApprovalModal from '../../components/Buying/InventoryApprovalModal'
 import './Buying.css'
 
@@ -19,6 +20,7 @@ export default function GRNRequestDetail() {
   const [success, setSuccess] = useState(null)
   const [showInspectionModal, setShowInspectionModal] = useState(false)
   const [showApprovalModal, setShowApprovalModal] = useState(false)
+  const [showQCApprovalModal, setShowQCApprovalModal] = useState(false)
   const [showInventoryApprovalModal, setShowInventoryApprovalModal] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
   const [user, setUser] = useState(null)
@@ -106,6 +108,17 @@ export default function GRNRequestDetail() {
     setTimeout(() => setSuccess(null), 3000)
   }
 
+  const handleQCApproval = () => {
+    setShowQCApprovalModal(true)
+  }
+
+  const handleQCApprovalSuccess = (updatedGrn) => {
+    setGrn(updatedGrn)
+    setShowQCApprovalModal(false)
+    setSuccess('GRN approved by QC. Ready for inventory approval.')
+    setTimeout(() => setSuccess(null), 3000)
+  }
+
   const getStatusColor = (status) => {
     const colors = {
       pending: 'warning',
@@ -190,7 +203,7 @@ export default function GRNRequestDetail() {
               <span className="font-medium">PO:</span> {grn.po_no} <span className="mx-1.5">•</span> <span className="font-medium">Supplier:</span> {grn.supplier_name}
             </p>
           </div>
-          <Badge color={getStatusColor(grn.status)} variant="solid" className="flex items-center gap-1.5 text-sm px-3 py-1.5 whitespace-nowrap">
+          <Badge color={getStatusColor(grn.status)} variant="solid" className="flex items-center gap-1.5 text-sm p-2 whitespace-nowrap">
             {getStatusIcon(grn.status)}
             {grn.status.replace('_', ' ').toUpperCase()}
           </Badge>
@@ -206,17 +219,21 @@ export default function GRNRequestDetail() {
           {[
             { status: 'pending', label: 'Received', icon: Truck },
             { status: 'inspecting', label: 'Inspecting', icon: FileCheck },
-            { status: 'awaiting_inventory_approval', label: 'Review', icon: Home },
+            { status: 'qc_approval', label: 'QC Check', icon: CheckCircle },
+            { status: 'awaiting_inventory_approval', label: 'Inventory', icon: Home },
             { status: 'approved', label: 'Completed', icon: CheckCircle }
           ].map((step, idx) => {
             const Icon = step.icon
-            const isCompleted = ['inspecting', 'awaiting_inventory_approval', 'approved', 'rejected'].includes(grn.status) && idx === 0 ||
-                               ['awaiting_inventory_approval', 'approved'].includes(grn.status) && idx <= 1 ||
-                               grn.status === 'approved' && idx <= 3
+            const isCompleted = ['inspecting', 'qc_approval', 'awaiting_inventory_approval', 'approved'].includes(grn.status) && idx === 0 ||
+                               ['qc_approval', 'awaiting_inventory_approval', 'approved'].includes(grn.status) && idx <= 1 ||
+                               ['awaiting_inventory_approval', 'approved'].includes(grn.status) && idx <= 2 ||
+                               ['awaiting_inventory_approval', 'approved'].includes(grn.status) && idx <= 3 ||
+                               grn.status === 'approved' && idx <= 4
             const isActive = (idx === 0 && grn.status === 'pending') ||
                             (idx === 1 && grn.status === 'inspecting') ||
-                            (idx === 2 && grn.status === 'awaiting_inventory_approval') ||
-                            (idx === 3 && grn.status === 'approved')
+                            (idx === 2 && ['qc_approval', 'awaiting_inventory_approval', 'approved'].includes(grn.status)) ||
+                            (idx === 3 && grn.status === 'awaiting_inventory_approval') ||
+                            (idx === 4 && grn.status === 'approved')
             const isSkipped = ['rejected', 'sent_back'].includes(grn.status) && idx >= 3
 
             return (
@@ -232,7 +249,7 @@ export default function GRNRequestDetail() {
                   </div>
                   <p className="text-xs font-semibold mt-1.5 text-neutral-700 dark:text-neutral-300 text-center whitespace-nowrap">{step.label}</p>
                 </div>
-                {idx < 3 && (
+                {idx < 4 && (
                   <div className={`h-1.5 flex-1 mx-1.5 mb-7 rounded-full transition-colors ${
                     isCompleted ? 'bg-green-500' :
                     isActive ? 'bg-blue-300' :
@@ -252,7 +269,7 @@ export default function GRNRequestDetail() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wide mb-1">Total Items</p>
-              <p className="text-3xl font-bold text-neutral-900 dark:text-neutral-100">{grn.items?.length || 0}</p>
+              <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{grn.items?.length || 0}</p>
             </div>
             <Package size={32} className="text-blue-500 opacity-20" />
           </div>
@@ -329,7 +346,7 @@ export default function GRNRequestDetail() {
               onClick={handleStartInspection}
               loading={loading}
               size="sm"
-              className="gap-1.5 flex items-center text-xs px-3 py-1.5"
+              className="gap-1.5 flex items-center text-xs p-2"
             >
               <CheckCircle size={14} />
               Start Inspection
@@ -397,7 +414,7 @@ export default function GRNRequestDetail() {
             </table>
           </div>
         ) : (
-          <div className="p-8 text-center">
+          <div className="p-3 text-center">
             <Package size={48} className="mx-auto text-neutral-400 mb-4" />
             <p className="text-neutral-600 dark:text-neutral-400">No items in this GRN</p>
           </div>
@@ -416,19 +433,19 @@ export default function GRNRequestDetail() {
               <>
                 <Button
                   variant="success"
-                  onClick={handleApproval}
-                  className="flex items-center justify-center gap-1.5 py-2 text-sm font-semibold h-auto shadow-lg hover:shadow-xl"
+                  onClick={handleQCApproval}
+                  className="flex items-center justify-center gap-1.5 py-2 text-xs font-semibold  h-auto shadow-lg hover:shadow-xl"
                 >
                   <CheckCircle size={16} />
-                  Send to Inventory
+                  QC Approval
                 </Button>
                 <Button
                   variant="danger"
                   onClick={() => setShowApprovalModal(true)}
-                  className="flex items-center justify-center gap-1.5 py-2 text-sm font-semibold h-auto shadow-lg hover:shadow-xl"
+                  className="flex items-center justify-center gap-1.5 py-2 text-xs font-semibold  h-auto shadow-lg hover:shadow-xl"
                 >
                   <XCircle size={16} />
-                  Reject GRN
+                  Send Back
                 </Button>
               </>
             )}
@@ -437,7 +454,7 @@ export default function GRNRequestDetail() {
                 <Button
                   variant="success"
                   onClick={() => setShowInventoryApprovalModal(true)}
-                  className="flex items-center justify-center gap-1.5 py-2 text-sm font-semibold h-auto shadow-lg hover:shadow-xl"
+                  className="flex items-center justify-center gap-1.5 py-2 text-xs font-semibold  h-auto shadow-lg hover:shadow-xl"
                 >
                   <Home size={16} />
                   Approve & Store
@@ -445,10 +462,10 @@ export default function GRNRequestDetail() {
                 <Button
                   variant="warning"
                   onClick={() => setShowApprovalModal(true)}
-                  className="flex items-center justify-center gap-1.5 py-2 text-sm font-semibold h-auto shadow-lg hover:shadow-xl"
+                  className="flex items-center justify-center gap-1.5 py-2 text-xs font-semibold  h-auto shadow-lg hover:shadow-xl"
                 >
                   <ArrowLeft size={16} />
-                  Send Back to Inspection
+                  Send Back to QC
                 </Button>
               </>
             )}
@@ -534,6 +551,14 @@ export default function GRNRequestDetail() {
           grn={grn}
           onClose={() => setShowApprovalModal(false)}
           onSuccess={handleApprovalSuccess}
+        />
+      )}
+
+      {showQCApprovalModal && (
+        <QCApprovalModal
+          grn={grn}
+          onClose={() => setShowQCApprovalModal(false)}
+          onSuccess={handleQCApprovalSuccess}
         />
       )}
 

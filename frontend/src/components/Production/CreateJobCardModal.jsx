@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react'
-import { AlertCircle, ChevronDown } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import Modal from '../Modal'
+import SearchableSelect from '../SearchableSelect'
 import * as productionService from '../../services/productionService'
+import api from '../../services/api'
 import { useToast } from '../ToastContainer'
 
-export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editingId }) {
+export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editingId, preSelectedWorkOrderId }) {
   const toast = useToast()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [workOrders, setWorkOrders] = useState([])
   const [workstations, setWorkstations] = useState([])
   const [operators, setOperators] = useState([])
-  const [showWODropdown, setShowWODropdown] = useState(false)
-  const [selectedWO, setSelectedWO] = useState(null)
+  const [operations, setOperations] = useState([])
   const [formData, setFormData] = useState({
     jc_id: '',
     wo_id: '',
@@ -42,7 +43,6 @@ export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editing
           status: 'draft',
           notes: ''
         })
-        setSelectedWO(null)
       }
     }
   }, [isOpen, editingId])
@@ -52,6 +52,20 @@ export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editing
       fetchJobCardDetails(editingId)
     }
   }, [workOrders])
+
+  useEffect(() => {
+    if (isOpen && preSelectedWorkOrderId && workOrders.length > 0 && !editingId) {
+      const wo = workOrders.find(w => w.wo_id === preSelectedWorkOrderId)
+      if (wo) {
+        setFormData(prev => ({
+          ...prev,
+          wo_id: wo.wo_id,
+          quantity: wo.quantity || wo.qty_to_manufacture || '100'
+        }))
+        handleSelectWorkOrder(wo)
+      }
+    }
+  }, [preSelectedWorkOrderId, workOrders, isOpen, editingId])
 
   const fetchData = async () => {
     try {
@@ -75,7 +89,7 @@ export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editing
       const wo = workOrders.find(w => w.wo_id === jc.work_order_id)
       
       if (wo) {
-        setSelectedWO(wo)
+        handleSelectWorkOrder(wo)
       }
       
       setFormData({
@@ -96,14 +110,20 @@ export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editing
     }
   }
 
-  const handleSelectWorkOrder = (wo) => {
-    setSelectedWO(wo)
-    setFormData(prev => ({
-      ...prev,
-      wo_id: wo.wo_id,
-      quantity: wo.quantity || wo.qty_to_manufacture || '100'
-    }))
-    setShowWODropdown(false)
+  const handleSelectWorkOrder = async (wo) => {
+    try {
+      const response = await productionService.getWorkOrder(wo.wo_id)
+      const woData = response.data || response
+      
+      const ops = (woData.operations || []).map(op => ({
+        label: op.operation_name || op.operation || '',
+        value: op.operation_name || op.operation || ''
+      }))
+      
+      setOperations(ops)
+    } catch (err) {
+      console.error('Failed to fetch work order operations:', err)
+    }
   }
 
   const handleInputChange = (e) => {
@@ -172,129 +192,70 @@ export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editing
       <form onSubmit={handleSubmit}>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-          <div style={{ position: 'relative' }}>
+          <div>
             <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '0.9rem' }}>Work Order *</label>
-            <div 
-              onClick={() => setShowWODropdown(!showWODropdown)}
-              style={{ 
-                width: '100%', 
-                padding: '8px', 
-                border: '1px solid #ddd', 
-                borderRadius: '4px',
-                background: 'white',
-                cursor: 'pointer',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
+            <SearchableSelect
+              value={formData.wo_id}
+              onChange={(value) => {
+                setFormData(prev => ({
+                  ...prev,
+                  wo_id: value
+                }))
+                const wo = workOrders.find(w => w.wo_id === value)
+                if (wo) {
+                  handleSelectWorkOrder(wo)
+                }
               }}
-            >
-              <span>{selectedWO ? `${selectedWO.wo_id} - ${selectedWO.item_name || selectedWO.item_code}` : 'Select Work Order'}</span>
-              <ChevronDown size={16} style={{ transform: showWODropdown ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
-            </div>
-            
-            {showWODropdown && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                marginTop: '4px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                background: 'white',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                zIndex: 100,
-                maxHeight: '300px',
-                overflowY: 'auto'
-              }}>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
-                  gap: '8px',
-                  padding: '8px',
-                  borderBottom: '1px solid #e5e7eb',
-                  background: '#f9fafb',
-                  fontWeight: '600',
-                  fontSize: '0.8rem',
-                  position: 'sticky',
-                  top: 0
-                }}>
-                  <div>WO ID</div>
-                  <div>Item</div>
-                  <div>Qty</div>
-                  <div>Priority</div>
-                  <div>Status</div>
-                </div>
-                {workOrders.map(wo => (
-                  <div
-                    key={wo.wo_id}
-                    onClick={() => handleSelectWorkOrder(wo)}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr',
-                      gap: '8px',
-                      padding: '10px 8px',
-                      borderBottom: '1px solid #e5e7eb',
-                      cursor: 'pointer',
-                      hover: { background: '#f0f0f0' },
-                      fontSize: '0.9rem'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#f0f0f0'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
-                  >
-                    <div style={{ fontWeight: '600' }}>{wo.wo_id}</div>
-                    <div>{wo.item_name || wo.item_code}</div>
-                    <div>{wo.quantity || wo.qty_to_manufacture || 0}</div>
-                    <div>
-                      <span style={{
-                        padding: '2px 6px',
-                        borderRadius: '3px',
-                        fontSize: '0.8rem',
-                        background: wo.priority === 'High' ? '#fee2e2' : wo.priority === 'Medium' ? '#fef3c7' : '#dbeafe',
-                        color: wo.priority === 'High' ? '#dc2626' : wo.priority === 'Medium' ? '#b45309' : '#1e40af'
-                      }}>
-                        {wo.priority || 'N/A'}
-                      </span>
-                    </div>
-                    <div>
-                      <span style={{
-                        padding: '2px 6px',
-                        borderRadius: '3px',
-                        fontSize: '0.8rem',
-                        background: '#f0f0f0'
-                      }}>
-                        {wo.status || 'N/A'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+              options={workOrders.map(wo => ({
+                value: wo.wo_id,
+                label: `${wo.wo_id} - ${wo.item_name || wo.item_code || ''}`
+              }))}
+              placeholder="Select Work Order"
+              isClearable={true}
+            />
           </div>
           <div>
             <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '0.9rem' }}>Workstation *</label>
-            <select name="machine_id" value={formData.machine_id} onChange={handleInputChange} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} required>
-              <option value="">Select Workstation</option>
-              {workstations.map(ws => (
-                <option key={ws.name} value={ws.name}>{ws.workstation_name || ws.name}</option>
-              ))}
-            </select>
+            <SearchableSelect
+              value={formData.machine_id}
+              onChange={(value) => setFormData(prev => ({ ...prev, machine_id: value }))}
+              options={workstations.map(ws => ({
+                value: ws.name || ws.workstation_id,
+                label: ws.workstation_name || ws.name
+              }))}
+              placeholder="Select Workstation"
+              isClearable={true}
+            />
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
           <div>
             <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '0.9rem' }}>Operator</label>
-            <select name="operator_id" value={formData.operator_id} onChange={handleInputChange} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}>
-              <option value="">Unassigned</option>
-              {operators.map(emp => (
-                <option key={emp.employee_id} value={emp.employee_id}>{emp.first_name} {emp.last_name}</option>
-              ))}
-            </select>
+            <SearchableSelect
+              value={formData.operator_id}
+              onChange={(value) => setFormData(prev => ({ ...prev, operator_id: value }))}
+              options={[
+                { value: '', label: 'Unassigned' },
+                ...operators.map(emp => ({
+                  value: emp.employee_id || emp.id,
+                  label: `${emp.first_name || ''} ${emp.last_name || ''}`.trim() || emp.name
+                }))
+              ]}
+              placeholder="Select Operator"
+              isClearable={true}
+            />
           </div>
           <div>
             <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '0.9rem' }}>Operation</label>
-            <input type="text" name="operation" value={formData.operation} onChange={handleInputChange} placeholder="e.g., Assembly, Cutting" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} />
+            <SearchableSelect
+              value={formData.operation}
+              onChange={(value) => setFormData(prev => ({ ...prev, operation: value }))}
+              options={operations.length > 0 ? operations : [{ value: '', label: 'Select Work Order first' }]}
+              placeholder="Select Operation from Work Order"
+              isClearable={true}
+              isDisabled={operations.length === 0}
+            />
           </div>
         </div>
 

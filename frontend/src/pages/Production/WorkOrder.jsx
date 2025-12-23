@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as productionService from '../../services/productionService'
-import { Plus, Edit2, Trash2, Truck, CheckCircle, AlertCircle, Clock, Zap, TrendingUp } from 'lucide-react'
-import './Production.css'
+import { Plus, Edit2, Trash2, Truck, Eye } from 'lucide-react'
 
 export default function WorkOrder() {
   const navigate = useNavigate()
@@ -14,8 +13,7 @@ export default function WorkOrder() {
     totalOrders: 0,
     inProgress: 0,
     completed: 0,
-    pending: 0,
-    totalCost: 0
+    pending: 0
   })
   const [filters, setFilters] = useState({
     status: '',
@@ -47,9 +45,8 @@ export default function WorkOrder() {
     const inProgress = ordersData.filter(o => o.status === 'in-progress').length
     const completed = ordersData.filter(o => o.status === 'completed').length
     const pending = ordersData.filter(o => ['draft', 'planned'].includes(o.status)).length
-    const totalCost = ordersData.reduce((sum, o) => sum + (o.total_cost || 0), 0)
 
-    setStats({ totalOrders: total, inProgress, completed, pending, totalCost })
+    setStats({ totalOrders: total, inProgress, completed, pending })
   }
 
   const handleFilterChange = (e) => {
@@ -73,120 +70,104 @@ export default function WorkOrder() {
     }
   }
 
+  const handleView = (order) => {
+    navigate(`/manufacturing/work-orders/${order.wo_id}?readonly=true`)
+  }
+
   const handleEdit = (order) => {
-    navigate(`/production/work-orders/form/${order.wo_id}`)
+    navigate(`/manufacturing/work-orders/${order.wo_id}`)
   }
 
   const handleTrack = (order) => {
-    navigate(`/production/work-orders/track/${order.wo_id}`)
+    navigate(`/manufacturing/work-orders/tracking/${order.wo_id}`)
   }
 
-  const getStatusColor = (status) => {
-    const colors = {
-      draft: 'status-draft',
-      planned: 'status-planned',
-      'in-progress': 'status-in-progress',
-      completed: 'status-completed',
-      cancelled: 'status-cancelled'
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      draft: { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-300' },
+      planned: { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300' },
+      'in-progress': { bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-300' },
+      completed: { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' },
+      cancelled: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300' }
     }
-    return colors[status] || 'status-draft'
+    return statusConfig[status] || statusConfig.draft
   }
 
-  const getPriorityColor = (priority) => {
-    const colors = {
-      high: { bg: '#fee2e2', text: '#991b1b' },
-      medium: { bg: '#fef3c7', text: '#92400e' },
-      low: { bg: '#dcfce7', text: '#166534' }
+  const getPriorityBadge = (priority) => {
+    const priorityConfig = {
+      high: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300' },
+      medium: { bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-300' },
+      low: { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' }
     }
-    return colors[priority] || { bg: '#f3f4f6', text: '#6b7280' }
+    return priorityConfig[priority] || { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-300' }
   }
 
   return (
-    <div className="wo-dashboard">
-      <div className="wo-dashboard-header">
-        <div className="wo-header-content">
-          <h1>Work Orders</h1>
-          <p>Manage and track production work orders</p>
-          <div className="wo-header-subtitle">Production Department • {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-        </div>
-        <button
-          onClick={() => navigate('/production/work-orders/form')}
-          className="wo-new-order-btn"
-        >
-          <Plus size={18} /> New Work Order
-        </button>
-      </div>
-
-      {success && (
-        <div className="wo-alert wo-alert-success">
-          ✓ {success}
-        </div>
-      )}
-
-      {error && (
-        <div className="wo-alert wo-alert-error">
-          ✕ {error}
-        </div>
-      )}
-
-      <div className="wo-kpi-section">
-        <div className="wo-kpi-row">
-          <div className="wo-kpi-card wo-kpi-primary">
-            <div className="wo-kpi-icon">
-              <Zap size={24} />
-            </div>
-            <div className="wo-kpi-details">
-              <div className="wo-kpi-label">Total Orders</div>
-              <div className="wo-kpi-value-row">
-                <span className="wo-kpi-value">{stats.totalOrders}</span>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100  px-6 py-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
+                📋
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
+                <p className="text-xs text-gray-600 mt-0">Manage and track production work</p>
               </div>
             </div>
           </div>
+          <button 
+            onClick={() => navigate('/manufacturing/work-orders/new')}
+            className="btn-primary flex items-center gap-2 bg-gradient-to-br from-blue-400 to-blue-600 "
+          >
+            <Plus size={16} /> Create Work Order
+          </button>
+        </div>
 
-          <div className="wo-kpi-card wo-kpi-warning">
-            <div className="wo-kpi-icon">
-              <Clock size={24} />
-            </div>
-            <div className="wo-kpi-details">
-              <div className="wo-kpi-label">In Progress</div>
-              <div className="wo-kpi-value-row">
-                <span className="wo-kpi-value">{stats.inProgress}</span>
-              </div>
-            </div>
+        {success && (
+          <div className="mb-2 p-2 pl-3 bg-green-50 border-l-4 border-green-400 rounded text-xs text-green-800 flex gap-2">
+            <span>✓</span>
+            <span>{success}</span>
           </div>
+        )}
 
-          <div className="wo-kpi-card wo-kpi-success">
-            <div className="wo-kpi-icon">
-              <CheckCircle size={24} />
-            </div>
-            <div className="wo-kpi-details">
-              <div className="wo-kpi-label">Completed</div>
-              <div className="wo-kpi-value-row">
-                <span className="wo-kpi-value">{stats.completed}</span>
-              </div>
-            </div>
+        {error && (
+          <div className="mb-2 p-2 pl-3 bg-red-50 border-l-4 border-red-400 rounded text-xs text-red-800 flex gap-2">
+            <span>✕</span>
+            <span>{error}</span>
           </div>
+        )}
 
-          <div className="wo-kpi-card wo-kpi-info">
-            <div className="wo-kpi-icon">
-              <AlertCircle size={24} />
-            </div>
-            <div className="wo-kpi-details">
-              <div className="wo-kpi-label">Pending</div>
-              <div className="wo-kpi-value-row">
-                <span className="wo-kpi-value">{stats.pending}</span>
-              </div>
-            </div>
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          <div className="bg-white rounded-lg p-3 border-l-4 border-blue-400 shadow-sm">
+            <div className="text-xs text-gray-600 font-semibold">Total</div>
+            <div className="text-xl font-bold text-gray-900 mt-0.5">{stats.totalOrders}</div>
+          </div>
+          <div className="bg-white rounded-lg p-3 border-l-4 border-amber-400 shadow-sm">
+            <div className="text-xs text-gray-600 font-semibold">In Progress</div>
+            <div className="text-xl font-bold text-gray-900 mt-0.5">{stats.inProgress}</div>
+          </div>
+          <div className="bg-white rounded-lg p-3 border-l-4 border-green-400 shadow-sm">
+            <div className="text-xs text-gray-600 font-semibold">Completed</div>
+            <div className="text-xl font-bold text-gray-900 mt-0.5">{stats.completed}</div>
+          </div>
+          <div className="bg-white rounded-lg p-3 border-l-4 border-gray-400 shadow-sm">
+            <div className="text-xs text-gray-600 font-semibold">Pending</div>
+            <div className="text-xl font-bold text-gray-900 mt-0.5">{stats.pending}</div>
           </div>
         </div>
-      </div>
 
-      <div className="wo-content-grid">
-        <div className="wo-col-main">
-          <div className="wo-filter-section">
-            <div className="wo-filter-group">
-              <label>Status</label>
-              <select name="status" value={filters.status} onChange={handleFilterChange}>
+        <div className="bg-white rounded-lg shadow-sm p-3 mb-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs font-semibold text-gray-700 block mb-1">Status</label>
+              <select 
+                name="status" 
+                value={filters.status} 
+                onChange={handleFilterChange}
+                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
                 <option value="">All Status</option>
                 <option value="draft">Draft</option>
                 <option value="planned">Planned</option>
@@ -195,76 +176,114 @@ export default function WorkOrder() {
                 <option value="cancelled">Cancelled</option>
               </select>
             </div>
-            <div className="wo-filter-group">
-              <label>Search</label>
-              <input type="text" name="search" placeholder="Search order ID or item..." value={filters.search} onChange={handleFilterChange} />
+            <div>
+              <label className="text-xs font-semibold text-gray-700 block mb-1">Search</label>
+              <input 
+                type="text" 
+                name="search" 
+                placeholder="Order ID or item..." 
+                value={filters.search} 
+                onChange={handleFilterChange}
+                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
           </div>
+        </div>
 
-          {loading ? (
-            <div className="wo-loading">
-              <div className="wo-loading-icon">⏳</div>
-              <div className="wo-loading-text">Loading work orders...</div>
-            </div>
-          ) : orders.length > 0 ? (
-            <div className="wo-table-container">
-              <table className="wo-table">
+        {loading ? (
+          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+            <div className="text-3xl mb-2">⏳</div>
+            <div className="text-xs text-gray-600">Loading work orders...</div>
+          </div>
+        ) : orders.length > 0 ? (
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
                 <thead>
-                  <tr>
-                    <th>WO ID</th>
-                    <th>Item</th>
-                    <th>Qty</th>
-                    <th>Unit Cost</th>
-                    <th>Total Cost</th>
-                    <th>Priority</th>
-                    <th>Due Date</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="px-3 py-2 text-left text-gray-700 font-semibold">WO ID</th>
+                    <th className="px-3 py-2 text-left text-gray-700 font-semibold">Item</th>
+                    <th className="px-3 py-2 text-right text-gray-700 font-semibold">Qty</th>
+                    <th className="px-3 py-2 text-right text-gray-700 font-semibold">Unit Cost</th>
+                    <th className="px-3 py-2 text-right text-gray-700 font-semibold">Total Cost</th>
+                    <th className="px-3 py-2 text-left text-gray-700 font-semibold">Priority</th>
+                    <th className="px-3 py-2 text-left text-gray-700 font-semibold">Due Date</th>
+                    <th className="px-3 py-2 text-left text-gray-700 font-semibold">Status</th>
+                    <th className="px-3 py-2 text-center text-gray-700 font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.map(order => (
-                    <tr key={order.wo_id}>
-                      <td><strong>{order.wo_id}</strong></td>
-                      <td>{order.item_name || order.item_code}</td>
-                      <td>{order.qty_to_manufacture || order.quantity}</td>
-                      <td>₹{order.unit_cost?.toFixed(2) || '0.00'}</td>
-                      <td>₹{order.total_cost?.toFixed(2) || '0.00'}</td>
-                      <td>
-                        <span className={`wo-priority-badge ${order.priority}`}>
-                          {order.priority}
-                        </span>
-                      </td>
-                      <td>{order.required_date ? new Date(order.required_date).toLocaleDateString() : 'N/A'}</td>
-                      <td><span className={`wo-status-badge ${getStatusColor(order.status)}`}>{order.status}</span></td>
-                      <td>
-                        <div className="wo-entry-actions">
-                          <button
-                            className="wo-btn-track"
-                            onClick={() => handleTrack(order)}
-                            title="Track"
-                          >
-                            <Truck size={14} />
-                          </button>
-                          <button className="wo-btn-edit" onClick={() => handleEdit(order)} title="Edit"><Edit2 size={14} /></button>
-                          <button className="wo-btn-delete" onClick={() => handleDelete(order.wo_id)} title="Delete"><Trash2 size={14} /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {orders.map((order, idx) => {
+                    const statusConfig = getStatusBadge(order.status)
+                    const priorityConfig = getPriorityBadge(order.priority)
+                    return (
+                      <tr key={order.wo_id} className={`border-b border-gray-200 hover:bg-gray-50 transition ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                        <td className="px-3 py-2 font-semibold text-gray-900">{order.wo_id}</td>
+                        <td className="px-3 py-2 text-gray-700">{order.item_name || order.item_code}</td>
+                        <td className="px-3 py-2 text-right text-gray-700">{order.qty_to_manufacture || order.quantity}</td>
+                        <td className="px-3 py-2 text-right text-gray-700">₹{order.unit_cost?.toFixed(0) || '0'}</td>
+                        <td className="px-3 py-2 text-right text-gray-700 font-semibold">₹{order.total_cost?.toFixed(0) || '0'}</td>
+                        <td className="px-3 py-2">
+                          <span className={`inline-block px-2 py-1 rounded border ${priorityConfig.bg} ${priorityConfig.text} ${priorityConfig.border} border text-xs capitalize`}>
+                            {order.priority}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-gray-700">{order.required_date ? new Date(order.required_date).toLocaleDateString() : 'N/A'}</td>
+                        <td className="px-3 py-2">
+                          <span className={`inline-block px-2 py-1 rounded border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} border text-xs capitalize`}>
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex gap-1 justify-center">
+                            <button
+                              onClick={() => handleView(order)}
+                              title="View"
+                              className="p-1 hover:bg-blue-50 rounded transition"
+                            >
+                              <Eye size={14} className="text-blue-600" />
+                            </button>
+                            {order.status === 'draft' && (
+                              <button 
+                                onClick={() => handleEdit(order)} 
+                                title="Edit"
+                                className="p-1 hover:bg-amber-50 rounded transition"
+                              >
+                                <Edit2 size={14} className="text-amber-600" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleTrack(order)}
+                              title="Track"
+                              className="p-1 hover:bg-green-50 rounded transition"
+                            >
+                              <Truck size={14} className="text-green-600" />
+                            </button>
+                            {order.status === 'draft' && (
+                              <button 
+                                onClick={() => handleDelete(order.wo_id)} 
+                                title="Delete"
+                                className="p-1 hover:bg-red-50 rounded transition"
+                              >
+                                <Trash2 size={14} className="text-red-600" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
-          ) : (
-            <div className="wo-empty-state">
-              <div className="wo-empty-icon">📭</div>
-              <div className="wo-empty-title">No work orders found</div>
-              <div className="wo-empty-text">Create a new work order to get started</div>
-            </div>
-          )}
-        </div>
-
-        
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+            <div className="text-3xl mb-2">📭</div>
+            <div className="text-xs font-semibold  text-gray-900">No work orders found</div>
+            <div className="text-xs text-gray-600 mt-1">Create a new work order to get started</div>
+          </div>
+        )}
       </div>
     </div>
   )

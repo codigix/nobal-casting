@@ -5,7 +5,7 @@ async function deploySchema() {
     host: 'localhost',
     user: 'erp_user',
     password: 'erp_password',
-    database: 'aluminium_erp',
+    database: 'nobalcasting',
     port: 3306,
     waitForConnections: true,
     connectionLimit: 10,
@@ -254,7 +254,7 @@ async function deploySchema() {
     const conn = await pool.getConnection()
     const [result] = await conn.query(`
       SELECT TABLE_NAME FROM information_schema.TABLES 
-      WHERE TABLE_SCHEMA = 'aluminium_erp' 
+      WHERE TABLE_SCHEMA = 'nobalcasting' 
       ORDER BY TABLE_NAME
     `)
     conn.release()

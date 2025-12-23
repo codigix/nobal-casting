@@ -8,7 +8,7 @@ async function addAuditFields() {
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
-    database: 'aluminium_erp',
+    database: 'nobalcasting',
     port: process.env.DB_PORT || 3306
   })
 

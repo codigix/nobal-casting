@@ -252,7 +252,7 @@ export default function PurchaseOrders() {
       label: 'Created By', 
       width: '11%',
       render: (val) => (
-        <span className="text-sm text-neutral-600 dark:text-neutral-400">
+        <span className="text-xs text-neutral-600 dark:text-neutral-400">
           {val || 'System'}
         </span>
       )
@@ -360,7 +360,7 @@ export default function PurchaseOrders() {
       {/* Header Section */}
       <div className="flex-between mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-neutral-900 dark:text-neutral-100">Purchase Orders</h2>
+          <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">Purchase Orders</h2>
           <p className="text-neutral-600 dark:text-neutral-400 mt-1">Manage and track all procurement activities</p>
         </div>
         <Button 

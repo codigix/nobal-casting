@@ -120,11 +120,9 @@
 }
 
 .form-group input,
-.form-group select,
 .form-group textarea {
   width: 100%;
   padding: 6px 10px;
-  border: 1px solid var(--border-color);
   border-radius: 3px;
   background-color: var(--input-bg);
   color: var(--text-primary);
@@ -375,7 +373,6 @@
 }
 
 :root.dark-mode .form-group input,
-:root.dark-mode .form-group select,
 :root.dark-mode .form-group textarea {
   background-color: #1a1a1a;
   color: #fff;

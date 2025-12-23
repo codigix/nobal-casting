@@ -11,14 +11,7 @@ import './Buying.css'
 
 
 const TABS = [
-  { id: 'details', label: 'Details' },
-  { id: 'inventory', label: 'Inventory' },
-  { id: 'purchasing', label: 'Purchasing' },
-  { id: 'sales', label: 'Sales' },
-  { id: 'accounting', label: 'Accounting' },
-  { id: 'tax', label: 'Tax' },
-  { id: 'quality', label: 'Quality' },
-  { id: 'manufacturing', label: 'Manufacturing' }
+  { id: 'details', label: 'Details' }
 ]
 
 export default function ItemForm() {
@@ -38,6 +31,7 @@ export default function ItemForm() {
   const [editingSupplier, setEditingSupplier] = useState(null)
   const [barcodeEditData, setBarcodeEditData] = useState({})
   const [supplierEditData, setSupplierEditData] = useState({})
+  const [generatedBarcode, setGeneratedBarcode] = useState(null)
 
 
   const [formData, setFormData] = useState({
@@ -90,6 +84,9 @@ export default function ItemForm() {
     no_of_cavities: 1,
     family_mould: false,
     mould_number: '',
+    drawing_no: '',
+    revision: '',
+    material_grade: '',
     gdc_dimensional_parameters: [],
     pdi_dimensional_parameters: [],
     visual_parameters: [],
@@ -97,10 +94,30 @@ export default function ItemForm() {
     machining_process_parameters: []
   })
 
-  const [itemGroups, setItemGroups] = useState([])
+  const [itemGroups, setItemGroups] = useState([
+    { label: 'SET', value: 'SET' },
+    { label: 'Mould', value: 'Mould' },
+    { label: 'EF; 1.5" UNIV TRUN RTV FREE', value: 'EF; 1.5" UNIV TRUN RTV FREE' },
+    { label: 'Finished Goods', value: 'Finished Goods' },
+    { label: 'Consumable', value: 'Consumable' },
+    { label: 'Sub Assemblies', value: 'Sub Assemblies' },
+    { label: 'Services', value: 'Services' },
+    { label: 'Raw Material', value: 'Raw Material' },
+    { label: 'Products', value: 'Products' },
+    { label: 'All Item Groups', value: 'All Item Groups' }
+  ])
   const [suppliers, setSuppliers] = useState([])
   const [customers, setCustomers] = useState([])
-  const [uomList, setUomList] = useState([])
+  const [uomList, setUomList] = useState([
+    { label: 'Bar', value: 'Bar' },
+    { label: 'Barleycorn', value: 'Barleycorn' },
+    { label: 'Box', value: 'Box' },
+    { label: 'Kg', value: 'Kg' },
+    { label: 'Litre', value: 'Litre' },
+    { label: 'Meter', value: 'Meter' },
+    { label: 'Nos', value: 'Nos' },
+    { label: 'Pair', value: 'Pair' }
+  ])
   const [valuationMethods, setValuationMethods] = useState([
     { label: 'FIFO', value: 'FIFO' },
     { label: 'Moving Average', value: 'Moving Average' },
@@ -120,8 +137,6 @@ export default function ItemForm() {
   ])
   const [itemGroupInput, setItemGroupInput] = useState('')
   const [showItemGroupDropdown, setShowItemGroupDropdown] = useState(false)
-
-
 
   useEffect(() => {
     fetchDropdownData()
@@ -170,24 +185,30 @@ export default function ItemForm() {
     try {
       const apiUrl = import.meta.env.VITE_API_URL
       const [groupsRes, suppliersRes, customersRes, uomRes] = await Promise.all([
-        axios.get(`${apiUrl}/items/groups`),
+        axios.get(`${apiUrl}/item-groups`).catch(() => ({ data: { data: [] } })),
         axios.get(`${apiUrl}/suppliers?limit=1000`),
         axios.get(`${apiUrl}/selling/customers?limit=1000`),
         axios.get(`${apiUrl}/uom?limit=1000`).catch(() => ({ data: { data: [] } }))
       ])
 
       const groups = groupsRes.data.data || []
-      setItemGroups(Array.isArray(groups) && groups.length > 0 && typeof groups[0] === 'object'
-        ? groups.map(g => ({ label: g.name || g.item_group || '', value: g.name || g.item_group || '' }))
-        : groups.map(g => ({ label: g, value: g })))
+      if (groups.length > 0) {
+        const mappedGroups = Array.isArray(groups) && typeof groups[0] === 'object'
+          ? groups.map(g => ({ label: g.name || g.item_group || '', value: g.name || g.item_group || '' }))
+          : groups.map(g => ({ label: g, value: g }))
+        setItemGroups(mappedGroups)
+      }
 
       setSuppliers(suppliersRes.data.data || [])
       setCustomers(customersRes.data.data || [])
 
       const uoms = uomRes.data.data || []
-      setUomList(Array.isArray(uoms) && uoms.length > 0 && typeof uoms[0] === 'object'
-        ? uoms.map(u => ({ label: u.name || u.uom || '', value: u.name || u.uom || '' }))
-        : uoms.map(u => ({ label: u, value: u })))
+      if (uoms.length > 0) {
+        const mappedUoms = Array.isArray(uoms) && typeof uoms[0] === 'object'
+          ? uoms.map(u => ({ label: u.name || u.uom || '', value: u.name || u.uom || '' }))
+          : uoms.map(u => ({ label: u, value: u }))
+        setUomList(mappedUoms)
+      }
     } catch (err) {
       console.error('Failed to fetch dropdown data:', err)
     }
@@ -432,7 +453,7 @@ export default function ItemForm() {
         setSuccess('Item created successfully')
       }
 
-      setTimeout(() => navigate('/buying/items'), 2000)
+      setTimeout(() => navigate('/manufacturing/items'), 2000)
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save item')
     } finally {
@@ -442,6 +463,39 @@ export default function ItemForm() {
 
   const handleTabClick = (tabId) => {
     setActiveTab(tabId)
+  }
+
+  const generateEANBarcode = () => {
+    if (!formData.item_code) {
+      setError('Please generate Item Code first')
+      return
+    }
+    
+    const barcodeValue = formData.item_code.replace(/[^0-9]/g, '').substring(0, 12).padEnd(12, '0')
+    const barcodeUrl = `https://barcodeapi.com/api/generate?type=ean&value=${barcodeValue}&width=200&height=100`
+    
+    setGeneratedBarcode({
+      barcode: barcodeValue,
+      barcode_name: formData.item_code,
+      barcode_type: 'EAN',
+      image_url: barcodeUrl
+    })
+
+    const updatedBarcodes = [
+      ...formData.barcode_list,
+      {
+        barcode: barcodeValue,
+        barcode_name: formData.item_code,
+        barcode_type: 'EAN'
+      }
+    ]
+    setFormData({
+      ...formData,
+      barcode_list: updatedBarcodes
+    })
+
+    setSuccess('EAN barcode generated successfully')
+    setTimeout(() => setSuccess(null), 3000)
   }
 
   const currentTabIndex = TABS.findIndex(t => t.id === activeTab)
@@ -674,7 +728,7 @@ export default function ItemForm() {
 
   const renderDetailsTab = () => (
     <div className="form-section">
-      <div className="form-row">
+      <div className="form-row grid grid-cols-3">
         <div className="form-group">
           <label>Item Code *</label>
           <input
@@ -698,9 +752,6 @@ export default function ItemForm() {
             required
           />
         </div>
-      </div>
-
-      <div className="form-row">
         <div className="form-group">
           <label>Item Group *</label>
           <SearchableSelect
@@ -719,138 +770,123 @@ export default function ItemForm() {
             placeholder="Select UOM"
           />
         </div>
-      </div>
-
-
-      <div className="form-row">
         <div className="form-group">
-          <label>HSN Code</label>
+          <label>Valuation Rate</label>
           <input
-            type="text"
-            name="hsn_code"
-            value={formData.hsn_code}
+            type="number"
+            name="valuation_rate"
+            value={formData.valuation_rate}
             onChange={handleChange}
-            placeholder="Enter HSN code"
+            placeholder="0.00"
+            step="0.01"
           />
         </div>
         <div className="form-group">
-          <label>No of Cavity</label>
+          <label>No. of Cavity (for mould items)</label>
           <input
             type="number"
             name="no_of_cavities"
             value={formData.no_of_cavities}
             onChange={handleChange}
+            placeholder="1"
             min="1"
           />
         </div>
-      </div>
-
-      <div className="form-row">
-        <div className="form-group checkbox">
+         <div className="form-group">
+          <label>Weight per Unit</label>
           <input
-            type="checkbox"
-            name="disabled"
-            id="disabled"
-            checked={formData.disabled}
+            type="number"
+            name="weight_per_unit"
+            value={formData.weight_per_unit}
             onChange={handleChange}
+            placeholder="0.00"
+            step="0.01"
           />
-          <label htmlFor="disabled">Disabled</label>
         </div>
-        <div className="form-group checkbox">
-          <input
-            type="checkbox"
-            name="allow_alternative_item"
-            id="allow_alternative_item"
-            checked={formData.allow_alternative_item}
-            onChange={handleChange}
-          />
-          <label htmlFor="allow_alternative_item">Allow Alternative Item</label>
-        </div>
-      </div>
-
-      <div className="form-row">
-        <div className="form-group checkbox">
-          <input
-            type="checkbox"
-            name="maintain_stock"
-            id="maintain_stock"
-            checked={formData.maintain_stock}
-            onChange={handleChange}
-          />
-          <label htmlFor="maintain_stock">Maintain Stock</label>
-        </div>
-        <div className="form-group checkbox">
-          <input
-            type="checkbox"
-            name="has_variants"
-            id="has_variants"
-            checked={formData.has_variants}
-            onChange={handleChange}
-          />
-          <label htmlFor="has_variants">Has Variants</label>
-        </div>
-      </div>
-
-      <div className="form-row">
-        <div className="form-group checkbox">
-          <input
-            type="checkbox"
-            name="family_mould"
-            id="family_mould"
-            checked={formData.family_mould}
-            onChange={handleChange}
-          />
-          <label htmlFor="family_mould">Family Mould</label>
-        </div>
-        <div className="form-group checkbox">
-          <input
-            type="checkbox"
-            name="is_fixed_asset"
-            id="is_fixed_asset"
-            checked={formData.is_fixed_asset}
-            onChange={handleChange}
-          />
-          <label htmlFor="is_fixed_asset">Is Fixed Asset</label>
-        </div>
-      </div>
-
-      <div className="form-row">
         <div className="form-group">
-          <label>Mould Number</label>
+          <label>Weight UOM</label>
+          <SearchableSelect
+            value={formData.weight_uom}
+            onChange={(val) => setFormData({ ...formData, weight_uom: val })}
+            options={uomList}
+            placeholder="Select weight UOM"
+          />
+        </div>
+         <div className="form-group">
+          <label>Drawing No (Optional)</label>
           <input
             type="text"
-            name="mould_number"
-            value={formData.mould_number}
+            name="drawing_no"
+            value={formData.drawing_no}
             onChange={handleChange}
-            placeholder="Enter mould number"
+            placeholder="Enter drawing number"
           />
         </div>
-      </div>
-
-      <div className="form-row">
-        <div className="form-group full-width">
-          <label>Description</label>
-          <textarea
-            name="description"
-            value={formData.description}
+        <div className="form-group">
+          <label>Revision (Optional)</label>
+          <input
+            type="text"
+            name="revision"
+            value={formData.revision}
             onChange={handleChange}
-            placeholder="Enter item description"
-            rows="3"
+            placeholder="Enter revision"
           />
         </div>
+         <div className="form-group">
+          <label>Material Grade (Optional)</label>
+          <input
+            type="text"
+            name="material_grade"
+            value={formData.material_grade}
+            onChange={handleChange}
+            placeholder="Enter material grade"
+          />
+        </div>
+         <Button
+          type="button"
+          onClick={generateEANBarcode}
+          variant="info"
+          style={{ marginBottom: '12px' }}
+        >
+          Generate EAN Barcode
+        </Button>
       </div>
 
-      <hr style={{ margin: 'var(--spacing-4) 0' }} />
+     
+     
 
-      {renderDimensionTable('gdc_dimensional_parameters', 'GDC Dimensional Parameters')}
-      {renderDimensionTable('pdi_dimensional_parameters', 'PDI Dimensional Parameters')}
-      {renderDimensionTable('visual_parameters', 'Visual Parameters')}
-      {renderDimensionTable('machining_dimensional_parameters', 'Machining Dimensional Parameters')}
-      {renderDimensionTable('machining_process_parameters', 'Machining Process Parameters')}
+      {generatedBarcode && (
+        <div style={{
+          marginTop: '20px',
+          padding: '16px',
+          backgroundColor: '#f5f5f5',
+          border: '1px solid #e0e0e0',
+          borderRadius: '4px'
+        }}>
+          <h4 style={{ marginTop: 0 }}>Generated Barcode</h4>
+          <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+            <img
+              src={generatedBarcode.image_url}
+              alt="EAN Barcode"
+              style={{ maxWidth: '100%', height: 'auto' }}
+              onError={(e) => {
+                e.target.style.display = 'none'
+              }}
+            />
+          </div>
+          <p><strong>Code:</strong> {generatedBarcode.barcode}</p>
+          <p><strong>Type:</strong> {generatedBarcode.barcode_type}</p>
+          <p><strong>Name:</strong> {generatedBarcode.barcode_name}</p>
+        </div>
+      )}
     </div>
   )
 
-  const renderInventoryTab = () => (
+  const renderTabContent = () => {
+    return renderDetailsTab()
+  }
+
+  const PLACEHOLDER = () => (
     <div className="form-section">
       <h3>Inventory Settings</h3>
 
@@ -950,6 +986,7 @@ export default function ItemForm() {
                 <th style={{ width: '60px' }}>No.</th>
                 <th>Barcode Name</th>
                 <th>Barcode Type</th>
+                <th style={{ width: '150px' }}>Barcode Preview</th>
                 <th style={{ width: '120px' }}>Action</th>
               </tr>
             </thead>
@@ -1014,6 +1051,21 @@ export default function ItemForm() {
                         </div>
                       ) : (
                         barcode.barcode_type || '-'
+                      )}
+                    </td>
+
+                    <td style={{ textAlign: 'center', padding: '8px' }}>
+                      {barcode.barcode && barcode.barcode_type ? (
+                        <img
+                          src={`https://barcodeapi.com/api/generate?type=${barcode.barcode_type.toLowerCase()}&value=${barcode.barcode}&width=100&height=50`}
+                          alt="Barcode preview"
+                          style={{ maxWidth: '100%', height: 'auto', maxHeight: '50px' }}
+                          onError={(e) => {
+                            e.target.style.display = 'none'
+                          }}
+                        />
+                      ) : (
+                        '-'
                       )}
                     </td>
 
@@ -1673,36 +1725,13 @@ export default function ItemForm() {
     </div>
   )
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'details':
-        return renderDetailsTab()
-      case 'inventory':
-        return renderInventoryTab()
-      case 'purchasing':
-        return renderPurchasingTab()
-      case 'sales':
-        return renderSalesTab()
-      case 'accounting':
-        return renderAccountingTab()
-      case 'tax':
-        return renderTaxTab()
-      case 'quality':
-        return renderQualityTab()
-      case 'manufacturing':
-        return renderManufacturingTab()
-      default:
-        return null
-    }
-  }
-
   return (
     <div className="buying-container">
       <Card>
         <div className="page-header">
           <h2>{isEditMode ? 'Edit Item' : 'Create Item'}</h2>
           <Button
-            onClick={() => navigate('/buying/items')}
+            onClick={() => navigate('/manufacturing/items')}
             variant="secondary"
           >
             Back
@@ -1721,48 +1750,30 @@ export default function ItemForm() {
           />
         )}
 
-        <div className="tab-wizard-container">
-          <div className="tab-wizard-header">
-            <div className="tab-wizard-tabs">
-              {TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  className={`tab-wizard-button ${activeTab === tab.id ? 'active' : ''}`}
-                  onClick={() => setActiveTab(tab.id)}
-                  type="button"
-                >
-                  <span className="tab-wizard-dot"></span>
-                  {tab.label}
-                </button>
-              ))}
+        <form onSubmit={handleSubmit} className="form-container">
+          {renderTabContent()}
+
+          <div className="form-actions">
+            <div></div>
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : 'Save'}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => navigate('/manufacturing/items')}
+              >
+                Cancel
+              </Button>
             </div>
+            <div></div>
           </div>
-
-          <form onSubmit={handleSubmit} className="tab-wizard-content">
-            {renderTabContent()}
-
-            <div className="form-actions">
-              <div></div>
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={loading}
-                >
-                  {loading ? 'Saving...' : 'Save'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => navigate('/buying/items')}
-                >
-                  Cancel
-                </Button>
-              </div>
-              <div></div>
-            </div>
-          </form>
-        </div>
+        </form>
       </Card>
     </div>
   )

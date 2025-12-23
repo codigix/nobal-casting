@@ -8,7 +8,7 @@
 --   OLD: id INT AUTO_INCREMENT PRIMARY KEY
 --   NEW: mr_item_id VARCHAR(50) PRIMARY KEY
 --
--- Run with: mysql -u root -p aluminium_erp < fix-schema.sql
+-- Run with: mysql -u root -p nobalcasting < fix-schema.sql
 -- ============================================================
 
 -- Step 1: Backup existing data
@@ -54,7 +54,7 @@ SELECT
   TABLE_SCHEMA,
   TABLE_NAME
 FROM information_schema.TABLES
-WHERE TABLE_SCHEMA = 'aluminium_erp' AND TABLE_NAME = 'material_request_item';
+WHERE TABLE_SCHEMA = 'nobalcasting' AND TABLE_NAME = 'material_request_item';
 
 -- Additional Fixes for data integrity
 -- =====================================

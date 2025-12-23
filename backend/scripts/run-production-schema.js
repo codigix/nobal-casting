@@ -10,7 +10,7 @@ async function runProductionSchema() {
     host: 'localhost',
     user: 'erp_user',
     password: 'erp_password',
-    database: 'aluminium_erp',
+    database: 'nobalcasting',
     port: 3306,
     waitForConnections: true,
     connectionLimit: 10,
@@ -65,7 +65,7 @@ async function runProductionSchema() {
     // Check production tables
     const [tables] = await pool.query(
       `SELECT TABLE_NAME FROM information_schema.TABLES 
-       WHERE TABLE_SCHEMA = 'aluminium_erp' 
+       WHERE TABLE_SCHEMA = 'nobalcasting' 
        AND (TABLE_NAME = 'work_order' 
             OR TABLE_NAME LIKE 'production_%' 
             OR TABLE_NAME = 'machine_master' 

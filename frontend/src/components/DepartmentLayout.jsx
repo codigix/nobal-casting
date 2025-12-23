@@ -26,7 +26,8 @@ import {
   Activity,
   Eye,
   Wrench,
-  Grid3x3
+  Grid3x3,
+  Award
 } from 'lucide-react'
 
 /**
@@ -39,11 +40,22 @@ export default function DepartmentLayout({ children }) {
   const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [expandedMenu, setExpandedMenu] = useState(null)
   const [popoverMenu, setPopoverMenu] = useState(null)
   const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 })
 
-  const userDept = user?.department?.toLowerCase() || 'buying'
+  let userDept = user?.department?.toLowerCase() || 'manufacturing'
+  if (userDept === 'production') userDept = 'manufacturing'
+
+  const getInitialExpandedMenu = () => {
+    const deptMenus = {
+      'inventory': 'inventory',
+      'manufacturing': 'manufacturing',
+      'admin': 'analytics'
+    }
+    return deptMenus[userDept] || null
+  }
+
+  const [expandedMenu, setExpandedMenu] = useState(getInitialExpandedMenu())
 
   const isActive = (path) => location.pathname.startsWith(path)
   const sidebarWidth = sidebarCollapsed ? 80 : 280
@@ -79,229 +91,72 @@ export default function DepartmentLayout({ children }) {
       section: 'NAVIGATION'
     }
 
-    const masterItems = {
-      id: 'masters',
-      label: 'Masters',
-      icon: Settings,
-      section: 'APPS',
-      submenu: [
-        { label: 'Suppliers', path: '/masters/suppliers', icon: Building2 },
-        { label: 'Items', path: '/masters/items', icon: Package },
-      ]
-    }
-
-    // BUYING DEPARTMENT MENU
-    if (userDept === 'buying') {
-      return [
-        dashboardItem,
-        {
-          id: 'buying',
-          label: 'Buying Module',
-          icon: ShoppingCart,
-          section: 'APPS',
-          submenu: [
-            { label: 'Material Requests', path: '/buying/material-requests', icon: FileText },
-            { label: 'RFQs', path: '/buying/rfqs', icon: Send },
-            { label: 'Quotations', path: '/buying/quotations', icon: DollarSign },
-            { label: 'Purchase Orders', path: '/buying/purchase-orders', icon: Clipboard },
-            { label: 'Purchase Receipts', path: '/buying/purchase-receipts', icon: Package },
-            { label: 'Purchase Invoices', path: '/buying/purchase-invoices', icon: Receipt }
-          ]
-        },
-        masterItems,
-        {
-          id: 'analytics',
-          label: 'Analytics',
-          icon: TrendingUp,
-          section: 'APPS',
-          submenu: [
-            { label: 'Buying Analytics', path: '/analytics/buying', icon: TrendingUp }
-          ]
-        }
-      ]
-    }
-
-    // SELLING DEPARTMENT MENU
-    if (userDept === 'selling') {
-      return [
-        dashboardItem,
-        {
-          id: 'selling',
-          label: 'Selling Module',
-          icon: TrendingUp,
-          section: 'APPS',
-          submenu: [
-            { label: 'Quotations', path: '/selling/quotations', icon: DollarSign },
-            { label: 'Sales Orders', path: '/selling/sales-orders', icon: Clipboard },
-            { label: 'Delivery Notes', path: '/selling/delivery-notes', icon: Package },
-            { label: 'Sales Invoices', path: '/selling/sales-invoices', icon: Receipt },
-            { label: 'Customers', path: '/selling/customers', icon: Building2 }
-          ]
-        },
-        {
-          id: 'analytics',
-          label: 'Analytics',
-          icon: TrendingUp,
-          section: 'APPS',
-          submenu: [
-            { label: 'Sales Analytics', path: '/analytics/selling', icon: TrendingUp }
-          ]
-        }
-      ]
-    }
-
     // INVENTORY DEPARTMENT MENU
     if (userDept === 'inventory') {
       return [
         dashboardItem,
         {
           id: 'inventory',
-          label: 'Inventory Module',
+          label: 'Inventory',
           icon: Warehouse,
           section: 'APPS',
           submenu: [
-            { label: 'GRN Requests', path: '/inventory/grn-requests', icon: CheckCircle },
+            { label: 'GRN Management', path: '/inventory/grn-management', icon: Package },
+            { label: 'Purchase Receipt', path: '/inventory/purchase-receipts', icon: Receipt },
+            { label: 'Warehouses', path: '/inventory/warehouses', icon: Warehouse },
             { label: 'Stock Entries', path: '/inventory/stock-entries', icon: FileText },
             { label: 'Stock Balance', path: '/inventory/stock-balance', icon: Package },
             { label: 'Stock Ledger', path: '/inventory/stock-ledger', icon: BarChart3 },
-            { label: 'Warehouses', path: '/inventory/warehouses', icon: Warehouse }
-          ]
-        },
-        {
-          id: 'analytics',
-          label: 'Analytics',
-          icon: TrendingUp,
-          section: 'APPS',
-          submenu: [
-            { label: 'Inventory Analytics', path: '/analytics/inventory', icon: TrendingUp }
+            { label: 'Suppliers', path: '/inventory/suppliers', icon: Users }
           ]
         }
       ]
     }
 
-    // ADMIN DEPARTMENT MENU - Full Access
+    // MANUFACTURING DEPARTMENT MENU
+    if (userDept === 'manufacturing') {
+      return [
+        dashboardItem,
+        {
+          id: 'manufacturing',
+          label: 'Manufacturing',
+          icon: Package,
+          section: 'APPS',
+          submenu: [
+            { label: 'Customers', path: '/manufacturing/customers', icon: Users },
+            { label: 'Items', path: '/manufacturing/items', icon: Package },
+            { label: 'BOM', path: '/manufacturing/bom', icon: Clipboard },
+            { label: 'Sales Orders', path: '/manufacturing/sales-orders', icon: ShoppingCart },
+            { label: 'Production Planning', path: '/manufacturing/production-planning', icon: Calendar },
+            { label: 'Work Orders', path: '/manufacturing/work-orders', icon: Clipboard },
+            { label: 'Job Cards', path: '/manufacturing/job-cards', icon: FileText },
+            { label: 'Workstations', path: '/manufacturing/workstations', icon: Grid3x3 },
+            { label: 'Operations', path: '/manufacturing/operations', icon: Wrench }
+          ]
+        },
+        {
+          id: 'analytics',
+          label: 'Analytics',
+          icon: BarChart3,
+          section: 'APPS',
+          submenu: [
+            { label: 'Production Analytics', path: '/manufacturing/analytics', icon: TrendingUp }
+          ]
+        }
+      ]
+    }
+
+    // ADMIN DEPARTMENT MENU
     if (userDept === 'admin') {
       return [
         dashboardItem,
         {
-          id: 'buying',
-          label: 'Buying Module',
-          icon: ShoppingCart,
-          section: 'APPS',
-          submenu: [
-            { label: 'Material Requests', path: '/buying/material-requests', icon: FileText },
-            { label: 'RFQs', path: '/buying/rfqs', icon: Send },
-            { label: 'Quotations', path: '/buying/quotations', icon: DollarSign },
-            { label: 'Purchase Orders', path: '/buying/purchase-orders', icon: Clipboard },
-            { label: 'Purchase Receipts', path: '/buying/purchase-receipts', icon: Package },
-            { label: 'Purchase Invoices', path: '/buying/purchase-invoices', icon: Receipt }
-          ]
-        },
-        {
-          id: 'selling',
-          label: 'Selling Module',
-          icon: TrendingUp,
-          section: 'APPS',
-          submenu: [
-            { label: 'Quotations', path: '/selling/quotations', icon: DollarSign },
-            { label: 'Sales Orders', path: '/selling/sales-orders', icon: Clipboard },
-            { label: 'Delivery Notes', path: '/selling/delivery-notes', icon: Package },
-            { label: 'Sales Invoices', path: '/selling/sales-invoices', icon: Receipt },
-            { label: 'Customers', path: '/selling/customers', icon: Building2 }
-          ]
-        },
-        {
-          id: 'inventory',
-          label: 'Inventory Module',
-          icon: Warehouse,
-          section: 'APPS',
-          submenu: [
-            { label: 'GRN Requests', path: '/inventory/grn-requests', icon: CheckCircle },
-            { label: 'Stock Entries', path: '/inventory/stock-entries', icon: FileText },
-            { label: 'Stock Balance', path: '/inventory/stock-balance', icon: Package },
-            { label: 'Stock Ledger', path: '/inventory/stock-ledger', icon: BarChart3 },
-            { label: 'Warehouses', path: '/inventory/warehouses', icon: Warehouse }
-          ]
-        },
-        masterItems,
-        {
-          id: 'analytics',
-          label: 'Analytics',
-          icon: TrendingUp,
-          section: 'APPS',
-          submenu: [
-            { label: 'Buying Analytics', path: '/analytics/buying', icon: TrendingUp },
-            { label: 'Sales Analytics', path: '/analytics/selling', icon: TrendingUp },
-            { label: 'Inventory Analytics', path: '/analytics/inventory', icon: TrendingUp }
-          ]
-        },
-        {
-          id: 'admin',
-          label: 'Administration',
-          icon: Users,
-          section: 'APPS',
-          submenu: [
-            { label: 'User Management', path: '/admin/users', icon: Users },
-            { label: 'Settings', path: '/admin/settings', icon: Settings }
-          ]
-        }
-      ]
-    }
-
-    // PRODUCTION DEPARTMENT MENU
-    if (userDept === 'production') {
-      return [
-        dashboardItem,
-        {
-          id: 'billOfMaterials',
-          label: 'Bill of Materials',
-          icon: Clipboard,
-          section: 'APPS',
-          submenu: [
-            { label: 'BOM', path: '/production/boms', icon: Clipboard },
-            { label: 'Workstations', path: '/production/workstations', icon: Grid3x3 },
-            { label: 'Operations', path: '/production/operations', icon: Wrench }
-          ]
-        },
-        {
-          id: 'production',
-          label: 'Production',
-          icon: Package,
-          section: 'APPS',
-          submenu: [
-            { label: 'Work Order', path: '/production/work-orders', icon: Clipboard },
-            { label: 'Job Card', path: '/production/job-cards', icon: FileText },
-            { label: 'Production Plan', path: '/production/plans', icon: Calendar },
-            { label: 'Production Orders', path: '/production/orders', icon: Package },
-            { label: 'Quality Records', path: '/production/quality', icon: CheckCircle }
-          ]
-        },
-        {
-          id: 'analytics',
-          label: 'Analytics',
-          icon: BarChart3,
-          section: 'APPS',
-          submenu: [
-            { label: 'Production Analytics', path: '/analytics/production', icon: TrendingUp }
-          ]
-        }
-      ]
-    }
-
-    // TOOLROOM DEPARTMENT MENU
-    if (userDept === 'toolroom') {
-      return [
-        dashboardItem,
-        {
-          id: 'toolroom',
-          label: 'Tool Room Module',
+          id: 'masters',
+          label: 'Masters',
           icon: Settings,
           section: 'APPS',
           submenu: [
-            { label: 'Tools', path: '/toolroom/tools', icon: Package },
-            { label: 'Die Register', path: '/toolroom/die-register', icon: Clipboard },
-            { label: 'Maintenance', path: '/toolroom/maintenance', icon: AlertCircle },
-            { label: 'Rework Logs', path: '/toolroom/reworks', icon: FileText }
+            { label: 'Employees & Designations', path: '/admin/employees-designations', icon: Users }
           ]
         },
         {
@@ -310,125 +165,16 @@ export default function DepartmentLayout({ children }) {
           icon: BarChart3,
           section: 'APPS',
           submenu: [
-            { label: 'Tool Analytics', path: '/analytics/toolroom', icon: TrendingUp }
+            { label: 'Project Analysis', path: '/admin/project-analysis', icon: TrendingUp },
+            { label: 'Machine Analysis', path: '/admin/machine-analysis', icon: TrendingUp },
+            { label: 'OEE Analysis', path: '/admin/oee', icon: TrendingUp },
+            { label: 'Customer Statistics', path: '/admin/customer-statistics', icon: Award }
           ]
         }
       ]
     }
 
-    // QUALITY CONTROL DEPARTMENT MENU
-    if (userDept === 'quality') {
-      return [
-        dashboardItem,
-        {
-          id: 'quality',
-          label: 'Quality Control Module',
-          icon: CheckCircle,
-          section: 'APPS',
-          submenu: [
-            { label: 'Inspections', path: '/quality/inspections', icon: FileText },
-            { label: 'Defects Log', path: '/quality/defects', icon: AlertCircle },
-            { label: 'Reports', path: '/quality/reports', icon: BarChart3 },
-            { label: 'Certifications', path: '/quality/certifications', icon: CheckCircle }
-          ]
-        },
-        {
-          id: 'analytics',
-          label: 'Analytics',
-          icon: BarChart3,
-          section: 'APPS',
-          submenu: [
-            { label: 'Quality Analytics', path: '/analytics/quality', icon: TrendingUp }
-          ]
-        }
-      ]
-    }
-
-    // DISPATCH DEPARTMENT MENU
-    if (userDept === 'dispatch') {
-      return [
-        dashboardItem,
-        {
-          id: 'dispatch',
-          label: 'Dispatch & Logistics',
-          icon: Truck,
-          section: 'APPS',
-          submenu: [
-            { label: 'Shipments', path: '/dispatch/shipments', icon: FileText },
-            { label: 'Routes', path: '/dispatch/routes', icon: Activity },
-            { label: 'Vehicle Fleet', path: '/dispatch/vehicles', icon: Truck },
-            { label: 'Tracking', path: '/dispatch/tracking', icon: Eye }
-          ]
-        },
-        {
-          id: 'analytics',
-          label: 'Analytics',
-          icon: BarChart3,
-          section: 'APPS',
-          submenu: [
-            { label: 'Dispatch Analytics', path: '/analytics/dispatch', icon: TrendingUp }
-          ]
-        }
-      ]
-    }
-
-    // ACCOUNTS/FINANCE DEPARTMENT MENU
-    if (userDept === 'accounts') {
-      return [
-        dashboardItem,
-        {
-          id: 'accounts',
-          label: 'Accounts & Finance',
-          icon: DollarSign,
-          section: 'APPS',
-          submenu: [
-            { label: 'Invoices', path: '/accounts/invoices', icon: Receipt },
-            { label: 'Payments', path: '/accounts/payments', icon: DollarSign },
-            { label: 'Statements', path: '/accounts/statements', icon: FileText },
-            { label: 'Reports', path: '/accounts/reports', icon: BarChart3 }
-          ]
-        },
-        {
-          id: 'analytics',
-          label: 'Analytics',
-          icon: BarChart3,
-          section: 'APPS',
-          submenu: [
-            { label: 'Financial Reports', path: '/analytics/accounts', icon: TrendingUp }
-          ]
-        }
-      ]
-    }
-
-    // HR/PAYROLL DEPARTMENT MENU
-    if (userDept === 'hr') {
-      return [
-        dashboardItem,
-        {
-          id: 'hr',
-          label: 'HR & Payroll',
-          icon: Users,
-          section: 'APPS',
-          submenu: [
-            { label: 'Employees', path: '/hr/employees', icon: Users },
-            { label: 'Attendance', path: '/hr/attendance', icon: CheckCircle },
-            { label: 'Payroll', path: '/hr/payroll', icon: DollarSign },
-            { label: 'Leave Management', path: '/hr/leaves', icon: Calendar }
-          ]
-        },
-        {
-          id: 'analytics',
-          label: 'Analytics',
-          icon: BarChart3,
-          section: 'APPS',
-          submenu: [
-            { label: 'HR Analytics', path: '/analytics/hr', icon: TrendingUp }
-          ]
-        }
-      ]
-    }
-
-    // Default fallback to buying menu
+    // Default fallback menu
     return [dashboardItem]
   }
 
@@ -437,31 +183,17 @@ export default function DepartmentLayout({ children }) {
   // Get department badge color
   const getDepartmentBadgeColor = () => {
     const colors = {
-      'buying': '#4F46E5',       // Blue
-      'selling': '#7C3AED',      // Purple
-      'inventory': '#059669',    // Green
-      'production': '#F59E0B',   // Amber
-      'toolroom': '#8B5CF6',     // Violet
-      'quality': '#06B6D4',      // Cyan
-      'dispatch': '#EC4899',     // Pink
-      'accounts': '#14B8A6',     // Teal
-      'hr': '#3B82F6',           // Blue
-      'admin': '#DC2626'         // Red
+      'inventory': '#059669',      // Green
+      'manufacturing': '#F59E0B',  // Amber
+      'admin': '#DC2626'           // Red
     }
     return colors[userDept] || '#4F46E5'
   }
 
   const getDepartmentLabel = () => {
     const labels = {
-      'buying': 'Buying/Procurement',
-      'selling': 'Selling/Sales',
-      'inventory': 'Inventory/Stock',
-      'production': 'Production/Manufacturing',
-      'toolroom': 'Tool Room/Maintenance',
-      'quality': 'Quality Control',
-      'dispatch': 'Dispatch/Logistics',
-      'accounts': 'Accounts/Finance',
-      'hr': 'HR/Payroll',
+      'inventory': 'Inventory',
+      'manufacturing': 'Manufacturing',
       'admin': 'Administration'
     }
     return labels[userDept] || 'Unknown'
@@ -484,7 +216,7 @@ export default function DepartmentLayout({ children }) {
             <>
               {Array.from(new Set(menuItems.map(item => item.section))).map((section) => (
                 <div key={section}>
-                  <div className="nav-section-label">{section}</div>
+                  <div className="nav-section-label mt-4">{section}</div>
                   {menuItems.filter(item => item.section === section).map((item) => {
                     const IconComponent = item.icon
                     return (

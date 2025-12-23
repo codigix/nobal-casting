@@ -47,7 +47,7 @@ const ToolRoomAnalytics = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-3">
             <TrendingUp className="w-10 h-10 text-blue-600" />
             Tool Room Analytics
           </h1>
@@ -251,8 +251,8 @@ const SummaryCard = ({ title, value, subtitle, icon }) => (
   <div className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition">
     <div className="flex items-start justify-between">
       <div>
-        <p className="text-gray-600 text-sm">{title}</p>
-        <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
+        <p className="text-gray-600 text-xs">{title}</p>
+        <p className="text-xl font-bold text-gray-900 mt-2">{value}</p>
         <p className="text-gray-500 text-xs mt-1">{subtitle}</p>
       </div>
       <div className="text-blue-600 opacity-20">

@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
-import Card from '../../components/Card/Card'
 import Button from '../../components/Button/Button'
 import Table from '../../components/Table/Table'
 import Input from '../../components/Input/Input'
 import { Link, useNavigate } from 'react-router-dom'
-import { Plus, Search, Edit2, Trash2, Package } from 'lucide-react'
-import './Buying.css'
+import { Plus, Search, Edit2, Trash2, Package, Tag, AlertTriangle } from 'lucide-react'
 
 export default function Items() {
   const navigate = useNavigate()
@@ -29,10 +27,10 @@ export default function Items() {
 
   const fetchItemGroups = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/items/groups`)
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/item-groups`)
       const data = await res.json()
       if (data.success) {
-        setGroups(data.data)
+        setGroups(data.data.map(g => g.name))
       }
     } catch (error) {
       console.error('Error fetching groups:', error)
@@ -80,38 +78,20 @@ export default function Items() {
     }
   }
 
-  const StatCard = ({ icon, label, value, color }) => (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      padding: '16px',
-      backgroundColor: 'var(--card-bg)',
-      borderRadius: '8px',
-      border: '1px solid var(--card-border)',
-      borderLeft: `4px solid ${color}`
-    }}>
-      <div style={{
-        fontSize: '24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        {icon}
+  const StatCard = ({ icon: Icon, label, value, color }) => (
+    <div className={`flex items-center gap-3 rounded-lg border-l-4 bg-white p-4 ${
+      color === 'blue' ? 'border-l-blue-500' :
+      color === 'purple' ? 'border-l-purple-500' :
+      'border-l-amber-500'
+    }`}>
+      <div className="text-2xl flex items-center justify-center text-gray-600">
+        <Icon size={24} />
       </div>
       <div>
-        <div style={{
-          fontSize: '12px',
-          color: 'var(--text-secondary)',
-          fontWeight: '500'
-        }}>
+        <div className="text-xs font-medium text-gray-600">
           {label}
         </div>
-        <div style={{
-          fontSize: '20px',
-          fontWeight: 'bold',
-          color: 'var(--text-primary)'
-        }}>
+        <div className="text-xl font-bold text-gray-900">
           {value}
         </div>
       </div>
@@ -119,53 +99,15 @@ export default function Items() {
   )
 
   const ActionButton = ({ icon: Icon, label, onClick, variant = 'default', disabled = false }) => {
-    const baseStyle = {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-      padding: '6px 12px',
-      fontSize: '12px',
-      fontWeight: '500',
-      border: 'none',
-      borderRadius: '6px',
-      cursor: disabled ? 'not-allowed' : 'pointer',
-      transition: 'all 0.2s ease',
-      opacity: disabled ? 0.5 : 1
-    }
-
-    const variantStyles = {
-      edit: {
-        backgroundColor: '#3b82f6',
-        color: 'white'
-      },
-      delete: {
-        backgroundColor: '#ef4444',
-        color: 'white'
-      }
-    }
-
-    const buttonStyle = {
-      ...baseStyle,
-      ...variantStyles[variant]
-    }
-
     return (
       <button
-        style={buttonStyle}
         onClick={onClick}
         disabled={disabled}
-        onMouseEnter={(e) => {
-          if (!disabled) {
-            e.currentTarget.style.backgroundColor = variant === 'edit' ? '#2563eb' : '#dc2626'
-            e.currentTarget.style.transform = 'scale(1.05)'
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!disabled) {
-            e.currentTarget.style.backgroundColor = variant === 'edit' ? '#3b82f6' : '#ef4444'
-            e.currentTarget.style.transform = 'scale(1)'
-          }
-        }}
+        className={`flex items-center gap-1 rounded-md p-2 text-xs font-medium transition-all ${
+          variant === 'edit'
+            ? 'bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50'
+            : 'bg-red-500 text-white hover:bg-red-600 disabled:opacity-50'
+        }`}
       >
         <Icon size={14} />
         {label}
@@ -178,7 +120,6 @@ export default function Items() {
     { key: 'name', label: 'Item Name' },
     { key: 'item_group', label: 'Group' },
     { key: 'uom', label: 'UOM' },
-    { key: 'hsn_code', label: 'HSN Code' },
     { key: 'gst_rate', label: 'GST %', format: (val) => `${val}%` }
   ]
 
@@ -188,13 +129,13 @@ export default function Items() {
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
         <ActionButton
           icon={Edit2}
-          label="Edit"
+          
           variant="edit"
-          onClick={() => navigate(`/masters/item/${item.item_code}`)}
+          onClick={() => navigate(`/manufacturing/items/${item.item_code}`)}
         />
         <ActionButton
           icon={Trash2}
-          label="Delete"
+         
           variant="delete"
           onClick={() => handleDelete(item.item_code)}
         />
@@ -208,85 +149,52 @@ export default function Items() {
   ]
 
   return (
-    <div className='page-container p-5'>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '24px',
-        flexWrap: 'wrap',
-        gap: '16px'
-      }}>
-        <div>
-          <h2 style={{
-            fontSize: '28px',
-            fontWeight: 'bold',
-            color: 'var(--text-primary)',
-            margin: '0 0 8px 0'
-          }}>
-            Items Master
-          </h2>
-          <p style={{
-            fontSize: '13px',
-            color: 'var(--text-secondary)',
-            margin: '0'
-          }}>
-            Manage your product catalog and inventory
-          </p>
+    <div className='bg-gradient-to-br from-gray-50 to-gray-100  px-6 py-6 min-h-screen'>
+      {/* Header */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white">
+            <Package size={20} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Items Master</h1>
+            <p className="text-xs text-gray-600">Manage your product catalog</p>
+          </div>
         </div>
-        <Link to="/masters/item/new">
-          <Button variant="primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Plus size={18} /> Create Item
-          </Button>
-        </Link>
+        <button 
+          onClick={() => navigate('/manufacturing/items/new')}
+          className="btn-primary flex items-center gap-2 bg-gradient-to-br from-blue-400 to-blue-600"
+        >
+          <Plus size={16} /> Create Item
+        </button>
       </div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-        gap: '16px',
-        marginBottom: '24px'
-      }}>
+      {/* Stats */}
+      <div className="mb-6 grid gap-3 grid-cols-1 sm:grid-cols-3">
         <StatCard
-          icon="📦"
+          icon={Package}
           label="Total Items"
           value={stats.totalItems}
-          color="#3b82f6"
+          color="blue"
         />
         <StatCard
-          icon="🏷️"
+          icon={Tag}
           label="Active Groups"
           value={stats.activeGroups}
-          color="#8b5cf6"
+          color="purple"
         />
         <StatCard
-          icon="⚠️"
+          icon={AlertTriangle}
           label="Low Stock Items"
           value={stats.lowStockItems}
-          color="#f59e0b"
+          color="amber"
         />
       </div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '16px',
-        marginBottom: '24px',
-        backgroundColor: 'var(--card-bg)',
-        padding: '20px',
-        borderRadius: '12px',
-        border: '1px solid var(--card-border)',
-        boxShadow: 'var(--shadow-sm)'
-      }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label style={{
-            fontSize: '12px',
-            fontWeight: '600',
-            color: 'var(--text-primary)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
+      {/* Filters */}
+      <div className="mb-6 grid gap-3 grid-cols-1 sm:grid-cols-2 rounded-lg border border-gray-200 bg-white p-3">
+        <div className="flex flex-col gap-2">
+          <label className="flex items-center gap-2 text-xs font-semibold text-gray-700">
             <Search size={14} /> Search Items
           </label>
           <Input
@@ -294,37 +202,17 @@ export default function Items() {
             placeholder="Search by code or name..."
             value={filters.search}
             onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-            style={{
-              padding: '10px 12px',
-              fontSize: '13px'
-            }}
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 placeholder-gray-500"
           />
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <label style={{
-            fontSize: '12px',
-            fontWeight: '600',
-            color: 'var(--text-primary)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
+        <div className="flex flex-col gap-2">
+          <label className="flex items-center gap-2 text-xs font-semibold text-gray-700">
             <Package size={14} /> Filter by Group
           </label>
           <select
             value={filters.item_group}
             onChange={(e) => setFilters({ ...filters, item_group: e.target.value })}
-            style={{
-              padding: '10px 12px',
-              border: '1px solid var(--input-border)',
-              borderRadius: '6px',
-              backgroundColor: 'var(--input-bg)',
-              color: 'var(--input-text)',
-              fontSize: '13px',
-              fontFamily: 'var(--font-primary)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
+            className="rounded-xs border border-gray-300 bg-white py-2 text-xs text-gray-900 cursor-pointer transition-all focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           >
             <option value="">All Groups</option>
             {groups.map(group => (
@@ -334,41 +222,62 @@ export default function Items() {
         </div>
       </div>
 
-      <div style={{
-        backgroundColor: 'var(--card-bg)',
-        borderRadius: '12px',
-        border: '1px solid var(--card-border)',
-        boxShadow: 'var(--shadow-md)',
-        overflow: 'hidden'
-      }}>
+      {/* Table */}
+      <div className="overflow-hidden ">
         {loading ? (
-          <div style={{
-            padding: '32px',
-            textAlign: 'center',
-            color: 'var(--text-secondary)'
-          }}>
-            <div style={{ fontSize: '14px', marginBottom: '8px' }}>Loading items...</div>
+          <div className="flex items-center justify-center px-4 py-12 text-gray-500">
+            <div className="text-sm">Loading items...</div>
           </div>
         ) : items.length === 0 ? (
-          <div style={{
-            padding: '32px',
-            textAlign: 'center',
-            color: 'var(--text-secondary)'
-          }}>
-            <Package size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
-            <div style={{ fontSize: '14px' }}>No items found</div>
-            <Link to="/masters/item/new">
-              <Button variant="primary" style={{ marginTop: '16px' }}>
+          <div className="flex flex-col items-center justify-center px-4 py-12 text-gray-500">
+            <Package size={32} className="mb-3 opacity-50" />
+            <div className="text-sm">No items found</div>
+            <Link to="/manufacturing/items/new">
+              <button className="mt-4 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all">
                 Create First Item
-              </Button>
+              </button>
             </Link>
           </div>
         ) : (
-          <Table
-            columns={columnsWithActions}
-            data={itemsWithActions}
-            rowClickable={false}
-          />
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50">
+                  {columnsWithActions.map(col => (
+                    <th
+                      key={col.key}
+                      className="px-3 py-2 text-left font-semibold text-gray-700"
+                    >
+                      {col.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {itemsWithActions.map((item, idx) => (
+                  <tr
+                    key={item.item_code}
+                    className={`border-b border-gray-100 ${
+                      idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                    } hover:bg-blue-50 transition-colors`}
+                  >
+                    {columnsWithActions.map(col => (
+                      <td
+                        key={`${item.item_code}-${col.key}`}
+                        className="px-3 py-2 text-gray-700"
+                      >
+                        {col.key === 'actions'
+                          ? item.actions
+                          : col.format
+                          ? col.format(item[col.key])
+                          : item[col.key] || '-'}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

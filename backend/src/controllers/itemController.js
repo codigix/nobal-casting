@@ -96,3 +96,15 @@ export async function deleteItem(req, res) {
     res.status(400).json({ success: false, error: error.message })
   }
 }
+
+export async function getUOMList(req, res) {
+  try {
+    const db = req.app.locals.db
+    const model = new ItemModel(db)
+
+    const uoms = await model.getUOMList()
+    res.json({ success: true, data: uoms })
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message })
+  }
+}

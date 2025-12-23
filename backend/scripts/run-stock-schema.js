@@ -10,7 +10,7 @@ async function runSchema() {
     host: 'localhost',
     user: 'erp_user',
     password: 'erp_password',
-    database: 'aluminium_erp',
+    database: 'nobalcasting',
     port: 3306,
     waitForConnections: true,
     connectionLimit: 10,
@@ -55,7 +55,7 @@ async function runSchema() {
     const conn = await pool.getConnection()
     const [tables] = await conn.query(
       `SELECT TABLE_NAME FROM information_schema.TABLES 
-       WHERE TABLE_SCHEMA = 'aluminium_erp' 
+       WHERE TABLE_SCHEMA = 'nobalcasting' 
        AND (TABLE_NAME LIKE '%warehouse%' OR TABLE_NAME LIKE '%stock%' OR TABLE_NAME LIKE '%batch%' OR TABLE_NAME LIKE '%material%' OR TABLE_NAME LIKE '%reorder%')
        ORDER BY TABLE_NAME`
     )

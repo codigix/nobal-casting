@@ -18,17 +18,17 @@ We've created a migration to update these tables to use `item_code` (VARCHAR) in
 Execute the migration file directly using MySQL CLI:
 
 ```bash
-mysql -u root -p aluminium_erp < backend/scripts/fix-item-code-schema.sql
+mysql -u root -p nobalcasting < backend/scripts/fix-item-code-schema.sql
 ```
 
 Or if MySQL is not in PATH:
 ```bash
-C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe -u root -p aluminium_erp < backend/scripts/fix-item-code-schema.sql
+C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe -u root -p nobalcasting < backend/scripts/fix-item-code-schema.sql
 ```
 
 ### Option 2: Using MySQL Workbench or DBeaver
 1. Open your database tool
-2. Connect to the `aluminium_erp` database
+2. Connect to the `nobalcasting` database
 3. Open the file: `backend/scripts/fix-item-code-schema.sql`
 4. Execute all statements
 

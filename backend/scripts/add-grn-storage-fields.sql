@@ -1,4 +1,4 @@
-USE aluminium_erp;
+USE nobalcasting;
 
 -- Add columns to grn_request_items if they don't exist
 ALTER TABLE grn_request_items 

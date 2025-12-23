@@ -29,6 +29,33 @@ export function createHRPayrollRoutes(db) {
     authMiddleware,
     hrPayrollController.updateEmployee.bind(hrPayrollController)
   )
+  router.delete(
+    '/employees/:employee_id',
+    authMiddleware,
+    hrPayrollController.deleteEmployee.bind(hrPayrollController)
+  )
+
+  // ============= DESIGNATION MASTER =============
+  router.post(
+    '/designations',
+    authMiddleware,
+    hrPayrollController.createDesignation.bind(hrPayrollController)
+  )
+  router.get(
+    '/designations',
+    authMiddleware,
+    hrPayrollController.getDesignations.bind(hrPayrollController)
+  )
+  router.put(
+    '/designations/:designation_id',
+    authMiddleware,
+    hrPayrollController.updateDesignation.bind(hrPayrollController)
+  )
+  router.delete(
+    '/designations/:designation_id',
+    authMiddleware,
+    hrPayrollController.deleteDesignation.bind(hrPayrollController)
+  )
 
   // ============= ATTENDANCE LOG =============
   router.post(

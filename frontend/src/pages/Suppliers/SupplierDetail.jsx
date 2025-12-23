@@ -69,7 +69,7 @@ export default function SupplierDetail() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-[var(--text-primary)]">{supplier.name}</h1>
+          <h1 className="text-xl font-bold text-[var(--text-primary)]">{supplier.name}</h1>
           <p className="text-[var(--text-secondary)] mt-1">Supplier ID: {supplier.supplier_id}</p>
         </div>
         <div className="flex gap-3">
@@ -120,7 +120,7 @@ export default function SupplierDetail() {
       {/* Basic Information */}
       <Card className="mb-8">
         <h2 className="text-xl font-bold mb-6">Basic Information</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Supplier Name</label>
             <p className="text-[var(--text-primary)]">{supplier.name}</p>

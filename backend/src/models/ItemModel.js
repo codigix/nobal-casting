@@ -1,5 +1,3 @@
-import { v4 as uuidv4 } from 'uuid'
-
 export class ItemModel {
   constructor(db) {
     this.db = db
@@ -359,6 +357,17 @@ export class ItemModel {
       return { success: true }
     } catch (error) {
       throw new Error(`Failed to delete item: ${error.message}`)
+    }
+  }
+
+  async getUOMList() {
+    try {
+      const [uoms] = await this.db.execute(
+        `SELECT DISTINCT uom FROM item WHERE is_active = 1 AND uom IS NOT NULL ORDER BY uom`
+      )
+      return uoms.map(row => row.uom)
+    } catch (error) {
+      throw new Error(`Failed to fetch UOM list: ${error.message}`)
     }
   }
 }

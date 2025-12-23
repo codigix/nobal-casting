@@ -37,7 +37,7 @@ export default function Layout({ children }) {
             <Link
               key={item.path}
               to={item.path}
-              className="flex items-center gap-3 px-4 py-3 transition-colors"
+              className="flex items-center gap-3 p-2 transition-colors"
               style={{ color: 'var(--sidebar-text)', backgroundColor: 'transparent', opacity: 0.8 }}
               onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.opacity = '1' }}
               onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.opacity = '0.8' }}
@@ -64,7 +64,7 @@ export default function Layout({ children }) {
         </header>
 
         {/* Content area */}
-        <main className="flex-1 overflow-y-auto p-8">
+        <main className="flex-1 overflow-y-auto p-3">
           {children}
         </main>
 

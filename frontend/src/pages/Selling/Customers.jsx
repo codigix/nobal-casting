@@ -15,6 +15,7 @@ export default function Customers() {
   const navigate = useNavigate()
   const [customers, setCustomers] = useState([])
   const [showModal, setShowModal] = useState(false)
+  const [activeTab, setActiveTab] = useState('tata')
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
@@ -83,13 +84,10 @@ export default function Customers() {
   }
 
   const getStatusColor = (status) => {
-    // Customer status colors
     switch (status) {
       case 'active':
-        // Green - Active customer
         return 'success'
       case 'inactive':
-        // Gray - Inactive customer
         return 'secondary'
       default:
         return 'secondary'
@@ -110,8 +108,16 @@ export default function Customers() {
     }
   }
 
+  const filteredCustomers = customers.filter(customer => {
+    if (activeTab === 'tata') {
+      return customer.customer_type?.toLowerCase() === 'tata'
+    } else {
+      return customer.customer_type?.toLowerCase() !== 'tata'
+    }
+  })
+
   const columns = [
-    { label: 'Customer Name', key: 'name', searchable: true },
+    { label: 'Customer Name', key: 'customer_name', searchable: true },
     { label: 'Email', key: 'email' },
     { label: 'Phone', key: 'phone' },
     { label: 'GST No', key: 'gst_no' },
@@ -203,6 +209,40 @@ export default function Customers() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0' }}>
+        <button
+          onClick={() => setActiveTab('tata')}
+          style={{
+            padding: '0.75rem 1.5rem',
+            borderBottom: activeTab === 'tata' ? '2px solid #3b82f6' : 'none',
+            color: activeTab === 'tata' ? '#3b82f6' : '#6b7280',
+            fontWeight: activeTab === 'tata' ? '600' : '500',
+            cursor: 'pointer',
+            background: 'transparent',
+            border: 'none',
+            fontSize: '0.95rem'
+          }}
+        >
+          🏢 TATA
+        </button>
+        <button
+          onClick={() => setActiveTab('other')}
+          style={{
+            padding: '0.75rem 1.5rem',
+            borderBottom: activeTab === 'other' ? '2px solid #3b82f6' : 'none',
+            color: activeTab === 'other' ? '#3b82f6' : '#6b7280',
+            fontWeight: activeTab === 'other' ? '600' : '500',
+            cursor: 'pointer',
+            background: 'transparent',
+            border: 'none',
+            fontSize: '0.95rem'
+          }}
+        >
+          👥 Other Customers
+        </button>
+      </div>
+
       {/* Filters */}
       <div className="filters-section">
         <div className="filter-group">
@@ -231,13 +271,13 @@ export default function Customers() {
       <div className="table-container">
         {loading ? (
           <div className="table-empty">Loading...</div>
-        ) : customers.length === 0 ? (
+        ) : filteredCustomers.length === 0 ? (
           <div className="table-empty">
             <Users size={48} />
             <p>No customers found. Add one to get started.</p>
           </div>
         ) : (
-          <DataTable columns={columns} data={customers} />
+          <DataTable columns={columns} data={filteredCustomers} />
         )}
       </div>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import axios from 'axios'
+import api from '../../services/api'
 import Button from '../../components/Button/Button'
 import Alert from '../../components/Alert/Alert'
 import Card from '../../components/Card/Card'
@@ -8,136 +8,17 @@ import AuditTrail from '../../components/AuditTrail'
 import SearchableSelect from '../../components/SearchableSelect'
 import './Selling.css'
 
-const styles = {
-  mainContainer: {
-    maxWidth: '100%',
-    margin: '2rem',
-    padding: '0'
-  },
-  header: {
-    marginBottom: '20px',
-    paddingBottom: '12px',
-    borderBottom: '2px solid #e5e7eb'
-  },
-  tabsContainer: {
-    marginBottom: '20px',
-    borderBottom: '2px solid #e5e7eb'
-  },
-  tabsList: {
-    display: 'flex',
-    gap: '8px',
-    overflowX: 'auto',
-    paddingBottom: '0',
-    borderBottom: 'none'
-  },
-  tab: {
-    padding: '12px 20px',
-    fontSize: '13px',
-    fontWeight: '500',
-    cursor: 'pointer',
-    border: 'none',
-    backgroundColor: 'transparent',
-    color: '#666',
-    borderBottom: '3px solid transparent',
-    transition: 'all 0.3s',
-    whiteSpace: 'nowrap'
-  },
-  tabActive: {
-    color: '#007bff',
-    borderBottomColor: '#007bff'
-  },
-  tabContent: {
-    padding: '20px 0'
-  },
-  gridRow: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '12px',
-    marginBottom: '12px'
-  },
-  formGroup: {
-    display: 'flex',
-    flexDirection: 'column'
-  },
-  label: {
-    fontSize: '13px',
-    fontWeight: '500',
-    marginBottom: '4px',
-    color: '#374151'
-  },
-  input: {
-    padding: '8px',
-    fontSize: '13px',
-    border: '1px solid #d1d5db',
-    borderRadius: '4px',
-    fontFamily: 'inherit'
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    fontSize: '13px',
-    marginTop: '8px'
-  },
-  tableHeader: {
-    backgroundColor: '#f3f4f6',
-    fontWeight: '600',
-    padding: '8px',
-    textAlign: 'left',
-    borderBottom: '2px solid #d1d5db'
-  },
-  tableCell: {
-    padding: '8px',
-    borderBottom: '1px solid #e5e7eb'
-  },
-  totalsBox: {
-    backgroundColor: '#f8fafc',
-    border: '1px solid #e5e7eb',
-    borderRadius: '4px',
-    padding: '12px',
-    marginTop: '12px'
-  },
-  wizardNav: {
-    display: 'flex',
-    gap: '10px',
-    justifyContent: 'space-between',
-    marginTop: '30px',
-    paddingTop: '20px',
-    borderTop: '1px solid #e5e7eb'
-  },
-  wizardProgress: {
-    display: 'flex',
-    gap: '4px',
-    justifyContent: 'center',
-    marginBottom: '20px'
-  },
-  progressDot: {
-    width: '8px',
-    height: '8px',
-    borderRadius: '50%',
-    backgroundColor: '#e5e7eb',
-    transition: 'all 0.3s'
-  },
-  progressDotActive: {
-    backgroundColor: '#007bff',
-    width: '24px',
-    borderRadius: '4px'
-  }
-}
-
 export default function SalesOrderForm() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const isEditMode = id && id !== 'new'
+  const searchParams = new URLSearchParams(window.location.search)
+  const isReadOnly = searchParams.get('readonly') === 'true'
+  const isEditMode = id && id !== 'new' && !isReadOnly
 
   const tabs = [
     { id: 'basicDetails', label: 'Basic Details' },
-    { id: 'accountingDimensions', label: 'Accounting Dimensions' },
-    { id: 'currencyPriceList', label: 'Currency & Price List' },
     { id: 'items', label: 'Items' },
-    { id: 'paymentTerms', label: 'Payment Terms' },
-    { id: 'additionalInfo', label: 'Additional Info' },
-    { id: 'printSettings', label: 'Print Settings' },
-    { id: 'totals', label: 'Totals & Discounts' }
+    { id: 'bomDetails', label: 'BOM Details' }
   ]
 
   const [activeTabIndex, setActiveTabIndex] = useState(0)
@@ -149,77 +30,49 @@ export default function SalesOrderForm() {
     customer_name: '',
     customer_email: '',
     customer_phone: '',
+    bom_id: '',
+    bom_name: '',
+    quantity: 1,
+    source_warehouse: '',
     delivery_date: '',
     order_type: 'Sales',
-    cost_center: '',
-    project: '',
-    currency: 'INR',
-    price_list: '',
-    ignore_pricing_rule: false,
     items: [],
-    payment_terms_template: '',
-    payment_schedule: [],
-    status: 'Draft',
-    is_internal_customer: false,
-    source: '',
-    campaign: '',
-    territory: '',
-    letter_head: '',
-    print_heading: '',
-    group_same_items: false,
-    terms_and_conditions: '',
-    notes: '',
-    tax_category: '',
-    shipping_rule: '',
-    incoterm: '',
-    sales_taxes_charges_template: '',
-    taxes_charges: [],
-    rounding_adjustment: 0,
-    disable_rounded_total: false,
-    apply_discount_on: 'Grand Total',
-    coupon_code: '',
-    additional_discount_percentage: 0,
-    additional_discount_amount: 0,
-    sales_partner: '',
-    commission_rate: 0,
-    amount_eligible_for_commission: 0,
-    total_commission: 0,
-    sales_team: [],
-    auto_repeat: '',
-    from_date: '',
-    to_date: ''
+    status: 'Draft'
   })
 
   const [customers, setCustomers] = useState([])
-  const [allItems, setAllItems] = useState([])
+  const [boms, setBoms] = useState([])
+  const [itemsList, setItemsList] = useState([])
+  const [warehouses, setWarehouses] = useState([])
+  const [selectedBomData, setSelectedBomData] = useState(null)
+  const [stockAvailability, setStockAvailability] = useState({})
   const [orderTypes, setOrderTypes] = useState([{ label: 'Sales', value: 'Sales' }])
-  const [costCenters, setCostCenters] = useState([])
-  const [projects, setProjects] = useState([])
-  const [currencies, setCurrencies] = useState([{ label: 'INR', value: 'INR' }])
-  const [priceLists, setPriceLists] = useState([])
   const [statuses, setStatuses] = useState([{ label: 'Draft', value: 'Draft' }, { label: 'Submitted', value: 'Submitted' }, { label: 'Confirmed', value: 'Confirmed' }])
-  const [sources, setSources] = useState([])
-  const [campaigns, setCampaigns] = useState([])
-  const [territories, setTerritories] = useState([])
-  const [letterHeads, setLetterHeads] = useState([])
-  const [taxCategories, setTaxCategories] = useState([])
-  const [shippingRules, setShippingRules] = useState([])
-  const [incoterms, setIncoterms] = useState([])
-  const [taxChargesTemplates, setTaxChargesTemplates] = useState([])
-  const [salesPartners, setSalesPartners] = useState([])
-  const [couponCodes, setCouponCodes] = useState([])
-  const [accountHeads, setAccountHeads] = useState([])
-  const [paymentTermsTemplates, setPaymentTermsTemplates] = useState([])
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [order, setOrder] = useState(null)
   const [dataLoading, setDataLoading] = useState(false)
+  const [canSave, setCanSave] = useState(true)
+  const [bomRawMaterials, setBomRawMaterials] = useState([])
+  const [bomOperations, setBomOperations] = useState([])
+  const [bomFinishedGoods, setBomFinishedGoods] = useState([])
+  const [refreshingBom, setRefreshingBom] = useState(false)
+  const [expandedItemGroups, setExpandedItemGroups] = useState({})
+
+  useEffect(() => {
+    if (activeTabIndex === tabs.length - 1) {
+      setCanSave(false)
+      const timer = setTimeout(() => setCanSave(true), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [activeTabIndex])
 
   useEffect(() => {
     fetchRequiredData()
-    if (isEditMode) {
+    fetchWarehouses()
+    if (isEditMode || isReadOnly) {
       fetchOrder()
     }
   }, [])
@@ -227,43 +80,26 @@ export default function SalesOrderForm() {
   const fetchRequiredData = async () => {
     try {
       setDataLoading(true)
-      const [custRes, itemRes, costRes, projRes, priceRes, sourceRes, campRes, terrRes, letterRes, taxRes, shipRes, incoRes, stRes, partRes, couponRes, accRes, payRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/selling/customers').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/items?limit=1000').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/cost-centers').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/projects').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/price-lists').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/lead-sources').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/campaigns').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/territories').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/letter-heads').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/tax-categories').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/shipping-rules').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/incoterms').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/sales-taxes-charges-template').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/crm/sales-partners').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/selling/coupon-codes').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/account-heads').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/payment-terms').catch(() => ({ data: { data: [] } }))
+      const [custRes, bomRes, itemsRes] = await Promise.all([
+        api.get('/selling/customers').catch(() => ({ data: { data: [] } })),
+        api.get('/production/boms?limit=1000').catch(() => ({ data: { data: [] } })),
+        api.get('/items').catch(() => ({ data: { data: [] } }))
       ])
 
       setCustomers(custRes.data.data || [])
-      setAllItems(itemRes.data.data || [])
-      setCostCenters((costRes.data.data || []).map(c => ({ label: c.name || c.cost_center || '', value: c.id || c.name || '' })))
-      setProjects((projRes.data.data || []).map(p => ({ label: p.name || p.project || '', value: p.id || p.name || '' })))
-      setPriceLists((priceRes.data.data || []).map(p => ({ label: p.name || p.price_list || '', value: p.id || p.name || '' })))
-      setSources((sourceRes.data.data || []).map(s => ({ label: s.name || s.source_name || '', value: s.id || s.name || '' })))
-      setCampaigns((campRes.data.data || []).map(c => ({ label: c.name || c.campaign_name || '', value: c.id || c.name || '' })))
-      setTerritories((terrRes.data.data || []).map(t => ({ label: t.name || t.territory_name || '', value: t.id || t.name || '' })))
-      setLetterHeads((letterRes.data.data || []).map(l => ({ label: l.name || l.letter_head_name || '', value: l.id || l.name || '' })))
-      setTaxCategories((taxRes.data.data || []).map(t => ({ label: t.name || t.tax_category || '', value: t.id || t.name || '' })))
-      setShippingRules((shipRes.data.data || []).map(s => ({ label: s.name || s.shipping_rule || '', value: s.id || s.name || '' })))
-      setIncoterms((incoRes.data.data || []).map(i => ({ label: i.name || i.incoterm || '', value: i.id || i.name || '' })))
-      setTaxChargesTemplates((stRes.data.data || []).map(s => ({ label: s.name || s.sales_taxes_charges_template || '', value: s.id || s.name || '' })))
-      setSalesPartners((partRes.data.data || []).map(p => ({ label: p.name || p.sales_partner || '', value: p.id || p.name || '' })))
-      setCouponCodes((couponRes.data.data || []).map(c => ({ label: c.name || c.coupon_code || '', value: c.id || c.name || '' })))
-      setAccountHeads((accRes.data.data || []).map(a => ({ label: a.name || a.account_head || '', value: a.id || a.name || '' })))
-      setPaymentTermsTemplates((payRes.data.data || []).map(p => ({ label: p.name || p.payment_terms || '', value: p.id || p.name || '' })))
+      const bomsData = bomRes.data.data || []
+      setBoms(bomsData.map(b => ({
+        label: `${b.bom_id} - ${b.product_name || b.name || ''}`,
+        value: b.bom_id || b.id || '',
+        fullData: b
+      })))
+
+      const itemsData = itemsRes.data.data || []
+      setItemsList(itemsData.map(item => ({
+        label: item.item_code,
+        value: item.item_code,
+        fullData: item
+      })))
     } catch (err) {
       console.error('Failed to fetch required data:', err)
     } finally {
@@ -271,9 +107,41 @@ export default function SalesOrderForm() {
     }
   }
 
+  const fetchWarehouses = async () => {
+    try {
+      const response = await api.get('/stock/warehouses')
+      const warehousesData = response.data.data || []
+      setWarehouses(warehousesData.filter(w => w && w.warehouse_name).map(w => ({
+        label: w.warehouse_name || '',
+        value: w.warehouse_name || ''
+      })))
+    } catch (err) {
+      console.error('Failed to fetch warehouses:', err)
+    }
+  }
+
+  const fetchStockAvailability = async (itemCode) => {
+    try {
+      const response = await api.get(`/stock/${itemCode}`)
+      return response.data.data || 0
+    } catch (err) {
+      console.error('Failed to fetch stock:', err)
+      return 0
+    }
+  }
+
+  const formatCurrency = (value) => {
+    return parseFloat(value || 0).toLocaleString('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })
+  }
+
   const fetchOrder = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/selling/sales-orders/${id}`)
+      const response = await api.get(`/production/sales-orders/${id}`)
       const orderData = response.data.data
       setOrder(orderData)
       setFormData(prev => ({
@@ -284,48 +152,77 @@ export default function SalesOrderForm() {
         customer_name: orderData.customer_name || '',
         customer_email: orderData.customer_email || '',
         customer_phone: orderData.customer_phone || '',
+        bom_id: orderData.bom_id || '',
+        bom_name: orderData.bom_name || '',
+        quantity: orderData.quantity || 1,
+        source_warehouse: orderData.source_warehouse || '',
         delivery_date: orderData.delivery_date || '',
         order_type: orderData.order_type || 'Sales',
-        cost_center: orderData.cost_center || '',
-        project: orderData.project || '',
-        currency: orderData.currency || 'INR',
-        price_list: orderData.price_list || '',
-        ignore_pricing_rule: orderData.ignore_pricing_rule || false,
         items: orderData.items || [],
-        payment_terms_template: orderData.payment_terms_template || '',
-        payment_schedule: orderData.payment_schedule || [],
-        status: orderData.status || 'Draft',
-        is_internal_customer: orderData.is_internal_customer || false,
-        source: orderData.source || '',
-        campaign: orderData.campaign || '',
-        territory: orderData.territory || '',
-        letter_head: orderData.letter_head || '',
-        print_heading: orderData.print_heading || '',
-        group_same_items: orderData.group_same_items || false,
-        terms_and_conditions: orderData.terms_and_conditions || '',
-        notes: orderData.notes || '',
-        tax_category: orderData.tax_category || '',
-        shipping_rule: orderData.shipping_rule || '',
-        incoterm: orderData.incoterm || '',
-        sales_taxes_charges_template: orderData.sales_taxes_charges_template || '',
-        taxes_charges: orderData.taxes_charges || [],
-        rounding_adjustment: orderData.rounding_adjustment || 0,
-        disable_rounded_total: orderData.disable_rounded_total || false,
-        apply_discount_on: orderData.apply_discount_on || 'Grand Total',
-        coupon_code: orderData.coupon_code || '',
-        additional_discount_percentage: orderData.additional_discount_percentage || 0,
-        additional_discount_amount: orderData.additional_discount_amount || 0,
-        sales_partner: orderData.sales_partner || '',
-        commission_rate: orderData.commission_rate || 0,
-        amount_eligible_for_commission: orderData.amount_eligible_for_commission || 0,
-        total_commission: orderData.total_commission || 0,
-        sales_team: orderData.sales_team || [],
-        auto_repeat: orderData.auto_repeat || '',
-        from_date: orderData.from_date || '',
-        to_date: orderData.to_date || ''
+        status: orderData.status || 'Draft'
       }))
     } catch (err) {
       setError('Failed to fetch sales order')
+    }
+  }
+
+  const fetchBomDetails = async (bomId) => {
+    try {
+      setRefreshingBom(true)
+      const response = await api.get(`/production/boms/${bomId}`)
+      const bomData = response.data.data
+      setSelectedBomData(bomData)
+
+      const bomLines = bomData.lines || bomData.items || []
+      const rawMaterials = bomData.rawMaterials || []
+      const operations = bomData.operations || []
+      
+      const allItems = [
+        ...bomLines.map((item, idx) => ({
+          item_code: item.component_code || item.item_code || '',
+          item_name: item.component_description || item.item_name || '',
+          field_description: item.component_description || item.field_description || '',
+          fg_sub_assembly: item.component_type || item.fg_sub_assembly || 'FG',
+          delivery_date: '',
+          commit_date: item.commit_date || '',
+          qty: item.quantity || item.qty || 1,
+          ordered_qty: item.ordered_qty || item.quantity || 1,
+          rate: item.rate || 0,
+          amount: (item.quantity || item.qty || 1) * (item.rate || 0),
+          input_group: item.input_group || '',
+          source_warehouse: item.source_warehouse || '',
+          id: Date.now() + Math.random() + idx
+        })),
+        ...rawMaterials.map((item, idx) => ({
+          item_code: item.item_code || '',
+          item_name: item.item_name || '',
+          field_description: item.item_name || '',
+          fg_sub_assembly: 'Raw Material',
+          delivery_date: '',
+          commit_date: '',
+          qty: item.qty || 1,
+          ordered_qty: item.qty || 1,
+          rate: item.rate || 0,
+          amount: (item.qty || 1) * (item.rate || 0),
+          input_group: '',
+          source_warehouse: item.source_warehouse || '',
+          id: Date.now() + Math.random() + 1000 + idx
+        }))
+      ]
+
+      setBomRawMaterials(rawMaterials)
+      setBomOperations(operations)
+      setBomFinishedGoods(bomLines)
+
+      setFormData(prev => ({
+        ...prev,
+        items: allItems
+      }))
+    } catch (err) {
+      setError('Failed to fetch BOM details')
+      console.error('Error fetching BOM:', err)
+    } finally {
+      setRefreshingBom(false)
     }
   }
 
@@ -341,12 +238,28 @@ export default function SalesOrderForm() {
     setFormData({ ...formData, [fieldName]: value })
   }
 
+  const handleBomChange = (value) => {
+    const selectedBom = boms.find(b => b.value === value)
+    const updatedData = {
+      ...formData,
+      bom_id: value,
+      bom_name: selectedBom?.label || ''
+    }
+    if (selectedBom?.fullData?.source_warehouse) {
+      updatedData.source_warehouse = selectedBom.fullData.source_warehouse
+    }
+    setFormData(updatedData)
+    if (value) {
+      fetchBomDetails(value)
+    }
+  }
+
   const handleCustomerChange = (value) => {
     const customer = customers.find(c => c.customer_id === value)
     setFormData({
       ...formData,
       customer_id: value,
-      customer_name: customer?.name || '',
+      customer_name: customer?.customer_name || '',
       customer_email: customer?.email || '',
       customer_phone: customer?.phone || ''
     })
@@ -360,10 +273,16 @@ export default function SalesOrderForm() {
         {
           item_code: '',
           item_name: '',
+          field_description: '',
+          fg_sub_assembly: 'FG',
           delivery_date: '',
+          commit_date: '',
           qty: 1,
+          ordered_qty: 1,
           rate: 0,
           amount: 0,
+          stock_available: 0,
+          input_group: '',
           id: Date.now() + Math.random()
         }
       ]
@@ -379,43 +298,27 @@ export default function SalesOrderForm() {
     const updatedItems = [...formData.items]
     updatedItems[idx] = {
       ...updatedItems[idx],
-      [field]: field === 'rate' || field === 'qty' ? parseFloat(value) || 0 : value
+      [field]: field === 'rate' || field === 'qty' || field === 'ordered_qty' ? parseFloat(value) || 0 : value
     }
     if (field === 'qty' || field === 'rate') {
       updatedItems[idx].amount = updatedItems[idx].qty * updatedItems[idx].rate
     }
-    setFormData({ ...formData, items: updatedItems })
-  }
+    if (field === 'item_code' && value) {
+      const selectedItem = itemsList.find(i => i.value === value)
+      if (selectedItem) {
+        updatedItems[idx].item_name = selectedItem.fullData.item_name || ''
+        updatedItems[idx].field_description = selectedItem.fullData.description || ''
+        updatedItems[idx].rate = selectedItem.fullData.standard_rate || 0
+        updatedItems[idx].amount = updatedItems[idx].qty * (selectedItem.fullData.standard_rate || 0)
+      }
 
-  const handleAddPaymentScheduleRow = () => {
-    setFormData({
-      ...formData,
-      payment_schedule: [
-        ...formData.payment_schedule,
-        {
-          payment_term: '',
-          description: '',
-          due_date: '',
-          invoice_portion: 0,
-          payment_amount: 0,
-          id: Date.now() + Math.random()
-        }
-      ]
-    })
-  }
-
-  const handleRemovePaymentScheduleRow = (idx) => {
-    const updatedSchedule = formData.payment_schedule.filter((_, i) => i !== idx)
-    setFormData({ ...formData, payment_schedule: updatedSchedule })
-  }
-
-  const handlePaymentScheduleChange = (idx, field, value) => {
-    const updatedSchedule = [...formData.payment_schedule]
-    updatedSchedule[idx] = {
-      ...updatedSchedule[idx],
-      [field]: value
+      fetchStockAvailability(value).then(stock => {
+        const itemsWithStock = [...formData.items]
+        itemsWithStock[idx].stock_available = stock
+        setFormData({ ...formData, items: itemsWithStock })
+      })
     }
-    setFormData({ ...formData, payment_schedule: updatedSchedule })
+    setFormData({ ...formData, items: updatedItems })
   }
 
   const calculateSubtotal = () => {
@@ -424,733 +327,431 @@ export default function SalesOrderForm() {
 
   const calculateGrandTotal = () => {
     const subtotal = calculateSubtotal()
-    const discountAmount = formData.discount_type === 'percentage'
-      ? (subtotal * (formData.additional_discount_percentage || 0)) / 100
-      : formData.additional_discount_amount || 0
-    const taxAmount = (subtotal - discountAmount) * 0.18
-    return subtotal - discountAmount + taxAmount
+    const quantity = parseFloat(formData.quantity) || 1
+    return subtotal * quantity
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    if (e) e.preventDefault()
+    
+    if (loading) return
 
-    if (!formData.customer_id || formData.items.length === 0 || !formData.delivery_date) {
-      setError('Please fill all required fields')
+    if (!formData.customer_id) {
+      setError('Please select a customer')
+      return
+    }
+
+    if (formData.items.length === 0 || calculateGrandTotal() === 0) {
+      setError('Please add at least one item with a non-zero amount')
       return
     }
 
     try {
       setLoading(true)
-      const submitData = {
+      setError(null)
+
+      const payload = {
         ...formData,
+        order_amount: calculateGrandTotal(),
         items: formData.items.map(({ id, ...item }) => item),
-        payment_schedule: formData.payment_schedule.map(({ id, ...row }) => row)
+        bom_raw_materials: bomRawMaterials,
+        bom_operations: bomOperations,
+        bom_finished_goods: bomFinishedGoods
       }
 
       if (isEditMode) {
-        await axios.put(`http://localhost:5000/api/selling/sales-orders/${id}`, submitData)
+        await api.put(`/production/sales-orders/${id}`, payload)
         setSuccess('Sales order updated successfully')
       } else {
-        await axios.post('http://localhost:5000/api/selling/sales-orders', submitData)
+        await api.post('/production/sales-orders', payload)
         setSuccess('Sales order created successfully')
       }
 
-      setTimeout(() => navigate('/selling/sales-orders'), 2000)
+      setTimeout(() => {
+        navigate('/selling/sales-orders')
+      }, 1500)
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save sales order')
-    } finally {
       setLoading(false)
     }
   }
 
-  const currentTab = tabs[activeTabIndex]
-
   const nextTab = () => {
     if (activeTabIndex < tabs.length - 1) {
       setActiveTabIndex(activeTabIndex + 1)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
 
   const prevTab = () => {
     if (activeTabIndex > 0) {
       setActiveTabIndex(activeTabIndex - 1)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
 
+  const currentTab = tabs[activeTabIndex]
+
+  const groupRawMaterialsByItemGroup = () => {
+    const grouped = {}
+    bomRawMaterials.forEach(material => {
+      const group = material.item_group || 'Unclassified'
+      if (!grouped[group]) {
+        grouped[group] = []
+      }
+      grouped[group].push(material)
+    })
+    return grouped
+  }
+
+  const groupItemsByItemGroup = () => {
+    const grouped = {}
+    formData.items.forEach(item => {
+      const group = item.item_group || 'Unclassified'
+      if (!grouped[group]) {
+        grouped[group] = []
+      }
+      grouped[group].push(item)
+    })
+    return grouped
+  }
+
+  const toggleItemGroup = (group) => {
+    setExpandedItemGroups(prev => ({
+      ...prev,
+      [group]: !prev[group]
+    }))
+  }
+
+  const groupedRawMaterials = groupRawMaterialsByItemGroup()
+  const itemGroupsInOrder = Object.keys(groupedRawMaterials).sort()
+  const groupedItems = groupItemsByItemGroup()
+  const itemsGroupsInOrder = Object.keys(groupedItems).sort()
+
+  if (dataLoading) {
+    return <div className="max-w-full m-8 p-0">Loading form data...</div>
+  }
+
   return (
-    <div style={styles.mainContainer}>
+    <div className="max-w-full m-8 p-0">
       <Card>
-        <div style={styles.header}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2>{isEditMode ? 'Edit Sales Order' : 'New Sales Order'} <span style={{ color: '#ef4444', fontSize: '0.8em' }}>Not Saved</span></h2>
-            <Button
-              onClick={() => navigate('/selling/sales-orders')}
-              variant="secondary"
-            >
-              Back
-            </Button>
+        <div className="mb-5 pb-3 border-b-2 border-gray-200">
+          <h2 className="m-0 text-2xl font-bold text-gray-900">
+            {isReadOnly ? 'View Sales Order' : isEditMode ? 'Edit Sales Order' : 'New Sales Order'}
+          </h2>
+        </div>
+
+        {error && <Alert variant="danger">{error}</Alert>}
+        {success && <Alert variant="success">{success}</Alert>}
+
+        <form onSubmit={(e) => e.preventDefault()}>
+          <div className="mb-5 border-b-2 border-gray-200">
+            <div className="flex gap-2 overflow-x-auto pb-0 border-b-0">
+              {tabs.map((tab, idx) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTabIndex(idx)}
+                  className={`px-5 py-3 text-xs font-medium cursor-pointer border-b-4 border-transparent transition-all whitespace-nowrap ${activeTabIndex === idx
+                      ? 'text-blue-600 border-b-blue-600'
+                      : 'text-gray-600 hover:text-gray-700'
+                    }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {error && <Alert type="danger">{error}</Alert>}
-        {success && <Alert type="success">{success}</Alert>}
-
-        {isEditMode && order && (
-          <AuditTrail
-            createdAt={order.created_at}
-            createdBy={order.created_by}
-            updatedAt={order.updated_at}
-            updatedBy={order.updated_by}
-            status={order.status}
-          />
-        )}
-
-        <div style={styles.wizardProgress}>
-          {tabs.map((_, idx) => (
-            <div
-              key={idx}
-              style={{
-                ...styles.progressDot,
-                ...(idx === activeTabIndex ? styles.progressDotActive : {})
-              }}
-              onClick={() => {
-                setActiveTabIndex(idx)
-                window.scrollTo({ top: 0, behavior: 'smooth' })
-              }}
-            />
-          ))}
-        </div>
-
-        <div style={styles.tabsContainer}>
-          <div style={styles.tabsList}>
-            {tabs.map((tab, idx) => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  setActiveTabIndex(idx)
-                  window.scrollTo({ top: 0, behavior: 'smooth' })
-                }}
-                style={{
-                  ...styles.tab,
-                  ...(idx === activeTabIndex ? styles.tabActive : {})
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit}>
           {currentTab.id === 'basicDetails' && (
-            <div style={styles.tabContent}>
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Series</label>
+            <div className="py-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium mb-1 text-gray-700">Series</label>
                   <input
-                    style={styles.input}
+                    className="px-2 py-2 text-xs border border-gray-300 rounded bg-gray-100"
                     type="text"
                     name="series"
                     value={formData.series}
                     onChange={handleChange}
-                    placeholder="SAL-ORD-YYYY-"
+                    placeholder="Auto-generated"
+                    disabled
                   />
                 </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Date *</label>
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium mb-1 text-gray-700">Date</label>
                   <input
-                    style={styles.input}
+                    className={`px-2 py-2 text-xs border border-gray-300 rounded ${isReadOnly ? 'bg-gray-100' : ''}`}
                     type="date"
                     name="date"
                     value={formData.date}
                     onChange={handleChange}
                     required
+                    disabled={isReadOnly}
                   />
                 </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Customer's Purchase Order</label>
+                <div className="flex flex-col">
+                  <SearchableSelect
+                    label="Customer"
+                    value={formData.customer_id}
+                    onChange={(val) => handleCustomerChange(val)}
+                    options={customers.filter(c => c && c.customer_id && c.customer_name).map(c => ({ label: c.customer_name, value: c.customer_id }))}
+                    placeholder="Search customer..."
+                    disabled={isReadOnly}
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium mb-1 text-gray-700">Customer Name</label>
                   <input
-                    style={styles.input}
+                    className="px-2 py-2 text-xs border border-gray-300 rounded bg-gray-100"
                     type="text"
-                    name="customer_po"
-                    placeholder="Enter PO number"
+                    value={formData.customer_name}
+                    disabled
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium mb-1 text-gray-700">Email</label>
+                  <input
+                    className="px-2 py-2 text-xs border border-gray-300 rounded bg-gray-100"
+                    type="email"
+                    value={formData.customer_email}
+                    disabled
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium mb-1 text-gray-700">Phone</label>
+                  <input
+                    className="px-2 py-2 text-xs border border-gray-300 rounded bg-gray-100"
+                    type="text"
+                    value={formData.customer_phone}
+                    disabled
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <SearchableSelect
+                    label="BOM"
+                    value={formData.bom_id}
+                    onChange={(val) => handleBomChange(val)}
+                    options={boms}
+                    placeholder="Search BOM..."
+                    disabled={isReadOnly}
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium mb-1 text-gray-700">Quantity</label>
+                  <input
+                    className={`px-2 py-2 text-xs border border-gray-300 rounded ${isReadOnly ? 'bg-gray-100' : ''}`}
+                    type="number"
+                    name="quantity"
+                    value={formData.quantity}
+                    onChange={handleChange}
+                    min="1"
+                    step="1"
+                    disabled={isReadOnly}
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <SearchableSelect
+                    label="Source Warehouse"
+                    value={formData.source_warehouse}
+                    onChange={(val) => setFormData({ ...formData, source_warehouse: val })}
+                    options={warehouses}
+                    placeholder="Select warehouse..."
+                    disabled={isReadOnly}
                   />
                 </div>
               </div>
 
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <SearchableSelect
-                    label="Customer *"
-                    value={formData.customer_id}
-                    onChange={handleCustomerChange}
-                    options={customers.map(c => ({ label: c.name, value: c.customer_id }))}
-                    placeholder="Search customer..."
-                    required
-                  />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Delivery Date *</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium mb-1 text-gray-700">Delivery Date</label>
                   <input
-                    style={styles.input}
+                    className={`px-2 py-2 text-xs border border-gray-300 rounded ${isReadOnly ? 'bg-gray-100' : ''}`}
                     type="date"
                     name="delivery_date"
                     value={formData.delivery_date}
                     onChange={handleChange}
-                    required
+                    disabled={isReadOnly}
                   />
                 </div>
-              </div>
-
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Order Type</label>
-                  <select style={styles.input} name="order_type" value={formData.order_type} onChange={handleChange}>
+                <div className="flex flex-col">
+                  <label className="text-xs font-medium mb-1 text-gray-700">Order Type</label>
+                  <select className={`px-2 py-2 text-xs border border-gray-300 rounded ${isReadOnly ? 'bg-gray-100' : ''}`} name="order_type" value={formData.order_type} onChange={handleChange} disabled={isReadOnly}>
                     <option value="Sales">Sales</option>
                     <option value="Purchase">Purchase</option>
                   </select>
                 </div>
               </div>
-            </div>
-          )}
 
-          {currentTab.id === 'accountingDimensions' && (
-            <div style={styles.tabContent}>
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <SearchableSelect
-                    label="Cost Center"
-                    value={formData.cost_center}
-                    onChange={(val) => handleSearchableChange('cost_center', val)}
-                    options={costCenters}
-                    placeholder="Search cost center..."
-                  />
-                </div>
-                <div style={styles.formGroup}>
-                  <SearchableSelect
-                    label="Project"
-                    value={formData.project}
-                    onChange={(val) => handleSearchableChange('project', val)}
-                    options={projects}
-                    placeholder="Search project..."
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {currentTab.id === 'currencyPriceList' && (
-            <div style={styles.tabContent}>
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <SearchableSelect
-                    label="Currency"
-                    value={formData.currency}
-                    onChange={(val) => handleSearchableChange('currency', val)}
-                    options={currencies}
-                    placeholder="Search currency..."
-                  />
-                </div>
-                <div style={styles.formGroup}>
-                  <SearchableSelect
-                    label="Price List"
-                    value={formData.price_list}
-                    onChange={(val) => handleSearchableChange('price_list', val)}
-                    options={priceLists}
-                    placeholder="Search price list..."
-                  />
-                </div>
-              </div>
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <input
-                    style={{ ...styles.input, cursor: 'pointer' }}
-                    type="checkbox"
-                    name="ignore_pricing_rule"
-                    checked={formData.ignore_pricing_rule}
-                    onChange={handleChange}
-                    id="ignore_pricing_rule"
-                  />
-                  <label style={styles.label} htmlFor="ignore_pricing_rule">Ignore Pricing Rule</label>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {currentTab.id === 'items' && (
-            <div style={styles.tabContent}>
-              <Button
-                type="button"
-                variant="primary"
-                onClick={handleAddItem}
-                style={{ marginBottom: '15px', fontSize: '0.85rem', padding: '6px 12px' }}
-              >
-                + Add Row
-              </Button>
-
-              {formData.items.length > 0 ? (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={styles.tableHeader}>Item Code</th>
-                        <th style={styles.tableHeader}>Item Name</th>
-                        <th style={styles.tableHeader}>Delivery Date</th>
-                        <th style={styles.tableHeader}>Qty</th>
-                        <th style={styles.tableHeader}>Rate (INR)</th>
-                        <th style={styles.tableHeader}>Amount (INR)</th>
-                        <th style={styles.tableHeader}>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {formData.items.map((item, idx) => (
-                        <tr key={idx}>
-                          <td style={styles.tableCell}>
-                            <input
-                              style={styles.input}
-                              type="text"
-                              value={item.item_code}
-                              onChange={(e) => handleItemChange(idx, 'item_code', e.target.value)}
-                              placeholder="Item code"
-                            />
-                          </td>
-                          <td style={styles.tableCell}>
-                            <input
-                              style={styles.input}
-                              type="text"
-                              value={item.item_name}
-                              onChange={(e) => handleItemChange(idx, 'item_name', e.target.value)}
-                              placeholder="Item name"
-                            />
-                          </td>
-                          <td style={styles.tableCell}>
-                            <input
-                              style={styles.input}
-                              type="date"
-                              value={item.delivery_date}
-                              onChange={(e) => handleItemChange(idx, 'delivery_date', e.target.value)}
-                            />
-                          </td>
-                          <td style={styles.tableCell}>
-                            <input
-                              style={styles.input}
-                              type="number"
-                              value={item.qty}
-                              onChange={(e) => handleItemChange(idx, 'qty', e.target.value)}
-                              placeholder="0"
-                              step="0.01"
-                              min="0"
-                            />
-                          </td>
-                          <td style={styles.tableCell}>
-                            <input
-                              style={styles.input}
-                              type="number"
-                              value={item.rate}
-                              onChange={(e) => handleItemChange(idx, 'rate', e.target.value)}
-                              placeholder="0.00"
-                              step="0.01"
-                              min="0"
-                            />
-                          </td>
-                          <td style={styles.tableCell}>
-                            {(item.qty * item.rate).toFixed(2)}
-                          </td>
-                          <td style={styles.tableCell}>
-                            <Button
-                              type="button"
-                              variant="danger"
-                              onClick={() => handleRemoveItem(idx)}
-                              style={{ fontSize: '0.75rem', padding: '4px 8px' }}
-                            >
-                              Remove
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '30px', backgroundColor: '#f9f9f9', borderRadius: '6px', color: '#999' }}>
-                  No items added yet
-                </div>
-              )}
-            </div>
-          )}
-
-          {currentTab.id === 'paymentTerms' && (
-            <div style={styles.tabContent}>
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <SearchableSelect
-                    label="Payment Terms Template"
-                    value={formData.payment_terms_template}
-                    onChange={(val) => handleSearchableChange('payment_terms_template', val)}
-                    options={paymentTermsTemplates}
-                    placeholder="Search payment terms..."
-                  />
-                </div>
-              </div>
-
-              <h4 style={{ marginTop: '20px', marginBottom: '10px' }}>Payment Schedule</h4>
-              <Button
-                type="button"
-                variant="primary"
-                onClick={handleAddPaymentScheduleRow}
-                style={{ marginBottom: '15px', fontSize: '0.85rem', padding: '6px 12px' }}
-              >
-                + Add Row
-              </Button>
-
-              {formData.payment_schedule.length > 0 ? (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={styles.tableHeader}>Payment Term</th>
-                        <th style={styles.tableHeader}>Description</th>
-                        <th style={styles.tableHeader}>Due Date</th>
-                        <th style={styles.tableHeader}>Invoice Portion (%)</th>
-                        <th style={styles.tableHeader}>Payment Amount</th>
-                        <th style={styles.tableHeader}>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {formData.payment_schedule.map((row, idx) => (
-                        <tr key={idx}>
-                          <td style={styles.tableCell}>
-                            <input
-                              style={styles.input}
-                              type="text"
-                              value={row.payment_term}
-                              onChange={(e) => handlePaymentScheduleChange(idx, 'payment_term', e.target.value)}
-                              placeholder="Payment term"
-                            />
-                          </td>
-                          <td style={styles.tableCell}>
-                            <input
-                              style={styles.input}
-                              type="text"
-                              value={row.description}
-                              onChange={(e) => handlePaymentScheduleChange(idx, 'description', e.target.value)}
-                              placeholder="Description"
-                            />
-                          </td>
-                          <td style={styles.tableCell}>
-                            <input
-                              style={styles.input}
-                              type="date"
-                              value={row.due_date}
-                              onChange={(e) => handlePaymentScheduleChange(idx, 'due_date', e.target.value)}
-                            />
-                          </td>
-                          <td style={styles.tableCell}>
-                            <input
-                              style={styles.input}
-                              type="number"
-                              value={row.invoice_portion}
-                              onChange={(e) => handlePaymentScheduleChange(idx, 'invoice_portion', e.target.value)}
-                              placeholder="0"
-                              step="0.01"
-                              min="0"
-                              max="100"
-                            />
-                          </td>
-                          <td style={styles.tableCell}>
-                            <input
-                              style={styles.input}
-                              type="number"
-                              value={row.payment_amount}
-                              onChange={(e) => handlePaymentScheduleChange(idx, 'payment_amount', e.target.value)}
-                              placeholder="0.00"
-                              step="0.01"
-                              min="0"
-                            />
-                          </td>
-                          <td style={styles.tableCell}>
-                            <Button
-                              type="button"
-                              variant="danger"
-                              onClick={() => handleRemovePaymentScheduleRow(idx)}
-                              style={{ fontSize: '0.75rem', padding: '4px 8px' }}
-                            >
-                              Remove
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '30px', backgroundColor: '#f9f9f9', borderRadius: '6px', color: '#999' }}>
-                  No payment schedule added yet
-                </div>
-              )}
-
-              <h4 style={{ marginTop: '20px', marginBottom: '10px' }}>Terms & Conditions</h4>
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <textarea
-                    style={{ ...styles.input, resize: 'vertical', minHeight: '100px' }}
-                    name="terms_and_conditions"
-                    value={formData.terms_and_conditions}
-                    onChange={handleChange}
-                    placeholder="Add terms and conditions..."
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {currentTab.id === 'additionalInfo' && (
-            <div style={styles.tabContent}>
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
+              <div className="grid grid-cols-1 gap-3 mb-3">
+                <div className="flex flex-col">
                   <SearchableSelect
                     label="Status"
                     value={formData.status}
                     onChange={(val) => handleSearchableChange('status', val)}
                     options={statuses}
                     placeholder="Select status..."
-                  />
-                </div>
-                <div style={styles.formGroup}>
-                  <SearchableSelect
-                    label="Source"
-                    value={formData.source}
-                    onChange={(val) => handleSearchableChange('source', val)}
-                    options={sources}
-                    placeholder="Search source..."
-                  />
-                </div>
-              </div>
-
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <SearchableSelect
-                    label="Campaign"
-                    value={formData.campaign}
-                    onChange={(val) => handleSearchableChange('campaign', val)}
-                    options={campaigns}
-                    placeholder="Search campaign..."
-                  />
-                </div>
-                <div style={styles.formGroup}>
-                  <SearchableSelect
-                    label="Territory"
-                    value={formData.territory}
-                    onChange={(val) => handleSearchableChange('territory', val)}
-                    options={territories}
-                    placeholder="Search territory..."
-                  />
-                </div>
-              </div>
-
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <input
-                    style={{ ...styles.input, cursor: 'pointer' }}
-                    type="checkbox"
-                    name="is_internal_customer"
-                    checked={formData.is_internal_customer}
-                    onChange={handleChange}
-                    id="is_internal_customer"
-                  />
-                  <label style={styles.label} htmlFor="is_internal_customer">Is Internal Customer</label>
-                </div>
-              </div>
-
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Notes</label>
-                  <textarea
-                    style={{ ...styles.input, resize: 'vertical', minHeight: '80px' }}
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleChange}
-                    placeholder="Add notes..."
+                    disabled={isReadOnly}
                   />
                 </div>
               </div>
             </div>
           )}
 
-          {currentTab.id === 'printSettings' && (
-            <div style={styles.tabContent}>
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <SearchableSelect
-                    label="Letter Head"
-                    value={formData.letter_head}
-                    onChange={(val) => handleSearchableChange('letter_head', val)}
-                    options={letterHeads}
-                    placeholder="Search letter head..."
-                  />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Print Heading</label>
-                  <input
-                    style={styles.input}
-                    type="text"
-                    name="print_heading"
-                    value={formData.print_heading}
-                    onChange={handleChange}
-                    placeholder="Enter print heading"
-                  />
-                </div>
-              </div>
+          {currentTab.id === 'items' && (
+            <div className="py-5">
+              {!isReadOnly && (
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={handleAddItem}
+                  className="mb-4 text-xs py-1 px-3"
+                >
+                  + Add Row
+                </Button>
+              )}
 
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <input
-                    style={{ ...styles.input, cursor: 'pointer' }}
-                    type="checkbox"
-                    name="group_same_items"
-                    checked={formData.group_same_items}
-                    onChange={handleChange}
-                    id="group_same_items"
-                  />
-                  <label style={styles.label} htmlFor="group_same_items">Group same items</label>
-                </div>
-              </div>
-            </div>
-          )}
+              {formData.items.length > 0 ? (
+                <div className="space-y-2">
+                  {itemsGroupsInOrder.map((groupName) => {
+                    const groupItems = groupedItems[groupName]
+                    const isExpanded = expandedItemGroups[groupName]
+                    
+                    return (
+                      <div key={groupName} className="border border-gray-200 rounded overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => toggleItemGroup(groupName)}
+                          className="w-full flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition p-3 group"
+                        >
+                          <div className="flex items-center gap-3 flex-1">
+                            <div className="text-left">
+                              <h3 className="text-sm font-bold text-gray-900 group-hover:text-gray-700">{groupName}</h3>
+                              <p className="text-xs text-gray-600 mt-0">{groupItems.length} items</p>
+                            </div>
+                          </div>
+                          <div className="text-gray-600 flex-shrink-0">
+                            {isExpanded ? '▲' : '▼'}
+                          </div>
+                        </button>
 
-          {currentTab.id === 'totals' && (
-            <div style={styles.tabContent}>
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <SearchableSelect
-                    label="Tax Category"
-                    value={formData.tax_category}
-                    onChange={(val) => handleSearchableChange('tax_category', val)}
-                    options={taxCategories}
-                    placeholder="Search tax category..."
-                  />
+                        {isExpanded && (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-gray-200 bg-gray-50">
+                                  <th className="text-left py-2 px-2 font-semibold">Item Code</th>
+                                  <th className="text-left py-2 px-2 font-semibold">Item Name</th>
+                                  <th className="text-left py-2 px-2 font-semibold">Description</th>
+                                  <th className="text-right py-2 px-2 font-semibold">Qty</th>
+                                  <th className="text-left py-2 px-2 font-semibold">Rate (₹)</th>
+                                  <th className="text-left py-2 px-2 font-semibold">Amount (₹)</th>
+                                  <th className="text-left py-2 px-2 font-semibold">Action</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {groupItems.map((item, idx) => {
+                                  const globalIdx = formData.items.findIndex(i => 
+                                    i.item_code === item.item_code && i.qty === item.qty
+                                  )
+                                  
+                                  return (
+                                    <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                                      <td className="py-2 px-2">
+                                        <SearchableSelect
+                                          value={item.item_code}
+                                          onChange={(val) => handleItemChange(globalIdx, 'item_code', val)}
+                                          options={itemsList}
+                                          placeholder="Select Item"
+                                          disabled={isReadOnly}
+                                        />
+                                      </td>
+                                      <td className="py-2 px-2">
+                                        <input
+                                          className={`w-full px-2 py-1 text-xs border border-gray-300 rounded ${isReadOnly ? 'bg-gray-100' : ''}`}
+                                          type="text"
+                                          value={item.item_name}
+                                          onChange={(e) => handleItemChange(globalIdx, 'item_name', e.target.value)}
+                                          placeholder="Item name"
+                                          disabled={isReadOnly}
+                                        />
+                                      </td>
+                                      <td className="py-2 px-2">
+                                        <input
+                                          className={`w-full px-2 py-1 text-xs border border-gray-300 rounded ${isReadOnly ? 'bg-gray-100' : ''}`}
+                                          type="text"
+                                          value={item.field_description}
+                                          onChange={(e) => handleItemChange(globalIdx, 'field_description', e.target.value)}
+                                          placeholder="Description"
+                                          disabled={isReadOnly}
+                                        />
+                                      </td>
+                                      <td className="py-2 px-2 text-right">
+                                        <input
+                                          className={`w-full px-2 py-1 text-xs border border-gray-300 rounded text-right ${isReadOnly ? 'bg-gray-100' : ''}`}
+                                          type="number"
+                                          value={item.qty}
+                                          onChange={(e) => handleItemChange(globalIdx, 'qty', e.target.value)}
+                                          placeholder="0"
+                                          step="0.01"
+                                          min="0"
+                                          disabled={isReadOnly}
+                                        />
+                                      </td>
+                                      <td className="py-2 px-2">
+                                        <input
+                                          className={`w-full px-2 py-1 text-xs border border-gray-300 rounded ${isReadOnly ? 'bg-gray-100' : ''}`}
+                                          type="number"
+                                          value={item.rate}
+                                          onChange={(e) => handleItemChange(globalIdx, 'rate', e.target.value)}
+                                          placeholder="0"
+                                          step="0.01"
+                                          min="0"
+                                          disabled={isReadOnly}
+                                        />
+                                      </td>
+                                      <td className="py-2 px-2">
+                                        {parseFloat(item.amount || (item.qty * item.rate) || 0).toFixed(2)}
+                                      </td>
+                                      <td className="py-2 px-2">
+                                        {!isReadOnly && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleRemoveItem(globalIdx)}
+                                            className="px-2 py-1 bg-red-100 text-red-700 border border-red-300 rounded text-xs font-medium hover:bg-red-200"
+                                          >
+                                            Remove
+                                          </button>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  )
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
-                <div style={styles.formGroup}>
-                  <SearchableSelect
-                    label="Shipping Rule"
-                    value={formData.shipping_rule}
-                    onChange={(val) => handleSearchableChange('shipping_rule', val)}
-                    options={shippingRules}
-                    placeholder="Search shipping rule..."
-                  />
+              ) : (
+                <div className="bg-gray-100 p-5 rounded text-center text-gray-500 text-xs">
+                  No items added. Click "Add Row" to add items or select a BOM in Basic Details tab.
                 </div>
-              </div>
-
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <SearchableSelect
-                    label="Incoterm"
-                    value={formData.incoterm}
-                    onChange={(val) => handleSearchableChange('incoterm', val)}
-                    options={incoterms}
-                    placeholder="Search incoterm..."
-                  />
-                </div>
-              </div>
-
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <SearchableSelect
-                    label="Taxes & Charges Template"
-                    value={formData.sales_taxes_charges_template}
-                    onChange={(val) => handleSearchableChange('sales_taxes_charges_template', val)}
-                    options={taxChargesTemplates}
-                    placeholder="Search taxes & charges template..."
-                  />
-                </div>
-              </div>
-
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Apply Discount On</label>
-                  <select style={styles.input} name="apply_discount_on" value={formData.apply_discount_on} onChange={handleChange}>
-                    <option value="Grand Total">Grand Total</option>
-                    <option value="Pre Tax Total">Pre Tax Total</option>
-                  </select>
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Additional Discount Percentage (%)</label>
-                  <input
-                    style={styles.input}
-                    type="number"
-                    name="additional_discount_percentage"
-                    value={formData.additional_discount_percentage}
-                    onChange={handleChange}
-                    placeholder="0"
-                    step="0.01"
-                    min="0"
-                  />
-                </div>
-              </div>
-
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Additional Discount Amount (₹)</label>
-                  <input
-                    style={styles.input}
-                    type="number"
-                    name="additional_discount_amount"
-                    value={formData.additional_discount_amount}
-                    onChange={handleChange}
-                    placeholder="0"
-                    step="0.01"
-                    min="0"
-                  />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Rounding Adjustment</label>
-                  <input
-                    style={styles.input}
-                    type="number"
-                    name="rounding_adjustment"
-                    value={formData.rounding_adjustment}
-                    onChange={handleChange}
-                    placeholder="0"
-                    step="0.01"
-                  />
-                </div>
-              </div>
-
-              <div style={styles.gridRow}>
-                <div style={styles.formGroup}>
-                  <input
-                    style={{ ...styles.input, cursor: 'pointer' }}
-                    type="checkbox"
-                    name="disable_rounded_total"
-                    checked={formData.disable_rounded_total}
-                    onChange={handleChange}
-                    id="disable_rounded_total"
-                  />
-                  <label style={styles.label} htmlFor="disable_rounded_total">Disable Rounded Total</label>
-                </div>
-              </div>
+              )}
 
               {formData.items.length > 0 && (
-                <div style={styles.totalsBox}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                <div className="bg-blue-50 border border-gray-200 rounded  px-6 py-6 mt-3">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div style={{ marginBottom: '8px', fontSize: '12px', color: '#666', display: 'flex', justifyContent: 'space-between' }}>
+                      <div className="mb-2 text-xs text-gray-600 flex justify-between">
                         <span>Subtotal:</span>
-                        <strong>₹{calculateSubtotal().toFixed(2)}</strong>
+                        <strong>{formatCurrency(calculateSubtotal())}</strong>
                       </div>
-                      {formData.additional_discount_percentage > 0 && (
-                        <div style={{ marginBottom: '8px', fontSize: '12px', color: '#666', display: 'flex', justifyContent: 'space-between' }}>
-                          <span>Discount ({formData.additional_discount_percentage}%):</span>
-                          <strong>-₹{(calculateSubtotal() * formData.additional_discount_percentage / 100).toFixed(2)}</strong>
-                        </div>
-                      )}
                     </div>
                     <div>
-                      <div style={{ marginBottom: '8px', fontSize: '14px', fontWeight: 'bold', color: '#007bff', display: 'flex', justifyContent: 'space-between' }}>
+                      <div className="mb-2 text-xs font-bold text-blue-600 flex justify-between">
                         <span>Grand Total:</span>
-                        <strong>₹{calculateGrandTotal().toFixed(2)}</strong>
+                        <strong>{formatCurrency(calculateGrandTotal())}</strong>
                       </div>
                     </div>
                   </div>
@@ -1159,24 +760,182 @@ export default function SalesOrderForm() {
             </div>
           )}
 
-          <div style={styles.wizardNav}>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={prevTab}
-              disabled={activeTabIndex === 0}
-            >
-              ← Previous
-            </Button>
+          {currentTab.id === 'bomDetails' && (
+            <div className="py-5">
+              {formData.bom_id && !isReadOnly && (
+                <button
+                  type="button"
+                  onClick={() => fetchBomDetails(formData.bom_id)}
+                  disabled={refreshingBom}
+                  className="mb-4 px-4 py-2 bg-blue-500 text-white rounded text-sm font-medium hover:bg-blue-600 disabled:bg-gray-400"
+                >
+                  {refreshingBom ? '⏳ Refreshing...' : '🔄 Refresh BOM Details'}
+                </button>
+              )}
+              {bomFinishedGoods.length > 0 && (
+                <div className="mb-5">
+                  <div className="bg-white border border-gray-200 rounded">
+                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 font-semibold text-sm text-gray-800">
+                      📦 Finished Goods ({bomFinishedGoods.length})
+                    </div>
+                    <div className="p-4">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-2 px-2 font-semibold">Item Code</th>
+                            <th className="text-left py-2 px-2 font-semibold">Description</th>
+                            <th className="text-left py-2 px-2 font-semibold">Type</th>
+                            <th className="text-right py-2 px-2 font-semibold">Qty</th>
+                            <th className="text-left py-2 px-2 font-semibold">Rate</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bomFinishedGoods.map((item, idx) => (
+                            <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="py-2 px-2">{item.component_code || item.item_code || '-'}</td>
+                              <td className="py-2 px-2">{item.component_description || item.item_name || '-'}</td>
+                              <td className="py-2 px-2">{item.component_type || item.fg_sub_assembly || '-'}</td>
+                              <td className="py-2 px-2 text-right">{item.quantity || item.qty || 1}</td>
+                              <td className="py-2 px-2">₹{parseFloat(item.rate || 0).toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-            <span style={{ fontSize: '12px', color: '#666', alignSelf: 'center' }}>
+              {bomRawMaterials.length > 0 && (
+                <div className="mb-5 space-y-2">
+                  <div className="bg-white border border-gray-200 rounded px-4 py-3 font-semibold text-sm text-gray-800">
+                    🔧 Materials ({bomRawMaterials.length})
+                  </div>
+                  {itemGroupsInOrder.map((groupName) => {
+                    const groupItems = groupedRawMaterials[groupName]
+                    const isExpanded = expandedItemGroups[groupName]
+                    
+                    return (
+                      <div key={groupName} className="border border-gray-200 rounded overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => toggleItemGroup(groupName)}
+                          className="w-full flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition p-3 group"
+                        >
+                          <div className="flex items-center gap-3 flex-1">
+                            <div className="text-left">
+                              <h3 className="text-sm font-bold text-gray-900 group-hover:text-gray-700">{groupName}</h3>
+                              <p className="text-xs text-gray-600 mt-0">{groupItems.length} items</p>
+                            </div>
+                          </div>
+                          <div className="text-gray-600 flex-shrink-0">
+                            {isExpanded ? '▲' : '▼'}
+                          </div>
+                        </button>
+
+                        {isExpanded && (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-gray-200 bg-gray-50">
+                                  <th className="text-left py-2 px-2 font-semibold">Item Code</th>
+                                  <th className="text-left py-2 px-2 font-semibold">Item Name</th>
+                                  <th className="text-right py-2 px-2 font-semibold">Qty</th>
+                                  <th className="text-left py-2 px-2 font-semibold">UOM</th>
+                                  <th className="text-left py-2 px-2 font-semibold">Rate</th>
+                                  <th className="text-left py-2 px-2 font-semibold">Warehouse</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {groupItems.map((item, idx) => (
+                                  <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                                    <td className="py-2 px-2">{item.item_code || '-'}</td>
+                                    <td className="py-2 px-2">{item.item_name || '-'}</td>
+                                    <td className="py-2 px-2 text-right">{item.qty || item.quantity || 1}</td>
+                                    <td className="py-2 px-2">{item.uom || '-'}</td>
+                                    <td className="py-2 px-2">₹{parseFloat(item.rate || 0).toFixed(2)}</td>
+                                    <td className="py-2 px-2">{item.source_warehouse || '-'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {bomOperations.length > 0 && (
+                <div className="mb-5">
+                  <div className="bg-white border border-gray-200 rounded">
+                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 font-semibold text-sm text-gray-800">
+                      ⚙️ Operations ({bomOperations.length})
+                    </div>
+                    <div className="p-4">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-2 px-2 font-semibold">Operation</th>
+                            <th className="text-left py-2 px-2 font-semibold">Workstation</th>
+                            <th className="text-right py-2 px-2 font-semibold">Time (Hours)</th>
+                            <th className="text-right py-2 px-2 font-semibold">Cost</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bomOperations.map((op, idx) => (
+                            <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="py-2 px-2">{op.operation || op.operation_name || '-'}</td>
+                              <td className="py-2 px-2">{op.workstation_type || op.workstation || op.default_workstation || '-'}</td>
+                              <td className="py-2 px-2 text-right">{op.operation_time || op.time_in_hours || op.hours || '-'}</td>
+                              <td className="py-2 px-2 text-right">₹{parseFloat(op.operating_cost || op.cost || 0).toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {bomFinishedGoods.length === 0 && bomRawMaterials.length === 0 && bomOperations.length === 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded p-4 text-center text-blue-700 text-sm">
+                  Select a BOM in Basic Details tab to view BOM details here.
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex gap-2.5 justify-between mt-7 pt-5 border-t border-gray-200">
+            {!isReadOnly && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={prevTab}
+                disabled={activeTabIndex === 0}
+              >
+                ← Previous
+              </Button>
+            )}
+
+            <span className="text-xs text-gray-600 self-center">
               Step {activeTabIndex + 1} of {tabs.length}
             </span>
 
-            {activeTabIndex === tabs.length - 1 ? (
+            {isReadOnly ? (
               <Button
-                type="submit"
+                type="button"
+                variant="secondary"
+                onClick={() => navigate('/selling/sales-orders')}
+              >
+                ← Back
+              </Button>
+            ) : activeTabIndex === tabs.length - 1 ? (
+              <Button
+                type="button"
                 variant="primary"
+                onClick={handleSubmit}
                 disabled={loading}
               >
                 {loading ? 'Saving...' : 'Save Sales Order'}

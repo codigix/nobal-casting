@@ -1,7 +1,7 @@
 -- GRN Requests Schema
 -- Handles Goods Receipt Notes workflow from purchase to inventory
 
-USE aluminium_erp;
+USE nobalcasting;
 
 -- GRN Requests Table
 CREATE TABLE IF NOT EXISTS grn_requests (

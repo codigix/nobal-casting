@@ -5,6 +5,7 @@ import Modal from '../Modal'
 export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [customerId, setCustomerId] = useState('')
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -13,16 +14,58 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
     billing_address: '',
     shipping_address: '',
     credit_limit: '',
+    customer_type: 'other',
     status: 'active'
   })
 
+  const generateCustomerId = async (name) => {
+    if (!name || name.length < 3) return ''
+    
+    const prefix = name.slice(0, 3).toUpperCase()
+    
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/selling/customers`)
+      const data = await res.json()
+      const existingCustomers = data.data || []
+      
+      const prefixedIds = existingCustomers
+        .filter(c => c.customer_id && c.customer_id.startsWith(prefix))
+        .map(c => {
+          const match = c.customer_id.match(/-(\d+)$/)
+          return match ? parseInt(match[1]) : 0
+        })
+      
+      const nextNumber = (Math.max(...prefixedIds, 0) + 1).toString().padStart(3, '0')
+      return `${prefix}-${nextNumber}`
+    } catch (err) {
+      return `${prefix}-001`
+    }
+  }
+
   const handleInputChange = (e) => {
     const { name, value } = e.target
+    
+    if (name === 'name') {
+      handleNameChange(value)
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }))
+    }
+    setError(null)
+  }
+
+  const handleNameChange = async (value) => {
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      name: value
     }))
-    setError(null)
+    
+    if (value.length >= 3) {
+      const newId = await generateCustomerId(value)
+      setCustomerId(newId)
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -35,7 +78,6 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
         throw new Error('Please fill in all required fields')
       }
 
-      // Simple email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(formData.email)) {
         throw new Error('Please enter a valid email address')
@@ -45,6 +87,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          customer_id: customerId,
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
@@ -52,6 +95,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
           billing_address: formData.billing_address,
           shipping_address: formData.shipping_address,
           credit_limit: parseFloat(formData.credit_limit || 0),
+          customer_type: formData.customer_type,
           status: formData.status,
           total_sales: 0
         })
@@ -62,6 +106,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
         throw new Error(data.error || 'Failed to create customer')
       }
 
+      setCustomerId('')
       setFormData({
         name: '',
         email: '',
@@ -70,6 +115,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
         billing_address: '',
         shipping_address: '',
         credit_limit: '',
+        customer_type: 'other',
         status: 'active'
       })
       
@@ -86,26 +132,15 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
     <Modal isOpen={isOpen} onClose={onClose} title="👤 Create New Customer" size="lg">
       <form onSubmit={handleSubmit}>
         {error && (
-          <div style={{
-            background: '#fee2e2',
-            border: '1px solid #fecaca',
-            borderRadius: '8px',
-            padding: '12px 16px',
-            marginBottom: '20px',
-            color: '#dc2626',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            fontSize: '0.9rem'
-          }}>
+          <div className="mb-5 p-3 bg-red-50 border border-red-300 rounded-lg text-red-700 text-sm flex items-center gap-2">
             <AlertCircle size={18} />
             {error}
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+        <div className="grid grid-cols-2 gap-5">
           <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
+            <label className="block font-semibold text-gray-900 mb-2 text-sm">
               Customer Name *
             </label>
             <input
@@ -115,20 +150,25 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               value={formData.name}
               onChange={handleInputChange}
               required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                boxSizing: 'border-box'
-              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
+            <label className="block font-semibold text-gray-900 mb-2 text-sm">
+              Customer ID * <span className="text-gray-500 font-normal">(Auto-generated)</span>
+            </label>
+            <input
+              type="text"
+              readOnly
+              value={customerId}
+              placeholder="Will auto-generate..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+
+          <div>
+            <label className="block font-semibold text-gray-900 mb-2 text-sm">
               Email *
             </label>
             <input
@@ -138,20 +178,12 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               value={formData.email}
               onChange={handleInputChange}
               required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                boxSizing: 'border-box'
-              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
+            <label className="block font-semibold text-gray-900 mb-2 text-sm">
               Phone *
             </label>
             <input
@@ -161,20 +193,12 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               value={formData.phone}
               onChange={handleInputChange}
               required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                boxSizing: 'border-box'
-              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
+            <label className="block font-semibold text-gray-900 mb-2 text-sm">
               GST Number
             </label>
             <input
@@ -183,20 +207,28 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               placeholder="22ABCDE1234F1Z5"
               value={formData.gst_no}
               onChange={handleInputChange}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                boxSizing: 'border-box'
-              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
+            <label className="block font-semibold text-gray-900 mb-2 text-sm">
+              Customer Type *
+            </label>
+            <select
+              name="customer_type"
+              value={formData.customer_type}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              required
+            >
+              <option value="tata">TATA</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-gray-900 mb-2 text-sm">
               Credit Limit (₹)
             </label>
             <input
@@ -207,43 +239,27 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               onChange={handleInputChange}
               step="0.01"
               min="0"
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                boxSizing: 'border-box'
-              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
+            <label className="block font-semibold text-gray-900 mb-2 text-sm">
               Status
             </label>
             <select
               name="status"
               value={formData.status}
               onChange={handleInputChange}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                backgroundColor: '#fff'
-              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
             >
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </select>
           </div>
 
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
+          <div className="col-span-2">
+            <label className="block font-semibold text-gray-900 mb-2 text-sm">
               Billing Address
             </label>
             <textarea
@@ -252,21 +268,12 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               value={formData.billing_address}
               onChange={handleInputChange}
               rows="2"
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                boxSizing: 'border-box',
-                resize: 'vertical'
-              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-vertical focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
+          <div className="col-span-2">
+            <label className="block font-semibold text-gray-900 mb-2 text-sm">
               Shipping Address
             </label>
             <textarea
@@ -275,52 +282,23 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               value={formData.shipping_address}
               onChange={handleInputChange}
               rows="2"
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                boxSizing: 'border-box',
-                resize: 'vertical'
-              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-vertical focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '30px' }}>
+        <div className="flex gap-2 justify-end mt-6">
           <button
             type="button"
             onClick={onClose}
-            style={{
-              padding: '10px 24px',
-              backgroundColor: '#f3f4f6',
-              border: '1px solid #ddd',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '0.95rem',
-              fontWeight: 500,
-              transition: 'all 0.2s'
-            }}
+            className="px-6 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700 cursor-pointer text-sm font-medium hover:bg-gray-200 transition"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            style={{
-              padding: '10px 24px',
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontSize: '0.95rem',
-              fontWeight: 600,
-              opacity: loading ? 0.65 : 1,
-              transition: 'all 0.2s'
-            }}
+            className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white border-none rounded-lg cursor-pointer text-xs font-semibold  hover:from-green-600 hover:to-green-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? 'Creating...' : '✓ Create Customer'}
           </button>

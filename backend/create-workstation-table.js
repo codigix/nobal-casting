@@ -9,7 +9,7 @@ async function main() {
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'aluminium_erp',
+    database: process.env.DB_NAME || 'nobalcasting',
     port: process.env.DB_PORT || 3306
   })
 
@@ -32,7 +32,7 @@ async function main() {
         const [rows] = await db.query(
           `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES 
            WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?`,
-          [table, process.env.DB_NAME || 'aluminium_erp']
+          [table, process.env.DB_NAME || 'nobalcasting']
         )
         return rows.length > 0
       } catch {

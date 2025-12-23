@@ -82,6 +82,80 @@ class HRPayrollModel {
     }
   }
 
+  async deleteEmployee(employee_id) {
+    try {
+      const [result] = await this.db.query(
+        `DELETE FROM employee_master WHERE employee_id = ?`,
+        [employee_id]
+      )
+      return result.affectedRows > 0
+    } catch (error) {
+      throw error
+    }
+  }
+
+  // ============= DESIGNATION MASTER =============
+
+  async createDesignation(data) {
+    try {
+      const designation_id = `DESIG-${Date.now()}`
+      const [result] = await this.db.query(
+        `INSERT INTO designation_master 
+        (designation_id, name, description)
+        VALUES (?, ?, ?)`,
+        [designation_id, data.name, data.description || '']
+      )
+      return { designation_id, ...data }
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async getDesignations() {
+    try {
+      const [results] = await this.db.query(
+        `SELECT * FROM designation_master ORDER BY name ASC`
+      )
+      return results
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async updateDesignation(designation_id, data) {
+    try {
+      let query = 'UPDATE designation_master SET '
+      const params = []
+      const fields = []
+
+      Object.entries(data).forEach(([key, value]) => {
+        fields.push(`${key} = ?`)
+        params.push(value)
+      })
+
+      query += fields.join(', ')
+      query += ' WHERE designation_id = ? OR name = ?'
+      params.push(designation_id, designation_id)
+
+      const [result] = await this.db.query(query, params)
+      return result.affectedRows > 0
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async deleteDesignation(designation_id) {
+    try {
+      const [result] = await this.db.query(
+        `DELETE FROM designation_master WHERE designation_id = ? OR name = ?`,
+        [designation_id, designation_id]
+      )
+      return result.affectedRows > 0
+    } catch (error) {
+      throw error
+    }
+  }
+
   // ============= ATTENDANCE LOG =============
 
   async recordAttendance(data) {

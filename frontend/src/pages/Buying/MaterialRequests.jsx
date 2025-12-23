@@ -221,7 +221,7 @@ export default function MaterialRequests() {
       {/* Header Section */}
       <div className="flex justify-between items-start mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-neutral-900 dark:text-neutral-100">Material Requests</h2>
+          <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">Material Requests</h2>
           <p className="text-neutral-600 dark:text-neutral-400 mt-1">Create and manage material requisitions</p>
         </div>
         <Button 

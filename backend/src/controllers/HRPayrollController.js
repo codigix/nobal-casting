@@ -123,6 +123,135 @@ class HRPayrollController {
     }
   }
 
+  async deleteEmployee(req, res) {
+    try {
+      const { employee_id } = req.params
+
+      const success = await this.hrPayrollModel.deleteEmployee(employee_id)
+
+      if (!success) {
+        return res.status(404).json({
+          success: false,
+          message: 'Employee not found'
+        })
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Employee deleted successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error deleting employee',
+        error: error.message
+      })
+    }
+  }
+
+  // ============= DESIGNATION MASTER =============
+
+  async createDesignation(req, res) {
+    try {
+      const { name, description } = req.body
+
+      if (!name) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required field: name'
+        })
+      }
+
+      const designation = await this.hrPayrollModel.createDesignation({
+        name,
+        description
+      })
+
+      res.status(201).json({
+        success: true,
+        message: 'Designation created successfully',
+        data: designation
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error creating designation',
+        error: error.message
+      })
+    }
+  }
+
+  async getDesignations(req, res) {
+    try {
+      const designations = await this.hrPayrollModel.getDesignations()
+
+      res.status(200).json({
+        success: true,
+        data: designations,
+        count: designations.length
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching designations',
+        error: error.message
+      })
+    }
+  }
+
+  async updateDesignation(req, res) {
+    try {
+      const { designation_id } = req.params
+      const data = req.body
+
+      const success = await this.hrPayrollModel.updateDesignation(designation_id, data)
+
+      if (!success) {
+        return res.status(404).json({
+          success: false,
+          message: 'Designation not found'
+        })
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Designation updated successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error updating designation',
+        error: error.message
+      })
+    }
+  }
+
+  async deleteDesignation(req, res) {
+    try {
+      const { designation_id } = req.params
+
+      const success = await this.hrPayrollModel.deleteDesignation(designation_id)
+
+      if (!success) {
+        return res.status(404).json({
+          success: false,
+          message: 'Designation not found'
+        })
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Designation deleted successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error deleting designation',
+        error: error.message
+      })
+    }
+  }
+
   // ============= ATTENDANCE LOG =============
 
   async recordAttendance(req, res) {

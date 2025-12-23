@@ -1,6 +1,52 @@
 import GRNRequestModel from '../models/GRNRequestModel.js'
 import StockEntryModel from '../models/StockEntryModel.js'
 
+export const generateGRNNo = async (req, res) => {
+  try {
+    const grnNo = await GRNRequestModel.generateGRNNo()
+    res.json({ success: true, data: { grn_no: grnNo } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+}
+
+export const qcApproveGRN = async (req, res) => {
+  try {
+    const userId = req.user?.id || 1
+    const grnId = req.params.id
+
+    const grn = await GRNRequestModel.getById(grnId)
+    if (!grn) {
+      return res.status(404).json({ success: false, error: 'GRN request not found' })
+    }
+
+    if (grn.status !== 'inspecting') {
+      return res.status(400).json({ success: false, error: 'GRN must be in inspecting status for QC approval' })
+    }
+
+    const acceptedItems = grn.items?.filter(item => item.item_status === 'accepted' || item.item_status === 'partially_accepted') || []
+    if (acceptedItems.length === 0) {
+      return res.status(400).json({ success: false, error: 'No accepted items to approve' })
+    }
+
+    const allQCPassed = acceptedItems.every(item => {
+      if (!item.qc_checks) return false
+      const checks = typeof item.qc_checks === 'string' ? JSON.parse(item.qc_checks) : item.qc_checks
+      const passedCount = Object.values(checks).filter(Boolean).length
+      return passedCount === 4
+    })
+
+    if (!allQCPassed) {
+      return res.status(400).json({ success: false, error: 'Not all accepted items passed QC checks' })
+    }
+
+    const updatedGRN = await GRNRequestModel.qcApprove(grnId, userId)
+    res.json({ success: true, data: updatedGRN, message: 'GRN approved by QC and sent to inventory' })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+}
+
 export const createGRNRequest = async (req, res) => {
   try {
     const { grn_no, po_no, supplier_id, supplier_name, receipt_date, items, notes } = req.body

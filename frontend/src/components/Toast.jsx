@@ -60,7 +60,7 @@ export default function Toast({ message, type = 'info', onClose, duration = 4000
   }[type]
 
   return (
-    <div className={`${bgColor} text-white px-4 py-3 rounded-md shadow-lg flex items-center gap-3 toast-enter`}>
+    <div className={`${bgColor} text-white p-2 rounded-md shadow-lg flex items-center gap-3 toast-enter`}>
       <Icon size={20} />
       <span className="flex-1">{message}</span>
       <button

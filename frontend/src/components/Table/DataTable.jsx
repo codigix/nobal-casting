@@ -101,8 +101,8 @@ export default function DataTable({
   }
 
   return (
-    <div className="data-table-wrapper">
-      {!hideColumnToggle && (
+    <>
+     {!hideColumnToggle && (
         <div className="table-toolbar">
           <div className="column-toggle-container">
             <button
@@ -137,31 +137,18 @@ export default function DataTable({
           </div>
         </div>
       )}
+    <div className="data-table-wrapper">
+     
 
-      {filterable && filteredColumns.length > 0 && (
-        <div className="table-filters">
-          {filteredColumns.map(col => (
-            <div key={col.key} className="filter-input">
-              <label>{col.label}</label>
-              <input 
-                type="text"
-                placeholder={`Filter ${col.label}...`}
-                value={filters[col.key] || ''}
-                onChange={(e) => handleFilterChange(col.key, e.target.value)}
-              />
-            </div>
-          ))}
-        </div>
-      )}
+      
 
-      <div className="table-responsive">
+      <div className="table-responsive mt-4">
         <table className="data-table">
           <thead>
             <tr>
               {filteredColumns.map(col => (
                 <th 
                   key={col.key}
-                  style={{ width: col.width }}
                   onClick={() => sortable && handleSort(col.key)}
                   className={sortable && col.key !== 'actions' ? 'sortable' : ''}
                   title={sortable ? 'Click to sort' : ''}
@@ -188,9 +175,9 @@ export default function DataTable({
               </tr>
             ) : (
               paginatedData.map((row, idx) => (
-                <tr key={idx} className="data-row">
+                <tr key={idx} className="data-row bg-white">
                   {filteredColumns.map(col => (
-                    <td key={col.key} style={{ width: col.width }}>
+                    <td key={col.key} className={col.key === 'status' || col.dropdown ? 'dropdown-col' : ''}>
                       {col.render ? col.render(row[col.key], row) : row[col.key]}
                     </td>
                   ))}
@@ -229,5 +216,6 @@ export default function DataTable({
         </div>
       )}
     </div>
+    </>
   )
 }

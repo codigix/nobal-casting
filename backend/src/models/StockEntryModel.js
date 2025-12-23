@@ -1,4 +1,4 @@
-﻿class StockEntryModel {
+class StockEntryModel {
   static getDb() {
     return global.db
   }
@@ -416,14 +416,39 @@
   static async delete(id) {
     try {
       const db = this.getDb()
-      const entry = await this.getById(id)
-      if (entry && entry.status !== 'Draft') {
-        throw new Error('Cannot delete submitted or cancelled stock entries')
-      }
+      const connection = await db.getConnection()
+      await connection.beginTransaction()
 
-      await db.query('DELETE FROM stock_entry_items WHERE stock_entry_id = ?', [id])
-      const [result] = await db.query('DELETE FROM stock_entries WHERE id = ?', [id])
-      return result.affectedRows > 0
+      try {
+        // Get entry status without detailed items to avoid numeric value issues
+        const [entryRows] = await connection.query(
+          'SELECT id, status FROM stock_entries WHERE id = ?',
+          [id]
+        )
+        
+        if (!entryRows[0]) {
+          throw new Error('Stock entry not found')
+        }
+        
+        const entry = entryRows[0]
+        if (entry.status !== 'Draft') {
+          throw new Error('Cannot delete submitted or cancelled stock entries')
+        }
+
+        // Delete related stock entry items first
+        await connection.query('DELETE FROM stock_entry_items WHERE stock_entry_id = ?', [id])
+        
+        // Delete the stock entry
+        const [result] = await connection.query('DELETE FROM stock_entries WHERE id = ?', [id])
+        
+        await connection.commit()
+        return result.affectedRows > 0
+      } catch (error) {
+        await connection.rollback()
+        throw error
+      } finally {
+        connection.release()
+      }
     } catch (error) {
       throw new Error(`Failed to delete stock entry: ${error.message}`)
     }

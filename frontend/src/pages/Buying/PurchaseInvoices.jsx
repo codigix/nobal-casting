@@ -145,7 +145,7 @@ export default function PurchaseInvoices() {
     <div>
       <div className="flex-between mb-6">
         <div>
-          <h2 className="text-3xl font-bold text-neutral-900 dark:text-neutral-100">Purchase Invoices</h2>
+          <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">Purchase Invoices</h2>
           <p className="text-neutral-600 dark:text-neutral-400 mt-1">Track and manage all purchase invoices</p>
         </div>
         <Button 

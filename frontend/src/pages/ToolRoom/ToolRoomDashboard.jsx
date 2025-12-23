@@ -36,7 +36,7 @@ const ToolRoomDashboard = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 flex items-center gap-3">
+          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-3">
             <Wrench className="w-10 h-10 text-blue-600" />
             Tool Room Dashboard
           </h1>
@@ -176,7 +176,7 @@ const KPICard = ({ title, value, icon, color }) => {
       <div className={`${colorClass} w-12 h-12 rounded-lg flex items-center justify-center mb-4`}>
         {icon}
       </div>
-      <h3 className="text-gray-600 text-sm font-medium">{title}</h3>
+      <h3 className="text-gray-600 text-xs font-medium">{title}</h3>
       <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
     </div>
   )

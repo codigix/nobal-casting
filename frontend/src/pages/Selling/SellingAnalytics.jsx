@@ -4,6 +4,7 @@ import {
   Calendar, Users, ShoppingCart, DollarSign, Package, Receipt,
   Filter, Download, Zap
 } from 'lucide-react'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import Button from '../../components/Button/Button'
 import Card from '../../components/Card/Card'
 import Badge from '../../components/Badge/Badge'
@@ -163,52 +164,70 @@ export default function SellingAnalytics() {
         </Card>
       </div>
 
-      {/* Status Breakdown */}
+      {/* Status Breakdown Pie Chart */}
       <Card style={{ marginTop: '24px' }}>
         <h3 style={{ margin: '0 0 16px 0', fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)' }}>
           Order Status Breakdown
         </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-          {analyticsData.statusBreakdown?.map((status, idx) => (
-            <div key={idx} style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-lg)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontWeight: 'var(--font-medium)' }}>{status.name}</span>
-                <Badge color="primary">{status.count}</Badge>
-              </div>
-              <div style={{ width: '100%', height: '4px', background: 'var(--card-border)', borderRadius: '2px', overflow: 'hidden' }}>
-                <div 
-                  style={{ 
-                    width: `${(status.count / (analyticsData.totalOrders || 1)) * 100}%`,
-                    height: '100%',
-                    background: `var(--${status.color}-600)`
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
+        {analyticsData.statusBreakdown && analyticsData.statusBreakdown.length > 0 ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={analyticsData.statusBreakdown}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, count }) => `${name}: ${count}`}
+                  outerRadius={90}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {analyticsData.statusBreakdown.map((entry, index) => {
+                    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899']
+                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                  })}
+                </Pie>
+                <Tooltip formatter={(value) => `${value} orders`} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>No data available</p>
+        )}
       </Card>
 
-      {/* Payment Status */}
+      {/* Payment Status Pie Chart */}
       <Card style={{ marginTop: '24px' }}>
         <h3 style={{ margin: '0 0 16px 0', fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)' }}>
-          Payment Status
+          Payment Status Distribution
         </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-          {analyticsData.paymentStatus?.map((status, idx) => (
-            <div key={idx} style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-lg)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 'var(--font-medium)' }}>{status.name}</span>
-                <span style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--font-bold)' }}>
-                  ₹{status.value?.toFixed(0) || '0'}
-                </span>
-              </div>
-              <p style={{ margin: '4px 0 0 0', color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
-                {status.percentage?.toFixed(1) || '0'}% of total
-              </p>
-            </div>
-          ))}
-        </div>
+        {analyticsData.paymentStatus && analyticsData.paymentStatus.length > 0 ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={analyticsData.paymentStatus}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percentage }) => `${name}: ${percentage?.toFixed(1) || '0'}%`}
+                  outerRadius={90}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {analyticsData.paymentStatus.map((entry, index) => {
+                    const colors = ['#10B981', '#EF4444', '#F59E0B', '#3B82F6', '#8B5CF6']
+                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                  })}
+                </Pie>
+                <Tooltip formatter={(value) => `₹${value?.toFixed(0) || '0'}`} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>No data available</p>
+        )}
       </Card>
     </div>
   )

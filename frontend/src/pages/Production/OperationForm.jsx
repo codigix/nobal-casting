@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Save, X, Plus, Trash2, AlertCircle, CheckCircle } from 'lucide-react'
 import Card from '../../components/Card/Card'
-import './Production.css'
 
 export default function OperationForm() {
   const navigate = useNavigate()
@@ -143,7 +142,7 @@ export default function OperationForm() {
 
       if (response.ok) {
         setSuccess('Operation saved successfully! Redirecting...')
-        setTimeout(() => navigate('/production/operations'), 1500)
+        setTimeout(() => navigate('/manufacturing/operations'), 1500)
       } else {
         const errorData = await response.json()
         throw new Error(errorData.message || 'Failed to save operation')
@@ -419,7 +418,7 @@ export default function OperationForm() {
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingTop: '20px', borderTop: '1px solid #e5e7eb' }}>
           <button
             type="button"
-            onClick={() => navigate('/production/operations')}
+            onClick={() => navigate('/manufacturing/operations')}
             className="btn-cancel"
           >
             Cancel

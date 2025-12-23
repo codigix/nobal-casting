@@ -4,7 +4,7 @@ const pool = createPool({
   host: 'localhost',
   user: 'erp_user',
   password: 'erp_password',
-  database: 'aluminium_erp'
+  database: 'nobalcasting'
 })
 
 async function fixCollation() {
@@ -15,7 +15,7 @@ async function fixCollation() {
     const [result] = await conn.query(`
       SELECT TABLE_COLLATION 
       FROM information_schema.TABLES 
-      WHERE TABLE_SCHEMA = 'aluminium_erp' 
+      WHERE TABLE_SCHEMA = 'nobalcasting' 
       AND TABLE_NAME = 'item'
     `)
     
@@ -27,7 +27,7 @@ async function fixCollation() {
       const [stockTables] = await conn.query(`
         SELECT TABLE_NAME 
         FROM information_schema.TABLES 
-        WHERE TABLE_SCHEMA = 'aluminium_erp' 
+        WHERE TABLE_SCHEMA = 'nobalcasting' 
         AND TABLE_NAME IN ('stock_balance', 'stock_ledger', 'stock_entries', 'stock_entry_items', 
                            'material_transfers', 'material_transfer_items', 'batch_tracking', 
                            'stock_reconciliation', 'stock_reconciliation_items', 

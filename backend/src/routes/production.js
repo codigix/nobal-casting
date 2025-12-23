@@ -1,6 +1,7 @@
 import express from 'express'
 import ProductionController from '../controllers/ProductionController.js'
 import ProductionModel from '../models/ProductionModel.js'
+import { SellingController } from '../controllers/SellingController.js'
 import authMiddleware from '../middleware/authMiddleware.js'
 
 export function createProductionRoutes(db) {
@@ -55,6 +56,11 @@ export function createProductionRoutes(db) {
     '/work-orders/:wo_id',
     authMiddleware,
     productionController.updateWorkOrder.bind(productionController)
+  )
+  router.delete(
+    '/work-orders/:wo_id',
+    authMiddleware,
+    productionController.deleteWorkOrder.bind(productionController)
   )
 
   // ============= PRODUCTION PLANS =============
@@ -213,6 +219,38 @@ router.delete(
     productionController.deleteWorkstation.bind(productionController)
   )
 
+  // ============= SALES ORDERS =============
+  router.post(
+    '/sales-orders',
+    authMiddleware,
+    SellingController.createSalesOrder
+  )
+  router.get(
+    '/sales-orders',
+    authMiddleware,
+    SellingController.getSalesOrders
+  )
+  router.get(
+    '/sales-orders/:id',
+    authMiddleware,
+    SellingController.getSalesOrderById
+  )
+  router.put(
+    '/sales-orders/:id',
+    authMiddleware,
+    SellingController.updateSalesOrder
+  )
+  router.delete(
+    '/sales-orders/:id',
+    authMiddleware,
+    SellingController.deleteSalesOrder
+  )
+  router.put(
+    '/sales-orders/:id/confirm',
+    authMiddleware,
+    SellingController.confirmSalesOrder
+  )
+
   // ============= ANALYTICS =============
   router.get(
     '/analytics/dashboard',
@@ -228,6 +266,55 @@ router.delete(
     '/analytics/operator-efficiency',
     authMiddleware,
     productionController.getOperatorEfficiency.bind(productionController)
+  )
+
+  // ============= TIME LOGS =============
+  router.post(
+    '/time-logs',
+    authMiddleware,
+    productionController.createTimeLog.bind(productionController)
+  )
+  router.get(
+    '/time-logs',
+    authMiddleware,
+    productionController.getTimeLogs.bind(productionController)
+  )
+  router.delete(
+    '/time-logs/:id',
+    authMiddleware,
+    productionController.deleteTimeLog.bind(productionController)
+  )
+
+  router.post(
+    '/rejections',
+    authMiddleware,
+    productionController.createRejection.bind(productionController)
+  )
+  router.get(
+    '/rejections',
+    authMiddleware,
+    productionController.getRejections.bind(productionController)
+  )
+  router.delete(
+    '/rejections/:id',
+    authMiddleware,
+    productionController.deleteRejection.bind(productionController)
+  )
+
+  router.post(
+    '/downtimes',
+    authMiddleware,
+    productionController.createDowntime.bind(productionController)
+  )
+  router.get(
+    '/downtimes',
+    authMiddleware,
+    productionController.getDowntimes.bind(productionController)
+  )
+  router.delete(
+    '/downtimes/:id',
+    authMiddleware,
+    productionController.deleteDowntime.bind(productionController)
   )
 
   return router

@@ -29,7 +29,7 @@ export default function PurchaseOrderList() {
   return (
     <div>
       <div className="flex-between mb-8">
-        <h2 className="text-3xl font-bold text-[var(--text-primary)]">Purchase Orders</h2>
+        <h2 className="text-xl font-bold text-[var(--text-primary)]">Purchase Orders</h2>
         <Button variant="primary">Create New PO</Button>
       </div>
 

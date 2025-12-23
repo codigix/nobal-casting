@@ -1,56 +1,48 @@
-import ProductionOrders from './ProductionOrders'
-import ProductionSchedule from './ProductionSchedule'
-import ProductionEntries from './ProductionEntries'
-import BatchTracking from './BatchTracking'
-import QualityRecords from './QualityRecords'
-import ProductionAnalytics from './ProductionAnalytics'
 import BOM from './BOM'
-import ProductionPlan from './ProductionPlan'
-import ProductionPlanForm from './ProductionPlanForm'
-import WorkOrder from './WorkOrder'
-import WorkOrderTracking from './WorkOrderTracking'
-import JobCard from './JobCard'
 import BOMForm from './BOMForm'
+import Customers from './Customers'
+import JobCard from './JobCard'
 import Operations from './Operations'
 import OperationForm from './OperationForm'
+import ProductionDashboard from './ProductionDashboard'
+import ProductionPlan from './ProductionPlan'
+import ProductionPlanning from './ProductionPlanning'
+import ProductionPlanningForm from './ProductionPlanningForm'
+import WorkOrder from './WorkOrder'
+import WorkOrderForm from './WorkOrderForm'
 import Workstations from './Workstations'
 import WorkstationForm from './WorkstationForm'
 
 export {
-  ProductionOrders,
-  ProductionSchedule,
-  ProductionEntries,
-  BatchTracking,
-  QualityRecords,
-  ProductionAnalytics,
   BOM,
-  ProductionPlan,
-  ProductionPlanForm,
-  WorkOrder,
-  WorkOrderTracking,
-  JobCard,
   BOMForm,
+  Customers,
+  JobCard,
+  Operations,
   OperationForm,
+  ProductionDashboard,
+  ProductionPlan,
+  ProductionPlanning,
+  ProductionPlanningForm,
+  WorkOrder,
+  WorkOrderForm,
   Workstations,
   WorkstationForm
 }
 
 export default {
-  ProductionOrders,
-  ProductionSchedule,
-  ProductionEntries,
-  BatchTracking,
-  QualityRecords,
-  ProductionAnalytics,
   BOM,
-  ProductionPlan,
-  ProductionPlanForm,
-  WorkOrder,
-  WorkOrderTracking,
-  JobCard,
   BOMForm,
+  Customers,
+  JobCard,
   Operations,
   OperationForm,
+  ProductionDashboard,
+  ProductionPlan,
+  ProductionPlanning,
+  ProductionPlanningForm,
+  WorkOrder,
+  WorkOrderForm,
   Workstations,
   WorkstationForm
 }

@@ -5,7 +5,7 @@ async function createGRNRequestsTables() {
     host: 'localhost',
     user: 'erp_user',
     password: 'erp_password',
-    database: 'aluminium_erp',
+    database: 'nobalcasting',
     port: 3306,
     waitForConnections: true,
     connectionLimit: 10,

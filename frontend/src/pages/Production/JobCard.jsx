@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, Eye, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, Edit2, Trash2, Eye, CheckCircle, ChevronDown, ChevronRight, Clock, AlertCircle, Zap } from 'lucide-react'
 import * as productionService from '../../services/productionService'
 import CreateJobCardModal from '../../components/Production/CreateJobCardModal'
 import ViewJobCardModal from '../../components/Production/ViewJobCardModal'
+import TimeLogsModal from '../../components/Production/TimeLogsModal'
+import RejectionEntryModal from '../../components/Production/RejectionEntryModal'
+import DowntimeEntryModal from '../../components/Production/DowntimeEntryModal'
 import SearchableSelect from '../../components/SearchableSelect'
 import { useToast } from '../../components/ToastContainer'
-import './Production.css'
 
 export default function JobCard() {
   const toast = useToast()
@@ -25,6 +27,11 @@ export default function JobCard() {
   const [inlineEditData, setInlineEditData] = useState({})
   const [workstations, setWorkstations] = useState([])
   const [operators, setOperators] = useState([])
+  const [operations, setOperations] = useState([])
+  const [showTimeLogsModal, setShowTimeLogsModal] = useState(false)
+  const [showRejectionModal, setShowRejectionModal] = useState(false)
+  const [showDowntimeModal, setShowDowntimeModal] = useState(false)
+  const [selectedJobCard, setSelectedJobCard] = useState(null)
 
   useEffect(() => {
     fetchData()
@@ -36,14 +43,16 @@ export default function JobCard() {
 
   const fetchData = async () => {
     try {
-      const [wsRes, empRes] = await Promise.all([
+      const [wsRes, empRes, opsRes] = await Promise.all([
         productionService.getWorkstationsList(),
-        productionService.getEmployees()
+        productionService.getEmployees(),
+        productionService.getOperationsList()
       ])
       setWorkstations(wsRes.data || [])
       setOperators(empRes.data || [])
+      setOperations(opsRes.data || [])
     } catch (err) {
-      console.error('Failed to fetch workstations/operators:', err)
+      console.error('Failed to fetch workstations/operators/operations:', err)
     }
   }
 
@@ -68,10 +77,13 @@ export default function JobCard() {
         setExpandedWO(expandedWO === wo_id ? null : wo_id)
         return
       }
+      
       const response = await productionService.getJobCards({ work_order_id: wo_id })
+      const jobCards = response.data || []
+      
       setJobCardsByWO(prev => ({
         ...prev,
-        [wo_id]: response.data || []
+        [wo_id]: jobCards
       }))
       setExpandedWO(wo_id)
     } catch (err) {
@@ -259,6 +271,13 @@ export default function JobCard() {
     }))
   }
 
+  const getOperationOptions = () => {
+    return operations.map(op => ({
+      value: op.name || op.operation_name,
+      label: op.operation_name || op.name
+    }))
+  }
+
   const getMaxPlannableQty = (jobCardId, woId) => {
     const jobCards = jobCardsByWO[woId] || []
     const currentCardIndex = jobCards.findIndex(c => c.job_card_id === jobCardId)
@@ -284,261 +303,357 @@ export default function JobCard() {
   }
 
   return (
-    <div className="production-container">
-      <div className="production-header">
-        <div>
-          <h1>🎫 Job Cards</h1>
-          <p className="text-gray-600 mt-1">View work orders and their job cards</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100  px-6 py-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
+                🎫
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Job Cards</h1>
+                <p className="text-xs text-gray-600 mt-0">View and manage job cards</p>
+              </div>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              setEditingId(null)
+              setShowModal(true)
+            }}
+            className="btn-primary flex items-center gap-2 bg-gradient-to-br from-purple-400 to-purple-600"
+          >
+            <Plus size={16} /> New Job Card
+          </button> 
         </div>
-        <button 
-          onClick={() => {
+
+        <CreateJobCardModal 
+          isOpen={showModal}
+          onClose={() => {
+            setShowModal(false)
             setEditingId(null)
-            setShowModal(true)
           }}
-          className="btn-submit w-auto flex items-center gap-2"
-        >
-          <Plus size={18} /> New Job Card
-        </button>
-      </div>
+          onSuccess={fetchWorkOrders}
+          editingId={editingId}
+        />
 
+        <ViewJobCardModal
+          isOpen={showViewModal}
+          onClose={() => {
+            setShowViewModal(false)
+            setViewingJobCardId(null)
+          }}
+          onSuccess={fetchWorkOrders}
+          jobCardId={viewingJobCardId}
+        />
 
+        <TimeLogsModal
+          isOpen={showTimeLogsModal}
+          onClose={() => {
+            setShowTimeLogsModal(false)
+            setSelectedJobCard(null)
+          }}
+          jobCardId={selectedJobCard?.job_card_id}
+          jobCardData={selectedJobCard}
+        />
 
-      <CreateJobCardModal 
-        isOpen={showModal}
-        onClose={() => {
-          setShowModal(false)
-          setEditingId(null)
-        }}
-        onSuccess={fetchWorkOrders}
-        editingId={editingId}
-      />
+        <RejectionEntryModal
+          isOpen={showRejectionModal}
+          onClose={() => {
+            setShowRejectionModal(false)
+            setSelectedJobCard(null)
+          }}
+          jobCardId={selectedJobCard?.job_card_id}
+          jobCardData={selectedJobCard}
+        />
 
-      <ViewJobCardModal
-        isOpen={showViewModal}
-        onClose={() => {
-          setShowViewModal(false)
-          setViewingJobCardId(null)
-        }}
-        onSuccess={fetchWorkOrders}
-        jobCardId={viewingJobCardId}
-      />
+        <DowntimeEntryModal
+          isOpen={showDowntimeModal}
+          onClose={() => {
+            setShowDowntimeModal(false)
+            setSelectedJobCard(null)
+          }}
+          jobCardId={selectedJobCard?.job_card_id}
+          jobCardData={selectedJobCard}
+        />
 
-      <div className="filter-section">
-        <div className="filter-group">
-          <label>Status</label>
-          <select name="status" value={filters.status} onChange={handleFilterChange}>
-            <option value="">All Status</option>
-            <option value="draft">Draft</option>
-            <option value="pending">Pending</option>
-            <option value="in-progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+        <div className="bg-white rounded-lg shadow-sm p-3 mb-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs font-semibold text-gray-700 block mb-1">Status</label>
+              <select 
+                name="status" 
+                value={filters.status} 
+                onChange={handleFilterChange}
+                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">All Status</option>
+                <option value="draft">Draft</option>
+                <option value="pending">Pending</option>
+                <option value="in-progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-700 block mb-1">Search</label>
+              <input 
+                type="text" 
+                name="search" 
+                placeholder="Work order ID..." 
+                value={filters.search} 
+                onChange={handleFilterChange}
+                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+          </div>
         </div>
-        <div className="filter-group">
-          <label>Search</label>
-          <input type="text" name="search" placeholder="Search work order..." value={filters.search} onChange={handleFilterChange} />
-        </div>
-      </div>
 
-      {loading ? (
-        <div className="text-center py-10">Loading work orders...</div>
-      ) : workOrders.length > 0 ? (
-        <div className="production-entries-container">
-          <table className="entries-table">
-            <thead>
-              <tr>
-                <th className="w-10"></th>
-                <th>WO ID</th>
-                <th>Item</th>
-                <th>Qty</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Due Date</th>
-                <th className="w-28">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {workOrders.map(wo => (
-                <React.Fragment key={wo.wo_id}>
-                  <tr className="work-order-row" onClick={() => fetchJobCardsForWO(wo.wo_id)}>
-                    <td className="w-10 cursor-pointer text-center">
-                      {expandedWO === wo.wo_id ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                    </td>
-                    <td><strong>{wo.wo_id}</strong></td>
-                    <td>{wo.item_name || wo.item_code || 'N/A'}</td>
-                    <td>{wo.quantity || wo.qty_to_manufacture || 0}</td>
-                    <td>
-                      <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                        wo.priority === 'High' ? 'bg-red-100 text-red-700' : 
-                        wo.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700' : 
-                        'bg-blue-100 text-blue-700'
+        {loading ? (
+          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+            <div className="text-3xl mb-2">⏳</div>
+            <div className="text-xs text-gray-600">Loading work orders...</div>
+          </div>
+        ) : workOrders.length > 0 ? (
+          <div className="space-y-2">
+            {workOrders.map(wo => (
+              <div key={wo.wo_id} className="bg-white rounded-lg shadow-sm overflow-hidden">
+                <div 
+                  className="border-l-4 border-purple-400 bg-gray-50 hover:bg-gray-100 transition p-3 cursor-pointer flex items-center gap-2"
+                  onClick={() => fetchJobCardsForWO(wo.wo_id)}
+                >
+                  <div className="w-5 flex items-center justify-center text-gray-600">
+                    {expandedWO === wo.wo_id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  </div>
+                  <div className="flex-1 grid grid-cols-6 gap-3 items-center text-xs">
+                    <div>
+                      <div className="text-gray-500 text-xs">WO ID</div>
+                      <div className="font-semibold text-gray-900">{wo.wo_id}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500 text-xs">Item</div>
+                      <div className="text-gray-700">{wo.item_name || wo.item_code || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500 text-xs">Qty</div>
+                      <div className="font-semibold text-gray-900">{wo.quantity || wo.qty_to_manufacture || 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500 text-xs">Priority</div>
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
+                        wo.priority === 'high' ? 'bg-red-100 text-red-800' : 
+                        wo.priority === 'medium' ? 'bg-amber-100 text-amber-800' : 
+                        'bg-green-100 text-green-800'
                       }`}>
                         {wo.priority || 'N/A'}
                       </span>
-                    </td>
-                    <td><span className={`work-order-status ${getStatusColor(wo.status)}`}>{wo.status}</span></td>
-                    <td>{wo.required_date ? new Date(wo.required_date).toLocaleDateString() : 'N/A'}</td>
-                    <td className="w-28">
-                      <div className="entry-actions" onClick={(e) => e.stopPropagation()}>
-                        <button className="btn-view" title="View"><Eye size={16} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                  {expandedWO === wo.wo_id && jobCardsByWO[wo.wo_id] && jobCardsByWO[wo.wo_id].length > 0 && (
-                    <>
-                      <tr className="job-card-header bg-gray-100 border-t-2 border-gray-300">
-                        <td colSpan="2" className="font-semibold text-xs text-gray-600 border-b border-gray-300">Job Card ID</td>
-                        <td className="font-semibold text-xs text-gray-600 border-b border-gray-300">Workstation</td>
-                        <td className="font-semibold text-xs text-gray-600 border-b border-gray-300">Operation</td>
-                        <td className="font-semibold text-xs text-gray-600 border-b border-gray-300">Assignee</td>
-                        <td className="font-semibold text-xs text-gray-600 border-b border-gray-300">Planned Qty</td>
-                        <td className="font-semibold text-xs text-gray-600 border-b border-gray-300">Produced Qty</td>
-                        <td className="font-semibold text-xs text-gray-600 border-b border-gray-300">Status</td>
-                        <td className="font-semibold text-xs text-gray-600 border-b border-gray-300">Start Date</td>
-                        <td className="font-semibold text-xs text-gray-600 border-b border-gray-300">End Date</td>
-                        <td className="font-semibold text-xs text-gray-600 border-b border-gray-300 w-32">Actions</td>
-                      </tr>
-                      {jobCardsByWO[wo.wo_id].map((card, idx) => (
-                        inlineEditingId === card.job_card_id ? (
-                          <tr key={card.job_card_id} className={`job-card-row ${idx === 0 ? 'first-card' : ''} bg-yellow-50`}>
-                            <td colSpan="2">
-                              <strong className="text-gray-600">{card.job_card_id}</strong>
-                            </td>
-                            <td>
-                              <SearchableSelect
-                                value={inlineEditData.machine_id}
-                                onChange={(val) => handleInlineInputChange('machine_id', val)}
-                                options={getWorkstationOptions()}
-                                placeholder="Select Workstation"
-                              />
-                            </td>
-                            <td>
-                              <input 
-                                type="text" 
-                                value={inlineEditData.operation} 
-                                onChange={(e) => handleInlineInputChange('operation', e.target.value)} 
-                                placeholder="Operation Name"
-                                className="w-full px-1.5 py-1.5 text-xs border border-gray-300 rounded" 
-                              />
-                            </td>
-                            <td>
-                              <SearchableSelect
-                                value={inlineEditData.operator_id}
-                                onChange={(val) => handleInlineInputChange('operator_id', val)}
-                                options={getOperatorOptions()}
-                                placeholder="Select Operator"
-                              />
-                            </td>
-                            <td>
-                              {(() => {
-                                const maxPlannableQty = getMaxPlannableQty(card.job_card_id, wo.wo_id)
-                                const isFirstTask = maxPlannableQty === Infinity
-                                const isValidPlannableNumber = typeof maxPlannableQty === 'number' && isFinite(maxPlannableQty)
-                                return (
+                    </div>
+                    <div>
+                      <div className="text-gray-500 text-xs">Status</div>
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold border ${
+                        wo.status === 'draft' ? 'bg-gray-100 text-gray-800 border-gray-300' :
+                        wo.status === 'planned' ? 'bg-blue-100 text-blue-800 border-blue-300' :
+                        wo.status === 'in-progress' ? 'bg-amber-100 text-amber-800 border-amber-300' :
+                        wo.status === 'completed' ? 'bg-green-100 text-green-800 border-green-300' :
+                        'bg-red-100 text-red-800 border-red-300'
+                      }`}>{wo.status}</span>
+                    </div>
+                    <div>
+                      <div className="text-gray-500 text-xs">Due Date</div>
+                      <div className="text-gray-700">{wo.required_date ? new Date(wo.required_date).toLocaleDateString() : 'N/A'}</div>
+                    </div>
+                  </div>
+                </div>
+                {expandedWO === wo.wo_id && jobCardsByWO[wo.wo_id] && jobCardsByWO[wo.wo_id].length > 0 && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-gray-100 border border-gray-200">
+                          <th className="px-3 py-2 text-left font-semibold text-gray-700">ID</th>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-700">Work Order</th>
+                          <th className="px-3 py-2 text-right font-semibold text-gray-700">Qty To Manuf</th>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-700">Operation</th>
+                          
+                          <th className="px-3 py-2 text-left font-semibold text-gray-700">Workstation</th>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-700">Status</th>
+                          <th className="px-3 py-2 text-center font-semibold text-gray-700">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {jobCardsByWO[wo.wo_id].map((card, idx) => (
+                          inlineEditingId === card.job_card_id ? (
+                            <tr key={card.job_card_id} className="bg-yellow-50 border border-yellow-200">
+                              <td colSpan="7" className="px-3 py-3">
+                                <div className="text-xs font-semibold text-gray-700 mb-2">Editing: {card.job_card_id}</div>
+                                <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
                                   <div>
-                                    <input 
-                                      type="number" 
-                                      value={inlineEditData.planned_quantity} 
-                                      onChange={(e) => handleInlineInputChange('planned_quantity', e.target.value)} 
-                                      step="0.01" 
-                                      max={isFirstTask ? undefined : maxPlannableQty}
-                                      className="w-full px-1.5 py-1.5 text-xs border border-gray-300 rounded" 
+                                    <label className="text-xs text-gray-600 block mb-1">Operation</label>
+                                    <SearchableSelect
+                                      value={inlineEditData.operation}
+                                      onChange={(val) => handleInlineInputChange('operation', val)}
+                                      options={getOperationOptions()}
+                                      placeholder="Select Operation"
                                     />
-                                    {isValidPlannableNumber && (
-                                      <div className="text-xs text-gray-500 mt-0.5">
-                                        Max: {maxPlannableQty.toFixed(2)}
-                                      </div>
-                                    )}
                                   </div>
-                                )
-                              })()}
-                            </td>
-                            <td>
-                              {(() => {
-                                const maxProducibleQty = getMaxProducibleQty(card.job_card_id, wo.wo_id)
-                                const isValidProducibleNumber = typeof maxProducibleQty === 'number' && isFinite(maxProducibleQty)
-                                return (
                                   <div>
-                                    <input 
-                                      type="number" 
-                                      value={inlineEditData.produced_quantity} 
-                                      onChange={(e) => handleInlineInputChange('produced_quantity', e.target.value)} 
-                                      step="0.01" 
-                                      max={isValidProducibleNumber ? maxProducibleQty : undefined}
-                                      className="w-full px-1.5 py-1.5 text-xs border border-gray-300 rounded"
+                                    <label className="text-xs text-gray-600 block mb-1">Workstation</label>
+                                    <SearchableSelect
+                                      value={inlineEditData.machine_id}
+                                      onChange={(val) => handleInlineInputChange('machine_id', val)}
+                                      options={getWorkstationOptions()}
+                                      placeholder="Select Workstation"
                                     />
-                                    {isValidProducibleNumber && (
-                                      <div className="text-xs text-gray-500 mt-0.5">
-                                        Max: {maxProducibleQty.toFixed(2)}
-                                      </div>
-                                    )}
                                   </div>
-                                )
-                              })()}
-                            </td>
-                            <td>
-                              <select value={inlineEditData.status} onChange={(e) => handleInlineInputChange('status', e.target.value)} className="w-full px-1.5 py-1.5 text-xs border border-gray-300 rounded">
-                                <option value="draft">Draft</option>
-                                <option value="pending">Pending</option>
-                                <option value="in-progress">In Progress</option>
-                                <option value="completed">Completed</option>
-                                <option value="cancelled">Cancelled</option>
-                              </select>
-                            </td>
-                            <td>
-                              <input type="date" value={inlineEditData.scheduled_start_date} onChange={(e) => handleInlineInputChange('scheduled_start_date', e.target.value)} className="w-full px-1.5 py-1.5 text-xs border border-gray-300 rounded" />
-                            </td>
-                            <td>
-                              <input type="date" value={inlineEditData.scheduled_end_date} onChange={(e) => handleInlineInputChange('scheduled_end_date', e.target.value)} className="w-full px-1.5 py-1.5 text-xs border border-gray-300 rounded" />
-                            </td>
-                            <td>
-                              <div className="entry-actions flex gap-1" onClick={(e) => e.stopPropagation()}>
-                                <button className="btn-submit px-2.5 py-1.5 text-xs bg-emerald-500 text-white border-none rounded cursor-pointer hover:bg-emerald-600 transition" title="Save" onClick={() => handleInlineSave(card.job_card_id)}>✓</button>
-                                <button className="btn-cancel px-2.5 py-1.5 text-xs bg-red-500 text-white border-none rounded cursor-pointer hover:bg-red-600 transition" title="Cancel" onClick={handleInlineCancel}>✕</button>
-                              </div>
-                            </td>
-                          </tr>
-                        ) : (
-                          <tr key={card.job_card_id} className={`job-card-row ${idx === 0 ? 'first-card' : ''}`}>
-                            <td colSpan="2">
-                              <strong className="text-gray-600">{card.job_card_id}</strong>
-                            </td>
-                            <td>{getWorkstationName(card.machine_id)}</td>
-                            <td>{card.operation || 'N/A'}</td>
-                            <td>{getOperatorName(card.operator_id)}</td>
-                            <td>{formatQuantity(card.planned_quantity)}</td>
-                            <td>{formatQuantity(card.produced_quantity)}</td>
-                            <td><span className={`work-order-status ${getStatusColor(card.status)}`}>{card.status}</span></td>
-                            <td>{card.scheduled_start_date ? new Date(card.scheduled_start_date).toLocaleDateString() : 'N/A'}</td>
-                            <td>{card.scheduled_end_date ? new Date(card.scheduled_end_date).toLocaleDateString() : 'N/A'}</td>
-                            <td>
-                              <div className="entry-actions flex gap-1" onClick={(e) => e.stopPropagation()}>
-                                <button className="btn-view" title="View" onClick={() => handleViewJobCard(card.job_card_id)}><Eye size={16} /></button>
-                                <button className="btn-edit" title="Edit Inline" onClick={() => handleInlineEdit(card)}><Edit2 size={16} /></button>
-                                <button className="btn-delete" title="Delete" onClick={() => handleDelete(card.job_card_id)}><Trash2 size={16} /></button>
-                              </div>
-                            </td>
-                          </tr>
-                        )
-                      ))}
-                    </>
-                  )}
-                  {expandedWO === wo.wo_id && jobCardsByWO[wo.wo_id] && jobCardsByWO[wo.wo_id].length === 0 && (
-                    <tr className="job-card-empty-row">
-                      <td colSpan="10" className="text-center">
-                        No job cards for this work order
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="text-center py-10 bg-gray-50 rounded">No work orders found</div>
-      )}
+                                  <div>
+                                    <label className="text-xs text-gray-600 block mb-1">Status</label>
+                                    <select value={inlineEditData.status} onChange={(e) => handleInlineInputChange('status', e.target.value)} className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                      <option value="draft">Draft</option>
+                                      <option value="pending">Pending</option>
+                                      <option value="in-progress">In Progress</option>
+                                      <option value="completed">Completed</option>
+                                      <option value="cancelled">Cancelled</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-xs text-gray-600 block mb-1">Operator</label>
+                                    <SearchableSelect
+                                      value={inlineEditData.operator_id}
+                                      onChange={(val) => handleInlineInputChange('operator_id', val)}
+                                      options={getOperatorOptions()}
+                                      placeholder="Select Operator"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs text-gray-600 block mb-1">Planned Qty</label>
+                                    {(() => {
+                                      const maxPlannableQty = getMaxPlannableQty(card.job_card_id, wo.wo_id)
+                                      const isFirstTask = maxPlannableQty === Infinity
+                                      const isValidPlannableNumber = typeof maxPlannableQty === 'number' && isFinite(maxPlannableQty)
+                                      return (
+                                        <div>
+                                          <input 
+                                            type="number" 
+                                            value={inlineEditData.planned_quantity} 
+                                            onChange={(e) => handleInlineInputChange('planned_quantity', e.target.value)} 
+                                            step="0.01" 
+                                            max={isFirstTask ? undefined : maxPlannableQty}
+                                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500" 
+                                          />
+                                          {isValidPlannableNumber && (
+                                            <div className="text-xs text-gray-500 mt-0.5">Max: {maxPlannableQty.toFixed(2)}</div>
+                                          )}
+                                        </div>
+                                      )
+                                    })()}
+                                  </div>
+                                  <div>
+                                    <label className="text-xs text-gray-600 block mb-1">Produced Qty</label>
+                                    {(() => {
+                                      const maxProducibleQty = getMaxProducibleQty(card.job_card_id, wo.wo_id)
+                                      const isValidProducibleNumber = typeof maxProducibleQty === 'number' && isFinite(maxProducibleQty)
+                                      return (
+                                        <div>
+                                          <input 
+                                            type="number" 
+                                            value={inlineEditData.produced_quantity} 
+                                            onChange={(e) => handleInlineInputChange('produced_quantity', e.target.value)} 
+                                            step="0.01" 
+                                            max={isValidProducibleNumber ? maxProducibleQty : undefined}
+                                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                          />
+                                          {isValidProducibleNumber && (
+                                            <div className="text-xs text-gray-500 mt-0.5">Max: {maxProducibleQty.toFixed(2)}</div>
+                                          )}
+                                        </div>
+                                      )
+                                    })()}
+                                  </div>
+                                  <div>
+                                    <label className="text-xs text-gray-600 block mb-1">Start Date</label>
+                                    <input type="date" value={inlineEditData.scheduled_start_date} onChange={(e) => handleInlineInputChange('scheduled_start_date', e.target.value)} className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs text-gray-600 block mb-1">End Date</label>
+                                    <input type="date" value={inlineEditData.scheduled_end_date} onChange={(e) => handleInlineInputChange('scheduled_end_date', e.target.value)} className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                                  </div>
+                                </div>
+                                <div className="flex gap-2 justify-end pt-3 mt-3 border-t border-yellow-200">
+                                  <button className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition" title="Save" onClick={() => handleInlineSave(card.job_card_id)}>Save</button>
+                                  <button className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition" title="Cancel" onClick={handleInlineCancel}>Cancel</button>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : (
+                            <tr key={card.job_card_id} className={`border border-gray-200 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
+                              <td className="px-3 py-2 text-gray-900 font-medium">{card.job_card_id}</td>
+                                <td className="px-3 py-2 text-gray-900">{wo.wo_id}</td>
+                                <td className="px-3 py-2 text-right text-gray-900 font-medium">{formatQuantity(card.planned_quantity)}</td>
+                              <td className="px-3 py-2 text-gray-900 font-medium">{card.operation || 'N/A'}</td>
+                                                            <td className="px-3 py-2 text-gray-900">{getWorkstationName(card.machine_id)}</td>
+
+                              <td className="px-3 py-2">
+                                <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                                  card.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                  card.status === 'in-progress' ? 'bg-orange-100 text-orange-800' :
+                                  card.status === 'pending' ? 'bg-blue-100 text-blue-800' :
+                                  card.status === 'draft' ? 'bg-gray-100 text-gray-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {card.status || 'Draft'}
+                                </span>
+                              </td>
+                              
+                            
+                              
+                              <td className="px-3 py-2 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button className="p-1 hover:bg-blue-50 rounded transition" title="View" onClick={() => handleViewJobCard(card.job_card_id)}>
+                                    <Eye size={14} className="text-blue-600" />
+                                  </button>
+                                  <button className="p-1 hover:bg-orange-50 rounded transition" title="Time Logs" onClick={() => {
+                                    setSelectedJobCard(card)
+                                    setShowTimeLogsModal(true)
+                                  }}>
+                                    <Clock size={14} className="text-orange-600" />
+                                  </button>
+                                  <button className="p-1 hover:bg-red-50 rounded transition" title="Rejection" onClick={() => {
+                                    setSelectedJobCard(card)
+                                    setShowRejectionModal(true)
+                                  }}>
+                                    <AlertCircle size={14} className="text-red-600" />
+                                  </button>
+                                  <button className="p-1 hover:bg-yellow-50 rounded transition" title="Downtime" onClick={() => {
+                                    setSelectedJobCard(card)
+                                    setShowDowntimeModal(true)
+                                  }}>
+                                    <Zap size={14} className="text-yellow-600" />
+                                  </button>
+                                  <button className="p-1 hover:bg-green-50 rounded transition" title="Edit" onClick={() => handleInlineEdit(card)}>
+                                    <Edit2 size={14} className="text-green-600" />
+                                  </button>
+                                  <button className="p-1 hover:bg-red-50 rounded transition" title="Delete" onClick={() => handleDelete(card.job_card_id)}>
+                                    <Trash2 size={14} className="text-red-600" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+            <div className="text-3xl mb-2">📋</div>
+            <div className="text-xs text-gray-600">No work orders found. Job cards will be auto-created when you expand a work order.</div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

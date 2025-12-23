@@ -425,6 +425,91 @@ class GRNRequestModel {
       throw new Error(`Failed to approve GRN in inventory: ${error.message}`)
     }
   }
+
+  static async qcApprove(id, userId) {
+    try {
+      const db = this.getDb()
+      const connection = await db.getConnection()
+
+      try {
+        await connection.beginTransaction()
+
+        await connection.query(
+          `UPDATE grn_requests SET 
+           status = 'awaiting_inventory_approval', 
+           updated_at = NOW()
+           WHERE id = ?`,
+          [id]
+        )
+
+        await connection.query(
+          `INSERT INTO grn_request_logs (grn_request_id, action, status_from, status_to, created_by)
+           VALUES (?, ?, ?, ?, ?)`,
+          [id, 'QC_APPROVED', 'inspecting', 'awaiting_inventory_approval', userId]
+        )
+
+        await connection.commit()
+        return this.getById(id)
+      } catch (error) {
+        await connection.rollback()
+        throw error
+      } finally {
+        connection.release()
+      }
+    } catch (error) {
+      throw new Error(`Failed to approve QC: ${error.message}`)
+    }
+  }
+
+  static async generateGRNNo() {
+    try {
+      const db = this.getDb()
+      const connection = await db.getConnection()
+      
+      try {
+        await connection.beginTransaction()
+        
+        const date = new Date()
+        const today = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+        const dateStr = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`
+        
+        const [existingSeq] = await connection.query(
+          `SELECT next_number FROM document_sequences 
+           WHERE document_type = 'GRN' AND sequence_date = ?
+           FOR UPDATE`,
+          [today]
+        )
+        
+        let nextNo
+        if (existingSeq.length > 0) {
+          nextNo = existingSeq[0].next_number
+          await connection.query(
+            `UPDATE document_sequences 
+             SET next_number = next_number + 1 
+             WHERE document_type = 'GRN' AND sequence_date = ?`,
+            [today]
+          )
+        } else {
+          nextNo = 1
+          await connection.query(
+            `INSERT INTO document_sequences (document_type, sequence_date, next_number) 
+             VALUES ('GRN', ?, 2)`,
+            [today]
+          )
+        }
+        
+        await connection.commit()
+        return `GRN-${dateStr}-${String(nextNo).padStart(4, '0')}`
+      } catch (error) {
+        await connection.rollback()
+        throw error
+      } finally {
+        connection.release()
+      }
+    } catch (error) {
+      throw new Error(`Failed to generate GRN number: ${error.message}`)
+    }
+  }
 }
 
 export default GRNRequestModel

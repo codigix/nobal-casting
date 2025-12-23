@@ -35,8 +35,13 @@ export default function DepartmentProtectedRoute({ children, departments = [] })
   }
 
   // Check if user's department is in allowed departments
-  const userDept = user?.department?.toLowerCase() || 'buying'
-  const allowedDepts = departments.map(d => d.toLowerCase())
+  let userDept = user?.department?.toLowerCase() || 'manufacturing'
+  if (userDept === 'production') userDept = 'manufacturing'
+  const allowedDepts = departments.map(d => {
+    let dept = d.toLowerCase()
+    if (dept === 'production') dept = 'manufacturing'
+    return dept
+  })
 
   if (!allowedDepts.includes(userDept)) {
     return (
@@ -56,16 +61,16 @@ export default function DepartmentProtectedRoute({ children, departments = [] })
         <p style={{ color: 'var(--text-secondary)', marginBottom: '20px' }}>
           This page is only available for {departments.map(d => {
             const deptMap = {
-              'buying': 'Buying/Procurement',
-              'selling': 'Selling/Sales',
-              'inventory': 'Inventory/Stock',
+              'inventory': 'Inventory',
+              'manufacturing': 'Production',
+              'production': 'Production',
               'admin': 'Administration'
             }
             return deptMap[d.toLowerCase()] || d
           }).join(', ')} department.
         </p>
         <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-          Your department: <strong>{user?.department}</strong>
+          Your department: <strong>{userDept === 'manufacturing' ? 'Production' : userDept.charAt(0).toUpperCase() + userDept.slice(1)}</strong>
         </p>
       </div>
     )

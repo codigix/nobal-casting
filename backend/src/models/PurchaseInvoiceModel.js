@@ -1,6 +1,8 @@
-import { v4 as uuidv4 } from 'uuid'
-
 export class PurchaseInvoiceModel {
+  generateId() {
+    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  }
+
   constructor(db) {
     this.db = db
   }
@@ -47,7 +49,7 @@ export class PurchaseInvoiceModel {
              (invoice_item_id, purchase_invoice_no, item_code, qty, rate)
              VALUES (?, ?, ?, ?, ?)`,
             [
-              uuidv4(),
+              this.generateId(),
               purchase_invoice_no,
               item.item_code,
               item.qty,

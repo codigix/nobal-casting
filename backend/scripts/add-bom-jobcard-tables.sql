@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS bom_line (
 CREATE TABLE IF NOT EXISTS job_card (
   job_card_id VARCHAR(50) PRIMARY KEY,
   work_order_id VARCHAR(50),
+  operation VARCHAR(255),
   machine_id VARCHAR(100),
   operator_id VARCHAR(100),
   planned_quantity DECIMAL(18,6),

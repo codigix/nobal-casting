@@ -1,8 +1,8 @@
 -- Aluminium Precision Casting ERP Database Schema
 -- MySQL database creation and table structure
 
-CREATE DATABASE IF NOT EXISTS aluminium_erp;
-USE aluminium_erp;
+CREATE DATABASE IF NOT EXISTS nobalcasting;
+USE nobalcasting;
 
 -- ===== CORE MASTER TABLES =====
 

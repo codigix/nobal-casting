@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import Button from '../../components/Button/Button'
-import DataTable from '../../components/Table/DataTable'
 import Alert from '../../components/Alert/Alert'
-import Card from '../../components/Card/Card'
 import Badge from '../../components/Badge/Badge'
+import Card from '../../components/Card/Card'
+import DataTable from '../../components/Table/DataTable'
 import Modal, { useModal } from '../../components/Modal/Modal'
-import Pagination from './Pagination'
-import { Plus, Edit2, Trash2, Package, Eye, X } from 'lucide-react'
+import { Plus, Trash2, Package, X, Calendar, Warehouse, Tag, Database, Grid3x3, List, Eye, Edit2 } from 'lucide-react'
 import './Inventory.css'
 
 export default function StockEntries() {
@@ -28,8 +26,8 @@ export default function StockEntries() {
   const [typeFilter, setTypeFilter] = useState('')
   const [warehouseFilter, setWarehouseFilter] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(10)
-  const navigate = useNavigate()
+  const [itemsPerPage, setItemsPerPage] = useState(12)
+  const [viewMode, setViewMode] = useState('table')
   
   const [formData, setFormData] = useState({
     entry_date: new Date().toISOString().split('T')[0],
@@ -273,66 +271,143 @@ export default function StockEntries() {
     setCurrentPage(1)
   }
 
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case 'Material Receipt':
+        return <Package size={20} className="text-green-500" />
+      case 'Material Transfer':
+        return <Database size={20} className="text-blue-500" />
+      case 'Material Issue':
+        return <Tag size={20} className="text-orange-500" />
+      case 'Manufacturing Return':
+        return <Package size={20} className="text-purple-500" />
+      default:
+        return <Package size={20} className="text-gray-500" />
+    }
+  }
+
+  const getTypeColor = (type) => {
+    switch (type) {
+      case 'Material Receipt':
+        return 'from-green-50 to-green-100'
+      case 'Material Transfer':
+        return 'from-blue-50 to-blue-100'
+      case 'Material Issue':
+        return 'from-orange-50 to-orange-100'
+      case 'Manufacturing Return':
+        return 'from-purple-50 to-purple-100'
+      default:
+        return 'from-gray-50 to-gray-100'
+    }
+  }
+
   const columns = [
     { key: 'entry_id', label: 'Entry ID' },
+    {
+      key: 'entry_type',
+      label: 'Type',
+      render: (value, row) => row ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {getTypeIcon(row.entry_type)}
+          <span>{row.entry_type}</span>
+        </div>
+      ) : '-'
+    },
     { key: 'warehouse_name', label: 'Warehouse' },
-    { key: 'total_items', label: 'Items Count' },
     {
       key: 'entry_date',
-      label: 'Date',
-      render: (row) => new Date(row.entry_date).toLocaleDateString()
+      label: 'Entry Date',
+      render: (value, row) => row && row.entry_date ? new Date(row.entry_date).toLocaleDateString() : '-'
     },
-    { key: 'reference_doctype', label: 'Type' },
+    {
+      key: 'total_items',
+      label: 'Items',
+      render: (value, row) => row ? (value || 0) : '-'
+    },
     {
       key: 'actions',
       label: 'Actions',
-      render: (row) => (
-        <div className="inventory-actions-cell">
-          <button className="btn-delete" onClick={() => handleDelete(row.entry_id)}>
-            <Trash2 size={14} />
-          </button>
-        </div>
-      )
+      render: (value, row) => {
+        if (!row) return null
+        return (
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button
+              type="button"
+              className="btn-primary"
+              style={{ padding: '6px 12px', fontSize: '12px' }}
+              onClick={() => {
+                setEditingId(row.id)
+                setFormData({
+                  entry_date: row.entry_date,
+                  entry_type: row.entry_type,
+                  from_warehouse_id: row.from_warehouse_id || '',
+                  to_warehouse_id: row.to_warehouse_id || '',
+                  purpose: row.purpose || '',
+                  reference_doctype: row.reference_doctype || '',
+                  reference_name: row.reference_name || '',
+                  remarks: row.remarks || '',
+                  grn_id: row.grn_id || ''
+                })
+                setEntryItems(row.items || [])
+                formModal.open()
+              }}
+            >
+              <Edit2 size={14} style={{ marginRight: '4px' }} /> Edit
+            </button>
+            <button
+              type="button"
+              className="btn-danger"
+              style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: '#ef4444', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontWeight: '500' }}
+              onClick={() => handleDelete(row.id)}
+            >
+              <Trash2 size={14} style={{ marginRight: '4px' }} /> Delete
+            </button>
+          </div>
+        )
+      }
     }
   ]
 
   return (
-    <div className="inventory-container">
-      <div className="inventory-header">
-        <h1>
-          <Package size={18} style={{ display: 'inline', marginRight: '6px' }} />
-          Stock Entries
-        </h1>
-        <Button
-          variant="primary"
-          onClick={formModal.open}
-          icon={Plus}
-          style={{ padding: '6px 10px', fontSize: '11px' }}
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-4 sm:p-5 lg:p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-6">
+          <div>
+            <h1 className="text-xl font-black text-neutral-900 dark:text-white flex items-center gap-3">
+              <Package size={28} className="text-amber-500" />
+              Stock Entries
+            </h1>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400">Track and manage inventory stock movements</p>
+          </div>
+          <button
+            onClick={formModal.open}
+            className="flex items-center justify-center gap-2 p-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 whitespace-nowrap text-sm"
+          >
+            <Plus size={18} />
+            Create Entry
+          </button>
+        </div>
+
+        {error && <Alert type="danger">{error}</Alert>}
+        {success && <Alert type="success">{success}</Alert>}
+
+        <Modal
+          isOpen={formModal.isOpen}
+          onClose={formModal.close}
+          title="Create Stock Entry"
+          size="2xl"
+          footer={
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', width: '100%' }}>
+              <Button variant="secondary" onClick={formModal.close}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" form="manual-entry-form" loading={loading}>
+                Create Entry
+              </Button>
+            </div>
+          }
         >
-          Add
-        </Button>
-      </div>
-
-      {error && <Alert type="danger">{error}</Alert>}
-      {success && <Alert type="success">{success}</Alert>}
-
-      <Modal
-        isOpen={formModal.isOpen}
-        onClose={formModal.close}
-        title="Create Stock Entry"
-        size="2xl"
-        footer={
-          <>
-            <Button variant="secondary" onClick={formModal.close}>
-              Cancel
-            </Button>
-            <Button variant="primary" type="submit" form="manual-entry-form" loading={loading}>
-              Create Entry
-            </Button>
-          </>
-        }
-      >
-        <form id="manual-entry-form" onSubmit={handleSubmit}>
+          <form id="manual-entry-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div className="form-row">
             <div className="form-group">
               <label>Select GRN Request (Optional)</label>
@@ -587,87 +662,208 @@ export default function StockEntries() {
               />
             </div>
 
-        </form>
-      </Modal>
+          </form>
+        </Modal>
 
-      {entries.length > 0 && (
-        <div className="inventory-filters">
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <input
-              type="text"
-              placeholder="Search by entry ID or warehouse..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value)
-                setCurrentPage(1)
-              }}
-            />
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 px-4">
+            <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-4 mb-4 animate-pulse">
+              <Package size={40} className="text-neutral-400 dark:text-neutral-600" />
+            </div>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">Loading stock entries...</p>
           </div>
-          <select 
-            value={typeFilter} 
-            onChange={(e) => {
-              setTypeFilter(e.target.value)
-              setCurrentPage(1)
-            }}
-          >
-            <option value="">All Types</option>
-            <option value="GRN">GRN</option>
-            <option value="purchase_receipt">Purchase Receipt</option>
-            <option value="production">Production</option>
-            <option value="adjustment">Adjustment</option>
-          </select>
-          <select 
-            value={warehouseFilter} 
-            onChange={(e) => {
-              setWarehouseFilter(e.target.value)
-              setCurrentPage(1)
-            }}
-          >
-            <option value="">All Warehouses</option>
-            {warehouses.map(wh => (
-              <option key={wh.id} value={wh.id}>
-                {wh.warehouse_name}
-              </option>
-            ))}
-          </select>
-          {(searchTerm || typeFilter || warehouseFilter) && (
-            <Button 
-              variant="secondary" 
-              onClick={handleClearFilters}
-              icon={X}
-            >
-              Clear Filters
-            </Button>
-          )}
-        </div>
-      )}
+        ) : entries.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800">
+            <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-4 mb-4">
+              <Package size={40} className="text-neutral-400 dark:text-neutral-600" />
+            </div>
+            <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">No Stock Entries Found</h3>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center max-w-md mb-6">Create your first stock entry to start tracking inventory movements.</p>
+          </div>
+        ) : (
+          <>
+            {entries.length > 0 && (
+              <div className="mb-5 flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  placeholder="Search by entry ID or warehouse..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value)
+                    setCurrentPage(1)
+                  }}
+                  className="flex-1 p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+                <select 
+                  value={typeFilter} 
+                  onChange={(e) => {
+                    setTypeFilter(e.target.value)
+                    setCurrentPage(1)
+                  }}
+                  className="p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="">All Types</option>
+                  <option value="GRN">GRN</option>
+                  <option value="purchase_receipt">Purchase Receipt</option>
+                  <option value="production">Production</option>
+                  <option value="adjustment">Adjustment</option>
+                </select>
+                <select 
+                  value={warehouseFilter} 
+                  onChange={(e) => {
+                    setWarehouseFilter(e.target.value)
+                    setCurrentPage(1)
+                  }}
+                  className="p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="">All Warehouses</option>
+                  {warehouses.map(wh => (
+                    <option key={wh.id} value={wh.id}>
+                      {wh.warehouse_name}
+                    </option>
+                  ))}
+                </select>
+                {(searchTerm || typeFilter || warehouseFilter) && (
+                  <button 
+                    onClick={handleClearFilters}
+                    className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center gap-1 text-sm"
+                  >
+                    <X size={14} />
+                    Clear
+                  </button>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setViewMode('table')}
+                    className={`p-2 rounded-md transition-all ${viewMode === 'table' ? 'bg-amber-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
+                    title="Table view"
+                  >
+                    <List size={18} />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('card')}
+                    className={`p-2 rounded-md transition-all ${viewMode === 'card' ? 'bg-amber-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
+                    title="Card view"
+                  >
+                    <Grid3x3 size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
 
-      {loading ? (
-        <div className="no-data">
-          <Package size={48} style={{ opacity: 0.5 }} />
-          <p>Loading stock entries...</p>
-        </div>
-      ) : (
-        <>
-          <DataTable 
-            columns={columns} 
-            data={paginatedData}
-            disablePagination={true}
-            filterable={true}
-            sortable={true}
-          />
-          {filteredEntries.length > 0 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              itemsPerPage={itemsPerPage}
-              totalItems={filteredEntries.length}
-              onItemsPerPageChange={setItemsPerPage}
-            />
-          )}
-        </>
-      )}
+            {filteredEntries.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800">
+                <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-4 mb-4">
+                  <Package size={40} className="text-neutral-400 dark:text-neutral-600" />
+                </div>
+                <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">No Matching Entries</h3>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center max-w-md">Try adjusting your search or filters.</p>
+              </div>
+            ) : viewMode === 'table' ? (
+              <div className="overflow-x-auto ">
+                <DataTable columns={columns} data={filteredEntries} />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {paginatedData.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden"
+                  >
+                    <div className={`bg-gradient-to-br ${getTypeColor(entry.entry_type || entry.reference_doctype)} p-4 flex items-start justify-between`}>
+                      <div className="flex items-start gap-2">
+                        <div className="p-1 bg-white/50 rounded-lg">
+                          {getTypeIcon(entry.entry_type || entry.reference_doctype)}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-neutral-900 text-base">{entry.entry_id}</h3>
+                          <p className="text-xs text-neutral-700 font-medium">{entry.entry_type || entry.reference_doctype || 'Entry'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 space-y-2">
+                      <div className="flex items-center gap-2 text-xs">
+                        <Badge variant="secondary">{entry.reference_doctype || 'Stock Entry'}</Badge>
+                      </div>
+
+                      {entry.warehouse_name && (
+                        <div className="flex items-center gap-2">
+                          <Warehouse size={14} className="text-neutral-400" />
+                          <span className="text-xs text-neutral-600 dark:text-neutral-400">{entry.warehouse_name}</span>
+                        </div>
+                      )}
+
+                      {entry.entry_date && (
+                        <div className="flex items-center gap-2">
+                          <Calendar size={14} className="text-neutral-400" />
+                          <span className="text-xs text-neutral-600 dark:text-neutral-400">{new Date(entry.entry_date).toLocaleDateString()}</span>
+                        </div>
+                      )}
+
+                      {entry.total_items && (
+                        <div className="flex items-center gap-2">
+                          <Tag size={14} className="text-neutral-400" />
+                          <span className="text-xs text-neutral-600 dark:text-neutral-400">Items: <strong>{entry.total_items}</strong></span>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 pt-3 border-t border-neutral-200 dark:border-neutral-800">
+                        <button
+                          onClick={() => handleDelete(entry.entry_id || entry.id)}
+                          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/50 transition-all"
+                        >
+                          <Trash2 size={12} />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {viewMode === 'card' && totalPages > 1 && (
+              <div className="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-xs text-neutral-600 dark:text-neutral-400">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredEntries.length)} of {filteredEntries.length} entries
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    Previous
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                          currentPage === page
+                            ? 'bg-amber-500 text-white'
+                            : 'border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   )
 }

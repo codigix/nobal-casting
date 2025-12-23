@@ -1,5 +1,4 @@
 import { PurchaseOrderModel } from '../models/PurchaseOrderModel.js'
-import { v4 as uuidv4 } from 'uuid'
 import notificationService from '../services/notificationService.js'
 
 export async function createPurchaseOrder(req, res) {
@@ -10,7 +9,7 @@ export async function createPurchaseOrder(req, res) {
     const result = await model.create(req.body)
 
     if (req.body.due_date && req.body.payment_amount) {
-      const reminderId = uuidv4()
+      const reminderId = `REMINDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       await model.createPaymentReminder(
         reminderId,
         result.po_no,

@@ -27,7 +27,7 @@ class AuthController {
       }
 
       // Register user
-      const user = await this.authModel.register(email, fullName, password, department || 'buying')
+      const user = await this.authModel.register(email, fullName, password, department || 'manufacturing')
 
       // Generate token
       const token = jwt.sign(

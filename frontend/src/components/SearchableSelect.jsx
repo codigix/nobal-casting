@@ -17,6 +17,8 @@ export default function SearchableSelect({
   const [filteredOptions, setFilteredOptions] = useState(options)
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
   const containerRef = useRef(null)
+  const optionsListRef = useRef(null)
+  const dropdownRef = useRef(null)
 
   useEffect(() => {
     if (onSearch) {
@@ -50,6 +52,26 @@ export default function SearchableSelect({
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    const handleScroll = (e) => {
+      if (!isOpen) return
+      if (optionsListRef.current && optionsListRef.current.contains(e.target)) return
+      if (dropdownRef.current && dropdownRef.current.contains(e.target)) return
+      setIsOpen(false)
+    }
+
+    const handleResize = () => {
+      if (isOpen) setIsOpen(false)
+    }
+
+    window.addEventListener('scroll', handleScroll, true)
+    window.addEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [isOpen])
 
   const handleSelect = (option) => {
     onChange(option.value)
@@ -135,20 +157,22 @@ export default function SearchableSelect({
         </div>
 
         {isOpen && (
-          <div style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            right: 0,
-            marginTop: '4px',
-            background: 'white',
-            border: '1px solid #d1d5db',
-            borderRadius: '4px',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-            zIndex: 10,
-            maxHeight: '200px',
-            overflowY: 'auto'
-          }}>
+          <div 
+            ref={dropdownRef}
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              marginTop: '4px',
+              background: 'white',
+              border: '1px solid #d1d5db',
+              borderRadius: '4px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+              zIndex: 10,
+              maxHeight: '200px',
+              overflowY: 'auto'
+            }}>
             {isLoading && (
               <div style={{ padding: '10px', color: '#9ca3af', textAlign: 'center' }}>
                 Loading...
@@ -159,24 +183,26 @@ export default function SearchableSelect({
                 No options found
               </div>
             )}
-            {!isLoading && filteredOptions.map((option, index) => (
-              <div
-                key={option.value}
-                onClick={() => handleSelect(option)}
-                style={{
-                  padding: '6px',
-                  cursor: 'pointer',
-                  background: highlightedIndex === index ? '#f3f4f6' : 'white',
-                  color: option.value === value ? '#2563eb' : '#1f2937',
-                  fontWeight: option.value === value ? '600' : 'normal',
-                  borderBottom: '1px solid #f3f3f3',
-                  fontSize: '10px'
-                }}
-                onMouseEnter={() => setHighlightedIndex(index)}
-              >
-                {option.label}
-              </div>
-            ))}
+            <div ref={optionsListRef}>
+              {!isLoading && filteredOptions.map((option, index) => (
+                <div
+                  key={option.value}
+                  onClick={() => handleSelect(option)}
+                  style={{
+                    padding: '6px',
+                    cursor: 'pointer',
+                    background: highlightedIndex === index ? '#f3f4f6' : 'white',
+                    color: option.value === value ? '#2563eb' : '#1f2937',
+                    fontWeight: option.value === value ? '600' : 'normal',
+                    borderBottom: '1px solid #f3f3f3',
+                    fontSize: '10px'
+                  }}
+                  onMouseEnter={() => setHighlightedIndex(index)}
+                >
+                  {option.label}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

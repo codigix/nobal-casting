@@ -7,7 +7,7 @@ const config = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'aluminium_erp',
+  database: process.env.DB_NAME || 'nobalcasting',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -25,7 +25,7 @@ async function runMigration() {
         const [rows] = await connection.query(
           `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
            WHERE TABLE_NAME = ? AND COLUMN_NAME = ? AND TABLE_SCHEMA = ?`,
-          [table, column, process.env.DB_NAME || 'aluminium_erp']
+          [table, column, process.env.DB_NAME || 'nobalcasting']
         )
         return rows.length > 0
       } catch {

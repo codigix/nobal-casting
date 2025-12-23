@@ -5,7 +5,7 @@ export class SellingController {
 
   static async createCustomer(req, res) {
     const db = req.app.locals.db
-    const { name, email, phone, gstin, gst_no, billing_address, shipping_address, credit_limit, status } = req.body
+    const { customer_id, name, email, phone, gstin, gst_no, billing_address, shipping_address, credit_limit, status } = req.body
 
     try {
       // Validation
@@ -17,15 +17,16 @@ export class SellingController {
         return res.status(400).json({ error: 'Invalid email format' })
       }
 
-      const customer_id = `CUST-${Date.now()}`
-      const gstinValue = gstin || gst_no // Accept both field names
+      const finalCustomerId = customer_id || `CUST-${Date.now()}`
+      const gstinValue = gstin || gst_no
+      const isActive = status === 'inactive' ? 0 : 1
 
       await db.execute(
-        `INSERT INTO selling_customer 
-         (customer_id, name, email, phone, gstin, billing_address, shipping_address, credit_limit, status)
+        `INSERT INTO customer 
+         (customer_id, name, email, phone, gstin, billing_address, shipping_address, credit_limit, is_active)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          customer_id,
+          finalCustomerId,
           name,
           email || null,
           phone || null,
@@ -33,14 +34,14 @@ export class SellingController {
           billing_address || null,
           shipping_address || null,
           credit_limit || 0,
-          status || 'active'
+          isActive
         ]
       )
 
       res.status(201).json({
         success: true,
         data: {
-          customer_id,
+          customer_id: finalCustomerId,
           name,
           email,
           phone,
@@ -62,7 +63,7 @@ export class SellingController {
     const { name, status } = req.query
 
     try {
-      let query = 'SELECT * FROM selling_customer WHERE deleted_at IS NULL'
+      let query = 'SELECT customer_id, name, email, phone FROM customer WHERE deleted_at IS NULL'
       const params = []
 
       if (name) {
@@ -70,14 +71,22 @@ export class SellingController {
         params.push(`%${name}%`)
       }
       if (status) {
-        query += ' AND status = ?'
-        params.push(status)
+        query += ' AND is_active = ?'
+        params.push(status === 'active' ? 1 : 0)
       }
 
       query += ' ORDER BY created_at DESC'
 
       const [customers] = await db.execute(query, params)
-      res.json({ success: true, data: customers })
+      
+      const mappedCustomers = customers.map(c => ({
+        customer_id: c.customer_id,
+        customer_name: c.name,
+        email: c.email || '',
+        phone: c.phone || ''
+      }))
+      
+      res.json({ success: true, data: mappedCustomers })
     } catch (error) {
       console.error('Error fetching customers:', error)
       res.status(500).json({ error: 'Failed to fetch customers', details: error.message })
@@ -90,7 +99,7 @@ export class SellingController {
 
     try {
       const [rows] = await db.execute(
-        'SELECT * FROM selling_customer WHERE customer_id = ? AND deleted_at IS NULL',
+        'SELECT * FROM customer WHERE customer_id = ? AND deleted_at IS NULL',
         [id]
       )
 
@@ -124,7 +133,7 @@ export class SellingController {
 
       // Validate customer exists
       const [customerCheck] = await db.execute(
-        'SELECT customer_id FROM selling_customer WHERE customer_id = ? AND deleted_at IS NULL',
+        'SELECT customer_id FROM customer WHERE customer_id = ? AND deleted_at IS NULL',
         [customer_id]
       )
 
@@ -165,7 +174,7 @@ export class SellingController {
     try {
       let query = `SELECT sq.*, sc.name as customer_name 
                    FROM selling_quotation sq
-                   LEFT JOIN selling_customer sc ON sq.customer_id = sc.customer_id
+                   LEFT JOIN customer sc ON sq.customer_id = sc.customer_id
                    WHERE sq.deleted_at IS NULL`
       const params = []
 
@@ -213,7 +222,7 @@ export class SellingController {
       const [updated] = await db.execute(
         `SELECT sq.*, sc.name as customer_name 
          FROM selling_quotation sq
-         LEFT JOIN selling_customer sc ON sq.customer_id = sc.customer_id
+         LEFT JOIN customer sc ON sq.customer_id = sc.customer_id
          WHERE sq.quotation_id = ?`,
         [id]
       )
@@ -259,7 +268,7 @@ export class SellingController {
 
   static async createSalesOrder(req, res) {
     const db = req.app.locals.db
-    const { customer_id, quotation_id, order_amount, total_value, delivery_date, order_terms, terms_conditions } = req.body
+    const { customer_id, customer_name, customer_email, customer_phone, quotation_id, order_amount, total_value, delivery_date, order_terms, terms_conditions, items, bom_id, bom_name, source_warehouse, order_type, status, bom_raw_materials, bom_operations, bom_finished_goods } = req.body
 
     try {
       // Accept both field name variations
@@ -270,23 +279,32 @@ export class SellingController {
         return res.status(400).json({ error: 'Customer and order amount are required' })
       }
 
-      // Validate customer exists
-      const [customerCheck] = await db.execute(
-        'SELECT customer_id FROM selling_customer WHERE customer_id = ? AND deleted_at IS NULL',
+      // Fetch customer details
+      const [customerRows] = await db.execute(
+        'SELECT customer_id, name, email, phone FROM customer WHERE customer_id = ? AND deleted_at IS NULL',
         [customer_id]
       )
 
-      if (!customerCheck.length) {
+      if (!customerRows.length) {
         return res.status(400).json({ error: 'Customer not found. Please select a valid customer.' })
       }
 
+      const customer = customerRows[0]
+      const finalCustomerName = customer_name || customer.name || ''
+      const finalCustomerEmail = customer_email || customer.email || ''
+      const finalCustomerPhone = customer_phone || customer.phone || ''
+
       const sales_order_id = `SO-${Date.now()}`
+      const itemsJSON = items ? JSON.stringify(items) : null
+      const bomRawMaterialsJSON = bom_raw_materials ? JSON.stringify(bom_raw_materials) : null
+      const bomOperationsJSON = bom_operations ? JSON.stringify(bom_operations) : null
+      const bomFinishedGoodsJSON = bom_finished_goods ? JSON.stringify(bom_finished_goods) : null
 
       await db.execute(
         `INSERT INTO selling_sales_order 
-         (sales_order_id, customer_id, quotation_id, order_amount, delivery_date, order_terms, status)
-         VALUES (?, ?, ?, ?, ?, ?, 'draft')`,
-        [sales_order_id, customer_id, quotation_id || null, finalAmount, delivery_date || null, finalTerms || null]
+         (sales_order_id, customer_id, customer_name, customer_email, customer_phone, quotation_id, order_amount, delivery_date, order_terms, items, bom_id, bom_name, source_warehouse, order_type, status, bom_raw_materials, bom_operations, bom_finished_goods)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [sales_order_id, customer_id, finalCustomerName, finalCustomerEmail, finalCustomerPhone, quotation_id || null, finalAmount, delivery_date || null, finalTerms || null, itemsJSON, bom_id || null, bom_name || null, source_warehouse || null, order_type || 'Sales', status || 'Draft', bomRawMaterialsJSON, bomOperationsJSON, bomFinishedGoodsJSON]
       )
 
       res.status(201).json({
@@ -294,12 +312,23 @@ export class SellingController {
         data: {
           sales_order_id,
           customer_id,
+          customer_name: finalCustomerName,
+          customer_email: finalCustomerEmail,
+          customer_phone: finalCustomerPhone,
           quotation_id,
           order_amount: finalAmount,
           total_value: finalAmount,
           delivery_date,
           order_terms: finalTerms,
-          status: 'draft'
+          items: items || [],
+          bom_id,
+          bom_name,
+          source_warehouse,
+          order_type: order_type || 'Sales',
+          status: status || 'Draft',
+          bom_raw_materials: bom_raw_materials || [],
+          bom_operations: bom_operations || [],
+          bom_finished_goods: bom_finished_goods || []
         }
       })
     } catch (error) {
@@ -313,9 +342,13 @@ export class SellingController {
     const { customer_id, status } = req.query
 
     try {
-      let query = `SELECT sso.*, sso.order_amount as total_value, sc.name as customer_name 
+      let query = `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.source_warehouse, sso.order_type, sso.customer_name, sso.customer_email, sso.customer_phone, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
+                          sso.order_amount as total_value, 
+                          COALESCE(c.name, sso.customer_name, '') as customer_full_name,
+                          COALESCE(c.email, sso.customer_email, '') as customer_email_alt,
+                          COALESCE(c.phone, sso.customer_phone, '') as customer_phone_alt
                    FROM selling_sales_order sso
-                   LEFT JOIN selling_customer sc ON sso.customer_id = sc.customer_id
+                   LEFT JOIN customer c ON sso.customer_id = c.customer_id
                    WHERE sso.deleted_at IS NULL`
       const params = []
 
@@ -331,7 +364,19 @@ export class SellingController {
       query += ' ORDER BY sso.created_at DESC'
 
       const [orders] = await db.execute(query, params)
-      res.json({ success: true, data: orders })
+      
+      const processedOrders = orders.map(order => ({
+        ...order,
+        customer_name: order.customer_name || order.customer_full_name,
+        customer_email: order.customer_email || order.customer_email_alt,
+        customer_phone: order.customer_phone || order.customer_phone_alt,
+        items: order.items ? JSON.parse(order.items) : [],
+        bom_finished_goods: order.bom_finished_goods ? JSON.parse(order.bom_finished_goods) : [],
+        bom_raw_materials: order.bom_raw_materials ? JSON.parse(order.bom_raw_materials) : [],
+        bom_operations: order.bom_operations ? JSON.parse(order.bom_operations) : []
+      }))
+      
+      res.json({ success: true, data: processedOrders })
     } catch (error) {
       console.error('Error fetching sales orders:', error)
       res.status(500).json({ error: 'Failed to fetch sales orders', details: error.message })
@@ -362,14 +407,26 @@ export class SellingController {
       )
 
       const [updated] = await db.execute(
-        `SELECT sso.*, sso.order_amount as total_value, sc.name as customer_name 
+        `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.source_warehouse, sso.order_type, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
+                sso.order_amount as total_value, 
+                COALESCE(c.name, '') as customer_name,
+                COALESCE(c.email, '') as customer_email,
+                COALESCE(c.phone, '') as customer_phone
          FROM selling_sales_order sso
-         LEFT JOIN selling_customer sc ON sso.customer_id = sc.customer_id
+         LEFT JOIN customer c ON sso.customer_id = c.customer_id
          WHERE sso.sales_order_id = ?`,
         [id]
       )
 
-      res.json({ success: true, data: updated[0] })
+      const processedOrder = {
+        ...updated[0],
+        items: updated[0].items ? JSON.parse(updated[0].items) : [],
+        bom_finished_goods: updated[0].bom_finished_goods ? JSON.parse(updated[0].bom_finished_goods) : [],
+        bom_raw_materials: updated[0].bom_raw_materials ? JSON.parse(updated[0].bom_raw_materials) : [],
+        bom_operations: updated[0].bom_operations ? JSON.parse(updated[0].bom_operations) : []
+      }
+
+      res.json({ success: true, data: processedOrder })
     } catch (error) {
       console.error('Error confirming sales order:', error)
       res.status(500).json({ error: 'Failed to confirm sales order', details: error.message })
@@ -382,9 +439,16 @@ export class SellingController {
 
     try {
       const [orders] = await db.execute(
-        `SELECT sso.*, sso.order_amount as total_value, sc.name as customer_name 
+        `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.source_warehouse, sso.order_type, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
+                sso.order_amount as total_value,
+                sso.customer_name,
+                sso.customer_email,
+                sso.customer_phone,
+                COALESCE(c.name, sso.customer_name, '') as customer_full_name,
+                COALESCE(c.email, sso.customer_email, '') as customer_email_alt,
+                COALESCE(c.phone, sso.customer_phone, '') as customer_phone_alt
          FROM selling_sales_order sso
-         LEFT JOIN selling_customer sc ON sso.customer_id = sc.customer_id
+         LEFT JOIN customer c ON sso.customer_id = c.customer_id
          WHERE sso.sales_order_id = ? AND sso.deleted_at IS NULL`,
         [id]
       )
@@ -393,17 +457,86 @@ export class SellingController {
         return res.status(404).json({ error: 'Sales order not found' })
       }
 
-      res.json({ success: true, data: orders[0] })
+      const order = orders[0]
+      const processedOrder = {
+        ...order,
+        customer_name: order.customer_name || order.customer_full_name,
+        customer_email: order.customer_email || order.customer_email_alt,
+        customer_phone: order.customer_phone || order.customer_phone_alt,
+        items: order.items ? JSON.parse(order.items) : [],
+        bom_finished_goods: order.bom_finished_goods ? JSON.parse(order.bom_finished_goods) : [],
+        bom_raw_materials: order.bom_raw_materials ? JSON.parse(order.bom_raw_materials) : [],
+        bom_operations: order.bom_operations ? JSON.parse(order.bom_operations) : []
+      }
+
+      res.json({ success: true, data: processedOrder })
     } catch (error) {
       console.error('Error fetching sales order:', error)
       res.status(500).json({ error: 'Failed to fetch sales order', details: error.message })
     }
   }
 
+  static async getSalesOrderByItem(req, res) {
+    const db = req.app.locals.db
+    const { item_code } = req.params
+
+    try {
+      if (!item_code) {
+        return res.status(400).json({ error: 'Item code is required' })
+      }
+
+      const [orders] = await db.execute(
+        `SELECT sso.sales_order_id, sso.customer_id, sso.order_amount, sso.delivery_date, sso.status, sso.items, sso.bom_id, sso.bom_name, sso.customer_name, sso.customer_email, sso.customer_phone, c.name, c.email, c.phone
+         FROM selling_sales_order sso
+         LEFT JOIN customer c ON sso.customer_id = c.customer_id
+         WHERE sso.deleted_at IS NULL AND sso.status != 'cancelled'`,
+        []
+      )
+
+      let matchingOrders = []
+      
+      for (const order of orders) {
+        let items = []
+        try {
+            items = order.items ? (typeof order.items === 'string' ? JSON.parse(order.items) : order.items) : []
+        } catch (e) {
+            continue
+        }
+
+        const hasItem = Array.isArray(items) && items.some(item => 
+            item.item_code && item.item_code.toString().trim().toLowerCase() === item_code.toString().trim().toLowerCase()
+        )
+        if (hasItem) {
+          matchingOrders.push({
+            sales_order_id: order.sales_order_id,
+            customer_id: order.customer_id,
+            customer_name: order.customer_name || order.name,
+            customer_email: order.customer_email || order.email,
+            customer_phone: order.customer_phone || order.phone,
+            bom_id: order.bom_id,
+            bom_name: order.bom_name,
+            status: order.status,
+            order_amount: order.order_amount,
+            delivery_date: order.delivery_date
+          })
+        }
+      }
+
+      if (matchingOrders.length === 0) {
+        return res.json({ success: true, data: null, message: 'No sales order found for this item' })
+      }
+
+      res.json({ success: true, data: matchingOrders[0], allOrders: matchingOrders })
+    } catch (error) {
+      console.error('Error fetching sales order by item:', error)
+      res.status(500).json({ error: 'Failed to fetch sales order by item', details: error.message })
+    }
+  }
+
   static async updateSalesOrder(req, res) {
     const db = req.app.locals.db
     const { id } = req.params
-    const { order_amount, total_value, delivery_date, order_terms, status } = req.body
+    const { order_amount, total_value, delivery_date, order_terms, status, items, bom_id, bom_name, source_warehouse, order_type, customer_name, customer_email, customer_phone, bom_raw_materials, bom_operations, bom_finished_goods } = req.body
 
     try {
       // Check if order exists
@@ -426,7 +559,7 @@ export class SellingController {
       }
       if (delivery_date !== undefined) {
         updates.push('delivery_date = ?')
-        values.push(delivery_date)
+        values.push(delivery_date || null)
       }
       if (order_terms !== undefined) {
         updates.push('order_terms = ?')
@@ -435,6 +568,50 @@ export class SellingController {
       if (status !== undefined) {
         updates.push('status = ?')
         values.push(status)
+      }
+      if (items !== undefined) {
+        updates.push('items = ?')
+        values.push(items ? JSON.stringify(items) : null)
+      }
+      if (bom_id !== undefined) {
+        updates.push('bom_id = ?')
+        values.push(bom_id || null)
+      }
+      if (bom_name !== undefined) {
+        updates.push('bom_name = ?')
+        values.push(bom_name || null)
+      }
+      if (source_warehouse !== undefined) {
+        updates.push('source_warehouse = ?')
+        values.push(source_warehouse || null)
+      }
+      if (order_type !== undefined) {
+        updates.push('order_type = ?')
+        values.push(order_type || null)
+      }
+      if (customer_name !== undefined) {
+        updates.push('customer_name = ?')
+        values.push(customer_name || null)
+      }
+      if (customer_email !== undefined) {
+        updates.push('customer_email = ?')
+        values.push(customer_email || null)
+      }
+      if (customer_phone !== undefined) {
+        updates.push('customer_phone = ?')
+        values.push(customer_phone || null)
+      }
+      if (bom_raw_materials !== undefined) {
+        updates.push('bom_raw_materials = ?')
+        values.push(bom_raw_materials ? JSON.stringify(bom_raw_materials) : null)
+      }
+      if (bom_operations !== undefined) {
+        updates.push('bom_operations = ?')
+        values.push(bom_operations ? JSON.stringify(bom_operations) : null)
+      }
+      if (bom_finished_goods !== undefined) {
+        updates.push('bom_finished_goods = ?')
+        values.push(bom_finished_goods ? JSON.stringify(bom_finished_goods) : null)
       }
 
       if (updates.length === 0) {
@@ -449,14 +626,26 @@ export class SellingController {
 
       // Fetch updated order with customer info
       const [updated] = await db.execute(
-        `SELECT sso.*, sso.order_amount as total_value, sc.name as customer_name 
+        `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.source_warehouse, sso.order_type, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
+                sso.order_amount as total_value, 
+                COALESCE(c.name, '') as customer_name,
+                COALESCE(c.email, '') as customer_email,
+                COALESCE(c.phone, '') as customer_phone
          FROM selling_sales_order sso
-         LEFT JOIN selling_customer sc ON sso.customer_id = sc.customer_id
+         LEFT JOIN customer c ON sso.customer_id = c.customer_id
          WHERE sso.sales_order_id = ?`,
         [id]
       )
 
-      res.json({ success: true, data: updated[0] })
+      const processedOrder = {
+        ...updated[0],
+        items: updated[0].items ? JSON.parse(updated[0].items) : [],
+        bom_finished_goods: updated[0].bom_finished_goods ? JSON.parse(updated[0].bom_finished_goods) : [],
+        bom_raw_materials: updated[0].bom_raw_materials ? JSON.parse(updated[0].bom_raw_materials) : [],
+        bom_operations: updated[0].bom_operations ? JSON.parse(updated[0].bom_operations) : []
+      }
+
+      res.json({ success: true, data: processedOrder })
     } catch (error) {
       console.error('Error updating sales order:', error)
       res.status(500).json({ error: 'Failed to update sales order', details: error.message })
@@ -691,7 +880,7 @@ export class SellingController {
                    FROM selling_invoice si
                    LEFT JOIN selling_delivery_note sdn ON si.delivery_note_id = sdn.delivery_note_id
                    LEFT JOIN selling_sales_order sso ON sdn.sales_order_id = sso.sales_order_id
-                   LEFT JOIN selling_customer sc ON sso.customer_id = sc.customer_id
+                   LEFT JOIN customer sc ON sso.customer_id = sc.customer_id
                    WHERE si.deleted_at IS NULL`
       const params = []
 
@@ -747,7 +936,7 @@ export class SellingController {
          FROM selling_invoice si
          LEFT JOIN selling_delivery_note sdn ON si.delivery_note_id = sdn.delivery_note_id
          LEFT JOIN selling_sales_order sso ON sdn.sales_order_id = sso.sales_order_id
-         LEFT JOIN selling_customer sc ON sso.customer_id = sc.customer_id
+         LEFT JOIN customer sc ON sso.customer_id = sc.customer_id
          WHERE si.invoice_id = ?`,
         [id]
       )
@@ -819,7 +1008,7 @@ export class SellingController {
         `SELECT sdn.*, so.order_amount, sc.name as customer_name 
          FROM selling_delivery_note sdn
          LEFT JOIN selling_sales_order so ON sdn.sales_order_id = so.sales_order_id
-         LEFT JOIN selling_customer sc ON so.customer_id = sc.customer_id
+         LEFT JOIN customer sc ON so.customer_id = sc.customer_id
          WHERE sdn.delivery_note_id = ?`,
         [id]
       )

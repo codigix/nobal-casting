@@ -13,7 +13,7 @@ async function addSalesOrderTable() {
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'aluminium_erp',
+    database: process.env.DB_NAME || 'nobalcasting',
     port: process.env.DB_PORT || 3306,
     waitForConnections: true,
     connectionLimit: 10,
@@ -55,7 +55,7 @@ async function addSalesOrderTable() {
     // Verify the table exists
     const [tables] = await pool.query(
       `SELECT TABLE_NAME FROM information_schema.TABLES 
-       WHERE TABLE_SCHEMA = 'aluminium_erp' 
+       WHERE TABLE_SCHEMA = 'nobalcasting' 
        AND TABLE_NAME = 'sales_order'`
     )
 

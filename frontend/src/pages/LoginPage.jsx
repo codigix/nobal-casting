@@ -10,7 +10,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('password123')
   const [fullName, setFullName] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [department, setDepartment] = useState('buying')
+  const [department, setDepartment] = useState('manufacturing')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -18,15 +18,8 @@ export default function LoginPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const departments = [
-    { value: 'buying', label: 'Buying' },
-    { value: 'selling', label: 'Selling' },
     { value: 'inventory', label: 'Inventory' },
-    { value: 'production', label: 'Production' },
-    { value: 'toolroom', label: 'Tool Room' },
-    { value: 'quality', label: 'Quality' },
-    { value: 'dispatch', label: 'Dispatch' },
-    { value: 'accounts', label: 'Accounts' },
-    { value: 'hr', label: 'HR' },
+    { value: 'manufacturing', label: 'Production' },
     { value: 'admin', label: 'Admin' }
   ]
 

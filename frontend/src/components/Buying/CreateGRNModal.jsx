@@ -1,725 +1,456 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import Modal from '../Modal/Modal'
-import { AlertCircle, CheckCircle, Plus, Trash2, Loader } from 'lucide-react'
+import Button from '../Button/Button'
+import Alert from '../Alert/Alert'
+import { Plus, Trash2, Package, FileText, Truck, Calendar, AlertCircle } from 'lucide-react'
 
-export default function CreateGRNModal({ isOpen, onClose, onSuccess, poNo }) {
+export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [purchaseOrders, setPurchaseOrders] = useState([])
+  const [warehouses, setWarehouses] = useState([])
+  const [suppliers, setSuppliers] = useState([])
+  const [items, setItems] = useState([])
+
   const [formData, setFormData] = useState({
-    po_no: poNo || '',
+    grn_no: '',
+    po_no: '',
+    supplier_id: '',
+    supplier_name: '',
     receipt_date: new Date().toISOString().split('T')[0],
-    items: [],
-    warehouse_name: 'Main Warehouse',
     notes: ''
   })
 
-  const [purchaseOrders, setPurchaseOrders] = useState([])
-  const [warehouses, setWarehouses] = useState([])
-  const [selectedPO, setSelectedPO] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [dataLoading, setDataLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [grnItems, setGrnItems] = useState([
+    { item_code: '', item_name: '', po_qty: 0, received_qty: 0, batch_no: '', warehouse_name: '', uom: '' }
+  ])
 
   useEffect(() => {
     if (isOpen) {
-      fetchRequiredData()
+      fetchPurchaseOrders()
+      fetchWarehouses()
+      fetchSuppliers()
+      fetchItems()
+      generateGRNNo()
     }
   }, [isOpen])
 
-  useEffect(() => {
-    if (poNo && selectedPO?.po_no !== poNo) {
-      setFormData(prev => ({ ...prev, po_no: poNo }))
-    }
-  }, [poNo])
-
-  useEffect(() => {
-    if (warehouses.length > 0 && !formData.warehouse_name) {
-      setFormData(prev => ({ ...prev, warehouse_name: warehouses[0].name }))
-    }
-  }, [warehouses])
-
-  const fetchRequiredData = async () => {
+  const generateGRNNo = async () => {
     try {
-      setDataLoading(true)
-      setError(null)
-      const apiUrl = import.meta.env.VITE_API_URL
-
-      const [posRes, warehouseRes] = await Promise.all([
-        axios.get(`${apiUrl}/purchase-orders?limit=1000`),
-        axios.get(`${apiUrl}/stock/warehouses`)
-      ])
-
-      const allPOs = posRes.data.data || []
-      const receivablePOs = allPOs.filter(po => 
-        ['submitted', 'to_receive', 'partially_received'].includes(po.status)
-      )
-      setPurchaseOrders(receivablePOs)
-      
-      let warehousesList = warehouseRes.data.data || []
-      if (!warehousesList || warehousesList.length === 0) {
-        warehousesList = [{ warehouse_code: 'Main', name: 'Main Warehouse' }]
+      const response = await axios.get('/api/grn-requests/generate-grn-no')
+      if (response.data.success) {
+        setFormData(prev => ({ ...prev, grn_no: response.data.data.grn_no }))
+      } else {
+        console.error('Error generating GRN number:', response.data.error)
       }
-      setWarehouses(warehousesList)
     } catch (err) {
-      console.error('Failed to fetch required data:', err)
-      setWarehouses([{ warehouse_code: 'Main', name: 'Main Warehouse' }])
-      setError('Warning: Using default warehouse. Please check inventory department for available warehouses.')
-    } finally {
-      setDataLoading(false)
+      console.error('Error generating GRN number:', err)
     }
   }
 
-  const handlePOChange = async (e) => {
-    const poNo = e.target.value
-
-    if (!poNo) {
-      setFormData(prev => ({
-        ...prev,
-        po_no: '',
-        items: []
-      }))
-      setSelectedPO(null)
-      return
-    }
-
+  const fetchPurchaseOrders = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL
-      const response = await axios.get(`${apiUrl}/purchase-orders/${poNo}`)
-      const po = response.data.data
+      const response = await axios.get('/api/purchase-orders?status=submitted')
+      setPurchaseOrders(response.data.data || [])
+    } catch (err) {
+      console.error('Error fetching purchase orders:', err)
+    }
+  }
 
-      setSelectedPO(po)
+  const fetchWarehouses = async () => {
+    try {
+      const response = await axios.get('/api/stock/warehouses')
+      setWarehouses(response.data.data || [])
+    } catch (err) {
+      console.error('Error fetching warehouses:', err)
+    }
+  }
+
+  const fetchSuppliers = async () => {
+    try {
+      const response = await axios.get('/api/suppliers')
+      setSuppliers(response.data.data || [])
+    } catch (err) {
+      console.error('Error fetching suppliers:', err)
+    }
+  }
+
+  const fetchItems = async () => {
+    try {
+      const response = await axios.get('/api/items')
+      setItems(response.data.data || [])
+    } catch (err) {
+      console.error('Error fetching items:', err)
+    }
+  }
+
+  const handlePOSelect = (poNo) => {
+    const selectedPO = purchaseOrders.find(po => po.po_no === poNo)
+    if (selectedPO) {
       setFormData(prev => ({
         ...prev,
-        po_no: poNo,
-        items: (po.items || []).map(item => ({
-          item_code: item.item_code,
-          item_name: item.item_name || '',
-          ordered_qty: parseFloat(item.qty) || 0,
-          received_qty: '',
-          batch_no: '',
-          remarks: '',
-          id: Date.now() + Math.random()
-        }))
+        po_no: selectedPO.po_no,
+        supplier_id: selectedPO.supplier_id,
+        supplier_name: selectedPO.supplier_name || ''
       }))
-      setError(null)
-    } catch (err) {
-      console.error('Failed to fetch PO details:', err)
-      setError('Failed to load PO items')
-      setFormData(prev => ({ ...prev, po_no: '', items: [] }))
-      setSelectedPO(null)
+
+      if (selectedPO.items && selectedPO.items.length > 0) {
+        const newItems = selectedPO.items.map(item => ({
+          item_code: item.item_code,
+          item_name: item.item_name,
+          po_qty: item.qty || item.quantity || 0,
+          received_qty: item.qty || item.quantity || 0,
+          batch_no: '',
+          warehouse_name: warehouses.length > 0 ? warehouses[0].warehouse_name : '',
+          uom: item.uom || ''
+        }))
+        setGrnItems(newItems)
+      }
     }
   }
 
-  const handleItemChange = (idx, field, value) => {
-    const updatedItems = [...formData.items]
-    updatedItems[idx] = {
-      ...updatedItems[idx],
-      [field]: field === 'received_qty' ? (value === '' ? '' : parseFloat(value) || 0) : value
+  const handleSupplierChange = (supplierId) => {
+    const selectedSupplier = suppliers.find(s => s.supplier_id === supplierId)
+    if (selectedSupplier) {
+      setFormData(prev => ({
+        ...prev,
+        supplier_id: selectedSupplier.supplier_id,
+        supplier_name: selectedSupplier.name || ''
+      }))
     }
-    setFormData(prev => ({ ...formData, items: updatedItems }))
   }
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-    setError(null)
+  const handleItemChange = (index, field, value) => {
+    const newItems = [...grnItems]
+    newItems[index] = { ...newItems[index], [field]: value }
+    setGrnItems(newItems)
   }
 
   const handleAddItem = () => {
-    setFormData(prev => ({
-      ...prev,
-      items: [...prev.items, {
-        item_code: '',
-        item_name: '',
-        ordered_qty: 0,
-        received_qty: '',
-        batch_no: '',
-        remarks: '',
-        id: Date.now() + Math.random()
-      }]
-    }))
+    setGrnItems([
+      ...grnItems,
+      { item_code: '', item_name: '', po_qty: 0, received_qty: 0, batch_no: '', warehouse_name: warehouses.length > 0 ? warehouses[0].warehouse_name : '', uom: '' }
+    ])
   }
 
-  const handleRemoveItem = (idx) => {
-    setFormData(prev => ({
-      ...prev,
-      items: prev.items.filter((_, i) => i !== idx)
-    }))
+  const handleRemoveItem = (index) => {
+    if (grnItems.length > 1) {
+      setGrnItems(grnItems.filter((_, i) => i !== index))
+    }
   }
 
-  const getTotalReceivedQty = () => {
-    return formData.items.reduce((sum, item) => sum + (parseFloat(item.received_qty) || 0), 0)
+  const handleItemCodeSelect = (index, itemCode) => {
+    const selectedItem = items.find(item => item.item_code === itemCode)
+    if (selectedItem) {
+      const newItems = [...grnItems]
+      newItems[index] = {
+        ...newItems[index],
+        item_code: selectedItem.item_code,
+        item_name: selectedItem.name || selectedItem.item_name,
+        uom: selectedItem.uom || ''
+      }
+      setGrnItems(newItems)
+    }
   }
 
-  const validateForm = () => {
-    if (!formData.po_no) return 'Please select a Purchase Order'
-    if (!formData.receipt_date) return 'Receipt date is required'
-    if (!formData.warehouse_name) return 'Please select a Destination Warehouse'
-    if (formData.items.length === 0) return 'Please add at least one item'
-
-    const invalidItems = formData.items.filter(item => !item.item_code || item.received_qty === '')
-    if (invalidItems.length > 0) return 'All items must have quantity received'
-
-    const negativeQtyItems = formData.items.filter(item => parseFloat(item.received_qty) < 0)
-    if (negativeQtyItems.length > 0) return 'Received quantity cannot be negative'
-
-    return null
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError(null)
-
-    const validationError = validateForm()
-    if (validationError) {
-      setError(validationError)
+  const handleSubmit = async () => {
+    if (!formData.grn_no || !formData.supplier_name) {
+      setError('Please fill in GRN Number and Supplier Name')
       return
     }
 
-    try {
-      setLoading(true)
-      const apiUrl = import.meta.env.VITE_API_URL
-      const grnNo = `GRN-${Date.now()}`
+    if (grnItems.length === 0 || !grnItems.some(item => item.item_code)) {
+      setError('Please add at least one item')
+      return
+    }
 
-      const submitData = {
-        grn_no: grnNo,
-        po_no: formData.po_no,
-        supplier_id: selectedPO?.supplier_id || null,
-        supplier_name: selectedPO?.supplier_name || '',
+    const allItemsValid = grnItems.every(item => {
+      if (!item.item_code) return true
+      return item.received_qty > 0 && item.warehouse_name
+    })
+
+    if (!allItemsValid) {
+      setError('Please ensure all items have received quantity and warehouse assigned')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const payload = {
+        grn_no: formData.grn_no,
+        po_no: formData.po_no || '',
+        supplier_id: formData.supplier_id,
+        supplier_name: formData.supplier_name,
         receipt_date: formData.receipt_date,
-        notes: formData.notes,
-        items: formData.items.map(({ id, ordered_qty, remarks, ...item }) => ({
-          ...item,
-          po_qty: parseFloat(ordered_qty) || 0,
-          received_qty: parseFloat(item.received_qty) || 0,
-          warehouse_name: formData.warehouse_name
-        }))
+        items: grnItems.filter(item => item.item_code),
+        notes: formData.notes
       }
 
-      await axios.post(`${apiUrl}/grn-requests`, submitData)
+      const response = await axios.post('/api/grn-requests', payload)
 
-      setFormData({
-        po_no: '',
-        receipt_date: new Date().toISOString().split('T')[0],
-        items: [],
-        warehouse_name: 'Main Warehouse',
-        notes: ''
-      })
-      setSelectedPO(null)
-
-      onSuccess?.()
-      onClose()
+      if (response.data.success || response.status === 200 || response.status === 201) {
+        setError(null)
+        onSuccess && onSuccess(response.data.data)
+        onClose()
+      } else {
+        setError(response.data.error || 'Failed to create GRN request')
+      }
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create GRN')
-      console.error('GRN Creation Error:', err)
+      setError(err.response?.data?.error || 'Failed to create GRN request')
+      console.error('Error:', err)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="📦 Create Goods Receipt Note (GRN)" size="xl">
-      {dataLoading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-          <div style={{ textAlign: 'center' }}>
-            <Loader size={40} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-            <p style={{ color: '#666' }}>Loading data...</p>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title=""
+      size="full"
+      footer={
+        <div className="flex gap-2 justify-end w-full">
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="success" onClick={handleSubmit} loading={loading}>
+            Create GRN Request
+          </Button>
+        </div>
+      }
+    >
+      <div className="max-h-[calc(90vh-120px)] overflow-y-auto pr-2">
+        {/* Header Section */}
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg p-4 mb-4 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="m-0 mb-0.5 text-lg font-bold text-white">Create New GRN Request</h2>
+              <p className="m-0 text-xs opacity-90 text-gray-300">Register received goods and manage inventory</p>
+            </div>
+            <div className="bg-white bg-opacity-20 rounded px-2.5 py-1.5 text-xs font-semibold font-mono whitespace-nowrap">
+              {formData.grn_no}
+            </div>
           </div>
         </div>
-      ) : (
-        <form onSubmit={handleSubmit}>
-          {error && (
-            <div style={{
-              background: '#fee2e2',
-              border: '1px solid #fecaca',
-              borderRadius: '8px',
-              padding: '12px 16px',
-              marginBottom: '20px',
-              color: '#dc2626',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              fontSize: '0.9rem'
-            }}>
-              <AlertCircle size={18} style={{ flexShrink: 0 }} />
-              <span>{error}</span>
+
+        {error && <Alert type="danger" className="mb-3">{error}</Alert>}
+
+        {/* Two Column Layout for Form Sections */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          {/* GRN Header Section */}
+          <div className="bg-white border border-gray-200 rounded-lg p-3.5 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <FileText size={16} className="text-indigo-500" />
+              <h3 className="m-0 text-xs font-semibold text-gray-900">GRN Information</h3>
             </div>
-          )}
-
-          {/* Section 1: Basic Information */}
-          <div style={{
-            backgroundColor: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            padding: '16px',
-            marginBottom: '20px'
-          }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '0.95rem', fontWeight: 600, color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              📌 Basic Information
-            </h3>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            
+            <div className="flex flex-col gap-2.5">
               <div>
-                <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333', fontSize: '0.9rem' }}>
-                  Purchase Order *
+                <label className="block text-xs font-semibold mb-1 text-gray-500 uppercase tracking-wide">
+                  GRN Number
+                </label>
+                <input
+                  type="text"
+                  value={formData.grn_no}
+                  readOnly
+                  className="w-full px-2 py-2 border border-gray-200 rounded text-xs bg-gray-50 font-medium text-gray-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-gray-500 uppercase tracking-wide">
+                  Receipt Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={formData.receipt_date}
+                  onChange={(e) => setFormData({ ...formData, receipt_date: e.target.value })}
+                  className="w-full px-2 py-2 border border-gray-200 rounded text-xs text-gray-700"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Supplier Section */}
+          <div className="bg-white border border-gray-200 rounded-lg p-3.5 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <Truck size={16} className="text-indigo-500" />
+              <h3 className="m-0 text-xs font-semibold text-gray-900">Supplier Information</h3>
+            </div>
+            
+            <div className="flex flex-col gap-2.5">
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-gray-500 uppercase tracking-wide">
+                  Select Supplier <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.supplier_id}
+                  onChange={(e) => handleSupplierChange(e.target.value)}
+                  className="w-full px-2 py-2 border border-gray-200 rounded text-xs text-gray-700 bg-white"
+                >
+                  <option value="">Select Supplier</option>
+                  {suppliers.map(supplier => (
+                    <option key={supplier.supplier_id} value={supplier.supplier_id}>
+                      {supplier.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1 text-gray-500 uppercase tracking-wide">
+                  Purchase Order (Optional)
                 </label>
                 <select
                   value={formData.po_no}
-                  onChange={handlePOChange}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #ddd',
-                    borderRadius: '6px',
-                    fontSize: '0.95rem',
-                    fontFamily: 'inherit',
-                    backgroundColor: '#fff'
-                  }}
+                  onChange={(e) => handlePOSelect(e.target.value)}
+                  className="w-full px-2 py-2 border border-gray-200 rounded text-xs text-gray-700 bg-white"
                 >
-                  <option value="">Select Purchase Order</option>
+                  <option value="">-- No PO / Manual Entry --</option>
                   {purchaseOrders.map(po => (
-                    <option key={po.po_no} value={po.po_no}>
+                    <option key={po.id} value={po.po_no}>
                       {po.po_no} - {po.supplier_name}
                     </option>
                   ))}
                 </select>
               </div>
-
-              <div>
-                <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333', fontSize: '0.9rem' }}>
-                  Receipt Date *
-                </label>
-                <input
-                  type="date"
-                  name="receipt_date"
-                  value={formData.receipt_date}
-                  onChange={handleInputChange}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #ddd',
-                    borderRadius: '6px',
-                    fontSize: '0.95rem',
-                    fontFamily: 'inherit',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-            </div>
-
-            {selectedPO && (
-              <div style={{
-                backgroundColor: '#e0f2fe',
-                border: '1px solid #bae6fd',
-                borderRadius: '6px',
-                padding: '16px',
-                marginTop: '16px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
-                  <CheckCircle size={20} style={{ color: '#0284c7', flexShrink: 0, marginTop: '2px' }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, color: '#0284c7', fontSize: '0.95rem' }}>
-                      {selectedPO.supplier_name}
-                    </div>
-                    {selectedPO.gstin && (
-                      <div style={{ color: '#0c4a6e', fontSize: '0.85rem', marginTop: '4px' }}>
-                        GSTIN: {selectedPO.gstin}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #bae6fd' }}>
-                  <div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#0c4a6e', textTransform: 'uppercase', marginBottom: '4px' }}>
-                      Order Date
-                    </div>
-                    <div style={{ fontSize: '0.9rem', color: '#0c4a6e', fontWeight: 500 }}>
-                      {selectedPO.order_date ? new Date(selectedPO.order_date).toLocaleDateString() : '—'}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#0c4a6e', textTransform: 'uppercase', marginBottom: '4px' }}>
-                      Expected Delivery
-                    </div>
-                    <div style={{ fontSize: '0.9rem', color: '#0c4a6e', fontWeight: 500 }}>
-                      {selectedPO.expected_date ? new Date(selectedPO.expected_date).toLocaleDateString() : '—'}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#0c4a6e', textTransform: 'uppercase', marginBottom: '4px' }}>
-                      PO Value
-                    </div>
-                    <div style={{ fontSize: '0.9rem', color: '#0c4a6e', fontWeight: 500 }}>
-                      ₹{parseFloat(selectedPO.total_value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#0c4a6e', textTransform: 'uppercase', marginBottom: '4px' }}>
-                      Status
-                    </div>
-                    <div style={{ fontSize: '0.9rem', color: '#0c4a6e', fontWeight: 500 }}>
-                      {selectedPO.status?.replace('_', ' ').toUpperCase()}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Section 2: Warehouse */}
-          <div style={{
-            backgroundColor: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            padding: '16px',
-            marginBottom: '20px'
-          }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '0.95rem', fontWeight: 600, color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              🏭 Destination Warehouse
-            </h3>
-
-            <div>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333', fontSize: '0.9rem' }}>
-                Select Warehouse *
-              </label>
-              {warehouses.length === 0 ? (
-                <div style={{
-                  backgroundColor: '#fee2e2',
-                  border: '1px solid #fecaca',
-                  borderRadius: '6px',
-                  padding: '12px 16px',
-                  color: '#dc2626',
-                  fontSize: '0.9rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px'
-                }}>
-                  <AlertCircle size={18} />
-                  <span>No warehouses available. Please check with inventory department.</span>
-                </div>
-              ) : (
-                <select
-                  name="warehouse_name"
-                  value={formData.warehouse_name}
-                  onChange={handleInputChange}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #ddd',
-                    borderRadius: '6px',
-                    fontSize: '0.95rem',
-                    fontFamily: 'inherit',
-                    backgroundColor: '#fff'
-                  }}
-                >
-                  <option value="">-- Select Destination Warehouse --</option>
-                  {warehouses.map(wh => (
-                    <option key={wh.warehouse_code || wh.name} value={wh.name}>
-                      📦 {wh.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '6px' }}>
-                The warehouse where received goods will be stored
-              </p>
             </div>
           </div>
+        </div>
 
-          {/* Section 3: Received Items */}
-          <div style={{
-            backgroundColor: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            padding: '16px',
-            marginBottom: '20px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                📦 Received Items *
-              </h3>
-              <button
-                type="button"
-                onClick={handleAddItem}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 12px',
-                  backgroundColor: '#e0f2fe',
-                  border: '1px solid #0ea5e9',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  fontWeight: 500,
-                  color: '#0284c7',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#bae6fd'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#e0f2fe'}
-              >
-                <Plus size={16} /> Add Item
-              </button>
-            </div>
-
-            {!formData.po_no ? (
-              <div style={{
-                backgroundColor: '#fef3c7',
-                border: '1px solid #fcd34d',
-                borderRadius: '6px',
-                padding: '12px 16px',
-                color: '#92400e',
-                fontSize: '0.9rem'
-              }}>
-                📌 Select a Purchase Order to auto-populate items
-              </div>
-            ) : formData.items.length === 0 ? (
-              <div style={{
-                backgroundColor: '#fef3c7',
-                border: '1px solid #fcd34d',
-                borderRadius: '6px',
-                padding: '12px 16px',
-                color: '#92400e',
-                fontSize: '0.9rem'
-              }}>
-                📌 No items in selected PO or loading items...
-              </div>
-            ) : (
-              <div style={{ maxHeight: '500px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '6px' }}>
-                {formData.items.map((item, idx) => (
-                  <div key={item.id} style={{
-                    padding: '16px',
-                    borderBottom: idx < formData.items.length - 1 ? '1px solid #e5e7eb' : 'none',
-                    display: 'grid',
-                    gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr auto',
-                    gap: '12px',
-                    alignItems: 'end'
-                  }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, marginBottom: '4px', color: '#666' }}>
-                        Item Code
-                      </label>
-                      <div style={{
-                        padding: '8px 10px',
-                        backgroundColor: '#f9fafb',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '4px',
-                        fontSize: '0.9rem',
-                        fontFamily: 'inherit',
-                        color: '#374151'
-                      }}>
-                        <strong>{item.item_code}</strong>
-                        {item.item_name && <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '4px' }}>{item.item_name}</div>}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, marginBottom: '4px', color: '#666' }}>
-                        Ordered
-                      </label>
-                      <div style={{
-                        padding: '8px 10px',
-                        backgroundColor: '#f9fafb',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '4px',
-                        fontSize: '0.9rem',
-                        fontFamily: 'inherit',
-                        color: '#374151',
-                        textAlign: 'center',
-                        fontWeight: 500
-                      }}>
-                        {item.ordered_qty}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, marginBottom: '4px', color: '#666' }}>
-                        Received *
-                      </label>
+        {/* Items Section */}
+        <div className="bg-white border border-gray-200 rounded-lg p-3.5 mb-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <Package size={16} className="text-indigo-500" />
+            <h3 className="m-0 text-xs font-semibold text-gray-900">Received Items</h3>
+            <span className="ml-auto text-xs text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded">
+              {grnItems.filter(i => i.item_code).length} item(s)
+            </span>
+          </div>
+          
+          <div className="overflow-x-auto mb-3 rounded border border-gray-200 max-h-96 overflow-y-auto">
+            <table className="w-full border-collapse border border-gray-200 text-xs" style={{ minWidth: '900px' }}>
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="px-2.5 py-2.5 text-left border border-gray-200 font-semibold text-gray-500">Item Code</th>
+                  <th className="px-2.5 py-2.5 text-left border border-gray-200 font-semibold text-gray-500">Item Name</th>
+                  <th className="px-2.5 py-2.5 text-center border border-gray-200 font-semibold text-gray-500">Qty</th>
+                  <th className="px-2.5 py-2.5 text-center border border-gray-200 font-semibold text-gray-500">UOM</th>
+                  <th className="px-2.5 py-2.5 text-left border border-gray-200 font-semibold text-gray-500">Batch</th>
+                  <th className="px-2.5 py-2.5 text-left border border-gray-200 font-semibold text-gray-500">Warehouse</th>
+                  <th className="px-2.5 py-2.5 text-center border border-gray-200 font-semibold text-gray-500">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {grnItems.map((item, index) => (
+                  <tr key={index} className="bg-white border-b border-gray-200">
+                    <td className="px-2.5 py-2.5 border border-gray-200">
+                      <select
+                        value={item.item_code}
+                        onChange={(e) => handleItemCodeSelect(index, e.target.value)}
+                        className="w-full px-1.5 py-1 border border-gray-200 rounded text-xs text-gray-700"
+                      >
+                        <option value="">Select Item</option>
+                        {items.map(itemOption => (
+                          <option key={itemOption.id} value={itemOption.item_code}>
+                            {itemOption.item_code}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-2.5 py-2.5 border border-gray-200">
+                      <input
+                        type="text"
+                        value={item.item_name}
+                        readOnly
+                        className="w-full px-1.5 py-1 border border-gray-200 rounded text-xs bg-gray-50 text-gray-500"
+                      />
+                    </td>
+                    <td className="px-2.5 py-2.5 border border-gray-200">
                       <input
                         type="number"
-                        placeholder="0"
                         value={item.received_qty}
-                        onChange={(e) => handleItemChange(idx, 'received_qty', e.target.value)}
-                        step="0.01"
+                        onChange={(e) => handleItemChange(index, 'received_qty', parseFloat(e.target.value) || 0)}
+                        className="w-full px-1.5 py-1 border border-gray-200 rounded text-center text-xs text-gray-700"
                         min="0"
-                        required
-                        style={{
-                          width: '100%',
-                          padding: '8px 10px',
-                          border: '1px solid #ddd',
-                          borderRadius: '4px',
-                          fontSize: '0.9rem',
-                          fontFamily: 'inherit',
-                          boxSizing: 'border-box'
-                        }}
                       />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, marginBottom: '4px', color: '#666' }}>
-                        Batch No
-                      </label>
+                    </td>
+                    <td className="px-2.5 py-2.5 border border-gray-200 text-center">
                       <input
                         type="text"
-                        placeholder="Batch..."
+                        value={item.uom}
+                        readOnly
+                        className="w-full px-1.5 py-1 border border-gray-200 rounded text-center text-xs bg-gray-50 text-gray-500"
+                      />
+                    </td>
+                    <td className="px-2.5 py-2.5 border border-gray-200">
+                      <input
+                        type="text"
                         value={item.batch_no}
-                        onChange={(e) => handleItemChange(idx, 'batch_no', e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '8px 10px',
-                          border: '1px solid #ddd',
-                          borderRadius: '4px',
-                          fontSize: '0.9rem',
-                          fontFamily: 'inherit',
-                          boxSizing: 'border-box'
-                        }}
+                        onChange={(e) => handleItemChange(index, 'batch_no', e.target.value)}
+                        placeholder="Batch #"
+                        className="w-full px-1.5 py-1 border border-gray-200 rounded text-xs text-gray-700"
                       />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, marginBottom: '4px', color: '#666' }}>
-                        Remarks
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Notes..."
-                        value={item.remarks}
-                        onChange={(e) => handleItemChange(idx, 'remarks', e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '8px 10px',
-                          border: '1px solid #ddd',
-                          borderRadius: '4px',
-                          fontSize: '0.9rem',
-                          fontFamily: 'inherit',
-                          boxSizing: 'border-box'
-                        }}
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveItem(idx)}
-                      disabled={formData.items.length === 1}
-                      style={{
-                        padding: '8px 10px',
-                        backgroundColor: '#fee2e2',
-                        border: '1px solid #fecaca',
-                        borderRadius: '4px',
-                        cursor: formData.items.length === 1 ? 'not-allowed' : 'pointer',
-                        opacity: formData.items.length === 1 ? 0.5 : 1,
-                        transition: 'all 0.2s'
-                      }}
-                      title={formData.items.length === 1 ? 'At least one item required' : 'Remove item'}
-                    >
-                      <Trash2 size={16} color="#dc2626" />
-                    </button>
-                  </div>
+                    </td>
+                    <td className="px-2.5 py-2.5 border border-gray-200">
+                      <select
+                        value={item.warehouse_name}
+                        onChange={(e) => handleItemChange(index, 'warehouse_name', e.target.value)}
+                        className="w-full px-1.5 py-1 border border-gray-200 rounded text-xs text-gray-700"
+                      >
+                        <option value="">Select</option>
+                        {warehouses.map(wh => (
+                          <option key={wh.id} value={wh.warehouse_name}>
+                            {wh.warehouse_name}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-2.5 py-2.5 border border-gray-200 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItem(index)}
+                        disabled={grnItems.length === 1}
+                        className={`inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded text-xs font-medium mx-auto transition ${
+                          grnItems.length === 1
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-red-100 text-red-600 hover:bg-red-200 cursor-pointer'
+                        }`}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
                 ))}
-              </div>
-            )}
+              </tbody>
+            </table>
           </div>
 
-          {/* Summary */}
-          {formData.items.length > 0 && (
-            <div style={{
-              backgroundColor: '#f0f9ff',
-              border: '1px solid #bae6fd',
-              borderRadius: '6px',
-              padding: '12px 16px',
-              marginBottom: '20px'
-            }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontSize: '0.9rem' }}>
-                <div>
-                  <span style={{ color: '#666' }}>Total Items:</span>
-                  <span style={{ fontWeight: 600, color: '#0284c7', marginLeft: '8px' }}>{formData.items.length}</span>
-                </div>
-                <div>
-                  <span style={{ color: '#666' }}>Total Qty Received:</span>
-                  <span style={{ fontWeight: 600, color: '#0284c7', marginLeft: '8px' }}>{getTotalReceivedQty().toFixed(2)} units</span>
-                </div>
-              </div>
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={handleAddItem}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-indigo-500 text-white rounded text-xs font-semibold hover:bg-indigo-600 transition-colors"
+          >
+            <Plus size={14} /> Add Item
+          </button>
+        </div>
 
-          {/* Notes Section */}
-          <div style={{
-            backgroundColor: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            padding: '16px',
-            marginBottom: '20px'
-          }}>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333', fontSize: '0.9rem' }}>
-              📝 Notes (Optional)
-            </label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleInputChange}
-              placeholder="Any additional notes or observations..."
-              rows="3"
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.9rem',
-                fontFamily: 'monospace',
-                boxSizing: 'border-box'
-              }}
-            />
+        {/* Notes Section */}
+        <div className="bg-white border border-gray-200 rounded-lg p-3.5 shadow-sm">
+          <div className="flex items-center gap-2 mb-2.5">
+            <AlertCircle size={16} className="text-indigo-500" />
+            <h3 className="m-0 text-xs font-semibold text-gray-900">Additional Notes</h3>
           </div>
-
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '30px' }}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                padding: '10px 24px',
-                backgroundColor: '#f3f4f6',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '0.95rem',
-                fontWeight: 500,
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                padding: '10px 24px',
-                background: loading ? '#d1d5db' : 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontSize: '0.95rem',
-                fontWeight: 600,
-                opacity: loading ? 0.65 : 1,
-                transition: 'all 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              {loading && <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} />}
-              {loading ? 'Creating GRN...' : '✓ Create GRN'}
-            </button>
-          </div>
-        </form>
-      )}
+          <textarea
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            placeholder="Add any additional notes for this GRN request..."
+            className="w-full min-h-16 px-2 py-2 border border-gray-200 rounded text-xs text-gray-700 resize-vertical"
+          />
+        </div>
+      </div>
     </Modal>
   )
 }

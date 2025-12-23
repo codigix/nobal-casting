@@ -7,7 +7,7 @@ const config = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'aluminium_erp'
+  database: process.env.DB_NAME || 'nobalcasting'
 }
 
 async function verifyTables() {
@@ -29,7 +29,7 @@ async function verifyTables() {
         const [rows] = await connection.query(
           `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES 
            WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?`,
-          [process.env.DB_NAME || 'aluminium_erp', table]
+          [process.env.DB_NAME || 'nobalcasting', table]
         )
         
         if (rows.length > 0) {

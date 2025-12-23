@@ -111,7 +111,7 @@ const DieRegisterList = () => {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Die Register</h1>
+            <h1 className="text-xl font-bold text-gray-900">Die Register</h1>
             <p className="text-gray-600 mt-1">Track die lifecycle and usage</p>
           </div>
           <button
@@ -124,7 +124,7 @@ const DieRegisterList = () => {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+          <div className="bg-red-50 border border-red-200 text-red-700 p-2 rounded-lg mb-6">
             {error}
           </div>
         )}
@@ -146,28 +146,28 @@ const DieRegisterList = () => {
         {/* Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {loading ? (
-            <div className="p-8 text-center text-gray-500">Loading...</div>
+            <div className="p-3 text-center text-gray-500">Loading...</div>
           ) : (
             <table className="w-full">
               <thead className="bg-gray-100 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Die Name</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Die Code</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Assigned To</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Usage Count</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Prod Hours</th>
-                  <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Die Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Die Code</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Assigned To</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Usage Count</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Prod Hours</th>
+                  <th className="px-6 py-3 text-center text-xs font-semibold  text-gray-900">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {filteredDies.length > 0 ? (
                   filteredDies.map(die => (
                     <tr key={die.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm text-gray-900 font-medium">{die.dieName}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{die.dieCode}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{die.assignedTo}</td>
-                      <td className="px-6 py-4">
+                      <td className="p-2 text-sm text-gray-900 font-medium">{die.dieName}</td>
+                      <td className="p-2 text-sm text-gray-600">{die.dieCode}</td>
+                      <td className="p-2 text-sm text-gray-600">{die.assignedTo}</td>
+                      <td className="p-2">
                         <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
                           die.status === 'active' ? 'bg-green-100 text-green-800' :
                           die.status === 'rework' ? 'bg-orange-100 text-orange-800' :
@@ -176,9 +176,9 @@ const DieRegisterList = () => {
                           {die.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">{die.usageCount}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900">{die.productionHours}h</td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="p-2 text-sm text-gray-900">{die.usageCount}</td>
+                      <td className="p-2 text-sm text-gray-900">{die.productionHours}h</td>
+                      <td className="p-2 text-center">
                         <div className="flex justify-center gap-2">
                           <button
                             onClick={() => handleOpenModal(die)}

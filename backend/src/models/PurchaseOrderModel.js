@@ -1,6 +1,8 @@
-import { v4 as uuidv4 } from 'uuid'
-
 export class PurchaseOrderModel {
+  generateId() {
+    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  }
+
   constructor(db) {
     this.db = db
   }
@@ -45,7 +47,7 @@ export class PurchaseOrderModel {
       if (data.items && Array.isArray(data.items)) {
         for (const item of data.items) {
           try {
-            const po_item_id = uuidv4()
+            const po_item_id = this.generateId()
             await this.db.execute(
               `INSERT INTO purchase_order_item 
                (po_item_id, po_no, item_code, qty, uom, rate, schedule_date)
