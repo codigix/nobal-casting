@@ -1,0 +1,43 @@
+name: Deploy nobal-casting
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛎️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🚀 Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            echo "🔄 Starting deployment..."
+
+            cd /var/www/nobal-casting
+
+            git pull origin main
+
+            # === BACKEND ===
+            echo "📦 Updating backend..."
+            cd backend
+            npm install --production
+            pm2 restart nobal-casting-backend || pm2 start src/app.js --name "nobal-casting-backend"
+
+            # === FRONTEND ===
+            echo "🎨 Rebuilding frontend..."
+            cd ../frontend
+            npm install
+            npm run build
+
+            # === RELOAD NGINX ===
+            echo "🔁 Reloading Nginx..."
+            sudo nginx -t && sudo systemctl reload nginx
+
+            echo "✅ Deployment successful!"
