@@ -78,7 +78,7 @@ export default function LoginPage() {
               </div>
               <div className="brand-info">
                 <h1>Aluminium ERP</h1>
-                <p>Enterprise Management</p>
+                <p className='bg-green-600'>Enterprise Management</p>
               </div>
             </div>
           </div>
