@@ -1,12 +1,12 @@
-﻿import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ChevronDown, Save, X, Plus, Trash2, AlertCircle, Package, Boxes, Archive, Check } from 'lucide-react'
+import { ChevronDown, Save, X, Plus, Trash2, AlertCircle, Package, Boxes, Archive, Check, Factory, Zap } from 'lucide-react'
 import SearchableSelect from '../../components/SearchableSelect'
 
 export default function ProductionPlanningForm() {
   const navigate = useNavigate()
   const { plan_id } = useParams()
-  const [expandedSections, setExpandedSections] = useState({ 1: true, 1.5: true, 2: false, 3: false, 4: false })
+  const [expandedSections, setExpandedSections] = useState({ 0: true, 1: true, 1.5: true, 2: false, 3: false, 4: false, 5: false })
   const [expandedItemGroups, setExpandedItemGroups] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -43,7 +43,6 @@ export default function ProductionPlanningForm() {
     plan_id: '',
     naming_series: 'PP',
     company: '',
-    posting_date: new Date().toISOString().split('T')[0],
     sales_order_id: '',
     status: 'draft'
   })
@@ -51,6 +50,7 @@ export default function ProductionPlanningForm() {
   const [selectedSalesOrders, setSelectedSalesOrders] = useState([])
   const [selectedBomId, setSelectedBomId] = useState(null)
   const [selectedSalesOrderDetails, setSelectedSalesOrderDetails] = useState(null)
+  const [salesOrderQuantity, setSalesOrderQuantity] = useState(1)
   const [fgItems, setFGItems] = useState([])
   const [subAssemblyItems, setSubAssemblyItems] = useState([])
   const [rawMaterialItems, setRawMaterialItems] = useState([])
@@ -64,6 +64,8 @@ export default function ProductionPlanningForm() {
   const [editBackupFG, setEditBackupFG] = useState(null)
   const [editBackupSubAsm, setEditBackupSubAsm] = useState(null)
   const [editBackupRawMat, setEditBackupRawMat] = useState(null)
+  const [subAssemblyMaterials, setSubAssemblyMaterials] = useState({})
+  const [expandedSubAssemblyMaterials, setExpandedSubAssemblyMaterials] = useState({})
 
   const [items, setItems] = useState([])
   const [boms, setBOMs] = useState([])
@@ -72,6 +74,10 @@ export default function ProductionPlanningForm() {
   const [bomFinishedGoods, setBomFinishedGoods] = useState([])
   const [bomRawMaterials, setBomRawMaterials] = useState([])
   const [bomOperations, setBomOperations] = useState([])
+  const [showWorkOrderModal, setShowWorkOrderModal] = useState(false)
+  const [creatingWorkOrder, setCreatingWorkOrder] = useState(false)
+  const [workOrderData, setWorkOrderData] = useState(null)
+  const [savingPlan, setSavingPlan] = useState(false)
 
   const fetchProductionPlan = async (planId) => {
     try {
@@ -92,105 +98,39 @@ export default function ProductionPlanningForm() {
           console.log('Plan sales_order_id type:', typeof plan.sales_order_id)
           console.log('Plan sales_order_id value (JSON):', JSON.stringify(plan.sales_order_id))
           
-          const postingDate = plan.posting_date || new Date().toISOString().split('T')[0]
-          console.log('Plan posting_date from API:', plan.posting_date)
-          console.log('Posting date after processing:', postingDate)
-          
           setPlanHeader({
             plan_id: plan.plan_id || '',
             naming_series: plan.naming_series || 'PP',
             company: plan.company || '',
-            posting_date: postingDate,
             sales_order_id: plan.sales_order_id || '',
             status: plan.status || 'draft'
           })
-          console.log('Plan header set to:', {
-            posting_date: postingDate
-          })
+
+          setFGItems(plan.fg_items || [])
+          setSubAssemblyItems(plan.sub_assembly_items || [])
+          setRawMaterialItems(plan.raw_materials || [])
+          setOperationItems(plan.operations || [])
           
-          console.log('Sales order ID to fetch:', plan.sales_order_id)
-          console.log('Available sales orders count:', salesOrders.length)
-          console.log('Available sales orders:', salesOrders.map(so => ({
-            sales_order_id: so.sales_order_id,
-            customer_name: so.customer_name
-          })))
-          
-          let hasError = false
-          
-          if (plan.sales_order_id && plan.sales_order_id.trim() !== '') {
-            const matchingSO = salesOrders.find(so => so.sales_order_id === plan.sales_order_id)
-            console.log('Matching sales order in list:', matchingSO)
-            
-            try {
-              console.log('Fetching sales order details for:', plan.sales_order_id)
-              const soDetails = await fetchSalesOrderDetails(plan.sales_order_id)
-              console.log('Sales order details received:', soDetails)
-              
-              if (soDetails) {
-                console.log('Setting selected sales orders:', [plan.sales_order_id])
-                setSelectedSalesOrders([plan.sales_order_id])
-                setSelectedSalesOrderDetails(soDetails)
-                setSelectedBomId(soDetails.bom_id)
-                console.log('Processing sales order data with saved plan data...')
-                await processSalesOrderData(soDetails, postingDate, plan)
-                console.log('Sales order data processed successfully with saved values merged')
-              } else {
-                console.warn('No sales order details returned')
-                setError('Sales order not found. Please select a new sales order.')
-                hasError = true
-              }
-            } catch (err) {
-              console.error('Error fetching sales order details:', err)
-              setError('Failed to load sales order details. Please select a sales order.')
-              hasError = true
-            }
-          } else {
-            console.log('No sales_order_id found in plan - user must select one')
-            setSelectedSalesOrders([])
+          const planQty = plan.fg_items?.[0]?.planned_qty || plan.fg_items?.[0]?.quantity || 1
+          setSalesOrderQuantity(planQty)
+
+          if (plan.sales_order_id) {
+            setSelectedSalesOrders([plan.sales_order_id])
+            await processSalesOrderData(plan.sales_order_id, planQty)
           }
-          
-          if (!hasError) {
-            setSuccess('Production plan loaded successfully')
-            setTimeout(() => setSuccess(null), 3000)
-          }
+        } else {
+          setError('Production plan not found')
         }
       } else {
-        setError('Failed to load production plan')
-        setTimeout(() => setError(null), 3000)
+        setError('Failed to fetch production plan')
       }
     } catch (err) {
-      console.error('Failed to fetch production plan:', err)
-      setError('Error loading production plan')
-      setTimeout(() => setError(null), 3000)
+      console.error('Error fetching production plan:', err)
+      setError('Failed to load production plan')
     } finally {
       setLoading(false)
     }
   }
-
-  useEffect(() => {
-    const initLoad = async () => {
-      await Promise.all([
-        fetchItems(),
-        fetchBOMs(),
-        fetchWarehouses(),
-        fetchSalesOrders()
-      ])
-      
-      if (plan_id) {
-        await fetchProductionPlan(plan_id)
-      }
-    }
-    initLoad()
-  }, [plan_id])
-
-  useEffect(() => {
-    if (selectedSalesOrders.length > 0 && salesOrders.length > 0) {
-      const selectedSO = salesOrders.find(so => so.sales_order_id === selectedSalesOrders[0])
-      if (selectedSO) {
-        console.log('Sales order auto-selected:', selectedSO.sales_order_id, selectedSO.customer_name)
-      }
-    }
-  }, [selectedSalesOrders, salesOrders])
 
   const fetchItems = async () => {
     try {
@@ -198,12 +138,10 @@ export default function ProductionPlanningForm() {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/items`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
-      if (response.ok) {
-        const data = await response.json()
-        setItems(data.data || [])
-      }
+      const data = await response.json()
+      setItems(data.data || [])
     } catch (err) {
-      console.error('Failed to fetch items:', err)
+      console.error('Error fetching items:', err)
     }
   }
 
@@ -213,27 +151,23 @@ export default function ProductionPlanningForm() {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/production/boms`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
-      if (response.ok) {
-        const data = await response.json()
-        setBOMs(data.data || [])
-      }
+      const data = await response.json()
+      setBOMs(data.data || [])
     } catch (err) {
-      console.error('Failed to fetch BOMs:', err)
+      console.error('Error fetching BOMs:', err)
     }
   }
 
   const fetchWarehouses = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/stock/warehouses`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/warehouses`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
-      if (response.ok) {
-        const data = await response.json()
-        setWarehouses(data.data || [])
-      }
+      const data = await response.json()
+      setWarehouses(data.data || [])
     } catch (err) {
-      console.error('Failed to fetch warehouses:', err)
+      console.error('Error fetching warehouses:', err)
     }
   }
 
@@ -243,29 +177,37 @@ export default function ProductionPlanningForm() {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/selling/sales-orders`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
-      if (response.ok) {
-        const data = await response.json()
-        setSalesOrders(data.data || [])
-      }
+      const data = await response.json()
+      setSalesOrders(data.data || [])
     } catch (err) {
-      console.error('Failed to fetch sales orders:', err)
+      console.error('Error fetching sales orders:', err)
     }
   }
 
   const fetchBOMDetails = async (bomId) => {
     try {
+      setFetchingBom(true)
       const token = localStorage.getItem('token')
       const response = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${bomId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
-      if (response.ok) {
-        const data = await response.json()
-        return data.data
+      const data = await response.json()
+      const bomData = data.data || data
+      
+      if (bomData) {
+        setBomFinishedGoods(bomData.finished_goods || bomData.bom_finished_goods || [])
+        setBomRawMaterials(bomData.bom_raw_materials || bomData.rawMaterials || [])
+        setBomOperations(bomData.operations || bomData.bom_operations || [])
+        setOperationItems(bomData.operations || bomData.bom_operations || [])
       }
+      
+      return bomData
     } catch (err) {
-      console.error('Failed to fetch BOM details:', err)
+      console.error('Error fetching BOM details:', err)
+      return null
+    } finally {
+      setFetchingBom(false)
     }
-    return null
   }
 
   const fetchSalesOrderDetails = async (salesOrderId) => {
@@ -274,1117 +216,1029 @@ export default function ProductionPlanningForm() {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/selling/sales-orders/${salesOrderId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
-      if (response.ok) {
-        const data = await response.json()
-        return data.data
-      }
-    } catch (err) {
-      console.error('Failed to fetch sales order details:', err)
-    }
-    return null
-  }
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') e.preventDefault()
-  }
-
-  const getWarehouseName = (warehouseId) => {
-    if (!warehouseId) return '-'
-    const warehouseObj = warehouses.find(w => String(w.id) === String(warehouseId))
-    return warehouseObj?.warehouse_name || warehouseId || '-'
-  }
-
-  const formatDateForAPI = (dateValue) => {
-    if (!dateValue) return new Date().toISOString().split('T')[0]
-    if (typeof dateValue === 'string') {
-      if (dateValue.includes('T')) {
-        return dateValue.split('T')[0]
-      }
-      return dateValue
-    }
-    return new Date(dateValue).toISOString().split('T')[0]
-  }
-
-  const updateFGItem = (index, field, value) => {
-    const updatedItems = [...fgItems]
-    updatedItems[index] = {
-      ...updatedItems[index],
-      [field]: value
-    }
-    setFGItems(updatedItems)
-  }
-
-  const updateSubAssemblyItem = (index, field, value) => {
-    const updatedItems = [...subAssemblyItems]
-    updatedItems[index] = {
-      ...updatedItems[index],
-      [field]: value
-    }
-    setSubAssemblyItems(updatedItems)
-  }
-
-  const updateRawMaterialItem = (index, field, value) => {
-    const updatedItems = [...rawMaterialItems]
-    updatedItems[index] = {
-      ...updatedItems[index],
-      [field]: value
-    }
-    setRawMaterialItems(updatedItems)
-  }
-
-  const startEditFG = (index) => {
-    setEditingFGIndex(index)
-    setEditBackupFG(JSON.parse(JSON.stringify(fgItems[index])))
-  }
-
-  const confirmEditFG = () => {
-    setEditingFGIndex(null)
-    setEditBackupFG(null)
-  }
-
-  const cancelEditFG = () => {
-    if (editBackupFG !== null) {
-      const updatedItems = [...fgItems]
-      updatedItems[editingFGIndex] = editBackupFG
-      setFGItems(updatedItems)
-    }
-    setEditingFGIndex(null)
-    setEditBackupFG(null)
-  }
-
-  const startEditSubAsm = (index) => {
-    setEditingSubAsmIndex(index)
-    setEditBackupSubAsm(JSON.parse(JSON.stringify(subAssemblyItems[index])))
-  }
-
-  const confirmEditSubAsm = () => {
-    setEditingSubAsmIndex(null)
-    setEditBackupSubAsm(null)
-  }
-
-  const cancelEditSubAsm = () => {
-    if (editBackupSubAsm !== null) {
-      const updatedItems = [...subAssemblyItems]
-      updatedItems[editingSubAsmIndex] = editBackupSubAsm
-      setSubAssemblyItems(updatedItems)
-    }
-    setEditingSubAsmIndex(null)
-    setEditBackupSubAsm(null)
-  }
-
-  const startEditRawMat = (index) => {
-    setEditingRawMatIndex(index)
-    setEditBackupRawMat(JSON.parse(JSON.stringify(rawMaterialItems[index])))
-  }
-
-  const confirmEditRawMat = () => {
-    setEditingRawMatIndex(null)
-    setEditBackupRawMat(null)
-  }
-
-  const cancelEditRawMat = () => {
-    if (editBackupRawMat !== null) {
-      const updatedItems = [...rawMaterialItems]
-      updatedItems[editingRawMatIndex] = editBackupRawMat
-      setRawMaterialItems(updatedItems)
-    }
-    setEditingRawMatIndex(null)
-    setEditBackupRawMat(null)
-  }
-
-  const processSalesOrderData = async (soDetails, postingDate, planData = null) => {
-    console.log('=== processSalesOrderData called ===')
-    console.log('Sales order details:', soDetails.sales_order_id)
-    console.log('BOM ID in soDetails:', soDetails.bom_id)
-    console.log('Has bom_finished_goods:', soDetails.bom_finished_goods && soDetails.bom_finished_goods.length > 0)
-    console.log('Has bom_raw_materials:', soDetails.bom_raw_materials && soDetails.bom_raw_materials.length > 0)
-    
-    let finishedGoods = []
-    let allSubAssemblies = []
-    let actualRawMaterials = []
-    let operations = []
-
-    if (soDetails.bom_finished_goods && soDetails.bom_finished_goods.length > 0) {
-      console.log('Raw BOM finished goods from SO:', JSON.stringify(soDetails.bom_finished_goods, null, 2))
-      console.log('BOM ID from SO:', soDetails.bom_id)
-      finishedGoods = soDetails.bom_finished_goods.map(item => ({
-        ...item,
-        item_code: item.item_code || item.component_code || '',
-        item_name: item.item_name || item.component_description || '',
-        bom_no: item.bom_no || soDetails.bom_id || ''
-      }))
-      console.log('Processed FG items with bom_no:', JSON.stringify(finishedGoods, null, 2))
-    }
-
-    if (soDetails.bom_raw_materials && soDetails.bom_raw_materials.length > 0) {
-      allSubAssemblies = soDetails.bom_raw_materials.filter(item =>
-        item.component_type === 'Sub-assembly' || item.fg_sub_assembly === 'Sub-assembly' || item.item_group === 'Sub Assemblies'
-      ).map(item => ({
-        ...item,
-        item_code: item.item_code || item.component_code || '',
-        item_name: item.item_name || item.component_description || ''
-      }))
-      actualRawMaterials = soDetails.bom_raw_materials.filter(item =>
-        (item.component_type === 'Raw-Material' || item.item_group === 'Raw Material') &&
-        item.component_type !== 'Sub-assembly' && item.fg_sub_assembly !== 'Sub-assembly'
-      ).map(item => ({
-        ...item,
-        item_code: item.item_code || item.component_code || '',
-        item_name: item.item_name || item.component_description || ''
-      }))
-    }
-
-    if (soDetails.bom_operations && soDetails.bom_operations.length > 0) {
-      operations = soDetails.bom_operations
-    }
-
-    if (soDetails.bom_id && (finishedGoods.length === 0 || actualRawMaterials.length === 0)) {
-      console.log('Fetching full BOM details for:', soDetails.bom_id)
-      const bomDetails = await fetchBOMDetails(soDetails.bom_id)
-      console.log('BOM details fetched:', bomDetails ? 'Yes' : 'No')
-      if (bomDetails) {
-        console.log('BOM details have lines:', bomDetails.lines && bomDetails.lines.length > 0)
-        const lines = bomDetails.lines || []
-        const rawMats = bomDetails.rawMaterials || []
-        const bomOperations = bomDetails.operations || []
-
-        if (finishedGoods.length === 0) {
-          const fgFromLines = lines.filter(item =>
-            item.component_type === 'FG' || item.fg_sub_assembly === 'FG'
-          )
-          finishedGoods = fgFromLines.length > 0 ? fgFromLines.map(item => ({
-            ...item,
-            item_code: item.item_code || item.component_code || '',
-            item_name: item.item_name || item.component_description || '',
-            bom_no: item.bom_no || bomDetails.bom_id || soDetails.bom_id || ''
-          })) : [{
-            item_code: bomDetails.item_code,
-            item_name: bomDetails.product_name,
-            component_code: bomDetails.item_code,
-            component_description: bomDetails.product_name,
-            item_group: bomDetails.item_group,
-            quantity: bomDetails.quantity,
-            qty: bomDetails.quantity,
-            uom: bomDetails.uom,
-            rate: 0,
-            component_type: 'FG',
-            warehouse: bomDetails.warehouse || '',
-            planned_start_date: postingDate,
-            bom_no: bomDetails.bom_id || soDetails.bom_id || ''
-          }]
-        } else {
-          finishedGoods = finishedGoods.map(item => ({
-            ...item,
-            item_code: item.item_code || item.component_code || '',
-            item_name: item.item_name || item.component_description || '',
-            warehouse: item.warehouse || bomDetails.warehouse || '',
-            planned_start_date: item.planned_start_date || postingDate,
-            bom_no: item.bom_no || bomDetails.bom_id || soDetails.bom_id || ''
-          }))
-        }
-
-        if (actualRawMaterials.length === 0 && allSubAssemblies.length === 0) {
-          const subAssembliesFromLines = lines.filter(item =>
-            item.component_type === 'Sub-assembly' || item.fg_sub_assembly === 'Sub-assembly' || item.item_group === 'Sub Assemblies'
-          ).map(item => ({
-            ...item,
-            item_code: item.item_code || item.component_code || '',
-            item_name: item.item_name || item.component_description || ''
-          }))
-          const subAssembliesFromRawMats = rawMats.filter(item =>
-            item.component_type === 'Sub-assembly' || item.fg_sub_assembly === 'Sub-assembly' || item.item_group === 'Sub Assemblies'
-          ).map(item => ({
-            ...item,
-            item_code: item.item_code || item.component_code || '',
-            item_name: item.item_name || item.component_description || ''
-          }))
-          allSubAssemblies = [...subAssembliesFromLines, ...subAssembliesFromRawMats]
-          actualRawMaterials = rawMats.filter(item =>
-            (item.component_type === 'Raw-Material' || item.item_group === 'Raw Material') &&
-            item.component_type !== 'Sub-assembly' && item.fg_sub_assembly !== 'Sub-assembly' && item.item_group !== 'Sub Assemblies'
-          ).map(item => ({
-            ...item,
-            item_code: item.item_code || item.component_code || '',
-            item_name: item.item_name || item.component_description || ''
-          }))
-        }
-
-        if (operations.length === 0) {
-          operations = bomOperations
-        }
-      }
-    } else if (soDetails.bom_id) {
-      finishedGoods = finishedGoods.map(item => ({
-        ...item,
-        warehouse: item.warehouse || '',
-        planned_start_date: item.planned_start_date || postingDate,
-        bom_no: item.bom_no || soDetails.bom_id || ''
-      }))
-    }
-
-    allSubAssemblies = allSubAssemblies.map(item => ({
-      ...item,
-      item_code: item.item_code || item.component_code || '',
-      item_name: item.item_name || item.component_description || '',
-      target_warehouse: item.target_warehouse || '',
-      scheduled_date: item.scheduled_date || postingDate,
-      bom_no: item.bom_no || '',
-      manufacturing_type: item.manufacturing_type || 'In House'
-    }))
-
-    actualRawMaterials = actualRawMaterials.map(item => ({
-      ...item,
-      item_code: item.item_code || item.component_code || '',
-      item_name: item.item_name || item.component_description || '',
-      for_warehouse: item.for_warehouse || '',
-      type: item.type || 'Material',
-      plan_to_request_qty: item.plan_to_request_qty || item.qty || 0,
-      qty_as_per_bom: item.qty || item.quantity || 0,
-      required_by: item.required_by || postingDate
-    }))
-
-    if (planData && planData.fg_items && planData.fg_items.length > 0) {
-      console.log('Merging saved FG items with processed data')
-      finishedGoods = finishedGoods.map(processedItem => {
-        const savedItem = planData.fg_items.find(f => 
-          f.item_code === processedItem.item_code && 
-          f.item_name === processedItem.item_name
-        )
-        return savedItem ? { ...savedItem, ...processedItem } : processedItem
-      })
-    }
-
-    if (planData && planData.sub_assemblies && planData.sub_assemblies.length > 0) {
-      console.log('Merging saved sub-assemblies with processed data')
-      allSubAssemblies = allSubAssemblies.map(processedItem => {
-        const savedItem = planData.sub_assemblies.find(s => 
-          s.item_code === processedItem.item_code && 
-          s.item_name === processedItem.item_name
-        )
-        return savedItem ? { ...savedItem, ...processedItem } : processedItem
-      })
-    }
-
-    if (planData && planData.raw_materials && planData.raw_materials.length > 0) {
-      console.log('Merging saved raw materials with processed data')
-      actualRawMaterials = actualRawMaterials.map(processedItem => {
-        const savedItem = planData.raw_materials.find(r => 
-          r.item_code === processedItem.item_code && 
-          r.item_name === processedItem.item_name
-        )
-        return savedItem ? { ...savedItem, ...processedItem } : processedItem
-      })
-    }
-
-    setSubAssemblyItems(allSubAssemblies)
-    setFGItems(finishedGoods)
-    setRawMaterialItems(actualRawMaterials)
-    setOperationItems(operations)
-
-    setBomFinishedGoods(finishedGoods)
-    setBomRawMaterials(actualRawMaterials)
-    setBomOperations(operations)
-
-    setExpandedSections({ 1: true, 1.5: true, 2: true, 3: true, 4: true })
-
-    const groupedFG = groupItemsByItemGroup(finishedGoods)
-    const groupedSubAssembly = groupItemsByItemGroup(allSubAssemblies)
-    const groupedRawMaterials = groupItemsByItemGroup(actualRawMaterials)
-
-    const initialGroupExpand = {}
-    Object.keys(groupedFG).forEach(group => {
-      initialGroupExpand[`fg-${group}`] = true
-    })
-    Object.keys(groupedSubAssembly).forEach(group => {
-      initialGroupExpand[`sub-${group}`] = true
-    })
-    Object.keys(groupedRawMaterials).forEach(group => {
-      initialGroupExpand[`raw-${group}`] = true
-    })
-    setExpandedItemGroups(initialGroupExpand)
-  }
-
-  const handleSalesOrderSelect = async (value) => {
-    if (value) {
-      setSelectedSalesOrders([value])
-      setFetchingBom(true)
-      setExpandedItemGroups({})
+      const data = await response.json()
+      const soData = data.data || data
 
       try {
-        const soDetails = await fetchSalesOrderDetails(value)
-        if (soDetails) {
-          setSelectedSalesOrderDetails(soDetails)
-          setSelectedBomId(soDetails.bom_id)
-          await processSalesOrderData(soDetails, planHeader.posting_date)
+        if (soData.bom_raw_materials && typeof soData.bom_raw_materials === 'string') {
+          soData.bom_raw_materials = JSON.parse(soData.bom_raw_materials)
         }
-      } catch (err) {
-        console.error('Error fetching BOM:', err)
-        setError('Failed to fetch BOM details')
-      } finally {
-        setFetchingBom(false)
+        if (soData.bom_operations && typeof soData.bom_operations === 'string') {
+          soData.bom_operations = JSON.parse(soData.bom_operations)
+        }
+        if (soData.bom_finished_goods && typeof soData.bom_finished_goods === 'string') {
+          soData.bom_finished_goods = JSON.parse(soData.bom_finished_goods)
+        }
+      } catch (parseErr) {
+        console.warn('Error parsing BOM JSON fields:', parseErr)
       }
-    } else {
-      setSelectedSalesOrders([])
-      setSelectedBomId(null)
-      setSelectedSalesOrderDetails(null)
-      setFGItems([])
-      setSubAssemblyItems([])
-      setRawMaterialItems([])
-      setOperationItems([])
-      setBomFinishedGoods([])
-      setBomRawMaterials([])
-      setBomOperations([])
-      setExpandedItemGroups({})
+
+      return soData
+    } catch (err) {
+      console.error('Error fetching sales order details:', err)
+      return null
     }
   }
 
-  const handleSubmit = async () => {
-    setLoading(true)
-    setError(null)
+  const loadSubAssemblyMaterials = async (subAssemblySku) => {
+    if (subAssemblyMaterials[subAssemblySku]) {
+      return subAssemblyMaterials[subAssemblySku]
+    }
+
     try {
+      const bomItem = bomRawMaterials.find(rm => rm.item_code === subAssemblySku)
+      if (!bomItem) return []
+
       const token = localStorage.getItem('token')
+      const bomId = bomItem.bom_no || bomItem.bom_id
+      if (!bomId) return []
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${bomId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
       
-      const salesOrderId = selectedSalesOrders.length > 0 ? selectedSalesOrders[0] : null
-      
-      const postingDate = formatDateForAPI(planHeader.posting_date)
-      
-      console.log('FG Items before save:', JSON.stringify(fgItems, null, 2))
-      
-      const formattedFGItems = fgItems.map(item => ({
-        ...item,
-        planned_start_date: formatDateForAPI(item.planned_start_date),
-        bom_no: item.bom_no || selectedBomId || ''
-      }))
-      
-      console.log('Formatted FG Items to save:', JSON.stringify(formattedFGItems, null, 2))
-      
-      const formattedSubAssemblies = subAssemblyItems.map(item => ({
-        ...item,
-        scheduled_date: formatDateForAPI(item.scheduled_date),
-        bom_no: item.bom_no || ''
-      }))
-      
-      const formattedRawMaterials = rawMaterialItems.map(item => ({
-        ...item,
-        required_by: formatDateForAPI(item.required_by)
-      }))
-      
-      const payload = {
-        plan_id: planHeader.plan_id || `PLAN-${Date.now()}`,
-        naming_series: planHeader.naming_series,
-        company: planHeader.company,
-        posting_date: postingDate,
-        sales_order_id: salesOrderId,
-        status: planHeader.status,
-        bom_id: selectedBomId,
-        fg_items: formattedFGItems,
-        sub_assemblies: formattedSubAssemblies,
-        raw_materials: formattedRawMaterials,
-        operations: operationItems
+      if (!response.ok) return []
+
+      const data = await response.json()
+      const bomData = data.data || data
+      const materials = (bomData.bom_raw_materials || bomData.rawMaterials || []).filter(m => {
+        const group = m.item_group || m.group || ''
+        return group.toLowerCase() !== 'sub assembly' && group.toLowerCase() !== 'sub assemblies'
+      })
+
+      setSubAssemblyMaterials(prev => ({ ...prev, [subAssemblySku]: materials }))
+      return materials
+    } catch (err) {
+      console.error('Error loading sub-assembly materials:', err)
+      return []
+    }
+  }
+
+  const updateSubAssemblyMaterial = async (subAssemblySku, materialIndex, field, value) => {
+    const materials = await loadSubAssemblyMaterials(subAssemblySku)
+    if (materials && materials[materialIndex]) {
+      const updatedMaterials = [...materials]
+      updatedMaterials[materialIndex] = { ...updatedMaterials[materialIndex], [field]: value }
+      setSubAssemblyMaterials(prev => ({ ...prev, [subAssemblySku]: updatedMaterials }))
+    }
+  }
+
+  useEffect(() => {
+    fetchItems()
+    fetchBOMs()
+    fetchWarehouses()
+    fetchSalesOrders()
+
+    if (plan_id) {
+      fetchProductionPlan(plan_id)
+    }
+  }, [plan_id])
+
+  const handleSalesOrderSelect = (soId) => {
+    setPlanHeader(prev => ({ ...prev, sales_order_id: soId }))
+    setSelectedSalesOrders([soId])
+  }
+
+  const processSalesOrderData = async (soId, salesOrderQty = 1) => {
+    const soDetails = await fetchSalesOrderDetails(soId)
+    if (!soDetails) return
+
+    let itemCode = ''
+    let itemName = ''
+    
+    const items = soDetails.items || []
+    if (Array.isArray(items) && items.length > 0) {
+      const firstItem = items[0]
+      itemCode = firstItem.item_code || firstItem.item || firstItem.sku || ''
+      itemName = firstItem.item_name || firstItem.name || firstItem.description || ''
+    }
+    
+    if (!itemCode || !itemName) {
+      const bomFGList = soDetails.bom_finished_goods || []
+      if (Array.isArray(bomFGList) && bomFGList.length > 0) {
+        const firstItem = bomFGList[0]
+        itemCode = itemCode || firstItem.item_code || firstItem.component_code || firstItem.item || firstItem.sku || 'FG Item'
+        itemName = itemName || firstItem.item_name || firstItem.component_description || firstItem.item_description || firstItem.description || firstItem.name || 'Finished Good'
+      }
+    }
+
+    if (!itemCode) itemCode = 'FG Item'
+    if (!itemName) itemName = 'Finished Good'
+
+    let quantity = salesOrderQty || 1
+    if (!quantity || quantity === 1) {
+      const firstItemQty = items.length > 0 ? (items[0].qty || items[0].quantity || items[0].ordered_qty) : undefined
+      if (firstItemQty) {
+        quantity = parseFloat(firstItemQty) || 1
+      }
+    }
+
+    setSalesOrderQuantity(quantity)
+    
+    const enrichedDetails = {
+      ...soDetails,
+      item_code: itemCode,
+      item_name: itemName
+    }
+    setSelectedSalesOrderDetails(enrichedDetails)
+
+    const fg = {
+      item_code: itemCode,
+      item_name: itemName,
+      quantity: quantity,
+      sales_order_quantity: quantity,
+      planned_start_date: new Date().toISOString().split('T')[0],
+      planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    }
+
+    const bomId = soDetails.bom_id || soDetails.bom_no
+    if (bomId) {
+      setSelectedBomId(bomId)
+
+      let bomData = null
+      const bomFinishedGoodsFromSO = soDetails.bom_finished_goods || []
+      const bomRawMaterialsFromSO = soDetails.bom_raw_materials || []
+      const bomOperationsFromSO = soDetails.bom_operations || []
+
+      if (bomFinishedGoodsFromSO.length === 0 || bomRawMaterialsFromSO.length === 0) {
+        bomData = await fetchBOMDetails(bomId)
       }
 
-      const url = plan_id
-        ? `${import.meta.env.VITE_API_URL}/production-planning/${plan_id}`
-        : `${import.meta.env.VITE_API_URL}/production-planning`
+      const bomFinishedGoods = bomFinishedGoodsFromSO.length > 0 ? bomFinishedGoodsFromSO : (bomData?.finished_goods || bomData?.bom_finished_goods || bomData?.lines || [])
+      
+      if (bomFinishedGoods.length > 0) {
+        const fgItemsFromBOM = bomFinishedGoods.map(fgItem => ({
+          item_code: fgItem.item_code || fgItem.component_code || itemCode,
+          item_name: fgItem.item_name || fgItem.component_description || fgItem.product_name || itemName,
+          quantity: (fgItem.qty || fgItem.quantity || 1) * quantity,
+          sales_order_quantity: quantity,
+          planned_start_date: new Date().toISOString().split('T')[0],
+          planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        }))
+        setFGItems(fgItemsFromBOM)
+      } else if (bomData?.item_code || bomData?.product_name) {
+        const fgFromBOM = {
+          item_code: bomData.item_code || itemCode,
+          item_name: bomData.product_name || itemName,
+          quantity: quantity,
+          sales_order_quantity: quantity,
+          planned_start_date: new Date().toISOString().split('T')[0],
+          planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        }
+        setFGItems([fgFromBOM])
+      } else {
+        setFGItems([fg])
+      }
 
-      const method = plan_id ? 'PATCH' : 'POST'
+      const proportionalMaterials = (bomRawMaterialsFromSO.length > 0 ? bomRawMaterialsFromSO : (bomData?.bom_raw_materials || bomData?.rawMaterials || [])).map(mat => ({
+        ...mat,
+        quantity: (mat.qty || mat.quantity || 0) * quantity,
+        rate: mat.rate || 0,
+        bom_qty: mat.qty || mat.quantity || 0,
+        sales_order_quantity: quantity
+      }))
 
-      const response = await fetch(url, {
-        method,
+      setRawMaterialItems(proportionalMaterials)
+
+      const proportionalOperations = (bomOperationsFromSO.length > 0 ? bomOperationsFromSO : (bomData?.operations || bomData?.bom_operations || [])).map(op => ({
+        ...op,
+        proportional_time: (op.time || op.operation_time || 0) * quantity
+      }))
+
+      setOperationItems(proportionalOperations)
+    } else {
+      setFGItems([fg])
+    }
+  }
+
+  const saveProductionPlan = async () => {
+    try {
+      setSavingPlan(true)
+      setError(null)
+      const token = localStorage.getItem('token')
+
+      if (!selectedSalesOrders.length) {
+        setError('Please select a sales order')
+        return
+      }
+
+      if (!fgItems.length) {
+        setError('Please add at least one finished good item')
+        return
+      }
+
+      const payloadPlanId = planHeader.plan_id || `PP-${Date.now()}`
+
+      const planPayload = {
+        plan_id: payloadPlanId,
+        naming_series: planHeader.naming_series || 'PP',
+        company: planHeader.company || '',
+        sales_order_id: selectedSalesOrders[0],
+        status: planHeader.status || 'draft',
+        bom_id: selectedBomId || '',
+        plan_date: new Date().toISOString().split('T')[0],
+        week_number: null
+      }
+
+      let planResponse
+      if (plan_id) {
+        planResponse = await fetch(`${import.meta.env.VITE_API_URL}/production-planning/${plan_id}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ...planPayload,
+            fg_items: fgItems,
+            sub_assemblies: subAssemblyItems,
+            raw_materials: rawMaterialItems,
+            operations: operationItems
+          })
+        })
+      } else {
+        planResponse = await fetch(`${import.meta.env.VITE_API_URL}/production-planning`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(planPayload)
+        })
+      }
+
+      if (!planResponse.ok) {
+        const errorData = await planResponse.json()
+        setError(errorData.message || 'Failed to save production plan')
+        return
+      }
+
+      const planResult = await planResponse.json()
+      const savedPlanId = planResult.data?.plan_id || payloadPlanId
+
+      setPlanHeader(prev => ({
+        ...prev,
+        plan_id: savedPlanId
+      }))
+
+      if (fgItems.length > 0) {
+        for (const item of fgItems) {
+          try {
+            await fetch(`${import.meta.env.VITE_API_URL}/production-planning/${savedPlanId}/fg-items`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                item_code: item.item_code,
+                item_name: item.item_name,
+                planned_qty: item.quantity || item.planned_qty || 1,
+                planned_start_date: item.planned_start_date,
+                planned_end_date: item.planned_end_date
+              })
+            })
+          } catch (err) {
+            console.error('Error adding FG item:', err)
+          }
+        }
+      }
+
+      if (subAssemblyItems.length > 0) {
+        for (const item of subAssemblyItems) {
+          try {
+            await fetch(`${import.meta.env.VITE_API_URL}/production-planning/${savedPlanId}/sub-assembly-items`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                item_code: item.item_code,
+                item_name: item.item_name,
+                planned_qty: item.quantity || item.planned_qty || 1,
+                scheduled_date: item.planned_start_date
+              })
+            })
+          } catch (err) {
+            console.error('Error adding sub-assembly item:', err)
+          }
+        }
+      }
+
+      if (rawMaterialItems.length > 0) {
+        for (const item of rawMaterialItems) {
+          try {
+            await fetch(`${import.meta.env.VITE_API_URL}/production-planning/${savedPlanId}/raw-material-items`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                item_code: item.item_code,
+                item_name: item.item_name,
+                qty: item.quantity || item.qty || 0,
+                plan_to_request_qty: item.quantity || item.qty || 0,
+                for_warehouse: item.for_warehouse || item.source_warehouse,
+                rate: item.rate || 0
+              })
+            })
+          } catch (err) {
+            console.error('Error adding raw material item:', err)
+          }
+        }
+      }
+
+      setSuccess(`Production Plan ${savedPlanId} saved successfully!`)
+      setTimeout(() => setSuccess(null), 3000)
+      
+      if (!plan_id) {
+        setTimeout(() => {
+          navigate(`/manufacturing/production-planning/${savedPlanId}`)
+        }, 1000)
+      }
+    } catch (err) {
+      console.error('Error saving production plan:', err)
+      setError(`Failed to save production plan: ${err.message}`)
+    } finally {
+      setSavingPlan(false)
+    }
+  }
+
+  const prepareWorkOrderData = async () => {
+    if (!selectedSalesOrderDetails || !fgItems.length) {
+      setError('Please select a sales order and ensure FG items are loaded')
+      return null
+    }
+
+    try {
+      const fgItem = fgItems[0]
+      const salesOrderId = selectedSalesOrders[0]
+      const soDetails = await fetchSalesOrderDetails(salesOrderId)
+
+      const requiredItems = rawMaterialItems.map((item, idx) => {
+        const baseBomQty = item.plan_to_request_qty || item.qty_as_per_bom || 0
+        const proportionalQty = baseBomQty * salesOrderQuantity
+        const itemRate = item.rate || 0
+        return {
+          item_code: item.item_code || '',
+          source_warehouse: item.for_warehouse || '',
+          required_qty: proportionalQty,
+          rate: itemRate,
+          sales_order_quantity: salesOrderQuantity,
+          bom_qty: baseBomQty,
+          sequence: idx + 1
+        }
+      })
+
+      let operations = operationItems
+      if (!operations || operations.length === 0) {
+        const bomId = selectedBomId || fgItem.bom_no
+        if (bomId) {
+          const bomDetails = await fetchBOMDetails(bomId)
+          operations = bomDetails?.operations || bomDetails?.bom_operations || []
+        }
+      }
+
+      const soQty = fgItem.sales_order_quantity || salesOrderQuantity || 1
+      const operationsPayload = operations.map((op, idx) => ({
+        operation: op.operation || op.operation_name || op.name || '',
+        workstation: op.workstation || op.workstation_type || op.default_workstation || '',
+        time: op.proportional_time !== undefined ? op.proportional_time : (op.time || op.operation_time || 0),
+        sequence: idx + 1
+      }))
+
+      const woData = {
+        item_code: fgItem.item_code || fgItem.component_code || '',
+        bom_no: selectedBomId || fgItem.bom_no || '',
+        quantity: soQty,
+        sales_order_quantity: soQty,
+        priority: 'Medium',
+        notes: `From Production Plan: ${planHeader.plan_id}`,
+        sales_order_id: salesOrderId,
+        planned_start_date: fgItem.planned_start_date || new Date().toISOString().split('T')[0],
+        planned_end_date: fgItem.planned_end_date || new Date().toISOString().split('T')[0],
+        actual_start_date: fgItem.actual_start_date || null,
+        actual_end_date: fgItem.actual_end_date || null,
+        expected_delivery_date: fgItem.expected_delivery_date || soDetails?.delivery_date || null,
+        required_items: requiredItems,
+        operations: operationsPayload,
+        production_plan_id: planHeader.plan_id
+      }
+
+      setWorkOrderData(woData)
+      setShowWorkOrderModal(true)
+      return woData
+    } catch (err) {
+      console.error('Error preparing work order data:', err)
+      setError('Failed to prepare work order data')
+      return null
+    }
+  }
+
+  const handleCreateWorkOrder = async () => {
+    if (!workOrderData) return
+
+    try {
+      setCreatingWorkOrder(true)
+      setError(null)
+      const token = localStorage.getItem('token')
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/production/work-orders`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(workOrderData)
       })
 
       if (response.ok) {
-        setSuccess('Production plan saved successfully')
-        setTimeout(() => navigate('/manufacturing/production-planning'), 1500)
+        const result = await response.json()
+        setSuccess('Work Order created successfully!')
+        setShowWorkOrderModal(false)
+        setWorkOrderData(null)
+        
+        setTimeout(() => {
+          navigate('/manufacturing/work-orders')
+        }, 2000)
       } else {
-        const errData = await response.json()
-        setError(errData.error || 'Failed to save production plan')
+        const errorData = await response.json()
+        setError(errorData.message || 'Failed to create work order')
       }
     } catch (err) {
-      setError('Error: ' + err.message)
+      console.error('Error creating work order:', err)
+      setError(`Failed to create work order: ${err.message}`)
     } finally {
-      setLoading(false)
+      setCreatingWorkOrder(false)
     }
   }
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center">
+          <div className="text-4xl mb-4">📋</div>
+          <p className="text-gray-600">Loading production plan...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-white px-3 py-2">
+    <div className="min-h-screen bg-gray-50 px-4 py-3">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-2">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-white">
-              <Package size={16} />
-            </div>
+        {/* Header */}
+        <div className="mb-3">
+          <button 
+            onClick={() => navigate('/manufacturing/production-planning')}
+            className="text-blue-600 hover:text-blue-800 text-xs font-medium mb-2 flex items-center gap-1"
+          >
+            ← Back
+          </button>
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-base font-semibold text-gray-900 mb-0">Production Planning</h1>
-              <p className="text-gray-600 text-xs">Create and manage production schedule</p>
+              <h1 className="text-lg font-bold text-gray-900">Production Plan</h1>
+              <p className="text-xs text-gray-500">{planHeader.plan_id}</p>
+            </div>
+            <div className="flex gap-2">
+              {!plan_id && (
+                <button 
+                  onClick={async () => {
+                    if (!selectedSalesOrders.length) {
+                      setError('Please select a sales order')
+                      return
+                    }
+                    await prepareWorkOrderData()
+                  }}
+                  className="px-3 py-1.5 bg-orange-600 text-white rounded text-sm font-medium hover:bg-orange-700 transition"
+                >
+                  ⚡ Create Work Order
+                </button>
+              )}
+              {plan_id && (
+                <button 
+                  onClick={async () => {
+                    if (!selectedSalesOrders.length || selectedSalesOrders.length === 0) {
+                      setError('Please select a sales order')
+                      return
+                    }
+                    await prepareWorkOrderData()
+                  }}
+                  className="px-3 py-1.5 bg-orange-600 text-white rounded text-sm font-medium hover:bg-orange-700 transition"
+                >
+                  ⚡ Create Work Order
+                </button>
+              )}
             </div>
           </div>
         </div>
 
+        {/* Messages */}
         {error && (
-          <div className="mb-2 p-2 bg-red-50 border border-red-300 rounded text-xs text-red-800 flex gap-2">
-            <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
-            <span>{error}</span>
+          <div className="mb-3 p-2 bg-red-50 border-l-4 border-red-500 rounded text-red-800 text-xs">
+            {error}
           </div>
         )}
-
         {success && (
-          <div className="mb-2 p-2 bg-green-50 border border-green-300 rounded text-xs text-green-800 flex gap-2">
-            <Check size={14} className="flex-shrink-0 mt-0.5" />
-            <span>{success}</span>
+          <div className="mb-3 p-2 bg-green-50 border-l-4 border-green-500 rounded text-green-800 text-xs">
+            {success}
           </div>
         )}
 
-        {loading && plan_id && (
-          <div className="mb-2 p-3 bg-blue-50 border border-blue-300 rounded text-xs text-blue-800 flex items-center gap-2">
-            <div className="animate-spin">⏳</div>
-            <span>Loading production plan details...</span>
-          </div>
-        )}
-
-        <div className="bg-white border border-gray-200 rounded mb-2 overflow-hidden">
+        {/* Section 0: Plan Header */}
+        <div className="bg-white rounded shadow mb-3">
           <button
-            type="button"
-            onClick={() => toggleSection(1)}
-            className="w-full flex items-center justify-between p-1.5 hover:bg-gray-50 transition"
+            onClick={() => toggleSection(0)}
+            className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
           >
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white">
-                <Package size={14} />
-              </div>
-              <h2 className="text-xs font-semibold text-gray-900">Planning Details</h2>
+              <span className="text-sm font-bold text-gray-600">0</span>
+              <h2 className="text-sm font-semibold text-gray-900">Plan Header</h2>
             </div>
-            <ChevronDown size={16} className={`text-gray-600 transition-transform ${expandedSections[1] ? 'rotate-180' : ''}`} />
+            <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[0] ? 'rotate-180' : ''}`} />
           </button>
-          {expandedSections[1] && (
-            <div className="border-t border-gray-200 p-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+
+          {expandedSections[0] && (
+            <div className="px-4 py-3 border-t border-gray-200">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-2">Step 1: Select Sales Order</label>
-                  <SearchableSelect
-                    value={selectedSalesOrders.length > 0 ? selectedSalesOrders[0] : ''}
-                    onChange={handleSalesOrderSelect}
-                    options={salesOrders.map(so => ({
-                      value: so.sales_order_id,
-                      label: `${so.sales_order_id} - ${so.customer_name || 'N/A'}`
-                    }))}
-                    placeholder={fetchingBom ? "Loading BOM..." : "Search and select sales order..."}
-                    isClearable={true}
-                    disabled={fetchingBom}
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Plan ID</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={planHeader.plan_id || 'Auto-generated'}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded bg-gray-50 text-gray-600 text-xs cursor-not-allowed"
                   />
                 </div>
-
-               
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Naming Series</label>
-                    <input
-                      type="text"
-                      value={planHeader.naming_series}
-                      onChange={(e) => setPlanHeader({ ...planHeader, naming_series: e.target.value })}
-                      onKeyDown={handleKeyDown}
-                      placeholder="e.g., PP"
-                      className="w-full px-2 py-1 bg-gray-50 border border-gray-300 rounded text-xs text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Company</label>
-                    <input
-                      type="text"
-                      value={planHeader.company}
-                      onChange={(e) => setPlanHeader({ ...planHeader, company: e.target.value })}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Enter company name"
-                      className="w-full px-2 py-1 bg-gray-50 border border-gray-300 rounded text-xs text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Posting Date</label>
-                    <input
-                      type="date"
-                      value={planHeader.posting_date}
-                      onChange={(e) => setPlanHeader({ ...planHeader, posting_date: e.target.value })}
-                      className="w-full px-2 py-1 bg-gray-50 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent transition"
-                    />
-                  </div>
-                
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="bg-white border border-gray-200 rounded mb-2 overflow-hidden">
-          <button
-            type="button"
-            onClick={() => toggleSection(1.5)}
-            className="w-full flex items-center justify-between p-1.5 hover:bg-gray-50 transition"
-          >
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white">
-                <Package size={14} />
-              </div>
-              <h2 className="text-xs font-semibold text-gray-900">Sales Orders</h2>
-            </div>
-            <ChevronDown size={16} className={`text-gray-600 transition-transform ${expandedSections[1.5] ? 'rotate-180' : ''}`} />
-          </button>
-          {expandedSections[1.5] && (
-            <div className="border-t border-gray-200 p-2">
-              {selectedSalesOrderDetails ? (
                 <div>
-                  <h3 className="text-xs font-semibold text-gray-700 mb-2">Get Sales Orders</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b border-gray-200 bg-gray-100">
-                          <th className="text-center py-1 px-2 font-semibold">No.</th>
-                          <th className="text-left py-1 px-2 font-semibold">Sales Order</th>
-                          <th className="text-left py-1 px-2 font-semibold">Sales Order Date</th>
-                          <th className="text-left py-1 px-2 font-semibold">Customer</th>
-                          <th className="text-right py-1 px-2 font-semibold">Grand Total</th>
-                          <th className="text-center py-1 px-2 font-semibold"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="text-center py-1 px-2 font-medium">1</td>
-                          <td className="py-1 px-2 font-medium text-blue-600">{selectedSalesOrderDetails.sales_order_id || '-'}</td>
-                          <td className="py-1 px-2">{selectedSalesOrderDetails.sales_order_date || '-'}</td>
-                          <td className="py-1 px-2">{selectedSalesOrderDetails.customer_name || '-'}</td>
-                          <td className="py-1 px-2 text-right">₹ {parseFloat(selectedSalesOrderDetails.grand_total || 0).toFixed(2)}</td>
-                          <td className="text-center py-1 px-2 text-blue-600 cursor-pointer">✎</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Series</label>
+                  <input
+                    type="text"
+                    value={planHeader.naming_series}
+                    onChange={(e) => setPlanHeader(prev => ({ ...prev, naming_series: e.target.value }))}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
                 </div>
-              ) : (
-                <p className="text-xs text-gray-600">No sales order selected. Select a sales order first.</p>
-              )}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Status</label>
+                  <select
+                    value={planHeader.status}
+                    onChange={(e) => setPlanHeader(prev => ({ ...prev, status: e.target.value }))}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="planned">Planned</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
             </div>
           )}
         </div>
 
-        <div className="bg-white border border-gray-200 rounded mb-2 overflow-hidden">
+        {/* Section 1: Sales Order Selection */}
+        <div className="bg-white rounded shadow mb-3">
           <button
-            type="button"
-            onClick={() => toggleSection(2)}
-            className="w-full flex items-center justify-between p-1.5 hover:bg-gray-50 transition"
+            onClick={() => toggleSection(1)}
+            className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
           >
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center text-white">
-                <Package size={14} />
-              </div>
-              <h2 className="text-xs font-semibold text-gray-900">Step 2: Finished Goods ({fgItems.length})</h2>
+              <span className="text-sm font-bold text-orange-600">1</span>
+              <h2 className="text-sm font-semibold text-gray-900">Sales Order Selection</h2>
             </div>
-            <ChevronDown size={16} className={`text-gray-600 transition-transform ${expandedSections[2] ? 'rotate-180' : ''}`} />
+            <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[1] ? 'rotate-180' : ''}`} />
           </button>
-          {expandedSections[2] && (
-            <div className="border-t border-gray-200 p-2">
-              {fgItems.length > 0 && (
-                <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded">
-                  <h3 className="text-xs font-semibold text-blue-900 mb-1">📦 Item Details</h3>
-                  <div className="space-y-1">
-                    {Object.entries(groupItemsByItemGroup(fgItems)).map(([group, items]) => (
-                      <div key={group} className="flex items-center justify-between">
-                        <span className="text-xs text-blue-700">
-                          <strong>Finished Goods Item Group:</strong> {group}
-                        </span>
-                        <span className="bg-blue-600 text-white text-xs font-medium px-2 py-0.5 rounded">{items.length} items</span>
+
+          {expandedSections[1] && (
+            <div className="px-4 py-3 border-t border-gray-200">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Select Sales Order</label>
+                  <SearchableSelect
+                    options={salesOrders.map(so => ({
+                      value: so.sales_order_id || so.name,
+                      label: `${so.sales_order_id || so.name} - ${so.customer_name || 'N/A'}`
+                    }))}
+                    value={selectedSalesOrders[0] || ''}
+                    onChange={(value) => {
+                      setSelectedSalesOrders([value])
+                      handleSalesOrderSelect(value)
+                      processSalesOrderData(value)
+                    }}
+                    placeholder="Search and select sales order..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Sales Order Quantity</label>
+                  <input
+                    type="number"
+                    value={salesOrderQuantity}
+                    onChange={(e) => {
+                      const qty = parseInt(e.target.value) || 1
+                      setSalesOrderQuantity(qty)
+                      if (selectedSalesOrders[0]) {
+                        processSalesOrderData(selectedSalesOrders[0], qty)
+                      }
+                    }}
+                    min="1"
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Section 1.5: BOM Selection */}
+        {(selectedSalesOrderDetails || fgItems.length > 0) && (
+          <div className="bg-white rounded shadow mb-3">
+            <button
+              onClick={() => toggleSection(1.5)}
+              className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-blue-600">1.5</span>
+                <h2 className="text-sm font-semibold text-gray-900">BOM Details</h2>
+              </div>
+              <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[1.5] ? 'rotate-180' : ''}`} />
+            </button>
+
+            {expandedSections[1.5] && (
+              <div className="px-4 py-3 border-t border-gray-200">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                  <div className="bg-blue-50 rounded p-2">
+                    <p className="text-xs text-gray-600 font-semibold">Item</p>
+                    <p className="text-xs font-bold text-gray-900">
+                      {(fgItems[0]?.item_code || selectedSalesOrderDetails?.item_code || 'N/A')}
+                      {(fgItems[0]?.item_name || selectedSalesOrderDetails?.item_name) && (
+                        <span> - {fgItems[0]?.item_name || selectedSalesOrderDetails?.item_name}</span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="bg-green-50 rounded p-2">
+                    <p className="text-xs text-gray-600 font-semibold">BOM No</p>
+                    <p className="text-xs font-bold text-gray-900">{selectedBomId || 'N/A'}</p>
+                  </div>
+                  <div className="bg-orange-50 rounded p-2">
+                    <p className="text-xs text-gray-600 font-semibold">Quantity</p>
+                    <p className="text-xs font-bold text-gray-900">{salesOrderQuantity || fgItems[0]?.quantity || 1}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Section 2: Finished Goods */}
+        {fgItems.length > 0 && (
+          <div className="bg-white rounded shadow mb-3">
+            <button
+              onClick={() => toggleSection(2)}
+              className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-green-600">2</span>
+                <h2 className="text-sm font-semibold text-gray-900">Finished Goods ({fgItems.length})</h2>
+              </div>
+              <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[2] ? 'rotate-180' : ''}`} />
+            </button>
+
+            {expandedSections[2] && (
+              <div className="px-4 py-3 border-t border-gray-200">
+                <div className="space-y-2">
+                  {fgItems.map((item, idx) => (
+                    <div key={idx} className="bg-gradient-to-r from-green-50 to-green-100 rounded p-2 border border-green-200">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+                        <div>
+                          <p className="text-xs text-gray-600 font-semibold">Item Code</p>
+                          <p className="font-bold text-gray-900">{item.item_code || selectedSalesOrderDetails?.item_code || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-semibold">Item Name</p>
+                          <p className="font-bold text-gray-900">{item.item_name || selectedSalesOrderDetails?.item_name || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-semibold">Qty</p>
+                          <p className="font-bold text-gray-900">{item.planned_qty || item.quantity || item.qty}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-semibold">Start Date</p>
+                          <p className="font-bold text-gray-900">{item.planned_start_date}</p>
+                        </div>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Section 3: Raw Materials */}
+        {rawMaterialItems.length > 0 && (
+          <div className="bg-white rounded shadow mb-3">
+            <button
+              onClick={() => toggleSection(3)}
+              className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-purple-600">3</span>
+                <h2 className="text-sm font-semibold text-gray-900">Raw Materials ({rawMaterialItems.length})</h2>
+              </div>
+              <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[3] ? 'rotate-180' : ''}`} />
+            </button>
+
+            {expandedSections[3] && (
+              <div className="px-4 py-3 border-t border-gray-200 overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-gray-100 border-b border-gray-300">
+                    <tr>
+                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Item Code</th>
+                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Item Name</th>
+                      <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Qty</th>
+                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Warehouse</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rawMaterialItems.map((item, idx) => (
+                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="px-2 py-1 font-medium text-gray-900">{item.item_code}</td>
+                        <td className="px-2 py-1 text-gray-700">{item.item_name}</td>
+                        <td className="px-2 py-1 text-right font-bold text-gray-900">{item.quantity || item.qty_as_per_bom}</td>
+                        <td className="px-2 py-1 text-gray-700">{item.for_warehouse || '-'}</td>
+                      </tr>
                     ))}
-                  </div>
-                </div>
-              )}
-              {fgItems.length > 0 ? (
-                <div className="space-y-1">
-                  {Object.entries(groupItemsByItemGroup(fgItems)).map(([group, items]) => (
-                    <div key={group} className="border border-gray-200 rounded">
-                      <button
-                        type="button"
-                        onClick={() => toggleItemGroup(`fg-${group}`)}
-                        className="w-full flex items-center justify-between p-1.5 hover:bg-gray-50 transition"
-                      >
-                        <span className="text-xs font-semibold text-gray-800">{group} ({items.length})</span>
-                        <ChevronDown size={14} className={`text-gray-600 transition-transform ${expandedItemGroups[`fg-${group}`] ? 'rotate-180' : ''}`} />
-                      </button>
-                      {expandedItemGroups[`fg-${group}`] && (
-                        <div className="border-t border-gray-200 p-1 bg-gray-50">
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs">
-                              <thead>
-                                <tr className="border-b border-gray-200 bg-gray-100">
-                                  <th className="text-center py-1 px-2 font-semibold">No.</th>
-                                  <th className="text-left py-1 px-2 font-semibold">Item Code</th>
-                                  <th className="text-left py-1 px-2 font-semibold">BOM No</th>
-                                  <th className="text-right py-1 px-2 font-semibold">Planned Qty</th>
-                                  <th className="text-left py-1 px-2 font-semibold">UOM</th>
-                                  <th className="text-left py-1 px-2 font-semibold">Finished Goods Warehouse</th>
-                                  <th className="text-left py-1 px-2 font-semibold">Planned Start Date</th>
-                                  <th className="text-center py-1 px-2 font-semibold">Actions</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {items.map((item, idx) => {
-                                  const globalIdx = fgItems.findIndex(fg => 
-                                    fg.item_code === item.item_code && fg.item_name === item.item_name
-                                  )
-                                  const isEditing = editingFGIndex === globalIdx
-                                  const stateItem = globalIdx >= 0 ? fgItems[globalIdx] : item
-                                  return (
-                                    <tr key={idx} className="border-b border-gray-100 hover:bg-white">
-                                      <td className="py-1 px-2 text-center text-xs font-medium">{globalIdx + 1}</td>
-                                      <td className="py-1 px-2 text-xs font-medium">{stateItem.component_code || stateItem.item_code || '-'}</td>
-                                      <td className="py-1 px-2 text-xs">{selectedBomId || '-'}</td>
-                                      <td className="py-1 px-2 text-right text-xs font-medium">{stateItem.quantity || stateItem.qty || 1}</td>
-                                      <td className="py-1 px-2 text-xs">{stateItem.uom || '-'}</td>
-                                      <td className="py-1 px-2">
-                                        {isEditing ? (
-                                          <SearchableSelect
-                                            value={stateItem.warehouse || stateItem.fg_warehouse || ''}
-                                            onChange={(val) => updateFGItem(globalIdx, 'warehouse', val)}
-                                            options={warehouses.map(w => ({
-                                              value: w.id,
-                                              label: w.warehouse_name
-                                            }))}
-                                            placeholder="Select warehouse"
-                                            isClearable={true}
-                                          />
-                                        ) : (
-                                          <span className="text-xs">{getWarehouseName(stateItem.warehouse)}</span>
-                                        )}
-                                      </td>
-                                      <td className="py-1 px-2">
-                                        {isEditing ? (
-                                          <input
-                                            type="date"
-                                            value={stateItem.planned_start_date || ''}
-                                            onChange={(e) => updateFGItem(globalIdx, 'planned_start_date', e.target.value)}
-                                            className="w-full px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                          />
-                                        ) : (
-                                          <span className="text-xs">{stateItem.planned_start_date || '-'}</span>
-                                        )}
-                                      </td>
-                                      <td className="py-1 px-2 flex gap-1 justify-end">
-                                        {isEditing ? (
-                                          <>
-                                            <button
-                                              onClick={() => confirmEditFG()}
-                                              className="text-green-600 hover:text-green-700 text-lg"
-                                              title="Confirm"
-                                            >
-                                              ✓
-                                            </button>
-                                            <button
-                                              onClick={() => cancelEditFG()}
-                                              className="text-red-600 hover:text-red-700 text-lg"
-                                              title="Cancel"
-                                            >
-                                              ✕
-                                            </button>
-                                          </>
-                                        ) : (
-                                          <button
-                                            onClick={() => startEditFG(globalIdx)}
-                                            className="text-blue-600 hover:text-blue-700"
-                                            title="Edit"
-                                          >
-                                            ✎
-                                          </button>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  )
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-gray-600">No finished goods found. Select a sales order first.</p>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="bg-white border border-gray-200 rounded mb-2 overflow-hidden">
-          <button
-            type="button"
-            onClick={() => toggleSection(3)}
-            className="w-full flex items-center justify-between p-1.5 hover:bg-gray-50 transition"
-          >
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-cyan-500 flex items-center justify-center text-white">
-                <Boxes size={14} />
+                  </tbody>
+                </table>
               </div>
-              <h2 className="text-xs font-semibold text-gray-900">Step 3: Sub-Assembly Items ({subAssemblyItems.length})</h2>
-            </div>
-            <ChevronDown size={16} className={`text-gray-600 transition-transform ${expandedSections[3] ? 'rotate-180' : ''}`} />
-          </button>
-          {expandedSections[3] && (
-            <div className="border-t border-gray-200 p-2">
-              {subAssemblyItems.length > 0 && (
-                <div className="mb-3 space-y-2">
-                  <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2 text-xs text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={consolidateSubAssembly}
-                        onChange={(e) => setConsolidateSubAssembly(e.target.checked)}
-                        className="w-4 h-4 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-                      <span>Consolidate Sub Assembly Items</span>
-                    </label>
-                  </div>
-                  <div className="flex items-start gap-4">
-                    <label className="flex items-start gap-2 text-xs text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={skipAvailableSubAssembly}
-                        onChange={(e) => setSkipAvailableSubAssembly(e.target.checked)}
-                        className="w-4 h-4 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 mt-0.5"
-                      />
-                      <div>
-                        <div>Skip Available Sub Assembly Items</div>
-                        <p className="text-gray-600 text-xs mt-0.5">If this checkbox is enabled, then the system won't run the MRP for the available sub-assembly items.</p>
+            )}
+          </div>
+        )}
+
+        {/* Section 4: Sub-assembly Items */}
+        {subAssemblyItems.length > 0 && (
+          <div className="bg-white rounded shadow mb-3">
+            <button
+              onClick={() => toggleSection(4)}
+              className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-blue-600">4</span>
+                <h2 className="text-sm font-semibold text-gray-900">Sub-Assembly ({subAssemblyItems.length})</h2>
+              </div>
+              <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[4] ? 'rotate-180' : ''}`} />
+            </button>
+
+            {expandedSections[4] && (
+              <div className="px-4 py-3 border-t border-gray-200">
+                <div className="space-y-2">
+                  {subAssemblyItems.map((item, idx) => (
+                    <div key={idx} className="bg-blue-50 rounded p-2 border border-blue-200">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+                        <div>
+                          <p className="text-xs text-gray-600 font-semibold">Item Code</p>
+                          <p className="font-bold text-gray-900">{item.item_code}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-semibold">Item Name</p>
+                          <p className="font-bold text-gray-900">{item.item_name}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-semibold">Qty</p>
+                          <p className="font-bold text-gray-900">{item.required_qty || item.qty}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-semibold">Warehouse</p>
+                          <p className="font-bold text-gray-900">{item.target_warehouse || '-'}</p>
+                        </div>
                       </div>
-                    </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Section 5: Operations */}
+        {operationItems.length > 0 && (
+          <div className="bg-white rounded shadow mb-3">
+            <button
+              onClick={() => toggleSection(5)}
+              className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-indigo-600">5</span>
+                <h2 className="text-sm font-semibold text-gray-900">Operations ({operationItems.length})</h2>
+              </div>
+              <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[5] ? 'rotate-180' : ''}`} />
+            </button>
+
+            {expandedSections[5] && (
+              <div className="px-4 py-3 border-t border-gray-200 overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-gray-100 border-b border-gray-300">
+                    <tr>
+                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Operation</th>
+                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Workstation</th>
+                      <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Time (hrs)</th>
+                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Seq</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {operationItems.map((item, idx) => (
+                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="px-2 py-1 font-medium text-gray-900">{item.operation || item.operation_name}</td>
+                        <td className="px-2 py-1 text-gray-700">{item.workstation || item.workstation_type || '-'}</td>
+                        <td className="px-2 py-1 text-right font-bold text-gray-900">{item.time || item.operation_time || 0}</td>
+                        <td className="px-2 py-1 text-gray-700">{item.sequence || idx + 1}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex gap-2 justify-between pt-3 mb-3">
+          <button
+            onClick={() => navigate('/manufacturing/production-planning')}
+            className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm font-medium hover:bg-gray-50 transition"
+          >
+            ← Back to Plans
+          </button>
+          <div className="flex gap-2">
+            {selectedSalesOrders.length > 0 && (
+              <>
+                <button
+                  onClick={saveProductionPlan}
+                  disabled={savingPlan || !selectedSalesOrders.length}
+                  className="px-3 py-1.5 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed transition flex items-center gap-2"
+                >
+                  <Save size={16} /> {savingPlan ? 'Saving...' : 'Save Plan'}
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!selectedSalesOrders.length) {
+                      setError('Please select a sales order')
+                      return
+                    }
+                    await prepareWorkOrderData()
+                  }}
+                  className="px-3 py-1.5 bg-orange-600 text-white rounded text-sm font-medium hover:bg-orange-700 transition flex items-center gap-2"
+                >
+                  <Zap size={16} /> Create Work Order
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Work Order Modal */}
+        {showWorkOrderModal && workOrderData && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99] p-4">
+            <div className="bg-white rounded shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-gradient-to-r from-orange-600 via-orange-600 to-orange-700 p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="bg-white bg-opacity-20 rounded p-1.5">
+                    <Boxes size={16} className="text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-white font-bold text-sm">Create Work Order</h2>
+                    <p className="text-orange-100 text-xs">Review details and confirm</p>
                   </div>
                 </div>
-              )}
-              {subAssemblyItems.length > 0 ? (
-                <div className="space-y-1">
-                  {Object.entries(groupItemsByItemGroup(subAssemblyItems)).map(([group, items]) => (
-                    <div key={group} className="border border-gray-200 rounded">
-                      <button
-                        type="button"
-                        onClick={() => toggleItemGroup(`sub-${group}`)}
-                        className="w-full flex items-center justify-between p-1.5 hover:bg-gray-50 transition"
-                      >
-                        <span className="text-xs font-semibold text-gray-800">{group} ({items.length})</span>
-                        <ChevronDown size={14} className={`text-gray-600 transition-transform ${expandedItemGroups[`sub-${group}`] ? 'rotate-180' : ''}`} />
-                      </button>
-                      {expandedItemGroups[`sub-${group}`] && (
-                        <div className="border-t border-gray-200 p-1 bg-gray-50">
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs">
-                              <thead>
-                                <tr className="border-b border-gray-200 bg-gray-100">
-                                  <th className="text-center py-1 px-2 font-semibold">
-                                    <input
-                                      type="checkbox"
-                                      className="w-3 h-3 border border-gray-300 rounded"
-                                    />
-                                  </th>
-                                  <th className="text-center py-1 px-2 font-semibold">No.</th>
-                                  <th className="text-left py-1 px-2 font-semibold">Sub Assembly Item Code</th>
-                                  <th className="text-left py-1 px-2 font-semibold">Target Warehouse</th>
-                                  <th className="text-left py-1 px-2 font-semibold">Scheduled Date</th>
-                                  <th className="text-right py-1 px-2 font-semibold">Required Qty</th>
-                                  <th className="text-left py-1 px-2 font-semibold">BOM No</th>
-                                  <th className="text-left py-1 px-2 font-semibold">Manufacturing Type</th>
-                                  <th className="text-center py-1 px-2 font-semibold">Actions</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {items.map((item, idx) => {
-                                  const globalIdx = subAssemblyItems.findIndex(sub =>
-                                    sub.item_code === item.item_code && sub.item_name === item.item_name
-                                  )
-                                  const isEditing = editingSubAsmIndex === globalIdx
-                                  const stateItem = globalIdx >= 0 ? subAssemblyItems[globalIdx] : item
-                                  return (
-                                    <tr key={idx} className="border-b border-gray-100 hover:bg-white">
-                                      <td className="text-center py-1 px-2">
-                                        <input
-                                          type="checkbox"
-                                          className="w-3 h-3 border border-gray-300 rounded"
-                                        />
-                                      </td>
-                                      <td className="text-center py-1 px-2 font-medium">{globalIdx + 1}</td>
-                                      <td className="py-1 px-2 font-medium">{stateItem.component_code || stateItem.item_code || '-'}</td>
-                                      <td className="py-1 px-2">
-                                        {isEditing ? (
-                                          <SearchableSelect
-                                            value={stateItem.target_warehouse || ''}
-                                            onChange={(val) => updateSubAssemblyItem(globalIdx, 'target_warehouse', val)}
-                                            options={warehouses.map(w => ({
-                                              value: w.id,
-                                              label: w.warehouse_name
-                                            }))}
-                                            placeholder="Select warehouse"
-                                            isClearable={true}
-                                          />
-                                        ) : (
-                                          <span className="text-xs">{getWarehouseName(stateItem.target_warehouse)}</span>
-                                        )}
-                                      </td>
-                                      <td className="py-1 px-2">
-                                        {isEditing ? (
-                                          <input
-                                            type="date"
-                                            value={stateItem.scheduled_date || ''}
-                                            onChange={(e) => updateSubAssemblyItem(globalIdx, 'scheduled_date', e.target.value)}
-                                            className="w-full px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                          />
-                                        ) : (
-                                          <span className="text-xs">{stateItem.scheduled_date || '-'}</span>
-                                        )}
-                                      </td>
-                                      <td className="py-1 px-2 text-right">
-                                        {isEditing ? (
-                                          <input
-                                            type="number"
-                                            value={stateItem.quantity || stateItem.qty || ''}
-                                            onChange={(e) => updateSubAssemblyItem(globalIdx, 'qty', parseFloat(e.target.value))}
-                                            className="w-full px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-right"
-                                          />
-                                        ) : (
-                                          <span className="text-xs">{stateItem.quantity || stateItem.qty || '-'}</span>
-                                        )}
-                                      </td>
-                                      <td className="py-1 px-2">{stateItem.bom_no || '-'}</td>
-                                      <td className="py-1 px-2">
-                                        {isEditing ? (
-                                          <select
-                                            value={stateItem.manufacturing_type || 'In House'}
-                                            onChange={(e) => updateSubAssemblyItem(globalIdx, 'manufacturing_type', e.target.value)}
-                                            className="w-full px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                          >
-                                            <option value="In House">In House</option>
-                                            <option value="Out Source">Out Source</option>
-                                          </select>
-                                        ) : (
-                                          <span className="text-xs">{stateItem.manufacturing_type || '-'}</span>
-                                        )}
-                                      </td>
-                                      <td className="py-1 px-2 flex gap-1 justify-end">
-                                        {isEditing ? (
-                                          <>
-                                            <button
-                                              onClick={() => confirmEditSubAsm()}
-                                              className="text-green-600 hover:text-green-700 text-lg"
-                                              title="Confirm"
-                                            >
-                                              ✓
-                                            </button>
-                                            <button
-                                              onClick={() => cancelEditSubAsm()}
-                                              className="text-red-600 hover:text-red-700 text-lg"
-                                              title="Cancel"
-                                            >
-                                              ✕
-                                            </button>
-                                          </>
-                                        ) : (
-                                          <button
-                                            onClick={() => startEditSubAsm(globalIdx)}
-                                            className="text-blue-600 hover:text-blue-700"
-                                            title="Edit"
-                                          >
-                                            ✎
-                                          </button>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  )
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-gray-600">No sub-assembly items found. Select a sales order first.</p>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="bg-white border border-gray-200 rounded mb-2 overflow-hidden">
-          <button
-            type="button"
-            onClick={() => toggleSection(4)}
-            className="w-full flex items-center justify-between p-1.5 hover:bg-gray-50 transition"
-          >
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-white">
-                <Archive size={14} />
+                <button
+                  onClick={() => {
+                    setShowWorkOrderModal(false)
+                    setWorkOrderData(null)
+                  }}
+                  className="text-white hover:bg-orange-500 p-1 rounded transition"
+                >
+                  <X size={16} />
+                </button>
               </div>
-              <h2 className="text-xs font-semibold text-gray-900">Step 4: Raw Material Planning ({rawMaterialItems.length})</h2>
-            </div>
-            <ChevronDown size={16} className={`text-gray-600 transition-transform ${expandedSections[4] ? 'rotate-180' : ''}`} />
-          </button>
-          {expandedSections[4] && (
-            <div className="border-t border-gray-200 p-2">
-              {rawMaterialItems.length > 0 ? (
-                <div className="space-y-1">
-                  {Object.entries(groupItemsByItemGroup(rawMaterialItems)).map(([group, items]) => (
-                    <div key={group} className="border border-gray-200 rounded">
-                      <button
-                        type="button"
-                        onClick={() => toggleItemGroup(`raw-${group}`)}
-                        className="w-full flex items-center justify-between p-1.5 hover:bg-gray-50 transition"
-                      >
-                        <span className="text-xs font-semibold text-gray-800">{group} ({items.length})</span>
-                        <ChevronDown size={14} className={`text-gray-600 transition-transform ${expandedItemGroups[`raw-${group}`] ? 'rotate-180' : ''}`} />
-                      </button>
-                      {expandedItemGroups[`raw-${group}`] && (
-                        <div className="border-t border-gray-200 p-1 bg-gray-50">
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs">
-                              <thead>
-                                <tr className="border-b border-gray-200 bg-gray-100">
-                                  <th className="text-center py-1 px-2 font-semibold">
-                                    <input
-                                      type="checkbox"
-                                      className="w-3 h-3 border border-gray-300 rounded"
-                                    />
-                                  </th>
-                                  <th className="text-center py-1 px-2 font-semibold">No.</th>
-                                  <th className="text-left py-1 px-2 font-semibold">Item Code</th>
-                                  <th className="text-left py-1 px-2 font-semibold">For Warehouse</th>
-                                  <th className="text-left py-1 px-2 font-semibold">Type</th>
-                                  <th className="text-right py-1 px-2 font-semibold">Plan to Request Qty</th>
-                                  <th className="text-right py-1 px-2 font-semibold">Qty As Per BOM</th>
-                                  <th className="text-left py-1 px-2 font-semibold">Required By</th>
-                                  <th className="text-center py-1 px-2 font-semibold">Actions</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {items.map((item, idx) => {
-                                  const globalIdx = rawMaterialItems.findIndex(raw =>
-                                    raw.item_code === item.item_code && raw.item_name === item.item_name
-                                  )
-                                  const isEditing = editingRawMatIndex === globalIdx
-                                  const stateItem = globalIdx >= 0 ? rawMaterialItems[globalIdx] : item
-                                  return (
-                                    <tr key={idx} className="border-b border-gray-100 hover:bg-white">
-                                      <td className="text-center py-1 px-2">
-                                        <input
-                                          type="checkbox"
-                                          className="w-3 h-3 border border-gray-300 rounded"
-                                        />
-                                      </td>
-                                      <td className="text-center py-1 px-2 font-medium">{globalIdx + 1}</td>
-                                      <td className="py-1 px-2 font-medium">{stateItem.item_code || '-'}</td>
-                                      <td className="py-1 px-2">
-                                        {isEditing ? (
-                                          <SearchableSelect
-                                            value={stateItem.for_warehouse || ''}
-                                            onChange={(val) => updateRawMaterialItem(globalIdx, 'for_warehouse', val)}
-                                            options={warehouses.map(w => ({
-                                              value: w.id,
-                                              label: w.warehouse_name
-                                            }))}
-                                            placeholder="Select warehouse"
-                                            isClearable={true}
-                                          />
-                                        ) : (
-                                          <span className="text-xs">{getWarehouseName(stateItem.for_warehouse)}</span>
-                                        )}
-                                      </td>
-                                      <td className="py-1 px-2">{stateItem.type || '-'}</td>
-                                      <td className="py-1 px-2">
-                                        {isEditing ? (
-                                          <input
-                                            type="number"
-                                            value={stateItem.plan_to_request_qty || ''}
-                                            onChange={(e) => updateRawMaterialItem(globalIdx, 'plan_to_request_qty', parseFloat(e.target.value))}
-                                            className="w-full px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-right"
-                                          />
-                                        ) : (
-                                          <span className="text-xs text-right block">{stateItem.plan_to_request_qty || 0}</span>
-                                        )}
-                                      </td>
-                                      <td className="py-1 px-2 text-right font-medium">{stateItem.qty_as_per_bom || 0}</td>
-                                      <td className="py-1 px-2">
-                                        {isEditing ? (
-                                          <input
-                                            type="date"
-                                            value={stateItem.required_by || ''}
-                                            onChange={(e) => updateRawMaterialItem(globalIdx, 'required_by', e.target.value)}
-                                            className="w-full px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                          />
-                                        ) : (
-                                          <span className="text-xs">{stateItem.required_by || '-'}</span>
-                                        )}
-                                      </td>
-                                      <td className="py-1 px-2 flex gap-1 justify-end">
-                                        {isEditing ? (
-                                          <>
-                                            <button
-                                              onClick={() => confirmEditRawMat()}
-                                              className="text-green-600 hover:text-green-700 text-lg"
-                                              title="Confirm"
-                                            >
-                                              ✓
-                                            </button>
-                                            <button
-                                              onClick={() => cancelEditRawMat()}
-                                              className="text-red-600 hover:text-red-700 text-lg"
-                                              title="Cancel"
-                                            >
-                                              ✕
-                                            </button>
-                                          </>
-                                        ) : (
-                                          <button
-                                            onClick={() => startEditRawMat(globalIdx)}
-                                            className="text-blue-600 hover:text-blue-700"
-                                            title="Edit"
-                                          >
-                                            ✎
-                                          </button>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  )
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-gray-600">No raw materials found. Select a sales order first.</p>
-              )}
-            </div>
-          )}
-        </div>
 
-        <div className="flex gap-2 justify-end mb-3 mt-3">
-          <button
-            type="button"
-            onClick={() => navigate('/manufacturing/production-planning')}
-            className="px-3 py-1 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-50 hover:border-gray-400 flex items-center gap-1 transition"
-          >
-            <X size={12} /> Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={loading}
-            className="px-4 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1 transition"
-          >
-            <Save size={12} /> {loading ? 'Saving...' : 'Submit'}
-          </button>
-        </div>
+              <div className="p-4 space-y-3">
+                {/* Main Info Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded p-2 border border-blue-200">
+                    <p className="text-xs text-blue-600 font-semibold mb-1">Item Code</p>
+                    <p className="text-xs font-bold text-gray-900 break-words">{workOrderData.item_code}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded p-2 border border-purple-200">
+                    <p className="text-xs text-purple-600 font-semibold mb-1">BOM No</p>
+                    <p className="text-xs font-bold text-gray-900 break-words">{workOrderData.bom_no}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded p-2 border border-green-200">
+                    <p className="text-xs text-green-600 font-semibold mb-1">Quantity</p>
+                    <p className="text-xs font-bold text-gray-900">{workOrderData.quantity}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded p-2 border border-orange-200">
+                    <p className="text-xs text-orange-600 font-semibold mb-1">Priority</p>
+                    <p className="text-xs font-bold text-gray-900">{workOrderData.priority}</p>
+                  </div>
+                </div>
+
+                {/* Operations Section */}
+                {workOrderData.operations && workOrderData.operations.length > 0 && (
+                  <div className="rounded overflow-hidden border border-gray-200 shadow-sm">
+                    <div className="bg-gradient-to-r from-green-50 to-green-100 px-3 py-2 border-b border-green-200">
+                      <h3 className="font-semibold text-xs text-green-900 flex items-center gap-2">
+                        <Factory size={14} className="text-green-600" />
+                        Operations ({workOrderData.operations.length})
+                      </h3>
+                    </div>
+                    <div className="overflow-x-auto max-h-40">
+                      <table className="w-full text-xs">
+                        <thead className="bg-gray-50 sticky top-0 border-b border-gray-200">
+                          <tr>
+                            <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Operation</th>
+                            <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Workstation</th>
+                            <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Time (hrs)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {workOrderData.operations.map((op, idx) => (
+                            <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-green-50 transition`}>
+                              <td className="px-2 py-1 font-medium text-gray-900">{op.operation}</td>
+                              <td className="px-2 py-1 text-gray-700">{op.workstation || '-'}</td>
+                              <td className="px-2 py-1 text-right font-medium text-gray-900">{op.time || 0}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Raw Materials Section */}
+                {workOrderData.required_items && workOrderData.required_items.length > 0 && (
+                  <div className="rounded overflow-hidden border border-gray-200 shadow-sm">
+                    <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-3 py-2 border-b border-purple-200">
+                      <h3 className="font-semibold text-xs text-purple-900 flex items-center gap-2">
+                        <Boxes size={14} className="text-purple-600" />
+                        Raw Materials ({workOrderData.required_items.length})
+                      </h3>
+                    </div>
+                    <div className="overflow-x-auto max-h-40">
+                      <table className="w-full text-xs">
+                        <thead className="bg-gray-50 sticky top-0 border-b border-gray-200">
+                          <tr>
+                            <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Item Code</th>
+                            <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Qty</th>
+                            <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Warehouse</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {workOrderData.required_items.map((item, idx) => (
+                            <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-purple-50 transition`}>
+                              <td className="px-2 py-1 font-medium text-gray-900">{item.item_code}</td>
+                              <td className="px-2 py-1 text-right font-medium text-gray-900">{item.required_qty}</td>
+                              <td className="px-2 py-1 text-gray-700">{item.source_warehouse || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Notes Section */}
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded p-3 border border-gray-200">
+                  <p className="text-xs font-semibold text-gray-600 mb-1">Notes</p>
+                  <p className="text-xs text-gray-700 leading-relaxed">{workOrderData.notes}</p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 justify-end pt-3 border-t border-gray-200">
+                  <button
+                    onClick={() => {
+                      setShowWorkOrderModal(false)
+                      setWorkOrderData(null)
+                    }}
+                    className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-50 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateWorkOrder}
+                    disabled={creatingWorkOrder}
+                    className="px-3 py-1.5 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded text-xs font-medium hover:from-orange-700 hover:to-orange-800 disabled:opacity-60 disabled:cursor-not-allowed transition flex items-center gap-1"
+                  >
+                    <Check size={14} /> {creatingWorkOrder ? 'Creating...' : 'Confirm & Create'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

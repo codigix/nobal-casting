@@ -14,7 +14,7 @@
   }
 
   h2 {
-    @apply text-xl font-bold text-[var(--text-primary)];
+    @apply text-xl  text-[var(--text-primary)];
   }
 
   h3 {

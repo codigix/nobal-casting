@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../services/api'
 import DataTable from '../../components/Table/DataTable'
 import Alert from '../../components/Alert/Alert'
 import Badge from '../../components/Badge/Badge'
 import Button from '../../components/Button/Button'
-import { BarChart3, X, Grid3x3, List, TrendingUp, AlertTriangle, Package } from 'lucide-react'
+import { BarChart3, X, Grid3x3, List, TrendingUp, AlertTriangle, Package, ArrowDown, ArrowUp } from 'lucide-react'
+import StockMovementModal from '../../components/Inventory/StockMovementModal'
 import './Inventory.css'
 
 export default function StockBalance() {
@@ -19,6 +20,8 @@ export default function StockBalance() {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(12)
   const [viewMode, setViewMode] = useState('table')
+  const [showMovementModal, setShowMovementModal] = useState(false)
+  const [selectedStockItem, setSelectedStockItem] = useState(null)
 
   useEffect(() => {
     fetchWarehouses()
@@ -27,7 +30,7 @@ export default function StockBalance() {
 
   const fetchWarehouses = async () => {
     try {
-      const response = await axios.get('/api/stock/warehouses')
+      const response = await api.get('/stock/warehouses')
       setWarehouses(response.data.data || [])
     } catch (err) {
       console.error('Failed to fetch warehouses:', err)
@@ -40,7 +43,7 @@ export default function StockBalance() {
       const params = new URLSearchParams()
       if (warehouseFilter) params.append('warehouse_id', warehouseFilter)
       
-      const response = await axios.get(`/api/stock/stock-balance?${params}`)
+      const response = await api.get(`/stock/stock-balance?${params}`)
       const stockData = Array.isArray(response.data.data) ? response.data.data : []
       
       // Calculate statistics
@@ -167,6 +170,33 @@ export default function StockBalance() {
         if (!row) return null
         const status = getStockStatus(row.current_qty, row.reorder_level)
         return <Badge className={status.class}>{status.text}</Badge>
+      }
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (value, row) => {
+        if (!row) return null
+        return (
+          <div className="flex gap-2">
+            <Button
+              variant="success"
+              size="sm"
+              onClick={() => { setSelectedStockItem({ ...row, movement_type: 'IN' }); setShowMovementModal(true) }}
+              className="text-xs flex items-center gap-1"
+            >
+              <ArrowDown size={14} /> IN
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => { setSelectedStockItem({ ...row, movement_type: 'OUT' }); setShowMovementModal(true) }}
+              className="text-xs flex items-center gap-1"
+            >
+              <ArrowUp size={14} /> OUT
+            </Button>
+          </div>
+        )
       }
     }
   ]
@@ -410,6 +440,15 @@ export default function StockBalance() {
               </button>
             </div>
           </div>
+        )}
+
+        {/* Stock Movement Modal */}
+        {showMovementModal && (
+          <StockMovementModal
+            initialItem={selectedStockItem}
+            onClose={() => { setShowMovementModal(false); setSelectedStockItem(null) }}
+            onSuccess={() => { setShowMovementModal(false); setSelectedStockItem(null); fetchStockBalance() }}
+          />
         )}
       </div>
     </div>

@@ -158,6 +158,21 @@ export const deleteWorkOrder = async (wo_id) => {
   return response.data
 }
 
+export const truncateWorkOrders = async () => {
+  const response = await api.delete('/production/work-orders/truncate/all')
+  return response.data
+}
+
+export const truncateBOMs = async () => {
+  const response = await api.delete('/production/boms/truncate/all')
+  return response.data
+}
+
+export const truncateJobCards = async () => {
+  const response = await api.delete('/production/job-cards/truncate/all')
+  return response.data
+}
+
 // Items Master
 export const getItemsList = async () => {
   const response = await api.get('/items')
@@ -323,5 +338,30 @@ export const createDowntime = async (data) => {
 
 export const deleteDowntime = async (id) => {
   const response = await api.delete(`/production/downtimes/${id}`)
+  return response.data
+}
+
+export const createOutwardChallan = async (data) => {
+  const response = await api.post('/production/outward-challans', data)
+  return response.data
+}
+
+export const getOutwardChallans = async (jobCardId) => {
+  const response = await api.get(`/production/outward-challans?job_card_id=${jobCardId}`)
+  return response.data
+}
+
+export const createInwardChallan = async (data) => {
+  const response = await api.post('/production/inward-challans', data)
+  return response.data
+}
+
+export const getInwardChallans = async (jobCardId) => {
+  const response = await api.get(`/production/inward-challans?job_card_id=${jobCardId}`)
+  return response.data
+}
+
+export const updateInwardChallan = async (id, data) => {
+  const response = await api.put(`/production/inward-challans/${id}`, data)
   return response.data
 }

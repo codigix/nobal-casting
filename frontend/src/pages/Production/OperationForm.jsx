@@ -62,7 +62,7 @@ export default function OperationForm() {
   const fetchOperationDetails = async (opId) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/operations/${opId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/production/operations/${opId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (response.ok) {
@@ -132,7 +132,7 @@ export default function OperationForm() {
 
       const token = localStorage.getItem('token')
       const response = await fetch(
-        id ? `${import.meta.env.VITE_API_URL}/operations/${id}` : `${import.meta.env.VITE_API_URL}/operations`,
+        id ? `${import.meta.env.VITE_API_URL}/production/operations/${id}` : `${import.meta.env.VITE_API_URL}/production/operations`,
         {
           method: id ? 'PUT' : 'POST',
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -155,290 +155,326 @@ export default function OperationForm() {
   }
 
   return (
-    <div className="production-container">
-      <div className="production-header">
-        <div>
-          <h1>⚙️ {id ? 'Edit Operation' : 'Create Operation'}</h1>
-          <p className="header-subtitle">{id ? 'Update operation details' : 'Define a new production operation'}</p>
-        </div>
-      </div>
-
-      {error && <div className="alert alert-error">✕ {error}</div>}
-      {success && <div className="alert alert-success">✓ {success}</div>}
-
-      <form onSubmit={handleSubmit}>
-        <Card className="form-card" style={{ marginBottom: '24px' }}>
-          <div className="form-group">
-            <label>Operation Name <span style={{ color: '#dc2626' }}>*</span></label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              placeholder="e.g., Assembly, Welding, Painting"
-              required
-            />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center text-white text-xl">
+              ⚙️
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">{id ? 'Edit Operation' : 'Create Operation'}</h1>
+              <p className="text-gray-600">{id ? 'Update operation details' : 'Define a new production operation'}</p>
+            </div>
           </div>
+        </div>
 
-          <div className="form-grid-2">
-            <div className="form-group">
-              <label>Default Workstation</label>
-              <div style={{display: 'flex', gap: '8px'}}>
-                {!workstationManualEntry ? (
-                  <div style={{flex: 1, position: 'relative'}} onClick={(e) => e.stopPropagation()}>
-                    <input 
-                      type="text" 
-                      value={workstationDropdownOpen ? workstationDropdownSearch : (workstations.find(ws => ws.name === formData.default_workstation)?.workstation_name || formData.default_workstation || '')}
-                      onChange={(e) => {
-                        setWorkstationDropdownSearch(e.target.value)
-                        if (!workstationDropdownOpen) setWorkstationDropdownOpen(true)
-                      }}
-                      onFocus={() => setWorkstationDropdownOpen(true)}
-                      placeholder="Select Workstation"
-                      style={{width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem', fontFamily: 'inherit'}}
-                      onClick={(e) => {e.stopPropagation(); setWorkstationDropdownOpen(true)}}
-                    />
-                    {workstationDropdownOpen && (
-                      <div onClick={(e) => e.stopPropagation()} style={{position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px', maxHeight: '300px', overflowY: 'auto', zIndex: 9999, marginTop: '4px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', minWidth: '300px'}}>
-                        {workstations.filter(ws => 
-                          ws.name.toLowerCase().includes(workstationDropdownSearch.toLowerCase()) ||
-                          ws.workstation_name.toLowerCase().includes(workstationDropdownSearch.toLowerCase())
-                        ).map(ws => (
-                          <div 
-                            key={ws.name}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setFormData({...formData, default_workstation: ws.name})
-                              setWorkstationDropdownOpen(false)
-                              setWorkstationDropdownSearch('')
-                            }}
-                            style={{padding: '10px 12px', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', transition: 'background-color 0.15s'}}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = '#fff'}
-                          >
-                            <div style={{fontWeight: '600', fontSize: '13px', color: '#1f2937'}}>{ws.name}</div>
-                            <div style={{fontSize: '12px', color: '#6b7280', marginTop: '2px'}}>{ws.workstation_name || ''}</div>
-                          </div>
-                        ))}
-                        {workstations.filter(ws => 
-                          ws.name.toLowerCase().includes(workstationDropdownSearch.toLowerCase()) ||
-                          ws.workstation_name.toLowerCase().includes(workstationDropdownSearch.toLowerCase())
-                        ).length === 0 && (
-                          <div style={{padding: '10px 12px', textAlign: 'center', color: '#6b7280', fontSize: '13px'}}>
-                            No workstations found
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
+            <span className="text-2xl">✕</span>
+            <div className="flex-1">
+              <p className="text-red-800 font-medium">Error</p>
+              <p className="text-red-700 text-sm">{error}</p>
+            </div>
+          </div>
+        )}
+        
+        {success && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex gap-3">
+            <span className="text-2xl">✓</span>
+            <div className="flex-1">
+              <p className="text-green-800 font-medium">Success</p>
+              <p className="text-green-700 text-sm">{success}</p>
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          
+          {/* Basic Information Section */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+              <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center text-blue-600">📋</div>
+              Basic Information
+            </h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Operation Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Assembly, Welding, Painting, Machining"
+                  required
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Default Workstation</label>
+                  <div className="flex gap-2">
+                    {!workstationManualEntry ? (
+                      <div className="flex-1 relative">
+                        <input 
+                          type="text" 
+                          value={workstationDropdownOpen ? workstationDropdownSearch : (workstations.find(ws => ws.name === formData.default_workstation)?.workstation_name || formData.default_workstation || '')}
+                          onChange={(e) => {
+                            setWorkstationDropdownSearch(e.target.value)
+                            if (!workstationDropdownOpen) setWorkstationDropdownOpen(true)
+                          }}
+                          onFocus={() => setWorkstationDropdownOpen(true)}
+                          placeholder="Select workstation"
+                          onClick={(e) => {e.stopPropagation(); setWorkstationDropdownOpen(true)}}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                        />
+                        {workstationDropdownOpen && (
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
+                            {workstations.filter(ws => 
+                              ws.name.toLowerCase().includes(workstationDropdownSearch.toLowerCase()) ||
+                              ws.workstation_name.toLowerCase().includes(workstationDropdownSearch.toLowerCase())
+                            ).map(ws => (
+                              <div 
+                                key={ws.name}
+                                onClick={() => {
+                                  setFormData({...formData, default_workstation: ws.name})
+                                  setWorkstationDropdownOpen(false)
+                                  setWorkstationDropdownSearch('')
+                                }}
+                                className="px-4 py-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition"
+                              >
+                                <div className="font-medium text-gray-900 text-sm">{ws.name}</div>
+                                <div className="text-xs text-gray-500">{ws.workstation_name || ''}</div>
+                              </div>
+                            ))}
+                            {workstations.filter(ws => 
+                              ws.name.toLowerCase().includes(workstationDropdownSearch.toLowerCase()) ||
+                              ws.workstation_name.toLowerCase().includes(workstationDropdownSearch.toLowerCase())
+                            ).length === 0 && (
+                              <div className="px-4 py-3 text-center text-gray-500 text-sm">No workstations found</div>
+                            )}
                           </div>
                         )}
                       </div>
+                    ) : (
+                      <input 
+                        type="text" 
+                        name="default_workstation" 
+                        value={formData.default_workstation} 
+                        onChange={handleInputChange} 
+                        placeholder="e.g., Lathe, Press" 
+                        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                      />
                     )}
+                    <button 
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setWorkstationManualEntry(!workstationManualEntry)
+                        setWorkstationDropdownOpen(false)
+                      }}
+                      className="px-3 py-2.5 border border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition font-medium text-sm"
+                    >
+                      {workstationManualEntry ? '📋' : '✏️'}
+                    </button>
                   </div>
-                ) : (
-                  <input 
-                    type="text" 
-                    name="default_workstation" 
-                    value={formData.default_workstation} 
-                    onChange={handleInputChange} 
-                    placeholder="e.g., Lathe, Press" 
-                    style={{flex: 1, padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem', fontFamily: 'inherit'}} 
-                  />
-                )}
-                <button 
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    setWorkstationManualEntry(!workstationManualEntry)
-                    setWorkstationDropdownOpen(false)
-                    setWorkstationDropdownSearch('')
-                  }}
-                  style={{padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#f9fafb', cursor: 'pointer', fontSize: '14px'}}
-                >
-                  {workstationManualEntry ? '📋' : '✏️'}
-                </button>
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      name="is_corrective_operation"
+                      checked={formData.is_corrective_operation}
+                      onChange={handleInputChange}
+                      className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 transition"
+                    />
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">Corrective Operation</span>
+                  </label>
+                  <p className="text-xs text-gray-500 ml-8 mt-1">Mark if this is a corrective/rework operation</p>
+                </div>
               </div>
             </div>
+          </div>
 
-            <div className="form-group">
-              <label className="checkbox-label">
+          {/* Job Card Settings Section */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+              <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center text-purple-600">📊</div>
+              Job Card Settings
+            </h2>
+
+            <div className="space-y-4">
+              <label className="flex items-center gap-3 cursor-pointer group p-3 rounded-lg hover:bg-gray-50 transition">
                 <input
                   type="checkbox"
-                  name="is_corrective_operation"
-                  checked={formData.is_corrective_operation}
+                  name="create_job_card_based_on_batch_size"
+                  checked={formData.create_job_card_based_on_batch_size}
                   onChange={handleInputChange}
+                  className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 transition"
                 />
-                <span>Corrective Operation</span>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">Create Job Card based on Batch Size</span>
               </label>
+
+              {formData.create_job_card_based_on_batch_size && (
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Batch Size <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      name="batch_size"
+                      value={formData.batch_size}
+                      onChange={handleInputChange}
+                      min="1"
+                      step="1"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Quality Inspection Template</label>
+                    <select
+                      name="quality_inspection_template"
+                      value={formData.quality_inspection_template}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                    >
+                      <option value="">Select Template (Optional)</option>
+                      {qualityTemplates.map(tpl => (
+                        <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        </Card>
 
-        <Card className="form-card" style={{ marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1f2937', marginBottom: '16px', marginTop: 0 }}>Job Card Settings</h3>
+          {/* Sub Operations Section */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center text-green-600">⚡</div>
+                Sub Operations
+              </h2>
+              <button
+                type="button"
+                onClick={handleAddSubOperation}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 font-medium transition"
+              >
+                <Plus size={18} /> Add Step
+              </button>
+            </div>
 
-          <div className="form-group" style={{ marginBottom: '20px' }}>
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                name="create_job_card_based_on_batch_size"
-                checked={formData.create_job_card_based_on_batch_size}
+            {subOperations.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-4xl mb-2">📝</div>
+                <p className="text-gray-600">No sub-operations added yet</p>
+                <p className="text-gray-500 text-sm">Click "Add Step" to add your first sub-operation</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 w-12">No.</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Operation Step</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 w-32">Time (hrs)</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 w-16">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {subOperations.map((row, idx) => (
+                      <tr key={row._key} className="hover:bg-gray-50 transition">
+                        <td className="px-4 py-3 text-center font-semibold text-gray-600">{row.no}</td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="text"
+                            value={row.operation}
+                            onChange={(e) => handleUpdateSubOperation(idx, 'operation', e.target.value)}
+                            placeholder="e.g., Cut, Grind, Weld, Assemble"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="number"
+                            value={row.operation_time}
+                            onChange={(e) => handleUpdateSubOperation(idx, 'operation_time', e.target.value)}
+                            min="0"
+                            step="0.1"
+                            placeholder="0.0"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-center text-sm"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {subOperations.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSubOperation(idx)}
+                              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
+                              title="Delete row"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm">
+                  <span className="text-gray-700">Total Operation Time: </span>
+                  <span className="font-semibold text-blue-600">{getTotalOperationTime().toFixed(2)} hrs</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Description Section */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+              <div className="w-6 h-6 bg-yellow-100 rounded flex items-center justify-center text-yellow-600">📝</div>
+              Description & Notes
+            </h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Details</label>
+              <textarea
+                name="description"
+                value={formData.description}
                 onChange={handleInputChange}
+                placeholder="Detailed description of the operation, process notes, safety guidelines, equipment requirements, etc."
+                rows={6}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none"
               />
-              <span>Create Job Card based on Batch Size</span>
-            </label>
+            </div>
           </div>
 
-          {formData.create_job_card_based_on_batch_size && (
-            <div className="form-grid-2">
-              <div className="form-group">
-                <label>Batch Size <span style={{ color: '#dc2626' }}>*</span></label>
-                <input
-                  type="number"
-                  name="batch_size"
-                  value={formData.batch_size}
-                  onChange={handleInputChange}
-                  min="1"
-                  step="1"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Quality Inspection Template</label>
-                <select
-                  name="quality_inspection_template"
-                  value={formData.quality_inspection_template}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select Template</option>
-                  {qualityTemplates.map(tpl => (
-                    <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-        </Card>
-
-        <Card className="form-card" style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1f2937', margin: 0 }}>Sub Operations</h3>
+          {/* Action Buttons */}
+          <div className="flex gap-3 justify-end pt-6 border-t border-gray-200">
             <button
               type="button"
-              onClick={handleAddSubOperation}
-              className="btn-add"
+              onClick={() => navigate('/manufacturing/operations')}
+              className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition"
             >
-              <Plus size={18} /> Add Row
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg flex items-center gap-2 font-medium transition"
+            >
+              <Save size={18} /> {loading ? 'Saving...' : 'Save Operation'}
             </button>
           </div>
-
-          {subOperations.length === 0 ? (
-            <div className="empty-state">
-              <p>No sub-operations added yet. Click "Add Row" to start.</p>
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table className="entries-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: '60px', textAlign: 'center' }}>No.</th>
-                    <th>Operation</th>
-                    <th style={{ width: '150px', textAlign: 'center' }}>Time (hrs)</th>
-                    <th style={{ width: '50px', textAlign: 'center' }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {subOperations.map((row, idx) => (
-                    <tr key={row._key}>
-                      <td style={{ textAlign: 'center', fontWeight: 600 }}>{row.no}</td>
-                      <td>
-                        <input
-                          type="text"
-                          value={row.operation}
-                          onChange={(e) => handleUpdateSubOperation(idx, 'operation', e.target.value)}
-                          placeholder="e.g., Cut, Grind, Weld"
-                          style={{
-                            width: '100%',
-                            padding: '8px 10px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '6px',
-                            fontSize: '0.9rem'
-                          }}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          value={row.operation_time}
-                          onChange={(e) => handleUpdateSubOperation(idx, 'operation_time', e.target.value)}
-                          min="0"
-                          step="0.1"
-                          placeholder="0.0"
-                          style={{
-                            width: '100%',
-                            padding: '8px 10px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '6px',
-                            fontSize: '0.9rem',
-                            textAlign: 'center'
-                          }}
-                        />
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        {subOperations.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveSubOperation(idx)}
-                            className="btn-delete-small"
-                            title="Delete row"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-
-        <Card className="form-card" style={{ marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1f2937', marginBottom: '16px', marginTop: 0 }}>Operation Description</h3>
-          <div className="form-group">
-            <label>Description</label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              placeholder="Detailed description of the operation, process notes, safety guidelines, etc."
-              rows={6}
-            />
-          </div>
-        </Card>
-
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingTop: '20px', borderTop: '1px solid #e5e7eb' }}>
-          <button
-            type="button"
-            onClick={() => navigate('/manufacturing/operations')}
-            className="btn-cancel"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-submit"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              opacity: loading ? 0.6 : 1,
-              cursor: loading ? 'not-allowed' : 'pointer'
-            }}
-          >
-            <Save size={18} /> {loading ? 'Saving...' : 'Save Operation'}
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   )
 }

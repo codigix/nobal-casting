@@ -64,17 +64,28 @@ class StockBalanceModel {
   }
 
   // Get stock balance by item and warehouse
-  static async getByItemAndWarehouse(itemCode, warehouseId) {
+  static async getByItemAndWarehouse(itemCode, warehouseIdentifier) {
     try {
       const db = this.getDb()
+      
+      let whereClause = 'sb.item_code = ? AND '
+      let params = [itemCode]
+      
+      if (Number.isInteger(Number(warehouseIdentifier))) {
+        whereClause += 'sb.warehouse_id = ?'
+        params.push(Number(warehouseIdentifier))
+      } else {
+        whereClause += 'w.warehouse_code = ?'
+        params.push(warehouseIdentifier)
+      }
       
       const query = `SELECT sb.*, i.item_code, i.name as item_name, i.item_group, i.uom, w.warehouse_code, w.warehouse_name
                      FROM stock_balance sb
                      LEFT JOIN item i ON sb.item_code = i.item_code
                      LEFT JOIN warehouses w ON sb.warehouse_id = w.id
-                     WHERE sb.item_code = ? AND sb.warehouse_id = ?`
+                     WHERE ${whereClause}`
       
-      const [rows] = await db.query(query, [itemCode, warehouseId])
+      const [rows] = await db.query(query, params)
       return rows[0] || null
     } catch (error) {
       throw new Error(`Failed to fetch stock balance: ${error.message}`)

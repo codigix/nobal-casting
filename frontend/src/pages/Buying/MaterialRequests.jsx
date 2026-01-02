@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import api from '../../services/api'
 import Button from '../../components/Button/Button'
 import DataTable from '../../components/Table/DataTable'
 import AdvancedFilters from '../../components/AdvancedFilters'
@@ -8,6 +7,7 @@ import Alert from '../../components/Alert/Alert'
 import Card from '../../components/Card/Card'
 import Badge from '../../components/Badge/Badge'
 import CreateMaterialRequestModal from '../../components/Buying/CreateMaterialRequestModal'
+import ViewMaterialRequestModal from '../../components/Buying/ViewMaterialRequestModal'
 import { Plus, Eye, CheckCircle, XCircle, Trash2, AlertCircle, CheckCheck, Clock } from 'lucide-react'
 import './Buying.css'
 
@@ -19,8 +19,9 @@ export default function MaterialRequests() {
   const [filters, setFilters] = useState({ status: '', department: '', search: '' })
   const [departments, setDepartments] = useState([])
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [viewModalOpen, setViewModalOpen] = useState(false)
+  const [selectedMrId, setSelectedMrId] = useState(null)
   const [stats, setStats] = useState({ total: 0, draft: 0, approved: 0, converted: 0, cancelled: 0 })
-  const navigate = useNavigate()
 
   useEffect(() => {
     fetchRequests()
@@ -35,7 +36,7 @@ export default function MaterialRequests() {
       if (filters.department) params.append('department', filters.department)
       if (filters.search) params.append('search', filters.search)
 
-      const response = await axios.get(`/api/material-requests?${params}`)
+      const response = await api.get(`/material-requests?${params}`)
       const data = response.data.data || []
       setRequests(data)
       calculateStats(data)
@@ -58,7 +59,7 @@ export default function MaterialRequests() {
 
   const fetchDepartments = async () => {
     try {
-      const response = await axios.get('/api/material-requests/departments')
+      const response = await api.get('/material-requests/departments')
       setDepartments(response.data.data || [])
     } catch (err) {
       console.error('Failed to fetch departments:', err)
@@ -67,10 +68,11 @@ export default function MaterialRequests() {
 
   const handleApprove = async (id) => {
     try {
-      await axios.patch(`/api/material-requests/${id}/approve`)
-      setSuccess('Material request approved successfully')
+      const response = await api.patch(`/material-requests/${id}/approve`)
+      const message = response.data.grn ? `Material request approved successfully. GRN ${response.data.grn.grn_no} created for inspection.` : 'Material request approved successfully'
+      setSuccess(message)
       fetchRequests()
-      setTimeout(() => setSuccess(null), 3000)
+      setTimeout(() => setSuccess(null), 4000)
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to approve')
     }
@@ -78,7 +80,7 @@ export default function MaterialRequests() {
 
   const handleReject = async (id) => {
     try {
-      await axios.patch(`/api/material-requests/${id}/reject`)
+      await api.patch(`/material-requests/${id}/reject`)
       setSuccess('Material request rejected')
       fetchRequests()
       setTimeout(() => setSuccess(null), 3000)
@@ -90,7 +92,7 @@ export default function MaterialRequests() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this material request?')) {
       try {
-        await axios.delete(`/api/material-requests/${id}`)
+        await api.delete(`/material-requests/${id}`)
         setSuccess('Material request deleted')
         fetchRequests()
         setTimeout(() => setSuccess(null), 3000)
@@ -146,7 +148,10 @@ export default function MaterialRequests() {
       <Button 
         size="sm"
         variant="icon"
-        onClick={() => navigate(`/buying/material-request/${row.mr_id}`)}
+        onClick={() => {
+          setSelectedMrId(row.mr_id)
+          setViewModalOpen(true)
+        }}
         title="View Material Request"
         className="flex items-center justify-center p-2"
       >
@@ -215,6 +220,20 @@ export default function MaterialRequests() {
           fetchRequests()
           setSuccess('Material request created successfully')
           setTimeout(() => setSuccess(null), 3000)
+        }}
+      />
+
+      <ViewMaterialRequestModal
+        isOpen={viewModalOpen}
+        onClose={() => {
+          setViewModalOpen(false)
+          setSelectedMrId(null)
+        }}
+        mrId={selectedMrId}
+        onStatusChange={() => {
+          fetchRequests()
+          // Optionally close modal if deleted, or keep open if approved/rejected
+          // For delete, the modal closes itself in handleDelete
         }}
       />
 

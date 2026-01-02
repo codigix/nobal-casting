@@ -10,7 +10,8 @@ export default function DataTable({
   sortable = true,
   pageSize = 10,
   disablePagination = false,
-  hideColumnToggle = false
+  hideColumnToggle = false,
+  defaultHiddenColumns = []
 }) {
   const [filters, setFilters] = useState({})
   const [sortConfig, setSortConfig] = useState({
@@ -19,7 +20,7 @@ export default function DataTable({
   })
   const [currentPage, setCurrentPage] = useState(1)
   const [visibleColumns, setVisibleColumns] = useState(
-    new Set(columns.map(col => col.key))
+    new Set(columns.map(col => col.key).filter(key => !defaultHiddenColumns.includes(key)))
   )
   const [showColumnMenu, setShowColumnMenu] = useState(false)
 

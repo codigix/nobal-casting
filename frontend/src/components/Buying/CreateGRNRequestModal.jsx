@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../services/api'
 import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
 import { X } from 'lucide-react'
@@ -47,7 +47,7 @@ export default function CreateGRNRequestModal({ purchaseReceipt, onClose, onSucc
         notes
       }
 
-      const response = await axios.post('/api/grn-requests', grnData)
+      const response = await api.post('/grn-requests', grnData)
       
       if (response.data.success) {
         setError(null)

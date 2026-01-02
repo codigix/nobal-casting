@@ -3,7 +3,7 @@ import { AlertCircle } from 'lucide-react'
 import Modal from '../Modal'
 import * as productionService from '../../services/productionService'
 
-export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess }) {
+export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [formData, setFormData] = useState({
@@ -15,6 +15,16 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess }) {
     priority: 'medium',
     notes: ''
   })
+
+  useEffect(() => {
+    if (isOpen && bom) {
+      setFormData(prev => ({
+        ...prev,
+        item_code: bom.item_code || '',
+        quantity: bom.quantity || ''
+      }))
+    }
+  }, [isOpen, bom])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target

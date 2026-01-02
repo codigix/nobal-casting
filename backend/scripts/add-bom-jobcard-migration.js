@@ -94,8 +94,10 @@ async function runMigration() {
         INDEX idx_created_at (created_at)
       )`,
       
-      // Add operation column to existing job_card table if it doesn't exist
-      `ALTER TABLE job_card ADD COLUMN IF NOT EXISTS operation VARCHAR(255) AFTER work_order_id`,
+      // Add columns to job_card table if they don't exist
+      `ALTER TABLE job_card ADD COLUMN operation VARCHAR(255) AFTER work_order_id`,
+      `ALTER TABLE job_card ADD COLUMN operation_sequence INT`,
+      `ALTER TABLE job_card ADD COLUMN operation_time DECIMAL(10,2) DEFAULT 0`,
 
       // Create BOM Operations table
       `CREATE TABLE IF NOT EXISTS bom_operation (

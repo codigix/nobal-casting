@@ -40,6 +40,7 @@ ALTER TABLE work_order ADD COLUMN IF NOT EXISTS planned_end_date DATETIME;
 ALTER TABLE work_order ADD COLUMN IF NOT EXISTS actual_start_date DATETIME;
 ALTER TABLE work_order ADD COLUMN IF NOT EXISTS actual_end_date DATETIME;
 ALTER TABLE work_order ADD COLUMN IF NOT EXISTS expected_delivery_date DATE;
+ALTER TABLE work_order ADD COLUMN IF NOT EXISTS sales_order_quantity DECIMAL(18,6);
 
 -- Add indexes for better query performance
 ALTER TABLE work_order ADD INDEX IF NOT EXISTS idx_wo_id (wo_id);

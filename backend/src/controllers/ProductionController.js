@@ -10,16 +10,16 @@ class ProductionController {
     try {
       const { name, operation_name, default_workstation, is_corrective_operation, create_job_card_based_on_batch_size, batch_size, quality_inspection_template, description, sub_operations } = req.body
 
-      if (!name || !operation_name) {
+      if (!name) {
         return res.status(400).json({
           success: false,
-          message: 'Missing required fields: name, operation_name'
+          message: 'Missing required field: name'
         })
       }
 
       const operation = await this.productionModel.createOperation({
         name,
-        operation_name,
+        operation_name: operation_name || name,
         default_workstation,
         is_corrective_operation,
         create_job_card_based_on_batch_size,
@@ -159,12 +159,12 @@ class ProductionController {
   // Create work order
   async createWorkOrder(req, res) {
     try {
-      const { item_code, bom_no, quantity, priority, notes, planned_start_date, planned_end_date, actual_start_date, actual_end_date, expected_delivery_date, required_items, operations } = req.body
+      const { item_code, bom_no, quantity, priority, notes, sales_order_id, planned_start_date, planned_end_date, actual_start_date, actual_end_date, expected_delivery_date, required_items, operations } = req.body
 
-      if (!item_code || !bom_no || !quantity) {
+      if (!item_code || !quantity) {
         return res.status(400).json({
           success: false,
-          message: 'Missing required fields: item_code, bom_no, quantity'
+          message: 'Missing required fields: item_code, quantity'
         })
       }
 
@@ -172,15 +172,16 @@ class ProductionController {
       const workOrder = await this.productionModel.createWorkOrder({
         wo_id,
         item_code,
-        bom_no,
+        bom_no: bom_no || null,
         quantity,
-        priority,
-        notes,
-        planned_start_date,
-        planned_end_date,
-        actual_start_date,
-        actual_end_date,
-        expected_delivery_date,
+        priority: priority || 'medium',
+        notes: notes || '',
+        sales_order_id: sales_order_id || null,
+        planned_start_date: planned_start_date || null,
+        planned_end_date: planned_end_date || null,
+        actual_start_date: actual_start_date || null,
+        actual_end_date: actual_end_date || null,
+        expected_delivery_date: expected_delivery_date || null,
         status: 'Draft'
       })
 
@@ -201,12 +202,13 @@ class ProductionController {
           await this.productionModel.createJobCard({
             job_card_id: jc_id,
             work_order_id: wo_id,
-            operation: operation.operation || '',
-            machine_id: operation.workstation || '',
+            operation: operation.operation_name || operation.operation || '',
+            machine_id: operation.workstation_type || operation.workstation || '',
             operator_id: '',
             planned_quantity: quantity,
-            scheduled_start_date: planned_start_date,
-            scheduled_end_date: planned_end_date,
+            operation_time: operation.operation_time || operation.time || 0,
+            scheduled_start_date: new Date(),
+            scheduled_end_date: new Date(),
             status: 'Open',
             created_by: req.user?.username || 'system',
             notes: operation.notes || ''
@@ -283,7 +285,7 @@ class ProductionController {
   async updateWorkOrder(req, res) {
     try {
       const { wo_id } = req.params
-      const { item_code, bom_no, quantity, priority, notes, planned_start_date, planned_end_date, actual_start_date, actual_end_date, expected_delivery_date, required_items, operations } = req.body
+      const { item_code, bom_no, quantity, priority, notes, sales_order_id, planned_start_date, planned_end_date, actual_start_date, actual_end_date, expected_delivery_date, required_items, operations } = req.body
 
       const success = await this.productionModel.updateWorkOrder(wo_id, {
         item_code,
@@ -291,6 +293,7 @@ class ProductionController {
         quantity,
         priority,
         notes,
+        sales_order_id,
         planned_start_date,
         planned_end_date,
         actual_start_date,
@@ -380,6 +383,22 @@ class ProductionController {
       res.status(500).json({
         success: false,
         message: 'Error deleting work order',
+        error: error.message
+      })
+    }
+  }
+
+  async truncateWorkOrders(req, res) {
+    try {
+      await this.productionModel.truncateWorkOrders()
+      res.status(200).json({
+        success: true,
+        message: 'All work orders truncated successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error truncating work orders',
         error: error.message
       })
     }
@@ -882,7 +901,7 @@ class ProductionController {
 
   async createBOM(req, res) {
     try {
-      const { item_code, product_name, description, quantity, uom, status, revision, effective_date, lines, operations, scrapItems, rawMaterials, total_cost } = req.body
+      const { item_code, product_name, description, quantity, uom, status, revision, effective_date, lines, operations, scrapItems, rawMaterials, total_cost, item_group, items_group } = req.body
 
       if (!item_code) {
         return res.status(400).json({
@@ -903,7 +922,9 @@ class ProductionController {
         revision: revision || 1,
         effective_date,
         total_cost: total_cost || 0,
-        created_by: req.user?.username || 'system'
+        created_by: req.user?.username || 'system',
+        item_group,
+        items_group: items_group || 'Finished Goods'
       })
 
       if (lines && lines.length > 0) {
@@ -1071,6 +1092,22 @@ class ProductionController {
     }
   }
 
+  async truncateBOMs(req, res) {
+    try {
+      await this.productionModel.truncateBOMs()
+      res.status(200).json({
+        success: true,
+        message: 'All BOMs truncated successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error truncating BOMs',
+        error: error.message
+      })
+    }
+  }
+
   // ============= JOB CARDS =============
 
   async getJobCards(req, res) {
@@ -1115,7 +1152,7 @@ class ProductionController {
 
   async createJobCard(req, res) {
     try {
-      const { work_order_id, machine_id, operator_id, planned_quantity, scheduled_start_date, scheduled_end_date, notes } = req.body
+      const { work_order_id, machine_id, operator_id, operation, operation_sequence, planned_quantity, scheduled_start_date, scheduled_end_date, notes } = req.body
 
       if (!work_order_id || !machine_id || !planned_quantity) {
         return res.status(400).json({
@@ -1130,6 +1167,8 @@ class ProductionController {
         work_order_id,
         machine_id,
         operator_id,
+        operation,
+        operation_sequence,
         planned_quantity,
         scheduled_start_date,
         scheduled_end_date,
@@ -1155,11 +1194,13 @@ class ProductionController {
   async updateJobCard(req, res) {
     try {
       const { job_card_id } = req.params
-      const { machine_id, operator_id, planned_quantity, produced_quantity, rejected_quantity, scheduled_start_date, scheduled_end_date, actual_start_date, actual_end_date, status, notes } = req.body
+      const { machine_id, operator_id, operation, operation_sequence, planned_quantity, produced_quantity, rejected_quantity, scheduled_start_date, scheduled_end_date, actual_start_date, actual_end_date, status, notes } = req.body
 
       const success = await this.productionModel.updateJobCard(job_card_id, {
         machine_id,
         operator_id,
+        operation,
+        operation_sequence,
         planned_quantity,
         produced_quantity,
         rejected_quantity,
@@ -1204,6 +1245,22 @@ class ProductionController {
       res.status(500).json({
         success: false,
         message: 'Error deleting job card',
+        error: error.message
+      })
+    }
+  }
+
+  async truncateJobCards(req, res) {
+    try {
+      await this.productionModel.truncateJobCards()
+      res.status(200).json({
+        success: true,
+        message: 'All job cards truncated successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error truncating job cards',
         error: error.message
       })
     }
@@ -1395,12 +1452,12 @@ class ProductionController {
 
   async recordRejection(req, res) {
     try {
-      const { job_card_id, operator_name, machine, rejection_reason, quantity, notes } = req.body
+      const { job_card_id, operator_name, machine, rejection_reason, rejected_qty, notes } = req.body
 
-      if (!job_card_id || !rejection_reason || !quantity) {
+      if (!job_card_id || !rejection_reason || rejected_qty === undefined) {
         return res.status(400).json({
           success: false,
-          message: 'Missing required fields: job_card_id, rejection_reason, quantity'
+          message: 'Missing required fields: job_card_id, rejection_reason, rejected_qty'
         })
       }
 
@@ -1409,7 +1466,7 @@ class ProductionController {
         operator_name,
         machine,
         rejection_reason,
-        quantity,
+        rejected_qty,
         notes
       })
 
@@ -1660,6 +1717,318 @@ class ProductionController {
         message: 'Error deleting downtime',
         error: error.message
       })
+    }
+  }
+
+  async startOperation(req, res) {
+    try {
+      const { job_card_id } = req.params
+      const { actual_start_date, workstation_id, employee_id, start_date, start_time, inhouse, outsource, notes } = req.body
+
+      if (!actual_start_date) {
+        return res.status(400).json({
+          success: false,
+          error: 'actual_start_date is required'
+        })
+      }
+
+      if (!employee_id) {
+        return res.status(400).json({
+          success: false,
+          error: 'employee_id is required'
+        })
+      }
+
+      const userId = req.user?.user_id || 'system'
+
+      const result = await this.productionModel.startOperation(job_card_id, {
+        actual_start_date,
+        workstation_id,
+        employee_id,
+        start_date,
+        start_time,
+        inhouse,
+        outsource,
+        notes,
+        created_by: userId
+      })
+
+      res.json({
+        success: true,
+        data: result,
+        message: 'Operation started successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  }
+
+  async endOperation(req, res) {
+    try {
+      const { job_card_id } = req.params
+      const { actual_end_date, next_operation_id, notes } = req.body
+
+      if (!actual_end_date) {
+        return res.status(400).json({
+          success: false,
+          error: 'actual_end_date is required'
+        })
+      }
+
+      const userId = req.user?.user_id || 'system'
+
+      const result = await this.productionModel.endOperation(job_card_id, {
+        actual_end_date,
+        next_operation_id,
+        notes,
+        created_by: userId
+      })
+
+      res.json({
+        success: true,
+        data: result,
+        message: 'Operation ended successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  }
+
+  async getOperationLogs(req, res) {
+    try {
+      const { job_card_id } = req.params
+
+      const logs = await this.productionModel.getOperationLogs(job_card_id)
+
+      res.json({
+        success: true,
+        data: logs
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  }
+
+  async createOutwardChallan(req, res) {
+    try {
+      const { job_card_id, vendor_id, vendor_name, expected_return_date, notes } = req.body
+
+      if (!job_card_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required field: job_card_id'
+        })
+      }
+
+      const challan = await this.productionModel.createOutwardChallan({
+        job_card_id,
+        vendor_id,
+        vendor_name,
+        expected_return_date,
+        notes,
+        created_by: req.user?.id || 'system'
+      })
+
+      res.status(201).json({
+        success: true,
+        message: 'Outward challan created successfully',
+        data: challan
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error creating outward challan',
+        error: error.message
+      })
+    }
+  }
+
+  async getOutwardChallans(req, res) {
+    try {
+      const { job_card_id } = req.query
+
+      if (!job_card_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required parameter: job_card_id'
+        })
+      }
+
+      const challans = await this.productionModel.getOutwardChallans(job_card_id)
+      res.json({
+        success: true,
+        data: challans || []
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching outward challans',
+        error: error.message
+      })
+    }
+  }
+
+  async createInwardChallan(req, res) {
+    try {
+      const { job_card_id, outward_challan_id, vendor_id, vendor_name, quantity_received, quantity_accepted, quantity_rejected, notes } = req.body
+
+      if (!job_card_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required field: job_card_id'
+        })
+      }
+
+      const challan = await this.productionModel.createInwardChallan({
+        job_card_id,
+        outward_challan_id,
+        vendor_id,
+        vendor_name,
+        quantity_received,
+        quantity_accepted,
+        quantity_rejected,
+        notes,
+        created_by: req.user?.id || 'system'
+      })
+
+      res.status(201).json({
+        success: true,
+        message: 'Inward challan created successfully',
+        data: challan
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error creating inward challan',
+        error: error.message
+      })
+    }
+  }
+
+  async getInwardChallans(req, res) {
+    try {
+      const { job_card_id } = req.query
+
+      if (!job_card_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required parameter: job_card_id'
+        })
+      }
+
+      const challans = await this.productionModel.getInwardChallans(job_card_id)
+      res.json({
+        success: true,
+        data: challans || []
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching inward challans',
+        error: error.message
+      })
+    }
+  }
+
+  async updateInwardChallan(req, res) {
+    try {
+      const { id } = req.params
+      const { quantity_received, quantity_accepted, quantity_rejected, notes, status } = req.body
+
+      await this.productionModel.updateInwardChallan(id, {
+        quantity_received,
+        quantity_accepted,
+        quantity_rejected,
+        notes,
+        status
+      })
+
+      res.json({
+        success: true,
+        message: 'Inward challan updated successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error updating inward challan',
+        error: error.message
+      })
+    }
+  }
+
+  async createMaterialRequestFromBOM(bom_id, rawMaterials) {
+    const db = this.productionModel.db
+    
+    if (!rawMaterials || rawMaterials.length === 0) {
+      return null
+    }
+
+    try {
+      const mr_id = 'MR-' + Date.now()
+      const request_date = new Date().toISOString().split('T')[0]
+
+      await db.query(
+        `INSERT INTO material_request 
+         (mr_id, series_no, transition_date, requested_by_id, department, purpose, 
+          request_date, required_by_date, target_warehouse, source_warehouse, items_notes, status) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [mr_id, `BOM-${bom_id}`, null, 'system', 'Production', 'purchase', 
+         request_date, null, null, null, `Auto-created from BOM: ${bom_id}`, 'draft']
+      )
+
+      for (const material of rawMaterials) {
+        const mr_item_id = 'MRI-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
+        await db.query(
+          'INSERT INTO material_request_item (mr_item_id, mr_id, item_code, qty, uom, purpose) VALUES (?, ?, ?, ?, ?, ?)',
+          [mr_item_id, mr_id, material.item_code, parseFloat(material.qty) || 0, material.uom || 'Kg', null]
+        )
+      }
+
+      return mr_id
+    } catch (error) {
+      console.error('Error creating material request from BOM:', error)
+      return null
+    }
+  }
+
+  async createStockMovementsFromBOM(bom_id, mr_id, rawMaterials) {
+    const db = this.productionModel.db
+    
+    if (!rawMaterials || rawMaterials.length === 0) {
+      return []
+    }
+
+    try {
+      const movements = []
+      
+      for (const material of rawMaterials) {
+        const transaction_no = 'SM-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
+        
+        await db.query(
+          `INSERT INTO stock_movements (transaction_no, item_code, warehouse_id, movement_type, quantity, 
+           reference_type, reference_name, notes, created_by) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [transaction_no, material.item_code, material.source_warehouse || 1, 'OUT', 
+           parseFloat(material.qty) || 0, 'BOM', bom_id, 
+           `Material request from BOM: ${bom_id} (MR: ${mr_id})`, 'system']
+        )
+        
+        movements.push(transaction_no)
+      }
+
+      return movements
+    } catch (error) {
+      console.error('Error creating stock movements from BOM:', error)
+      return []
     }
   }
 }

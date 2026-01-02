@@ -212,7 +212,7 @@ const ToolMasterList = () => {
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-96 overflow-y-auto">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tool Name *</label>
+                <label className="block text-xs  text-gray-700 mb-1">Tool Name *</label>
                 <input
                   type="text"
                   name="toolName"
@@ -223,7 +223,7 @@ const ToolMasterList = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tool Code *</label>
+                <label className="block text-xs  text-gray-700 mb-1">Tool Code *</label>
                 <input
                   type="text"
                   name="toolCode"
@@ -234,7 +234,7 @@ const ToolMasterList = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tool Type</label>
+                <label className="block text-xs  text-gray-700 mb-1">Tool Type</label>
                 <input
                   type="text"
                   name="toolType"
@@ -244,7 +244,7 @@ const ToolMasterList = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                <label className="block text-xs  text-gray-700 mb-1">Location</label>
                 <input
                   type="text"
                   name="location"
@@ -254,7 +254,7 @@ const ToolMasterList = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cost</label>
+                <label className="block text-xs  text-gray-700 mb-1">Cost</label>
                 <input
                   type="number"
                   name="cost"
@@ -264,7 +264,7 @@ const ToolMasterList = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <label className="block text-xs  text-gray-700 mb-1">Status</label>
                 <select
                   name="status"
                   value={formData.status}

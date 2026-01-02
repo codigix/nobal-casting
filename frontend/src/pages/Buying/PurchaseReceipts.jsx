@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../services/api'
 import Button from '../../components/Button/Button'
 import DataTable from '../../components/Table/DataTable'
 import Alert from '../../components/Alert/Alert'
@@ -41,7 +41,7 @@ export default function PurchaseReceipts() {
   const fetchGRNRequests = async () => {
     try {
       setLoading(true)
-      const response = await axios.get('/api/grn-requests')
+      const response = await api.get('/grn-requests')
       const data = response.data.data || []
       setGrns(data)
 
@@ -62,7 +62,7 @@ export default function PurchaseReceipts() {
 
   const fetchWarehouses = async () => {
     try {
-      const response = await axios.get('/api/stock/warehouses')
+      const response = await api.get('/stock/warehouses')
       const warehouseData = response.data.data || []
       console.log('Warehouses loaded:', warehouseData)
       setWarehouses(warehouseData)
@@ -74,7 +74,7 @@ export default function PurchaseReceipts() {
 
   const handleStartInspection = async (grnId) => {
     try {
-      const response = await axios.post(`/api/grn-requests/${grnId}/start-inspection`)
+      const response = await api.post(`/grn-requests/${grnId}/start-inspection`)
       setSuccess('Inspection started')
       fetchGRNRequests()
       setTimeout(() => setSuccess(null), 3000)
@@ -90,7 +90,7 @@ export default function PurchaseReceipts() {
     }
 
     try {
-      const response = await axios.post(`/api/grn-requests/${grnId}/approve`, {
+      const response = await api.post(`/grn-requests/${grnId}/approve`, {
         approvedItems: approvalItems
       })
       setSuccess('GRN approved and stock entry created')
@@ -110,7 +110,7 @@ export default function PurchaseReceipts() {
     }
 
     try {
-      await axios.post(`/api/grn-requests/${grnId}/reject`, {
+      await api.post(`/grn-requests/${grnId}/reject`, {
         reason: rejectionReason
       })
       setSuccess('GRN rejected')
@@ -244,7 +244,7 @@ export default function PurchaseReceipts() {
 
       console.log('Sending approval data:', approvedItemsWithStorage)
 
-      const response = await axios.post(`/api/grn-requests/${selectedGRN.id}/inventory-approve`, {
+      const response = await api.post(`/grn-requests/${selectedGRN.id}/inventory-approve`, {
         approvedItems: approvedItemsWithStorage
       })
       setSuccess('✓ GRN approved! Materials stored in inventory. Stock entries created automatically.')
@@ -475,7 +475,7 @@ export default function PurchaseReceipts() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {grns.map(grn => (
                   <div key={grn.id} className="bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow">
-                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 p-4 border-b border-neutral-200 dark:border-neutral-700">
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 p-2 border-b border-neutral-200 dark:border-neutral-700">
                       <div className="flex items-start justify-between text-sm">
                         <div>
                           <h3 className="font-semibold text-neutral-900 dark:text-white text-md">{grn.grn_no}</h3>

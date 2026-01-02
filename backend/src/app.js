@@ -1,4 +1,4 @@
-﻿import express from 'express'
+import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import { createPool } from 'mysql2/promise'
@@ -12,6 +12,8 @@ import stockWarehouseRoutes from './routes/stockWarehouses.js'
 import stockBalanceRoutes from './routes/stockBalance.js'
 import stockLedgerRoutes from './routes/stockLedger.js'
 import stockEntryRoutes from './routes/stockEntries.js'
+import stockMovementRoutes from './routes/stockMovements.js'
+import productionStagesRoutes from './routes/productionStages.js'
 import suppliersRoutes from './routes/suppliers.js'
 import { createProductionRoutes } from './routes/production.js'
 import { createProductionPlanningRoutes } from './routes/productionPlanning.js'
@@ -24,19 +26,16 @@ import materialRequestRoutes from './routes/materialRequests.js'
 import mastersRoutes from './routes/masters.js'
 import machinesRoutes from './routes/machines.js'
 
-// Load environment variables
 dotenv.config()
 
 const app = express()
 
-// CORS Configuration - Handle multiple origins properly
 const allowedOrigins = process.env.CORS_ORIGIN 
   ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
   : ['http://localhost:5174', 'http://localhost:3000', 'http://localhost:3001']
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl requests, etc)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true)
     } else {
@@ -47,11 +46,9 @@ const corsOptions = {
   optionsSuccessStatus: 200
 }
 
-// Middleware
 app.use(cors(corsOptions))
 app.use(express.json())
 
-// Database pool
 let db = null
 
 async function initializeDatabase() {
@@ -67,29 +64,41 @@ async function initializeDatabase() {
       queueLimit: 0
     })
 
-    // Test the database connection
     await db.execute('SELECT 1')
     console.log('✓ Database connected successfully')
 
-    // Create customer tables if they don't exist
     await createCustomerTables()
     
-    // Create UOM table if it doesn't exist
     await createUOMTable()
 
-    // Create Item Group table if it doesn't exist
     await createItemGroupTable()
 
-    // Create Production Planning tables if they don't exist
     await createProductionPlanningTables()
 
-    // Create HR Payroll tables if they don't exist
     await createHRPayrollTables()
 
-    // Store db in app locals for route handlers
+    await createStockMovementTable()
+    
+    await enhanceJobCardTable()
+    
+    await createTimeLogTable()
+    
+    await createRejectionTable()
+    
+    await createRejectionEntryTable()
+    
+    await enhanceTimeLogTable()
+    
+    await createProductionStagesTable()
+    await fixOperationExecutionLogTable()
+    await createOperationExecutionLogTable()
+    await createBomMaterialRequestLinkTable()
+    await createOutwardChallanTable()
+    await createInwardChallanTable()
+    await createDocumentSequencesTable()
+
     app.locals.db = db
 
-    // Make db available globally for models
     global.db = db
 
     console.log('✓ Database pool created successfully')
@@ -232,12 +241,13 @@ async function createItemGroupTable() {
 async function createProductionPlanningTables() {
   try {
     await db.execute(`
-      CREATE TABLE IF NOT EXISTS production_planning_header (
+      CREATE TABLE IF NOT EXISTS production_plan (
         plan_id VARCHAR(100) PRIMARY KEY,
         naming_series VARCHAR(50),
         company VARCHAR(100),
         posting_date DATE NOT NULL,
         sales_order_id VARCHAR(100),
+        bom_id VARCHAR(100),
         status VARCHAR(50) DEFAULT 'draft',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -247,7 +257,7 @@ async function createProductionPlanningTables() {
         INDEX idx_sales_order_id (sales_order_id)
       )
     `)
-    console.log('✓ Production planning header table ready')
+    console.log('✓ Production plan table ready')
 
     await db.execute(`
       CREATE TABLE IF NOT EXISTS production_plan_fg (
@@ -258,6 +268,7 @@ async function createProductionPlanningTables() {
         bom_no VARCHAR(100),
         planned_qty DECIMAL(18,6) NOT NULL,
         uom VARCHAR(50),
+        item_group VARCHAR(100),
         planned_start_date DATE,
         fg_warehouse VARCHAR(100),
         revision VARCHAR(50),
@@ -265,7 +276,7 @@ async function createProductionPlanningTables() {
         notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (plan_id) REFERENCES production_planning_header(plan_id) ON DELETE CASCADE,
+        FOREIGN KEY (plan_id) REFERENCES production_plan(plan_id) ON DELETE CASCADE,
         INDEX idx_plan_id (plan_id),
         INDEX idx_item_code (item_code)
       )
@@ -282,6 +293,7 @@ async function createProductionPlanningTables() {
         schedule_date DATE,
         required_qty DECIMAL(18,6),
         manufacturing_type VARCHAR(50),
+        item_group VARCHAR(100),
         bom_no VARCHAR(100),
         revision VARCHAR(50),
         material_grade VARCHAR(100),
@@ -289,7 +301,7 @@ async function createProductionPlanningTables() {
         notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (plan_id) REFERENCES production_planning_header(plan_id) ON DELETE CASCADE,
+        FOREIGN KEY (plan_id) REFERENCES production_plan(plan_id) ON DELETE CASCADE,
         INDEX idx_plan_id (plan_id),
         INDEX idx_item_code (item_code)
       )
@@ -303,6 +315,7 @@ async function createProductionPlanningTables() {
         item_code VARCHAR(100) NOT NULL,
         item_name VARCHAR(255),
         item_type VARCHAR(50),
+        item_group VARCHAR(100),
         plan_to_request_qty DECIMAL(18,6),
         qty_as_per_bom DECIMAL(18,6),
         required_by DATE,
@@ -313,7 +326,7 @@ async function createProductionPlanningTables() {
         notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (plan_id) REFERENCES production_planning_header(plan_id) ON DELETE CASCADE,
+        FOREIGN KEY (plan_id) REFERENCES production_plan(plan_id) ON DELETE CASCADE,
         INDEX idx_plan_id (plan_id),
         INDEX idx_item_code (item_code)
       )
@@ -369,51 +382,398 @@ async function createHRPayrollTables() {
   }
 }
 
-// Health check endpoint
+async function createStockMovementTable() {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS stock_movements (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        transaction_no VARCHAR(50) NOT NULL UNIQUE,
+        item_code VARCHAR(100) NOT NULL,
+        warehouse_id INT NOT NULL,
+        movement_type ENUM('IN', 'OUT') NOT NULL,
+        quantity DECIMAL(18, 6) NOT NULL,
+        reference_type VARCHAR(50),
+        reference_name VARCHAR(100),
+        notes TEXT,
+        status ENUM('Pending', 'Approved', 'Completed', 'Cancelled') DEFAULT 'Pending',
+        created_by VARCHAR(50),
+        approved_by VARCHAR(50),
+        rejection_reason TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        approved_at TIMESTAMP NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_transaction_no (transaction_no),
+        INDEX idx_item_code (item_code),
+        INDEX idx_warehouse_id (warehouse_id),
+        INDEX idx_status (status),
+        INDEX idx_movement_type (movement_type),
+        INDEX idx_created_at (created_at)
+      )
+    `)
+    console.log('✓ Stock movements table ready')
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
+async function enhanceJobCardTable() {
+  try {
+    const columnsToAdd = [
+      { name: 'operation_sequence', sql: 'operation_sequence INT DEFAULT NULL' },
+      { name: 'planned_start_date', sql: 'planned_start_date DATETIME DEFAULT NULL' },
+      { name: 'planned_end_date', sql: 'planned_end_date DATETIME DEFAULT NULL' },
+      { name: 'actual_start_date', sql: 'actual_start_date DATETIME DEFAULT NULL' },
+      { name: 'actual_end_date', sql: 'actual_end_date DATETIME DEFAULT NULL' },
+      { name: 'is_delayed', sql: 'is_delayed TINYINT(1) DEFAULT 0' },
+      { name: 'next_operation_id', sql: 'next_operation_id INT DEFAULT NULL' },
+      { name: 'assigned_workstation_id', sql: 'assigned_workstation_id VARCHAR(50) DEFAULT NULL' },
+      { name: 'assignment_notes', sql: 'assignment_notes TEXT DEFAULT NULL' },
+      { name: 'inhouse', sql: 'inhouse TINYINT(1) DEFAULT 0' },
+      { name: 'outsource', sql: 'outsource TINYINT(1) DEFAULT 0' }
+    ]
+
+    for (const column of columnsToAdd) {
+      try {
+        await db.execute(`ALTER TABLE job_card ADD COLUMN ${column.sql}`)
+        console.log(`✓ Added column ${column.name} to job_card`)
+      } catch (error) {
+        if (error.message.includes('Duplicate column')) {
+          console.log(`→ Column ${column.name} already exists in job_card`)
+        } else {
+          throw error
+        }
+      }
+    }
+
+    await db.execute(`
+      ALTER TABLE job_card ADD INDEX idx_operation_sequence (operation_sequence),
+      ADD INDEX idx_planned_dates (planned_start_date, planned_end_date),
+      ADD INDEX idx_is_delayed (is_delayed)
+    `)
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
+async function enhanceTimeLogTable() {
+  try {
+    const columnsToAdd = [
+      { name: 'workstation_name', sql: 'workstation_name VARCHAR(100) DEFAULT NULL' },
+      { name: 'inhouse', sql: 'inhouse TINYINT(1) DEFAULT 0' },
+      { name: 'outsource', sql: 'outsource TINYINT(1) DEFAULT 0' }
+    ]
+
+    for (const column of columnsToAdd) {
+      try {
+        await db.execute(`ALTER TABLE time_log ADD COLUMN ${column.sql}`)
+        console.log(`✓ Added column ${column.name} to time_log`)
+      } catch (error) {
+        if (error.message.includes('Duplicate column')) {
+          console.log(`→ Column ${column.name} already exists in time_log`)
+        } else if (error.message.includes('Unknown table')) {
+          console.log('Note: time_log table does not exist yet')
+          return
+        } else {
+          throw error
+        }
+      }
+    }
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
+async function createProductionStagesTable() {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS production_stages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        stage_code VARCHAR(50) NOT NULL UNIQUE,
+        stage_name VARCHAR(100) NOT NULL,
+        stage_sequence INT NOT NULL,
+        description TEXT,
+        is_active TINYINT(1) DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_stage_code (stage_code),
+        INDEX idx_is_active (is_active),
+        INDEX idx_stage_sequence (stage_sequence)
+      )
+    `)
+    console.log('✓ Production stages table ready')
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
+async function createTimeLogTable() {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS time_log (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        time_log_id VARCHAR(50) UNIQUE NOT NULL,
+        job_card_id VARCHAR(50) NOT NULL,
+        employee_id VARCHAR(50),
+        operator_name VARCHAR(255),
+        workstation_name VARCHAR(100),
+        shift VARCHAR(10),
+        from_time TIME,
+        to_time TIME,
+        time_in_minutes INT DEFAULT 0,
+        completed_qty DECIMAL(18,6) DEFAULT 0,
+        accepted_qty DECIMAL(18,6) DEFAULT 0,
+        rejected_qty DECIMAL(18,6) DEFAULT 0,
+        scrap_qty DECIMAL(18,6) DEFAULT 0,
+        inhouse TINYINT(1) DEFAULT 0,
+        outsource TINYINT(1) DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_job_card_id (job_card_id),
+        INDEX idx_employee_id (employee_id),
+        INDEX idx_time_log_id (time_log_id),
+        FOREIGN KEY (job_card_id) REFERENCES job_card(job_card_id) ON DELETE CASCADE
+      )
+    `)
+    console.log('✓ Time log table ready')
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
+async function createRejectionTable() {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS rejection (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        job_card_id VARCHAR(50) NOT NULL,
+        operator_name VARCHAR(255),
+        machine VARCHAR(255),
+        rejection_reason VARCHAR(255),
+        quantity DECIMAL(18,6) DEFAULT 0,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_job_card_id (job_card_id),
+        FOREIGN KEY (job_card_id) REFERENCES job_card(job_card_id) ON DELETE CASCADE
+      )
+    `)
+    console.log('✓ Rejection table ready')
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
+async function createRejectionEntryTable() {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS rejection_entry (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        rejection_id VARCHAR(50) UNIQUE NOT NULL,
+        job_card_id VARCHAR(50) NOT NULL,
+        rejection_reason VARCHAR(255),
+        rejected_qty DECIMAL(18,6) DEFAULT 0,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_job_card_id (job_card_id),
+        INDEX idx_rejection_id (rejection_id),
+        FOREIGN KEY (job_card_id) REFERENCES job_card(job_card_id) ON DELETE CASCADE
+      )
+    `)
+    console.log('✓ Rejection entry table ready')
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
+async function fixOperationExecutionLogTable() {
+  try {
+    await db.execute(`
+      ALTER TABLE operation_execution_log MODIFY COLUMN event_timestamp DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3)
+    `)
+    await db.execute(`
+      ALTER TABLE operation_execution_log MODIFY COLUMN workstation_id VARCHAR(50)
+    `)
+    console.log('✓ Operation execution log table schema updated')
+  } catch (error) {
+    if (error.message.includes('Unknown table')) {
+      console.log('Note: operation_execution_log table does not exist yet')
+    } else {
+      console.log('Note:', error.message)
+    }
+  }
+}
+
+async function createOperationExecutionLogTable() {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS operation_execution_log (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        job_card_id VARCHAR(50) NOT NULL,
+        event_type VARCHAR(50) NOT NULL,
+        event_timestamp DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
+        workstation_id VARCHAR(50),
+        operator_id VARCHAR(100),
+        start_date DATE,
+        start_time TIME,
+        notes TEXT,
+        created_by VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_job_card_id (job_card_id),
+        INDEX idx_event_type (event_type),
+        INDEX idx_event_timestamp (event_timestamp),
+        FOREIGN KEY (job_card_id) REFERENCES job_card(job_card_id) ON DELETE CASCADE
+      )
+    `)
+    console.log('✓ Operation execution log table ready')
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
+async function createBomMaterialRequestLinkTable() {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS bom_material_request_link (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        bom_id INT NOT NULL,
+        material_request_id INT NOT NULL,
+        link_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_by VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_bom_id (bom_id),
+        INDEX idx_material_request_id (material_request_id),
+        INDEX idx_link_timestamp (link_timestamp),
+        UNIQUE KEY unique_bom_mr (bom_id, material_request_id)
+      )
+    `)
+    console.log('✓ BOM Material Request link table ready')
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
+async function createOutwardChallanTable() {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS outward_challan (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        challan_number VARCHAR(50) UNIQUE NOT NULL,
+        job_card_id VARCHAR(50) NOT NULL,
+        vendor_id VARCHAR(50),
+        vendor_name VARCHAR(255),
+        challan_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        expected_return_date DATE,
+        notes TEXT,
+        status VARCHAR(50) DEFAULT 'issued',
+        created_by VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_job_card_id (job_card_id),
+        INDEX idx_vendor_id (vendor_id),
+        INDEX idx_challan_date (challan_date),
+        INDEX idx_status (status),
+        FOREIGN KEY (job_card_id) REFERENCES job_card(job_card_id) ON DELETE CASCADE
+      )
+    `)
+    console.log('✓ Outward challan table ready')
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
+async function createInwardChallanTable() {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS inward_challan (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        challan_number VARCHAR(50) UNIQUE NOT NULL,
+        outward_challan_id INT,
+        job_card_id VARCHAR(50) NOT NULL,
+        vendor_id VARCHAR(50),
+        vendor_name VARCHAR(255),
+        received_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        quantity_received DECIMAL(18,6) DEFAULT 0,
+        quantity_accepted DECIMAL(18,6) DEFAULT 0,
+        quantity_rejected DECIMAL(18,6) DEFAULT 0,
+        notes TEXT,
+        status VARCHAR(50) DEFAULT 'received',
+        created_by VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_job_card_id (job_card_id),
+        INDEX idx_outward_challan_id (outward_challan_id),
+        INDEX idx_vendor_id (vendor_id),
+        INDEX idx_received_date (received_date),
+        INDEX idx_status (status),
+        FOREIGN KEY (job_card_id) REFERENCES job_card(job_card_id) ON DELETE CASCADE,
+        FOREIGN KEY (outward_challan_id) REFERENCES outward_challan(id) ON DELETE SET NULL
+      )
+    `)
+    console.log('✓ Inward challan table ready')
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
+async function createDocumentSequencesTable() {
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS document_sequences (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        document_type VARCHAR(50) NOT NULL,
+        sequence_date DATE NOT NULL,
+        next_number INT NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_doc_date (document_type, sequence_date),
+        INDEX idx_document_type (document_type),
+        INDEX idx_sequence_date (sequence_date)
+      )
+    `)
+    console.log('✓ Document sequences table ready')
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-// Setup routes function - called after DB initialization
 function setupRoutes() {
-  // API Routes - Authentication (requires db)
   app.use('/api/auth', authRoutes(db))
   
-  // API Routes - Inventory Module
   app.use('/api/items', itemRoutes)
   app.use('/api/item-groups', itemGroupRoutes)
   app.use('/api/uom', uomRoutes)
   app.use('/api/purchase-orders', purchaseOrderRoutes)
   app.use('/api/purchase-receipts', purchaseReceiptRoutes)
   app.use('/api/grn-requests', grnRequestRoutes)
+  app.use('/api/warehouses', stockWarehouseRoutes)
   app.use('/api/stock/warehouses', stockWarehouseRoutes)
   app.use('/api/stock/stock-balance', stockBalanceRoutes)
   app.use('/api/stock/ledger', stockLedgerRoutes)
   app.use('/api/stock/entries', stockEntryRoutes)
+  app.use('/api/stock/movements', stockMovementRoutes)
   app.use('/api/suppliers', suppliersRoutes)
   
-  // API Routes - Manufacturing Module
+  app.use('/api/production-stages', productionStagesRoutes)
   app.use('/api/production', createProductionRoutes(db))
   app.use('/api/production-planning', createProductionPlanningRoutes(db))
   app.use('/api/customers', customerRoutes)
   app.use('/api/material-requests', materialRequestRoutes)
   
-  // API Routes - HR & Payroll Module
   app.use('/api/hr', createHRPayrollRoutes(db))
   
-  // API Routes - Selling Module
   app.use('/api/selling', sellingRoutes)
   
-  // API Routes - Analytics (for all departments)
   app.use('/api/analytics', analyticsRoutes)
   
-  // API Routes - Masters Data
   app.use('/api/masters', mastersRoutes)
   
-  // API Routes - Machines Analysis
   app.use('/api/machines', machinesRoutes)
   
-  // Error handling middleware (must be after all routes)
   app.use((err, req, res, next) => {
     console.error(err.stack)
     res.status(500).json({ 
@@ -422,7 +782,6 @@ function setupRoutes() {
     })
   })
 
-  // 404 handler (must be last)
   app.use((req, res) => {
     res.status(404).json({ error: 'Endpoint not found' })
   })
@@ -430,10 +789,9 @@ function setupRoutes() {
 
 const PORT = process.env.PORT || 5000
 
-// Start server
 async function start() {
   await initializeDatabase()
-  setupRoutes() // Setup routes after DB is initialized
+  setupRoutes()
   
   app.listen(PORT, () => {
     console.log(`✓ Server running on http://localhost:${PORT}`)

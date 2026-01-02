@@ -221,7 +221,7 @@ const DieRegisterList = () => {
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-96 overflow-y-auto">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Die Name *</label>
+                <label className="block text-xs  text-gray-700 mb-1">Die Name *</label>
                 <input
                   type="text"
                   name="dieName"
@@ -232,7 +232,7 @@ const DieRegisterList = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Die Code *</label>
+                <label className="block text-xs  text-gray-700 mb-1">Die Code *</label>
                 <input
                   type="text"
                   name="dieCode"
@@ -243,7 +243,7 @@ const DieRegisterList = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
+                <label className="block text-xs  text-gray-700 mb-1">Assigned To</label>
                 <input
                   type="text"
                   name="assignedTo"
@@ -253,7 +253,7 @@ const DieRegisterList = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Usage Count</label>
+                <label className="block text-xs  text-gray-700 mb-1">Usage Count</label>
                 <input
                   type="number"
                   name="usageCount"
@@ -263,7 +263,7 @@ const DieRegisterList = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Production Hours</label>
+                <label className="block text-xs  text-gray-700 mb-1">Production Hours</label>
                 <input
                   type="number"
                   name="productionHours"
@@ -273,7 +273,7 @@ const DieRegisterList = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <label className="block text-xs  text-gray-700 mb-1">Status</label>
                 <select
                   name="status"
                   value={formData.status}

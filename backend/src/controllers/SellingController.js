@@ -268,15 +268,15 @@ export class SellingController {
 
   static async createSalesOrder(req, res) {
     const db = req.app.locals.db
-    const { customer_id, customer_name, customer_email, customer_phone, quotation_id, order_amount, total_value, delivery_date, order_terms, terms_conditions, items, bom_id, bom_name, source_warehouse, order_type, status, bom_raw_materials, bom_operations, bom_finished_goods } = req.body
+    const { customer_id, customer_name, customer_email, customer_phone, quotation_id, order_amount, total_value, delivery_date, order_terms, terms_conditions, items, bom_id, bom_name, source_warehouse, order_type, status, quantity, qty, bom_raw_materials, bom_operations, bom_finished_goods } = req.body
 
     try {
       // Accept both field name variations
-      const finalAmount = order_amount || total_value
       const finalTerms = order_terms || terms_conditions
+      const salesQuantity = parseFloat(qty || quantity) || 1
 
-      if (!customer_id || !finalAmount) {
-        return res.status(400).json({ error: 'Customer and order amount are required' })
+      if (!customer_id) {
+        return res.status(400).json({ error: 'Customer is required' })
       }
 
       // Fetch customer details
@@ -295,16 +295,28 @@ export class SellingController {
       const finalCustomerPhone = customer_phone || customer.phone || ''
 
       const sales_order_id = `SO-${Date.now()}`
-      const itemsJSON = items ? JSON.stringify(items) : null
+      
+      // Calculate amounts for items based on BOM qty and sales order quantity
+      const calculatedItems = items && items.length > 0 
+        ? items.map(item => ({
+            ...item,
+            amount: ((item.bom_qty || item.qty || 1) * salesQuantity * (item.rate || 0))
+          }))
+        : []
+      
+      // Calculate grand total
+      const finalAmount = calculatedItems.reduce((sum, item) => sum + (item.amount || 0), 0)
+      
+      const itemsJSON = calculatedItems && calculatedItems.length > 0 ? JSON.stringify(calculatedItems) : null
       const bomRawMaterialsJSON = bom_raw_materials ? JSON.stringify(bom_raw_materials) : null
       const bomOperationsJSON = bom_operations ? JSON.stringify(bom_operations) : null
       const bomFinishedGoodsJSON = bom_finished_goods ? JSON.stringify(bom_finished_goods) : null
 
       await db.execute(
         `INSERT INTO selling_sales_order 
-         (sales_order_id, customer_id, customer_name, customer_email, customer_phone, quotation_id, order_amount, delivery_date, order_terms, items, bom_id, bom_name, source_warehouse, order_type, status, bom_raw_materials, bom_operations, bom_finished_goods)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [sales_order_id, customer_id, finalCustomerName, finalCustomerEmail, finalCustomerPhone, quotation_id || null, finalAmount, delivery_date || null, finalTerms || null, itemsJSON, bom_id || null, bom_name || null, source_warehouse || null, order_type || 'Sales', status || 'Draft', bomRawMaterialsJSON, bomOperationsJSON, bomFinishedGoodsJSON]
+         (sales_order_id, customer_id, customer_name, customer_email, customer_phone, quotation_id, order_amount, delivery_date, order_terms, items, bom_id, bom_name, qty, source_warehouse, order_type, status, bom_raw_materials, bom_operations, bom_finished_goods)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [sales_order_id, customer_id, finalCustomerName, finalCustomerEmail, finalCustomerPhone, quotation_id || null, finalAmount, delivery_date || null, finalTerms || null, itemsJSON, bom_id || null, bom_name || null, salesQuantity, source_warehouse || null, order_type || 'Sales', status || 'Draft', bomRawMaterialsJSON, bomOperationsJSON, bomFinishedGoodsJSON]
       )
 
       res.status(201).json({
@@ -323,6 +335,7 @@ export class SellingController {
           items: items || [],
           bom_id,
           bom_name,
+          qty: salesQuantity,
           source_warehouse,
           order_type: order_type || 'Sales',
           status: status || 'Draft',
@@ -342,7 +355,7 @@ export class SellingController {
     const { customer_id, status } = req.query
 
     try {
-      let query = `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.source_warehouse, sso.order_type, sso.customer_name, sso.customer_email, sso.customer_phone, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
+      let query = `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.qty, sso.source_warehouse, sso.order_type, sso.customer_name, sso.customer_email, sso.customer_phone, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
                           sso.order_amount as total_value, 
                           COALESCE(c.name, sso.customer_name, '') as customer_full_name,
                           COALESCE(c.email, sso.customer_email, '') as customer_email_alt,
@@ -407,7 +420,7 @@ export class SellingController {
       )
 
       const [updated] = await db.execute(
-        `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.source_warehouse, sso.order_type, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
+        `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.qty, sso.source_warehouse, sso.order_type, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
                 sso.order_amount as total_value, 
                 COALESCE(c.name, '') as customer_name,
                 COALESCE(c.email, '') as customer_email,
@@ -439,7 +452,7 @@ export class SellingController {
 
     try {
       const [orders] = await db.execute(
-        `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.source_warehouse, sso.order_type, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
+        `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.qty, sso.source_warehouse, sso.order_type, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
                 sso.order_amount as total_value,
                 sso.customer_name,
                 sso.customer_email,
@@ -536,7 +549,7 @@ export class SellingController {
   static async updateSalesOrder(req, res) {
     const db = req.app.locals.db
     const { id } = req.params
-    const { order_amount, total_value, delivery_date, order_terms, status, items, bom_id, bom_name, source_warehouse, order_type, customer_name, customer_email, customer_phone, bom_raw_materials, bom_operations, bom_finished_goods } = req.body
+    const { order_amount, total_value, delivery_date, order_terms, status, items, bom_id, bom_name, source_warehouse, order_type, customer_name, customer_email, customer_phone, bom_raw_materials, bom_operations, bom_finished_goods, qty } = req.body
 
     try {
       // Check if order exists
@@ -553,25 +566,28 @@ export class SellingController {
       const updates = []
       const values = []
 
+      // Calculate amounts for items and grand total if items are provided
+      let calculatedItems = null
+      let finalAmount = order_amount || total_value
+      
+      if (items !== undefined) {
+        calculatedItems = items && items.length > 0
+          ? items.map(item => ({
+              ...item,
+              amount: ((item.bom_qty || item.qty || 1) * (item.rate || 0))
+            }))
+          : []
+        
+        // Calculate grand total from items
+        finalAmount = calculatedItems.reduce((sum, item) => sum + (item.amount || 0), 0)
+        
+        updates.push('items = ?')
+        values.push(calculatedItems && calculatedItems.length > 0 ? JSON.stringify(calculatedItems) : null)
+      }
+
       if (order_amount !== undefined || total_value !== undefined) {
         updates.push('order_amount = ?')
-        values.push(order_amount || total_value)
-      }
-      if (delivery_date !== undefined) {
-        updates.push('delivery_date = ?')
-        values.push(delivery_date || null)
-      }
-      if (order_terms !== undefined) {
-        updates.push('order_terms = ?')
-        values.push(order_terms)
-      }
-      if (status !== undefined) {
-        updates.push('status = ?')
-        values.push(status)
-      }
-      if (items !== undefined) {
-        updates.push('items = ?')
-        values.push(items ? JSON.stringify(items) : null)
+        values.push(finalAmount)
       }
       if (bom_id !== undefined) {
         updates.push('bom_id = ?')
@@ -580,6 +596,10 @@ export class SellingController {
       if (bom_name !== undefined) {
         updates.push('bom_name = ?')
         values.push(bom_name || null)
+      }
+      if (qty !== undefined) {
+        updates.push('qty = ?')
+        values.push(parseFloat(qty) || 1)
       }
       if (source_warehouse !== undefined) {
         updates.push('source_warehouse = ?')
@@ -613,6 +633,19 @@ export class SellingController {
         updates.push('bom_finished_goods = ?')
         values.push(bom_finished_goods ? JSON.stringify(bom_finished_goods) : null)
       }
+      if (status !== undefined) {
+        updates.push('status = ?')
+        values.push(status || 'Draft')
+      }
+      if (delivery_date !== undefined) {
+        updates.push('delivery_date = ?')
+        const dateValue = delivery_date ? new Date(delivery_date).toISOString().split('T')[0] : null
+        values.push(dateValue)
+      }
+      if (order_terms !== undefined) {
+        updates.push('order_terms = ?')
+        values.push(order_terms || null)
+      }
 
       if (updates.length === 0) {
         return res.status(400).json({ error: 'No fields to update' })
@@ -622,11 +655,14 @@ export class SellingController {
       values.push(id)
 
       const query = `UPDATE selling_sales_order SET ${updates.join(', ')} WHERE sales_order_id = ?`
-      await db.execute(query, values)
+      console.log('UPDATE Query:', query)
+      console.log('UPDATE Values:', values)
+      const result = await db.execute(query, values)
+      console.log('UPDATE executed successfully', result)
 
       // Fetch updated order with customer info
       const [updated] = await db.execute(
-        `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.source_warehouse, sso.order_type, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
+        `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.qty, sso.source_warehouse, sso.order_type, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
                 sso.order_amount as total_value, 
                 COALESCE(c.name, '') as customer_name,
                 COALESCE(c.email, '') as customer_email,
@@ -677,6 +713,21 @@ export class SellingController {
     } catch (error) {
       console.error('Error deleting sales order:', error)
       res.status(500).json({ error: 'Failed to delete sales order', details: error.message })
+    }
+  }
+
+  static async truncateSalesOrders(req, res) {
+    const db = req.app.locals.db
+
+    try {
+      await db.execute(
+        'DELETE FROM selling_sales_order'
+      )
+
+      res.json({ success: true, message: 'All sales orders truncated successfully' })
+    } catch (error) {
+      console.error('Error truncating sales orders:', error)
+      res.status(500).json({ error: 'Failed to truncate sales orders', details: error.message })
     }
   }
 

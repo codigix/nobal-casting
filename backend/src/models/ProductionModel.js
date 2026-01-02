@@ -7,6 +7,11 @@ class ProductionModel {
 
   async createOperation(data) {
     try {
+      const existing = await this.getOperationById(data.name)
+      if (existing) {
+        throw new Error(`Operation '${data.name}' already exists`)
+      }
+      
       await this.db.query(
         `INSERT INTO operation (name, operation_name, default_workstation, is_corrective_operation, create_job_card_based_on_batch_size, batch_size, quality_inspection_template, description)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -96,10 +101,9 @@ class ProductionModel {
   async createWorkOrder(data) {
     try {
       await this.db.query(
-        `INSERT INTO work_order (wo_id, item_code, bom_no, quantity, priority, notes, planned_start_date, planned_end_date, actual_start_date, actual_end_date, expected_delivery_date, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [data.wo_id, data.item_code, data.bom_no, data.quantity, data.priority, data.notes, 
-         data.planned_start_date || null, data.planned_end_date || null, data.actual_start_date || null, data.actual_end_date || null, data.expected_delivery_date || null, data.status]
+        `INSERT INTO work_order (wo_id, item_code, quantity, priority, notes, status, sales_order_id, bom_no, planned_start_date, planned_end_date, actual_start_date, actual_end_date, expected_delivery_date)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [data.wo_id, data.item_code, data.quantity, data.priority || 'medium', data.notes || '', data.status, data.sales_order_id || null, data.bom_no || null, data.planned_start_date || null, data.planned_end_date || null, data.actual_start_date || null, data.actual_end_date || null, data.expected_delivery_date || null]
       )
       return { wo_id: data.wo_id, ...data }
     } catch (error) {
@@ -169,12 +173,13 @@ class ProductionModel {
       if (data.quantity) { fields.push('quantity = ?'); values.push(data.quantity) }
       if (data.status) { fields.push('status = ?'); values.push(data.status) }
       if (data.priority) { fields.push('priority = ?'); values.push(data.priority) }
-      if (data.notes) { fields.push('notes = ?'); values.push(data.notes) }
-      if (data.planned_start_date) { fields.push('planned_start_date = ?'); values.push(data.planned_start_date) }
-      if (data.planned_end_date) { fields.push('planned_end_date = ?'); values.push(data.planned_end_date) }
-      if (data.actual_start_date) { fields.push('actual_start_date = ?'); values.push(data.actual_start_date) }
-      if (data.actual_end_date) { fields.push('actual_end_date = ?'); values.push(data.actual_end_date) }
-      if (data.expected_delivery_date) { fields.push('expected_delivery_date = ?'); values.push(data.expected_delivery_date) }
+      if (data.notes !== undefined) { fields.push('notes = ?'); values.push(data.notes) }
+      if (data.sales_order_id !== undefined) { fields.push('sales_order_id = ?'); values.push(data.sales_order_id) }
+      if (data.planned_start_date !== undefined) { fields.push('planned_start_date = ?'); values.push(data.planned_start_date) }
+      if (data.planned_end_date !== undefined) { fields.push('planned_end_date = ?'); values.push(data.planned_end_date) }
+      if (data.actual_start_date !== undefined) { fields.push('actual_start_date = ?'); values.push(data.actual_start_date) }
+      if (data.actual_end_date !== undefined) { fields.push('actual_end_date = ?'); values.push(data.actual_end_date) }
+      if (data.expected_delivery_date !== undefined) { fields.push('expected_delivery_date = ?'); values.push(data.expected_delivery_date) }
 
       if (fields.length === 0) return false
 
@@ -199,11 +204,13 @@ class ProductionModel {
 
   async addWorkOrderItem(wo_id, item) {
     try {
+      const requiredQty = item.required_qty || item.required_quantity || item.qty || item.quantity || 0
+      
       await this.db.query(
         `INSERT INTO work_order_item (wo_id, item_code, source_warehouse, required_qty, transferred_qty, consumed_qty, returned_qty, sequence)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [wo_id, item.item_code, item.source_warehouse, item.required_qty || item.required_quantity, 
-         item.transferred_qty || 0, item.consumed_qty || 0, item.returned_qty || 0, item.sequence]
+        [wo_id, item.item_code, item.source_warehouse || '', requiredQty, 
+         item.transferred_qty || 0, item.consumed_qty || 0, item.returned_qty || 0, item.sequence || 0]
       )
     } catch (error) {
       throw error
@@ -221,11 +228,15 @@ class ProductionModel {
 
   async addWorkOrderOperation(wo_id, operation) {
     try {
+      const operationName = operation.operation_name || operation.operation || ''
+      const workstation = operation.workstation_type || operation.workstation || ''
+      const time = operation.operation_time || operation.time || 0
+      
       await this.db.query(
         `INSERT INTO work_order_operation (wo_id, operation, workstation, time, completed_qty, process_loss_qty, sequence)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [wo_id, operation.operation, operation.workstation, operation.time, 
-         operation.completed_qty || 0, operation.process_loss_qty || 0, operation.sequence]
+        [wo_id, operationName, workstation, time, 
+         operation.completed_qty || 0, operation.process_loss_qty || 0, operation.sequence || 0]
       )
     } catch (error) {
       throw error
@@ -572,11 +583,11 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async createBOM(data) {
     try {
-      const query = `INSERT INTO bom (bom_id, item_code, product_name, item_group, description, quantity, uom, status, revision, effective_date, total_cost, created_by)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      const query = `INSERT INTO bom (bom_id, item_code, product_name, item_group, items_group, description, quantity, uom, status, revision, effective_date, total_cost, created_by)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       await this.db.query(
         query,
-        [data.bom_id, data.item_code, data.product_name, data.item_group, data.description, data.quantity || 1, 
+        [data.bom_id, data.item_code, data.product_name, data.item_group, data.items_group || 'Finished Goods', data.description, data.quantity || 1, 
          data.uom, data.status, data.revision, data.effective_date, data.total_cost || 0, data.created_by]
       )
       return data
@@ -584,12 +595,25 @@ async deleteAllBOMRawMaterials(bom_id) {
       if (error.code !== 'ER_BAD_FIELD_ERROR') {
         throw error
       }
-      await this.db.query(
-        `INSERT INTO bom (bom_id, item_code, description, quantity, uom, status, revision, effective_date, total_cost, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [data.bom_id, data.item_code, data.description, data.quantity || 1, 
-         data.uom, data.status, data.revision, data.effective_date, data.total_cost || 0, data.created_by]
-      )
+      try {
+        await this.db.query(
+          `INSERT INTO bom (bom_id, item_code, description, quantity, uom, status, revision, effective_date, total_cost, created_by)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [data.bom_id, data.item_code, data.description, data.quantity || 1, 
+           data.uom, data.status, data.revision, data.effective_date, data.total_cost || 0, data.created_by]
+        )
+      } catch (innerError) {
+        if (innerError.code === 'ER_BAD_FIELD_ERROR') {
+          await this.db.query(
+            `INSERT INTO bom (bom_id, item_code, product_name, item_group, items_group, description, quantity, uom, status, revision, effective_date, total_cost, created_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [data.bom_id, data.item_code, data.product_name || '', data.item_group || '', data.items_group || 'Finished Goods', data.description, data.quantity || 1, 
+             data.uom, data.status, data.revision, data.effective_date, data.total_cost || 0, data.created_by]
+          )
+        } else {
+          throw innerError
+        }
+      }
       return data
     }
   }
@@ -769,10 +793,10 @@ async deleteAllBOMRawMaterials(bom_id) {
   async createJobCard(data) {
     try {
       await this.db.query(
-        `INSERT INTO job_card (job_card_id, work_order_id, machine_id, operator_id, planned_quantity, scheduled_start_date, scheduled_end_date, status, created_by, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [data.job_card_id, data.work_order_id, data.machine_id, data.operator_id, 
-         data.planned_quantity, data.scheduled_start_date, data.scheduled_end_date, data.status, data.created_by, data.notes]
+        `INSERT INTO job_card (job_card_id, work_order_id, machine_id, operator_id, operation, operation_sequence, planned_quantity, operation_time, scheduled_start_date, scheduled_end_date, status, created_by, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [data.job_card_id, data.work_order_id, data.machine_id, data.operator_id, data.operation || null, data.operation_sequence || null,
+         data.planned_quantity, data.operation_time || 0, data.scheduled_start_date, data.scheduled_end_date, data.status, data.created_by, data.notes]
       )
       return data
     } catch (error) {
@@ -786,6 +810,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       const values = []
 
       if (data.operation) { fields.push('operation = ?'); values.push(data.operation) }
+      if (data.operation_sequence) { fields.push('operation_sequence = ?'); values.push(data.operation_sequence) }
       if (data.status) { fields.push('status = ?'); values.push(data.status) }
       if (data.operator_id) { fields.push('operator_id = ?'); values.push(data.operator_id) }
       if (data.machine_id) { fields.push('machine_id = ?'); values.push(data.machine_id) }
@@ -835,9 +860,9 @@ async deleteAllBOMRawMaterials(bom_id) {
       const response = await this.db.query(
         `INSERT INTO workstation (name, workstation_name, description, location, capacity_per_hour, is_active, status)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [data.id, data.name, data.description, data.location, data.capacity_per_hour, data.is_active !== false, 'active']
+        [data.name, data.workstation_name, data.description, data.location, data.capacity_per_hour, data.is_active !== false, 'active']
       )
-      return { id: data.id, ...data }
+      return { ...data }
     } catch (error) {
       throw error
     }
@@ -866,10 +891,10 @@ async deleteAllBOMRawMaterials(bom_id) {
       const fields = []
       const values = []
 
-      if (data.name) { fields.push('workstation_name = ?'); values.push(data.name) }
+      if (data.workstation_name) { fields.push('workstation_name = ?'); values.push(data.workstation_name) }
       if (data.description) { fields.push('description = ?'); values.push(data.description) }
       if (data.location) { fields.push('location = ?'); values.push(data.location) }
-      if (data.capacity_per_hour) { fields.push('capacity_per_hour = ?'); values.push(data.capacity_per_hour) }
+      if (data.capacity_per_hour !== undefined) { fields.push('capacity_per_hour = ?'); values.push(data.capacity_per_hour) }
       if (data.is_active !== undefined) { fields.push('is_active = ?'); values.push(data.is_active) }
 
       if (fields.length === 0) return false
@@ -1080,12 +1105,13 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async recordRejection(data) {
     try {
+      const rejectionId = `REJ-${Date.now()}`
       await this.db.query(
-        `INSERT INTO rejection (job_card_id, operator_name, machine, rejection_reason, quantity, notes, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-        [data.job_card_id, data.operator_name, data.machine, data.rejection_reason, data.quantity, data.notes]
+        `INSERT INTO rejection_entry (rejection_id, job_card_id, rejection_reason, rejected_qty, notes)
+         VALUES (?, ?, ?, ?, ?)`,
+        [rejectionId, data.job_card_id, data.rejection_reason, data.rejected_qty, data.notes]
       )
-      return data
+      return { rejection_id: rejectionId, ...data }
     } catch (error) {
       throw error
     }
@@ -1114,13 +1140,14 @@ async deleteAllBOMRawMaterials(bom_id) {
   async createTimeLog(data) {
     try {
       const timeLogId = `TL-${Date.now()}`
-      const query = `INSERT INTO time_log (time_log_id, job_card_id, employee_id, operator_name, shift, from_time, to_time, time_in_minutes, completed_qty, accepted_qty, rejected_qty, scrap_qty)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      const query = `INSERT INTO time_log (time_log_id, job_card_id, employee_id, operator_name, workstation_name, shift, from_time, to_time, time_in_minutes, completed_qty, accepted_qty, rejected_qty, scrap_qty, inhouse, outsource)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       await this.db.query(query, [
         timeLogId,
         data.job_card_id,
         data.employee_id || null,
         data.operator_name || null,
+        data.workstation_name || null,
         data.shift || 'A',
         data.from_time || null,
         data.to_time || null,
@@ -1128,7 +1155,9 @@ async deleteAllBOMRawMaterials(bom_id) {
         data.completed_qty || 0,
         data.accepted_qty || 0,
         data.rejected_qty || 0,
-        data.scrap_qty || 0
+        data.scrap_qty || 0,
+        data.inhouse ? 1 : 0,
+        data.outsource ? 1 : 0
       ])
       return { time_log_id: timeLogId, ...data }
     } catch (error) {
@@ -1223,6 +1252,186 @@ async deleteAllBOMRawMaterials(bom_id) {
     try {
       await this.db.query('DELETE FROM downtime_entry WHERE downtime_id = ?', [downtimeId])
       return true
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async startOperation(jobCardId, data) {
+    try {
+      const { actual_start_date, workstation_id, employee_id, start_date, start_time, inhouse, outsource, notes, created_by } = data
+
+      const eventTimestamp = new Date(actual_start_date).toISOString().replace('Z', '').replace('T', ' ')
+      await this.db.query(
+        `INSERT INTO operation_execution_log 
+          (job_card_id, event_type, event_timestamp, workstation_id, operator_id, start_date, start_time, notes, created_by)
+         VALUES (?, 'START', ?, ?, ?, ?, ?, ?, ?)`,
+        [jobCardId, eventTimestamp, workstation_id || null, employee_id || null, start_date || null, start_time || null, notes || null, created_by || 'system']
+      )
+
+      await this.db.query(
+        `UPDATE job_card SET actual_start_date = ?, status = 'in-progress', assigned_workstation_id = ?, operator_id = ?, inhouse = ?, outsource = ? WHERE job_card_id = ?`,
+        [eventTimestamp, workstation_id || null, employee_id || null, inhouse ? 1 : 0, outsource ? 1 : 0, jobCardId]
+      )
+
+      return { success: true, message: 'Operation started successfully' }
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async endOperation(jobCardId, data) {
+    try {
+      const { actual_end_date, next_operation_id, notes, created_by } = data
+
+      const eventTimestamp = new Date(actual_end_date).toISOString().replace('Z', '').replace('T', ' ')
+      await this.db.query(
+        `INSERT INTO operation_execution_log 
+          (job_card_id, event_type, event_timestamp, notes, created_by)
+         VALUES (?, 'END', ?, ?, ?)`,
+        [jobCardId, eventTimestamp, notes || null, created_by || 'system']
+      )
+
+      await this.db.query(
+        `UPDATE job_card SET actual_end_date = ?, status = 'completed', next_operation_id = ? WHERE job_card_id = ?`,
+        [eventTimestamp, next_operation_id || null, jobCardId]
+      )
+
+      return { success: true, message: 'Operation ended successfully' }
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async getOperationLogs(jobCardId) {
+    try {
+      const [logs] = await this.db.query(
+        `SELECT * FROM operation_execution_log 
+         WHERE job_card_id = ? 
+         ORDER BY event_timestamp ASC`,
+        [jobCardId]
+      )
+      return logs || []
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async createOutwardChallan(data) {
+    try {
+      const challanNumber = `OC-${Date.now()}`
+      const query = `INSERT INTO outward_challan (challan_number, job_card_id, vendor_id, vendor_name, expected_return_date, notes, status, created_by)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      await this.db.query(query, [
+        challanNumber,
+        data.job_card_id,
+        data.vendor_id || null,
+        data.vendor_name || null,
+        data.expected_return_date || null,
+        data.notes || null,
+        'issued',
+        data.created_by || null
+      ])
+      return { challan_number: challanNumber, ...data }
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async getOutwardChallans(jobCardId) {
+    try {
+      const [challans] = await this.db.query('SELECT * FROM outward_challan WHERE job_card_id = ? ORDER BY challan_date DESC', [jobCardId])
+      return challans || []
+    } catch (error) {
+      return []
+    }
+  }
+
+  async createInwardChallan(data) {
+    try {
+      const challanNumber = `IC-${Date.now()}`
+      const query = `INSERT INTO inward_challan (challan_number, outward_challan_id, job_card_id, vendor_id, vendor_name, quantity_received, quantity_accepted, quantity_rejected, notes, status, created_by)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      await this.db.query(query, [
+        challanNumber,
+        data.outward_challan_id || null,
+        data.job_card_id,
+        data.vendor_id || null,
+        data.vendor_name || null,
+        data.quantity_received || 0,
+        data.quantity_accepted || 0,
+        data.quantity_rejected || 0,
+        data.notes || null,
+        'received',
+        data.created_by || null
+      ])
+      return { challan_number: challanNumber, ...data }
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async getInwardChallans(jobCardId) {
+    try {
+      const [challans] = await this.db.query('SELECT * FROM inward_challan WHERE job_card_id = ? ORDER BY received_date DESC', [jobCardId])
+      return challans || []
+    } catch (error) {
+      return []
+    }
+  }
+
+  async updateInwardChallan(id, data) {
+    try {
+      const updateFields = []
+      const values = []
+      
+      for (const [key, value] of Object.entries(data)) {
+        updateFields.push(`${key} = ?`)
+        values.push(value)
+      }
+      
+      values.push(id)
+      
+      const query = `UPDATE inward_challan SET ${updateFields.join(', ')}, updated_at = NOW() WHERE id = ?`
+      await this.db.query(query, values)
+      return true
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async deleteOutwardChallan(challanNumber) {
+    try {
+      await this.db.query('DELETE FROM outward_challan WHERE challan_number = ?', [challanNumber])
+      return true
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async truncateBOMs() {
+    try {
+      await this.db.query('DELETE FROM bom_line')
+      await this.db.query('DELETE FROM bom_operation')
+      await this.db.query('DELETE FROM bom_scrap')
+      await this.db.query('DELETE FROM bom')
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async truncateWorkOrders() {
+    try {
+      await this.db.query('DELETE FROM work_order_item')
+      await this.db.query('DELETE FROM work_order')
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async truncateJobCards() {
+    try {
+      await this.db.query('DELETE FROM job_card')
     } catch (error) {
       throw error
     }

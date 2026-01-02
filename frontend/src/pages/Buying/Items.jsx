@@ -19,9 +19,12 @@ export default function Items() {
     search: ''
   })
   const [loading, setLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   useEffect(() => {
     fetchItemGroups()
+    setCurrentPage(1)
     fetchItems()
   }, [filters])
 
@@ -115,6 +118,12 @@ export default function Items() {
     )
   }
 
+  // Pagination calculations
+  const totalPages = Math.ceil(items.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedItems = items.slice(startIndex, endIndex)
+
   const columns = [
     { key: 'item_code', label: 'Item Code' },
     { key: 'name', label: 'Item Name' },
@@ -123,7 +132,7 @@ export default function Items() {
     { key: 'gst_rate', label: 'GST %', format: (val) => `${val}%` }
   ]
 
-  const itemsWithActions = items.map(item => ({
+  const paginatedItemsWithActions = paginatedItems.map(item => ({
     ...item,
     actions: (
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -254,7 +263,7 @@ export default function Items() {
                 </tr>
               </thead>
               <tbody>
-                {itemsWithActions.map((item, idx) => (
+                {paginatedItemsWithActions.map((item, idx) => (
                   <tr
                     key={item.item_code}
                     className={`border-b border-gray-100 ${
@@ -280,6 +289,46 @@ export default function Items() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {items.length > 0 && (
+        <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="text-xs text-gray-600">
+            Showing {startIndex + 1} to {Math.min(endIndex, items.length)} of {items.length} items
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-2 rounded-md border border-gray-300 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              Previous
+            </button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                    currentPage === page
+                      ? 'bg-blue-500 text-white'
+                      : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 rounded-md border border-gray-300 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import axios from 'axios'
+import api from '../../services/api'
 import Button from '../../components/Button/Button'
 import Alert from '../../components/Alert/Alert'
 import Card from '../../components/Card/Card'
@@ -54,7 +54,7 @@ export default function MaterialRequestForm() {
 
   const fetchMaterialRequest = async () => {
     try {
-      const response = await axios.get(`/api/material-requests/${id}`)
+      const response = await api.get(`/material-requests/${id}`)
       const mr = response.data.data
       setMaterialRequest(mr)
       setFormData({
@@ -71,7 +71,7 @@ export default function MaterialRequestForm() {
 
   const fetchItems = async () => {
     try {
-      const response = await axios.get('/api/items?limit=1000')
+      const response = await api.get('/items?limit=1000')
       setItems(response.data.data || [])
     } catch (err) {
       console.error('Failed to fetch items:', err)
@@ -80,7 +80,7 @@ export default function MaterialRequestForm() {
 
   const fetchContacts = async () => {
     try {
-      const response = await axios.get('/api/suppliers/contacts/all')
+      const response = await api.get('/suppliers/contacts/all')
       setContacts(response.data.data || [])
     } catch (err) {
       console.error('Failed to fetch contacts:', err)
@@ -89,7 +89,7 @@ export default function MaterialRequestForm() {
 
   const fetchWarehouses = async () => {
     try {
-      const response = await axios.get('/api/warehouses?limit=1000')
+      const response = await api.get('/warehouses?limit=1000')
       setWarehouses(response.data.data || [])
     } catch (err) {
       console.error('Failed to fetch warehouses:', err)
@@ -178,10 +178,10 @@ export default function MaterialRequestForm() {
       }
 
       if (isEditMode) {
-        await axios.put(`/api/material-requests/${id}`, submitData)
+        await api.put(`/material-requests/${id}`, submitData)
         setSuccess('Material request updated successfully')
       } else {
-        await axios.post('/api/material-requests', submitData)
+        await api.post('/material-requests', submitData)
         setSuccess('Material request created successfully')
       }
 

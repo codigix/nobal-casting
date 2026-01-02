@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Plus, Search, Edit2, Trash2, BarChart3, AlertCircle, Zap, TrendingUp, FileText } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, BarChart3, AlertCircle, Zap, TrendingUp, FileText, Trash } from 'lucide-react'
 import * as productionService from '../../services/productionService'
 import DataTable from '../../components/Table/DataTable'
+import { useToast } from '../../components/ToastContainer'
 
 export default function BOM() {
   const navigate = useNavigate()
   const location = useLocation()
+  const toast = useToast()
   const [boms, setBOMs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -31,7 +33,34 @@ export default function BOM() {
       setLoading(true)
       const response = await productionService.getBOMs(filters)
       const bomData = response.data || []
-      setBOMs(bomData)
+      
+      // Fetch sales orders to calculate total quantity
+      let bomsWithTotals = bomData
+      try {
+        const token = localStorage.getItem('token')
+        const soResponse = await fetch(`${import.meta.env.VITE_API_URL}/selling/sales-orders`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        const soData = await soResponse.json()
+        const allSalesOrders = soData.data || []
+        
+        // Add sales order item count to each BOM
+        bomsWithTotals = bomData.map(bom => {
+          const relatedSOs = allSalesOrders.filter(so => so.item_code === bom.item_code)
+          const totalItems = relatedSOs.reduce((sum, so) => sum + (parseFloat(so.qty) || 0), 0)
+          const totalQty = totalItems > 0 ? parseFloat(bom.quantity || 0) * totalItems : 0
+          return { 
+            ...bom, 
+            totalItems, 
+            totalQty,
+            soCount: relatedSOs.length 
+          }
+        })
+      } catch (soErr) {
+        console.error('Failed to fetch sales orders:', soErr)
+      }
+      
+      setBOMs(bomsWithTotals)
       
       const allResponse = await productionService.getBOMs({})
       const allBOMs = allResponse.data || []
@@ -75,6 +104,24 @@ export default function BOM() {
     }
   }
 
+  const handleTruncate = async () => {
+    if (window.confirm('⚠️ Warning: This will permanently delete ALL BOMs. Are you sure?')) {
+      try {
+        setLoading(true)
+        await fetch(`${import.meta.env.VITE_API_URL}/production/boms/truncate/all`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        })
+        setSuccess('All BOMs truncated successfully')
+        setTimeout(() => setSuccess(null), 3000)
+        fetchBOMs()
+      } catch (err) {
+        setError('Failed to truncate BOMs')
+        toast?.error('Failed to truncate BOMs')
+      }
+    }
+  }
+
   const handleEdit = (bom) => {
     navigate(`/manufacturing/bom/${bom.bom_id}`)
   }
@@ -89,22 +136,19 @@ export default function BOM() {
   }
 
   const columns = [
-   
-   
     {
-  key: 'item_code',
-  label: 'Item',
-  render: (value, row) => (
-    <div 
-      onClick={() => handleEdit(row)}
-      className="cursor-pointer hover:text-blue-600 transition"
-    >
-      <div className="font-semibold">{row.bom_id}</div>
-      <div className="text-xs text-gray-600">{row.item_code} - {row.product_name}</div>
-    </div>
-  )
-},
-
+      key: 'item_code',
+      label: 'Item',
+      render: (value, row) => (
+        <div 
+          onClick={() => handleEdit(row)}
+          className="cursor-pointer hover:text-blue-600 transition"
+        >
+          <div className="font-semibold"> {row.product_name}</div>
+          <div className="text-xs text-gray-600">{row.bom_id}</div>
+        </div>
+      )
+    },
     {
       key: 'is_active',
       label: 'Is Active',
@@ -119,15 +163,22 @@ export default function BOM() {
         <input type="checkbox" checked={row.is_default === true} readOnly className="cursor-pointer" />
       )
     },
-  {
-  key: 'total_cost',
-  label: 'Total Cost',
-  render: (value, row) => {
-    const costPerUnit = parseFloat(row.total_cost || 0) / parseFloat(row.quantity || 1)
-    return <div className="text-right">₹{costPerUnit.toFixed(2)}</div>
-  }
-},
-
+    {
+      key: 'quantity',
+      label: 'BOM QTY',
+      render: (value, row) => (
+        <div className="text-left font-semibold">{parseFloat(row.quantity || 0).toFixed(2)} {row.uom}</div>
+      )
+    },
+   
+    {
+      key: 'total_cost',
+      label: 'Total Cost',
+      render: (value, row) => {
+        const costPerUnit = parseFloat(row.total_cost || 0) / parseFloat(row.quantity || 1)
+        return <div className="text-left">₹{costPerUnit.toFixed(2)}</div>
+      }
+    },
     {
       key: 'updated_at',
       label: 'Last Updated On',
@@ -137,7 +188,7 @@ export default function BOM() {
         </div>
       )
     },
-     {
+    {
       key: 'status',
       label: 'Status',
       render: (value, row) => (
@@ -163,12 +214,21 @@ export default function BOM() {
           <h1 className="text-xl font-bold text-gray-900 mb-1">📋 Bill of Materials</h1>
           <p className="text-sm text-gray-600">Manage product BOMs and components</p>
         </div>
-        <button 
-          onClick={() => navigate('/manufacturing/bom/new')}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={18} /> New BOM
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => navigate('/manufacturing/bom/new')}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus size={18} /> New BOM
+          </button>
+          <button 
+            onClick={handleTruncate}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-xs hover:bg-red-700 text-white rounded-md transition-colors"
+            title="Delete all BOMs"
+          >
+            <Trash size={18} /> Truncate All
+          </button>
+        </div>
       </div>
 
       {/* Alerts */}

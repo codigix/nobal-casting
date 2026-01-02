@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import api from '../../services/api'
 import Card from '../../components/Card/Card'
 import Button from '../../components/Button/Button'
 import Badge from '../../components/Badge/Badge'
 import Alert from '../../components/Alert/Alert'
-import { Search, Clock, Eye, FileCheck, Package, CheckCircle, XCircle, AlertCircle, TrendingUp } from 'lucide-react'
+import { Search, Clock, Eye, FileCheck, Package, CheckCircle, XCircle, AlertCircle, TrendingUp, LayoutGrid, List } from 'lucide-react'
 
 export default function GRNManagement() {
   const navigate = useNavigate()
@@ -22,12 +23,11 @@ export default function GRNManagement() {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/grn-requests`)
-      const data = await response.json()
-      if (data.success) {
-        setGrns(data.data || [])
+      const response = await api.get('/grn-requests')
+      if (response.data.success) {
+        setGrns(response.data.data || [])
       } else {
-        setError(data.error || 'Failed to fetch GRNs')
+        setError(response.data.error || 'Failed to fetch GRNs')
       }
     } catch (err) {
       console.error('Error fetching GRNs:', err)
@@ -43,7 +43,7 @@ export default function GRNManagement() {
         grn.grn_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         grn.po_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         grn.supplier_name?.toLowerCase().includes(searchTerm.toLowerCase())
-      return grn.status === status && matchesSearch
+      return (status ? grn.status === status : true) && matchesSearch
     })
   }
 
@@ -168,16 +168,34 @@ export default function GRNManagement() {
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-100">Quality Control Workflow</h1>
+            <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">Quality Control Workflow</h1>
             <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Manage GRNs through inspection, approval, and storage stages</p>
           </div>
-          <Button
-            variant="primary"
-            onClick={fetchGRNs}
-            className="flex items-center gap-2 text-sm px-4 py-2"
-          >
-            <TrendingUp size={16} /> Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center bg-white dark:bg-neutral-800 rounded-lg p-1 border border-neutral-200 dark:border-neutral-700">
+              <button
+                onClick={() => setViewMode('kanban')}
+                className={`p-2 rounded-md transition-all ${viewMode === 'kanban' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'}`}
+                title="Kanban View"
+              >
+                <LayoutGrid size={18} />
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-2 rounded-md transition-all ${viewMode === 'table' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300'}`}
+                title="Table View"
+              >
+                <List size={18} />
+              </button>
+            </div>
+            <Button
+              variant="primary"
+              onClick={fetchGRNs}
+              className="flex items-center gap-2 text-sm px-4 py-2"
+            >
+              <TrendingUp size={16} /> Refresh
+            </Button>
+          </div>
         </div>
 
         {error && <Alert type="danger" className="mb-2">{error}</Alert>}
@@ -213,7 +231,10 @@ export default function GRNManagement() {
         />
       </div>
 
-      {/* Kanban Board */}
+      {/* Views */}
+      {viewMode === 'kanban' ? (
+        <>
+          {/* Kanban Board */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-96">
         {kanbanColumns.map((column) => {
           const columnGrns = getFilteredGrns(column.status)
@@ -222,12 +243,12 @@ export default function GRNManagement() {
           return (
             <div key={column.status} className="flex flex-col">
               {/* Column Header */}
-              <div className={`bg-gradient-to-r ${config.color} border-2 ${config.border} rounded-t-lg p-4`}>
+              <div className={`bg-gradient-to-r flex items-start justify-between ${config.color} border-2 ${config.border} rounded-t-lg p-2`}>
                 <div className="flex items-center gap-2 mb-2">
                   {getStatusIcon(column.status)}
-                  <h2 className="font-bold text-sm text-neutral-900">{column.title}</h2>
+                  <h2 className="text-xs text-neutral-900">{column.title}</h2>
                 </div>
-                <div className="text-2xl font-bold text-neutral-700">{columnGrns.length}</div>
+                <div className="text-xl font-bold text-neutral-700">{columnGrns.length}</div>
               </div>
 
               {/* Cards Container */}
@@ -238,11 +259,11 @@ export default function GRNManagement() {
                     const qcStats = getQCStats(grn)
 
                     return (
-                      <Card key={grn.grn_no} className={`p-4 border-l-4 ${config.border} hover:shadow-lg transition-all cursor-pointer group`}>
+                      <Card key={grn.grn_no} className={` border border-neutral-200 p-2 bg-neutral-100 rounded-lg ${config.border}  transition-all cursor-pointer group`}>
                         {/* GRN Header */}
                         <div className="flex justify-between items-start mb-3">
                           <div>
-                            <h3 className="font-bold text-sm text-neutral-900">{grn.grn_no}</h3>
+                            <h3 className="text-xs text-neutral-900">{grn.grn_no}</h3>
                             <p className="text-xs text-neutral-500">PO: {grn.po_no}</p>
                           </div>
                           <Badge variant="solid" className={`text-xs ${config.badge}`}>
@@ -254,16 +275,16 @@ export default function GRNManagement() {
                         <p className="text-xs text-neutral-700 mb-3 font-medium truncate">{grn.supplier_name}</p>
 
                         {/* Item Stats */}
-                        <div className="grid grid-cols-3 gap-2 mb-3 text-center">
-                          <div className="bg-blue-50 rounded p-2">
+                        <div className="grid grid-cols-3 gap-1 mb-3 text-center">
+                          <div className="bg-blue-50 rounded">
                             <p className="text-xs font-bold text-blue-700">{itemStats.total}</p>
                             <p className="text-xs text-blue-600">Items</p>
                           </div>
-                          <div className="bg-green-50 rounded p-2">
+                          <div className="bg-green-50 rounded">
                             <p className="text-xs font-bold text-green-700">{itemStats.accepted}</p>
                             <p className="text-xs text-green-600">Accepted</p>
                           </div>
-                          <div className="bg-red-50 rounded p-2">
+                          <div className="bg-red-50 rounded">
                             <p className="text-xs font-bold text-red-700">{itemStats.rejected}</p>
                             <p className="text-xs text-red-600">Rejected</p>
                           </div>
@@ -322,7 +343,7 @@ export default function GRNManagement() {
           const config = getStatusConfig(status)
 
           return (
-            <Card key={status} className="p-4">
+            <Card key={status} className="p-2">
               <div className="flex items-center gap-3 mb-4">
                 {getStatusIcon(status)}
                 <h3 className="font-bold text-neutral-900">{config.label}</h3>
@@ -339,7 +360,7 @@ export default function GRNManagement() {
                     >
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-bold text-sm text-neutral-900">{grn.grn_no}</p>
+                          <p className="text-xs text-neutral-900">{grn.grn_no}</p>
                           <p className="text-xs text-neutral-600">{grn.supplier_name}</p>
                         </div>
                         <Eye size={14} className="text-neutral-400" />
@@ -354,6 +375,70 @@ export default function GRNManagement() {
           )
         })}
       </div>
+
+        </>
+      ) : (
+        /* Table View */
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-neutral-50 text-neutral-600 font-semibold border-b border-neutral-200">
+                <tr>
+                  <th className="px-6 py-4">GRN Number</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Supplier</th>
+                  <th className="px-6 py-4">PO Number</th>
+                  <th className="px-6 py-4 text-center">Items</th>
+                  <th className="px-6 py-4 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-200">
+                {getFilteredGrns().length > 0 ? (
+                  getFilteredGrns().map((grn) => {
+                    const config = getStatusConfig(grn.status)
+                    const itemStats = getItemStats(grn)
+
+                    return (
+                      <tr key={grn.grn_no} className="hover:bg-neutral-50 transition-colors">
+                        <td className="px-6 py-4 font-medium text-neutral-900">{grn.grn_no}</td>
+                        <td className="px-6 py-4">
+                          <Badge variant="solid" className={`text-xs ${config.badge}`}>
+                            {config.label}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 text-neutral-600">{grn.supplier_name}</td>
+                        <td className="px-6 py-4 text-neutral-600">{grn.po_no}</td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="font-semibold text-neutral-900">{itemStats.total}</span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                           <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewGRN(grn.grn_no)}
+                            className="text-xs"
+                          >
+                            <Eye size={16} />
+                          </Button>
+                        </td>
+                      </tr>
+                    )
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-12 text-center text-neutral-500">
+                      <div className="flex flex-col items-center justify-center">
+                        <Package size={32} className="mb-2 opacity-50" />
+                        <p>No GRNs found</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       {/* Info Section */}
       <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200">

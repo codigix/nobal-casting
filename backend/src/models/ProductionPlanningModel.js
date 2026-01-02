@@ -6,11 +6,12 @@ export class ProductionPlanningModel {
   async createPlan(data) {
     try {
       const planId = data.plan_id || `PLAN-${Date.now()}`
+      const today = new Date().toISOString().split('T')[0]
       
       await this.db.execute(
-        `INSERT INTO production_planning_header (plan_id, naming_series, company, posting_date, sales_order_id, status)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [planId, data.naming_series || 'PP', data.company || '', data.posting_date || new Date(), data.sales_order_id || null, data.status || 'draft']
+        `INSERT INTO production_plan (plan_id, naming_series, company, sales_order_id, status, bom_id, plan_date, week_number, planned_by_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [planId, data.naming_series || 'PP', data.company || '', data.sales_order_id || null, data.status || 'draft', data.bom_id || null, data.plan_date || today, data.week_number || null, data.planned_by_id || null]
       )
 
       return { plan_id: planId }
@@ -22,7 +23,7 @@ export class ProductionPlanningModel {
   async getPlanById(plan_id) {
     try {
       const [plans] = await this.db.execute(
-        `SELECT * FROM production_planning_header WHERE plan_id = ?`,
+        `SELECT * FROM production_plan WHERE plan_id = ?`,
         [plan_id]
       )
       
@@ -45,6 +46,11 @@ export class ProductionPlanningModel {
         [plan_id]
       ).catch(() => [])
 
+      const [operations] = await this.db.execute(
+        `SELECT * FROM production_plan_operations WHERE plan_id = ?`,
+        [plan_id]
+      ).catch(() => [])
+
       const mappedSubAssemblies = subAssemblies.map(item => ({
         ...item,
         scheduled_date: item.schedule_date
@@ -64,7 +70,7 @@ export class ProductionPlanningModel {
           
           try {
             await this.db.execute(
-              `UPDATE production_planning_header SET sales_order_id = ? WHERE plan_id = ?`,
+              `UPDATE production_plan SET sales_order_id = ? WHERE plan_id = ?`,
               [salesOrderId, plan_id]
             )
           } catch (err) {
@@ -77,7 +83,8 @@ export class ProductionPlanningModel {
         ...plan,
         fg_items: fgItems,
         sub_assemblies: mappedSubAssemblies,
-        raw_materials: mappedRawMaterials
+        raw_materials: mappedRawMaterials,
+        operations: operations
       }
     } catch (error) {
       throw error
@@ -119,7 +126,7 @@ export class ProductionPlanningModel {
   async getAllPlans() {
     try {
       const [plans] = await this.db.execute(
-        `SELECT * FROM production_planning_header ORDER BY created_at DESC`
+        `SELECT * FROM production_plan ORDER BY created_at DESC`
       )
       
       const plansWithItems = []
@@ -128,7 +135,17 @@ export class ProductionPlanningModel {
           const [fgItems] = await this.db.execute(
             `SELECT * FROM production_plan_fg WHERE plan_id = ?`,
             [plan.plan_id]
-          )
+          ).catch(() => [])
+          
+          const [rawMaterials] = await this.db.execute(
+            `SELECT * FROM production_plan_raw_material WHERE plan_id = ?`,
+            [plan.plan_id]
+          ).catch(() => [])
+          
+          const mappedRawMaterials = rawMaterials.map(item => ({
+            ...item,
+            qty: item.plan_to_request_qty || item.qty
+          }))
           
           let salesOrderId = plan.sales_order_id
           if (!salesOrderId && fgItems && fgItems.length > 0) {
@@ -140,13 +157,15 @@ export class ProductionPlanningModel {
           
           plansWithItems.push({
             ...plan,
-            fg_items: fgItems || []
+            fg_items: fgItems || [],
+            raw_materials: mappedRawMaterials || []
           })
         } catch (err) {
-          console.error(`Error fetching FG items for plan ${plan.plan_id}:`, err)
+          console.error(`Error fetching items for plan ${plan.plan_id}:`, err)
           plansWithItems.push({
             ...plan,
-            fg_items: []
+            fg_items: [],
+            raw_materials: []
           })
         }
       }
@@ -172,7 +191,7 @@ export class ProductionPlanningModel {
       const planId = fgItem.plan_id
 
       const [plans] = await this.db.execute(
-        `SELECT * FROM production_planning_header WHERE plan_id = ?`,
+        `SELECT * FROM production_plan WHERE plan_id = ?`,
         [planId]
       )
 
@@ -201,21 +220,25 @@ export class ProductionPlanningModel {
 
   async updatePlanHeader(plan_id, data) {
     try {
-      const checkQuery = `SELECT plan_id FROM production_planning_header WHERE plan_id = ?`
+      const checkQuery = `SELECT plan_id FROM production_plan WHERE plan_id = ?`
       const [existing] = await this.db.execute(checkQuery, [plan_id])
       
       if (existing.length === 0) {
-        const insertQuery = `INSERT INTO production_planning_header 
-          (plan_id, naming_series, company, posting_date, sales_order_id, status)
-          VALUES (?, ?, ?, ?, ?, ?)`
+        const today = new Date().toISOString().split('T')[0]
+        const insertQuery = `INSERT INTO production_plan 
+          (plan_id, naming_series, company, sales_order_id, status, bom_id, plan_date, week_number, planned_by_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
         
         await this.db.execute(insertQuery, [
           plan_id,
           data.naming_series || 'PP',
           data.company || '',
-          data.posting_date || new Date(),
           data.sales_order_id || null,
-          data.status || 'draft'
+          data.status || 'draft',
+          data.bom_id || null,
+          data.plan_date || today,
+          data.week_number || null,
+          data.planned_by_id || null
         ])
         
         return true
@@ -226,14 +249,17 @@ export class ProductionPlanningModel {
 
       if (data.naming_series !== undefined) { fields.push('naming_series = ?'); values.push(data.naming_series) }
       if (data.company !== undefined) { fields.push('company = ?'); values.push(data.company) }
-      if (data.posting_date !== undefined) { fields.push('posting_date = ?'); values.push(data.posting_date) }
       if (data.sales_order_id !== undefined) { fields.push('sales_order_id = ?'); values.push(data.sales_order_id) }
       if (data.status !== undefined) { fields.push('status = ?'); values.push(data.status) }
+      if (data.bom_id !== undefined) { fields.push('bom_id = ?'); values.push(data.bom_id) }
+      if (data.plan_date !== undefined) { fields.push('plan_date = ?'); values.push(data.plan_date) }
+      if (data.week_number !== undefined) { fields.push('week_number = ?'); values.push(data.week_number) }
+      if (data.planned_by_id !== undefined) { fields.push('planned_by_id = ?'); values.push(data.planned_by_id) }
 
       if (fields.length === 0) return true
 
       values.push(plan_id)
-      const query = `UPDATE production_planning_header SET ${fields.join(', ')} WHERE plan_id = ?`
+      const query = `UPDATE production_plan SET ${fields.join(', ')} WHERE plan_id = ?`
       await this.db.execute(query, values)
 
       return true
@@ -272,7 +298,7 @@ export class ProductionPlanningModel {
   async addFGItem(plan_id, item) {
     try {
       const [plans] = await this.db.execute(
-        `SELECT plan_id FROM production_planning_header WHERE plan_id = ?`,
+        `SELECT plan_id FROM production_plan WHERE plan_id = ?`,
         [plan_id]
       )
       
@@ -296,7 +322,7 @@ export class ProductionPlanningModel {
           notes TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          FOREIGN KEY (plan_id) REFERENCES production_planning_header(plan_id) ON DELETE CASCADE,
+          FOREIGN KEY (plan_id) REFERENCES production_plan(plan_id) ON DELETE CASCADE,
           INDEX idx_plan_id (plan_id),
           INDEX idx_item_code (item_code)
         )
@@ -320,7 +346,7 @@ export class ProductionPlanningModel {
   async addSubAssemblyItem(plan_id, item) {
     try {
       const [plans] = await this.db.execute(
-        `SELECT plan_id FROM production_planning_header WHERE plan_id = ?`,
+        `SELECT plan_id FROM production_plan WHERE plan_id = ?`,
         [plan_id]
       )
       
@@ -345,7 +371,7 @@ export class ProductionPlanningModel {
           notes TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          FOREIGN KEY (plan_id) REFERENCES production_planning_header(plan_id) ON DELETE CASCADE,
+          FOREIGN KEY (plan_id) REFERENCES production_plan(plan_id) ON DELETE CASCADE,
           INDEX idx_plan_id (plan_id),
           INDEX idx_item_code (item_code)
         )
@@ -369,7 +395,7 @@ export class ProductionPlanningModel {
   async addRawMaterialItem(plan_id, item) {
     try {
       const [plans] = await this.db.execute(
-        `SELECT plan_id FROM production_planning_header WHERE plan_id = ?`,
+        `SELECT plan_id FROM production_plan WHERE plan_id = ?`,
         [plan_id]
       )
       
@@ -384,6 +410,7 @@ export class ProductionPlanningModel {
           item_code VARCHAR(100) NOT NULL,
           item_name VARCHAR(255),
           item_type VARCHAR(50),
+          item_group VARCHAR(100),
           plan_to_request_qty DECIMAL(18,6),
           qty_as_per_bom DECIMAL(18,6),
           required_by DATE,
@@ -394,7 +421,7 @@ export class ProductionPlanningModel {
           notes TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          FOREIGN KEY (plan_id) REFERENCES production_planning_header(plan_id) ON DELETE CASCADE,
+          FOREIGN KEY (plan_id) REFERENCES production_plan(plan_id) ON DELETE CASCADE,
           INDEX idx_plan_id (plan_id),
           INDEX idx_item_code (item_code)
         )
@@ -405,9 +432,9 @@ export class ProductionPlanningModel {
       
       await this.db.execute(
         `INSERT INTO production_plan_raw_material 
-         (plan_id, item_code, item_name, item_type, plan_to_request_qty, qty_as_per_bom, required_by, bom_no, revision, material_grade, drawing_no, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [plan_id, item.item_code || null, item.item_name || null, item.item_type || null, planToRequestQty, 
+         (plan_id, item_code, item_name, item_type, item_group, plan_to_request_qty, qty_as_per_bom, required_by, bom_no, revision, material_grade, drawing_no, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [plan_id, item.item_code || null, item.item_name || null, item.item_type || null, item.item_group || null, planToRequestQty, 
          qtyAsPerBom, item.required_by || null, item.bom_no || null, item.revision || null, item.material_grade || null, item.drawing_no || null, item.notes || null]
       )
     } catch (error) {
@@ -453,9 +480,64 @@ export class ProductionPlanningModel {
   async deletePlan(plan_id) {
     try {
       await this.db.execute(
-        `DELETE FROM production_planning_header WHERE plan_id = ?`,
+        `DELETE FROM production_plan WHERE plan_id = ?`,
         [plan_id]
       )
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async createMaterialRequest(plan_id) {
+    try {
+      const [plans] = await this.db.execute(
+        `SELECT * FROM production_plan WHERE plan_id = ?`,
+        [plan_id]
+      )
+      if (!plans.length) throw new Error('Production plan not found')
+      const plan = plans[0]
+
+      const [rawMaterials] = await this.db.execute(
+        `SELECT * FROM production_plan_raw_material WHERE plan_id = ?`,
+        [plan_id]
+      )
+
+      if (!rawMaterials || rawMaterials.length === 0) {
+        throw new Error('No raw materials found in this production plan')
+      }
+
+      const mr_id = 'MR-' + Date.now()
+      const request_date = new Date().toISOString().split('T')[0]
+
+      await this.db.execute(
+        `INSERT INTO material_request 
+         (mr_id, series_no, transition_date, requested_by_id, department, purpose, 
+          request_date, required_by_date, target_warehouse, source_warehouse, items_notes, status) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [mr_id, `PLAN-${plan_id}`, null, 'system', 'Production', 'purchase', 
+         request_date, null, null, null, `Auto-created from Production Plan: ${plan_id}`, 'draft']
+      )
+
+      for (const material of rawMaterials) {
+        const mr_item_id = 'MRI-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
+        await this.db.execute(
+          'INSERT INTO material_request_item (mr_item_id, mr_id, item_code, qty, uom, purpose) VALUES (?, ?, ?, ?, ?, ?)',
+          [mr_item_id, mr_id, material.item_code, material.plan_to_request_qty || material.qty_as_per_bom || 0, 'Kg', null]
+        )
+      }
+
+      return mr_id
+    } catch (error) {
+      throw new Error('Failed to create material request from production plan: ' + error.message)
+    }
+  }
+
+  async truncatePlans() {
+    try {
+      await this.db.execute('DELETE FROM production_plan_fg')
+      await this.db.execute('DELETE FROM production_plan_sub_assembly')
+      await this.db.execute('DELETE FROM production_plan_raw_material')
+      await this.db.execute('DELETE FROM production_plan')
     } catch (error) {
       throw error
     }

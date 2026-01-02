@@ -48,15 +48,14 @@ export default function ProductionDashboard() {
       setLoading(true)
       setError(null)
 
-      const today = new Date().toISOString().split('T')[0]
-
-      const [woRes, bomRes, ppRes, jcRes, opRes, wsRes] = await Promise.all([
+      const [woRes, bomRes, ppRes, jcRes, opRes, wsRes, peRes] = await Promise.all([
         productionService.getWorkOrders().catch(() => ({})),
         productionService.getBOMs().catch(() => ({})),
         productionService.getProductionPlans().catch(() => ({})),
         productionService.getJobCards().catch(() => ({})),
         productionService.getOperationsList().catch(() => ({})),
-        productionService.getWorkstationsList().catch(() => ({}))
+        productionService.getWorkstationsList().catch(() => ({})),
+        productionService.getProductionEntries().catch(() => ({}))
       ])
 
       const wo = Array.isArray(woRes) ? woRes : woRes.data || []
@@ -65,6 +64,7 @@ export default function ProductionDashboard() {
       const jc = Array.isArray(jcRes) ? jcRes : jcRes.data || []
       const op = Array.isArray(opRes) ? opRes : opRes.data || []
       const ws = Array.isArray(wsRes) ? wsRes : wsRes.data || []
+      const pe = Array.isArray(peRes) ? peRes : peRes.data || []
 
       const completedCount = jc.filter(j => j.status === 'Completed').length
       const inProgressCount = jc.filter(j => j.status === 'In Progress').length
@@ -82,62 +82,77 @@ export default function ProductionDashboard() {
         operations: op.length
       })
 
-      const mockStatuses = ['Completed', 'In Progress', 'Pending']
-      const mockWorkOrders = []
+      const workOrdersData = wo.length > 0 ? wo.map((item, idx) => ({
+        id: item.wo_id || item.id || `WO-${idx + 1}`,
+        name: item.name || `Work Order ${idx + 1}`,
+        status: item.status || 'Pending',
+        priority: item.priority || 'Medium'
+      })) : []
 
-      const mockBOMs = bom.length > 0 ? bom.map((item, idx) => ({
-        id: item.id || `BOM-${idx + 1}`,
-        name: item.name || `BOM ${idx + 1}`,
-        status: mockStatuses[idx % 3],
-        items: item.items || 5
+      const bomData = bom.length > 0 ? bom.map((item, idx) => ({
+        id: item.bom_id || item.id || `BOM-${idx + 1}`,
+        name: item.bom_name || item.name || `BOM ${idx + 1}`,
+        status: item.status || 'Active',
+        items: item.total_items || item.items || 0
+      })) : []
+
+      const prodPlanData = pp.length > 0 ? pp.map((item, idx) => ({
+        id: item.plan_id || item.id || `PP-${idx + 1}`,
+        name: item.plan_name || item.name || `Production Plan ${idx + 1}`,
+        status: item.status || 'Planning',
+        quantity: item.total_quantity || item.quantity || 0
+      })) : []
+
+      const jobCardData = jc.length > 0 ? jc.map((item, idx) => ({
+        id: item.jc_id || item.id || `JC-${idx + 1}`,
+        name: item.jc_code || item.name || `Job Card ${idx + 1}`,
+        status: item.status || 'Pending',
+        priority: item.priority || 'Medium'
+      })) : []
+
+      const workstationData = ws.length > 0 ? ws.map((item, idx) => ({
+        id: item.ws_id || item.id || `WS-${idx + 1}`,
+        name: item.ws_name || item.name || `Workstation ${idx + 1}`,
+        status: item.status || (idx % 2 === 0 ? 'Active' : 'Idle'),
+        utilization: item.utilization_percent || Math.round(Math.random() * 100)
+      })) : []
+
+      const operationsData = op.length > 0 ? op.map((item, idx) => ({
+        id: item.op_id || item.id || `OP-${idx + 1}`,
+        name: item.op_name || item.name || `Operation ${idx + 1}`,
+        status: item.status || 'Pending',
+        duration: item.standard_time || Math.round(Math.random() * 120) + 15
+      })) : []
+
+      const dailyData = pe.length > 0 
+        ? generateDailyProductionChart(pe)
+        : [
+            { day: 'Mon', completed: 12, inProgress: 8, pending: 3 },
+            { day: 'Tue', completed: 15, inProgress: 10, pending: 2 },
+            { day: 'Wed', completed: 18, inProgress: 9, pending: 1 },
+            { day: 'Thu', completed: 14, inProgress: 11, pending: 4 },
+            { day: 'Fri', completed: 20, inProgress: 7, pending: 2 },
+            { day: 'Sat', completed: 6, inProgress: 5, pending: 1 }
+          ]
+
+      const capacityData = ws.length > 0 ? ws.map(item => ({
+        station: item.ws_name || item.name || `Station ${Math.random()}`,
+        usage: item.utilization_percent || Math.round(Math.random() * 100)
       })) : [
-        { id: 'BOM-001', name: 'Assembly BOM', status: 'Completed', items: 8 },
-        { id: 'BOM-002', name: 'Component BOM', status: 'In Progress', items: 12 },
-        { id: 'BOM-003', name: 'Sub-Assembly', status: 'Pending', items: 6 }
+        { station: 'Station 1', usage: 85 },
+        { station: 'Station 2', usage: 72 },
+        { station: 'Station 3', usage: 91 },
+        { station: 'Station 4', usage: 68 },
+        { station: 'Station 5', usage: 78 }
       ]
-
-      const mockProdPlans = pp.length > 0 ? pp.map((item, idx) => ({
-        id: item.id || `PP-${idx + 1}`,
-        name: item.name || `Production Plan ${idx + 1}`,
-        status: mockStatuses[idx % 3],
-        quantity: item.quantity || 100
-      })) : [
-        { id: 'PP-001', name: 'Monthly Plan Jan', status: 'Completed', quantity: 500 },
-        { id: 'PP-002', name: 'Monthly Plan Feb', status: 'In Progress', quantity: 750 },
-        { id: 'PP-003', name: 'Monthly Plan Mar', status: 'Pending', quantity: 600 }
-      ]
-
-      const mockJobCards = jc.length > 0 ? jc.map((item, idx) => ({
-        id: item.id || `JC-${idx + 1}`,
-        name: item.name || `Job Card ${idx + 1}`,
-        status: item.status || mockStatuses[idx % 3],
-        priority: ['High', 'Medium', 'Low'][idx % 3]
-      })) : [
-        { id: 'JC-001', name: 'Casting Job', status: 'Completed', priority: 'High' },
-        { id: 'JC-002', name: 'Machining Job', status: 'In Progress', priority: 'High' },
-        { id: 'JC-003', name: 'Assembly Job', status: 'Pending', priority: 'Medium' }
-      ]
-
-      const mockWorkstations = ws.length > 0 ? ws.map((item, idx) => ({
-        id: item.id || `WS-${idx + 1}`,
-        name: item.name || `Workstation ${idx + 1}`,
-        status: idx % 2 === 0 ? 'Active' : 'Idle',
-        utilization: [85, 72, 91, 68, 78][idx % 5]
-      })) : [
-        { id: 'WS-001', name: 'Station 1 - Casting', status: 'Active', utilization: 85 },
-        { id: 'WS-002', name: 'Station 2 - Machining', status: 'Active', utilization: 72 },
-        { id: 'WS-003', name: 'Station 3 - Assembly', status: 'Idle', utilization: 30 }
-      ]
-
-      const mockOperations = []
 
       setDataEntries({
-        workOrders: mockWorkOrders,
-        boms: mockBOMs,
-        productionPlans: mockProdPlans,
-        jobCards: mockJobCards,
-        workstations: mockWorkstations,
-        operations: mockOperations
+        workOrders: workOrdersData,
+        boms: bomData,
+        productionPlans: prodPlanData,
+        jobCards: jobCardData,
+        workstations: workstationData,
+        operations: operationsData
       })
 
       setChartData({
@@ -146,44 +161,59 @@ export default function ProductionDashboard() {
           { name: 'In Progress', value: inProgressCount, fill: '#f59e0b' },
           { name: 'Pending', value: pendingCount, fill: '#ef4444' }
         ],
-        dailyProduction: [
-          { day: 'Mon', completed: 12, inProgress: 8, pending: 3 },
-          { day: 'Tue', completed: 15, inProgress: 10, pending: 2 },
-          { day: 'Wed', completed: 18, inProgress: 9, pending: 1 },
-          { day: 'Thu', completed: 14, inProgress: 11, pending: 4 },
-          { day: 'Fri', completed: 20, inProgress: 7, pending: 2 },
-          { day: 'Sat', completed: 6, inProgress: 5, pending: 1 }
-        ],
+        dailyProduction: dailyData,
         workOrderStatus: [
-          { status: 'Active', value: wo.length, fill: '#3b82f6' },
-          { status: 'Completed', value: Math.round(wo.length * 0.6), fill: '#10b981' },
-          { status: 'On Hold', value: Math.round(wo.length * 0.2), fill: '#f59e0b' }
+          { status: 'Active', value: wo.filter(w => w.status === 'Active').length, fill: '#3b82f6' },
+          { status: 'Completed', value: wo.filter(w => w.status === 'Completed').length, fill: '#10b981' },
+          { status: 'On Hold', value: wo.filter(w => w.status === 'On Hold').length, fill: '#f59e0b' }
         ],
-        capacityUtilization: [
-          { station: 'Station 1', usage: 85 },
-          { station: 'Station 2', usage: 72 },
-          { station: 'Station 3', usage: 91 },
-          { station: 'Station 4', usage: 68 },
-          { station: 'Station 5', usage: 78 }
-        ]
+        capacityUtilization: capacityData
       })
     } catch (err) {
       console.error('Error fetching dashboard data:', err)
       setError('Failed to load dashboard data')
       setStats({
-        workOrders: 15,
-        boms: 8,
-        productionPlans: 5,
-        jobCards: 22,
-        completedToday: 6,
-        inProgress: 9,
-        pending: 3,
-        workstations: 12,
-        operations: 45
+        workOrders: 0,
+        boms: 0,
+        productionPlans: 0,
+        jobCards: 0,
+        completedToday: 0,
+        inProgress: 0,
+        pending: 0,
+        workstations: 0,
+        operations: 0
       })
     } finally {
       setLoading(false)
     }
+  }
+
+  const generateDailyProductionChart = (entries) => {
+    const last7Days = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      last7Days.push(d.toISOString().split('T')[0])
+    }
+
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    return last7Days.map((dateStr, idx) => {
+      const dayEntry = entries.filter(e => {
+        const entryDate = e.created_at ? e.created_at.split('T')[0] : e.entry_date
+        return entryDate === dateStr
+      })
+      
+      const completed = dayEntry.filter(e => e.status === 'Completed').length
+      const inProgress = dayEntry.filter(e => e.status === 'In Progress').length
+      const pending = dayEntry.filter(e => e.status === 'Pending').length
+
+      return {
+        day: dayNames[new Date(dateStr).getDay()],
+        completed: completed || 0,
+        inProgress: inProgress || 0,
+        pending: pending || 0
+      }
+    })
   }
 
   const StatCard = ({ label, value, subtitle, icon: Icon, borderColor, bgColor }) => (
@@ -271,7 +301,7 @@ export default function ProductionDashboard() {
   const ChartContainer = ({ children, title, subtitle }) => (
     <div className="bg-gradient-to-br from-white via-blue-50 to-white rounded-2xl shadow-lg border border-gray-100 p-6 hover:shadow-2xl transition-shadow">
       <div className="mb-4">
-        <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+        <h3 className="text-sm font-bold text-gray-900">{title}</h3>
         {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
       </div>
       {children}
@@ -419,6 +449,16 @@ export default function ProductionDashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
+            {dataEntries.workOrders.length > 0 && (
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 mb-4">Recent Work Orders</h3>
+                <div className="space-y-4">
+                  {dataEntries.workOrders.slice(0, 10).map(item => (
+                    <EntryCard key={item.id} item={item} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -441,6 +481,16 @@ export default function ProductionDashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
+            {dataEntries.boms.length > 0 && (
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 mb-4">BOMs List</h3>
+                <div className="space-y-4">
+                  {dataEntries.boms.slice(0, 10).map(item => (
+                    <EntryCard key={item.id} item={item} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -463,6 +513,16 @@ export default function ProductionDashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
+            {dataEntries.productionPlans.length > 0 && (
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 mb-4">Production Plans</h3>
+                <div className="space-y-4">
+                  {dataEntries.productionPlans.slice(0, 10).map(item => (
+                    <EntryCard key={item.id} item={item} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -485,6 +545,16 @@ export default function ProductionDashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
+            {dataEntries.jobCards.length > 0 && (
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 mb-4">Job Cards</h3>
+                <div className="space-y-4">
+                  {dataEntries.jobCards.slice(0, 10).map(item => (
+                    <EntryCard key={item.id} item={item} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -507,6 +577,16 @@ export default function ProductionDashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
+            {dataEntries.workstations.length > 0 && (
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 mb-4">Workstations</h3>
+                <div className="space-y-4">
+                  {dataEntries.workstations.slice(0, 10).map(item => (
+                    <EntryCard key={item.id} item={item} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -578,6 +658,17 @@ export default function ProductionDashboard() {
                 </ResponsiveContainer>
               </ChartContainer>
             </div>
+
+            {dataEntries.operations.length > 0 && (
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 mb-4">Operations List</h3>
+                <div className="space-y-4">
+                  {dataEntries.operations.slice(0, 10).map(item => (
+                    <EntryCard key={item.id} item={item} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../services/api'
 import Button from '../../components/Button/Button'
 import Alert from '../../components/Alert/Alert'
 import Badge from '../../components/Badge/Badge'
@@ -39,7 +39,7 @@ export default function Warehouses() {
 
   const fetchDepartments = async () => {
     try {
-      const response = await axios.get('/api/masters/departments')
+      const response = await api.get('/masters/departments')
       if (response.data.success) {
         setDepartments(['all', ...response.data.data])
       }
@@ -52,7 +52,7 @@ export default function Warehouses() {
   const fetchWarehouses = async () => {
     try {
       setLoading(true)
-      const response = await axios.get('/api/stock/warehouses')
+      const response = await api.get('/stock/warehouses')
       setWarehouses(response.data.data || [])
       setError(null)
     } catch (err) {
@@ -73,10 +73,10 @@ export default function Warehouses() {
     try {
       setLoading(true)
       if (editingId) {
-        await axios.put(`/api/stock/warehouses/${editingId}`, formData)
+        await api.put(`/stock/warehouses/${editingId}`, formData)
         setSuccess('Warehouse updated successfully')
       } else {
-        await axios.post('/api/stock/warehouses', formData)
+        await api.post('/stock/warehouses', formData)
         setSuccess('Warehouse created successfully')
       }
       setFormData({
@@ -111,7 +111,7 @@ export default function Warehouses() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this warehouse?')) {
       try {
-        await axios.delete(`/api/stock/warehouses/${id}`)
+        await api.delete(`/stock/warehouses/${id}`)
         setSuccess('Warehouse deleted successfully')
         fetchWarehouses()
         setTimeout(() => setSuccess(null), 3000)

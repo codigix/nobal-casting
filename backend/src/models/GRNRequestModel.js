@@ -172,8 +172,8 @@ class GRNRequestModel {
       await connection.beginTransaction()
 
       try {
-        const totalAccepted = approvedItems.reduce((sum, item) => sum + (item.accepted_qty || 0), 0)
-        const totalRejected = approvedItems.reduce((sum, item) => sum + (item.rejected_qty || 0), 0)
+        const totalAccepted = parseInt(Math.floor(approvedItems.reduce((sum, item) => sum + (parseFloat(item.accepted_qty) || 0), 0)), 10) || 0
+        const totalRejected = parseInt(Math.floor(approvedItems.reduce((sum, item) => sum + (parseFloat(item.rejected_qty) || 0), 0)), 10) || 0
 
         await connection.query(
           `UPDATE grn_requests SET 
@@ -341,8 +341,8 @@ class GRNRequestModel {
       await connection.beginTransaction()
 
       try {
-        const totalAccepted = approvedItems.reduce((sum, item) => sum + (item.accepted_qty || 0), 0)
-        const totalRejected = approvedItems.reduce((sum, item) => sum + (item.rejected_qty || 0), 0)
+        const totalAccepted = parseInt(Math.floor(approvedItems.reduce((sum, item) => sum + (parseFloat(item.accepted_qty) || 0), 0)), 10) || 0
+        const totalRejected = parseInt(Math.floor(approvedItems.reduce((sum, item) => sum + (parseFloat(item.rejected_qty) || 0), 0)), 10) || 0
 
         await connection.query(
           `UPDATE grn_requests SET 

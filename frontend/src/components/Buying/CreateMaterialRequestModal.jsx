@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../services/api'
 import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
@@ -39,8 +39,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
 
   const fetchItems = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL
-      const response = await axios.get(`${apiUrl}/items?limit=1000`)
+      const response = await api.get('/items?limit=1000')
       setItems(response.data.data || [])
     } catch (err) {
       console.error('Failed to fetch items:', err)
@@ -49,8 +48,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
 
   const fetchContacts = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL
-      const response = await axios.get(`${apiUrl}/suppliers/contacts/all`)
+      const response = await api.get('/suppliers/contacts/all')
       setContacts(response.data.data || [])
     } catch (err) {
       console.error('Failed to fetch contacts:', err)
@@ -59,8 +57,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
 
   const fetchWarehouses = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL
-      const response = await axios.get(`${apiUrl}/stock/warehouses?limit=1000`)
+      const response = await api.get('/stock/warehouses?limit=1000')
       setWarehouses(response.data.data || [])
     } catch (err) {
       console.error('Failed to fetch warehouses:', err)
@@ -143,8 +140,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
         items: formData.items.map(({ id, ...item }) => item)
       }
 
-      const apiUrl = import.meta.env.VITE_API_URL
-      await axios.post(`${apiUrl}/material-requests`, submitData)
+      await api.post('/material-requests', submitData)
       onSuccess()
       onClose()
     } catch (err) {

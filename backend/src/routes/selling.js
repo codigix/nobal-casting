@@ -26,6 +26,7 @@ router.get('/sales-orders', SellingController.getSalesOrders)
 router.get('/orders/confirmed', SellingController.getConfirmedOrders)
 router.get('/sales-orders/item/:item_code', SellingController.getSalesOrderByItem)
 // Specific routes must come before generic :id routes
+router.delete('/sales-orders/truncate/all', SellingController.truncateSalesOrders)
 router.put('/sales-orders/:id/confirm', SellingController.confirmSalesOrder)
 // Generic :id routes
 router.get('/sales-orders/:id', SellingController.getSalesOrderById)

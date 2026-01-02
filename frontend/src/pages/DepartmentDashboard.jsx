@@ -46,7 +46,7 @@ export default function DepartmentDashboard() {
           fetch(`${import.meta.env.VITE_API_URL}/stock/warehouses`, { headers }).catch(() => ({})),
           fetch(`${import.meta.env.VITE_API_URL}/stock/entries`, { headers }).catch(() => ({})),
           fetch(`${import.meta.env.VITE_API_URL}/stock/stock-balance`, { headers }).catch(() => ({})),
-          fetch(`${import.meta.env.VITE_API_URL}/stock/stock-ledger`, { headers }).catch(() => ({}))
+          fetch(`${import.meta.env.VITE_API_URL}/stock/ledger`, { headers }).catch(() => ({}))
         ])
         const [pr, wh, se, sb, sl] = await Promise.all([
           prRes.json?.().catch(() => []), whRes.json?.().catch(() => []), 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import axios from 'axios'
+import api from '../../services/api'
 import Button from '../../components/Button/Button'
 import Alert from '../../components/Alert/Alert'
 import Card from '../../components/Card/Card'
@@ -50,12 +50,11 @@ export default function RFQForm() {
 
   const fetchRequiredData = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL
       const [mrRes, supRes, itemRes, compRes] = await Promise.all([
-        axios.get(`${apiUrl}/material-requests/approved`),
-        axios.get(`${apiUrl}/suppliers?active=true`),
-        axios.get(`${apiUrl}/items?limit=1000`),
-        axios.get(`${apiUrl}/company-info`).catch(() => ({ data: { data: null } }))
+        api.get('/material-requests/approved'),
+        api.get('/suppliers?active=true'),
+        api.get('/items?limit=1000'),
+        api.get('/company-info').catch(() => ({ data: { data: null } }))
       ])
 
       setApprovedMRs(mrRes.data.data || [])
@@ -69,8 +68,7 @@ export default function RFQForm() {
 
   const fetchRFQ = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL
-      const response = await axios.get(`${apiUrl}/rfqs/${id}`)
+      const response = await api.get(`/rfqs/${id}`)
       const rfq = response.data.data
       setFormData({
         series_no: rfq.series_no || '',
@@ -86,7 +84,7 @@ export default function RFQForm() {
   const handleLoadFromMR = (mrId) => {
     const mr = approvedMRs.find(m => m.mr_id === mrId)
     if (mr) {
-      axios.get(`/api/material-requests/${mrId}`).then(res => {
+      api.get(`/material-requests/${mrId}`).then(res => {
         const items = res.data.data.items || []
         setFormData({
           ...formData,

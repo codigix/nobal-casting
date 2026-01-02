@@ -171,28 +171,41 @@ export default function WorkstationForm() {
 
     if (!validateForm()) {
       setLoading(false)
+      setError('Please fix the errors above before submitting')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
 
     try {
       const token = localStorage.getItem('token')
+      
+      const cleanedData = {
+        ...formData,
+        name: formData.name?.trim() || '',
+        workstation_name: formData.workstation_name?.trim() || ''
+      }
+
+      console.log('Submitting workstation data:', cleanedData)
+
       const response = await fetch(
         id ? `${import.meta.env.VITE_API_URL}/production/workstations/${id}` : `${import.meta.env.VITE_API_URL}/production/workstations`,
         {
           method: id ? 'PUT' : 'POST',
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
+          body: JSON.stringify(cleanedData)
         }
       )
 
+      const responseData = await response.json()
+      
       if (response.ok) {
         setSuccess('Workstation saved successfully! Redirecting...')
         setTimeout(() => navigate('/manufacturing/workstations'), 1500)
       } else {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to save workstation')
+        throw new Error(responseData.message || `Failed to save workstation (${response.status})`)
       }
     } catch (err) {
+      console.error('Submit error:', err)
       setError(err.message)
     } finally {
       setLoading(false)
@@ -223,10 +236,10 @@ export default function WorkstationForm() {
   )
 
   const FormField = ({ label, name, type = 'text', required, options, ...props }) => (
-    <div className="form-group">
+    <div className={`form-group ${(name === 'name' || name === 'workstation_name') ? 'p-2 bg-blue-50 rounded border border-blue-100' : ''}`}>
       <label className="block text-xs font-semibold text-gray-700 mb-1">
         {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
+        {(required || name === 'name' || name === 'workstation_name') && <span className="text-red-500 ml-1 font-bold">*</span>}
       </label>
       {fieldDescriptions[name] && (
         <p className="text-xs text-gray-500 mb-1.5">{fieldDescriptions[name]}</p>
@@ -234,11 +247,11 @@ export default function WorkstationForm() {
       {options ? (
         <select
           name={name}
-          value={formData[name]}
+          value={formData[name] || ''}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           className={`w-full px-3 py-2 border rounded text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
-            fieldErrors[name] ? 'border-red-500' : 'border-gray-300'
+            fieldErrors[name] ? 'border-red-500 bg-red-50' : 'border-gray-300'
           }`}
           disabled={id && name === 'name'}
           {...props}
@@ -253,7 +266,7 @@ export default function WorkstationForm() {
           <input
             type="checkbox"
             name={name}
-            checked={formData[name]}
+            checked={formData[name] || false}
             onChange={handleInputChange}
             className="w-4 h-4 text-cyan-600 rounded focus:ring-cyan-500"
             {...props}
@@ -263,12 +276,12 @@ export default function WorkstationForm() {
       ) : type === 'textarea' ? (
         <textarea
           name={name}
-          value={formData[name]}
+          value={formData[name] || ''}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           rows={5}
           className={`w-full px-3 py-2 border rounded text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-vertical ${
-            fieldErrors[name] ? 'border-red-500' : 'border-gray-300'
+            fieldErrors[name] ? 'border-red-500 bg-red-50' : 'border-gray-300'
           }`}
           {...props}
         />
@@ -276,18 +289,19 @@ export default function WorkstationForm() {
         <input
           type={type}
           name={name}
-          value={formData[name]}
+          value={formData[name] || ''}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          className={`w-full px-3 py-2 border rounded text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
-            fieldErrors[name] ? 'border-red-500' : 'border-gray-300'
+          className={`w-full px-3 py-2 border rounded text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 font-medium ${
+            fieldErrors[name] ? 'border-red-500 bg-red-50' : 'border-gray-300'
           }`}
+          required={name === 'name' || name === 'workstation_name'}
           disabled={id && name === 'name'}
           {...props}
         />
       )}
       {fieldErrors[name] && (
-        <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+        <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-semibold">
           <AlertCircle size={12} /> {fieldErrors[name]}
         </p>
       )}
@@ -450,8 +464,9 @@ export default function WorkstationForm() {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !formData.name?.trim() || !formData.workstation_name?.trim()}
               className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg text-xs font-semibold hover:from-cyan-600 hover:to-cyan-700 transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+              title={!formData.name?.trim() ? 'Workstation ID is required' : !formData.workstation_name?.trim() ? 'Workstation Name is required' : ''}
             >
               <Save size={16} /> {loading ? 'Saving...' : 'Save Workstation'}
             </button>

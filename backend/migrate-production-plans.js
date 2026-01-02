@@ -27,7 +27,7 @@ async function migrate() {
     for (const plan of oldPlans) {
       try {
         await db.execute(
-          `INSERT IGNORE INTO production_planning_header (plan_id, naming_series, company, posting_date, sales_order_id, status)
+          `INSERT IGNORE INTO production_plan (plan_id, naming_series, company, posting_date, sales_order_id, status)
            VALUES (?, ?, ?, ?, ?, ?)`,
           [plan.plan_id, 'PP', '', new Date().toISOString().split('T')[0], null, 'draft']
         )
@@ -39,7 +39,7 @@ async function migrate() {
     
     console.log('\nMigration complete!')
     
-    const [newPlans] = await db.execute('SELECT COUNT(*) as count FROM production_planning_header')
+    const [newPlans] = await db.execute('SELECT COUNT(*) as count FROM production_plan')
     console.log(`New table now has ${newPlans[0].count} plans`)
     
     db.end()

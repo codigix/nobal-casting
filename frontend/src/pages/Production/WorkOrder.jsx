@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as productionService from '../../services/productionService'
-import { Plus, Edit2, Trash2, Truck, Eye } from 'lucide-react'
+import { Plus, Edit2, Trash2, Truck, Eye, Trash } from 'lucide-react'
 
 export default function WorkOrder() {
   const navigate = useNavigate()
@@ -70,6 +70,21 @@ export default function WorkOrder() {
     }
   }
 
+  const handleTruncate = async () => {
+    if (!window.confirm('⚠️ Warning: This will permanently delete ALL work orders. Are you sure?')) return
+    try {
+      setLoading(true)
+      await productionService.truncateWorkOrders()
+      setSuccess('All work orders truncated successfully')
+      setTimeout(() => setSuccess(null), 3000)
+      fetchWorkOrders()
+    } catch (err) {
+      setError(err.message || 'Failed to truncate work orders')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleView = (order) => {
     navigate(`/manufacturing/work-orders/${order.wo_id}?readonly=true`)
   }
@@ -117,12 +132,21 @@ export default function WorkOrder() {
               </div>
             </div>
           </div>
-          <button 
-            onClick={() => navigate('/manufacturing/work-orders/new')}
-            className="btn-primary flex items-center gap-2 bg-gradient-to-br from-blue-400 to-blue-600 "
-          >
-            <Plus size={16} /> Create Work Order
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => navigate('/manufacturing/work-orders/new')}
+              className="btn-primary flex items-center gap-2 bg-gradient-to-br from-blue-400 to-blue-600 "
+            >
+              <Plus size={16} /> Create Work Order
+            </button>
+            <button 
+              onClick={handleTruncate}
+              className="btn-primary flex items-center gap-2 bg-gradient-to-br from-red-400 to-red-600"
+              title="Delete all work orders"
+            >
+              <Trash size={16} /> Truncate All
+            </button>
+          </div>
         </div>
 
         {success && (
@@ -228,7 +252,7 @@ export default function WorkOrder() {
                             {order.priority}
                           </span>
                         </td>
-                        <td className="px-3 py-2 text-gray-700">{order.required_date ? new Date(order.required_date).toLocaleDateString() : 'N/A'}</td>
+                        <td className="px-3 py-2 text-gray-700">{order.planned_end_date ? new Date(order.planned_end_date).toLocaleDateString() : 'N/A'}</td>
                         <td className="px-3 py-2">
                           <span className={`inline-block px-2 py-1 rounded border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} border text-xs capitalize`}>
                             {order.status}

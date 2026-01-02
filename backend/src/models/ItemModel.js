@@ -59,17 +59,33 @@ export class ItemModel {
     try {
       for (const barcode of barcodes) {
         if (barcode.barcode) {
-          await this.db.execute(
-            `INSERT INTO item_barcode (barcode_id, item_code, barcode, barcode_name, barcode_type) 
-             VALUES (?, ?, ?, ?, ?)`,
-            [
-              `BARCODE-${Date.now()}-${Math.random()}`,
-              item_code,
-              barcode.barcode,
-              barcode.barcode_name || '',
-              barcode.barcode_type || ''
-            ]
-          )
+          try {
+            const [existing] = await this.db.execute(
+              `SELECT barcode_id FROM item_barcode WHERE barcode = ?`,
+              [barcode.barcode]
+            )
+            
+            if (existing && existing.length > 0) {
+              await this.db.execute(
+                `UPDATE item_barcode SET item_code = ?, barcode_name = ?, barcode_type = ? WHERE barcode = ?`,
+                [item_code, barcode.barcode_name || '', barcode.barcode_type || '', barcode.barcode]
+              )
+            } else {
+              await this.db.execute(
+                `INSERT INTO item_barcode (barcode_id, item_code, barcode, barcode_name, barcode_type) 
+                 VALUES (?, ?, ?, ?, ?)`,
+                [
+                  `BARCODE-${Date.now()}-${Math.random()}`,
+                  item_code,
+                  barcode.barcode,
+                  barcode.barcode_name || '',
+                  barcode.barcode_type || ''
+                ]
+              )
+            }
+          } catch (insertError) {
+            console.error(`Error saving barcode ${barcode.barcode}:`, insertError.message)
+          }
         }
       }
     } catch (error) {

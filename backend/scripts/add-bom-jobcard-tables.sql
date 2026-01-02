@@ -59,6 +59,10 @@ CREATE TABLE IF NOT EXISTS job_card (
   INDEX idx_operator_id (operator_id)
 );
 
+-- Add missing columns to job_card table if they don't exist
+ALTER TABLE job_card ADD COLUMN IF NOT EXISTS operation_sequence INT;
+ALTER TABLE job_card ADD COLUMN IF NOT EXISTS operation_time DECIMAL(10,2) DEFAULT 0;
+
 -- Add indexes for better query performance
 ALTER TABLE bom ADD INDEX idx_created_at (created_at);
 ALTER TABLE bom_line ADD INDEX idx_component_code (component_code);

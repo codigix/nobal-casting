@@ -240,20 +240,52 @@ export default function PurchaseOrderForm() {
     return po.items.reduce((total, item) => total + (item.qty || 0), 0)
   }
 
+  const validateForm = () => {
+    if (!po.supplier_id) return 'Please select a supplier'
+    if (!po.order_date) return 'Please select an order date'
+    if (!po.expected_date) return 'Please select an expected delivery date'
+    if (po.items.length === 0) return 'Please add at least one item'
+    
+    for (const item of po.items) {
+      if (!item.item_code) return 'All items must have an item code selected'
+      if (!item.qty || item.qty <= 0) return `Invalid quantity for item ${item.item_code}`
+    }
+    return null
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    const errorMsg = validateForm()
+    if (errorMsg) {
+      alert(errorMsg)
+      return
+    }
+
     setLoading(true)
     try {
-      const method = po_no ? 'PUT' : 'POST'
-      const url = po_no ? `${import.meta.env.VITE_API_URL}/purchase-orders/${po_no}` : `${import.meta.env.VITE_API_URL}/purchase-orders`
+      const isEdit = po_no && po_no !== 'new'
+      const method = isEdit ? 'PUT' : 'POST'
+      const url = isEdit ? `${import.meta.env.VITE_API_URL}/purchase-orders/${po_no}` : `${import.meta.env.VITE_API_URL}/purchase-orders`
       
       const submitData = {
         ...po,
         subtotal: calculateSubtotal(),
         tax_amount: calculateTaxAmount(),
         final_amount: calculateTotal(),
+        items: po.items.map(item => ({
+          ...item,
+          qty: parseFloat(item.qty) || 0,
+          rate: parseFloat(item.rate) || 0,
+          tax_rate: parseFloat(item.tax_rate) || 0,
+          schedule_date: item.schedule_date || po.expected_date // Ensure schedule_date is present
+        })),
         accounting_emails: ['accounts@company.com']
       }
+
+      // Clean up optional fields
+      if (!submitData.due_date) delete submitData.due_date
+      if (!submitData.payment_terms_description) delete submitData.payment_terms_description
 
       const res = await fetch(url, {
         method,
@@ -266,7 +298,7 @@ export default function PurchaseOrderForm() {
         alert('Purchase Order saved successfully!')
         navigate('/buying/purchase-orders')
       } else {
-        alert(`Error: ${data.error}`)
+        alert(`Error: ${data.error || 'Unknown error occurred'}`)
       }
     } catch (error) {
       alert(`Error: ${error.message}`)

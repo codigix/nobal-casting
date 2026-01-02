@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../services/api'
 import Button from '../../components/Button/Button'
 import Alert from '../../components/Alert/Alert'
 import Badge from '../../components/Badge/Badge'
@@ -67,8 +67,8 @@ export default function StockEntries() {
   const fetchApprovedGRNs = async () => {
     try {
       const [grnRes, entriesRes] = await Promise.all([
-        axios.get('/api/grn-requests?status=approved'),
-        axios.get('/api/stock/entries')
+        api.get('/grn-requests?status=approved'),
+        api.get('/stock/entries')
       ])
       
       const grns = grnRes.data.data || []
@@ -90,7 +90,7 @@ export default function StockEntries() {
   const fetchEntries = async () => {
     try {
       setLoading(true)
-      const response = await axios.get('/api/stock/entries')
+      const response = await api.get('/stock/entries')
       setEntries(response.data.data || [])
       
       const grnNosWithEntries = new Set(
@@ -111,7 +111,7 @@ export default function StockEntries() {
 
   const fetchWarehouses = async () => {
     try {
-      const response = await axios.get('/api/stock/warehouses')
+      const response = await api.get('/stock/warehouses')
       setWarehouses(response.data.data || [])
     } catch (err) {
       console.error('Failed to fetch warehouses:', err)
@@ -120,7 +120,7 @@ export default function StockEntries() {
 
   const fetchItems = async () => {
     try {
-      const response = await axios.get('/api/items?limit=1000')
+      const response = await api.get('/items?limit=1000')
       setItems(response.data.data || [])
     } catch (err) {
       console.error('Failed to fetch items:', err)
@@ -204,10 +204,10 @@ export default function StockEntries() {
       }
 
       if (editingId) {
-        await axios.put(`/api/stock/entries/${editingId}`, submitData)
+        await api.put(`/stock/entries/${editingId}`, submitData)
         setSuccess('Stock entry updated successfully')
       } else {
-        await axios.post('/api/stock/entries', submitData)
+        await api.post('/stock/entries', submitData)
         setSuccess('Stock entry created successfully')
       }
 
@@ -241,7 +241,7 @@ export default function StockEntries() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this stock entry?')) {
       try {
-        await axios.delete(`/api/stock/entries/${id}`)
+        await api.delete(`/stock/entries/${id}`)
         setSuccess('Stock entry deleted successfully')
         fetchEntries()
         setTimeout(() => setSuccess(null), 3000)

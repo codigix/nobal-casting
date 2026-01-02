@@ -7,20 +7,18 @@ export class ProductionPlanningController {
 
   async createPlan(req, res) {
     try {
-      const { plan_id, company, posting_date, planned_by_id, naming_series, sales_order_id, status } = req.body
-
-      if (!posting_date) {
-        return res.status(400).json({ success: false, error: 'Posting date is required' })
-      }
+      const { plan_id, company, planned_by_id, naming_series, sales_order_id, status, bom_id, plan_date, week_number } = req.body
 
       const result = await this.model.createPlan({
         plan_id,
         company,
-        posting_date,
         planned_by_id,
         naming_series,
         sales_order_id,
-        status
+        status,
+        bom_id,
+        plan_date,
+        week_number
       })
 
       res.status(201).json({ success: true, data: result })
@@ -33,7 +31,7 @@ export class ProductionPlanningController {
   async updatePlan(req, res) {
     try {
       const { plan_id } = req.params
-      const { naming_series, company, posting_date, sales_order_id, status, fg_items, sub_assemblies, raw_materials } = req.body
+      const { naming_series, company, sales_order_id, status, bom_id, plan_date, week_number, planned_by_id, fg_items, sub_assemblies, raw_materials } = req.body
 
       if (!plan_id) {
         return res.status(400).json({ success: false, error: 'Plan ID is required' })
@@ -42,9 +40,12 @@ export class ProductionPlanningController {
       await this.model.updatePlanHeader(plan_id, {
         naming_series,
         company,
-        posting_date,
         sales_order_id,
-        status
+        status,
+        bom_id,
+        plan_date,
+        week_number,
+        planned_by_id
       })
 
       if (fg_items && Array.isArray(fg_items)) {
@@ -124,10 +125,16 @@ export class ProductionPlanningController {
 
   async addFGItems(req, res) {
     try {
-      const { plan_id, items } = req.body
+      const { plan_id } = req.params
+      const body = req.body
+      const items = body.items ? (Array.isArray(body.items) ? body.items : [body.items]) : [body]
 
-      if (!plan_id || !items || !Array.isArray(items)) {
-        return res.status(400).json({ success: false, error: 'Invalid plan_id or items' })
+      if (!plan_id) {
+        return res.status(400).json({ success: false, error: 'Plan ID is required' })
+      }
+
+      if (!items || items.length === 0) {
+        return res.status(400).json({ success: false, error: 'At least one item is required' })
       }
 
       for (const item of items) {
@@ -143,10 +150,16 @@ export class ProductionPlanningController {
 
   async addSubAssemblyItems(req, res) {
     try {
-      const { plan_id, items } = req.body
+      const { plan_id } = req.params
+      const body = req.body
+      const items = body.items ? (Array.isArray(body.items) ? body.items : [body.items]) : [body]
 
-      if (!plan_id || !items || !Array.isArray(items)) {
-        return res.status(400).json({ success: false, error: 'Invalid plan_id or items' })
+      if (!plan_id) {
+        return res.status(400).json({ success: false, error: 'Plan ID is required' })
+      }
+
+      if (!items || items.length === 0) {
+        return res.status(400).json({ success: false, error: 'At least one item is required' })
       }
 
       for (const item of items) {
@@ -162,10 +175,16 @@ export class ProductionPlanningController {
 
   async addRawMaterialItems(req, res) {
     try {
-      const { plan_id, items } = req.body
+      const { plan_id } = req.params
+      const body = req.body
+      const items = body.items ? (Array.isArray(body.items) ? body.items : [body.items]) : [body]
 
-      if (!plan_id || !items || !Array.isArray(items)) {
-        return res.status(400).json({ success: false, error: 'Invalid plan_id or items' })
+      if (!plan_id) {
+        return res.status(400).json({ success: false, error: 'Plan ID is required' })
+      }
+
+      if (!items || items.length === 0) {
+        return res.status(400).json({ success: false, error: 'At least one item is required' })
       }
 
       for (const item of items) {
@@ -215,8 +234,21 @@ export class ProductionPlanningController {
   async submitPlan(req, res) {
     try {
       const { plan_id } = req.params
+      
       await this.model.updatePlanStatus(plan_id, 'submitted')
-      res.json({ success: true, message: 'Production plan submitted' })
+      
+      let mrId = null
+      try {
+        mrId = await this.model.createMaterialRequest(plan_id)
+      } catch (mrError) {
+        console.error('Warning: Could not create material request:', mrError.message)
+      }
+      
+      res.json({ 
+        success: true, 
+        message: 'Production plan submitted',
+        data: { material_request_id: mrId }
+      })
     } catch (error) {
       console.error('Error submitting production plan:', error)
       res.status(500).json({ success: false, error: error.message })
@@ -230,6 +262,16 @@ export class ProductionPlanningController {
       res.json({ success: true, message: 'Production plan deleted' })
     } catch (error) {
       console.error('Error deleting production plan:', error)
+      res.status(500).json({ success: false, error: error.message })
+    }
+  }
+
+  async truncatePlans(req, res) {
+    try {
+      await this.model.truncatePlans()
+      res.json({ success: true, message: 'All production plans truncated successfully' })
+    } catch (error) {
+      console.error('Error truncating production plans:', error)
       res.status(500).json({ success: false, error: error.message })
     }
   }

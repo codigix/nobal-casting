@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, Eye, CheckCircle, ChevronDown, ChevronRight, Clock, AlertCircle, Zap } from 'lucide-react'
+import { Plus, Edit2, Trash2, Eye, CheckCircle, ChevronDown, ChevronRight, AlertCircle, Zap, Trash } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import * as productionService from '../../services/productionService'
 import CreateJobCardModal from '../../components/Production/CreateJobCardModal'
 import ViewJobCardModal from '../../components/Production/ViewJobCardModal'
-import TimeLogsModal from '../../components/Production/TimeLogsModal'
-import RejectionEntryModal from '../../components/Production/RejectionEntryModal'
-import DowntimeEntryModal from '../../components/Production/DowntimeEntryModal'
 import SearchableSelect from '../../components/SearchableSelect'
 import { useToast } from '../../components/ToastContainer'
 
 export default function JobCard() {
+  const navigate = useNavigate()
   const toast = useToast()
   const [workOrders, setWorkOrders] = useState([])
   const [jobCardsByWO, setJobCardsByWO] = useState({})
@@ -28,10 +27,6 @@ export default function JobCard() {
   const [workstations, setWorkstations] = useState([])
   const [operators, setOperators] = useState([])
   const [operations, setOperations] = useState([])
-  const [showTimeLogsModal, setShowTimeLogsModal] = useState(false)
-  const [showRejectionModal, setShowRejectionModal] = useState(false)
-  const [showDowntimeModal, setShowDowntimeModal] = useState(false)
-  const [selectedJobCard, setSelectedJobCard] = useState(null)
 
   useEffect(() => {
     fetchData()
@@ -111,17 +106,33 @@ export default function JobCard() {
     }
   }
 
+  const handleTruncate = async () => {
+    if (!window.confirm('⚠️ Warning: This will permanently delete ALL job cards. Are you sure?')) return
+    try {
+      setLoading(true)
+      await productionService.truncateJobCards()
+      toast.addToast('All job cards truncated successfully', 'success')
+      fetchWorkOrders()
+    } catch (err) {
+      toast.addToast(err.message || 'Failed to truncate job cards', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleEdit = (card) => {
     setEditingId(card.job_card_id)
     setShowModal(true)
   }
 
+
+
   const handleInlineEdit = (card) => {
     setInlineEditingId(card.job_card_id)
     setInlineEditData({
       operation: card.operation || '',
-      planned_quantity: card.planned_quantity || 0,
-      produced_quantity: card.produced_quantity || 0,
+      planned_quantity: parseFloat(card.planned_quantity) || 0,
+      produced_quantity: parseFloat(card.produced_quantity) || 0,
       machine_id: card.machine_id || '',
       operator_id: card.operator_id || '',
       status: card.status || 'draft',
@@ -146,7 +157,7 @@ export default function JobCard() {
     if (currentCardIndex === 0) return { valid: true }
 
     const previousCard = jobCards[currentCardIndex - 1]
-    const previousProduced = previousCard?.produced_quantity || 0
+    const previousProduced = parseFloat(previousCard?.produced_quantity) || 0
     const newPlanned = parseFloat(newPlannedQty) || 0
 
     if (newPlanned > previousProduced) {
@@ -167,13 +178,13 @@ export default function JobCard() {
     const workOrder = workOrders.find(wo => wo.wo_id === woId)
     if (!workOrder) return { valid: true }
 
-    const plannedTotal = workOrder.quantity || workOrder.qty_to_manufacture || 0
+    const plannedTotal = parseFloat(workOrder.quantity || workOrder.qty_to_manufacture || 0)
     
     const alreadyProduced = jobCards.reduce((sum, card) => {
       if (card.job_card_id === jobCardId) {
         return sum
       }
-      return sum + (card.produced_quantity || 0)
+      return sum + (parseFloat(card.produced_quantity) || 0)
     }, 0)
 
     const availableProduction = plannedTotal - alreadyProduced
@@ -285,7 +296,7 @@ export default function JobCard() {
     if (currentCardIndex === 0) return Infinity
 
     const previousCard = jobCards[currentCardIndex - 1]
-    return previousCard?.produced_quantity || 0
+    return parseFloat(previousCard?.produced_quantity) || 0
   }
 
   const getMaxProducibleQty = (jobCardId, woId) => {
@@ -293,10 +304,10 @@ export default function JobCard() {
     const workOrder = workOrders.find(wo => wo.wo_id === woId)
     if (!workOrder) return 0
 
-    const plannedTotal = workOrder.quantity || workOrder.qty_to_manufacture || 0
+    const plannedTotal = parseFloat(workOrder.quantity || workOrder.qty_to_manufacture || 0)
     const alreadyProduced = jobCards.reduce((sum, card) => {
       if (card.job_card_id === jobCardId) return sum
-      return sum + (card.produced_quantity || 0)
+      return sum + (parseFloat(card.produced_quantity) || 0)
     }, 0)
 
     return plannedTotal - alreadyProduced
@@ -317,15 +328,24 @@ export default function JobCard() {
               </div>
             </div>
           </div>
-          <button 
-            onClick={() => {
-              setEditingId(null)
-              setShowModal(true)
-            }}
-            className="btn-primary flex items-center gap-2 bg-gradient-to-br from-purple-400 to-purple-600"
-          >
-            <Plus size={16} /> New Job Card
-          </button> 
+          <div className="flex gap-2">
+            <button 
+              onClick={() => {
+                setEditingId(null)
+                setShowModal(true)
+              }}
+              className="btn-primary flex items-center gap-2 bg-gradient-to-br from-purple-400 to-purple-600"
+            >
+              <Plus size={16} /> New Job Card
+            </button>
+            <button 
+              onClick={handleTruncate}
+              className="btn-primary flex items-center gap-2 bg-gradient-to-br from-red-400 to-red-600"
+              title="Delete all job cards"
+            >
+              <Trash size={16} /> Truncate All
+            </button>
+          </div>
         </div>
 
         <CreateJobCardModal 
@@ -346,36 +366,6 @@ export default function JobCard() {
           }}
           onSuccess={fetchWorkOrders}
           jobCardId={viewingJobCardId}
-        />
-
-        <TimeLogsModal
-          isOpen={showTimeLogsModal}
-          onClose={() => {
-            setShowTimeLogsModal(false)
-            setSelectedJobCard(null)
-          }}
-          jobCardId={selectedJobCard?.job_card_id}
-          jobCardData={selectedJobCard}
-        />
-
-        <RejectionEntryModal
-          isOpen={showRejectionModal}
-          onClose={() => {
-            setShowRejectionModal(false)
-            setSelectedJobCard(null)
-          }}
-          jobCardId={selectedJobCard?.job_card_id}
-          jobCardData={selectedJobCard}
-        />
-
-        <DowntimeEntryModal
-          isOpen={showDowntimeModal}
-          onClose={() => {
-            setShowDowntimeModal(false)
-            setSelectedJobCard(null)
-          }}
-          jobCardId={selectedJobCard?.job_card_id}
-          jobCardData={selectedJobCard}
         />
 
         <div className="bg-white rounded-lg shadow-sm p-3 mb-3">
@@ -461,7 +451,7 @@ export default function JobCard() {
                     </div>
                     <div>
                       <div className="text-gray-500 text-xs">Due Date</div>
-                      <div className="text-gray-700">{wo.required_date ? new Date(wo.required_date).toLocaleDateString() : 'N/A'}</div>
+                      <div className="text-gray-700">{wo.planned_end_date ? new Date(wo.planned_end_date).toLocaleDateString() : 'N/A'}</div>
                     </div>
                   </div>
                 </div>
@@ -472,9 +462,9 @@ export default function JobCard() {
                         <tr className="bg-gray-100 border border-gray-200">
                           <th className="px-3 py-2 text-left font-semibold text-gray-700">ID</th>
                           <th className="px-3 py-2 text-left font-semibold text-gray-700">Work Order</th>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-700">Item</th>
                           <th className="px-3 py-2 text-right font-semibold text-gray-700">Qty To Manuf</th>
                           <th className="px-3 py-2 text-left font-semibold text-gray-700">Operation</th>
-                          
                           <th className="px-3 py-2 text-left font-semibold text-gray-700">Workstation</th>
                           <th className="px-3 py-2 text-left font-semibold text-gray-700">Status</th>
                           <th className="px-3 py-2 text-center font-semibold text-gray-700">Actions</th>
@@ -484,7 +474,7 @@ export default function JobCard() {
                         {jobCardsByWO[wo.wo_id].map((card, idx) => (
                           inlineEditingId === card.job_card_id ? (
                             <tr key={card.job_card_id} className="bg-yellow-50 border border-yellow-200">
-                              <td colSpan="7" className="px-3 py-3">
+                              <td colSpan="8" className="px-3 py-3">
                                 <div className="text-xs font-semibold text-gray-700 mb-2">Editing: {card.job_card_id}</div>
                                 <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
                                   <div>
@@ -588,9 +578,10 @@ export default function JobCard() {
                             <tr key={card.job_card_id} className={`border border-gray-200 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
                               <td className="px-3 py-2 text-gray-900 font-medium">{card.job_card_id}</td>
                                 <td className="px-3 py-2 text-gray-900">{wo.wo_id}</td>
+                                <td className="px-3 py-2 text-gray-900">{wo.item_name || wo.item_code || 'N/A'}</td>
                                 <td className="px-3 py-2 text-right text-gray-900 font-medium">{formatQuantity(card.planned_quantity)}</td>
                               <td className="px-3 py-2 text-gray-900 font-medium">{card.operation || 'N/A'}</td>
-                                                            <td className="px-3 py-2 text-gray-900">{getWorkstationName(card.machine_id)}</td>
+                                <td className="px-3 py-2 text-gray-900">{getWorkstationName(card.machine_id)}</td>
 
                               <td className="px-3 py-2">
                                 <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
@@ -611,26 +602,13 @@ export default function JobCard() {
                                   <button className="p-1 hover:bg-blue-50 rounded transition" title="View" onClick={() => handleViewJobCard(card.job_card_id)}>
                                     <Eye size={14} className="text-blue-600" />
                                   </button>
-                                  <button className="p-1 hover:bg-orange-50 rounded transition" title="Time Logs" onClick={() => {
-                                    setSelectedJobCard(card)
-                                    setShowTimeLogsModal(true)
+                                  <button className="p-1 hover:bg-green-50 rounded transition" title="Execute & Production Entry" onClick={() => {
+                                    navigate(`/manufacturing/job-cards/${card.job_card_id}/production-entry`)
                                   }}>
-                                    <Clock size={14} className="text-orange-600" />
+                                    <Zap size={14} className="text-green-600" />
                                   </button>
-                                  <button className="p-1 hover:bg-red-50 rounded transition" title="Rejection" onClick={() => {
-                                    setSelectedJobCard(card)
-                                    setShowRejectionModal(true)
-                                  }}>
-                                    <AlertCircle size={14} className="text-red-600" />
-                                  </button>
-                                  <button className="p-1 hover:bg-yellow-50 rounded transition" title="Downtime" onClick={() => {
-                                    setSelectedJobCard(card)
-                                    setShowDowntimeModal(true)
-                                  }}>
-                                    <Zap size={14} className="text-yellow-600" />
-                                  </button>
-                                  <button className="p-1 hover:bg-green-50 rounded transition" title="Edit" onClick={() => handleInlineEdit(card)}>
-                                    <Edit2 size={14} className="text-green-600" />
+                                  <button className="p-1 hover:bg-gray-50 rounded transition" title="Edit" onClick={() => handleInlineEdit(card)}>
+                                    <Edit2 size={14} className="text-gray-600" />
                                   </button>
                                   <button className="p-1 hover:bg-red-50 rounded transition" title="Delete" onClick={() => handleDelete(card.job_card_id)}>
                                     <Trash2 size={14} className="text-red-600" />

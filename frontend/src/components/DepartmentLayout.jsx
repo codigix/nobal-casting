@@ -83,11 +83,18 @@ export default function DepartmentLayout({ children }) {
 
   // Define menu items for each department
   const getDepartmentMenuItems = () => {
+    // Create dashboard item with dynamic path based on department
+    const dashboardPaths = {
+      'inventory': '/inventory/dashboard',
+      'manufacturing': '/manufacturing/dashboard',
+      'admin': '/admin/dashboard'
+    }
+    
     const dashboardItem = {
       id: 'dashboard',
       label: 'Dashboard',
       icon: LayoutDashboard,
-      path: '/dashboard',
+      path: dashboardPaths[userDept] || '/manufacturing/dashboard',
       section: 'NAVIGATION'
     }
 
@@ -101,6 +108,7 @@ export default function DepartmentLayout({ children }) {
           icon: Warehouse,
           section: 'APPS',
           submenu: [
+            { label: 'Material Requests', path: '/inventory/material-requests', icon: FileText },
             { label: 'GRN Management', path: '/inventory/grn-management', icon: Package },
             { label: 'Purchase Receipt', path: '/inventory/purchase-receipts', icon: Receipt },
             { label: 'Warehouses', path: '/inventory/warehouses', icon: Warehouse },

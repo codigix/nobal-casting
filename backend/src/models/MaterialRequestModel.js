@@ -1,4 +1,25 @@
+import StockBalanceModel from './StockBalanceModel.js'
+import StockLedgerModel from './StockLedgerModel.js'
+
 export class MaterialRequestModel {
+  /**
+   * Resolve warehouse code to warehouse ID
+   */
+  static async getWarehouseId(db, warehouseIdentifier) {
+    if (!warehouseIdentifier) return null
+    
+    if (Number.isInteger(Number(warehouseIdentifier))) {
+      return Number(warehouseIdentifier)
+    }
+    
+    const [rows] = await db.execute(
+      'SELECT id FROM warehouses WHERE warehouse_code = ? OR warehouse_name = ?',
+      [warehouseIdentifier, warehouseIdentifier]
+    )
+    
+    return rows.length ? rows[0].id : warehouseIdentifier
+  }
+
   /**
    * Get all material requests
    */
@@ -172,14 +193,105 @@ export class MaterialRequestModel {
    */
   static async approve(db, mrId, approvedBy) {
     try {
-      const [mr] = await db.execute('SELECT status FROM material_request WHERE mr_id = ?', [mrId])
-      if (!mr.length) throw new Error('Material request not found')
-      if (mr[0].status !== 'draft') throw new Error('Only draft MRs can be approved')
+      // Get MR details
+      const [mrRows] = await db.execute('SELECT * FROM material_request WHERE mr_id = ?', [mrId])
+      if (!mrRows.length) throw new Error('Material request not found')
+      const request = mrRows[0]
 
+      if (request.status !== 'draft') throw new Error('Only draft MRs can be approved')
+
+      // Get items
+      const [items] = await db.execute('SELECT * FROM material_request_item WHERE mr_id = ?', [mrId])
+
+      // Check stock for Issue/Transfer
+      const isStockTransaction = ['material_transfer', 'material_issue'].includes(request.purpose)
+
+      if (isStockTransaction) {
+        if (!request.source_warehouse) {
+          throw new Error('Source warehouse is required for Material Transfer/Issue')
+        }
+
+        // Check stock availability
+        for (const item of items) {
+          const balance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, request.source_warehouse)
+          const available = balance ? Number(balance.available_qty) : 0
+          
+          if (available < Number(item.qty)) {
+            throw new Error(`Insufficient stock for item ${item.item_code} in warehouse ${request.source_warehouse}. Available: ${available}, Requested: ${item.qty}`)
+          }
+        }
+      }
+
+      // Update status
       await db.execute(
         'UPDATE material_request SET status = ?, updated_at = NOW() WHERE mr_id = ?',
         ['approved', mrId]
       )
+
+      // Execute Stock Movements
+      if (isStockTransaction) {
+        const sourceWarehouseId = await this.getWarehouseId(db, request.source_warehouse)
+        const targetWarehouseId = request.target_warehouse ? await this.getWarehouseId(db, request.target_warehouse) : null
+        
+        for (const item of items) {
+          const qty = Number(item.qty)
+
+          // Deduct from Source
+          const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, request.source_warehouse)
+          const currentValuation = sourceBalance ? Number(sourceBalance.valuation_rate) : 0
+          const currentQty = sourceBalance ? Number(sourceBalance.current_qty) : 0
+          
+          await StockBalanceModel.upsert(item.item_code, sourceWarehouseId, {
+            current_qty: currentQty - qty,
+            reserved_qty: sourceBalance ? Number(sourceBalance.reserved_qty) : 0,
+            valuation_rate: currentValuation,
+            last_issue_date: new Date()
+          })
+
+          // Add Ledger Entry (OUT)
+          await StockLedgerModel.create({
+            item_code: item.item_code,
+            warehouse_id: sourceWarehouseId,
+            transaction_date: new Date(),
+            transaction_type: request.purpose === 'material_transfer' ? 'Transfer' : 'Issue',
+            qty_in: 0,
+            qty_out: qty,
+            valuation_rate: currentValuation,
+            reference_doctype: 'Material Request',
+            reference_name: mrId,
+            remarks: `Approved Material Request ${mrId}`,
+            created_by: approvedBy
+          })
+
+          // If Transfer, Add to Target
+          if (request.purpose === 'material_transfer' && targetWarehouseId) {
+            const targetBalance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, request.target_warehouse)
+            const targetQty = targetBalance ? Number(targetBalance.current_qty) : 0
+            
+            await StockBalanceModel.upsert(item.item_code, targetWarehouseId, {
+              current_qty: targetQty + qty,
+              reserved_qty: targetBalance ? Number(targetBalance.reserved_qty) : 0,
+              valuation_rate: currentValuation, // Transfer incoming rate
+              last_receipt_date: new Date()
+            })
+
+            // Add Ledger Entry (IN)
+            await StockLedgerModel.create({
+              item_code: item.item_code,
+              warehouse_id: targetWarehouseId,
+              transaction_date: new Date(),
+              transaction_type: 'Transfer',
+              qty_in: qty,
+              qty_out: 0,
+              valuation_rate: currentValuation,
+              reference_doctype: 'Material Request',
+              reference_name: mrId,
+              remarks: `Incoming Transfer from MR ${mrId}`,
+              created_by: approvedBy
+            })
+          }
+        }
+      }
 
       return await this.getById(db, mrId)
     } catch (error) {
@@ -226,6 +338,26 @@ export class MaterialRequestModel {
       return await this.getById(db, mrId)
     } catch (error) {
       throw new Error('Failed to convert material request: ' + error.message)
+    }
+  }
+
+  /**
+   * Update source warehouse for material request
+   */
+  static async updateSourceWarehouse(db, mrId, sourceWarehouse) {
+    try {
+      const [mr] = await db.execute('SELECT status FROM material_request WHERE mr_id = ?', [mrId])
+      if (!mr.length) throw new Error('Material request not found')
+      if (mr[0].status !== 'draft') throw new Error('Can only update draft material requests')
+
+      await db.execute(
+        'UPDATE material_request SET source_warehouse = ?, updated_at = NOW() WHERE mr_id = ?',
+        [sourceWarehouse, mrId]
+      )
+
+      return true
+    } catch (error) {
+      throw new Error('Failed to update source warehouse: ' + error.message)
     }
   }
 
@@ -304,6 +436,38 @@ export class MaterialRequestModel {
       return rows.map(r => r.department)
     } catch (error) {
       throw new Error('Failed to fetch departments: ' + error.message)
+    }
+  }
+
+  static async createGRNFromRequest(db, mrId) {
+    try {
+      const [mrRows] = await db.execute('SELECT * FROM material_request WHERE mr_id = ?', [mrId])
+      if (!mrRows.length) throw new Error('Material request not found')
+      const mr = mrRows[0]
+
+      const [itemRows] = await db.execute('SELECT * FROM material_request_item WHERE mr_id = ?', [mrId])
+
+      const grnNo = `GRN-${Date.now()}`
+
+      const [result] = await db.execute(
+        `INSERT INTO grn_requests (grn_no, po_no, supplier_id, supplier_name, receipt_date, status, total_items, material_request_id)
+         VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`,
+        [grnNo, '', '', mr.requested_by_name || 'Internal', new Date(), itemRows.length, mrId]
+      )
+
+      const grnRequestId = result.insertId
+
+      for (const item of itemRows) {
+        await db.execute(
+          `INSERT INTO grn_request_items (grn_request_id, item_code, item_name, po_qty, received_qty, batch_no, warehouse_name)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [grnRequestId, item.item_code, item.item_name, item.qty, 0, '', mr.source_warehouse || '']
+        )
+      }
+
+      return { grn_no: grnNo, id: grnRequestId }
+    } catch (error) {
+      throw new Error('Failed to create GRN from request: ' + error.message)
     }
   }
 }

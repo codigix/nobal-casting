@@ -360,7 +360,7 @@ export default function EmployeesDesignations() {
                 <form onSubmit={handleSaveEmployee}>
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                      <label className="block text-xs  text-gray-700 mb-1">First Name *</label>
                       <input
                         type="text"
                         value={employeeFormData.first_name}
@@ -370,7 +370,7 @@ export default function EmployeesDesignations() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                      <label className="block text-xs  text-gray-700 mb-1">Last Name</label>
                       <input
                         type="text"
                         value={employeeFormData.last_name}
@@ -379,7 +379,7 @@ export default function EmployeesDesignations() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                      <label className="block text-xs  text-gray-700 mb-1">Email *</label>
                       <input
                         type="email"
                         value={employeeFormData.email}
@@ -389,7 +389,7 @@ export default function EmployeesDesignations() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                      <label className="block text-xs  text-gray-700 mb-1">Phone</label>
                       <input
                         type="tel"
                         value={employeeFormData.phone}
@@ -398,7 +398,7 @@ export default function EmployeesDesignations() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Designation</label>
+                      <label className="block text-xs  text-gray-700 mb-1">Designation</label>
                       <select
                         value={employeeFormData.designation}
                         onChange={(e) => setEmployeeFormData(prev => ({ ...prev, designation: e.target.value }))}
@@ -413,7 +413,7 @@ export default function EmployeesDesignations() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                      <label className="block text-xs  text-gray-700 mb-1">Department</label>
                       <select
                         value={employeeFormData.department}
                         onChange={(e) => setEmployeeFormData(prev => ({ ...prev, department: e.target.value }))}
@@ -428,7 +428,7 @@ export default function EmployeesDesignations() {
                       </select>
                     </div>
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Date of Joining</label>
+                      <label className="block text-xs  text-gray-700 mb-1">Date of Joining</label>
                       <input
                         type="date"
                         value={employeeFormData.joining_date}
@@ -577,7 +577,7 @@ export default function EmployeesDesignations() {
                 <form onSubmit={handleSaveDesignation}>
                   <div className="grid grid-cols-1 gap-4 mb-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Designation Name *</label>
+                      <label className="block text-xs  text-gray-700 mb-1">Designation Name *</label>
                       <input
                         type="text"
                         value={designationFormData.name}
@@ -587,7 +587,7 @@ export default function EmployeesDesignations() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                      <label className="block text-xs  text-gray-700 mb-1">Description</label>
                       <textarea
                         value={designationFormData.description}
                         onChange={(e) => setDesignationFormData(prev => ({ ...prev, description: e.target.value }))}

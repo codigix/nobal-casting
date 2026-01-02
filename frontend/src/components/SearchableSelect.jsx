@@ -10,7 +10,9 @@ export default function SearchableSelect({
   isLoading = false,
   error = '',
   required = false,
-  onSearch = null
+  onSearch = null,
+  isClearable = true,
+  isDisabled = false
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -37,9 +39,15 @@ export default function SearchableSelect({
   useEffect(() => {
     if (value) {
       const selectedOption = options.find(opt => opt.value === value)
-      if (selectedOption && selectedOption.label !== searchTerm) {
-        setSearchTerm(selectedOption.label)
+      if (selectedOption) {
+        if (selectedOption.label !== searchTerm) {
+          setSearchTerm(selectedOption.label)
+        }
+      } else {
+        setSearchTerm(value)
       }
+    } else {
+      setSearchTerm('')
     }
   }, [value, options])
 
@@ -77,6 +85,12 @@ export default function SearchableSelect({
     onChange(option.value)
     setSearchTerm(option.label)
     setIsOpen(false)
+  }
+
+  const handleClear = (e) => {
+    e.stopPropagation()
+    onChange('')
+    setSearchTerm('')
   }
 
   const handleInputChange = (e) => {
@@ -141,10 +155,30 @@ export default function SearchableSelect({
               padding: '6px',
               border: 'none',
               outline: 'none',
-              fontSize: '12px'
+              fontSize: '12px',
+              background: isDisabled ? '#f3f4f6' : 'white',
+              cursor: isDisabled ? 'not-allowed' : 'text'
             }}
-            disabled={isLoading}
+            disabled={isLoading || isDisabled}
           />
+          {isClearable && searchTerm && !isDisabled && (
+            <button
+              type="button"
+              onClick={handleClear}
+              style={{
+                marginRight: '4px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#6b7280',
+                padding: '0 4px',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              ×
+            </button>
+          )}
           <ChevronDown 
             size={18} 
             style={{

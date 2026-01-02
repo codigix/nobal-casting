@@ -6,7 +6,7 @@ import DataTable from '../../components/Table/DataTable'
 import { useNavigate } from 'react-router-dom'
 import { 
   Edit2, Eye, Package, CheckCircle, Trash2, Plus, TrendingUp, AlertTriangle, AlertCircle,
-  Truck, Clock, Calendar, DollarSign, Check, Search
+  Truck, Clock, Calendar, DollarSign, Check, Search, Trash
 } from 'lucide-react'
 import ViewSalesOrderModal from '../../components/Selling/ViewSalesOrderModal'
 import './Selling.css'
@@ -313,6 +313,27 @@ export default function SalesOrder() {
     }
   }
 
+  const handleTruncate = async () => {
+    if (!window.confirm('⚠️ Warning: This will permanently delete ALL sales orders. Are you sure?')) return
+    try {
+      setLoading(true)
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/selling/sales-orders/truncate/all`, {
+        method: 'DELETE'
+      })
+      if (res.ok) {
+        fetchOrders()
+        alert('All sales orders truncated successfully')
+      } else {
+        alert('Failed to truncate sales orders')
+      }
+    } catch (error) {
+      console.error('Error truncating sales orders:', error)
+      alert('Error truncating sales orders')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const ActionButton = ({ icon: Icon, label, onClick, danger = false }) => {
     const [isHovered, setIsHovered] = useState(false)
     return (
@@ -415,14 +436,19 @@ export default function SalesOrder() {
         const itemList = row.items.map(item => `${item.item_name || item.item_code} (Qty: ${item.qty})`).join(', ')
         const summaryText = itemCount > 2 ? `${firstFewItems}... (+${itemCount - 2} more)` : firstFewItems
         return (
-          <span title={itemList} className="max-w-xs inline-block truncate text-xs">
-            {summaryText}
-          </span>
+          <div className="group relative inline-block max-w-xs">
+            <span className="inline-block truncate text-xs text-slate-700 hover:text-blue-600 cursor-help font-medium">
+              {summaryText}
+            </span>
+            <div className="invisible group-hover:visible absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-slate-900 text-white text-xs rounded-md px-3 py-2 z-50 shadow-lg whitespace-normal max-w-sm break-words pointer-events-none">
+              {itemList}
+            </div>
+          </div>
         )
       }
     },
     { 
-      label: 'Qty', 
+      label: 'Items Qty', 
       key: 'total_qty',
       render: (value, row) => {
         if (!row || !row.items || row.items.length === 0) return '0'
@@ -453,143 +479,165 @@ export default function SalesOrder() {
   ]
 
   return (
-    <div className="max-w-full m-8 p-0">
-      <Card>
-        <div className="flex justify-between items-center mb-5 pb-3 border-b border-gray-200 border-opacity-50">
-          <h2 className="text-2xl font-bold m-0 text-gray-800">Sales Orders</h2>
-          <button 
-            onClick={() => navigate('/manufacturing/sales-orders/new')}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Plus size={18} /> New Order
-          </button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8 flex justify-between items-end">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 mb-1">Sales Orders</h1>
+            <p className="text-slate-600 text-xs">Manage and track all your sales orders</p>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => navigate('/manufacturing/sales-orders/new')}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded font-semibold text-xs flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+            >
+              <Plus size={15} /> New Order
+            </button>
+            <button 
+              onClick={handleTruncate}
+              className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded font-semibold text-xs flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+              title="Delete all sales orders"
+            >
+              <Trash size={15} /> Truncate All
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
-          <div className="glass-card glass-card-primary">
-            <div className="flex justify-between items-start mb-2.5">
-              <span className="text-xs text-gray-600 font-semibold">Total Orders</span>
-              <div className="glass-icon" style={{ backgroundColor: 'rgba(37, 99, 235, 0.15)' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+          <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-4">
+            
+            <div className='flex justify-between items-center'>
+              <div className="text-md font-bold text-slate-900 mb-0.5">{stats.total}</div>
+            <div className="flex items-start mb-3">
+              <div className="p-2.5 bg-blue-100 rounded-md">
                 <Package size={18} color={iconColorMap.primary} />
               </div>
             </div>
-            <div className="text-xl font-bold text-gray-800 mb-1.5">{stats.total}</div>
-            <div className="text-xs flex items-center gap-1 font-medium text-gray-600">
-              <Calendar size={12} /> All time
             </div>
+            <p className="text-xs text-slate-600 font-medium">Total Orders</p>
           </div>
 
-          <div className="glass-card glass-card-warning">
-            <div className="flex justify-between items-start mb-2.5">
-              <span className="text-xs text-gray-600 font-semibold">Draft Orders</span>
-              <div className="glass-icon" style={{ backgroundColor: 'rgba(249, 115, 22, 0.15)' }}>
+          <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-4">
+            <div className='flex justify-between items-center'>
+              <div className="text-md font-bold text-slate-900 mb-0.5">{stats.draft}</div>
+            <div className="flex items-start mb-3">
+              <div className="p-2.5 bg-orange-100 rounded-md">
                 <Edit2 size={18} color={iconColorMap.warning} />
               </div>
             </div>
-            <div className="text-xl font-bold text-gray-800 mb-1.5">{stats.draft}</div>
-            <div className="text-xs flex items-center gap-1 font-medium text-orange-500">
-              <AlertTriangle size={12} /> Pending
             </div>
+            
+            <p className="text-xs text-slate-600 font-medium">Draft Orders</p>
           </div>
 
-          <div className="glass-card glass-card-success">
-            <div className="flex justify-between items-start mb-2.5">
-              <span className="text-xs text-gray-600 font-semibold">Confirmed Orders</span>
-              <div className="glass-icon" style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)' }}>
+          <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-4">
+                        <div className='flex justify-between items-center'>
+                          <div className="text-md font-bold text-slate-900 mb-0.5">{stats.confirmed || 0}</div>
+
+            <div className="flex items-start mb-3">
+              <div className="p-2.5 bg-green-100 rounded-md">
                 <Check size={18} color={iconColorMap.success} />
               </div>
             </div>
-            <div className="text-xl font-bold text-gray-800 mb-1.5">{stats.confirmed}</div>
-            <div className="text-xs flex items-center gap-1 font-medium text-green-600">
-              <CheckCircle size={12} /> Ready to dispatch
-            </div>
+                        </div>
+            <p className="text-xs text-slate-600 font-medium">Confirmed</p>
           </div>
 
-          <div className="glass-card glass-card-success">
-            <div className="flex justify-between items-start mb-2.5">
-              <span className="text-xs text-gray-600 font-semibold">Total Revenue</span>
-              <div className="glass-icon" style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)' }}>
+          <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-4">
+                       <div className='flex justify-between items-center'>
+                         <div className="text-md font-bold text-slate-900 mb-0.5">₹{(stats.total_value / 100000).toFixed(1)}L</div>
+
+            <div className="flex items-start mb-3">
+              <div className="p-2.5 bg-emerald-100 rounded-md">
                 <DollarSign size={18} color={iconColorMap.success} />
               </div>
             </div>
-            <div className="text-xl font-bold text-gray-800 mb-1.5">₹{(stats.total_value / 100000).toFixed(1)}L</div>
-            <div className="text-xs flex items-center gap-1 font-medium text-green-600">
-              <TrendingUp size={12} /> Avg: ₹{(stats.avg_value / 1000).toFixed(0)}K
-            </div>
+                       </div>
+            <p className="text-xs text-slate-600 font-medium">Total Revenue</p>
           </div>
 
-          <div className="glass-card glass-card-danger">
-            <div className="flex justify-between items-start mb-2.5">
-              <span className="text-xs text-gray-600 font-semibold">Pending Delivery</span>
-              <div className="glass-icon" style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)' }}>
+          <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-4">
+            <div className='flex justify-between items-center'>
+
+            <div className="text-md font-bold text-slate-900 mb-0.5">{stats.pending_delivery}</div>
+            <div className="flex items-start mb-3">
+              <div className="p-2.5 bg-red-100 rounded-md">
                 <Truck size={18} color={iconColorMap.danger} />
               </div>
             </div>
-            <div className="text-xl font-bold text-gray-800 mb-1.5">{stats.pending_delivery}</div>
-            <div className="text-xs flex items-center gap-1 font-medium text-red-500">
-              <Clock size={12} /> In transit
             </div>
+            
+            <p className="text-xs text-slate-600 font-medium">Pending Delivery</p>
           </div>
         </div>
 
-        <div className=" flex gap-3 mb-5 sm:flex-row">
-          <div className="flex-1 flex flex-col gap-1 w-[70%]">
-            <label className="text-xs font-medium text-gray-700">Search Orders</label>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by Order ID, Customer, or Item..."
-                value={filters.globalSearch}
-                onChange={(e) => setFilters({ ...filters, globalSearch: e.target.value })}
-                className=" pl-9 p-2 w-full text-xs"
-              />
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="flex flex-col gap-1.5 md:col-span-2">
+              <label className="text-xs font-semibold text-slate-700">Search Orders</label>
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Order ID, Customer, or Item..."
+                  value={filters.globalSearch}
+                  onChange={(e) => setFilters({ ...filters, globalSearch: e.target.value })}
+                  className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs"
+                />
+              </div>
             </div>
-          </div>
-          <div className="flex flex-col gap-1 w-[30%]">
-            <label className="text-xs font-medium text-gray-700">Filter by Status</label>
-            <select 
-              value={filters.status} 
-              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="p-2 w-full text-xs"
-            >
-              <option value="">All Status</option>
-              <option value="draft">Draft</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="dispatched">Dispatched</option>
-              <option value="invoiced">Invoiced</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-slate-700">Status Filter</label>
+              <select 
+                value={filters.status} 
+                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs"
+              >
+                <option value="">All Status</option>
+                <option value="draft">Draft</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="dispatched">Dispatched</option>
+                <option value="invoiced">Invoiced</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
           </div>
         </div>
 
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded mb-4 text-red-900 text-sm">
-            {error}
+          <div className="bg-red-50 border border-red-300 rounded-md p-3 mb-6 text-red-800 text-xs flex items-start gap-2">
+            <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />
+            <div>{error}</div>
           </div>
         )}
 
-        <div>
-          
-            {loading ? (
-              <div className="text-center py-10 text-gray-600">Loading...</div>
-            ) : filteredOrders.length === 0 ? (
-              <div className="text-center py-10 text-gray-600">
-                <Package size={48} className="mx-auto mb-4 opacity-50" />
-                <p className="my-2">No sales orders found.</p>
-                <Button 
-                  onClick={() => navigate('/manufacturing/sales-orders/new')}
-                  className="mt-3"
-                >
-                  Create First Order
-                </Button>
+        <div >
+          {loading ? (
+            <div className="text-center py-12 text-slate-500">
+              <div className="animate-spin mx-auto mb-3">
+                <Package size={28} />
               </div>
-            ) : (
-              <DataTable columns={columns} data={filteredOrders} filterable={false} />
-            )}
-          
+              <p className="text-sm font-medium">Loading sales orders...</p>
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="text-center py-12 px-6">
+              <div className="bg-slate-100 rounded-full w-14 h-14 flex items-center justify-center mx-auto mb-3">
+                <Package size={28} className="text-slate-400" />
+              </div>
+              <h3 className="text-base font-semibold text-slate-900 mb-1">No Sales Orders Found</h3>
+              <p className="text-xs text-slate-600 mb-4">Get started by creating your first sales order</p>
+              <button
+                onClick={() => navigate('/manufacturing/sales-orders/new')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md font-semibold text-xs inline-flex items-center gap-2 transition-all"
+              >
+                <Plus size={16} /> Create First Order
+              </button>
+            </div>
+          ) : (
+            <DataTable columns={columns} data={filteredOrders} filterable={false} defaultHiddenColumns={['items_summary']} />
+          )}
         </div>
-      </Card>
+      </div>
 
       <ViewSalesOrderModal 
         isOpen={!!viewOrderId}

@@ -275,7 +275,7 @@ const MaintenanceSchedule = () => {
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tool ID *</label>
+                <label className="block text-xs  text-gray-700 mb-1">Tool ID *</label>
                 <input
                   type="text"
                   name="toolId"
@@ -286,7 +286,7 @@ const MaintenanceSchedule = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Maintenance Type *</label>
+                <label className="block text-xs  text-gray-700 mb-1">Maintenance Type *</label>
                 <select
                   name="maintenanceType"
                   value={formData.maintenanceType}
@@ -301,7 +301,7 @@ const MaintenanceSchedule = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Scheduled Date</label>
+                <label className="block text-xs  text-gray-700 mb-1">Scheduled Date</label>
                 <input
                   type="date"
                   name="scheduledDate"
@@ -311,7 +311,7 @@ const MaintenanceSchedule = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cost</label>
+                <label className="block text-xs  text-gray-700 mb-1">Cost</label>
                 <input
                   type="number"
                   name="cost"
@@ -321,7 +321,7 @@ const MaintenanceSchedule = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <label className="block text-xs  text-gray-700 mb-1">Status</label>
                 <select
                   name="status"
                   value={formData.status}
@@ -335,7 +335,7 @@ const MaintenanceSchedule = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <label className="block text-xs  text-gray-700 mb-1">Description</label>
                 <textarea
                   name="description"
                   value={formData.description}

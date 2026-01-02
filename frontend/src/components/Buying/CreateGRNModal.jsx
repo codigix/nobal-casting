@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../services/api'
 import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
@@ -38,7 +38,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
 
   const generateGRNNo = async () => {
     try {
-      const response = await axios.get('/api/grn-requests/generate-grn-no')
+      const response = await api.get('/grn-requests/generate-grn-no')
       if (response.data.success) {
         setFormData(prev => ({ ...prev, grn_no: response.data.data.grn_no }))
       } else {
@@ -51,7 +51,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
 
   const fetchPurchaseOrders = async () => {
     try {
-      const response = await axios.get('/api/purchase-orders?status=submitted')
+      const response = await api.get('/purchase-orders?status=submitted')
       setPurchaseOrders(response.data.data || [])
     } catch (err) {
       console.error('Error fetching purchase orders:', err)
@@ -60,8 +60,18 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
 
   const fetchWarehouses = async () => {
     try {
-      const response = await axios.get('/api/stock/warehouses')
-      setWarehouses(response.data.data || [])
+      const response = await api.get('/stock/warehouses')
+      const warehousesList = response.data.data || []
+      setWarehouses(warehousesList)
+      
+      if (warehousesList.length > 0 && grnItems.length > 0) {
+        const defaultWarehouseName = warehousesList[0].warehouse_name
+        const updatedItems = grnItems.map(item => ({
+          ...item,
+          warehouse_name: item.warehouse_name || defaultWarehouseName
+        }))
+        setGrnItems(updatedItems)
+      }
     } catch (err) {
       console.error('Error fetching warehouses:', err)
     }
@@ -69,7 +79,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
 
   const fetchSuppliers = async () => {
     try {
-      const response = await axios.get('/api/suppliers')
+      const response = await api.get('/suppliers')
       setSuppliers(response.data.data || [])
     } catch (err) {
       console.error('Error fetching suppliers:', err)
@@ -78,7 +88,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
 
   const fetchItems = async () => {
     try {
-      const response = await axios.get('/api/items')
+      const response = await api.get('/items')
       setItems(response.data.data || [])
     } catch (err) {
       console.error('Error fetching items:', err)
@@ -96,13 +106,14 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
       }))
 
       if (selectedPO.items && selectedPO.items.length > 0) {
+        const defaultWarehouse = warehouses && warehouses.length > 0 ? warehouses[0].warehouse_name : ''
         const newItems = selectedPO.items.map(item => ({
           item_code: item.item_code,
           item_name: item.item_name,
           po_qty: item.qty || item.quantity || 0,
           received_qty: item.qty || item.quantity || 0,
           batch_no: '',
-          warehouse_name: warehouses.length > 0 ? warehouses[0].warehouse_name : '',
+          warehouse_name: defaultWarehouse,
           uom: item.uom || ''
         }))
         setGrnItems(newItems)
@@ -128,9 +139,10 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
   }
 
   const handleAddItem = () => {
+    const defaultWarehouse = warehouses && warehouses.length > 0 ? warehouses[0].warehouse_name : ''
     setGrnItems([
       ...grnItems,
-      { item_code: '', item_name: '', po_qty: 0, received_qty: 0, batch_no: '', warehouse_name: warehouses.length > 0 ? warehouses[0].warehouse_name : '', uom: '' }
+      { item_code: '', item_name: '', po_qty: 0, received_qty: 0, batch_no: '', warehouse_name: defaultWarehouse, uom: '' }
     ])
   }
 
@@ -187,7 +199,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
         notes: formData.notes
       }
 
-      const response = await axios.post('/api/grn-requests', payload)
+      const response = await api.post('/grn-requests', payload)
 
       if (response.data.success || response.status === 200 || response.status === 201) {
         setError(null)

@@ -106,9 +106,22 @@ export class MaterialRequestController {
     try {
       const { db } = req.app.locals
       const { id } = req.params
+      const { approvedBy, source_warehouse } = req.body
 
-      const result = await MaterialRequestModel.approve(db, id, req.body.approvedBy)
-      res.json({ success: true, data: result, message: 'Material request approved' })
+      if (source_warehouse) {
+        await MaterialRequestModel.updateSourceWarehouse(db, id, source_warehouse)
+      }
+
+      const result = await MaterialRequestModel.approve(db, id, approvedBy)
+      
+      let grn = null
+      try {
+        grn = await MaterialRequestModel.createGRNFromRequest(db, id)
+      } catch (err) {
+        console.error('Warning: Failed to create GRN from MR:', err.message)
+      }
+
+      res.json({ success: true, data: result, grn: grn, message: 'Material request approved' })
     } catch (error) {
       res.status(400).json({ success: false, error: error.message })
     }

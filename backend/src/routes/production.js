@@ -47,6 +47,11 @@ export function createProductionRoutes(db) {
     authMiddleware,
     productionController.getWorkOrders.bind(productionController)
   )
+  router.delete(
+    '/work-orders/truncate/all',
+    authMiddleware,
+    productionController.truncateWorkOrders.bind(productionController)
+  )
   router.get(
     '/work-orders/:wo_id',
     authMiddleware,
@@ -160,6 +165,11 @@ router.delete(
     productionController.updateBOM.bind(productionController)
   )
   router.delete(
+    '/boms/truncate/all',
+    authMiddleware,
+    productionController.truncateBOMs.bind(productionController)
+  )
+  router.delete(
     '/boms/:bom_id',
     authMiddleware,
     productionController.deleteBOM.bind(productionController)
@@ -170,6 +180,11 @@ router.delete(
     '/job-cards',
     authMiddleware,
     productionController.getJobCards.bind(productionController)
+  )
+  router.delete(
+    '/job-cards/truncate/all',
+    authMiddleware,
+    productionController.truncateJobCards.bind(productionController)
   )
   router.get(
     '/job-cards/:job_card_id',
@@ -190,6 +205,23 @@ router.delete(
     '/job-cards/:job_card_id',
     authMiddleware,
     productionController.deleteJobCard.bind(productionController)
+  )
+
+  // ============= OPERATION EXECUTION =============
+  router.post(
+    '/job-cards/:job_card_id/start',
+    authMiddleware,
+    productionController.startOperation.bind(productionController)
+  )
+  router.post(
+    '/job-cards/:job_card_id/end',
+    authMiddleware,
+    productionController.endOperation.bind(productionController)
+  )
+  router.get(
+    '/operation-logs/:job_card_id',
+    authMiddleware,
+    productionController.getOperationLogs.bind(productionController)
   )
 
   // ============= WORKSTATIONS =============
@@ -315,6 +347,33 @@ router.delete(
     '/downtimes/:id',
     authMiddleware,
     productionController.deleteDowntime.bind(productionController)
+  )
+
+  router.post(
+    '/outward-challans',
+    authMiddleware,
+    productionController.createOutwardChallan.bind(productionController)
+  )
+  router.get(
+    '/outward-challans',
+    authMiddleware,
+    productionController.getOutwardChallans.bind(productionController)
+  )
+
+  router.post(
+    '/inward-challans',
+    authMiddleware,
+    productionController.createInwardChallan.bind(productionController)
+  )
+  router.get(
+    '/inward-challans',
+    authMiddleware,
+    productionController.getInwardChallans.bind(productionController)
+  )
+  router.put(
+    '/inward-challans/:id',
+    authMiddleware,
+    productionController.updateInwardChallan.bind(productionController)
   )
 
   return router

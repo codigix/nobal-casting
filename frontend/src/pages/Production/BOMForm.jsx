@@ -128,6 +128,72 @@ export default function BOMForm() {
     return () => document.removeEventListener('click', handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    const updateSubAssemblyRates = async () => {
+      const updatedMaterials = [...rawMaterials]
+      let hasChanges = false
+      
+      for (let i = 0; i < updatedMaterials.length; i++) {
+        const material = updatedMaterials[i]
+        const item = items.find(it => it.item_code === material.item_code)
+        
+        if (item && (item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')) {
+          try {
+            const bomsResponse = await productionService.getBOMs({ item_code: material.item_code })
+            if (bomsResponse && bomsResponse.data && bomsResponse.data.length > 0) {
+              const bom = bomsResponse.data[0]
+              let totalCost = parseFloat(bom.total_cost || 0)
+              const bomQuantity = parseFloat(bom.quantity || 1)
+              
+              if ((totalCost === 0 || !totalCost) && bom.bom_id) {
+                try {
+                  const bomDetailsResponse = await productionService.getBOMDetails(bom.bom_id)
+                  const bomDetails = bomDetailsResponse && bomDetailsResponse.data ? bomDetailsResponse.data : bomDetailsResponse
+                  if (bomDetails && bomDetails.lines && bomDetails.lines.length > 0) {
+                    totalCost = 0
+                    for (const line of bomDetails.lines) {
+                      try {
+                        const itemResp = await productionService.getItemDetails(line.component_code)
+                        if (itemResp && itemResp.data) {
+                          const itemRate = parseFloat(itemResp.data.valuation_rate || 0)
+                          const qty = parseFloat(line.quantity || 0)
+                          totalCost += (itemRate * qty)
+                        }
+                      } catch (e) {
+                        console.warn(`Failed to fetch cost for ${line.component_code}:`, e)
+                      }
+                    }
+                  }
+                } catch (detailErr) {
+                  console.warn('Failed to fetch BOM details for', material.item_code, ':', detailErr.message)
+                  totalCost = parseFloat(item.valuation_rate || 0)
+                }
+              }
+              
+              const costPerUnit = totalCost > 0 ? totalCost / bomQuantity : 0
+              const newRate = costPerUnit.toFixed(2)
+              
+              if (newRate !== updatedMaterials[i].rate) {
+                updatedMaterials[i] = {...updatedMaterials[i], rate: newRate, amount: (parseFloat(updatedMaterials[i].qty || 0) * newRate).toFixed(2)}
+                hasChanges = true
+              }
+            }
+          } catch (bomErr) {
+            console.warn('Failed to fetch BOM for sub-assembly', material.item_code, ':', bomErr.message)
+          }
+        }
+      }
+      
+      if (hasChanges) {
+        setRawMaterials(updatedMaterials)
+      }
+    }
+    
+    if (rawMaterials.length > 0 && items.length > 0) {
+      updateSubAssemblyRates()
+    }
+  }, [id])
+
   const toggleSection = (section) => {
     setExpandedSections(prev => ({...prev, [section]: !prev[section]}))
   }
@@ -234,7 +300,8 @@ export default function BOMForm() {
         with_operations: bom.with_operations === true,
         process_loss_percentage: bom.process_loss_percentage || 0
       })
-      setBomLines(bom.lines || [])
+      const linesWithIds = (bom.lines || []).map((l, idx) => ({...l, id: l.id || `line-${Date.now()}-${idx}`}))
+      setBomLines(linesWithIds)
       const materialsWithIds = (bom.rawMaterials || []).map((m, idx) => ({...m, id: m.id || `mat-${Date.now()}-${idx}`}))
       setRawMaterials(materialsWithIds)
       setOperations(bom.operations || [])
@@ -272,6 +339,42 @@ export default function BOMForm() {
     }
   }
 
+  const handleProductNameChange = async (value) => {
+    setFormData(prev => ({
+      ...prev,
+      product_name: value
+    }))
+    setError(null)
+
+    if (value && !formData.item_code) {
+      const selectedItem = items.find(item => 
+        (item.name === value || item.item_name === value) && 
+        (item.item_group === 'Finished Goods' || item.item_group === 'Finished Good' || item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')
+      )
+      if (selectedItem) {
+        setFormData(prev => ({
+          ...prev,
+          item_code: selectedItem.item_code,
+          product_name: value,
+          item_group: selectedItem.item_group || prev.item_group,
+          uom: selectedItem.uom || prev.uom
+        }))
+      }
+    }
+  }
+
+  const handleItemCodeChange = (value) => {
+    const selectedItem = items.find(item => item.item_code === value)
+    setFormData(prev => ({
+      ...prev,
+      item_code: value,
+      item_group: selectedItem?.item_group || prev.item_group
+    }))
+    if (selectedItem) {
+      handleInputChange({target: {name: 'item_code', value: value}})
+    }
+  }
+
   const handleLineChange = async (e) => {
     const { name, value } = e.target
     setNewLine(prev => ({
@@ -284,11 +387,55 @@ export default function BOMForm() {
         const response = await productionService.getItemDetails(value)
         if (response.success && response.data) {
           const itemData = response.data
+          let rate = itemData.valuation_rate || '0'
+          
+          if (itemData.item_group === 'Sub Assemblies' || itemData.item_group === 'Sub-assembly') {
+            try {
+              const bomsResponse = await productionService.getBOMs({ item_code: value })
+              if (bomsResponse && bomsResponse.data && bomsResponse.data.length > 0) {
+                const bom = bomsResponse.data[0]
+                let totalCost = parseFloat(bom.total_cost || 0)
+                const bomQuantity = parseFloat(bom.quantity || 1)
+                
+                if ((totalCost === 0 || !totalCost) && bom.bom_id) {
+                  try {
+                    const bomDetailsResponse = await productionService.getBOMDetails(bom.bom_id)
+                    const bomDetails = bomDetailsResponse && bomDetailsResponse.data ? bomDetailsResponse.data : bomDetailsResponse
+                    if (bomDetails && bomDetails.lines && bomDetails.lines.length > 0) {
+                      totalCost = 0
+                      for (const line of bomDetails.lines) {
+                        try {
+                          const itemResp = await productionService.getItemDetails(line.component_code)
+                          if (itemResp && itemResp.data) {
+                            const rate = parseFloat(itemResp.data.valuation_rate || 0)
+                            const qty = parseFloat(line.quantity || 0)
+                            totalCost += (rate * qty)
+                          }
+                        } catch (e) {
+                          console.warn(`Failed to fetch cost for ${line.component_code}:`, e)
+                        }
+                      }
+                    }
+                  } catch (detailErr) {
+                    console.warn('Failed to fetch BOM details for', value, ':', detailErr.message)
+                    totalCost = parseFloat(itemData.valuation_rate || 0)
+                  }
+                }
+                
+                const costPerUnit = totalCost / bomQuantity
+                rate = costPerUnit.toFixed(2)
+              }
+            } catch (bomErr) {
+              console.warn('Failed to fetch BOM for sub-assembly:', bomErr)
+              rate = itemData.valuation_rate || '0'
+            }
+          }
+          
           setNewLine(prev => ({
             ...prev,
             component_name: itemData.name || itemData.item_name || prev.component_name,
             uom: itemData.uom || prev.uom,
-            rate: itemData.valuation_rate || prev.rate || '0'
+            rate: rate
           }))
         }
       } catch (err) {
@@ -561,38 +708,47 @@ export default function BOMForm() {
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             {/* PRODUCT INFORMATION SECTION */}
-            <div className="border-b border-gray-200 p-2">
+            <div className={`border-b border-gray-200 p-2 ${expandedSections.product ? 'bg-blue-50 border-blue-200' : ''}`}>
               <button
                 type="button"
                 onClick={() => toggleSection('product')}
                 className="w-full flex items-center justify-between group"
               >
                 <div className="flex items-center gap-3 flex-1">
-                  <div className="w-8 h-8 rounded bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center text-base font-bold flex-shrink-0">📦</div>
+                  <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">📦</div>
                   <div className="text-left">
-                    <h2 className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition">Product Information</h2>
+                    <h2 className="text-sm font-bold text-blue-900 group-hover:text-blue-700 transition">Product Information</h2>
                     <p className="text-xs text-gray-500 mt-0">Basics</p>
                   </div>
                 </div>
-                <div className="text-gray-400 group-hover:text-gray-600 transition flex-shrink-0">
+                <div className="text-blue-600 group-hover:text-blue-700 transition flex-shrink-0">
                   {expandedSections.product ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </div>
               </button>
 
               {expandedSections.product && (
-                <div className="space-y-3 pt-3 border-t border-gray-100">
-                  <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-3 pt-3 border-t border-blue-100">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="flex flex-col">
+                      <label className="text-xs font-bold text-gray-600 mb-1">Product Name *</label>
+                      <SearchableSelect
+                        value={formData.product_name}
+                        onChange={handleProductNameChange}
+                        options={items
+                          .filter(item => item.item_group === 'Finished Goods' || item.item_group === 'Finished Good' || item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')
+                          .map(item => ({
+                            label: item.name || item.item_name,
+                            value: item.name || item.item_name
+                          }))}
+                        placeholder="Search products..."
+                        required
+                      />
+                    </div>
                     <div className="flex flex-col">
                       <label className="text-xs font-bold text-gray-600 mb-1">Item Code *</label>
                       <SearchableSelect
                         value={formData.item_code}
-                        onChange={(value) => {
-                          setFormData({...formData, item_code: value})
-                          const selectedItem = items.find(item => item.item_code === value)
-                          if (selectedItem) {
-                            handleInputChange({target: {name: 'item_code', value: value}})
-                          }
-                        }}
+                        onChange={handleItemCodeChange}
                         options={items
                           .filter(item => item.item_group === 'Finished Goods' || item.item_group === 'Finished Good' || item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')
                           .map(item => ({
@@ -604,8 +760,16 @@ export default function BOMForm() {
                       />
                     </div>
                     <div className="flex flex-col">
-                      <label className="text-xs font-bold text-gray-600 mb-1">Product Name</label>
-                      <input type="text" name="product_name" value={formData.product_name} onChange={handleInputChange} onKeyDown={handleKeyDown} placeholder="Name" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
+                      <label className="text-xs font-bold text-gray-600 mb-1">Item Group</label>
+                      <SearchableSelect
+                        value={formData.item_group}
+                        onChange={(value) => setFormData(prev => ({...prev, item_group: value}))}
+                        options={itemGroups.map(group => ({
+                          label: group.name || group.item_group_name,
+                          value: group.name || group.item_group_name
+                        }))}
+                        placeholder="Select item group..."
+                      />
                     </div>
                   </div>
 
@@ -663,31 +827,193 @@ export default function BOMForm() {
               )}
             </div>
 
+            {/* COMPONENTS/SUB-ASSEMBLIES SECTION */}
+            <div className={`border-b border-gray-200 p-2 ${expandedSections.components ? 'bg-blue-50 border-blue-200' : ''}`}>
+              <button
+                type="button"
+                onClick={() => toggleSection('components')}
+                className="w-full flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">📦</div>
+                  <div className="text-left">
+                    <h2 className="text-sm font-bold text-blue-900 group-hover:text-blue-700 transition">Components/Sub-Assemblies</h2>
+                    <p className="text-xs text-gray-500 mt-0">{bomLines.length} items • ₹{bomLines.reduce((sum, line) => sum + (parseFloat(line.amount) || 0), 0).toFixed(2)}</p>
+                  </div>
+                </div>
+                <div className="text-blue-600 group-hover:text-blue-700 transition flex-shrink-0">
+                  {expandedSections.components ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </div>
+              </button>
+
+              {expandedSections.components && (
+                <div className="space-y-3 pt-3 border-t border-blue-100">
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded p-3">
+                    <h3 className="font-bold text-blue-900 mb-3 text-xs flex items-center gap-1">
+                      <Plus size={14} /> Add Component
+                    </h3>
+                    <div className="grid auto-fit gap-2 items-end" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))'}}>
+                      <div className="flex flex-col">
+                        <label className="text-xs font-bold text-gray-700 mb-1">Component Code *</label>
+                        <SearchableSelect
+                          value={newLine.component_code}
+                          onChange={async (value) => {
+                            const item = items.find(i => i.item_code === value)
+                            let rate = item?.valuation_rate || '0'
+                            
+                            if (item?.item_group === 'Sub Assemblies' || item?.item_group === 'Sub-assembly') {
+                              try {
+                                const bomsResponse = await productionService.getBOMs({ item_code: value })
+                                if (bomsResponse && bomsResponse.data && bomsResponse.data.length > 0) {
+                                  const bom = bomsResponse.data[0]
+                                  let totalCost = parseFloat(bom.total_cost || 0)
+                                  const bomQuantity = parseFloat(bom.quantity || 1)
+                                  
+                                  if ((totalCost === 0 || !totalCost) && bom.bom_id) {
+                                    try {
+                                      const bomDetailsResponse = await productionService.getBOMDetails(bom.bom_id)
+                                      const bomDetails = bomDetailsResponse && bomDetailsResponse.data ? bomDetailsResponse.data : bomDetailsResponse
+                                      if (bomDetails && bomDetails.lines && bomDetails.lines.length > 0) {
+                                        totalCost = 0
+                                        for (const line of bomDetails.lines) {
+                                          try {
+                                            const itemResp = await productionService.getItemDetails(line.component_code)
+                                            if (itemResp && itemResp.data) {
+                                              const itemRate = parseFloat(itemResp.data.valuation_rate || 0)
+                                              const qty = parseFloat(line.quantity || 0)
+                                              totalCost += (itemRate * qty)
+                                            }
+                                          } catch (e) {
+                                            console.warn(`Failed to fetch cost for ${line.component_code}:`, e)
+                                          }
+                                        }
+                                      }
+                                    } catch (detailErr) {
+                                      console.warn('Failed to fetch BOM details for', value, ':', detailErr.message)
+                                      totalCost = parseFloat(item.valuation_rate || 0)
+                                    }
+                                  }
+                                  
+                                  const costPerUnit = totalCost / bomQuantity
+                                  rate = costPerUnit.toFixed(2)
+                                }
+                              } catch (bomErr) {
+                                console.warn('Failed to fetch BOM for sub-assembly:', bomErr)
+                              }
+                            }
+                            
+                            setNewLine({...newLine, component_code: value, component_name: item?.name || '', rate})
+                          }}
+                          options={items.filter(item => item && item.item_code && item.name).map(item => ({
+                            label: `${item.item_code} - ${item.name}`,
+                            value: item.item_code
+                          }))}
+                          placeholder="Search component..."
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-xs font-bold text-gray-700 mb-1">Qty *</label>
+                        <input type="number" value={newLine.qty} onChange={(e) => setNewLine({...newLine, qty: e.target.value})} onKeyDown={handleKeyDown} step="0.01" placeholder="1" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-xs font-bold text-gray-700 mb-1">UOM</label>
+                        <select value={newLine.uom} onChange={(e) => setNewLine({...newLine, uom: e.target.value})} className="px-2 py-1.5 border border-gray-200 rounded text-xs bg-white font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100">
+                          <option value="Kg">Kg</option>
+                          <option value="Nos">Nos</option>
+                          <option value="Ltr">Ltr</option>
+                          <option value="Meter">Meter</option>
+                          <option value="Box">Box</option>
+                        </select>
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-xs font-bold text-gray-700 mb-1">Rate (₹)</label>
+                        <input type="number" value={newLine.rate} onChange={(e) => setNewLine({...newLine, rate: e.target.value})} onKeyDown={handleKeyDown} step="0.01" placeholder="0" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-xs font-bold text-gray-700 mb-1">Notes</label>
+                        <input type="text" value={newLine.notes} onChange={(e) => setNewLine({...newLine, notes: e.target.value})} onKeyDown={handleKeyDown} placeholder="Notes" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
+                      </div>
+                      <button type="button" onClick={addBomLine} className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded font-semibold text-xs flex items-center justify-center gap-1 hover:from-blue-600 hover:to-blue-700 transition shadow-sm h-9">
+                        <Plus size={14} /> Add
+                      </button>
+                    </div>
+                  </div>
+
+                  {bomLines.length > 0 && (
+                    <div className="border border-blue-200 rounded overflow-hidden">
+                      <div className="bg-blue-50 px-3 py-2 border-b border-blue-200">
+                        <div className="font-bold text-blue-700 text-xs flex items-center gap-1">
+                          <Check size={14} className="text-blue-600" />
+                          Components Added ({bomLines.length})
+                        </div>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs border-collapse">
+                          <thead>
+                            <tr className="bg-gray-50 border-b border-blue-200">
+                              <th className="px-2 py-1.5 text-center text-xs font-bold text-gray-600 w-8">#</th>
+                              <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Component Code</th>
+                              <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Component Name</th>
+                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Qty</th>
+                              <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">UOM</th>
+                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Rate</th>
+                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Amount</th>
+                              <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Notes</th>
+                              <th className="px-2 py-1.5 text-center text-xs font-bold text-gray-600 w-8">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {bomLines.map((line, index) => (
+                              <tr key={line.id} className={`border-b border-blue-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}>
+                                <td className="px-2 py-1.5 text-center text-xs font-medium text-gray-600">{index + 1}</td>
+                                <td className="px-2 py-1.5 text-xs font-medium text-gray-900">{line.component_code}</td>
+                                <td className="px-2 py-1.5 text-xs text-gray-700">{line.component_name}</td>
+                                <td className="px-2 py-1.5 text-xs text-right text-gray-700">{parseFloat(line.qty || 0).toFixed(2)}</td>
+                                <td className="px-2 py-1.5 text-xs text-gray-700">{line.uom}</td>
+                                <td className="px-2 py-1.5 text-xs text-right text-gray-700">₹{parseFloat(line.rate || 0).toFixed(2)}</td>
+                                <td className="px-2 py-1.5 text-xs text-right font-semibold text-gray-900">₹{parseFloat(line.amount || 0).toFixed(2)}</td>
+                                <td className="px-2 py-1.5 text-xs text-gray-600">{line.notes || '-'}</td>
+                                <td className="px-2 py-1.5 text-center">
+                                  <button type="button" onClick={() => removeBomLine(line.id)} className="p-1 text-red-600 hover:bg-red-100 rounded transition">
+                                    <Trash2 size={12} />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* MATERIALS SECTION */}
-            <div className="border-b border-gray-200 p-2">
+            <div className={`border-b border-gray-200 p-2 ${expandedSections.raw_materials ? 'bg-emerald-50 border-emerald-200' : ''}`}>
               <button
                 type="button"
                 onClick={() => toggleSection('raw_materials')}
                 className="w-full flex items-center justify-between group"
               >
                 <div className="flex items-center gap-3 flex-1">
-                  <div className="w-8 h-8 rounded bg-gradient-to-br from-red-100 to-red-50 flex items-center justify-center text-base font-bold flex-shrink-0">🏭</div>
+                  <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">🏭</div>
                   <div className="text-left">
-                    <h2 className="text-sm font-bold text-gray-900 group-hover:text-red-600 transition">Materials</h2>
+                    <h2 className="text-sm font-bold text-emerald-900 group-hover:text-emerald-700 transition">Materials</h2>
                     <p className="text-xs text-gray-500 mt-0">{rawMaterials.length} • ₹{rawMaterials.reduce((sum, rm) => sum + (parseFloat(rm.amount) || 0), 0).toFixed(2)}</p>
                   </div>
                 </div>
-                <div className="text-gray-400 group-hover:text-gray-600 transition flex-shrink-0">
+                <div className="text-emerald-600 group-hover:text-emerald-700 transition flex-shrink-0">
                   {expandedSections.raw_materials ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </div>
               </button>
 
               {expandedSections.raw_materials && rawMaterials.length > 0 && (
-              <div className="mt-3 border border-blue-100 rounded p-3 bg-blue-50">
-                <h4 className="text-xs font-bold text-blue-900 mb-2">RM Consumption Preview (for {formData.quantity} {formData.uom})</h4>
+              <div className="mt-3 border border-emerald-100 rounded p-3 bg-emerald-50">
+                <h4 className="text-xs font-bold text-emerald-900 mb-2">RM Consumption Preview (for {formData.quantity} {formData.uom})</h4>
                 <div className="space-y-1">
                   {calculateRMConsumption(formData.quantity).map((consumption, idx) => (
-                    <div key={idx} className="flex justify-between text-xs text-blue-800">
+                    <div key={idx} className="flex justify-between text-xs text-emerald-800">
                       <span>{consumption.item_code} - {consumption.qty_required.toFixed(2)} {consumption.uom}</span>
                       <span className="font-semibold">₹{consumption.cost.toFixed(2)}</span>
                     </div>
@@ -697,25 +1023,68 @@ export default function BOMForm() {
             )}
 
             {expandedSections.raw_materials && (
-                <div className="space-y-3 pt-3 border-t border-gray-100">
-                  <div className="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded p-3">
-                    <h3 className="font-bold text-red-900 mb-3 text-xs flex items-center gap-1">
+                <div className="space-y-3 pt-3 border-t border-emerald-100">
+                  <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded p-3">
+                    <h3 className="font-bold text-emerald-900 mb-3 text-xs flex items-center gap-1">
                       <Plus size={14} /> Add Raw Material
                     </h3>
                     <div className="grid auto-fit gap-2 items-end" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))'}}>
                       <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Item Code *</label>
+                        <label className="text-xs font-bold text-gray-700 mb-1">Item Name *</label>
                         <SearchableSelect
                           value={newRawMaterial.item_code}
-                          onChange={(value) => {
+                          onChange={async (value) => {
                             const item = items.find(i => i.item_code === value)
-                            setNewRawMaterial({...newRawMaterial, item_code: value, item_name: item?.name || '', item_group: item?.item_group || ''})
+                            let rate = item?.valuation_rate || '0'
+                            
+                            if (item?.item_group === 'Sub Assemblies' || item?.item_group === 'Sub-assembly') {
+                              try {
+                                const bomsResponse = await productionService.getBOMs({ item_code: value })
+                                if (bomsResponse && bomsResponse.data && bomsResponse.data.length > 0) {
+                                  const bom = bomsResponse.data[0]
+                                  let totalCost = parseFloat(bom.total_cost || 0)
+                                  const bomQuantity = parseFloat(bom.quantity || 1)
+                                  
+                                  if ((totalCost === 0 || !totalCost) && bom.bom_id) {
+                                    try {
+                                      const bomDetailsResponse = await productionService.getBOMDetails(bom.bom_id)
+                                      const bomDetails = bomDetailsResponse && bomDetailsResponse.data ? bomDetailsResponse.data : bomDetailsResponse
+                                      if (bomDetails && bomDetails.lines && bomDetails.lines.length > 0) {
+                                        totalCost = 0
+                                        for (const line of bomDetails.lines) {
+                                          try {
+                                            const itemResp = await productionService.getItemDetails(line.component_code)
+                                            if (itemResp && itemResp.data) {
+                                              const itemRate = parseFloat(itemResp.data.valuation_rate || 0)
+                                              const qty = parseFloat(line.quantity || 0)
+                                              totalCost += (itemRate * qty)
+                                            }
+                                          } catch (e) {
+                                            console.warn(`Failed to fetch cost for ${line.component_code}:`, e)
+                                          }
+                                        }
+                                      }
+                                    } catch (detailErr) {
+                                      console.warn('Failed to fetch BOM details for', value, ':', detailErr.message)
+                                      totalCost = parseFloat(itemData.valuation_rate || 0)
+                                    }
+                                  }
+                                  
+                                  const costPerUnit = totalCost / bomQuantity
+                                  rate = costPerUnit.toFixed(2)
+                                }
+                              } catch (bomErr) {
+                                console.warn('Failed to fetch BOM for sub-assembly:', bomErr)
+                              }
+                            }
+                            
+                            setNewRawMaterial({...newRawMaterial, item_code: value, item_name: item?.name || '', item_group: item?.item_group || '', rate})
                           }}
                           options={items.filter(item => item && item.item_code && item.name && item.item_group !== 'Finished Goods').map(item => ({
-                            label: item.item_code,
+                            label: item.name,
                             value: item.item_code
                           }))}
-                          placeholder="Search items..."
+                          placeholder="Search by name..."
                         />
                       </div>
                       <div className="flex flex-col">
@@ -747,7 +1116,7 @@ export default function BOMForm() {
                           onChange={(value) => setNewRawMaterial({...newRawMaterial, source_warehouse: value})}
                           options={warehousesList.filter(wh => wh && (wh.warehouse_name || wh.name)).map(wh => ({
                             label: wh.warehouse_name || wh.name,
-                            value: wh.warehouse_name || wh.name
+                            value: wh.id
                           }))}
                           placeholder="Select"
                         />
@@ -854,7 +1223,7 @@ export default function BOMForm() {
                                               <select value={data.source_warehouse || ''} onChange={(e) => setEditingRowData({...data, source_warehouse: e.target.value})} className="px-2 py-1 border border-gray-300 rounded text-xs w-full">
                                                 <option value="">-</option>
                                                 {warehousesList.filter(wh => wh && (wh.warehouse_name || wh.name)).map(wh => (
-                                                  <option key={wh.id} value={wh.warehouse_name || wh.name}>{wh.warehouse_name || wh.name}</option>
+                                                  <option key={wh.id} value={wh.id}>{wh.warehouse_name || wh.name}</option>
                                                 ))}
                                               </select>
                                             ) : (
@@ -911,26 +1280,26 @@ export default function BOMForm() {
             </div>
 
             {/* OPERATIONS SECTION */}
-            <div className="border-b border-gray-200 p-2">
+            <div className={`border-b border-gray-200 p-2 ${expandedSections.operations ? 'bg-purple-50 border-purple-200' : ''}`}>
               <button
                 type="button"
                 onClick={() => toggleSection('operations')}
                 className="w-full flex items-center justify-between group"
               >
                 <div className="flex items-center gap-3 flex-1">
-                  <div className="w-8 h-8 rounded bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center text-base font-bold flex-shrink-0">⚙️</div>
+                  <div className="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">⚙️</div>
                   <div className="text-left">
-                    <h2 className="text-sm font-bold text-gray-900 group-hover:text-purple-600 transition">Operations</h2>
+                    <h2 className="text-sm font-bold text-purple-900 group-hover:text-purple-700 transition">Operations</h2>
                     <p className="text-xs text-gray-500 mt-0">{operations.length} • ₹{totalOperationCost.toFixed(0)}</p>
                   </div>
                 </div>
-                <div className="text-gray-400 group-hover:text-gray-600 transition flex-shrink-0">
+                <div className="text-purple-600 group-hover:text-purple-700 transition flex-shrink-0">
                   {expandedSections.operations ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </div>
               </button>
 
               {expandedSections.operations && (
-                <div className="space-y-3 pt-3 border-t border-gray-100">
+                <div className="space-y-3 pt-3 border-t border-purple-100">
                   <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded p-3">
                     <h3 className="font-bold text-purple-900 mb-3 text-xs flex items-center gap-1">
                       <Plus size={14} /> Add Operation
@@ -1039,28 +1408,28 @@ export default function BOMForm() {
             </div>
 
             {/* SCRAP & PROCESS LOSS SECTION */}
-            <div className="p-2">
+            <div className={`p-2 border-b border-gray-200 ${expandedSections.scrap ? 'bg-cyan-50 border-cyan-200' : ''}`}>
               <button
                 type="button"
                 onClick={() => toggleSection('scrap')}
                 className="w-full flex items-center justify-between group"
               >
                 <div className="flex items-center gap-3 flex-1">
-                  <div className="w-8 h-8 rounded bg-gradient-to-br from-orange-100 to-orange-50 flex items-center justify-center text-base font-bold flex-shrink-0">♻️</div>
+                  <div className="w-7 h-7 rounded-full bg-cyan-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">♻️</div>
                   <div className="text-left">
-                    <h2 className="text-sm font-bold text-gray-900 group-hover:text-orange-600 transition">Scrap & Loss</h2>
+                    <h2 className="text-sm font-bold text-cyan-900 group-hover:text-cyan-700 transition">Scrap & Loss</h2>
                     <p className="text-xs text-gray-500 mt-0">{scrapItems.length} item{scrapItems.length !== 1 ? 's' : ''}</p>
                   </div>
                 </div>
-                <div className="text-gray-400 group-hover:text-gray-600 transition flex-shrink-0">
+                <div className="text-cyan-600 group-hover:text-cyan-700 transition flex-shrink-0">
                   {expandedSections.scrap ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </div>
               </button>
 
               {expandedSections.scrap && (
-                <div className="space-y-3 pt-3 border-t border-gray-100">
-                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded p-3">
-                    <h3 className="font-bold text-orange-900 mb-3 text-xs flex items-center gap-1">
+                <div className="space-y-3 pt-3 border-t border-cyan-100">
+                  <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 border border-cyan-200 rounded p-3">
+                    <h3 className="font-bold text-cyan-900 mb-3 text-xs flex items-center gap-1">
                       <Plus size={14} /> Add Scrap
                     </h3>
                     <div className="grid auto-fit gap-2 items-end" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))'}}>
@@ -1155,26 +1524,26 @@ export default function BOMForm() {
           </div>
 
           {/* COSTING SUMMARY SECTION */}
-          <div className="border-b border-gray-200 p-2">
+          <div className={`border-b border-gray-200 p-2 ${expandedSections.costing ? 'bg-indigo-50 border-indigo-200' : ''}`}>
             <button
               type="button"
               onClick={() => toggleSection('costing')}
               className="w-full flex items-center justify-between group"
             >
               <div className="flex items-center gap-3 flex-1">
-                <div className="w-8 h-8 rounded bg-gradient-to-br from-green-100 to-green-50 flex items-center justify-center text-base font-bold flex-shrink-0">💰</div>
+                <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">💰</div>
                 <div className="text-left">
-                  <h2 className="text-sm font-bold text-gray-900 group-hover:text-green-600 transition">BOM Costing</h2>
+                  <h2 className="text-sm font-bold text-indigo-900 group-hover:text-indigo-700 transition">BOM Costing</h2>
                   <p className="text-xs text-gray-500 mt-0">₹{totalBOMCost.toFixed(2)} Total Cost</p>
                 </div>
               </div>
-              <div className="text-gray-400 group-hover:text-gray-600 transition flex-shrink-0">
+              <div className="text-indigo-600 group-hover:text-indigo-700 transition flex-shrink-0">
                 {expandedSections.costing ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
               </div>
             </button>
 
             {expandedSections.costing && (
-              <div className="pt-3 border-t border-gray-100">
+              <div className="pt-3 border-t border-indigo-100">
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                   <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
                     <div className="text-xs font-semibold text-blue-700 mb-1">Material Cost</div>
@@ -1247,7 +1616,7 @@ export default function BOMForm() {
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
             <div className="bg-white rounded-lg shadow-xl w-96 max-h-96 overflow-y-auto p-4">
               <div className="flex justify-between items-center mb-4 sticky top-0 bg-white">
-                <h2 className="text-lg font-bold text-gray-900">Load Draft</h2>
+                <h2 className="text-sm font-bold text-gray-900">Load Draft</h2>
                 <button
                   onClick={() => setShowDrafts(false)}
                   className="text-gray-400 hover:text-gray-600"

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../services/api'
 import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
 import Badge from '../Badge/Badge'
@@ -31,11 +31,8 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
 
   const fetchWarehouses = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/stock/warehouses')
-      const data = await res.json()
-      if (data.success) {
-        setWarehouses(data.data || [])
-      }
+      const response = await api.get('/stock/warehouses')
+      setWarehouses(response.data.data || [])
     } catch (error) {
       console.error('Error fetching warehouses:', error)
     }
