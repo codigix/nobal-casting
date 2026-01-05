@@ -20,29 +20,58 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
   })
 
   const [items, setItems] = useState([])
+  const [stockItems, setStockItems] = useState([])
   const [contacts, setContacts] = useState([])
   const [departments, setDepartments] = useState(['Production', 'Maintenance', 'Store'])
   const [warehouses, setWarehouses] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [newItem, setNewItem] = useState({ item_code: '', qty: 1, uom: 'pcs' })
+  const [newItem, setNewItem] = useState({ item_code: '', item_name: '', qty: 1, uom: 'pcs' })
   const [editingItemIndex, setEditingItemIndex] = useState(null)
 
   useEffect(() => {
     if (isOpen) {
-      fetchItems()
-      fetchContacts()
-      fetchWarehouses()
-      generateSeriesNumber()
+      const initializeModal = async () => {
+        const itemsData = await fetchItems()
+        await fetchStockItems(itemsData)
+        fetchContacts()
+        fetchWarehouses()
+        generateSeriesNumber()
+      }
+      initializeModal()
     }
   }, [isOpen])
 
   const fetchItems = async () => {
     try {
       const response = await api.get('/items?limit=1000')
-      setItems(response.data.data || [])
+      const itemsData = response.data.data || []
+      setItems(itemsData)
+      return itemsData
     } catch (err) {
       console.error('Failed to fetch items:', err)
+      return []
+    }
+  }
+
+  const fetchStockItems = async (itemsData = null) => {
+    try {
+      const allItems = itemsData && itemsData.length > 0 ? itemsData : items
+      const response = await api.get('/stock/stock-balance')
+      const balances = response.data.data || response.data || []
+      
+      const uniqueItemCodes = new Set()
+      balances.forEach(balance => {
+        if (balance.item_code && (balance.available_qty || 0) > 0) {
+          uniqueItemCodes.add(balance.item_code)
+        }
+      })
+
+      const itemsWithStock = allItems.filter(item => uniqueItemCodes.has(item.item_code))
+      setStockItems(itemsWithStock)
+    } catch (err) {
+      console.error('Failed to fetch stock items:', err)
+      setStockItems(itemsData || items)
     }
   }
 
@@ -73,12 +102,61 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData({ ...formData, [name]: value })
+    
+    if (name === 'department') {
+      if (value === 'Production') {
+        setFormData(prev => ({ 
+          ...prev, 
+          department: value,
+          purpose: 'material_issue',
+          source_warehouse: '',
+          target_warehouse: ''
+        }))
+      } else {
+        setFormData(prev => ({ 
+          ...prev, 
+          department: value,
+          purpose: 'purchase',
+          source_warehouse: '',
+          target_warehouse: ''
+        }))
+      }
+    } else if (name === 'purpose') {
+      if (value === 'purchase') {
+        setFormData(prev => ({ 
+          ...prev, 
+          purpose: value,
+          source_warehouse: '',
+          target_warehouse: ''
+        }))
+      } else if (value === 'material_issue') {
+        setFormData(prev => ({ 
+          ...prev, 
+          purpose: value,
+          target_warehouse: ''
+        }))
+      }
+    } else {
+      setFormData({ ...formData, [name]: value })
+    }
+  }
+
+  const getAvailableItems = () => {
+    if (formData.purpose === 'purchase') {
+      return items
+    } else {
+      return stockItems
+    }
   }
 
   const handleAddItem = () => {
     if (!newItem.item_code || !newItem.qty) {
       setError('Please select item and enter quantity')
+      return
+    }
+
+    if (formData.purpose === 'material_issue' && formData.items.length > 0 && !formData.source_warehouse) {
+      setError('Source warehouse is required for Material Issue')
       return
     }
 
@@ -100,7 +178,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
       })
     }
 
-    setNewItem({ item_code: '', qty: 1, uom: 'pcs' })
+    setNewItem({ item_code: '', item_name: '', qty: 1, uom: 'pcs' })
     setError(null)
   }
 
@@ -116,13 +194,13 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
     })
     if (editingItemIndex === index) {
       setEditingItemIndex(null)
-      setNewItem({ item_code: '', qty: 1, uom: 'pcs' })
+      setNewItem({ item_code: '', item_name: '', qty: 1, uom: 'pcs' })
     }
   }
 
   const handleCancelEdit = () => {
     setEditingItemIndex(null)
-    setNewItem({ item_code: '', qty: 1, uom: 'pcs' })
+    setNewItem({ item_code: '', item_name: '', qty: 1, uom: 'pcs' })
   }
 
   const handleSubmit = async (e) => {
@@ -130,6 +208,16 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
 
     if (!formData.requested_by_id || !formData.department || formData.items.length === 0) {
       setError('Please fill all required fields')
+      return
+    }
+
+    if (formData.purpose === 'material_issue' && !formData.source_warehouse) {
+      setError('Source warehouse is required for Material Issue')
+      return
+    }
+
+    if (formData.purpose === 'material_transfer' && (!formData.source_warehouse || !formData.target_warehouse)) {
+      setError('Both source and target warehouses are required for Material Transfer')
       return
     }
 
@@ -169,7 +257,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
       items: []
     })
     setError(null)
-    setNewItem({ item_code: '', qty: 1, uom: 'pcs' })
+    setNewItem({ item_code: '', item_name: '', qty: 1, uom: 'pcs' })
     setEditingItemIndex(null)
     onClose()
   }
@@ -249,17 +337,39 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>Purpose <span style={{ color: '#d32f2f' }}>*</span></label>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>
+                  Purpose <span style={{ color: '#d32f2f' }}>*</span>
+                  {formData.department === 'Production' && (
+                    <span style={{ fontSize: '11px', color: '#666', fontWeight: 'normal', marginLeft: '8px' }}>
+                      (Auto-set to Material Issue)
+                    </span>
+                  )}
+                </label>
                 <select 
                   name="purpose"
                   value={formData.purpose}
                   onChange={handleChange}
+                  disabled={formData.department === 'Production'}
                   required
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
+                  style={{ 
+                    width: '100%', 
+                    padding: '10px', 
+                    borderRadius: '4px', 
+                    border: '1px solid #ddd', 
+                    fontSize: '13px',
+                    backgroundColor: formData.department === 'Production' ? '#f5f5f5' : '#fff',
+                    cursor: formData.department === 'Production' ? 'not-allowed' : 'pointer'
+                  }}
                 >
-                  <option value="purchase">Purchase</option>
-                  <option value="material_transfer">Material Transfer</option>
-                  <option value="material_issue">Material Issue</option>
+                  {formData.department === 'Production' ? (
+                    <option value="material_issue">Material Issue (Release from Inventory)</option>
+                  ) : (
+                    <>
+                      <option value="purchase">Purchase (From Vendor)</option>
+                      <option value="material_transfer">Material Transfer (Between Warehouses)</option>
+                      <option value="material_issue">Material Issue (Release from Inventory)</option>
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -278,41 +388,77 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
           </div>
 
           {/* Section 2: Warehouses */}
-          <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
-            <h5 style={{ marginTop: 0, marginBottom: '16px', color: '#333', fontSize: '14px', fontWeight: '600' }}>Warehouse Details</h5>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>Target Warehouse</label>
-                <select 
-                  name="target_warehouse"
-                  value={formData.target_warehouse}
-                  onChange={handleChange}
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
-                >
-                  <option value="">Select Warehouse</option>
-                  {warehouses.map(wh => (
-                    <option key={wh.warehouse_id} value={wh.warehouse_id}>{wh.warehouse_name}</option>
-                  ))}
-                </select>
-              </div>
+          {formData.purpose !== 'purchase' && (
+            <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
+              <h5 style={{ marginTop: 0, marginBottom: '16px', color: '#333', fontSize: '14px', fontWeight: '600' }}>
+                Warehouse Details
+                {formData.purpose === 'material_issue' && ' (Source for Release)'}
+                {formData.purpose === 'material_transfer' && ' (Transfer Details)'}
+              </h5>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                {formData.purpose === 'material_transfer' && (
+                  <>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>
+                        Source Warehouse <span style={{ color: '#d32f2f' }}>*</span>
+                      </label>
+                      <select 
+                        name="source_warehouse"
+                        value={formData.source_warehouse}
+                        onChange={handleChange}
+                        required={formData.purpose === 'material_transfer'}
+                        style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
+                      >
+                        <option value="">Select Source Warehouse</option>
+                        {warehouses.map(wh => (
+                          <option key={wh.warehouse_id} value={wh.warehouse_code || wh.warehouse_name}>{wh.warehouse_name}</option>
+                        ))}
+                      </select>
+                    </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>Source Warehouse</label>
-                <select 
-                  name="source_warehouse"
-                  value={formData.source_warehouse}
-                  onChange={handleChange}
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
-                >
-                  <option value="">Select Warehouse</option>
-                  {warehouses.map(wh => (
-                    <option key={wh.warehouse_id} value={wh.warehouse_id}>{wh.warehouse_name}</option>
-                  ))}
-                </select>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>
+                        Target Warehouse <span style={{ color: '#d32f2f' }}>*</span>
+                      </label>
+                      <select 
+                        name="target_warehouse"
+                        value={formData.target_warehouse}
+                        onChange={handleChange}
+                        required={formData.purpose === 'material_transfer'}
+                        style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
+                      >
+                        <option value="">Select Target Warehouse</option>
+                        {warehouses.map(wh => (
+                          <option key={wh.warehouse_id} value={wh.warehouse_code || wh.warehouse_name}>{wh.warehouse_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
+
+                {formData.purpose === 'material_issue' && (
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>
+                      Source Warehouse (Release From) <span style={{ color: '#d32f2f' }}>*</span>
+                    </label>
+                    <select 
+                      name="source_warehouse"
+                      value={formData.source_warehouse}
+                      onChange={handleChange}
+                      required={formData.purpose === 'material_issue'}
+                      style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
+                    >
+                      <option value="">Select Source Warehouse (Items will be released from here)</option>
+                      {warehouses.map(wh => (
+                        <option key={wh.warehouse_id} value={wh.warehouse_code || wh.warehouse_name}>{wh.warehouse_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          )}
 
           {/* Section 3: Notes */}
           <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
@@ -343,21 +489,31 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                 <select 
                   value={newItem.item_code}
                   onChange={(e) => {
-                    const item = items.find(i => i.item_code === e.target.value)
+                    const availableItems = getAvailableItems()
+                    const item = availableItems.find(i => i.item_code === e.target.value)
                     setNewItem({ 
                       ...newItem, 
                       item_code: e.target.value,
+                      item_name: item?.name || '',
                       uom: item?.uom || 'pcs'
                     })
                   }}
                   style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
                 >
-                  <option value="">Select Item</option>
-                  {items.map(item => (
-                    <option key={item.item_code} value={item.item_code}>
-                      {item.item_code} - {item.name}
+                  <option value="">
+                    Select Item {formData.purpose === 'material_issue' ? '(Only items with stock shown)' : ''}
+                  </option>
+                  {getAvailableItems().length > 0 ? (
+                    getAvailableItems().map(item => (
+                      <option key={item.item_code} value={item.item_code}>
+                        {item.item_code} - {item.name}
+                      </option>
+                    ))
+                  ) : (
+                    <option disabled>
+                      {formData.purpose === 'material_issue' ? 'No items with stock available' : 'No items available'}
                     </option>
-                  ))}
+                  )}
                 </select>
               </div>
 
@@ -418,6 +574,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                     <tr>
                       <th style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #ddd', width: '50px' }}>No.</th>
                       <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Item Code</th>
+                      <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Item Name</th>
                       <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #ddd', width: '100px' }}>Quantity</th>
                       <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #ddd', width: '120px' }}>Unit of Measurement</th>
                       <th style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #ddd', width: '80px' }}>Action</th>
@@ -428,6 +585,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                       <tr key={item.id} style={{ borderBottom: '1px solid #ddd', backgroundColor: editingItemIndex === index ? '#fffbea' : 'transparent' }}>
                         <td style={{ padding: '8px', textAlign: 'center' }}>{index + 1}</td>
                         <td style={{ padding: '8px' }}>{item.item_code}</td>
+                        <td style={{ padding: '8px' }}>{item.item_name || '-'}</td>
                         <td style={{ padding: '8px' }}>{item.qty}</td>
                         <td style={{ padding: '8px' }}>{item.uom}</td>
                         <td style={{ padding: '8px', textAlign: 'center' }}>

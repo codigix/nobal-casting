@@ -13,6 +13,8 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
   const [success, setSuccess] = useState(null)
   const [warehouses, setWarehouses] = useState([])
   const [selectedSourceWarehouse, setSelectedSourceWarehouse] = useState('')
+  const [stockData, setStockData] = useState({})
+  const [checkingStock, setCheckingStock] = useState(false)
 
   useEffect(() => {
     if (isOpen && mrId) {
@@ -42,11 +44,96 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
       setRequest(response.data.data)
       setError(null)
       setSelectedSourceWarehouse('')
+      if (response.data.data?.items) {
+        await checkStockAvailability(response.data.data)
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to fetch material request details')
     } finally {
       setLoading(false)
     }
+  }
+
+  const checkStockAvailability = async (requestData) => {
+    try {
+      setCheckingStock(true)
+      const warehouse = selectedSourceWarehouse || requestData?.source_warehouse
+      
+      const stockInfo = {}
+      
+      for (const item of requestData.items || []) {
+        try {
+          const params = {
+            itemCode: item.item_code
+          }
+          
+          if (warehouse) {
+            params.warehouseId = warehouse
+          }
+          
+          const res = await api.get(`/stock/stock-balance`, { params })
+          const balance = res.data.data || res.data
+          
+          let availableQty = 0
+          let itemExists = false
+          
+          if (Array.isArray(balance)) {
+            itemExists = balance.length > 0
+            availableQty = balance.reduce((sum, b) => {
+              const qty = parseFloat(b.current_qty || b.available_qty || b.qty || 0)
+              return sum + qty
+            }, 0)
+          } else if (balance && typeof balance === 'object') {
+            itemExists = true
+            availableQty = parseFloat(balance.current_qty || balance.available_qty || balance.qty || 0)
+          }
+          
+          const requestedQty = parseFloat(item.qty || 0)
+          const hasRequiredQty = availableQty >= requestedQty
+          
+          console.log(`Stock check: ${item.item_code} - Found: ${itemExists}, Available: ${availableQty}, Required: ${requestedQty}, Has required: ${hasRequiredQty}`)
+          
+          stockInfo[item.item_code] = {
+            available: availableQty,
+            requested: requestedQty,
+            isAvailable: itemExists && availableQty > 0 && hasRequiredQty,
+            warehouse: warehouse || 'All Warehouses',
+            foundInInventory: itemExists,
+            error: !itemExists
+          }
+        } catch (err) {
+          console.error(`Stock check error for ${item.item_code}:`, err)
+          stockInfo[item.item_code] = {
+            available: 0,
+            requested: parseFloat(item.qty || 0),
+            isAvailable: false,
+            warehouse: warehouse || 'All Warehouses',
+            foundInInventory: false,
+            error: true
+          }
+        }
+      }
+      
+      setStockData(stockInfo)
+      console.log('Stock availability check complete:', stockInfo)
+    } catch (err) {
+      console.error('Error checking stock:', err)
+    } finally {
+      setCheckingStock(false)
+    }
+  }
+
+  const getAvailableItems = () => {
+    return Object.entries(stockData)
+      .filter(([_, stock]) => stock.foundInInventory && stock.isAvailable)
+      .map(([itemCode]) => itemCode)
+  }
+
+  const getUnavailableItems = () => {
+    return request?.items?.filter(item => {
+      const stock = stockData[item.item_code]
+      return stock && (!stock.foundInInventory || stock.available === 0)
+    }) || []
   }
 
   const handleApprove = async () => {
@@ -59,6 +146,14 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
         return
       }
 
+      const availableItems = getAvailableItems()
+      const unavailableItems = getUnavailableItems()
+
+      if (availableItems.length === 0 && unavailableItems.length > 0) {
+        setError(`No available items to approve. All items (${unavailableItems.map(i => i.item_code).join(', ')}) need to be sent for purchase.`)
+        return
+      }
+
       const payload = { 
         approvedBy: 'User'
       }
@@ -68,12 +163,18 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
       }
       
       console.log('Approving MR with payload:', payload)
-      await api.patch(`/material-requests/${mrId}/approve`, payload)
-      setSuccess('Material request approved successfully')
+      const response = await api.patch(`/material-requests/${mrId}/approve`, payload)
+      
+      const successMsg = response.data.message || 'Material request approved successfully'
+      setSuccess(successMsg)
       setSelectedSourceWarehouse('')
       fetchRequestDetails()
       if (onStatusChange) onStatusChange()
-      setTimeout(() => setSuccess(null), 3000)
+      
+      window.dispatchEvent(new CustomEvent('materialRequestApproved', { detail: { mrId, items: request.items } }))
+      
+      const showDuration = unavailableItems.length > 0 ? 6000 : 4000
+      setTimeout(() => setSuccess(null), showDuration)
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to approve')
     }
@@ -81,7 +182,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
 
   const handleReject = async () => {
     const reason = prompt('Please enter rejection reason:')
-    if (reason === null) return // Cancelled
+    if (reason === null) return
 
     try {
       await api.patch(`/material-requests/${mrId}/reject`, { reason })
@@ -103,6 +204,55 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
       } catch (err) {
         setError(err.response?.data?.error || 'Failed to delete')
       }
+    }
+  }
+
+  const handleSendForPurchase = async () => {
+    try {
+      const unavailableItems = getUnavailableItems()
+      if (unavailableItems.length === 0) {
+        setError('No unavailable items to purchase')
+        return
+      }
+
+      if (request?.department === 'Production' && request?.purpose !== 'material_issue') {
+        setError('Production department requests must use "Material Issue" purpose. Cannot send for purchase.')
+        return
+      }
+
+      setLoading(true)
+
+      const itemsToSend = unavailableItems.map(item => ({
+        item_code: item.item_code,
+        item_name: item.item_name,
+        qty: item.qty,
+        uom: item.uom
+      }))
+
+      const response = await api.post('/purchase-receipts/from-material-request', {
+        mr_id: mrId,
+        items: itemsToSend,
+        department: request?.department,
+        purpose: request?.purpose
+      })
+
+      if (response.data.success) {
+        setSuccess(`Purchase Receipt created successfully for ${unavailableItems.length} item(s). Redirecting to Purchase Receipts...`)
+        
+        setTimeout(() => {
+          window.location.href = '/inventory/purchase-receipts'
+        }, 2000)
+      }
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to create Purchase Receipt'
+      setError(errorMsg)
+      console.error('Send for purchase error:', {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message
+      })
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -133,7 +283,6 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
             {error && <Alert type="danger" className="mb-4">{error}</Alert>}
             {success && <Alert type="success" className="mb-4">{success}</Alert>}
 
-            {/* Header / Actions */}
             <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
               <div className="flex items-center gap-4">
                 <Badge color={getStatusColor(request.status)} size="lg">
@@ -144,13 +293,18 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                 </span>
               </div>
               
-              <div className="flex gap-2 items-center">
+              <div className="flex gap-2 items-center flex-wrap">
                 {request.status === 'draft' && (
                   <>
                     {['material_transfer', 'material_issue'].includes(request?.purpose) && (
                       <select
                         value={selectedSourceWarehouse || request?.source_warehouse || ''}
-                        onChange={(e) => setSelectedSourceWarehouse(e.target.value)}
+                        onChange={(e) => {
+                          setSelectedSourceWarehouse(e.target.value)
+                          if (request?.items) {
+                            checkStockAvailability({ ...request, source_warehouse: e.target.value })
+                          }
+                        }}
                         className={`px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
                           !selectedSourceWarehouse && !request?.source_warehouse 
                             ? 'border-red-500 focus:ring-red-500' 
@@ -170,14 +324,27 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                         )}
                       </select>
                     )}
-                    <Button 
-                      onClick={handleApprove}
-                      variant="success"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <CheckCircle size={16} /> Approve
-                    </Button>
+                    {getUnavailableItems().length > 0 && (
+                      <Button 
+                        onClick={handleSendForPurchase}
+                        variant="warning"
+                        size="sm"
+                        className="flex items-center gap-2"
+                        title={`Send ${getUnavailableItems().length} unavailable item(s) for purchase`}
+                      >
+                        Send for Purchase
+                      </Button>
+                    )}
+                    {getAvailableItems().length > 0 && (
+                      <Button 
+                        onClick={handleApprove}
+                        variant="success"
+                        size="sm"
+                        className="flex items-center gap-2"
+                      >
+                        <CheckCircle size={16} /> Approve
+                      </Button>
+                    )}
                     <Button 
                       onClick={handleReject}
                       variant="danger"
@@ -196,13 +363,9 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                     </Button>
                   </>
                 )}
-                {/* <Button variant="outline" size="sm" className="flex items-center gap-2">
-                  <Printer size={16} /> Print
-                </Button> */}
               </div>
             </div>
 
-            {/* Details Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Request Details</h4>
@@ -253,34 +416,72 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
               </div>
             </div>
 
-            {/* Items Table */}
+            {checkingStock && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
+                Checking stock availability...
+              </div>
+            )}
+
+            {getAvailableItems().length > 0 && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded">
+                <h4 className="text-sm font-bold text-green-800 mb-2">✓ Available Items</h4>
+                <p className="text-sm text-green-700">{getAvailableItems().length} item(s) are available in stock and can be approved.</p>
+              </div>
+            )}
+
+            {getUnavailableItems().length > 0 && (
+              <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded">
+                <h4 className="text-sm font-bold text-orange-800 mb-2">⚠ Unavailable Items</h4>
+                <p className="text-sm text-orange-700">{getUnavailableItems().length} item(s) are not available in stock. Click "Send for Purchase" to create a Purchase Receipt.</p>
+              </div>
+            )}
+
             <div className="mb-6">
-              <h4 className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Items</h4>
+              <h4 className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Items & Stock Status</h4>
               <div className="overflow-x-auto border rounded-lg">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-gray-100 text-gray-700 uppercase font-bold text-xs">
                     <tr>
                       <th className="px-4 py-3">Item Code</th>
                       <th className="px-4 py-3">Item Name</th>
-                      <th className="px-4 py-3 text-right">Quantity</th>
+                      <th className="px-4 py-3 text-right">Requested Qty</th>
+                      <th className="px-4 py-3 text-right">Available Qty</th>
+                      <th className="px-4 py-3 text-center">Status</th>
                       <th className="px-4 py-3 text-center">UOM</th>
-                      {/* <th className="px-4 py-3">Purpose</th> */}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {request.items && request.items.length > 0 ? (
-                      request.items.map((item, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 font-medium text-gray-900">{item.item_code}</td>
-                          <td className="px-4 py-3 text-gray-600">{item.item_name || '-'}</td>
-                          <td className="px-4 py-3 text-right font-medium">{item.qty}</td>
-                          <td className="px-4 py-3 text-center text-gray-500">{item.uom}</td>
-                          {/* <td className="px-4 py-3 text-gray-500">{item.purpose || '-'}</td> */}
-                        </tr>
-                      ))
+                      request.items.map((item, index) => {
+                        const stock = stockData[item.item_code]
+                        return (
+                          <tr key={index} className={`hover:bg-gray-50 ${stock?.error ? 'bg-orange-50' : stock?.isAvailable === false ? 'bg-red-50' : stock?.isAvailable ? 'bg-green-50' : ''}`}>
+                            <td className="px-4 py-3 font-medium text-gray-900">{item.item_code}</td>
+                            <td className="px-4 py-3 text-gray-600">{item.item_name || '-'}</td>
+                            <td className="px-4 py-3 text-right font-medium">{item.qty}</td>
+                            <td className="px-4 py-3 text-right font-medium">
+                              {stock ? stock.available.toFixed(2) : 'Checking...'}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {stock ? (
+                                stock.isAvailable ? (
+                                  <span className="inline-block px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">✓ AVAILABLE ({stock.available.toFixed(0)})</span>
+                                ) : !stock.foundInInventory ? (
+                                  <span className="inline-block px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium">✗ NOT AVAILABLE</span>
+                                ) : (
+                                  <span className="inline-block px-2 py-1 bg-orange-100 text-orange-800 rounded text-xs font-medium">⚠ INSUFFICIENT ({stock.available.toFixed(2)} of {stock.requested})</span>
+                                )
+                              ) : (
+                                <span className="text-gray-400 text-xs">Checking...</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center text-gray-500">{item.uom}</td>
+                          </tr>
+                        )
+                      })
                     ) : (
                       <tr>
-                        <td colSpan="5" className="px-4 py-6 text-center text-gray-500">
+                        <td colSpan="6" className="px-4 py-6 text-center text-gray-500">
                           No items found in this request
                         </td>
                       </tr>
@@ -290,7 +491,6 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
               </div>
             </div>
 
-            {/* Notes */}
             {request.items_notes && (
               <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-100">
                 <h4 className="text-sm font-bold text-yellow-800 mb-2">Notes</h4>

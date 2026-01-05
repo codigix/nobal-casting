@@ -796,7 +796,7 @@ async deleteAllBOMRawMaterials(bom_id) {
         `INSERT INTO job_card (job_card_id, work_order_id, machine_id, operator_id, operation, operation_sequence, planned_quantity, operation_time, scheduled_start_date, scheduled_end_date, status, created_by, notes)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [data.job_card_id, data.work_order_id, data.machine_id, data.operator_id, data.operation || null, data.operation_sequence || null,
-         data.planned_quantity, data.operation_time || 0, data.scheduled_start_date, data.scheduled_end_date, data.status, data.created_by, data.notes]
+         data.planned_quantity, data.operation_time || 0, data.scheduled_start_date, data.scheduled_end_date, (data.status || 'draft').toLowerCase(), data.created_by, data.notes]
       )
       return data
     } catch (error) {
@@ -811,7 +811,7 @@ async deleteAllBOMRawMaterials(bom_id) {
 
       if (data.operation) { fields.push('operation = ?'); values.push(data.operation) }
       if (data.operation_sequence) { fields.push('operation_sequence = ?'); values.push(data.operation_sequence) }
-      if (data.status) { fields.push('status = ?'); values.push(data.status) }
+      if (data.status) { fields.push('status = ?'); values.push((data.status || '').toLowerCase()) }
       if (data.operator_id) { fields.push('operator_id = ?'); values.push(data.operator_id) }
       if (data.machine_id) { fields.push('machine_id = ?'); values.push(data.machine_id) }
       if (data.planned_quantity) { fields.push('planned_quantity = ?'); values.push(data.planned_quantity) }
@@ -835,6 +835,30 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
+  async checkAndUpdateWorkOrderCompletion(work_order_id) {
+    try {
+      const [jobCards] = await this.db.query(
+        'SELECT status FROM job_card WHERE work_order_id = ?',
+        [work_order_id]
+      )
+
+      if (!jobCards || jobCards.length === 0) {
+        return false
+      }
+
+      const allCompleted = jobCards.every(card => (card.status || '').toLowerCase() === 'completed')
+      
+      if (allCompleted) {
+        await this.updateWorkOrder(work_order_id, { status: 'completed' })
+        return true
+      }
+
+      return false
+    } catch (error) {
+      throw error
+    }
+  }
+
   async deleteJobCard(job_card_id) {
     try {
       await this.db.query('DELETE FROM job_card WHERE job_card_id = ?', [job_card_id])
@@ -847,6 +871,101 @@ async deleteAllBOMRawMaterials(bom_id) {
   async deleteJobCardsByWorkOrder(work_order_id) {
     try {
       await this.db.query('DELETE FROM job_card WHERE work_order_id = ?', [work_order_id])
+      return true
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async generateJobCardsForWorkOrder(work_order_id, created_by = 'system') {
+    try {
+      const workOrder = await this.getWorkOrderById(work_order_id)
+      if (!workOrder) {
+        throw new Error('Work order not found')
+      }
+
+      if (!workOrder.operations || workOrder.operations.length === 0) {
+        throw new Error('No operations found for this work order')
+      }
+
+      const createdCards = []
+      const plannedQty = parseFloat(workOrder.quantity || workOrder.qty_to_manufacture || 0)
+
+      for (const operation of workOrder.operations) {
+        const job_card_id = `JC-${Date.now()}-${operation.sequence}`
+        const jobCardData = {
+          job_card_id,
+          work_order_id,
+          operation: operation.operation_name || operation.name || operation.operation || '',
+          operation_sequence: operation.sequence || 0,
+          machine_id: operation.default_workstation || operation.workstation || '',
+          operator_id: null,
+          planned_quantity: plannedQty,
+          operation_time: operation.operation_time || 0,
+          scheduled_start_date: null,
+          scheduled_end_date: null,
+          status: 'draft',
+          created_by,
+          notes: null
+        }
+
+        await this.createJobCard(jobCardData)
+        createdCards.push(jobCardData)
+      }
+
+      return createdCards
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async validateJobCardStatusTransition(job_card_id, newStatus) {
+    try {
+      const jobCard = await this.getJobCardDetails(job_card_id)
+      if (!jobCard) {
+        throw new Error('Job card not found')
+      }
+
+      const statusWorkflow = {
+        'draft': ['pending', 'cancelled'],
+        'pending': ['in-progress', 'cancelled'],
+        'in-progress': ['completed', 'cancelled'],
+        'completed': ['completed'],
+        'cancelled': ['cancelled'],
+        'open': ['pending', 'cancelled']
+      }
+
+      const currentStatusNormalized = (jobCard.status || '').toLowerCase()
+      const newStatusNormalized = (newStatus || '').toLowerCase()
+      const allowedNextStatuses = statusWorkflow[currentStatusNormalized] || []
+      if (!allowedNextStatuses.includes(newStatusNormalized)) {
+        const statusLabels = {
+          'draft': 'Draft',
+          'pending': 'Pending',
+          'in-progress': 'In Progress',
+          'completed': 'Completed',
+          'cancelled': 'Cancelled'
+        }
+        const currentLabel = statusLabels[currentStatusNormalized] || jobCard.status
+        const allowedLabels = allowedNextStatuses.map(s => statusLabels[s] || s)
+        throw new Error(`Job Card Status Error: Cannot transition from "${currentLabel}" to "${newStatus}". Allowed next statuses: ${allowedLabels.join(', ')}. Please follow the proper workflow sequence.`)
+      }
+
+      if (newStatusNormalized === 'in-progress') {
+        const [previousCards] = await this.db.query(
+          'SELECT * FROM job_card WHERE work_order_id = ? AND operation_sequence < ? ORDER BY operation_sequence DESC',
+          [jobCard.work_order_id, jobCard.operation_sequence || 0]
+        )
+
+        if (previousCards && previousCards.length > 0) {
+          const previousCard = previousCards[0]
+          const prevStatusNormalized = (previousCard.status || '').toLowerCase()
+          if (prevStatusNormalized !== 'completed') {
+            throw new Error(`Operation Sequence Error: Cannot start operation "${jobCard.operation}" (Sequence ${jobCard.operation_sequence}). The previous operation "${previousCard.operation}" (Sequence ${previousCard.operation_sequence}) must be completed first. Current status: ${(previousCard.status || 'Unknown').toUpperCase()}.`)
+          }
+        }
+      }
+
       return true
     } catch (error) {
       throw error

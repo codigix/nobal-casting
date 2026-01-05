@@ -22,10 +22,20 @@ export default function MaterialRequests() {
   const [viewModalOpen, setViewModalOpen] = useState(false)
   const [selectedMrId, setSelectedMrId] = useState(null)
   const [stats, setStats] = useState({ total: 0, draft: 0, approved: 0, converted: 0, cancelled: 0 })
+  const [stockData, setStockData] = useState({})
 
   useEffect(() => {
     fetchRequests()
     fetchDepartments()
+  }, [filters])
+
+  useEffect(() => {
+    const handleMaterialRequestApproved = () => {
+      fetchRequests()
+    }
+    
+    window.addEventListener('materialRequestApproved', handleMaterialRequestApproved)
+    return () => window.removeEventListener('materialRequestApproved', handleMaterialRequestApproved)
   }, [filters])
 
   const fetchRequests = async () => {
@@ -40,12 +50,65 @@ export default function MaterialRequests() {
       const data = response.data.data || []
       setRequests(data)
       calculateStats(data)
+      await checkItemsAvailability(data)
       setError(null)
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to fetch material requests')
       setRequests([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const checkItemsAvailability = async (requestsList) => {
+    try {
+      const allStockData = {}
+      
+      for (const request of requestsList) {
+        const warehouse = request.source_warehouse || 'warehouse'
+        
+        for (const item of request.items || []) {
+          const key = `${item.item_code}-${warehouse}`
+          
+          if (allStockData[key]) {
+            continue
+          }
+          
+          try {
+            const res = await api.get(`/stock/stock-balance`, {
+              params: {
+                item_code: item.item_code,
+                warehouse_id: warehouse
+              }
+            })
+            
+            const balance = res.data.data || res.data
+            let availableQty = 0
+            
+            if (Array.isArray(balance)) {
+              availableQty = balance.reduce((sum, b) => sum + (parseFloat(b.available_qty || b.current_qty || 0)), 0)
+            } else if (balance && typeof balance === 'object') {
+              availableQty = parseFloat(balance.available_qty || balance.current_qty || 0)
+            }
+            
+            allStockData[key] = {
+              available: availableQty,
+              requested: parseFloat(item.qty),
+              status: availableQty >= parseFloat(item.qty) ? 'available' : 'unavailable'
+            }
+          } catch (err) {
+            allStockData[key] = {
+              available: 0,
+              requested: parseFloat(item.qty),
+              status: 'unavailable'
+            }
+          }
+        }
+      }
+      
+      setStockData(allStockData)
+    } catch (err) {
+      console.error('Error checking stock availability:', err)
     }
   }
 
@@ -69,7 +132,7 @@ export default function MaterialRequests() {
   const handleApprove = async (id) => {
     try {
       const response = await api.patch(`/material-requests/${id}/approve`)
-      const message = response.data.grn ? `Material request approved successfully. GRN ${response.data.grn.grn_no} created for inspection.` : 'Material request approved successfully'
+      const message = response.data.message || 'Material request approved successfully'
       setSuccess(message)
       fetchRequests()
       setTimeout(() => setSuccess(null), 4000)
@@ -112,21 +175,68 @@ export default function MaterialRequests() {
     return colors[status] || 'secondary'
   }
 
+  const getItemsAvailabilityStatus = (row) => {
+    const warehouse = row.source_warehouse || 'warehouse'
+    const items = row.items || []
+    
+    if (items.length === 0) return { all: 'available', available: 0, unavailable: 0 }
+    
+    let availableCount = 0
+    let unavailableCount = 0
+    
+    for (const item of items) {
+      const key = `${item.item_code}-${warehouse}`
+      const itemStock = stockData[key]
+      
+      if (itemStock && itemStock.status === 'available') {
+        availableCount++
+      } else {
+        unavailableCount++
+      }
+    }
+    
+    return {
+      all: unavailableCount === 0 ? 'available' : (availableCount === 0 ? 'unavailable' : 'partial'),
+      available: availableCount,
+      unavailable: unavailableCount
+    }
+  }
+
   const columns = [
-    { key: 'mr_id', label: 'MR ID', width: '10%' },
-    { key: 'requested_by_name', label: 'Requested By', width: '12%' },
-    { key: 'department', label: 'Department', width: '12%' },
+    { key: 'mr_id', label: 'MR ID', width: '8%' },
+    { key: 'requested_by_name', label: 'Requested By', width: '10%' },
+    { key: 'department', label: 'Department', width: '10%' },
     { 
       key: 'required_by_date', 
       label: 'Required By', 
-      width: '10%',
+      width: '8%',
       render: (val) => val ? new Date(val).toLocaleDateString() : '-'
     },
-    { key: 'purpose', label: 'Purpose', width: '15%' },
+    { key: 'purpose', label: 'Purpose', width: '12%' },
+    {
+      key: 'stock_availability',
+      label: 'Stock Status',
+      width: '12%',
+      render: (val, row) => {
+        const status = getItemsAvailabilityStatus(row)
+        const colors = { available: 'success', unavailable: 'danger', partial: 'warning' }
+        const labels = { available: '✓ All Available', unavailable: '✗ Unavailable', partial: '⚠ Partial' }
+        return <Badge color={colors[status.all]}>{labels[status.all]}</Badge>
+      }
+    },
+    {
+      key: 'items_count',
+      label: 'Items (Avail/Total)',
+      width: '10%',
+      render: (val, row) => {
+        const status = getItemsAvailabilityStatus(row)
+        return <span>{status.available}/{(row.items || []).length}</span>
+      }
+    },
     { 
       key: 'status', 
-      label: 'Status', 
-      width: '8%',
+      label: 'Request Status', 
+      width: '10%',
       render: (val) => <Badge color={getStatusColor(val)}>{val}</Badge>
     },
     { 
@@ -134,12 +244,6 @@ export default function MaterialRequests() {
       label: 'Created', 
       width: '12%',
       render: (val) => new Date(val).toLocaleString()
-    },
-    { 
-      key: 'created_by', 
-      label: 'Created By', 
-      width: '10%',
-      render: (val) => val || 'System'
     }
   ]
 

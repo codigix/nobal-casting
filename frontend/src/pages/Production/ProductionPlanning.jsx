@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Edit2, Trash2, Eye, Zap, Trash, X, Boxes, Factory, Check } from 'lucide-react'
+import { Plus, Edit2, Trash2, Eye, Zap, Trash, X, Boxes, Factory, Check, Send, Loader } from 'lucide-react'
+import { useToast } from '../../components/ToastContainer'
 
 const enrichRequiredItemsWithStock = async (items, token) => {
   if (!items || items.length === 0) return items
@@ -25,13 +26,16 @@ const enrichRequiredItemsWithStock = async (items, token) => {
         stockByItem[stock.item_code].quantity += parseFloat(stock.available_qty || stock.qty || stock.quantity || 0)
       })
       
-      return items.map(item => ({
-        ...item,
-        qty: stockByItem[item.item_code]?.quantity || item.qty || item.quantity || 0,
-        quantity: stockByItem[item.item_code]?.quantity || item.qty || item.quantity || 0,
-        required_qty: item.qty || item.quantity || item.required_qty || 0,
-        source_warehouse: stockByItem[item.item_code]?.warehouse || item.source_warehouse || '-'
-      }))
+      return items.map(item => {
+        const bomQty = item.qty || item.quantity || item.required_qty || item.bom_qty || 0
+        return {
+          ...item,
+          qty: stockByItem[item.item_code]?.quantity || 0,
+          quantity: stockByItem[item.item_code]?.quantity || 0,
+          required_qty: bomQty,
+          source_warehouse: stockByItem[item.item_code]?.warehouse || item.source_warehouse || '-'
+        }
+      })
     }
   } catch (err) {
     console.error('Error fetching stock data:', err)
@@ -40,8 +44,184 @@ const enrichRequiredItemsWithStock = async (items, token) => {
   return items
 }
 
+const findBomForItem = async (itemCode, token, excludeBomId = null) => {
+  try {
+    console.log(`Fetching all BOMs to search for item: ${itemCode}`)
+    const searchRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    if (searchRes.ok) {
+      const data = await searchRes.json()
+      const bomList = Array.isArray(data) ? data : (data.data || [])
+      console.log(`Found ${bomList.length} BOMs in system:`, bomList.map(b => ({ bom_id: b.bom_id, item_code: b.item_code })))
+      
+      const matchingBom = bomList.find(bom => {
+        const bomItemCode = bom.item_code || bom.product_code || ''
+        const isMatch = bomItemCode.trim() === itemCode.trim() && bom.bom_id !== excludeBomId
+        if (isMatch) {
+          console.log(`MATCH FOUND: BOM ${bom.bom_id} for item ${itemCode}`)
+        }
+        return isMatch
+      })
+      
+      if (matchingBom) {
+        console.log(`Returning BOM ID: ${matchingBom.bom_id}`)
+        return matchingBom.bom_id || matchingBom.id
+      } else {
+        console.log(`NO MATCH found for ${itemCode} (excluding ${excludeBomId})`)
+      }
+    }
+  } catch (err) {
+    console.error(`Error searching BOM for item ${itemCode}:`, err)
+  }
+  return null
+}
+
+const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms = new Set()) => {
+  if (!bomId || visitedBoms.has(bomId)) {
+    return {}
+  }
+  
+  visitedBoms.add(bomId)
+  const allRawMaterials = {}
+  
+  try {
+    const bomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${bomId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    
+    if (!bomRes.ok) {
+      console.warn(`BOM ${bomId} not found`)
+      return allRawMaterials
+    }
+    
+    const bomData = await bomRes.json()
+    const bom = bomData.data || bomData
+    const rawMaterials = bom.bom_raw_materials || bom.rawMaterials || []
+    const consumables = bom.bom_consumables || bom.consumables || []
+    
+    console.log(`\n========== Processing BOM ${bomId} ==========`)
+    console.log(`Found ${rawMaterials.length} raw materials and ${consumables.length} consumables`)
+    console.log(`Raw Materials:`, rawMaterials)
+    console.log(`Consumables:`, consumables)
+    
+    const allMaterials = [...rawMaterials, ...consumables]
+    
+    for (const material of allMaterials) {
+      const itemCode = material.item_code || material.component_code
+      if (!itemCode) continue
+      
+      const baseQty = parseFloat(material.qty) || parseFloat(material.quantity) || parseFloat(material.bom_qty) || 1
+      const totalQty = baseQty * plannedQty
+      
+      const isSubAssembly = material.item_group === 'Sub Assemblies' || material.item_group === 'sub-assemblies'
+      
+      if (isSubAssembly) {
+        console.log(`\n=== SUB-ASSEMBLY: ${itemCode} ===`)
+        
+        let subBomId = material.bom_id
+        if (subBomId && subBomId !== bomId) {
+          console.log(`Using existing bom_id: ${subBomId}`)
+        } else {
+          console.log(`Searching for BOM of sub-assembly: ${itemCode}`)
+          subBomId = await findBomForItem(itemCode, token, bomId)
+        }
+        
+        if (subBomId && subBomId !== bomId) {
+          console.log(`Found BOM ${subBomId} for sub-assembly ${itemCode}, fetching its materials...`)
+          
+          try {
+            const subBomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${subBomId}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            })
+            if (subBomRes.ok) {
+              const subBomData = await subBomRes.json()
+              const subBom = subBomData.data || subBomData
+              const subBomMaterials = subBom.bom_raw_materials || subBom.rawMaterials || []
+              console.log(`Sub-assembly BOM ${subBomId} (${itemCode}) has ${subBomMaterials.length} materials:`, subBomMaterials)
+              
+              const subMaterials = await collectAllRawMaterials(subBomId, totalQty, token, visitedBoms)
+              console.log(`Sub-assembly ${itemCode} returned ${Object.keys(subMaterials).length} aggregated materials`)
+              for (const [subItemCode, subMaterial] of Object.entries(subMaterials)) {
+                if (allRawMaterials[subItemCode]) {
+                  allRawMaterials[subItemCode].qty += subMaterial.qty
+                  allRawMaterials[subItemCode].quantity += subMaterial.qty
+                } else {
+                  allRawMaterials[subItemCode] = subMaterial
+                }
+              }
+            } else {
+              console.log(`BOM ${subBomId} not found (status: ${subBomRes.status}), treating ${itemCode} as raw material`)
+              if (allRawMaterials[itemCode]) {
+                allRawMaterials[itemCode].qty += totalQty
+                allRawMaterials[itemCode].quantity += totalQty
+              } else {
+                allRawMaterials[itemCode] = {
+                  item_code: itemCode,
+                  item_name: material.item_name || material.name || itemCode,
+                  qty: totalQty,
+                  quantity: totalQty,
+                  uom: material.uom || 'pcs'
+                }
+              }
+            }
+          } catch (err) {
+            console.error(`Error fetching sub-assembly BOM ${subBomId}:`, err)
+            if (allRawMaterials[itemCode]) {
+              allRawMaterials[itemCode].qty += totalQty
+              allRawMaterials[itemCode].quantity += totalQty
+            } else {
+              allRawMaterials[itemCode] = {
+                item_code: itemCode,
+                item_name: material.item_name || material.name || itemCode,
+                qty: totalQty,
+                quantity: totalQty,
+                uom: material.uom || 'pcs'
+              }
+            }
+          }
+        } else {
+          console.log(`No BOM found for sub-assembly ${itemCode}, treating as raw material`)
+          if (allRawMaterials[itemCode]) {
+            allRawMaterials[itemCode].qty += totalQty
+            allRawMaterials[itemCode].quantity += totalQty
+          } else {
+            allRawMaterials[itemCode] = {
+              item_code: itemCode,
+              item_name: material.item_name || material.name || itemCode,
+              qty: totalQty,
+              quantity: totalQty,
+              uom: material.uom || 'pcs'
+            }
+          }
+        }
+      } else {
+        console.log(`Adding raw material: ${itemCode} with qty ${totalQty}`)
+        if (allRawMaterials[itemCode]) {
+          allRawMaterials[itemCode].qty += totalQty
+          allRawMaterials[itemCode].quantity += totalQty
+        } else {
+          allRawMaterials[itemCode] = {
+            item_code: itemCode,
+            item_name: material.item_name || material.name || itemCode,
+            qty: totalQty,
+            quantity: totalQty,
+            uom: material.uom || 'pcs'
+          }
+        }
+      }
+    }
+    console.log(`BOM ${bomId} processing complete, total materials: ${Object.keys(allRawMaterials).length}`)
+  } catch (err) {
+    console.error(`Error fetching BOM ${bomId}:`, err)
+  }
+  
+  return allRawMaterials
+}
+
 export default function ProductionPlanning() {
   const navigate = useNavigate()
+  const toast = useToast()
   const [plans, setPlans] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -51,6 +231,12 @@ export default function ProductionPlanning() {
   const [showWorkOrderModal, setShowWorkOrderModal] = useState(false)
   const [workOrderData, setWorkOrderData] = useState(null)
   const [creatingWorkOrder, setCreatingWorkOrder] = useState(false)
+  const [showMaterialRequestModal, setShowMaterialRequestModal] = useState(false)
+  const [materialRequestData, setMaterialRequestData] = useState(null)
+  const [sendingMaterialRequest, setSendingMaterialRequest] = useState(false)
+  const [materialStockData, setMaterialStockData] = useState({})
+  const [workOrderStockData, setWorkOrderStockData] = useState({})
+  const [checkingStock, setCheckingStock] = useState(false)
 
   useEffect(() => {
     fetchPlans()
@@ -322,14 +508,28 @@ export default function ProductionPlanning() {
       }
     }
 
-    let requiredItems = bomDetails?.rawMaterials || []
+    const fgItem = fgItems[0]
+    const plannedQty = fgItem.quantity || fgItem.planned_qty || fullPlan.planned_qty || fullPlan.quantity || 1
     
-    if (requiredItems.length > 0) {
+    const rawMatsList = bomDetails?.bom_raw_materials || bomDetails?.rawMaterials || []
+    let allItems = rawMatsList.map(item => {
+      const baseQty = parseFloat(item.qty) || parseFloat(item.quantity) || parseFloat(item.bom_qty) || 1
+      return {
+        ...item,
+        qty: baseQty * plannedQty,
+        quantity: baseQty * plannedQty,
+        required_qty: baseQty * plannedQty
+      }
+    })
+    
+    if (allItems.length > 0) {
       const token = localStorage.getItem('token')
-      requiredItems = await enrichRequiredItemsWithStock(requiredItems, token)
+      allItems = await enrichRequiredItemsWithStock(allItems, token)
     }
 
-    const fgItem = fgItems[0]
+    const subAssemblies = allItems.filter(item => item.bom_id || item.is_sub_assembly)
+    const rawMaterials = allItems.filter(item => !item.bom_id && !item.is_sub_assembly)
+
     const woData = {
       item_code: fgItem.item_code || fgItem.component_code || '',
       item_name: fgItem.item_name || fgItem.component_description || '',
@@ -339,12 +539,18 @@ export default function ProductionPlanning() {
       priority: 'Medium',
       notes: '',
       operations: bomDetails?.operations || [],
-      required_items: requiredItems,
+      sub_assemblies: subAssemblies,
+      required_items: rawMaterials,
       production_plan_id: plan.plan_id
     }
     
     setWorkOrderData(woData)
     setShowWorkOrderModal(true)
+    
+    const allRequiredItems = [...subAssemblies, ...rawMaterials]
+    if (allRequiredItems.length > 0) {
+      checkItemsStock(allRequiredItems, setWorkOrderStockData)
+    }
   }
 
   const handleCreateWorkOrderConfirm = () => {
@@ -361,6 +567,109 @@ export default function ProductionPlanning() {
     setShowWorkOrderModal(false)
     setWorkOrderData(null)
     navigate(`/manufacturing/work-orders/new?${params.toString()}`)
+  }
+
+  const handleSendMaterialRequest = async (plan) => {
+    let fgItems = plan.fg_items
+    let fullPlan = plan
+    
+    try {
+      setSendingMaterialRequest(true)
+      const token = localStorage.getItem('token')
+      
+      if (!fgItems || fgItems.length === 0) {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/production-planning/${plan.plan_id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        
+        if (res.ok) {
+          const data = await res.json()
+          fullPlan = data.data || data
+          fgItems = fullPlan.fg_items || fullPlan.finished_goods || fullPlan.bom_finished_goods || []
+        }
+      }
+
+      if (!plan.bom_id) {
+        toast.addToast('No BOM associated with this production plan', 'warning')
+        setSendingMaterialRequest(false)
+        return
+      }
+
+      const fgItem = fgItems && fgItems.length > 0 ? fgItems[0] : {}
+      const plannedQty = fgItem.quantity || fgItem.planned_qty || fullPlan.planned_qty || fullPlan.quantity || 1
+
+      const allRawMaterials = await collectAllRawMaterials(plan.bom_id, plannedQty, token)
+      
+      if (Object.keys(allRawMaterials).length === 0) {
+        toast.addToast('No raw materials found in BOM or sub-assemblies', 'warning')
+        setSendingMaterialRequest(false)
+        return
+      }
+
+      const requiredItems = Object.values(allRawMaterials)
+
+      const seriesNo = `MR-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`
+      const requiredByDate = new Date()
+      requiredByDate.setDate(requiredByDate.getDate() + 7)
+
+      const mrData = {
+        series_no: seriesNo,
+        transition_date: new Date().toISOString().split('T')[0],
+        requested_by_id: 'System',
+        department: 'Production',
+        purpose: 'purchase',
+        required_by_date: requiredByDate.toISOString().split('T')[0],
+        target_warehouse: '',
+        source_warehouse: '',
+        items_notes: `Material request for Production Plan: ${plan.plan_id}\\nBOM: ${plan.bom_id}\\nItem: ${fgItem.item_code || fgItem.item_name || ''}\\nPlanned Quantity: ${plannedQty}\\nIncludes raw materials from all sub-assemblies`,
+        items: requiredItems
+      }
+
+      setMaterialRequestData(mrData)
+      setShowMaterialRequestModal(true)
+      setSendingMaterialRequest(false)
+      
+      const mrItems = Object.values(allRawMaterials)
+      if (mrItems.length > 0) {
+        checkItemsStock(mrItems, setMaterialStockData)
+      }
+    } catch (err) {
+      console.error('Error preparing material request:', err)
+      toast.addToast('Error preparing material request', 'error')
+      setSendingMaterialRequest(false)
+    }
+  }
+
+  const handleSendMaterialRequestConfirm = async () => {
+    if (!materialRequestData) return
+    
+    try {
+      setSendingMaterialRequest(true)
+      const token = localStorage.getItem('token')
+      
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/material-requests`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(materialRequestData)
+      })
+
+      if (res.ok) {
+        toast.addToast('Material request created successfully', 'success')
+        setShowMaterialRequestModal(false)
+        setMaterialRequestData(null)
+      } else {
+        const errData = await res.json()
+        toast.addToast(errData.error || 'Failed to create material request', 'error')
+      }
+    } catch (err) {
+      console.error('Error creating material request:', err)
+      toast.addToast('Error creating material request', 'error')
+    } finally {
+      setSendingMaterialRequest(false)
+    }
   }
 
   const filteredPlans = plans.filter(plan => 
@@ -387,6 +696,51 @@ export default function ProductionPlanning() {
       })
     } catch {
       return '-'
+    }
+  }
+
+  const checkItemsStock = async (items, stateUpdater) => {
+    try {
+      setCheckingStock(true)
+      const token = localStorage.getItem('token')
+      const stockInfo = {}
+      
+      for (const item of items || []) {
+        try {
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/stock/stock-balance`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+            method: 'GET'
+          })
+          
+          if (res.ok) {
+            const data = await res.json()
+            const balances = Array.isArray(data) ? data : (data.data || [])
+            
+            const itemBalance = balances.find(b => b.item_code === item.item_code)
+            const availableQty = itemBalance ? parseFloat(itemBalance.available_qty || itemBalance.current_qty || 0) : 0
+            
+            stockInfo[item.item_code] = {
+              available: availableQty,
+              requested: item.quantity || item.qty || 0,
+              isAvailable: availableQty > 0 && availableQty >= (item.quantity || item.qty || 0),
+              hasStock: availableQty > 0
+            }
+          }
+        } catch (err) {
+          stockInfo[item.item_code] = {
+            available: 0,
+            requested: item.quantity || item.qty || 0,
+            isAvailable: false,
+            hasStock: false
+          }
+        }
+      }
+      
+      stateUpdater(stockInfo)
+    } catch (err) {
+      console.error('Error checking stock:', err)
+    } finally {
+      setCheckingStock(false)
     }
   }
 
@@ -500,6 +854,18 @@ export default function ProductionPlanning() {
                               className="p-1 hover:bg-green-50 rounded transition"
                             >
                               <Zap size={14} className="text-green-600" />
+                            </button>
+                            <button 
+                              onClick={() => handleSendMaterialRequest(plan)}
+                              title="Send Material Request"
+                              disabled={sendingMaterialRequest}
+                              className="p-1 hover:bg-purple-50 rounded transition disabled:opacity-60"
+                            >
+                              {sendingMaterialRequest ? (
+                                <Loader size={14} className="text-purple-600 animate-spin" />
+                              ) : (
+                                <Send size={14} className="text-purple-600" />
+                              )}
                             </button>
                             <button 
                               onClick={() => handleEdit(plan)}
@@ -616,6 +982,60 @@ export default function ProductionPlanning() {
                 </div>
               )}
 
+              {workOrderData.sub_assemblies && workOrderData.sub_assemblies.length > 0 && (
+                <div className="rounded overflow-hidden border border-gray-200 shadow-sm">
+                  <div className="bg-gradient-to-r from-orange-50 to-orange-100 px-3 py-2 border-b border-orange-200">
+                    <h3 className="font-semibold text-xs text-orange-900 flex items-center gap-2">
+                      <Boxes size={14} className="text-orange-600" />
+                      Sub-Assemblies ({workOrderData.sub_assemblies.length})
+                    </h3>
+                  </div>
+                  <div className="overflow-x-auto max-h-40">
+                    <table className="w-full text-xs">
+                      <thead className="bg-gray-50 sticky top-0 border-b border-gray-200">
+                        <tr>
+                          <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Item Code</th>
+                          <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Qty</th>
+                          <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Available</th>
+                          <th className="px-2 py-1.5 text-center font-semibold text-gray-700">Status</th>
+                          <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Warehouse</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {workOrderData.sub_assemblies.map((item, idx) => {
+                          const stock = workOrderStockData[item.item_code]
+                          return (
+                            <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-orange-50 transition ${stock?.isAvailable === false ? 'bg-red-50' : ''}`}>
+                              <td className="px-2 py-1 font-medium text-gray-900">{item.item_code}</td>
+                              <td className="px-2 py-1 text-right font-medium text-gray-900">{item.required_qty || item.qty || item.quantity || '-'}</td>
+                              <td className="px-2 py-1 text-right font-medium text-gray-900">
+                                {stock ? stock.available.toFixed(2) : '-'}
+                              </td>
+                              <td className="px-2 py-1 text-center">
+                                {stock ? (
+                                  stock.hasStock ? (
+                                    stock.isAvailable ? (
+                                      <span className="inline-block px-1.5 py-0.5 bg-green-100 text-green-800 rounded text-xs font-medium">✓</span>
+                                    ) : (
+                                      <span className="inline-block px-1.5 py-0.5 bg-red-100 text-red-800 rounded text-xs font-medium">✗</span>
+                                    )
+                                  ) : (
+                                    <span className="inline-block px-1.5 py-0.5 bg-orange-100 text-orange-800 rounded text-xs font-medium">⚠</span>
+                                  )
+                                ) : (
+                                  <span className="text-gray-400 text-xs">-</span>
+                                )}
+                              </td>
+                              <td className="px-2 py-1 text-gray-700">{item.source_warehouse || '-'}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               {workOrderData.required_items && workOrderData.required_items.length > 0 && (
                 <div className="rounded overflow-hidden border border-gray-200 shadow-sm">
                   <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-3 py-2 border-b border-purple-200">
@@ -630,17 +1050,40 @@ export default function ProductionPlanning() {
                         <tr>
                           <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Item Code</th>
                           <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Qty</th>
+                          <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Available</th>
+                          <th className="px-2 py-1.5 text-center font-semibold text-gray-700">Status</th>
                           <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Warehouse</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {workOrderData.required_items.map((item, idx) => (
-                          <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-purple-50 transition`}>
-                            <td className="px-2 py-1 font-medium text-gray-900">{item.item_code}</td>
-                            <td className="px-2 py-1 text-right font-medium text-gray-900">{item.qty || item.quantity || item.required_qty || '-'}</td>
-                            <td className="px-2 py-1 text-gray-700">{item.source_warehouse || '-'}</td>
-                          </tr>
-                        ))}
+                        {workOrderData.required_items.map((item, idx) => {
+                          const stock = workOrderStockData[item.item_code]
+                          return (
+                            <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-purple-50 transition ${stock?.isAvailable === false ? 'bg-red-50' : ''}`}>
+                              <td className="px-2 py-1 font-medium text-gray-900">{item.item_code}</td>
+                              <td className="px-2 py-1 text-right font-medium text-gray-900">{item.required_qty || item.qty || item.quantity || '-'}</td>
+                              <td className="px-2 py-1 text-right font-medium text-gray-900">
+                                {stock ? stock.available.toFixed(2) : '-'}
+                              </td>
+                              <td className="px-2 py-1 text-center">
+                                {stock ? (
+                                  stock.hasStock ? (
+                                    stock.isAvailable ? (
+                                      <span className="inline-block px-1.5 py-0.5 bg-green-100 text-green-800 rounded text-xs font-medium">✓</span>
+                                    ) : (
+                                      <span className="inline-block px-1.5 py-0.5 bg-red-100 text-red-800 rounded text-xs font-medium">✗</span>
+                                    )
+                                  ) : (
+                                    <span className="inline-block px-1.5 py-0.5 bg-orange-100 text-orange-800 rounded text-xs font-medium">⚠</span>
+                                  )
+                                ) : (
+                                  <span className="text-gray-400 text-xs">-</span>
+                                )}
+                              </td>
+                              <td className="px-2 py-1 text-gray-700">{item.source_warehouse || '-'}</td>
+                            </tr>
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -663,6 +1106,147 @@ export default function ProductionPlanning() {
                   className="px-3 py-1.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded text-xs font-medium hover:from-green-700 hover:to-green-800 disabled:opacity-60 disabled:cursor-not-allowed transition flex items-center gap-1"
                 >
                   <Check size={14} /> {creatingWorkOrder ? 'Creating...' : 'Confirm & Create'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showMaterialRequestModal && materialRequestData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99] p-4">
+          <div className="bg-white rounded shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-purple-600 via-purple-600 to-purple-700 p-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="bg-white bg-opacity-20 rounded p-1.5">
+                  <Boxes size={16} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="text-white font-bold text-sm">Create Material Request</h2>
+                  <p className="text-purple-100 text-xs">Review and confirm material request</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowMaterialRequestModal(false)
+                  setMaterialRequestData(null)
+                }}
+                className="text-white hover:bg-purple-500 p-1 rounded transition"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded p-2 border border-blue-200">
+                  <p className="text-xs text-blue-600 font-semibold mb-1">Series No</p>
+                  <p className="text-xs font-bold text-gray-900 break-words">{materialRequestData.series_no}</p>
+                </div>
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded p-2 border border-purple-200">
+                  <p className="text-xs text-purple-600 font-semibold mb-1">Department</p>
+                  <p className="text-xs font-bold text-gray-900">{materialRequestData.department}</p>
+                </div>
+                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded p-2 border border-green-200">
+                  <p className="text-xs text-green-600 font-semibold mb-1">Required By</p>
+                  <p className="text-xs font-bold text-gray-900">{new Date(materialRequestData.required_by_date).toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              {materialRequestData.items_notes && (
+                <div className="rounded overflow-hidden border border-gray-200 bg-gray-50 p-3">
+                  <p className="text-xs text-gray-600 font-semibold mb-1">Notes</p>
+                  <p className="text-xs text-gray-700 whitespace-pre-wrap">{materialRequestData.items_notes}</p>
+                </div>
+              )}
+
+              {materialRequestData.items && materialRequestData.items.length > 0 && (
+                <div className="rounded overflow-hidden border border-gray-200 shadow-sm">
+                  <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-3 py-2 border-b border-purple-200">
+                    <h3 className="font-semibold text-xs text-purple-900 flex items-center gap-2">
+                      <Boxes size={14} className="text-purple-600" />
+                      Materials ({materialRequestData.items.length})
+                    </h3>
+                  </div>
+                  {checkingStock && (
+                    <div className="px-3 py-2 bg-blue-50 border-b border-blue-200 text-xs text-blue-800">
+                      Checking stock availability...
+                    </div>
+                  )}
+                  <div className="overflow-x-auto max-h-40">
+                    <table className="w-full text-xs">
+                      <thead className="bg-gray-50 sticky top-0 border-b border-gray-200">
+                        <tr>
+                          <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Item Code</th>
+                          <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Item Name</th>
+                          <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Qty</th>
+                          <th className="px-2 py-1.5 text-left font-semibold text-gray-700">UOM</th>
+                          <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Available</th>
+                          <th className="px-2 py-1.5 text-center font-semibold text-gray-700">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {materialRequestData.items.map((item, idx) => {
+                          const stock = materialStockData[item.item_code]
+                          return (
+                            <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-purple-50 transition ${stock?.isAvailable === false ? 'bg-red-50' : ''}`}>
+                              <td className="px-2 py-1 font-medium text-gray-900">{item.item_code}</td>
+                              <td className="px-2 py-1 text-gray-700">{item.item_name || '-'}</td>
+                              <td className="px-2 py-1 text-right font-medium text-gray-900">{item.qty.toFixed(2)}</td>
+                              <td className="px-2 py-1 text-gray-700">{item.uom}</td>
+                              <td className="px-2 py-1 text-right font-medium text-gray-900">
+                                {stock ? stock.available.toFixed(2) : '-'}
+                              </td>
+                              <td className="px-2 py-1 text-center">
+                                {stock ? (
+                                  stock.hasStock ? (
+                                    stock.isAvailable ? (
+                                      <span className="inline-block px-1.5 py-0.5 bg-green-100 text-green-800 rounded text-xs font-medium">✓ Available</span>
+                                    ) : (
+                                      <span className="inline-block px-1.5 py-0.5 bg-red-100 text-red-800 rounded text-xs font-medium">✗ Insufficient</span>
+                                    )
+                                  ) : (
+                                    <span className="inline-block px-1.5 py-0.5 bg-orange-100 text-orange-800 rounded text-xs font-medium">⚠ Zero Stock</span>
+                                  )
+                                ) : (
+                                  <span className="text-gray-400 text-xs">-</span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2 justify-end pt-3 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setShowMaterialRequestModal(false)
+                    setMaterialRequestData(null)
+                  }}
+                  className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendMaterialRequestConfirm}
+                  disabled={sendingMaterialRequest}
+                  className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded text-xs font-medium hover:from-purple-700 hover:to-purple-800 disabled:opacity-60 disabled:cursor-not-allowed transition flex items-center gap-1"
+                >
+                  {sendingMaterialRequest ? (
+                    <>
+                      <Loader size={14} className="animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={14} />
+                      Send Request
+                    </>
+                  )}
                 </button>
               </div>
             </div>

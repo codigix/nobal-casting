@@ -4,7 +4,7 @@ import DataTable from '../../components/Table/DataTable'
 import Alert from '../../components/Alert/Alert'
 import Badge from '../../components/Badge/Badge'
 import Button from '../../components/Button/Button'
-import { BarChart3, X, Grid3x3, List, TrendingUp, AlertTriangle, Package, ArrowDown, ArrowUp } from 'lucide-react'
+import { BarChart3, X, Grid3x3, List, TrendingUp, AlertTriangle, Package, ArrowDown, ArrowUp, RefreshCw } from 'lucide-react'
 import StockMovementModal from '../../components/Inventory/StockMovementModal'
 import './Inventory.css'
 
@@ -213,6 +213,14 @@ export default function StockBalance() {
             </h1>
             <p className="text-xs text-neutral-600 dark:text-neutral-400">Monitor inventory levels across all warehouses</p>
           </div>
+          <button
+            onClick={fetchStockBalance}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            Refresh
+          </button>
         </div>
 
         {error && <Alert type="danger">{error}</Alert>}

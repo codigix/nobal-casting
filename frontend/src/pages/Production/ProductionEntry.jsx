@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Plus, Trash2, Clock, AlertCircle, ArrowLeft } from 'lucide-react'
+import { Plus, Trash2, Clock, AlertCircle, ArrowLeft, CheckCircle } from 'lucide-react'
 import * as productionService from '../../services/productionService'
 import api from '../../services/api'
 import { useToast } from '../../components/ToastContainer'
@@ -89,21 +89,146 @@ export default function ProductionEntry() {
     fetchAllData()
   }, [jobCardId])
 
+  useEffect(() => {
+    if (jobCardData && operators.length > 0 && workstations.length > 0) {
+      const newTimeLogForm = { ...timeLogForm }
+      let hasChanges = false
+
+      if (jobCardData.operator_id) {
+        const matchingOperator = operators.find(op => 
+          op.employee_id === jobCardData.operator_id || 
+          op.name === jobCardData.operator_id ||
+          `${op.first_name} ${op.last_name}` === jobCardData.operator_id
+        )
+        if (matchingOperator) {
+          newTimeLogForm.employee_id = matchingOperator.employee_id
+          newTimeLogForm.operator_name = `${matchingOperator.first_name} ${matchingOperator.last_name}`
+          hasChanges = true
+        }
+      }
+
+      if (jobCardData.machine_id) {
+        const matchingWorkstation = workstations.find(ws => 
+          ws.name === jobCardData.machine_id || 
+          ws.workstation_name === jobCardData.machine_id ||
+          ws.id === jobCardData.machine_id
+        )
+        if (matchingWorkstation) {
+          newTimeLogForm.machine_id = matchingWorkstation.name || matchingWorkstation.workstation_name || matchingWorkstation.id
+          hasChanges = true
+        }
+      }
+
+      if (hasChanges) {
+        setTimeLogForm(newTimeLogForm)
+      }
+    }
+  }, [jobCardData, operators, workstations])
+
+  useEffect(() => {
+    if (jobCardData && operations.length > 0 && warehouses.length > 0) {
+      const currentOperation = jobCardData.operation
+      
+      if (currentOperation) {
+        const currentOpIndex = operations.findIndex(op => 
+          op.operation_name === currentOperation || 
+          op.name === currentOperation
+        )
+        
+        if (currentOpIndex !== -1 && currentOpIndex < operations.length - 1) {
+          const nextOp = operations[currentOpIndex + 1]
+          
+          const newNextOperationForm = {
+            next_operator_id: '',
+            next_warehouse_id: nextOp.target_warehouse || '',
+            next_operation_id: nextOp.operation_id || nextOp.id || nextOp.operation_name || nextOp.name,
+            inhouse: false,
+            outsource: false
+          }
+          
+          setNextOperationForm(newNextOperationForm)
+        }
+      }
+    }
+  }, [jobCardData, operations, warehouses])
+
   const fetchAllData = async () => {
     try {
       setLoading(true)
       const [jobCardRes, wsRes, empRes, opsRes] = await Promise.all([
-        productionService.getJobCards({ id: jobCardId }),
+        productionService.getJobCardDetails(jobCardId),
         productionService.getWorkstationsList(),
         productionService.getEmployees(),
         productionService.getOperationsList()
       ])
       
-      const jobCard = jobCardRes.data?.[0] || jobCardRes.data
-      setJobCardData(jobCard)
+      let jobCard = jobCardRes.data || jobCardRes
+      
+      if (!jobCard?.job_card_id) {
+        toast.addToast('Job card not found', 'error')
+        setTimeout(() => navigate('/manufacturing/job-cards'), 1500)
+        return
+      }
+
+      const jobCardStatus = (jobCard?.status || '').toLowerCase()
+      
+      if (jobCardStatus === 'draft') {
+        await productionService.updateJobCard(jobCard.job_card_id, { status: 'pending' })
+        await productionService.updateJobCard(jobCard.job_card_id, { status: 'in-progress' })
+        jobCard.status = 'in-progress'
+      } else if (jobCardStatus === 'pending') {
+        await productionService.updateJobCard(jobCard.job_card_id, { status: 'in-progress' })
+        jobCard.status = 'in-progress'
+      }
+      
       setWorkstations(wsRes.data || [])
       setOperators(empRes.data || [])
-      setOperations(opsRes.data || [])
+      setJobCardData(jobCard)
+      
+      let allOperations = []
+      
+      if (jobCard?.work_order_id) {
+        try {
+          const woRes = await productionService.getWorkOrder(jobCard.work_order_id)
+          const woData = woRes?.data || woRes
+          
+          allOperations = woData?.operations || []
+          
+          if (allOperations.length === 0 && woData?.item_code) {
+            const bomResponse = await productionService.getBOMs({ item_code: woData.item_code })
+            const boms = bomResponse.data || []
+            
+            if (boms.length > 0) {
+              const bomDetails = await productionService.getBOMDetails(boms[0].bom_id)
+              const bomData = bomDetails.data || bomDetails
+              
+              allOperations = bomData?.operations || []
+            }
+          }
+        } catch (err) {
+          console.error('Failed to fetch work order/BOM operations:', err)
+        }
+      }
+      
+      if (allOperations.length === 0) {
+        allOperations = opsRes.data || []
+      }
+      
+      const globalOps = opsRes.data || []
+      
+      const enrichedOperations = allOperations.map(op => {
+        if (!op.name && !op.operation_name && op.operation_id) {
+          const globalOp = globalOps.find(g => g.operation_id === op.operation_id || g.id === op.operation_id)
+          return {
+            ...op,
+            name: globalOp?.name || globalOp?.operation_name || `Operation ${op.operation_id}`,
+            operation_name: globalOp?.operation_name || globalOp?.name || `Operation ${op.operation_id}`
+          }
+        }
+        return op
+      })
+      
+      setOperations(enrichedOperations)
       
       if (jobCard?.work_order_id) {
         fetchItemName(jobCard.work_order_id)
@@ -147,8 +272,8 @@ export default function ProductionEntry() {
 
   const fetchWarehouses = async () => {
     try {
-      const response = await api.get('/stock/warehouses')
-      setWarehouses(response.data?.data || [])
+      const response = await productionService.getWarehouses()
+      setWarehouses(response.data || response || [])
     } catch (err) {
       console.error('Failed to fetch warehouses:', err)
     }
@@ -382,35 +507,48 @@ export default function ProductionEntry() {
   const handleSubmitProduction = async () => {
     try {
       setIsSubmitting(true)
-      
-      if (!nextOperationForm.next_warehouse_id) {
-        toast.addToast('Please select warehouse', 'error')
-        return
-      }
-      if (!nextOperationForm.next_operation_id) {
-        toast.addToast('Please select next operation', 'error')
-        return
-      }
 
       const totalProduced = timeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0)
+      const plannedQty = parseFloat(jobCardData?.planned_quantity || 0)
 
-      const nextJobCard = {
-        work_order_id: jobCardData.work_order_id,
-        operation: operations.find(op => op.operation_id === nextOperationForm.next_operation_id)?.name,
-        machine_id: jobCardData.machine_id || jobCardData.assigned_workstation_id,
-        ...(nextOperationForm.next_operator_id && { operator_id: nextOperationForm.next_operator_id }),
-        planned_quantity: totalProduced,
-        status: 'Open'
+      if (totalProduced < plannedQty) {
+        const shortfall = (plannedQty - totalProduced).toFixed(2)
+        if (!window.confirm(`Warning: Produced quantity (${totalProduced.toFixed(2)}) is less than planned (${plannedQty.toFixed(2)}). Shortfall: ${shortfall} units. Continue anyway?`)) {
+          return
+        }
       }
 
-      await productionService.createJobCard(nextJobCard)
-
-      await productionService.updateJobCard(jobCardData.job_card_id, {
+      const updatePayload = {
         status: 'completed',
         produced_quantity: totalProduced
-      })
+      }
+      
+      await productionService.updateJobCard(jobCardData.job_card_id, updatePayload)
 
-      toast.addToast('Production completed and next operation assigned successfully', 'success')
+      let successMessage = 'Production completed successfully'
+
+      if (nextOperationForm.next_operation_id && nextOperationForm.next_warehouse_id) {
+        const selectedOp = operations.find(op => 
+          (op.operation_id || op.id) === nextOperationForm.next_operation_id || 
+          (op.operation_name || op.name) === nextOperationForm.next_operation_id
+        )
+
+        const nextJobCard = {
+          work_order_id: jobCardData.work_order_id,
+          operation: selectedOp?.operation_name || selectedOp?.name,
+          machine_id: selectedOp?.workstation_type || selectedOp?.workstation_name || jobCardData.machine_id || jobCardData.assigned_workstation_id,
+          ...(nextOperationForm.next_operator_id && { operator_id: nextOperationForm.next_operator_id }),
+          planned_quantity: totalProduced,
+          operation_sequence: (jobCardData.operation_sequence || 0) + 1,
+          status: 'draft'
+        }
+
+        await productionService.createJobCard(nextJobCard)
+        
+        successMessage = 'Production completed and next operation assigned successfully'
+      }
+
+      toast.addToast(successMessage, 'success')
       
       setTimeout(() => {
         navigate('/manufacturing/job-cards')
@@ -522,7 +660,7 @@ export default function ProductionEntry() {
                       className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     >
-                      <option key="" value="">Select operator</option>
+                      <option key="default-operator" value="">Select operator</option>
                       {operators.map(op => (
                         <option key={op.employee_id} value={op.employee_id}>
                           {op.first_name} {op.last_name}
@@ -539,7 +677,7 @@ export default function ProductionEntry() {
                       className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     >
-                      <option key="" value="">Select workstation</option>
+                      <option key="default-workstation" value="">Select workstation</option>
                       {workstations && workstations.length > 0 ? workstations.map(ws => (
                         <option key={ws.id || ws.name} value={ws.name || ws.workstation_name || ws.id}>
                           {ws.workstation_name || ws.name || ws.id}
@@ -575,7 +713,6 @@ export default function ProductionEntry() {
                       required
                     />
                   </div>
-
                   <div>
                     <label className="block text-xs text-gray-600 font-semibold mb-0.5">To Time *</label>
                     <input
@@ -586,26 +723,24 @@ export default function ProductionEntry() {
                       required
                     />
                   </div>
-
                   <div>
-                    <label className="block text-xs text-gray-600 font-semibold mb-0.5">Duration (min)</label>
+                    <label className="block text-xs text-gray-600 font-semibold mb-0.5">Completed Qty *</label>
                     <input
                       type="number"
-                      value={calculateTimeDuration()}
-                      disabled
-                      className="w-full p-1.5 border border-gray-300 rounded text-xs bg-gray-100 text-gray-600"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-gray-600 font-semibold mb-0.5">Completed Qty</label>
-                    <input
-                      type="number"
+                      step="0.01"
                       value={timeLogForm.completed_qty}
                       onChange={(e) => setTimeLogForm({ ...timeLogForm, completed_qty: e.target.value })}
-                      step="0.01"
-                      min="0"
                       className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 font-semibold mb-0.5">Duration</label>
+                    <input
+                      type="text"
+                      disabled
+                      value={`${calculateTimeDuration()} min`}
+                      className="w-full p-1.5 border border-gray-300 rounded text-xs bg-gray-100 text-gray-600"
                     />
                   </div>
                 </div>
@@ -615,68 +750,50 @@ export default function ProductionEntry() {
                     <label className="block text-xs text-gray-600 font-semibold mb-0.5">Accepted Qty</label>
                     <input
                       type="number"
+                      step="0.01"
                       value={timeLogForm.accepted_qty}
                       onChange={(e) => setTimeLogForm({ ...timeLogForm, accepted_qty: e.target.value })}
-                      step="0.01"
-                      min="0"
                       className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
-
                   <div>
                     <label className="block text-xs text-gray-600 font-semibold mb-0.5">Rejected Qty</label>
                     <input
                       type="number"
+                      step="0.01"
                       value={timeLogForm.rejected_qty}
                       onChange={(e) => setTimeLogForm({ ...timeLogForm, rejected_qty: e.target.value })}
-                      step="0.01"
-                      min="0"
                       className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
-
                   <div>
                     <label className="block text-xs text-gray-600 font-semibold mb-0.5">Scrap Qty</label>
                     <input
                       type="number"
+                      step="0.01"
                       value={timeLogForm.scrap_qty}
                       onChange={(e) => setTimeLogForm({ ...timeLogForm, scrap_qty: e.target.value })}
-                      step="0.01"
-                      min="0"
                       className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
-
-                  <div className="flex items-end">
-                    <div className="w-full text-xs font-bold text-gray-700">
-                      Total: {parseFloat(timeLogForm.completed_qty || 0).toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                  <div className="flex items-center gap-2 p-2 bg-blue-50 rounded border border-blue-300">
-                    <input
-                      type="checkbox"
-                      id="inhouse"
-                      checked={timeLogForm.inhouse}
-                      onChange={(e) => setTimeLogForm({ ...timeLogForm, inhouse: e.target.checked, outsource: e.target.checked ? false : timeLogForm.outsource })}
-                      className="w-3.5 h-3.5 rounded border-gray-300 cursor-pointer"
-                    />
-                    <label htmlFor="inhouse" className="text-xs font-medium text-gray-700 cursor-pointer">
-                      Inhouse
+                  <div className="flex items-end gap-1">
+                    <label className="flex items-center gap-1 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={timeLogForm.inhouse}
+                        onChange={(e) => setTimeLogForm({ ...timeLogForm, inhouse: e.target.checked })}
+                        className="w-3 h-3"
+                      />
+                      <span className="text-gray-600 font-semibold">In-house</span>
                     </label>
-                  </div>
-                  <div className="flex items-center gap-2 p-2 bg-purple-50 rounded border border-purple-300">
-                    <input
-                      type="checkbox"
-                      id="outsource"
-                      checked={timeLogForm.outsource}
-                      onChange={(e) => setTimeLogForm({ ...timeLogForm, outsource: e.target.checked, inhouse: e.target.checked ? false : timeLogForm.inhouse })}
-                      className="w-3.5 h-3.5 rounded border-gray-300 cursor-pointer"
-                    />
-                    <label htmlFor="outsource" className="text-xs font-medium text-gray-700 cursor-pointer">
-                      Outsource
+                    <label className="flex items-center gap-1 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={timeLogForm.outsource}
+                        onChange={(e) => setTimeLogForm({ ...timeLogForm, outsource: e.target.checked })}
+                        className="w-3 h-3"
+                      />
+                      <span className="text-gray-600 font-semibold">Outsource</span>
                     </label>
                   </div>
                 </div>
@@ -684,199 +801,147 @@ export default function ProductionEntry() {
                 <button
                   type="submit"
                   disabled={formLoading}
-                  className="w-full py-1.5 px-3 bg-blue-500 hover:bg-blue-600 text-white font-medium text-xs rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded text-xs font-semibold transition flex items-center justify-center gap-2"
                 >
+                  <Plus size={14} />
                   {formLoading ? 'Adding...' : 'Add Time Log'}
                 </button>
               </form>
 
-              {timeLogs.length > 0 ? (
-                <div className="overflow-x-auto border border-blue-200 rounded">
-                  <table className="w-full text-2xs">
-                    <thead className="bg-blue-100 border-b border-blue-200">
-                      <tr>
-                        <th className="px-2 py-1.5 text-left font-bold text-gray-700">Operator</th>
-                        <th className="px-2 py-1.5 text-left font-bold text-gray-700">Workstation</th>
-                        <th className="px-2 py-1.5 text-center font-bold text-gray-700">Shift</th>
-                        <th className="px-2 py-1.5 text-center font-bold text-gray-700">Time</th>
-                        <th className="px-2 py-1.5 text-center font-bold text-gray-700">Completed</th>
-                        <th className="px-2 py-1.5 text-center font-bold text-gray-700">Accepted</th>
-                        <th className="px-2 py-1.5 text-center font-bold text-gray-700">Type</th>
-                        <th className="px-2 py-1.5 text-center font-bold text-gray-700">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-blue-100">
-                      {timeLogs.map(log => (
-                        <tr key={log.time_log_id || log.id} className="hover:bg-blue-50 transition">
-                          <td className="px-2 py-1.5 text-gray-900 text-xs">{log.operator_name}</td>
-                          <td className="px-2 py-1.5 text-gray-900 text-xs">{log.workstation_name || log.machine_id || 'N/A'}</td>
-                          <td className="px-2 py-1.5 text-center text-gray-900 font-medium text-xs">{log.shift}</td>
-                          <td className="px-2 py-1.5 text-center text-gray-600 text-xs">
-                            {log.from_time} - {log.to_time}
-                          </td>
-                          <td className="px-2 py-1.5 text-center text-gray-900 font-bold text-xs">{log.completed_qty}</td>
-                          <td className="px-2 py-1.5 text-center text-green-600 font-bold text-xs">{log.accepted_qty}</td>
-                          <td className="px-2 py-1.5 text-center">
-                            <div className="flex justify-center gap-0.5">
-                              {log.inhouse && <span className="px-1 py-0.5 bg-blue-100 text-blue-700 rounded text-2xs font-bold">In</span>}
-                              {log.outsource && <span className="px-1 py-0.5 bg-purple-100 text-purple-700 rounded text-2xs font-bold">Out</span>}
-                            </div>
-                          </td>
-                          <td className="px-2 py-1.5 text-center">
-                            <button
-                              onClick={() => handleDeleteTimeLog(log.time_log_id || log.id)}
-                              className="text-red-600 hover:text-red-900 transition"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="p-6 text-center bg-blue-50 border border-blue-200 rounded text-gray-500">
-                  <Clock size={22} className="mx-auto mb-1.5 opacity-50" />
-                  <p className="text-xs">No time logs recorded yet</p>
-                </div>
-              )}
+              <div className="space-y-1">
+                {timeLogs.length === 0 ? (
+                  <div className="text-center py-4 text-xs text-gray-500">No time logs yet</div>
+                ) : (
+                  timeLogs.map(log => (
+                    <div key={log.time_log_id} className="flex items-center justify-between p-2 bg-white border border-gray-200 rounded text-xs">
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">{log.operator_name} - {log.workstation_name}</p>
+                        <p className="text-gray-600 text-2xs">
+                          {log.from_time} - {log.to_time} ({log.time_in_minutes} min) | Shift {log.shift}
+                        </p>
+                        <p className="text-gray-600 text-2xs">
+                          Completed: {log.completed_qty} | Accepted: {log.accepted_qty} | Rejected: {log.rejected_qty}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteTimeLog(log.time_log_id)}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded transition"
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
             {/* Rejections Section */}
-            <div className="p-3 bg-gradient-to-br from-red-50 to-rose-50 border border-red-200 rounded-lg">
-              <h3 className="text-xs font-bold text-gray-900 mb-3 uppercase tracking-wide">Rejections ({rejections.length})</h3>
+            <div className="p-3 bg-gradient-to-br from-red-50 to-slate-50 border border-red-200 rounded-lg">
+              <h3 className="text-xs font-bold text-gray-900 mb-3 flex items-center gap-2 uppercase tracking-wide">
+                Quality Rejections ({rejections.length})
+              </h3>
               <form onSubmit={handleAddRejection} className="mb-4 p-2.5 bg-white border border-red-200 rounded-lg">
                 <h4 className="mb-3 font-bold text-gray-900 flex items-center gap-2 text-xs uppercase tracking-wide">
-                  <Plus size={14} /> Add Rejection
+                  <Plus size={14} /> Record Rejection
                 </h4>
-
-                <div className="grid grid-cols-2 gap-2 mb-2">
+                
+                <div className="grid grid-cols-3 gap-2 mb-2">
                   <div>
-                    <label className="block text-xs text-gray-600 font-semibold mb-0.5">Rejection Reason *</label>
+                    <label className="block text-xs text-gray-600 font-semibold mb-0.5">Reason *</label>
                     <select
                       value={rejectionForm.reason}
                       onChange={(e) => setRejectionForm({ ...rejectionForm, reason: e.target.value })}
                       className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-red-500 focus:border-transparent"
                       required
                     >
-                      <option key="" value="">Select reason</option>
-                      {rejectionReasons.map(r => (
-                        <option key={r} value={r}>{r}</option>
+                      <option value="">Select reason</option>
+                      {rejectionReasons.map(reason => (
+                        <option key={reason} value={reason}>{reason}</option>
                       ))}
                     </select>
                   </div>
-
                   <div>
                     <label className="block text-xs text-gray-600 font-semibold mb-0.5">Rejected Qty *</label>
                     <input
                       type="number"
-                      value={rejectionForm.rejected_qty}
-                      onChange={(e) => setRejectionForm({ ...rejectionForm, rejected_qty: parseFloat(e.target.value) || 0 })}
                       step="0.01"
-                      min="0"
+                      value={rejectionForm.rejected_qty}
+                      onChange={(e) => setRejectionForm({ ...rejectionForm, rejected_qty: e.target.value })}
                       className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-red-500 focus:border-transparent"
                       required
                     />
                   </div>
-                </div>
-
-                <div className="mb-2">
-                  <label className="block text-xs text-gray-600 font-semibold mb-0.5">Notes</label>
-                  <textarea
-                    value={rejectionForm.notes}
-                    onChange={(e) => setRejectionForm({ ...rejectionForm, notes: e.target.value })}
-                    className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    rows="2"
-                  />
+                  <div>
+                    <label className="block text-xs text-gray-600 font-semibold mb-0.5">Notes</label>
+                    <input
+                      type="text"
+                      value={rejectionForm.notes}
+                      onChange={(e) => setRejectionForm({ ...rejectionForm, notes: e.target.value })}
+                      className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      placeholder="Optional notes"
+                    />
+                  </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={formLoading}
-                  className="w-full py-1.5 px-3 bg-red-500 hover:bg-red-600 text-white font-medium text-xs rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded text-xs font-semibold transition flex items-center justify-center gap-2"
                 >
-                  {formLoading ? 'Adding...' : 'Add Rejection'}
+                  <Plus size={14} />
+                  {formLoading ? 'Recording...' : 'Record Rejection'}
                 </button>
               </form>
 
-              {rejections.length > 0 ? (
-                <div className="overflow-x-auto border border-red-200 rounded">
-                  <table className="w-full text-2xs">
-                    <thead className="bg-red-100 border-b border-red-200">
-                      <tr>
-                        <th className="px-2 py-1.5 text-left font-bold text-gray-700">Reason</th>
-                        <th className="px-2 py-1.5 text-center font-bold text-gray-700">Qty</th>
-                        <th className="px-2 py-1.5 text-left font-bold text-gray-700">Notes</th>
-                        <th className="px-2 py-1.5 text-center font-bold text-gray-700">Date</th>
-                        <th className="px-2 py-1.5 text-center font-bold text-gray-700">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-red-100">
-                      {rejections.map(r => (
-                        <tr key={r.rejection_id || r.id} className="hover:bg-red-50 transition">
-                          <td className="px-2 py-1.5 text-gray-900 text-xs">{r.rejection_reason}</td>
-                          <td className="px-2 py-1.5 text-center font-bold text-red-600 text-xs">{r.rejected_qty}</td>
-                          <td className="px-2 py-1.5 text-gray-600 text-2xs">{r.notes || '-'}</td>
-                          <td className="px-2 py-1.5 text-center text-gray-500 text-2xs">{r.created_at ? new Date(r.created_at).toLocaleDateString() : '-'}</td>
-                          <td className="px-2 py-1.5 text-center">
-                            <button
-                              onClick={() => handleDeleteRejection(r.rejection_id || r.id)}
-                              className="text-red-600 hover:text-red-900 transition"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="p-6 text-center bg-red-50 border border-red-200 rounded text-gray-500">
-                  <AlertCircle size={22} className="mx-auto mb-1.5 opacity-50" />
-                  <p className="text-xs">No rejection entries recorded</p>
-                </div>
-              )}
+              <div className="space-y-1">
+                {rejections.length === 0 ? (
+                  <div className="text-center py-4 text-xs text-gray-500">No rejections recorded</div>
+                ) : (
+                  rejections.map(rej => (
+                    <div key={rej.rejection_id} className="flex items-center justify-between p-2 bg-white border border-gray-200 rounded text-xs">
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">{rej.rejection_reason}</p>
+                        <p className="text-gray-600 text-2xs">Qty: {rej.rejected_qty} | {rej.notes}</p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteRejection(rej.rejection_id)}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded transition"
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
             {/* Downtimes Section */}
-            <div className="p-3 bg-gradient-to-br from-orange-50 to-yellow-50 border border-orange-200 rounded-lg">
-              <h3 className="text-xs font-bold text-gray-900 mb-3 uppercase tracking-wide">Downtimes ({downtimes.length})</h3>
+            <div className="p-3 bg-gradient-to-br from-orange-50 to-slate-50 border border-orange-200 rounded-lg">
+              <h3 className="text-xs font-bold text-gray-900 mb-3 flex items-center gap-2 uppercase tracking-wide">
+                Downtimes ({downtimes.length})
+              </h3>
               <form onSubmit={handleAddDowntime} className="mb-4 p-2.5 bg-white border border-orange-200 rounded-lg">
                 <h4 className="mb-3 font-bold text-gray-900 flex items-center gap-2 text-xs uppercase tracking-wide">
-                  <Plus size={14} /> Add Downtime
+                  <Clock size={14} /> Record Downtime
                 </h4>
-
-                <div className="grid grid-cols-2 gap-2 mb-2">
+                
+                <div className="grid grid-cols-4 gap-2 mb-2">
                   <div>
-                    <label className="block text-xs text-gray-600 font-semibold mb-0.5">Downtime Type *</label>
+                    <label className="block text-xs text-gray-600 font-semibold mb-0.5">Type *</label>
                     <select
                       value={downtimeForm.type}
                       onChange={(e) => setDowntimeForm({ ...downtimeForm, type: e.target.value })}
                       className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       required
                     >
-                      <option key="" value="">Select type</option>
-                      {downtimeTypes.map(t => (
-                        <option key={t} value={t}>{t}</option>
+                      <option value="">Select type</option>
+                      {downtimeTypes.map(type => (
+                        <option key={type} value={type}>{type}</option>
                       ))}
                     </select>
                   </div>
-
-                  <div>
-                    <label className="block text-xs text-gray-600 font-semibold mb-0.5">Reason</label>
-                    <input
-                      type="text"
-                      value={downtimeForm.reason}
-                      onChange={(e) => setDowntimeForm({ ...downtimeForm, reason: e.target.value })}
-                      className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      placeholder="Optional details"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 mb-2">
                   <div>
                     <label className="block text-xs text-gray-600 font-semibold mb-0.5">From Time *</label>
                     <input
@@ -887,7 +952,6 @@ export default function ProductionEntry() {
                       required
                     />
                   </div>
-
                   <div>
                     <label className="block text-xs text-gray-600 font-semibold mb-0.5">To Time *</label>
                     <input
@@ -898,84 +962,79 @@ export default function ProductionEntry() {
                       required
                     />
                   </div>
-
                   <div>
-                    <label className="block text-xs text-gray-600 font-semibold mb-0.5">Duration (min)</label>
+                    <label className="block text-xs text-gray-600 font-semibold mb-0.5">Duration</label>
                     <input
-                      type="number"
-                      value={calculateDowntimeDuration(downtimeForm.from_time, downtimeForm.to_time)}
+                      type="text"
                       disabled
+                      value={`${calculateDowntimeDuration(downtimeForm.from_time, downtimeForm.to_time)} min`}
                       className="w-full p-1.5 border border-gray-300 rounded text-xs bg-gray-100 text-gray-600"
                     />
                   </div>
                 </div>
 
+                <div className="mb-2">
+                  <label className="block text-xs text-gray-600 font-semibold mb-0.5">Reason</label>
+                  <input
+                    type="text"
+                    value={downtimeForm.reason}
+                    onChange={(e) => setDowntimeForm({ ...downtimeForm, reason: e.target.value })}
+                    className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="Optional reason"
+                  />
+                </div>
+
                 <button
                   type="submit"
                   disabled={formLoading}
-                  className="w-full py-1.5 px-3 bg-orange-500 hover:bg-orange-600 text-white font-medium text-xs rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-1.5 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white rounded text-xs font-semibold transition flex items-center justify-center gap-2"
                 >
-                  {formLoading ? 'Adding...' : 'Add Downtime'}
+                  <Clock size={14} />
+                  {formLoading ? 'Recording...' : 'Record Downtime'}
                 </button>
               </form>
 
-              {downtimes.length > 0 ? (
-                <div className="overflow-x-auto border border-orange-200 rounded">
-                  <table className="w-full text-2xs">
-                    <thead className="bg-orange-100 border-b border-orange-200">
-                      <tr>
-                        <th className="px-2 py-1.5 text-left font-bold text-gray-700">Type</th>
-                        <th className="px-2 py-1.5 text-left font-bold text-gray-700">Reason</th>
-                        <th className="px-2 py-1.5 text-center font-bold text-gray-700">Time</th>
-                        <th className="px-2 py-1.5 text-center font-bold text-gray-700">Duration</th>
-                        <th className="px-2 py-1.5 text-center font-bold text-gray-700">Date</th>
-                        <th className="px-2 py-1.5 text-center font-bold text-gray-700">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-orange-100">
-                      {downtimes.map(d => (
-                        <tr key={d.downtime_id || d.id} className="hover:bg-orange-50 transition">
-                          <td className="px-2 py-1.5 text-gray-900 text-xs">{d.downtime_type}</td>
-                          <td className="px-2 py-1.5 text-gray-600 text-2xs">{d.downtime_reason || '-'}</td>
-                          <td className="px-2 py-1.5 text-center text-gray-600 text-2xs">
-                            {d.from_time} - {d.to_time}
-                          </td>
-                          <td className="px-2 py-1.5 text-center font-bold text-orange-600 text-xs">{d.duration_minutes || 0} min</td>
-                          <td className="px-2 py-1.5 text-center text-gray-500 text-2xs">{d.created_at ? new Date(d.created_at).toLocaleDateString() : '-'}</td>
-                          <td className="px-2 py-1.5 text-center">
-                            <button
-                              onClick={() => handleDeleteDowntime(d.downtime_id || d.id)}
-                              className="text-red-600 hover:text-red-900 transition"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="p-6 text-center bg-orange-50 border border-orange-200 rounded text-gray-500">
-                  <Clock size={22} className="mx-auto mb-1.5 opacity-50" />
-                  <p className="text-xs">No downtime entries recorded</p>
-                </div>
-              )}
+              <div className="space-y-1">
+                {downtimes.length === 0 ? (
+                  <div className="text-center py-4 text-xs text-gray-500">No downtimes recorded</div>
+                ) : (
+                  downtimes.map(dt => (
+                    <div key={dt.downtime_id} className="flex items-center justify-between p-2 bg-white border border-gray-200 rounded text-xs">
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">{dt.downtime_type}</p>
+                        <p className="text-gray-600 text-2xs">
+                          {dt.from_time} - {dt.to_time} ({dt.duration_minutes} min) | {dt.downtime_reason}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteDowntime(dt.downtime_id)}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded transition"
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
+          </div>
 
-            {/* Next Operation Section */}
-            <div className="p-3 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-lg">
-              <h3 className="text-xs font-bold text-gray-900 mb-3 uppercase tracking-wide">Assign Next Operation</h3>
-              
-              <div className="grid grid-cols-3 gap-2 mb-3">
+          {/* Completion Section */}
+          <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg">
+            <h3 className="text-xs font-bold text-gray-900 mb-3 flex items-center gap-2 uppercase tracking-wide">
+              <CheckCircle size={16} /> Complete Job Card
+            </h3>
+            <form className="space-y-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-2xs font-semibold text-gray-700 mb-0.5">Next Operator</label>
+                  <label className="block text-xs text-gray-600 font-semibold mb-0.5">Next Operator</label>
                   <select
                     value={nextOperationForm.next_operator_id}
                     onChange={(e) => setNextOperationForm({ ...nextOperationForm, next_operator_id: e.target.value })}
                     className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
-                    <option key="" value="">Select operator</option>
+                    <option key="default-next-operator" value="">Select operator (optional)</option>
                     {operators.map(op => (
                       <option key={op.employee_id} value={op.employee_id}>
                         {op.first_name} {op.last_name}
@@ -983,80 +1042,50 @@ export default function ProductionEntry() {
                     ))}
                   </select>
                 </div>
-
                 <div>
-                  <label className="block text-2xs font-semibold text-gray-700 mb-0.5">Warehouse *</label>
+                  <label className="block text-xs text-gray-600 font-semibold mb-0.5">Warehouse (optional)</label>
                   <select
                     value={nextOperationForm.next_warehouse_id}
                     onChange={(e) => setNextOperationForm({ ...nextOperationForm, next_warehouse_id: e.target.value })}
                     className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
-                    <option key="" value="">Select warehouse</option>
+                    <option key="default-warehouse" value="">Select warehouse</option>
                     {warehouses.map(wh => (
-                      <option key={wh.warehouse_id || wh.id} value={wh.warehouse_id || wh.id}>
-                        {wh.warehouse_name || wh.name}
-                      </option>
+                      <option key={wh.warehouse_name} value={wh.warehouse_name}>{wh.warehouse_name}</option>
                     ))}
                   </select>
                 </div>
-
                 <div>
-                  <label className="block text-2xs font-semibold text-gray-700 mb-0.5">Next Operation *</label>
+                  <label className="block text-xs text-gray-600 font-semibold mb-0.5">Next Operation (optional)</label>
                   <select
                     value={nextOperationForm.next_operation_id}
                     onChange={(e) => setNextOperationForm({ ...nextOperationForm, next_operation_id: e.target.value })}
                     className="w-full p-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
-                    <option key="" value="">Select operation</option>
-                    {operations.map(op => (
-                      <option key={op.operation_id || op.id} value={op.operation_id || op.id}>
-                        {op.operation_name || op.name}
-                      </option>
-                    ))}
+                    <option key="default-operation" value="">Select operation</option>
+                    {operations.map((op, idx) => {
+                      const opId = op.operation_id || op.id || idx
+                      const opName = op.operation_name || op.name || `Operation ${opId}`
+                      return (
+                        <option key={opId} value={opId}>
+                          {opName}
+                        </option>
+                      )
+                    })}
                   </select>
                 </div>
               </div>
 
-              <div className="mb-3 p-2.5 bg-white border border-purple-200 rounded">
-                <label className="block text-2xs font-semibold text-gray-700 mb-2">Production Type</label>
-                <div className="flex gap-3">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={nextOperationForm.inhouse}
-                      onChange={(e) => setNextOperationForm({ 
-                        ...nextOperationForm, 
-                        inhouse: e.target.checked,
-                        outsource: e.target.checked ? false : nextOperationForm.outsource
-                      })}
-                      className="w-3.5 h-3.5 rounded border-gray-300"
-                    />
-                    <span className="text-xs font-medium text-gray-700">Inhouse</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={nextOperationForm.outsource}
-                      onChange={(e) => setNextOperationForm({ 
-                        ...nextOperationForm, 
-                        outsource: e.target.checked,
-                        inhouse: e.target.checked ? false : nextOperationForm.inhouse
-                      })}
-                      className="w-3.5 h-3.5 rounded border-gray-300"
-                    />
-                    <span className="text-xs font-medium text-gray-700">Outsource</span>
-                  </label>
-                </div>
-              </div>
-
               <button
+                type="button"
                 onClick={handleSubmitProduction}
-                disabled={isSubmitting || !nextOperationForm.next_warehouse_id || !nextOperationForm.next_operation_id}
-                className="w-full py-1.5 px-3 bg-purple-600 hover:bg-purple-700 text-white font-medium text-xs rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isSubmitting}
+                className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-400 disabled:to-gray-400 text-white rounded-lg font-semibold transition flex items-center text-xs justify-center gap-2"
               >
-                {isSubmitting ? 'Assigning...' : 'Submit & Complete Production'}
+                <CheckCircle size={16} />
+                {isSubmitting ? 'Completing...' : 'Complete Production & Create Next Job Card'}
               </button>
-            </div>
+            </form>
           </div>
         </div>
       </div>

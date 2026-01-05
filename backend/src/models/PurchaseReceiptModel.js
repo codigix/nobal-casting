@@ -10,16 +10,21 @@ export class PurchaseReceiptModel {
     const grn_no = `GRN-${Date.now()}`
 
     try {
+      const supplierId = data.supplier_id !== undefined ? data.supplier_id : null
+      const mrId = data.mr_id || null
+      
       await this.db.execute(
         `INSERT INTO purchase_receipt 
-         (grn_no, po_no, supplier_id, receipt_date, status)
-         VALUES (?, ?, ?, ?, ?)`,
+         (grn_no, po_no, mr_id, supplier_id, receipt_date, status, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
           grn_no,
           data.po_no || null,
-          data.supplier_id || null,
+          mrId,
+          supplierId,
           data.receipt_date || new Date(),
-          'draft'
+          'draft',
+          data.notes || null
         ]
       )
 
@@ -55,7 +60,7 @@ export class PurchaseReceiptModel {
       const [grns] = await this.db.execute(
         `SELECT pr.*, s.name as supplier_name, po.po_no
          FROM purchase_receipt pr
-         JOIN supplier s ON pr.supplier_id = s.supplier_id
+         LEFT JOIN supplier s ON pr.supplier_id = s.supplier_id
          LEFT JOIN purchase_order po ON pr.po_no = po.po_no
          WHERE pr.grn_no = ?`,
         [grn_no]
@@ -81,7 +86,7 @@ export class PurchaseReceiptModel {
     try {
       let query = `SELECT pr.*, s.name as supplier_name, COUNT(pri.grn_item_id) as item_count
                    FROM purchase_receipt pr
-                   JOIN supplier s ON pr.supplier_id = s.supplier_id
+                   LEFT JOIN supplier s ON pr.supplier_id = s.supplier_id
                    LEFT JOIN purchase_receipt_item pri ON pr.grn_no = pri.grn_no
                    WHERE 1=1`
       const params = []

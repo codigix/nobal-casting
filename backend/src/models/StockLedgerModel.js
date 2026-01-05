@@ -10,6 +10,7 @@
       let query = `
         SELECT 
           sl.*,
+          sl.transaction_date as posting_date,
           i.name as item_name,
           w.warehouse_code,
           w.warehouse_name
@@ -121,6 +122,7 @@
       const [rows] = await db.query(
         `SELECT 
           sl.*,
+          sl.transaction_date as posting_date,
           i.name as item_name,
           w.warehouse_code,
           w.warehouse_name

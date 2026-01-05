@@ -281,7 +281,7 @@ export default function SupplierList() {
                   placeholder="e.g., ABC Industries"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-md"
+                  className="w-full p-2 text-xs border border-gray-300ed-md"
                 />
               </div>
 
@@ -292,7 +292,7 @@ export default function SupplierList() {
                   placeholder="e.g., 27AABCT1234H1Z0"
                   value={formData.gstin}
                   onChange={(e) => setFormData({ ...formData, gstin: e.target.value })}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-md"
+                  className="w-full p-2 text-xs border border-gray-300ed-md"
                 />
               </div>
 
@@ -315,7 +315,7 @@ export default function SupplierList() {
                   step="0.1"
                   value={formData.rating}
                   onChange={(e) => setFormData({ ...formData, rating: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-md"
+                  className="w-full p-2 text-xs border border-gray-300ed-md"
                 />
               </div>
 
@@ -326,7 +326,7 @@ export default function SupplierList() {
                   min="0"
                   value={formData.payment_terms_days}
                   onChange={(e) => setFormData({ ...formData, payment_terms_days: parseInt(e.target.value) || 0 })}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-md"
+                  className="w-full p-2 text-xs border border-gray-300ed-md"
                 />
               </div>
 
@@ -337,7 +337,7 @@ export default function SupplierList() {
                   min="0"
                   value={formData.lead_time_days}
                   onChange={(e) => setFormData({ ...formData, lead_time_days: parseInt(e.target.value) || 0 })}
-                  className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-md"
+                  className="w-full p-2 text-xs border border-gray-300ed-md"
                 />
               </div>
             </div>

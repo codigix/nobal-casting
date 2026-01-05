@@ -1,5 +1,6 @@
 import { MaterialRequestModel } from '../models/MaterialRequestModel.js'
 import { ItemModel } from '../models/ItemModel.js'
+import StockBalanceModel from '../models/StockBalanceModel.js'
 
 export class MaterialRequestController {
   /**
@@ -108,20 +109,78 @@ export class MaterialRequestController {
       const { id } = req.params
       const { approvedBy, source_warehouse } = req.body
 
-      if (source_warehouse) {
-        await MaterialRequestModel.updateSourceWarehouse(db, id, source_warehouse)
+      const mrRequest = await MaterialRequestModel.getById(db, id)
+      if (!mrRequest) {
+        return res.status(404).json({ success: false, error: 'Material request not found' })
       }
 
-      const result = await MaterialRequestModel.approve(db, id, approvedBy)
+      if (mrRequest.department === 'Production' && mrRequest.purpose !== 'material_issue') {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Production department requests must have purpose "Material Issue"' 
+        })
+      }
+
+      if (mrRequest.purpose === 'material_issue' && !source_warehouse) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Source warehouse is required for Material Issue requests' 
+        })
+      }
+
+      if (mrRequest.purpose === 'material_transfer' && (!source_warehouse || !mrRequest.target_warehouse)) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Both source and target warehouses are required for Material Transfer requests' 
+        })
+      }
+
+      const result = await MaterialRequestModel.approve(db, id, approvedBy, source_warehouse)
       
       let grn = null
-      try {
-        grn = await MaterialRequestModel.createGRNFromRequest(db, id)
-      } catch (err) {
-        console.error('Warning: Failed to create GRN from MR:', err.message)
+      let message = 'Material request approved successfully'
+      let unavailableItems = []
+
+      if (mrRequest.purpose === 'purchase') {
+        try {
+          grn = await MaterialRequestModel.createGRNFromRequest(db, id)
+          message = `Material request approved. GRN ${grn?.grn_no || ''} created for inspection.`
+        } catch (err) {
+          console.error('Warning: Failed to create GRN from MR:', err.message)
+          message = 'Material request approved. (GRN creation failed - please create manually)'
+        }
+      } else {
+        const warehouse = source_warehouse || result.source_warehouse || 'warehouse'
+        
+        for (const item of result.items || []) {
+          const balance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, warehouse)
+          
+          if (!balance) {
+            unavailableItems.push({
+              ...item,
+              reason: 'Not found in inventory stock balance'
+            })
+          } else {
+            const availableQty = Number(balance.available_qty || balance.current_qty || 0)
+            const requestedQty = Number(item.qty || 0)
+            if (availableQty < requestedQty) {
+              unavailableItems.push({
+                ...item,
+                reason: `Insufficient stock. Available: ${availableQty}, Requested: ${requestedQty}`
+              })
+            }
+          }
+        }
+        
+        if (unavailableItems.length > 0) {
+          const itemsStr = unavailableItems.map(i => `${i.item_code} (${i.reason})`).join(', ')
+          message = `Material request approved with issues. Items with problems: ${itemsStr}`
+        } else {
+          message = `Material request approved. Stock has been deducted from ${warehouse}.`
+        }
       }
 
-      res.json({ success: true, data: result, grn: grn, message: 'Material request approved' })
+      res.json({ success: true, data: result, grn: grn, message: message, unavailableItems: unavailableItems })
     } catch (error) {
       res.status(400).json({ success: false, error: error.message })
     }

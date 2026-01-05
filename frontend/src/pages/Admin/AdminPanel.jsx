@@ -385,24 +385,24 @@ export default function AdminPanel() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Machine ID</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Days Since Maintenance</th>
+                      <th className="text-left p-2 font-semibold text-gray-700">Machine ID</th>
+                      <th className="text-left p-2 font-semibold text-gray-700">Name</th>
+                      <th className="text-left p-2 font-semibold text-gray-700">Status</th>
+                      <th className="text-left p-2 font-semibold text-gray-700">Days Since Maintenance</th>
                     </tr>
                   </thead>
                   <tbody>
                     {machineStats.machines.length > 0 ? (
                       machineStats.machines.map((machine) => (
                         <tr key={machine.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-3 px-4 text-gray-800 font-medium">{machine.id}</td>
-                          <td className="py-3 px-4 text-gray-800">{machine.name}</td>
-                          <td className="py-3 px-4">
+                          <td className="p-2 text-gray-800 font-medium">{machine.id}</td>
+                          <td className="p-2 text-gray-800">{machine.name}</td>
+                          <td className="p-2">
                             <Badge color={machine.status === 'active' ? 'success' : machine.status === 'maintenance' ? 'warning' : 'danger'}>
                               {machine.status}
                             </Badge>
                           </td>
-                          <td className="py-3 px-4 text-gray-600 text-sm">{machine.days_since_maintenance || '—'}</td>
+                          <td className="p-2 text-gray-600 text-sm">{machine.days_since_maintenance || '—'}</td>
                         </tr>
                       ))
                     ) : (

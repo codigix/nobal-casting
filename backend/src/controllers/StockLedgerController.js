@@ -2,13 +2,13 @@ import StockLedgerModel from '../models/StockLedgerModel.js'
 
 export const getAllStockLedger = async (req, res) => {
   try {
-    const { itemId, warehouseId, transactionType, startDate, endDate, search, department } = req.query
+    const { item_code, warehouse_id, itemId, warehouseId, transactionType, startDate, endDate, search, department, from_date, to_date } = req.query
     const filters = {
-      itemId,
-      warehouseId,
+      itemCode: item_code || itemId,
+      warehouseId: warehouse_id || warehouseId,
       transactionType,
-      startDate,
-      endDate,
+      startDate: from_date || startDate,
+      endDate: to_date || endDate,
       search,
       department: department || req.user?.department || 'all'
     }

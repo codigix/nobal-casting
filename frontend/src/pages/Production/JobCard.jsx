@@ -250,6 +250,57 @@ export default function JobCard() {
     return ws ? (ws.workstation_name || ws.name) : 'N/A'
   }
 
+  const canStartJobCard = (jobCardId, woId) => {
+    const jobCards = jobCardsByWO[woId] || []
+    const currentCard = jobCards.find(c => c.job_card_id === jobCardId)
+    
+    if (!currentCard || (currentCard.status || '').toLowerCase() !== 'draft') {
+      return { canStart: false, reason: 'Only draft job cards can be started' }
+    }
+
+    const currentCardIndex = jobCards.findIndex(c => c.job_card_id === jobCardId)
+    
+    if (currentCardIndex === 0) {
+      return { canStart: true }
+    }
+
+    const previousCard = jobCards[currentCardIndex - 1]
+    const prevStatus = (previousCard.status || '').toLowerCase()
+    
+    if (prevStatus !== 'completed') {
+      return { 
+        canStart: false, 
+        reason: `Previous operation must be completed first. Current status: ${prevStatus.toUpperCase()}` 
+      }
+    }
+
+    return { canStart: true }
+  }
+
+  const handleStartJobCard = async (jobCardId, woId) => {
+    try {
+      const { canStart, reason } = canStartJobCard(jobCardId, woId)
+      
+      if (!canStart) {
+        toast.addToast(reason, 'error')
+        return
+      }
+
+      setLoading(true)
+      
+      await productionService.updateJobCard(jobCardId, { status: 'pending' })
+      await productionService.updateJobCard(jobCardId, { status: 'in-progress' })
+      
+      toast.addToast('Job card started. Redirecting to production entry...', 'success')
+      
+      await new Promise(resolve => setTimeout(resolve, 500))
+      navigate(`/manufacturing/job-cards/${jobCardId}/production-entry`)
+    } catch (err) {
+      toast.addToast(err.message || 'Failed to start job card', 'error')
+      setLoading(false)
+    }
+  }
+
   const getStatusColor = (status) => {
     const colors = {
       draft: 'status-draft',
@@ -287,6 +338,21 @@ export default function JobCard() {
       value: op.name || op.operation_name,
       label: op.operation_name || op.name
     }))
+  }
+
+  const getStatusWorkflow = () => {
+    return {
+      'draft': ['pending', 'cancelled'],
+      'pending': ['in-progress', 'cancelled'],
+      'in-progress': ['completed', 'cancelled'],
+      'completed': ['completed'],
+      'cancelled': ['cancelled']
+    }
+  }
+
+  const getAllowedStatuses = (currentStatus) => {
+    const workflow = getStatusWorkflow()
+    return workflow[(currentStatus || '').toLowerCase()] || []
   }
 
   const getMaxPlannableQty = (jobCardId, woId) => {
@@ -410,13 +476,15 @@ export default function JobCard() {
             {workOrders.map(wo => (
               <div key={wo.wo_id} className="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div 
-                  className="border-l-4 border-purple-400 bg-gray-50 hover:bg-gray-100 transition p-3 cursor-pointer flex items-center gap-2"
-                  onClick={() => fetchJobCardsForWO(wo.wo_id)}
+                  className="border-l-4 border-purple-400 bg-gray-50 hover:bg-gray-100 transition p-3 flex items-center gap-2"
                 >
-                  <div className="w-5 flex items-center justify-center text-gray-600">
+                  <div 
+                    className="w-5 flex items-center justify-center text-gray-600 cursor-pointer"
+                    onClick={() => fetchJobCardsForWO(wo.wo_id)}
+                  >
                     {expandedWO === wo.wo_id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                   </div>
-                  <div className="flex-1 grid grid-cols-6 gap-3 items-center text-xs">
+                  <div className="flex-1 grid grid-cols-6 gap-3 items-center text-xs cursor-pointer" onClick={() => fetchJobCardsForWO(wo.wo_id)}>
                     <div>
                       <div className="text-gray-500 text-xs">WO ID</div>
                       <div className="font-semibold text-gray-900">{wo.wo_id}</div>
@@ -455,9 +523,11 @@ export default function JobCard() {
                     </div>
                   </div>
                 </div>
-                {expandedWO === wo.wo_id && jobCardsByWO[wo.wo_id] && jobCardsByWO[wo.wo_id].length > 0 && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs border-collapse">
+                {expandedWO === wo.wo_id && (
+                  <>
+                    {jobCardsByWO[wo.wo_id] && jobCardsByWO[wo.wo_id].length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs border-collapse">
                       <thead>
                         <tr className="bg-gray-100 border border-gray-200">
                           <th className="px-3 py-2 text-left font-semibold text-gray-700">ID</th>
@@ -498,11 +568,19 @@ export default function JobCard() {
                                   <div>
                                     <label className="text-xs text-gray-600 block mb-1">Status</label>
                                     <select value={inlineEditData.status} onChange={(e) => handleInlineInputChange('status', e.target.value)} className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500">
-                                      <option value="draft">Draft</option>
-                                      <option value="pending">Pending</option>
-                                      <option value="in-progress">In Progress</option>
-                                      <option value="completed">Completed</option>
-                                      <option value="cancelled">Cancelled</option>
+                                      {(() => {
+                                        const allowedStatuses = getAllowedStatuses(inlineEditData.status)
+                                        const statusLabels = {
+                                          'draft': 'Draft',
+                                          'pending': 'Pending',
+                                          'in-progress': 'In Progress',
+                                          'completed': 'Completed',
+                                          'cancelled': 'Cancelled'
+                                        }
+                                        return allowedStatuses.map(status => (
+                                          <option key={status} value={status}>{statusLabels[status] || status}</option>
+                                        ))
+                                      })()}
                                     </select>
                                   </div>
                                   <div>
@@ -599,14 +677,29 @@ export default function JobCard() {
                               
                               <td className="px-3 py-2 text-center">
                                 <div className="flex items-center justify-center gap-1">
-                                  <button className="p-1 hover:bg-blue-50 rounded transition" title="View" onClick={() => handleViewJobCard(card.job_card_id)}>
-                                    <Eye size={14} className="text-blue-600" />
-                                  </button>
-                                  <button className="p-1 hover:bg-green-50 rounded transition" title="Execute & Production Entry" onClick={() => {
-                                    navigate(`/manufacturing/job-cards/${card.job_card_id}/production-entry`)
-                                  }}>
-                                    <Zap size={14} className="text-green-600" />
-                                  </button>
+                                  {(card.status || '').toLowerCase() === 'draft' ? (
+                                    <button 
+                                      className="px-2 py-1 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded transition font-medium"
+                                      title="Start this job card"
+                                      onClick={() => handleStartJobCard(card.job_card_id, wo.wo_id)}
+                                      disabled={loading}
+                                    >
+                                      Start
+                                    </button>
+                                  ) : (
+                                    <>
+                                      <button className="p-1 hover:bg-blue-50 rounded transition" title="View" onClick={() => handleViewJobCard(card.job_card_id)}>
+                                        <Eye size={14} className="text-blue-600" />
+                                      </button>
+                                      {(card.status || '').toLowerCase() === 'in-progress' && (
+                                        <button className="p-1 hover:bg-green-50 rounded transition" title="Production Entry" onClick={() => {
+                                          navigate(`/manufacturing/job-cards/${card.job_card_id}/production-entry`)
+                                        }}>
+                                          <Zap size={14} className="text-green-600" />
+                                        </button>
+                                      )}
+                                    </>
+                                  )}
                                   <button className="p-1 hover:bg-gray-50 rounded transition" title="Edit" onClick={() => handleInlineEdit(card)}>
                                     <Edit2 size={14} className="text-gray-600" />
                                   </button>
@@ -620,7 +713,13 @@ export default function JobCard() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                      </div>
+                    ) : (
+                      <div className="bg-blue-50 border-t border-blue-200 px-3 py-3 text-xs text-blue-700">
+                        <p>No job cards found. Job cards are created automatically when the work order is saved.</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             ))}

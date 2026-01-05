@@ -29,6 +29,9 @@ export default function PurchaseReceipts() {
   const [warehouses, setWarehouses] = useState([])
   const [storageData, setStorageData] = useState({})
   const [viewMode, setViewMode] = useState('table')
+  const [currentTab, setCurrentTab] = useState('grn-requests')
+  const [availableItems, setAvailableItems] = useState([])
+  const [availableItemsLoading, setAvailableItemsLoading] = useState(false)
 
   useEffect(() => {
     fetchGRNRequests()
@@ -69,6 +72,22 @@ export default function PurchaseReceipts() {
     } catch (err) {
       console.error('Error fetching warehouses:', err)
       setError('Failed to load warehouses. Please refresh the page.')
+    }
+  }
+
+  const fetchAvailableItems = async () => {
+    try {
+      setAvailableItemsLoading(true)
+      const response = await api.get('/stock/stock-balance')
+      const items = response.data.data || []
+      const filteredItems = items.filter(item => item.current_qty > 0)
+      setAvailableItems(filteredItems)
+      setError(null)
+    } catch (err) {
+      console.error('Error fetching available items:', err)
+      setError('Failed to load available items')
+    } finally {
+      setAvailableItemsLoading(false)
     }
   }
 
@@ -384,9 +403,43 @@ export default function PurchaseReceipts() {
               Create GRN
             </button>
           </div>
+
+          {/* Tab Navigation */}
+          <div className="flex gap-2 mt-6 border-b border-neutral-200 dark:border-neutral-700">
+            <button
+              onClick={() => setCurrentTab('grn-requests')}
+              className={`px-4 py-3 font-semibold transition-all relative ${
+                currentTab === 'grn-requests'
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
+              }`}
+            >
+              GRN Requests
+              {currentTab === 'grn-requests' && (
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500"></div>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setCurrentTab('available-items')
+                fetchAvailableItems()
+              }}
+              className={`px-4 py-3 font-semibold transition-all relative ${
+                currentTab === 'available-items'
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
+              }`}
+            >
+              Available Items
+              {currentTab === 'available-items' && (
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500"></div>
+              )}
+            </button>
+          </div>
         </div>
 
-        {/* Metrics Grid */}
+        {/* Metrics Grid - Only show for GRN Requests */}
+        {currentTab === 'grn-requests' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <MetricCard
             title="Pending Inspection"
@@ -425,12 +478,14 @@ export default function PurchaseReceipts() {
             iconColor="text-emerald-500"
           />
         </div>
+        )}
 
         {/* Alerts */}
         {error && <Alert type="danger">{error}</Alert>}
         {success && <Alert type="success">{success}</Alert>}
 
         {/* Main Content Card */}
+        {currentTab === 'grn-requests' && (
         <div className=" dark:bg-neutral-900 rounded-lg  dark:border-neutral-800  overflow-hidden">
           {/* Card Header */}
           <div className="flex items-center justify-between">
@@ -558,6 +613,79 @@ export default function PurchaseReceipts() {
             )}
           </div>
         </div>
+        )}
+
+        {/* Available Items Tab */}
+        {currentTab === 'available-items' && (
+        <div className=" dark:bg-neutral-900 rounded-lg  dark:border-neutral-800  overflow-hidden">
+          {/* Card Header */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-neutral-900 dark:text-white">Available Items in Stock</h2>
+          </div>
+
+          {/* Card Body */}
+          <div className="mt-3">
+            {availableItemsLoading ? (
+              <div className="flex flex-col items-center justify-center py-16 px-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-800 mb-4">
+                  <Package size={32} className="text-neutral-400 dark:text-neutral-600 animate-pulse" />
+                </div>
+                <p className="text-neutral-600 dark:text-neutral-400 font-medium">Loading available items...</p>
+              </div>
+            ) : availableItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 px-4">
+                <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-4 mb-4">
+                  <Package size={48} className="text-neutral-400 dark:text-neutral-600" />
+                </div>
+                <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">No Available Items</h3>
+                <p className="text-neutral-600 dark:text-neutral-400 text-center max-w-md">
+                  All items are currently out of stock
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-neutral-200 dark:border-neutral-700 text-sm">
+                  <thead>
+                    <tr className="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
+                      <th className="px-4 py-3 text-left font-semibold text-neutral-700 dark:text-neutral-300">Item Code</th>
+                      <th className="px-4 py-3 text-left font-semibold text-neutral-700 dark:text-neutral-300">Item Name</th>
+                      <th className="px-4 py-3 text-right font-semibold text-neutral-700 dark:text-neutral-300">Available Qty</th>
+                      <th className="px-4 py-3 text-right font-semibold text-neutral-700 dark:text-neutral-300">Reserved Qty</th>
+                      <th className="px-4 py-3 text-right font-semibold text-neutral-700 dark:text-neutral-300">Rate</th>
+                      <th className="px-4 py-3 text-right font-semibold text-neutral-700 dark:text-neutral-300">Total Value</th>
+                      <th className="px-4 py-3 text-left font-semibold text-neutral-700 dark:text-neutral-300">Warehouse</th>
+                      <th className="px-4 py-3 text-left font-semibold text-neutral-700 dark:text-neutral-300">Last Received</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {availableItems.map((item, idx) => {
+                      const totalValue = (parseFloat(item.current_qty) || 0) * (parseFloat(item.valuation_rate) || 0)
+                      return (
+                        <tr key={idx} className="border-b border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                          <td className="px-4 py-3 font-semibold text-neutral-900 dark:text-white">{item.item_code}</td>
+                          <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">{item.item_name}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-neutral-900 dark:text-white">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold">
+                              {(parseFloat(item.current_qty) || 0).toFixed(2)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right text-neutral-700 dark:text-neutral-300">{(parseFloat(item.reserved_qty) || 0).toFixed(2)}</td>
+                          <td className="px-4 py-3 text-right text-neutral-700 dark:text-neutral-300">{(parseFloat(item.valuation_rate) || 0).toFixed(2)}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-neutral-900 dark:text-white">{totalValue.toFixed(2)}</td>
+                          <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">{item.warehouse_name || '-'}</td>
+                          <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300 text-xs">
+                            {item.last_receipt_date ? new Date(item.last_receipt_date).toLocaleDateString() : '-'}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+        )}
       </div>
 
       <Modal

@@ -220,6 +220,8 @@ export default function WorkOrderForm() {
       console.log('BOM Data fetched:', bomData)
       setBomQuantity(bomData.quantity || 1)
 
+      const workOrderQty = parseFloat(formData.qty_to_manufacture) || 1
+
       const operations = (bomData.operations || []).map((op, idx) => ({
         id: Date.now() + idx,
         operation_name: op.operation_name || op.operation || '',
@@ -228,17 +230,21 @@ export default function WorkOrderForm() {
         operating_cost: op.operating_cost || op.cost || 0
       }))
 
-      const rawMaterials = (bomData.bom_raw_materials || bomData.rawMaterials || []).map((rm, idx) => ({
-        id: Date.now() + idx,
-        item_code: rm.item_code || '',
-        item_name: rm.item_name || rm.description || '',
-        quantity: rm.qty || rm.quantity || 0,
-        uom: rm.uom || '',
-        required_qty: rm.qty || rm.quantity || 0,
-        source_warehouse: rm.source_warehouse || '',
-        issued_qty: 0,
-        consumed_qty: 0
-      }))
+      const rawMaterials = (bomData.bom_raw_materials || bomData.rawMaterials || []).map((rm, idx) => {
+        const baseQty = rm.qty || rm.quantity || 0
+        const multipliedQty = baseQty * workOrderQty
+        return {
+          id: Date.now() + idx,
+          item_code: rm.item_code || '',
+          item_name: rm.item_name || rm.description || '',
+          quantity: multipliedQty,
+          uom: rm.uom || '',
+          required_qty: multipliedQty,
+          source_warehouse: rm.source_warehouse || '',
+          issued_qty: 0,
+          consumed_qty: 0
+        }
+      })
 
       setBomOperations(operations)
       setBomMaterials(rawMaterials)

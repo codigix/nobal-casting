@@ -2,11 +2,12 @@ import StockBalanceModel from '../models/StockBalanceModel.js'
 
 export const getAllStockBalance = async (req, res) => {
   try {
-    const { warehouseId, itemId, search, stockStatus, isLocked } = req.query
+    const { warehouseId, itemId, itemCode, search, stockStatus, isLocked } = req.query
     const filters = {
       department: req.user?.department || 'all',
       warehouseId,
-      itemId,
+      itemId: itemId || itemCode,
+      itemCode: itemCode || itemId,
       search,
       stockStatus,
       isLocked: isLocked !== undefined ? isLocked === 'true' : undefined

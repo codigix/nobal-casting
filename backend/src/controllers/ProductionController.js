@@ -209,7 +209,7 @@ class ProductionController {
             operation_time: operation.operation_time || operation.time || 0,
             scheduled_start_date: new Date(),
             scheduled_end_date: new Date(),
-            status: 'Open',
+            status: 'draft',
             created_by: req.user?.username || 'system',
             notes: operation.notes || ''
           })
@@ -341,7 +341,7 @@ class ProductionController {
               planned_quantity: quantity,
               scheduled_start_date: planned_start_date,
               scheduled_end_date: planned_end_date,
-              status: 'Open',
+              status: 'draft',
               created_by: req.user?.username || 'system',
               notes: operation.notes || ''
             })
@@ -1152,7 +1152,7 @@ class ProductionController {
 
   async createJobCard(req, res) {
     try {
-      const { work_order_id, machine_id, operator_id, operation, operation_sequence, planned_quantity, scheduled_start_date, scheduled_end_date, notes } = req.body
+      const { work_order_id, machine_id, operator_id, operation, operation_sequence, planned_quantity, scheduled_start_date, scheduled_end_date, status, notes } = req.body
 
       if (!work_order_id || !machine_id || !planned_quantity) {
         return res.status(400).json({
@@ -1172,7 +1172,7 @@ class ProductionController {
         planned_quantity,
         scheduled_start_date,
         scheduled_end_date,
-        status: 'Open',
+        status: status || 'draft',
         created_by: req.user?.username || 'system',
         notes
       })
@@ -1191,10 +1191,44 @@ class ProductionController {
     }
   }
 
+  async generateJobCardsForWorkOrder(req, res) {
+    try {
+      const { work_order_id } = req.params
+
+      if (!work_order_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'work_order_id is required'
+        })
+      }
+
+      const createdCards = await this.productionModel.generateJobCardsForWorkOrder(
+        work_order_id,
+        req.user?.username || 'system'
+      )
+
+      res.status(201).json({
+        success: true,
+        message: `${createdCards.length} job cards generated successfully`,
+        data: createdCards
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error generating job cards',
+        error: error.message
+      })
+    }
+  }
+
   async updateJobCard(req, res) {
     try {
       const { job_card_id } = req.params
       const { machine_id, operator_id, operation, operation_sequence, planned_quantity, produced_quantity, rejected_quantity, scheduled_start_date, scheduled_end_date, actual_start_date, actual_end_date, status, notes } = req.body
+
+      if (status) {
+        await this.productionModel.validateJobCardStatusTransition(job_card_id, status)
+      }
 
       const success = await this.productionModel.updateJobCard(job_card_id, {
         machine_id,
@@ -1213,6 +1247,13 @@ class ProductionController {
       })
 
       if (success) {
+        if (status && (status || '').toLowerCase() === 'completed') {
+          const jobCard = await this.productionModel.getJobCardDetails(job_card_id)
+          if (jobCard?.work_order_id) {
+            await this.productionModel.checkAndUpdateWorkOrderCompletion(jobCard.work_order_id)
+          }
+        }
+
         res.status(200).json({
           success: true,
           message: 'Job card updated successfully'
@@ -1224,7 +1265,7 @@ class ProductionController {
         })
       }
     } catch (error) {
-      res.status(500).json({
+      res.status(400).json({
         success: false,
         message: 'Error updating job card',
         error: error.message

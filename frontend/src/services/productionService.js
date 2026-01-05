@@ -131,6 +131,11 @@ export const deleteJobCard = async (jc_id) => {
   return response.data
 }
 
+export const generateJobCardsForWorkOrder = async (work_order_id) => {
+  const response = await api.post(`/production/job-cards/${work_order_id}/generate-all`)
+  return response.data
+}
+
 // Production Plans (extended)
 export const getProductionPlanDetails = async (plan_id) => {
   const response = await api.get(`/production/plans/${plan_id}`)

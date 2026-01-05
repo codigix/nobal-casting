@@ -3,6 +3,9 @@ import * as controller from '../controllers/purchaseReceiptController.js'
 
 const router = express.Router()
 
+// Create from Material Request (must be before /:grn_no route)
+router.post('/from-material-request', controller.createFromMaterialRequest)
+
 // CRUD Operations
 router.post('/', controller.createGRN)
 router.get('/', controller.listGRNs)

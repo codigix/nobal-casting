@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import axios from 'axios'
+import api from '../../services/api'
 import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
 import { X, AlertCircle, CheckCircle } from 'lucide-react'
@@ -81,8 +81,8 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
         qc_checks: qcChecksPassed
       }
 
-      const response = await axios.post(
-        `http://localhost:5000/api/grn-requests/${grnId}/items/inspect`,
+      const response = await api.post(
+        `/grn-requests/${grnId}/items/inspect`,
         payload
       )
 
@@ -93,7 +93,8 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
         setError(response.data.error || 'Failed to save inspection')
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Error saving inspection')
+      console.error('Inspection error:', err)
+      setError(err.response?.data?.error || err.message || 'Error saving inspection')
     } finally {
       setLoading(false)
     }
@@ -202,13 +203,15 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
                 <input
                   type="number"
                   min="0"
-                  max={item.received_qty}
                   value={acceptedQty}
                   onChange={(e) => {
-                    const val = parseFloat(e.target.value) || 0
-                    setAcceptedQty(Math.min(val, item.received_qty))
-                    if (val + rejectedQty > item.received_qty) {
-                      setRejectedQty(item.received_qty - val)
+                    const val = Math.max(0, parseFloat(e.target.value) || 0)
+                    const receivedQty = item.received_qty || 0
+                    const finalVal = receivedQty > 0 ? Math.min(val, receivedQty) : val
+                    setAcceptedQty(finalVal)
+                    const maxRejected = Math.max(0, receivedQty - finalVal)
+                    if (rejectedQty > maxRejected) {
+                      setRejectedQty(maxRejected)
                     }
                   }}
                   style={{
@@ -219,7 +222,7 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
                     backgroundColor: '#f0fdf4'
                   }}
                 />
-                <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>Max: {item.received_qty}</p>
+                <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>Max: {item.received_qty || item.po_qty || 'N/A'}</p>
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '6px' }}>
@@ -228,13 +231,15 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
                 <input
                   type="number"
                   min="0"
-                  max={item.received_qty}
                   value={rejectedQty}
                   onChange={(e) => {
-                    const val = parseFloat(e.target.value) || 0
-                    setRejectedQty(Math.min(val, item.received_qty))
-                    if (acceptedQty + val > item.received_qty) {
-                      setAcceptedQty(item.received_qty - val)
+                    const val = Math.max(0, parseFloat(e.target.value) || 0)
+                    const receivedQty = item.received_qty || 0
+                    const finalVal = receivedQty > 0 ? Math.min(val, receivedQty) : val
+                    setRejectedQty(finalVal)
+                    const maxAccepted = Math.max(0, receivedQty - finalVal)
+                    if (acceptedQty > maxAccepted) {
+                      setAcceptedQty(maxAccepted)
                     }
                   }}
                   style={{
@@ -245,7 +250,7 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
                     backgroundColor: '#fee2e2'
                   }}
                 />
-                <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>Max: {item.received_qty}</p>
+                <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>Max: {item.received_qty || item.po_qty || 'N/A'}</p>
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, marginBottom: '6px' }}>

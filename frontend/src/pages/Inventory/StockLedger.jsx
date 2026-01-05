@@ -3,7 +3,7 @@ import api from '../../services/api'
 import DataTable from '../../components/Table/DataTable'
 import Alert from '../../components/Alert/Alert'
 import Badge from '../../components/Badge/Badge'
-import { BookOpen, Download, X, Grid3x3, List, TrendingDown, TrendingUp } from 'lucide-react'
+import { BookOpen, Download, X, Grid3x3, List, TrendingDown, TrendingUp, RefreshCw } from 'lucide-react'
 import Button from '../../components/Button/Button'
 import './Inventory.css'
 
@@ -30,6 +30,15 @@ export default function StockLedger() {
 
   useEffect(() => {
     fetchLedger()
+  }, [filters])
+
+  useEffect(() => {
+    const handleMaterialRequestApproved = () => {
+      fetchLedger()
+    }
+    
+    window.addEventListener('materialRequestApproved', handleMaterialRequestApproved)
+    return () => window.removeEventListener('materialRequestApproved', handleMaterialRequestApproved)
   }, [filters])
 
   const fetchWarehouses = async () => {
@@ -59,7 +68,7 @@ export default function StockLedger() {
       if (filters.from_date) params.append('from_date', filters.from_date)
       if (filters.to_date) params.append('to_date', filters.to_date)
 
-      const response = await axios.get(`/api/stock/ledger?${params}`)
+      const response = await api.get(`/stock/ledger?${params}`)
       setLedgers(response.data.data || [])
       setError(null)
     } catch (err) {
@@ -112,9 +121,11 @@ export default function StockLedger() {
     const headers = ['Item Code', 'Warehouse', 'Date', 'Transaction Type', 'Qty In', 'Qty Out', 'Balance', 'Rate', 'Value']
     const csvContent = [
       headers.join(','),
-      ...ledgers.map(row =>
-        `${row.item_code},${row.warehouse_name},${row.posting_date},${row.transaction_type},${row.qty_in || 0},${row.qty_out || 0},${row.balance},${row.rate || 0},${(row.balance * (row.rate || 0)).toFixed(2)}`
-      )
+      ...ledgers.map(row => {
+        const balance = row.balance_qty || row.balance || 0
+        const rate = row.valuation_rate || row.rate || 0
+        return `${row.item_code},${row.warehouse_name},${row.posting_date},${row.transaction_type},${row.qty_in || 0},${row.qty_out || 0},${balance},${rate},${(balance * rate).toFixed(2)}`
+      })
     ].join('\n')
 
     const link = document.createElement('a')
@@ -141,7 +152,7 @@ export default function StockLedger() {
     {
       key: 'posting_date',
       label: 'Date',
-      render: (value, row) => row ? new Date(row.transaction_date).toLocaleDateString() : '-'
+      render: (value, row) => row ? new Date(row.posting_date).toLocaleDateString() : '-'
     },
     {
       key: 'transaction_type',
@@ -171,7 +182,7 @@ export default function StockLedger() {
     {
       key: 'value',
       label: 'Value',
-      render: (value, row) => row ? `₹${((row.balance || 0) * (row.rate || 0)).toFixed(2)}` : '-'
+      render: (value, row) => row ? `₹${((row.balance_qty || row.balance || 0) * (row.valuation_rate || row.rate || 0)).toFixed(2)}` : '-'
     }
   ]
 
@@ -186,6 +197,14 @@ export default function StockLedger() {
             </h1>
             <p className="text-xs text-neutral-600 dark:text-neutral-400">Track all stock movements and transactions</p>
           </div>
+          <button
+            onClick={fetchLedger}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            Refresh
+          </button>
         </div>
 
         {error && <Alert type="danger">{error}</Alert>}
@@ -318,11 +337,11 @@ export default function StockLedger() {
                       </div>
                       <div>
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Balance</p>
-                        <p className="text-sm font-bold text-neutral-900 dark:text-white">{entry.balance}</p>
+                        <p className="text-sm font-bold text-neutral-900 dark:text-white">{entry.balance_qty || entry.balance || 0}</p>
                       </div>
                       <div>
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Rate</p>
-                        <p className="text-xs font-semibold  text-neutral-900 dark:text-white">₹{entry.rate || 0}</p>
+                        <p className="text-xs font-semibold  text-neutral-900 dark:text-white">₹{entry.valuation_rate || entry.rate || 0}</p>
                       </div>
                     </div>
 
@@ -338,7 +357,7 @@ export default function StockLedger() {
 
                     <div className="pt-2">
                       <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Value</p>
-                      <p className="text-sm font-bold text-neutral-900 dark:text-white">₹{((entry.balance || 0) * (entry.rate || 0)).toFixed(2)}</p>
+                      <p className="text-sm font-bold text-neutral-900 dark:text-white">₹{(((entry.balance_qty || entry.balance || 0) * (entry.valuation_rate || entry.rate || 0)).toFixed(2))}</p>
                     </div>
                   </div>
                 </div>

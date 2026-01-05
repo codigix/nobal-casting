@@ -9,6 +9,9 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [jobCard, setJobCard] = useState(null)
+  const [timeLogs, setTimeLogs] = useState([])
+  const [rejections, setRejections] = useState([])
+  const [downtimes, setDowntimes] = useState([])
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [newStatus, setNewStatus] = useState('')
 
@@ -21,9 +24,17 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
   const fetchJobCardDetails = async () => {
     try {
       setLoading(true)
-      const response = await productionService.getJobCardDetails(jobCardId)
-      setJobCard(response.data)
-      setNewStatus(response.data?.status || '')
+      const [jobCardRes, timeLogsRes, rejectionsRes, downtimesRes] = await Promise.all([
+        productionService.getJobCardDetails(jobCardId),
+        productionService.getTimeLogs({ job_card_id: jobCardId }),
+        productionService.getRejections({ job_card_id: jobCardId }),
+        productionService.getDowntimes({ job_card_id: jobCardId })
+      ])
+      setJobCard(jobCardRes.data)
+      setNewStatus(jobCardRes.data?.status || '')
+      setTimeLogs(timeLogsRes.data || [])
+      setRejections(rejectionsRes.data || [])
+      setDowntimes(downtimesRes.data || [])
     } catch (err) {
       toast.addToast(err.message || 'Failed to load job card details', 'error')
     } finally {
@@ -32,14 +43,24 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
   }
 
   const statusWorkflow = {
-    'draft': 'pending',
-    'pending': 'in-progress',
-    'in-progress': 'completed',
-    'completed': 'completed'
+    'draft': ['pending', 'cancelled'],
+    'pending': ['in-progress', 'cancelled'],
+    'in-progress': ['completed', 'cancelled'],
+    'completed': ['completed'],
+    'cancelled': ['cancelled']
+  }
+
+  const getAllowedStatuses = (currentStatus) => {
+    return statusWorkflow[(currentStatus || '').toLowerCase()] || []
+  }
+
+  const getNextStatus = (currentStatus) => {
+    const allowed = getAllowedStatuses(currentStatus)
+    return allowed[0] || currentStatus
   }
 
   const handleNextStep = async () => {
-    const nextStatus = statusWorkflow[jobCard?.status] || 'pending'
+    const nextStatus = getNextStatus(jobCard?.status)
     await updateStatus(nextStatus)
   }
 
@@ -63,7 +84,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="View Job Card" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title="View Job Card" size="2xl">
       {loading ? (
         <div className="text-center py-10">Loading...</div>
       ) : (
@@ -131,6 +152,92 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
             </p>
           </div>
 
+          {timeLogs.length > 0 && (
+            <div className="mb-5">
+              <label className="block text-xs font-semibold text-gray-600 mb-2">Time Logs ({timeLogs.length})</label>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-gray-200">
+                      <th className="border p-2 text-left">From Time</th>
+                      <th className="border p-2 text-left">To Time</th>
+                      <th className="border p-2 text-left">Shift</th>
+                      <th className="border p-2 text-right">Completed Qty</th>
+                      <th className="border p-2 text-right">Accepted Qty</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {timeLogs.map((log, idx) => (
+                      <tr key={idx} className="border hover:bg-gray-50">
+                        <td className="border p-2">{log.from_time || '-'}</td>
+                        <td className="border p-2">{log.to_time || '-'}</td>
+                        <td className="border p-2">{log.shift}</td>
+                        <td className="border p-2 text-right">{log.completed_qty}</td>
+                        <td className="border p-2 text-right">{log.accepted_qty || log.completed_qty}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {rejections.length > 0 && (
+            <div className="mb-5">
+              <label className="block text-xs font-semibold text-gray-600 mb-2">Rejections ({rejections.length})</label>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-gray-200">
+                      <th className="border p-2 text-left">Reason</th>
+                      <th className="border p-2 text-right">Qty</th>
+                      <th className="border p-2 text-left">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rejections.map((rej, idx) => (
+                      <tr key={idx} className="border hover:bg-gray-50">
+                        <td className="border p-2">{rej.rejection_reason || rej.reason || '-'}</td>
+                        <td className="border p-2 text-right">{rej.rejected_qty}</td>
+                        <td className="border p-2">{rej.notes || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {downtimes.length > 0 && (
+            <div className="mb-5">
+              <label className="block text-xs font-semibold text-gray-600 mb-2">Downtimes ({downtimes.length})</label>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-gray-200">
+                      <th className="border p-2 text-left">From Time</th>
+                      <th className="border p-2 text-left">To Time</th>
+                      <th className="border p-2 text-left">Type</th>
+                      <th className="border p-2 text-left">Reason</th>
+                      <th className="border p-2 text-right">Duration (min)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {downtimes.map((dt, idx) => (
+                      <tr key={idx} className="border hover:bg-gray-50">
+                        <td className="border p-2">{dt.from_time || '-'}</td>
+                        <td className="border p-2">{dt.to_time || '-'}</td>
+                        <td className="border p-2">{dt.downtime_type || dt.type || '-'}</td>
+                        <td className="border p-2">{dt.downtime_reason || dt.reason || '-'}</td>
+                        <td className="border p-2 text-right">{dt.duration_minutes || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           <div className="mb-5">
             <label className="block text-xs font-semibold text-gray-600 mb-2">Update Status</label>
             <select 
@@ -138,10 +245,19 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
               onChange={(e) => setNewStatus(e.target.value)}
               className="w-full px-2 py-2 border border-gray-300 rounded"
             >
-              <option value="draft">Draft</option>
-              <option value="pending">Pending</option>
-              <option value="in-progress">In Progress</option>
-              <option value="completed">Completed</option>
+              {(() => {
+                const allowedStatuses = getAllowedStatuses(jobCard?.status)
+                const statusLabels = {
+                  'draft': 'Draft',
+                  'pending': 'Pending',
+                  'in-progress': 'In Progress',
+                  'completed': 'Completed',
+                  'cancelled': 'Cancelled'
+                }
+                return allowedStatuses.map(status => (
+                  <option key={status} value={status}>{statusLabels[status] || status}</option>
+                ))
+              })()}
             </select>
             <p className="text-xs text-gray-600 mt-2">
               Current: <strong>{jobCard?.status}</strong>

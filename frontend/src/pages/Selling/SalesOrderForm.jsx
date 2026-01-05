@@ -630,6 +630,10 @@ export default function SalesOrderForm() {
 
   const currentTab = tabs[activeTabIndex]
 
+  const formatQty = (qty) => {
+    return parseFloat(qty || 0).toString()
+  }
+
   const groupRawMaterialsByItemGroup = () => {
     const grouped = {}
     bomRawMaterials.forEach(material => {
@@ -724,26 +728,30 @@ export default function SalesOrderForm() {
   return (
     <div className="max-w-full m-8 p-0">
       <Card>
-        <div className="mb-5 pb-3 border-b-2 border-gray-200">
-          <h2 className="m-0 text-2xl font-bold text-gray-900">
-            {isReadOnly ? 'View Sales Order' : isEditMode ? 'Edit Sales Order' : 'New Sales Order'}
-          </h2>
+        <div className="mb-6 pb-4 border-b-2 border-gray-200 flex items-center justify-between">
+          <div>
+            <h2 className="m-0 text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <span className="text-blue-600">📋</span>
+              {isReadOnly ? 'View Sales Order' : isEditMode ? 'Edit Sales Order' : 'New Sales Order'}
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">{isReadOnly ? 'Review order details' : 'Create and manage sales orders'}</p>
+          </div>
         </div>
 
         {error && <Alert variant="danger">{error}</Alert>}
         {success && <Alert variant="success">{success}</Alert>}
 
         <form onSubmit={(e) => e.preventDefault()}>
-          <div className="mb-5 border-b-2 border-gray-200">
-            <div className="flex gap-2 overflow-x-auto pb-0 border-b-0">
+          <div className="mb-6">
+            <div className="flex gap-1 overflow-x-auto ">
               {tabs.map((tab, idx) => (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTabIndex(idx)}
-                  className={`px-5 py-3 text-xs font-medium cursor-pointer border-b-4 border-transparent transition-all whitespace-nowrap ${activeTabIndex === idx
-                      ? 'text-blue-600 border-b-blue-600'
-                      : 'text-gray-600 hover:text-gray-700'
+                  className={`p-2 text-sm font-semibold cursor-pointer  transition-all whitespace-nowrap ${activeTabIndex === idx
+                      ? 'bg-white text-blue-700  border-b-2 border-blue-200'
+                      : 'text-gray-600 hover:text-gray-700 hover:bg-white hover:bg-opacity-50'
                     }`}
                 >
                   {tab.label}
@@ -753,136 +761,153 @@ export default function SalesOrderForm() {
           </div>
 
           {currentTab.id === 'basicDetails' && (
-            <div className="py-5">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                <div className="flex flex-col">
-                  <label className="text-xs font-medium mb-1 text-gray-700">Series</label>
-                  <input
-                    className="px-2 py-2 text-xs border border-gray-300 rounded bg-gray-100"
-                    type="text"
-                    name="series"
-                    value={formData.series}
-                    onChange={handleChange}
-                    placeholder="Auto-generated"
-                    disabled
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs font-medium mb-1 text-gray-700">Date</label>
-                  <input
-                    className={`px-2 py-2 text-xs border border-gray-300 rounded ${isReadOnly ? 'bg-gray-100' : ''}`}
-                    type="date"
-                    name="date"
-                    value={formData.date}
-                    onChange={handleChange}
-                    required
-                    disabled={isReadOnly}
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <SearchableSelect
-                    label="Customer"
-                    value={formData.customer_id}
-                    onChange={(val) => handleCustomerChange(val)}
-                    options={customers.filter(c => c && c.customer_id && c.customer_name).map(c => ({ label: c.customer_name, value: c.customer_id }))}
-                    placeholder="Search customer..."
-                    disabled={isReadOnly}
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs font-medium mb-1 text-gray-700">Customer Name</label>
-                  <input
-                    className="px-2 py-2 text-xs border border-gray-300 rounded bg-gray-100"
-                    type="text"
-                    value={formData.customer_name}
-                    disabled
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs font-medium mb-1 text-gray-700">Email</label>
-                  <input
-                    className="px-2 py-2 text-xs border border-gray-300 rounded bg-gray-100"
-                    type="email"
-                    value={formData.customer_email}
-                    disabled
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs font-medium mb-1 text-gray-700">Phone</label>
-                  <input
-                    className="px-2 py-2 text-xs border border-gray-300 rounded bg-gray-100"
-                    type="text"
-                    value={formData.customer_phone}
-                    disabled
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <SearchableSelect
-                    label="BOM"
-                    value={formData.bom_id}
-                    onChange={(val) => handleBomChange(val)}
-                    options={boms}
-                    placeholder="Search BOM..."
-                    disabled={isReadOnly}
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs font-medium mb-1 text-gray-700">Sales Order Quantity</label>
-                  <input
-                    className={`px-2 py-2 text-xs border border-gray-300 rounded ${isReadOnly ? 'bg-gray-100' : ''}`}
-                    type="number"
-                    name="quantity"
-                    value={formData.qty === '' ? '' : parseFloat(formData.qty) || ''}
-                    onChange={handleQuantityChange}
-                    min="1"
-                    step="0.01"
-                    disabled={isReadOnly}
-                    placeholder="Enter quantity"
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <SearchableSelect
-                    label="Source Warehouse"
-                    value={formData.source_warehouse}
-                    onChange={(val) => setFormData({ ...formData, source_warehouse: val })}
-                    options={warehouses}
-                    placeholder="Select warehouse..."
-                    disabled={isReadOnly}
-                  />
+            <div className="space-y-6">
+              <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-xs">
+                <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <div className="w-1 h-5 bg-blue-600 rounded-full"></div>
+                  Order Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="flex flex-col">
+                    <label className="text-xs font-semibold text-gray-700 mb-2">Series</label>
+                    <input
+                      className="p-2 text-sm border border-gray-300 rounded bg-gray-50 text-gray-600 cursor-not-allowed text-xs"
+                      type="text"
+                      name="series"
+                      value={formData.series || 'Auto-generated'}
+                      onChange={handleChange}
+                      disabled
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-xs font-semibold text-gray-700 mb-2">Order Date *</label>
+                    <input
+                      className={`p-2 text-xs border border-gray-300ed focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
+                      type="date"
+                      name="date"
+                      value={formData.date}
+                      onChange={handleChange}
+                      required
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-xs font-semibold text-gray-700 mb-2">Delivery Date</label>
+                    <input
+                      className={`p-2 text-xs border border-gray-300ed focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
+                      type="date"
+                      name="delivery_date"
+                      value={formData.delivery_date}
+                      onChange={handleChange}
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-xs font-semibold text-gray-700 mb-2">Order Type</label>
+                    <select className={`p-2 text-xs border border-gray-300ed focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`} name="order_type" value={formData.order_type} onChange={handleChange} disabled={isReadOnly}>
+                      <option value="Sales">Sales</option>
+                      <option value="Purchase">Purchase</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                <div className="flex flex-col">
-                  <label className="text-xs font-medium mb-1 text-gray-700">Delivery Date</label>
-                  <input
-                    className={`px-2 py-2 text-xs border border-gray-300 rounded ${isReadOnly ? 'bg-gray-100' : ''}`}
-                    type="date"
-                    name="delivery_date"
-                    value={formData.delivery_date}
-                    onChange={handleChange}
-                    disabled={isReadOnly}
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs font-medium mb-1 text-gray-700">Order Type</label>
-                  <select className={`px-2 py-2 text-xs border border-gray-300 rounded ${isReadOnly ? 'bg-gray-100' : ''}`} name="order_type" value={formData.order_type} onChange={handleChange} disabled={isReadOnly}>
-                    <option value="Sales">Sales</option>
-                    <option value="Purchase">Purchase</option>
-                  </select>
+              <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-xs">
+                <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <div className="w-1 h-5 bg-amber-600 rounded-full"></div>
+                  Customer Details
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="md:col-span-2 flex flex-col">
+                    <label className="text-xs font-semibold text-gray-700 mb-2">Customer *</label>
+                    <SearchableSelect
+                      value={formData.customer_id}
+                      onChange={(val) => handleCustomerChange(val)}
+                      options={customers.filter(c => c && c.customer_id && c.customer_name).map(c => ({ label: c.customer_name, value: c.customer_id }))}
+                      placeholder="Search customer..."
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-xs font-semibold text-gray-700 mb-2">Email</label>
+                    <input
+                      className="p-2 text-sm border border-gray-300 rounded bg-gray-50 text-gray-600 cursor-not-allowed text-xs"
+                      type="email"
+                      value={formData.customer_email}
+                      disabled
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-xs font-semibold text-gray-700 mb-2">Phone</label>
+                    <input
+                      className="p-2 text-sm border border-gray-300 rounded bg-gray-50 text-gray-600 cursor-not-allowed text-xs"
+                      type="text"
+                      value={formData.customer_phone}
+                      disabled
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 mb-3">
-                <div className="flex flex-col">
-                  <SearchableSelect
-                    label="Status"
-                    value={formData.status}
-                    onChange={(val) => handleSearchableChange('status', val)}
-                    options={statuses}
-                    placeholder="Select status..."
-                    disabled={isReadOnly}
-                  />
+              <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-xs">
+                <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <div className="w-1 h-5 bg-green-600 rounded-full"></div>
+                  BOM & Inventory
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="md:col-span-2 flex flex-col">
+                    <label className="text-xs font-semibold text-gray-700 mb-2">Select BOM *</label>
+                    <SearchableSelect
+                      value={formData.bom_id}
+                      onChange={(val) => handleBomChange(val)}
+                      options={boms}
+                      placeholder="Search BOM..."
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-xs font-semibold text-gray-700 mb-2">Order Quantity *</label>
+                    <input
+                      className={`p-2 text-xs border border-gray-300ed focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
+                      type="number"
+                      name="quantity"
+                      value={formData.qty === '' ? '' : parseFloat(formData.qty) || ''}
+                      onChange={handleQuantityChange}
+                      min="1"
+                      step="0.01"
+                      disabled={isReadOnly}
+                      placeholder="Qty"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-xs font-semibold text-gray-700 mb-2">Warehouse</label>
+                    <SearchableSelect
+                      value={formData.source_warehouse}
+                      onChange={(val) => setFormData({ ...formData, source_warehouse: val })}
+                      options={warehouses}
+                      placeholder="Select warehouse..."
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-xs">
+                <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <div className="w-1 h-5 bg-purple-600 rounded-full"></div>
+                  Order Status
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col">
+                    <label className="text-xs font-semibold text-gray-700 mb-2">Status</label>
+                    <SearchableSelect
+                      value={formData.status}
+                      onChange={(val) => handleSearchableChange('status', val)}
+                      options={statuses}
+                      placeholder="Select status..."
+                      disabled={isReadOnly}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -890,41 +915,52 @@ export default function SalesOrderForm() {
 
 
           {currentTab.id === 'bomDetails' && (
-            <div className="py-5">
+            <div className="space-y-6">
               {console.log('BOM Details tab is active. formData.items count:', formData.items.length)}
-              <div className="mb-4 p-3 bg-blue-100 border border-blue-300 rounded text-xs">
-                <strong>Status:</strong> {bomFinishedGoods.length + bomRawMaterials.length + bomOperations.length} items loaded ({bomFinishedGoods.length} Finished Goods, {bomRawMaterials.length} Materials, {bomOperations.length} Operations)
-                {formData.bom_id && <span> | BOM Selected: {formData.bom_id}</span>}
+              <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-blue-900 mb-1">BOM Details Status</p>
+                    <p className="text-xs text-blue-800">
+                      <strong>{bomFinishedGoods.length + bomRawMaterials.length + bomOperations.length}</strong> items loaded • 
+                      <strong className="ml-1">{bomFinishedGoods.length}</strong> Finished Goods • 
+                      <strong className="ml-1">{bomRawMaterials.length}</strong> Materials • 
+                      <strong className="ml-1">{bomOperations.length}</strong> Operations
+                    </p>
+                    {formData.bom_id && <p className="text-xs text-blue-700 mt-2">BOM ID: <strong>{formData.bom_id}</strong></p>}
+                  </div>
+                  {formData.bom_id && !isReadOnly && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        console.log('Refresh BOM Details button clicked. Current qty:', formData.qty)
+                        fetchBomDetails(formData.bom_id, formData.qty)
+                      }}
+                      disabled={refreshingBom}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition disabled:bg-gray-400"
+                    >
+                      {refreshingBom ? '⏳ Refreshing...' : '🔄 Refresh'}
+                    </button>
+                  )}
+                </div>
               </div>
-              {formData.bom_id && !isReadOnly && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    console.log('Refresh BOM Details button clicked. Current qty:', formData.qty)
-                    fetchBomDetails(formData.bom_id, formData.qty)
-                  }}
-                  disabled={refreshingBom}
-                  className="mb-4 px-4 py-2 bg-blue-500 text-white rounded text-sm font-medium hover:bg-blue-600 disabled:bg-gray-400"
-                >
-                  {refreshingBom ? '⏳ Refreshing...' : '🔄 Refresh BOM Details'}
-                </button>
-              )}
               {bomFinishedGoods.length > 0 && (
                 <div className="mb-5">
-                  <div className="bg-white border border-gray-200 rounded">
-                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 font-semibold text-sm text-gray-800">
-                      📦 Finished Goods ({bomFinishedGoods.length})
+                  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-xs">
+                    <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-5 py-3.5 border-b border-blue-200 flex items-center gap-2">
+                      <span className="text-lg">📦</span>
+                      <h3 className="font-bold text-sm text-gray-900">Finished Goods <span className="font-normal text-gray-600">({bomFinishedGoods.length})</span></h3>
                     </div>
-                    <div className="p-4">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 px-2 font-semibold">Item Code</th>
-                            <th className="text-left py-2 px-2 font-semibold">Description</th>
-                            <th className="text-left py-2 px-2 font-semibold">Type</th>
-                            <th className="text-right py-2 px-2 font-semibold">Qty</th>
-                            <th className="text-left py-2 px-2 font-semibold">Rate</th>
-                            <th className="text-right py-2 px-2 font-semibold">Amount</th>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            <th className="text-left p-2 font-semibold text-gray-700">Item Code</th>
+                            <th className="text-left p-2 font-semibold text-gray-700">Description</th>
+                            <th className="text-left p-2 font-semibold text-gray-700">Type</th>
+                            <th className=" p-2 font-semibold text-gray-700">Qty</th>
+                            <th className="text-left p-2 font-semibold text-gray-700">Rate</th>
+                            <th className=" p-2 font-semibold text-gray-700">Amount</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -933,40 +969,40 @@ export default function SalesOrderForm() {
                             const multipliedQty = bomQty * (parseFloat(formData.qty) || 1)
                             const itemAmount = multipliedQty * (parseFloat(item.rate) || 0)
                             return (
-                            <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="py-2 px-2">{item.component_code || item.item_code || '-'}</td>
-                              <td className="py-2 px-2">{item.component_description || item.item_name || '-'}</td>
-                              <td className="py-2 px-2">{item.component_type || item.fg_sub_assembly || '-'}</td>
-                              <td className="py-2 px-2 text-right">
+                            <tr key={idx} className="border-b border-gray-100 hover:bg-blue-50 transition">
+                              <td className="p-2 font-medium text-gray-900">{item.component_code || item.item_code || '-'}</td>
+                              <td className="p-2 text-gray-700">{item.component_description || item.item_name || '-'}</td>
+                              <td className="p-2 text-gray-600 text-xs">{item.component_type || item.fg_sub_assembly || '-'}</td>
+                              <td className="p-2 text-right font-medium text-gray-900">
                                 {isReadOnly ? (
-                                  multipliedQty.toFixed(3)
+                                  formatQty(multipliedQty)
                                 ) : (
                                   <input
                                     type="number"
                                     step="0.001"
                                     value={item.qty !== undefined ? item.qty : bomQty}
                                     onChange={(e) => handleBomFinishedGoodEdit(idx, 'qty', e.target.value)}
-                                    className="w-full px-1 py-0.5 border border-gray-300 rounded text-right text-xs"
+                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-right text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                   />
                                 )}
                               </td>
-                              <td className="py-2 px-2">
+                              <td className="p-2">
                                 {isReadOnly ? (
-                                  '₹' + parseFloat(item.rate || 0).toFixed(2)
+                                  <span className="text-gray-900 font-medium">₹ {parseFloat(item.rate || 0).toFixed(2)}</span>
                                 ) : (
-                                  <div className="flex items-center">
-                                    <span className="mr-1">₹</span>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-gray-600">₹</span>
                                     <input
                                       type="number"
                                       step="0.01"
                                       value={item.rate || 0}
                                       onChange={(e) => handleBomFinishedGoodEdit(idx, 'rate', e.target.value)}
-                                      className="w-full px-1 py-0.5 border border-gray-300 rounded text-xs"
+                                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     />
                                   </div>
                                 )}
                               </td>
-                              <td className="py-2 px-2 text-right font-semibold">₹{itemAmount.toFixed(2)}</td>
+                              <td className="p-2 text-right font-bold text-green-700">₹ {itemAmount.toFixed(2)}</td>
                             </tr>
                             )
                           })}
@@ -980,23 +1016,24 @@ export default function SalesOrderForm() {
               {bomRawMaterials.length > 0 && (
                 <div className="mb-5">
                   {!isReadOnly && (
-                    <div className="bg-white border border-gray-200 rounded px-4 py-3 font-semibold text-sm text-gray-800 mb-4">
-                      🔧 Materials ({bomRawMaterials.length})
+                    <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 rounded-lg px-5 py-3.5 font-bold text-sm text-gray-900 mb-4 flex items-center gap-2">
+                      <span className="text-lg">🔧</span>
+                      Raw Materials <span className="font-normal text-gray-600">({bomRawMaterials.length})</span>
                     </div>
                   )}
                   {isReadOnly ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b border-gray-200 bg-gray-50">
-                            <th className="text-left py-2 px-2 font-semibold">Item Group</th>
-                            <th className="text-left py-2 px-2 font-semibold">Item Code</th>
-                            <th className="text-left py-2 px-2 font-semibold">Item Name</th>
-                            <th className="text-right py-2 px-2 font-semibold">Qty</th>
-                            <th className="text-left py-2 px-2 font-semibold">UOM</th>
-                            <th className="text-left py-2 px-2 font-semibold">Rate</th>
-                            <th className="text-right py-2 px-2 font-semibold">Amount</th>
-                            <th className="text-left py-2 px-2 font-semibold">Warehouse</th>
+                    <div className="overflow-x-auto bg-white rounded-lg border border-gray-200">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            <th className="text-left p-2 font-semibold text-gray-700">Item Group</th>
+                            <th className="text-left p-2 font-semibold text-gray-700">Item Code</th>
+                            <th className="text-left p-2 font-semibold text-gray-700">Item Name</th>
+                            <th className=" p-2 font-semibold text-gray-700">Qty</th>
+                            <th className="text-left p-2 font-semibold text-gray-700">UOM</th>
+                            <th className="text-left p-2 font-semibold text-gray-700">Rate</th>
+                            <th className=" p-2 font-semibold text-gray-700">Amount</th>
+                            <th className="text-left p-2 font-semibold text-gray-700">Warehouse</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1005,15 +1042,15 @@ export default function SalesOrderForm() {
                             const multipliedQty = bomQty * (parseFloat(formData.qty) || 1)
                             const itemAmount = multipliedQty * (parseFloat(item.rate) || 0)
                             return (
-                            <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="py-2 px-2">{item.item_group || 'Unclassified'}</td>
-                              <td className="py-2 px-2">{item.item_code || '-'}</td>
-                              <td className="py-2 px-2">{item.item_name || '-'}</td>
-                              <td className="py-2 px-2 text-right">{multipliedQty.toFixed(3)}</td>
-                              <td className="py-2 px-2">{item.uom || '-'}</td>
-                              <td className="py-2 px-2">₹{parseFloat(item.rate || 0).toFixed(2)}</td>
-                              <td className="py-2 px-2 text-right font-semibold">₹{itemAmount.toFixed(2)}</td>
-                              <td className="py-2 px-2">{item.source_warehouse || '-'}</td>
+                            <tr key={idx} className="border-b border-gray-100 hover:bg-amber-50 transition">
+                              <td className="p-2 text-xs font-medium text-blue-700 bg-blue-50 rounded">{item.item_group || 'Unclassified'}</td>
+                              <td className="p-2 font-medium text-gray-900">{item.item_code || '-'}</td>
+                              <td className="p-2 text-gray-700">{item.item_name || '-'}</td>
+                              <td className="p-2 text-right font-medium text-gray-900">{formatQty(multipliedQty)}</td>
+                              <td className="p-2 text-gray-600 text-sm">{item.uom || '-'}</td>
+                              <td className="p-2 font-medium text-gray-900">₹ {parseFloat(item.rate || 0).toFixed(2)}</td>
+                              <td className="p-2 text-right font-bold text-green-700">₹ {itemAmount.toFixed(2)}</td>
+                              <td className="p-2 text-gray-600">{item.source_warehouse || '-'}</td>
                             </tr>
                             )
                           })}
@@ -1078,7 +1115,7 @@ export default function SalesOrderForm() {
                                               className="w-full px-1 py-0.5 border border-gray-300 rounded text-right text-xs"
                                             />
                                           ) : (
-                                            multipliedQty.toFixed(3)
+                                            formatQty(multipliedQty)
                                           )}
                                         </td>
                                         <td className="py-2 px-2">{item.uom || '-'}</td>
@@ -1117,18 +1154,19 @@ export default function SalesOrderForm() {
 
               {bomOperations.length > 0 && (
                 <div className="mb-5">
-                  <div className="bg-white border border-gray-200 rounded">
-                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 font-semibold text-sm text-gray-800">
-                      ⚙️ Operations ({bomOperations.length})
+                  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-xs">
+                    <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-5 py-3.5 border-b border-purple-200 flex items-center gap-2">
+                      <span className="text-lg">⚙️</span>
+                      <h3 className="font-bold text-sm text-gray-900">Operations <span className="font-normal text-gray-600">({bomOperations.length})</span></h3>
                     </div>
-                    <div className="p-4">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 px-2 font-semibold">Operation</th>
-                            <th className="text-left py-2 px-2 font-semibold">Workstation</th>
-                            <th className="text-right py-2 px-2 font-semibold">Time (Hours)</th>
-                            <th className="text-right py-2 px-2 font-semibold">Cost</th>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            <th className="text-left p-2 font-semibold text-gray-700">Operation</th>
+                            <th className="text-left p-2 font-semibold text-gray-700">Workstation</th>
+                            <th className=" p-2 font-semibold text-gray-700">Time (Hours)</th>
+                            <th className=" p-2 font-semibold text-gray-700">Cost</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1136,36 +1174,36 @@ export default function SalesOrderForm() {
                             const operationCostPerUnit = (parseFloat(op.operating_cost || op.cost || 0))
                             const totalOperationCost = operationCostPerUnit * (parseFloat(formData.qty) || 1)
                             return (
-                            <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="py-2 px-2">{op.operation || op.operation_name || '-'}</td>
-                              <td className="py-2 px-2">{op.workstation_type || op.workstation || op.default_workstation || '-'}</td>
-                              <td className="py-2 px-2 text-right">
+                            <tr key={idx} className="border-b border-gray-100 hover:bg-purple-50 transition">
+                              <td className="p-2 font-medium text-gray-900">{op.operation || op.operation_name || '-'}</td>
+                              <td className="p-2 text-gray-700">{op.workstation_type || op.workstation || op.default_workstation || '-'}</td>
+                              <td className="p-2 text-left text-gray-900">
                                 {isEditMode && !isReadOnly ? (
                                   <input
                                     type="number"
                                     step="0.01"
                                     value={op.operation_time || op.time_in_hours || op.hours || 0}
                                     onChange={(e) => handleBomOperationEdit(idx, 'operation_time', e.target.value)}
-                                    className="w-full px-1 py-0.5 border border-gray-300 rounded text-right text-xs"
+                                    className="w-fit px-2 py-1.5 border border-gray-300 rounded text-right text-xs focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                   />
                                 ) : (
-                                  op.operation_time || op.time_in_hours || op.hours || '-'
+                                  <span className="font-medium">{op.operation_time || op.time_in_hours || op.hours || '-'}</span>
                                 )}
                               </td>
-                              <td className="py-2 px-2 text-right font-semibold">
+                              <td className="p-2 text-right font-bold text-green-700">
                                 {isEditMode && !isReadOnly ? (
-                                  <div className="flex items-center">
-                                    <span className="mr-1">₹</span>
+                                  <div className="flex items-center gap-1 justify-end">
+                                    <span className="text-gray-600">₹</span>
                                     <input
                                       type="number"
                                       step="0.01"
                                       value={op.operating_cost || op.cost || 0}
                                       onChange={(e) => handleBomOperationEdit(idx, 'operating_cost', e.target.value)}
-                                      className="w-full px-1 py-0.5 border border-gray-300 rounded text-xs"
+                                      className="w-20 px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     />
                                   </div>
                                 ) : (
-                                  '₹' + totalOperationCost.toFixed(2)
+                                  <>₹ {totalOperationCost.toFixed(2)}</>
                                 )}
                               </td>
                             </tr>
@@ -1230,27 +1268,29 @@ export default function SalesOrderForm() {
               )}
 
               {bomFinishedGoods.length === 0 && bomRawMaterials.length === 0 && bomOperations.length === 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded p-4 text-center text-blue-700 text-sm">
-                  Select a BOM in Basic Details tab to view BOM details here.
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 text-center">
+                  <p className="text-blue-900 font-semibold mb-1">📦 No BOM Selected</p>
+                  <p className="text-blue-700 text-sm">Select a BOM in the <strong>Basic Details</strong> tab to view materials, operations, and finished goods here.</p>
                 </div>
               )}
             </div>
           )}
 
-          <div className="flex gap-2.5 justify-between mt-7 pt-5 border-t border-gray-200">
+          <div className="flex gap-4 justify-between items-center mt-8 pt-6 border-t border-gray-200">
             {!isReadOnly && (
               <Button
                 type="button"
                 variant="secondary"
                 onClick={prevTab}
                 disabled={activeTabIndex === 0}
+                className="px-6 py-2.5 text-sm font-semibold"
               >
                 ← Previous
               </Button>
             )}
 
-            <span className="text-xs text-gray-600 self-center">
-              Step {activeTabIndex + 1} of {tabs.length}
+            <span className="text-sm font-medium text-gray-600">
+              Step <span className="font-bold text-gray-900">{activeTabIndex + 1}</span> of <span className="font-bold text-gray-900">{tabs.length}</span>
             </span>
 
             {isReadOnly ? (
