@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import DepartmentProtectedRoute from './components/DepartmentProtectedRoute'
 import DepartmentLayout from './components/DepartmentLayout'
 import LoginPage from './pages/LoginPage'
+import Dashboard from './pages/Dashboard'
 import DepartmentDashboard from './pages/DepartmentDashboard'
 
 import {
@@ -63,6 +64,14 @@ function App() {
             
             {/* Protected Routes with Department Layout */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
             
             <Route
               path="/manufacturing/dashboard"
