@@ -271,15 +271,29 @@ export default function ItemForm() {
 
   const fetchItem = async () => {
     try {
+      setLoading(true)
+      setError(null)
       const response = await axios.get(`${import.meta.env.VITE_API_URL}/items/${item_code}`)
       const itemData = response.data.data
+      
+      if (!itemData) {
+        setError('Item not found')
+        return
+      }
+      
       setItem(itemData)
       setFormData(prev => ({
         ...prev,
+        item_code: itemData.item_code || prev.item_code,
+        item_name: itemData.item_name || itemData.name || prev.item_name,
+        item_group: itemData.item_group || prev.item_group,
         ...itemData
       }))
     } catch (err) {
-      setError('Failed to fetch item details')
+      console.error('Error fetching item:', err)
+      setError(`Failed to fetch item details: ${err.response?.data?.error || err.message}`)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -1817,6 +1831,17 @@ export default function ItemForm() {
         {error && <Alert type="danger">{error}</Alert>}
         {success && <Alert type="success">{success}</Alert>}
 
+        {isEditMode && loading && !item && (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin inline-block mb-3">
+                <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full"></div>
+              </div>
+              <p className="text-slate-600">Loading item details...</p>
+            </div>
+          </div>
+        )}
+
         {isEditMode && item && (
           <AuditTrail
             createdAt={item.created_at}
@@ -1826,6 +1851,7 @@ export default function ItemForm() {
           />
         )}
 
+        {(!isEditMode || item) && (
         <form onSubmit={handleSubmit} className="form-container">
           {renderTabContent()}
 
@@ -1850,6 +1876,7 @@ export default function ItemForm() {
             <div></div>
           </div>
         </form>
+        )}
       </Card>
     </div>
   )

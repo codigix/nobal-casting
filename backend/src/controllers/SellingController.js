@@ -266,6 +266,69 @@ export class SellingController {
   // SALES ORDER ENDPOINTS
   // ============================================
 
+  static isSubAssemblyType(itemType) {
+    if (!itemType) return false
+    const normalized = String(itemType).toLowerCase().replace(/[-\s]/g, '').trim()
+    return normalized === 'subassemblies' || normalized === 'subassembly'
+  }
+
+  static async checkDuplicateSalesOrder(db, items, excludeOrderId = null) {
+    try {
+      if (!items || items.length === 0) return null
+
+      const [existingOrders] = await db.execute(
+        'SELECT sales_order_id, items, bom_finished_goods FROM selling_sales_order WHERE deleted_at IS NULL'
+      )
+
+      if (!existingOrders.length) return null
+
+      const incomingItemCodes = new Set()
+      const incomingItemTypes = new Map()
+      
+      items.forEach(item => {
+        incomingItemCodes.add(item.item_code)
+        incomingItemTypes.set(item.item_code, item.fg_sub_assembly)
+      })
+
+      for (const order of existingOrders) {
+        if (excludeOrderId && order.sales_order_id === excludeOrderId) {
+          continue
+        }
+        
+        const existingItems = order.items ? JSON.parse(order.items) : []
+        const existingBomItems = order.bom_finished_goods ? JSON.parse(order.bom_finished_goods) : []
+        
+        const allExistingItems = [...existingItems, ...existingBomItems]
+        
+        for (const existingItem of allExistingItems) {
+          if (incomingItemCodes.has(existingItem.item_code || existingItem.component_code)) {
+            const incomingType = incomingItemTypes.get(existingItem.item_code || existingItem.component_code)
+            const existingType = existingItem.fg_sub_assembly || existingItem.component_type
+            
+            if (incomingType === 'FG' && this.isSubAssemblyType(existingType)) {
+              return {
+                order_id: order.sales_order_id,
+                conflict: `Finished Good item is already in use as sub-assembly in sales order ${order.sales_order_id}`
+              }
+            }
+            
+            if (this.isSubAssemblyType(incomingType) && existingType === 'FG') {
+              return {
+                order_id: order.sales_order_id,
+                conflict: `Sub-Assembly item is already in use as finished good in sales order ${order.sales_order_id}`
+              }
+            }
+          }
+        }
+      }
+
+      return null
+    } catch (err) {
+      console.error('Error checking duplicate sales orders:', err)
+      return null
+    }
+  }
+
   static async createSalesOrder(req, res) {
     const db = req.app.locals.db
     const { customer_id, customer_name, customer_email, customer_phone, quotation_id, order_amount, total_value, delivery_date, order_terms, terms_conditions, items, bom_id, bom_name, source_warehouse, order_type, status, quantity, qty, bom_raw_materials, bom_operations, bom_finished_goods } = req.body
@@ -293,6 +356,11 @@ export class SellingController {
       const finalCustomerName = customer_name || customer.name || ''
       const finalCustomerEmail = customer_email || customer.email || ''
       const finalCustomerPhone = customer_phone || customer.phone || ''
+
+      const duplicateCheck = await this.checkDuplicateSalesOrder(db, items)
+      if (duplicateCheck) {
+        return res.status(409).json({ error: duplicateCheck.conflict })
+      }
 
       const sales_order_id = `SO-${Date.now()}`
       
@@ -560,6 +628,13 @@ export class SellingController {
 
       if (!orderCheck.length) {
         return res.status(404).json({ error: 'Sales order not found' })
+      }
+
+      if (items !== undefined) {
+        const duplicateCheck = await this.checkDuplicateSalesOrder(db, items, id)
+        if (duplicateCheck) {
+          return res.status(409).json({ error: duplicateCheck.conflict })
+        }
       }
 
       // Build update query dynamically

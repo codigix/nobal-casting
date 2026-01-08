@@ -25,8 +25,12 @@ export default function SearchableSelect({
   useEffect(() => {
     if (onSearch) {
       onSearch(searchTerm)
+    } else {
+      const filtered = options.filter(opt => 
+        opt.label.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      setFilteredOptions(filtered)
     }
-    setFilteredOptions(options)
     setHighlightedIndex(-1)
   }, [searchTerm, options, onSearch])
 

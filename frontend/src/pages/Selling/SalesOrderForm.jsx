@@ -9,6 +9,12 @@ import AuditTrail from '../../components/AuditTrail'
 import SearchableSelect from '../../components/SearchableSelect'
 import './Selling.css'
 
+const isSubAssemblyType = (itemType) => {
+  if (!itemType) return false
+  const normalized = itemType.toLowerCase().replace(/[-\s]/g, '').trim()
+  return normalized === 'subassemblies' || normalized === 'subassembly'
+}
+
 export default function SalesOrderForm() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -353,7 +359,7 @@ export default function SalesOrderForm() {
         allItems.push(itemObj)
         console.log('Added item to allItems:', itemObj)
 
-        if (itemType === 'Sub-Assembly' || itemType === 'Sub Assembly' || itemType === 'Sub-assembly') {
+        if (isSubAssemblyType(itemType)) {
           console.log(`Fetching sub-assembly items for: ${itemCode}`)
           const subItems = await fetchSubAssemblyItems(itemCode, bomQty, salesQty)
           console.log(`Got ${subItems.length} sub-items for ${itemCode}:`, subItems)
@@ -381,6 +387,15 @@ export default function SalesOrderForm() {
       setBomRawMaterials(rawMaterials)
       setBomOperations(operations)
       setBomFinishedGoods(bomLines)
+      
+      const groupedMaterials = {}
+      rawMaterials.forEach(material => {
+        const group = material.item_group || 'Unclassified'
+        if (!groupedMaterials[group]) {
+          groupedMaterials[group] = true
+        }
+      })
+      setExpandedItemGroups(groupedMaterials)
 
       console.log('Setting formData.items to:', allItems)
       setFormData(prev => {
@@ -980,7 +995,7 @@ export default function SalesOrderForm() {
                                   <input
                                     type="number"
                                     step="0.001"
-                                    value={item.qty !== undefined ? item.qty : bomQty}
+                                    value={multipliedQty}
                                     onChange={(e) => handleBomFinishedGoodEdit(idx, 'qty', e.target.value)}
                                     className="w-full px-2 py-1.5 border border-gray-300 rounded text-right text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                   />
@@ -1015,16 +1030,22 @@ export default function SalesOrderForm() {
 
               {bomRawMaterials.length > 0 && (
                 <div className="mb-5">
-                  {!isReadOnly && (
-                    <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 rounded-lg px-5 py-3.5 font-bold text-sm text-gray-900 mb-4 flex items-center gap-2">
-                      <span className="text-lg">🔧</span>
-                      Raw Materials <span className="font-normal text-gray-600">({bomRawMaterials.length})</span>
+                  <div className="bg-white rounded-lg border border-amber-200 overflow-hidden shadow-xs">
+                    <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 px-5 py-4 border-b border-amber-200 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-amber-100 rounded-lg">
+                          <span className="text-lg">📦</span>
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-sm text-gray-900">Raw Materials</h3>
+                          <p className="text-xs text-gray-600 mt-0.5">{bomRawMaterials.length} items required</p>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                  {isReadOnly ? (
-                    <div className="overflow-x-auto bg-white rounded-lg border border-gray-200">
+                    {isReadOnly ? (
+                    <div className="overflow-x-auto">
                       <table className="w-full text-sm">
-                        <thead className="bg-gray-50 border-b border-gray-200">
+                        <thead className="bg-amber-50 border-b border-amber-200">
                           <tr>
                             <th className="text-left p-2 font-semibold text-gray-700">Item Group</th>
                             <th className="text-left p-2 font-semibold text-gray-700">Item Code</th>
@@ -1057,42 +1078,45 @@ export default function SalesOrderForm() {
                         </tbody>
                       </table>
                     </div>
-                  ) : (
-                    <div className="space-y-2">
+                    ) : (
+                    <div className="border-t border-amber-100">
                       {itemGroupsInOrder.map((groupName) => {
                         const groupItems = groupedRawMaterials[groupName]
                         const isExpanded = expandedItemGroups[groupName]
                         
                         return (
-                          <div key={groupName} className="border border-gray-200 rounded overflow-hidden">
+                          <div key={groupName} className="border-b border-amber-100 last:border-b-0">
                             <button
                               type="button"
                               onClick={() => toggleItemGroup(groupName)}
-                              className="w-full flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition p-3 group"
+                              className="w-full flex items-center justify-between bg-amber-50 hover:bg-orange-50 transition p-4 group"
                             >
                               <div className="flex items-center gap-3 flex-1">
+                                <div className="p-2 bg-amber-100 rounded group-hover:bg-orange-100 transition">
+                                  <span className="text-sm">📋</span>
+                                </div>
                                 <div className="text-left">
-                                  <h3 className="text-sm font-bold text-gray-900 group-hover:text-gray-700">{groupName}</h3>
-                                  <p className="text-xs text-gray-600 mt-0">{groupItems.length} items</p>
+                                  <h4 className="text-sm font-semibold text-gray-900">{groupName}</h4>
+                                  <p className="text-xs text-gray-500 mt-0.5">{groupItems.length} item(s)</p>
                                 </div>
                               </div>
-                              <div className="text-gray-600 flex-shrink-0">
+                              <div className="text-amber-600 flex-shrink-0 font-semibold">
                                 {isExpanded ? '▲' : '▼'}
                               </div>
                             </button>
 
                             {isExpanded && (
-                              <div className="overflow-x-auto">
+                              <div className="overflow-x-auto bg-white">
                                 <table className="w-full text-xs">
                                   <thead>
-                                    <tr className="border-b border-gray-200 bg-gray-50">
-                                      <th className="text-left py-2 px-2 font-semibold">Item Code</th>
-                                      <th className="text-left py-2 px-2 font-semibold">Item Name</th>
-                                      <th className="text-right py-2 px-2 font-semibold">Qty</th>
-                                      <th className="text-left py-2 px-2 font-semibold">UOM</th>
-                                      <th className="text-left py-2 px-2 font-semibold">Rate</th>
-                                      <th className="text-right py-2 px-2 font-semibold">Amount</th>
-                                      <th className="text-left py-2 px-2 font-semibold">Warehouse</th>
+                                    <tr className="border-b border-amber-200 bg-amber-50">
+                                      <th className="text-left py-3 px-3 font-semibold text-gray-700">Item Code</th>
+                                      <th className="text-left py-3 px-3 font-semibold text-gray-700">Item Name</th>
+                                      <th className="text-right py-3 px-3 font-semibold text-gray-700">Qty</th>
+                                      <th className="text-center py-3 px-3 font-semibold text-gray-700">UOM</th>
+                                      <th className="text-right py-3 px-3 font-semibold text-gray-700">Rate (₹)</th>
+                                      <th className="text-right py-3 px-3 font-semibold text-gray-700">Amount (₹)</th>
+                                      <th className="text-left py-3 px-3 font-semibold text-gray-700">Warehouse</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -1102,41 +1126,38 @@ export default function SalesOrderForm() {
                                       const multipliedQty = bomQty * (parseFloat(formData.qty) || 1)
                                       const itemAmount = multipliedQty * (parseFloat(item.rate) || 0)
                                       return (
-                                      <tr key={itemIdx} className="border-b border-gray-100 hover:bg-gray-50">
-                                        <td className="py-2 px-2">{item.item_code || '-'}</td>
-                                        <td className="py-2 px-2">{item.item_name || '-'}</td>
-                                        <td className="py-2 px-2 text-right">
+                                      <tr key={itemIdx} className="border-b border-amber-100 hover:bg-amber-50 transition">
+                                        <td className="py-2.5 px-3 font-medium text-gray-900">{item.item_code || '-'}</td>
+                                        <td className="py-2.5 px-3 text-gray-700">{item.item_name || '-'}</td>
+                                        <td className="py-2.5 px-3 text-right font-semibold text-gray-900">
                                           {isEditMode && !isReadOnly ? (
                                             <input
                                               type="number"
                                               step="0.001"
-                                              value={item.qty !== undefined ? item.qty : bomQty}
+                                              value={multipliedQty}
                                               onChange={(e) => handleBomItemEdit(actualIdx, 'qty', e.target.value)}
-                                              className="w-full px-1 py-0.5 border border-gray-300 rounded text-right text-xs"
+                                              className="w-20 px-2 py-1 border border-amber-300 rounded text-right text-xs focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                                             />
                                           ) : (
                                             formatQty(multipliedQty)
                                           )}
                                         </td>
-                                        <td className="py-2 px-2">{item.uom || '-'}</td>
-                                        <td className="py-2 px-2">
+                                        <td className="py-2.5 px-3 text-center text-gray-600">{item.uom || '-'}</td>
+                                        <td className="py-2.5 px-3 text-right">
                                           {isEditMode && !isReadOnly ? (
-                                            <div className="flex items-center">
-                                              <span className="mr-1">₹</span>
-                                              <input
-                                                type="number"
-                                                step="0.01"
-                                                value={item.rate || 0}
-                                                onChange={(e) => handleBomItemEdit(actualIdx, 'rate', e.target.value)}
-                                                className="w-full px-1 py-0.5 border border-gray-300 rounded text-xs"
-                                              />
-                                            </div>
+                                            <input
+                                              type="number"
+                                              step="0.01"
+                                              value={item.rate || 0}
+                                              onChange={(e) => handleBomItemEdit(actualIdx, 'rate', e.target.value)}
+                                              className="w-20 px-2 py-1 border border-amber-300 rounded text-right text-xs focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                                            />
                                           ) : (
-                                            '₹' + parseFloat(item.rate || 0).toFixed(2)
+                                            parseFloat(item.rate || 0).toFixed(2)
                                           )}
                                         </td>
-                                        <td className="py-2 px-2 text-right font-semibold">₹{itemAmount.toFixed(2)}</td>
-                                        <td className="py-2 px-2">{item.source_warehouse || '-'}</td>
+                                        <td className="py-2.5 px-3 text-right font-semibold text-green-600">₹{itemAmount.toFixed(2)}</td>
+                                        <td className="py-2.5 px-3 text-xs text-gray-500">{item.source_warehouse || '-'}</td>
                                       </tr>
                                       )
                                     })}
@@ -1150,6 +1171,7 @@ export default function SalesOrderForm() {
                     </div>
                   )}
                 </div>
+              </div>
               )}
 
               {bomOperations.length > 0 && (
@@ -1219,47 +1241,51 @@ export default function SalesOrderForm() {
               {(bomFinishedGoods.length > 0 || bomRawMaterials.length > 0 || bomOperations.length > 0) && (
                 <div className="mt-6 pt-4 border-t border-gray-200">
                   <div className="flex justify-end">
-                    <div className="bg-gray-50 border border-gray-300 rounded p-4 min-w-64">
-                      <div className="space-y-2">
-                        {bomFinishedGoods.length > 0 && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Finished Goods:</span>
-                            <span className="font-semibold">
-                              ₹{bomFinishedGoods.reduce((sum, item) => {
-                                const bomQty = parseFloat(item.quantity || item.qty || 1)
-                                const itemAmount = bomQty * (parseFloat(formData.qty) || 1) * (parseFloat(item.rate) || 0)
-                                return sum + itemAmount
-                              }, 0).toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                        {bomRawMaterials.length > 0 && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Materials:</span>
-                            <span className="font-semibold">
-                              ₹{bomRawMaterials.reduce((sum, item) => {
-                                const bomQty = parseFloat(item.qty || 1)
-                                const itemAmount = bomQty * (parseFloat(formData.qty) || 1) * (parseFloat(item.rate) || 0)
-                                return sum + itemAmount
-                              }, 0).toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                        {bomOperations.length > 0 && (
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Operations:</span>
-                            <span className="font-semibold">
-                              ₹{bomOperations.reduce((sum, op) => {
-                                const costPerUnit = parseFloat(op.operating_cost || op.cost || 0)
-                                const totalCost = costPerUnit * (parseFloat(formData.qty) || 1)
-                                return sum + totalCost
-                              }, 0).toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                        <div className="border-t border-gray-300 pt-2 mt-2 flex justify-between">
-                          <span className="font-bold text-gray-800">Grand Total:</span>
-                          <span className="font-bold text-lg text-green-600">₹{calculateBomGrandTotal().toFixed(2)}</span>
+                    <div className="bg-white border-2 border-gray-300 rounded-lg p-5 min-w-80 shadow-sm">
+                      <h4 className="text-sm font-bold text-gray-900 mb-4">Cost Breakdown</h4>
+                      <div className="space-y-3">
+                        {bomFinishedGoods.length > 0 && (() => {
+                          const fgTotal = bomFinishedGoods.reduce((sum, item) => {
+                            const bomQty = parseFloat(item.quantity || item.qty || 1)
+                            const itemAmount = bomQty * (parseFloat(formData.qty) || 1) * (parseFloat(item.rate) || 0)
+                            return sum + itemAmount
+                          }, 0)
+                          return (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-700">Finished Goods ({bomFinishedGoods.length}):</span>
+                              <span className="font-semibold text-gray-900">₹{fgTotal.toFixed(2)}</span>
+                            </div>
+                          )
+                        })()}
+                        {bomRawMaterials.length > 0 && (() => {
+                          const matTotal = bomRawMaterials.reduce((sum, item) => {
+                            const bomQty = parseFloat(item.qty || 1)
+                            const itemAmount = bomQty * (parseFloat(formData.qty) || 1) * (parseFloat(item.rate) || 0)
+                            return sum + itemAmount
+                          }, 0)
+                          return (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-700">Raw Materials ({bomRawMaterials.length}):</span>
+                              <span className="font-semibold text-gray-900">₹{matTotal.toFixed(2)}</span>
+                            </div>
+                          )
+                        })()}
+                        {bomOperations.length > 0 && (() => {
+                          const opTotal = bomOperations.reduce((sum, op) => {
+                            const costPerUnit = parseFloat(op.operating_cost || op.cost || 0)
+                            const totalCost = costPerUnit * (parseFloat(formData.qty) || 1)
+                            return sum + totalCost
+                          }, 0)
+                          return (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-700">Operations ({bomOperations.length}):</span>
+                              <span className="font-semibold text-gray-900">₹{opTotal.toFixed(2)}</span>
+                            </div>
+                          )
+                        })()}
+                        <div className="border-t-2 border-gray-300 pt-3 mt-3 flex justify-between items-center">
+                          <span className="font-bold text-gray-900">Grand Total:</span>
+                          <span className="font-bold text-2xl text-green-600">₹{calculateBomGrandTotal().toFixed(2)}</span>
                         </div>
                       </div>
                     </div>

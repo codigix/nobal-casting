@@ -11,6 +11,7 @@ import {
   PurchaseReceipts,
   Items,
   ItemForm,
+  ItemGroups,
   GRNRequestDetail,
   MaterialRequests
 } from './pages/Buying'
@@ -313,6 +314,20 @@ function App() {
                   <DepartmentLayout>
                     <DepartmentProtectedRoute departments={['manufacturing', 'admin']}>
                       <ItemForm />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Item Groups */}
+            <Route
+              path="/manufacturing/item-groups"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['manufacturing', 'admin']}>
+                      <ItemGroups />
                     </DepartmentProtectedRoute>
                   </DepartmentLayout>
                 </ProtectedRoute>

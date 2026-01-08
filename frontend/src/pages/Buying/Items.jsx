@@ -3,7 +3,7 @@ import Button from '../../components/Button/Button'
 import Table from '../../components/Table/Table'
 import Input from '../../components/Input/Input'
 import { Link, useNavigate } from 'react-router-dom'
-import { Plus, Search, Edit2, Trash2, Package, Tag, AlertTriangle } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, Package, Tag, AlertTriangle, FolderOpen } from 'lucide-react'
 
 export default function Items() {
   const navigate = useNavigate()
@@ -170,12 +170,20 @@ export default function Items() {
             <p className="text-xs text-gray-600">Manage your product catalog</p>
           </div>
         </div>
-        <button 
-          onClick={() => navigate('/manufacturing/items/new')}
-          className="btn-primary flex items-center gap-2 bg-gradient-to-br from-blue-400 to-blue-600"
-        >
-          <Plus size={16} /> Create Item
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => navigate('/manufacturing/item-groups')}
+            className="btn-primary flex items-center gap-2 bg-gradient-to-br from-purple-400 to-purple-600"
+          >
+            <FolderOpen size={16} /> Item Groups
+          </button>
+          <button 
+            onClick={() => navigate('/manufacturing/items/new')}
+            className="btn-primary flex items-center gap-2 bg-gradient-to-br from-blue-400 to-blue-600"
+          >
+            <Plus size={16} /> Create Item
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

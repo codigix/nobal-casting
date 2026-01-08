@@ -706,7 +706,7 @@ export default function BOMForm() {
             </div>
           )}
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className=" rounded-lg shadow-sm border border-gray-200">
             {/* PRODUCT INFORMATION SECTION */}
             <div className={`border-b border-gray-200 p-2 ${expandedSections.product ? 'bg-blue-50 border-blue-200' : ''}`}>
               <button

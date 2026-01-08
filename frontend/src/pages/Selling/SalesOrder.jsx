@@ -449,18 +449,53 @@ export default function SalesOrder() {
     },
     { 
       label: 'Items Qty', 
-      key: 'total_qty',
+      key: 'qty',
       render: (value, row) => {
-        if (!row || !row.items || row.items.length === 0) return '0'
-        const totalQty = row.items.reduce((sum, item) => sum + (parseFloat(item.qty) || 0), 0)
-        return totalQty.toFixed(2)
+        if (!row) return '0'
+        
+        if (row.qty) return parseFloat(row.qty).toFixed(2)
+        
+        if (row.items && row.items.length > 0) {
+          const totalQty = row.items.reduce((sum, item) => sum + (parseFloat(item.qty) || 0), 0)
+          return totalQty.toFixed(2)
+        }
+        
+        return '0'
       }
     },
-    { label: 'Amount', key: 'total_value', render: (val) => `₹${parseFloat(val || 0).toFixed(2)}` },
+    { 
+      label: 'Amount', 
+      key: 'order_amount', 
+      render: (val, row) => {
+        if (!row) return '₹0.00'
+        
+        if (row.order_amount && parseFloat(row.order_amount) > 0) {
+          return `₹${parseFloat(row.order_amount).toFixed(2)}`
+        }
+        
+        if (row.items && row.items.length > 0) {
+          const totalAmount = row.items.reduce((sum, item) => {
+            const itemQty = parseFloat(item.qty) || 0
+            const itemRate = parseFloat(item.amount) || parseFloat(item.rate) || 0
+            return sum + (itemQty * itemRate)
+          }, 0)
+          return `₹${totalAmount.toFixed(2)}`
+        }
+        
+        return '₹0.00'
+      }
+    },
     { 
       label: 'Delivery Date', 
       key: 'delivery_date',
-      render: (val) => val ? new Date(val).toLocaleDateString('en-IN') : '-'
+      render: (val) => {
+        if (!val) return '-'
+        try {
+          return new Date(val).toLocaleDateString('en-IN')
+        } catch (e) {
+          return '-'
+        }
+      }
     },
     { 
       label: 'Status', 
@@ -634,7 +669,44 @@ export default function SalesOrder() {
               </button>
             </div>
           ) : (
-            <DataTable columns={columns} data={filteredOrders} filterable={false} defaultHiddenColumns={['items_summary']} />
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
+                  <p className="text-xs text-slate-600 font-medium mb-1">Total Amount</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    ₹{filteredOrders.reduce((sum, order) => sum + (parseFloat(order.order_amount) || 0), 0).toFixed(2)}
+                  </p>
+                </div>
+                <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
+                  <p className="text-xs text-slate-600 font-medium mb-1">Total Items Quantity</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {filteredOrders.reduce((sum, order) => {
+                      if (order.qty) return sum + parseFloat(order.qty)
+                      if (order.items?.length > 0) {
+                        return sum + order.items.reduce((itemSum, item) => itemSum + (parseFloat(item.qty) || 0), 0)
+                      }
+                      return sum
+                    }, 0).toFixed(2)}
+                  </p>
+                </div>
+                <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
+                  <p className="text-xs text-slate-600 font-medium mb-1">Earliest Delivery Date</p>
+                  <p className="text-2xl font-bold text-orange-600">
+                    {filteredOrders
+                      .map(o => o.delivery_date)
+                      .filter(d => d)
+                      .sort()[0]
+                      ? new Date(filteredOrders
+                          .map(o => o.delivery_date)
+                          .filter(d => d)
+                          .sort()[0]).toLocaleDateString('en-IN')
+                      : '-'
+                    }
+                  </p>
+                </div>
+              </div>
+              <DataTable columns={columns} data={filteredOrders} filterable={false} />
+            </>
           )}
         </div>
       </div>

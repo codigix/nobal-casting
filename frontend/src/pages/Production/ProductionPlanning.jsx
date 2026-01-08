@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { Plus, Edit2, Trash2, Eye, Zap, Trash, X, Boxes, Factory, Check, Send, Loader } from 'lucide-react'
 import { useToast } from '../../components/ToastContainer'
 
+const isSubAssemblyGroup = (itemGroup) => {
+  if (!itemGroup) return false
+  const normalized = itemGroup.toLowerCase().replace(/[-\s]/g, '').trim()
+  return normalized === 'subassemblies' || normalized === 'subassembly'
+}
+
 const enrichRequiredItemsWithStock = async (items, token) => {
   if (!items || items.length === 0) return items
   
@@ -114,7 +120,7 @@ const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms 
       const baseQty = parseFloat(material.qty) || parseFloat(material.quantity) || parseFloat(material.bom_qty) || 1
       const totalQty = baseQty * plannedQty
       
-      const isSubAssembly = material.item_group === 'Sub Assemblies' || material.item_group === 'sub-assemblies'
+      const isSubAssembly = isSubAssemblyGroup(material.item_group)
       
       if (isSubAssembly) {
         console.log(`\n=== SUB-ASSEMBLY: ${itemCode} ===`)

@@ -27,6 +27,12 @@ class ProductionModel {
   async getOperations() {
     try {
       const [operations] = await this.db.query('SELECT * FROM operation')
+      
+      for (const operation of operations) {
+        const [subOps] = await this.db.query('SELECT * FROM operation_sub_operation WHERE operation_name = ? ORDER BY no', [operation.name])
+        operation.sub_operations = subOps || []
+      }
+      
       return operations
     } catch (error) {
       throw error
@@ -36,7 +42,14 @@ class ProductionModel {
   async getOperationById(operation_id) {
     try {
       const [operations] = await this.db.query('SELECT * FROM operation WHERE name = ?', [operation_id])
-      return operations[0] || null
+      const operation = operations[0] || null
+      
+      if (operation) {
+        const [subOps] = await this.db.query('SELECT * FROM operation_sub_operation WHERE operation_name = ? ORDER BY no', [operation_id])
+        operation.sub_operations = subOps || []
+      }
+      
+      return operation
     } catch (error) {
       throw error
     }
@@ -79,7 +92,7 @@ class ProductionModel {
   async addSubOperation(operation_id, subOp) {
     try {
       await this.db.query(
-        `INSERT INTO sub_operation (operation_id, operation_no, sub_operation_code, op_time)
+        `INSERT INTO operation_sub_operation (operation_name, no, operation, operation_time)
          VALUES (?, ?, ?, ?)`,
         [operation_id, subOp.no, subOp.operation, subOp.operation_time]
       )
@@ -90,7 +103,7 @@ class ProductionModel {
 
   async deleteSubOperations(operation_id) {
     try {
-      await this.db.query('DELETE FROM sub_operation WHERE operation_id = ?', [operation_id])
+      await this.db.query('DELETE FROM operation_sub_operation WHERE operation_name = ?', [operation_id])
     } catch (error) {
       throw error
     }
