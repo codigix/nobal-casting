@@ -75,8 +75,8 @@ class StockBalanceModel {
         whereClause += 'sb.warehouse_id = ?'
         params.push(Number(warehouseIdentifier))
       } else {
-        whereClause += 'w.warehouse_code = ?'
-        params.push(warehouseIdentifier)
+        whereClause += '(w.warehouse_code = ? OR w.warehouse_name = ?)'
+        params.push(warehouseIdentifier, warehouseIdentifier)
       }
       
       const query = `SELECT sb.*, i.item_code, i.name as item_name, i.item_group, i.uom, w.warehouse_code, w.warehouse_name
@@ -93,9 +93,9 @@ class StockBalanceModel {
   }
 
   // Create or update stock balance
-  static async upsert(itemCode, warehouseId, data) {
+  static async upsert(itemCode, warehouseId, data, dbConnection = null) {
     try {
-      const db = this.getDb()
+      const db = dbConnection || this.getDb()
       const {
         current_qty = 0,
         reserved_qty = 0,

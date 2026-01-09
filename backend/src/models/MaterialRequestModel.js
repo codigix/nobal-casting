@@ -198,7 +198,7 @@ export class MaterialRequestModel {
       if (!mrRows.length) throw new Error('Material request not found')
       const request = mrRows[0]
 
-      if (request.status !== 'draft') throw new Error('Only draft MRs can be approved')
+      if (request.status !== 'draft' && request.status !== 'pending') throw new Error('Only draft or pending MRs can be approved')
 
       // Get items
       const [items] = await db.execute('SELECT * FROM material_request_item WHERE mr_id = ?', [mrId])
@@ -252,7 +252,7 @@ export class MaterialRequestModel {
               reserved_qty: sourceBalance ? Number(sourceBalance.reserved_qty) : 0,
               valuation_rate: currentValuation,
               last_issue_date: new Date()
-            })
+            }, db)
 
             // Add Ledger Entry (OUT)
             await StockLedgerModel.create({
@@ -267,7 +267,7 @@ export class MaterialRequestModel {
               reference_name: mrId,
               remarks: `Approved Material Request ${mrId}`,
               created_by: approvedBy
-            })
+            }, db)
 
             // If Transfer, Add to Target
             if (request.purpose === 'material_transfer' && targetWarehouseId) {
@@ -279,7 +279,7 @@ export class MaterialRequestModel {
                 reserved_qty: targetBalance ? Number(targetBalance.reserved_qty) : 0,
                 valuation_rate: currentValuation,
                 last_receipt_date: new Date()
-              })
+              }, db)
 
               // Add Ledger Entry (IN)
               await StockLedgerModel.create({
@@ -294,7 +294,7 @@ export class MaterialRequestModel {
                 reference_name: mrId,
                 remarks: `Incoming Transfer from MR ${mrId}`,
                 created_by: approvedBy
-              })
+              }, db)
             }
           }
         }

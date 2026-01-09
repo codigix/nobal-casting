@@ -211,8 +211,8 @@ export default function ProductionPlanningForm() {
       const bomData = data.data || data
       
       if (bomData) {
-        setBomFinishedGoods(bomData.finished_goods || bomData.bom_finished_goods || [])
-        setBomRawMaterials(bomData.bom_raw_materials || bomData.rawMaterials || [])
+        setBomFinishedGoods(bomData.lines || bomData.finished_goods || bomData.bom_finished_goods || [])
+        setBomRawMaterials(bomData.rawMaterials || bomData.bom_raw_materials || [])
         setBomOperations(bomData.operations || bomData.bom_operations || [])
         setOperationItems(bomData.operations || bomData.bom_operations || [])
       }
@@ -277,7 +277,7 @@ export default function ProductionPlanningForm() {
 
       const data = await response.json()
       const bomData = data.data || data
-      const materials = (bomData.bom_raw_materials || bomData.rawMaterials || []).filter(m => {
+      const materials = (bomData.rawMaterials || bomData.bom_raw_materials || []).filter(m => {
         const group = m.item_group || m.group || ''
         return !isSubAssemblyGroup(group)
       })
@@ -309,6 +309,12 @@ export default function ProductionPlanningForm() {
       fetchProductionPlan(plan_id)
     }
   }, [plan_id])
+
+  useEffect(() => {
+    console.log('=== rawMaterialItems CHANGED ===')
+    console.log('rawMaterialItems count:', rawMaterialItems.length)
+    console.log('rawMaterialItems data:', rawMaterialItems)
+  }, [rawMaterialItems])
 
   const handleSalesOrderSelect = (soId) => {
     setPlanHeader(prev => ({ ...prev, sales_order_id: soId }))
@@ -380,7 +386,7 @@ export default function ProductionPlanningForm() {
         bomData = await fetchBOMDetails(bomId)
       }
 
-      const bomFinishedGoods = bomFinishedGoodsFromSO.length > 0 ? bomFinishedGoodsFromSO : (bomData?.finished_goods || bomData?.bom_finished_goods || bomData?.lines || [])
+      const bomFinishedGoods = bomFinishedGoodsFromSO.length > 0 ? bomFinishedGoodsFromSO : (bomData?.lines || bomData?.finished_goods || bomData?.bom_finished_goods || [])
       
       if (bomFinishedGoods.length > 0) {
         const fgItemsFromBOM = bomFinishedGoods.map(fgItem => ({
@@ -406,13 +412,16 @@ export default function ProductionPlanningForm() {
         setFGItems([fg])
       }
 
-      const proportionalMaterials = (bomRawMaterialsFromSO.length > 0 ? bomRawMaterialsFromSO : (bomData?.bom_raw_materials || bomData?.rawMaterials || [])).map(mat => ({
-        ...mat,
-        quantity: (mat.qty || mat.quantity || 0) * quantity,
-        rate: mat.rate || 0,
-        bom_qty: mat.qty || mat.quantity || 0,
-        sales_order_quantity: quantity
-      }))
+      const allMaterials = bomRawMaterialsFromSO.length > 0 ? bomRawMaterialsFromSO : (bomData?.rawMaterials || bomData?.bom_raw_materials || [])
+      const proportionalMaterials = allMaterials
+        .filter(mat => mat.item_group !== 'Consumable')
+        .map(mat => ({
+          ...mat,
+          quantity: (mat.qty || mat.quantity || 0) * quantity,
+          rate: mat.rate || 0,
+          bom_qty: mat.qty || mat.quantity || 0,
+          sales_order_quantity: quantity
+        }))
 
       setRawMaterialItems(proportionalMaterials)
 
@@ -447,58 +456,88 @@ export default function ProductionPlanningForm() {
         { headers: { 'Authorization': `Bearer ${token}` } }
       )
 
-      if (bomDetailsResponse.ok) {
-        const bomDetails = await bomDetailsResponse.json()
-        const bom = bomDetails.data || bomDetails
-        const bomLines = bom.bom_raw_materials || bom.rawMaterials || bom.lines || []
+      if (!bomDetailsResponse.ok) {
+        throw new Error(`Failed to fetch BOM ${bomId}: ${bomDetailsResponse.status}`)
+      }
 
+      const bomDetails = await bomDetailsResponse.json()
+      const bom = bomDetails.data || bomDetails
+      console.log('BOM data fetched:', bom)
+      
+      const bomLines = bom.rawMaterials || bom.lines || bom.bom_raw_materials || []
+      console.log('BOM raw materials:', bomLines)
+
+      let bomList = boms && boms.length > 0 ? boms : []
+      if (bomList.length === 0) {
         const bomListResponse = await fetch(`${import.meta.env.VITE_API_URL}/production/boms?limit=1000`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
-
-        let bomList = []
         if (bomListResponse.ok) {
           const bomListData = await bomListResponse.json()
           bomList = bomListData.data || []
-        }
-
-        for (const material of bomLines) {
-          const itemCode = material.item_code || material.component_code
-          const itemName = material.item_name || material.component_description
-          
-          const matchingBom = bomList.find(b =>
-            (b.item_code || b.product_code || '').trim() === itemCode.trim()
-          )
-
-          if (matchingBom) {
-            const subBomDetailsResponse = await fetch(
-              `${import.meta.env.VITE_API_URL}/production/boms/${matchingBom.bom_id}`,
-              { headers: { 'Authorization': `Bearer ${token}` } }
-            )
-
-            if (subBomDetailsResponse.ok) {
-              const subBomDetails = await subBomDetailsResponse.json()
-              const subBom = subBomDetails.data || subBomDetails
-              const subMaterials = subBom.bom_raw_materials || subBom.rawMaterials || []
-              const operations = subBom.bom_operations || subBom.operations || []
-
-              subMaterials.forEach(subMat => {
-                nestedMaterials.push({
-                  parent_code: itemCode,
-                  parent_name: itemName,
-                  parent_bom_id: matchingBom.bom_id,
-                  item_code: subMat.item_code || subMat.component_code,
-                  item_name: subMat.item_name || subMat.component_description,
-                  item_group: subMat.item_group || 'N/A',
-                  qty: subMat.qty || subMat.quantity || 1,
-                  operations_qty: operations.length > 0 ? operations.reduce((sum, op) => sum + (op.operation_time || op.time || 0), 0) : 0,
-                  operations_count: operations.length
-                })
-              })
-            }
-          }
+        } else {
+          console.warn('Failed to fetch BOM list')
         }
       }
+      console.log('Available BOMs:', bomList)
+
+      for (const material of bomLines) {
+        const itemCode = (material.item_code || material.component_code || '').trim()
+        const itemName = material.item_name || material.component_description || ''
+        
+        if (!itemCode) continue
+
+        const matchingBom = bomList.find(b => {
+          const bomItemCode = (b.item_code || b.product_code || '').trim()
+          return bomItemCode.toLowerCase() === itemCode.toLowerCase()
+        })
+
+        if (matchingBom) {
+          console.log(`Found matching BOM for ${itemCode}:`, matchingBom)
+          
+          const subBomDetailsResponse = await fetch(
+            `${import.meta.env.VITE_API_URL}/production/boms/${matchingBom.bom_id}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          )
+
+          if (!subBomDetailsResponse.ok) {
+            console.warn(`Failed to fetch sub-BOM ${matchingBom.bom_id}`)
+            continue
+          }
+
+          const subBomDetails = await subBomDetailsResponse.json()
+          const subBom = subBomDetails.data || subBomDetails
+          console.log(`Sub-BOM details for ${itemCode}:`, subBom)
+          
+          const subMaterials = subBom.rawMaterials || subBom.bom_raw_materials || []
+          const operations = subBom.operations || subBom.bom_operations || []
+
+          subMaterials.forEach(subMat => {
+            if (subMat.item_group === 'Consumable') return
+            
+            const subBomQty = subMat.qty || subMat.quantity || 1
+            const parentBomQty = material.qty || material.quantity || 1
+            const actualQty = subBomQty * parentBomQty * salesOrderQuantity
+            nestedMaterials.push({
+              parent_code: itemCode,
+              parent_name: itemName,
+              parent_bom_id: matchingBom.bom_id,
+              item_code: subMat.item_code || subMat.component_code,
+              item_name: subMat.item_name || subMat.component_description,
+              item_group: subMat.item_group || 'N/A',
+              qty: actualQty,
+              bom_qty: subBomQty,
+              parent_bom_qty: parentBomQty,
+              operations_qty: operations.length > 0 ? operations.reduce((sum, op) => sum + (op.operation_time || op.time || 0), 0) : 0,
+              operations_count: operations.length
+            })
+          })
+        } else {
+          console.warn(`No matching BOM found for item code: ${itemCode}`)
+        }
+      }
+
+      console.log('Nested materials collected:', nestedMaterials)
 
       setNestedMaterialsData(prev => ({
         ...prev,
@@ -529,32 +568,42 @@ export default function ProductionPlanningForm() {
     try {
       const token = localStorage.getItem('token')
       
-      const bomListResponse = await fetch(`${import.meta.env.VITE_API_URL}/production/boms?limit=1000`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-
-      let bomList = []
-      if (bomListResponse.ok) {
-        const bomListData = await bomListResponse.json()
-        bomList = bomListData.data || []
+      let bomList = boms && boms.length > 0 ? boms : []
+      if (bomList.length === 0) {
+        const bomListResponse = await fetch(`${import.meta.env.VITE_API_URL}/production/boms?limit=1000`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (bomListResponse.ok) {
+          const bomListData = await bomListResponse.json()
+          bomList = bomListData.data || []
+        } else {
+          console.warn('Failed to fetch BOM list for material operations')
+        }
       }
 
-      const matchingBom = bomList.find(b =>
-        (b.item_code || b.product_code || '').trim() === materialItemCode.trim()
-      )
+      const matchingBom = bomList.find(b => {
+        const bomItemCode = (b.item_code || b.product_code || '').trim()
+        return bomItemCode.toLowerCase() === materialItemCode.trim().toLowerCase()
+      })
 
       let operations = []
       if (matchingBom) {
+        console.log(`Found matching BOM for material ${materialItemCode}:`, matchingBom)
         const bomDetailsResponse = await fetch(
           `${import.meta.env.VITE_API_URL}/production/boms/${matchingBom.bom_id}`,
           { headers: { 'Authorization': `Bearer ${token}` } }
         )
 
-        if (bomDetailsResponse.ok) {
+        if (!bomDetailsResponse.ok) {
+          console.warn(`Failed to fetch BOM ${matchingBom.bom_id}`)
+        } else {
           const bomDetails = await bomDetailsResponse.json()
           const bom = bomDetails.data || bomDetails
-          operations = bom.bom_operations || bom.operations || []
+          operations = bom.operations || bom.bom_operations || []
+          console.log(`Operations for ${materialItemCode}:`, operations)
         }
+      } else {
+        console.warn(`No matching BOM found for material: ${materialItemCode}`)
       }
 
       setMaterialOperationsData(prev => ({
@@ -590,10 +639,13 @@ export default function ProductionPlanningForm() {
       )
 
       let operations = []
-      if (bomDetailsResponse.ok) {
+      if (!bomDetailsResponse.ok) {
+        console.warn(`Failed to fetch BOM ${bomId}`)
+      } else {
         const bomDetails = await bomDetailsResponse.json()
         const bom = bomDetails.data || bomDetails
-        operations = bom.bom_operations || bom.operations || []
+        operations = bom.operations || bom.bom_operations || []
+        console.log(`Fetched operations for BOM ${bomId}:`, operations)
       }
 
       setBomOperationsData(prev => ({
@@ -637,7 +689,7 @@ export default function ProductionPlanningForm() {
       for (const subAsm of uniqueSubAssemblies) {
         const woPayload = {
           item_code: subAsm.item_code,
-          quantity: 1,
+          quantity: salesOrderQuantity,
           bom_no: subAsm.bom_id,
           priority: 'medium',
           notes: `Sub-assembly for production plan ${planHeader.plan_id}`,
@@ -676,7 +728,7 @@ export default function ProductionPlanningForm() {
         
         const fgWoPayload = {
           item_code: fgItem.item_code,
-          quantity: fgItem.qty || 1,
+          quantity: salesOrderQuantity,
           bom_no: selectedBomId || null,
           priority: 'high',
           notes: `Finished good for production plan ${planHeader.plan_id}`,
@@ -724,79 +776,97 @@ export default function ProductionPlanningForm() {
   }
 
   const fetchSubAssemblyBomMaterials = async () => {
+    console.log('=== fetchSubAssemblyBomMaterials CALLED ===')
+    console.log('rawMaterialItems:', rawMaterialItems)
+    console.log('salesOrderQuantity:', salesOrderQuantity)
     try {
       setFetchingSubAssemblyBoms(true)
       const token = localStorage.getItem('token')
+      console.log('Token retrieved:', !!token)
       
       if (rawMaterialItems.length === 0) {
+        console.warn('No raw material items found, returning early')
         alert('No raw material items found')
         return
       }
 
       const allMaterials = []
-      
-      const bomResponse = await fetch(`${import.meta.env.VITE_API_URL}/production/boms?limit=1000`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      
-      let bomList = []
-      if (bomResponse.ok) {
-        const bomListData = await bomResponse.json()
-        bomList = bomListData.data || []
-      }
+      console.log('Processing raw materials with their BOMs...')
       
       for (const rawMat of rawMaterialItems) {
         const itemCode = rawMat.item_code
+        const bomId = rawMat.bom_id
+        console.log(`Processing raw material: ${itemCode}, BOM ID: ${bomId}`)
+        
+        if (!bomId) {
+          console.warn(`No BOM ID found for ${itemCode}`)
+          continue
+        }
         
         try {
-          const matchingBom = bomList.find(b => 
-            (b.item_code || b.product_code || '').trim() === itemCode.trim()
+          console.log(`Fetching BOM details for ${bomId}...`)
+          const bomDetailsResponse = await fetch(
+            `${import.meta.env.VITE_API_URL}/production/boms/${bomId}`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
           )
+          console.log(`BOM details response status: ${bomDetailsResponse.status}`)
           
-          if (matchingBom) {
-            const bomDetailsResponse = await fetch(
-              `${import.meta.env.VITE_API_URL}/production/boms/${matchingBom.bom_id}`,
-              { headers: { 'Authorization': `Bearer ${token}` } }
-            )
+          if (bomDetailsResponse.ok) {
+            const bomDetails = await bomDetailsResponse.json()
+            const bom = bomDetails.data || bomDetails
+            console.log(`BOM details for ${itemCode}:`, bom)
             
-            if (bomDetailsResponse.ok) {
-              const bomDetails = await bomDetailsResponse.json()
-              const bom = bomDetails.data || bomDetails
+            const materials = bom.bom_raw_materials || bom.rawMaterials || bom.lines || []
+            const operations = bom.bom_operations || bom.operations || []
+            console.log(`Materials found: ${materials.length}, Operations found: ${operations.length}`)
+            
+            materials.forEach(material => {
+              if (material.item_group === 'Consumable') {
+                console.log(`Skipping consumable: ${material.item_code}`)
+                return
+              }
               
-              const materials = bom.bom_raw_materials || bom.rawMaterials || []
-              const operations = bom.bom_operations || bom.operations || []
-              
-              materials.forEach(material => {
-                allMaterials.push({
-                  bom_id: matchingBom.bom_id,
-                  sub_assembly_code: itemCode,
-                  sub_assembly_name: rawMat.item_name,
-                  item_code: material.item_code || material.component_code,
-                  item_name: material.item_name || material.component_description,
-                  item_group: material.item_group || 'N/A',
-                  qty: material.qty || material.quantity || 1,
-                  operations_qty: operations.length > 0 ? operations.reduce((sum, op) => sum + (op.operation_time || op.time || 0), 0) : 0,
-                  operations_count: operations.length,
-                  operations: operations
-                })
+              const bomQty = material.qty || material.quantity || 1
+              const actualQty = bomQty * salesOrderQuantity
+              console.log(`Adding material: ${material.item_code}, BOM qty: ${bomQty}, Actual qty: ${actualQty}`)
+              allMaterials.push({
+                bom_id: bomId,
+                sub_assembly_code: itemCode,
+                sub_assembly_name: rawMat.item_name,
+                item_code: material.item_code || material.component_code,
+                item_name: material.item_name || material.component_description,
+                item_group: material.item_group || 'N/A',
+                qty: actualQty,
+                bom_qty: bomQty,
+                operations_qty: operations.length > 0 ? operations.reduce((sum, op) => sum + (op.operation_time || op.time || 0), 0) : 0,
+                operations_count: operations.length,
+                operations: operations
               })
-            }
+            })
+          } else {
+            console.warn(`Failed to fetch BOM details: ${bomDetailsResponse.status}`)
           }
         } catch (err) {
           console.error(`Error fetching BOM for ${itemCode}:`, err)
         }
       }
       
+      console.log('All materials collected:', allMaterials.length)
+      console.log('All materials data:', allMaterials)
       setSubAssemblyBomMaterials(allMaterials)
+      console.log('State updated with sub-assembly materials')
       
       if (allMaterials.length > 0) {
+        console.log('Expanding section 3.5 and fetching operations...')
         setExpandedSections(prev => ({ ...prev, 3.5: true }))
         
         const uniqueBomIds = new Set(allMaterials.map(m => m.bom_id))
+        console.log('Unique BOM IDs to fetch operations for:', Array.from(uniqueBomIds))
         const bomOpsData = {}
         const expandedOpsState = {}
         
         for (const bomId of uniqueBomIds) {
+          console.log(`Processing operations for BOM ${bomId}...`)
           try {
             const bomDetailsResponse = await fetch(
               `${import.meta.env.VITE_API_URL}/production/boms/${bomId}`,
@@ -820,9 +890,13 @@ export default function ProductionPlanningForm() {
         setExpandedBomOps(prev => ({ ...prev, ...expandedOpsState }))
       }
     } catch (err) {
-      console.error('Error fetching sub-assembly BOM materials:', err)
-      alert('Failed to fetch sub-assembly BOM materials')
+      console.error('=== ERROR in fetchSubAssemblyBomMaterials ===')
+      console.error('Error details:', err)
+      console.error('Error message:', err.message)
+      console.error('Error stack:', err.stack)
+      alert('Failed to fetch sub-assembly BOM materials: ' + err.message)
     } finally {
+      console.log('=== fetchSubAssemblyBomMaterials COMPLETED ===')
       setFetchingSubAssemblyBoms(false)
     }
   }
@@ -1104,7 +1178,7 @@ export default function ProductionPlanningForm() {
 
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-3">
-      <div className="max-w-6xl mx-auto">
+      <div className="w-full mx-auto">
         {/* Header */}
         <div className="mb-3">
           <button 
@@ -1162,6 +1236,21 @@ export default function ProductionPlanningForm() {
             {success}
           </div>
         )}
+
+        {/* DEBUG PANEL */}
+        <div className="bg-red-50 border border-red-300 rounded p-3 mb-3">
+          <p className="text-xs font-bold text-red-700">DEBUG INFO:</p>
+          <p className="text-xs text-red-600">rawMaterialItems: {rawMaterialItems.length}</p>
+          <p className="text-xs text-red-600">salesOrderQuantity: {salesOrderQuantity}</p>
+          <p className="text-xs text-red-600">selectedSalesOrders: {selectedSalesOrders.length}</p>
+          <button
+            type="button"
+            onClick={() => console.log('Test button clicked! rawMaterialItems:', rawMaterialItems)}
+            className="mt-2 px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+          >
+            Test Console Log
+          </button>
+        </div>
 
         {/* Section 0: Plan Header */}
         <div className="bg-white rounded shadow mb-3">
@@ -1369,7 +1458,9 @@ export default function ProductionPlanningForm() {
                 <button
                   type="button"
                   onClick={(e) => {
+                    console.log('Get Sub-Asm Materials button clicked!')
                     e.stopPropagation()
+                    console.log('About to call fetchSubAssemblyBomMaterials...')
                     fetchSubAssemblyBomMaterials()
                   }}
                   disabled={fetchingSubAssemblyBoms}
@@ -1425,6 +1516,21 @@ export default function ProductionPlanningForm() {
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
+                    const uniqueBomIds = new Set(subAssemblyBomMaterials.map(m => `${m.sub_assembly_code}-${m.bom_id}`))
+                    uniqueBomIds.forEach(key => {
+                      const [code, bomId] = key.split('-')
+                      fetchNestedMaterialDetails(code, bomId)
+                    })
+                  }}
+                  className="px-3 py-1.5 bg-purple-500 hover:bg-purple-600 text-white text-xs font-semibold rounded transition"
+                  title="Fetch all sub-assembly nested materials details"
+                >
+                  📥 Fetch All Details
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
                     createWorkOrders()
                   }}
                   disabled={creatingWorkOrders}
@@ -1439,6 +1545,14 @@ export default function ProductionPlanningForm() {
 
             {expandedSections[3.5] && (
               <div className="px-4 py-3 border-t border-gray-200 space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded p-2 mb-2">
+                  <p className="text-xs text-blue-800"><strong>📋 How to use:</strong></p>
+                  <ul className="text-xs text-blue-700 mt-1 space-y-0.5">
+                    <li>• Click <strong>"Fetch All Details"</strong> button to load all nested materials for each sub-assembly</li>
+                    <li>• Click item code to expand <strong>operations</strong> for that item</li>
+                    <li>• Click <strong>ops count</strong> number to expand <strong>nested raw materials</strong> from sub-BOM</li>
+                  </ul>
+                </div>
                 {Array.from(new Set(subAssemblyBomMaterials.map(m => m.sub_assembly_code))).map((subAsmCode) => {
                   const subAsmMaterials = subAssemblyBomMaterials.filter(m => m.sub_assembly_code === subAsmCode)
                   const subAsmInfo = subAsmMaterials[0]
@@ -1461,12 +1575,12 @@ export default function ProductionPlanningForm() {
                         <table className="w-full text-xs">
                           <thead className="bg-cyan-100 border-b border-cyan-300">
                             <tr>
-                              <th className="px-2 py-1 text-left font-semibold text-gray-700">Item Code</th>
+                              <th className="px-2 py-1 text-left font-semibold text-gray-700">Item Code <span className="text-xs text-gray-600">(click to expand ops)</span></th>
                               <th className="px-2 py-1 text-left font-semibold text-gray-700">Item Name</th>
                               <th className="px-2 py-1 text-left font-semibold text-gray-700">Item Group</th>
                               <th className="px-2 py-1 text-right font-semibold text-gray-700">Qty</th>
                               <th className="px-2 py-1 text-right font-semibold text-gray-700">Operations Hours</th>
-                              <th className="px-2 py-1 text-right font-semibold text-gray-700">Ops Count</th>
+                              <th className="px-2 py-1 text-right font-semibold text-gray-700">Ops Count <span className="text-xs text-gray-600">(click to fetch materials)</span></th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1515,6 +1629,7 @@ export default function ProductionPlanningForm() {
                                               <tr>
                                                 <th className="px-2 py-1 text-left font-semibold text-gray-700">Operation</th>
                                                 <th className="px-2 py-1 text-left font-semibold text-gray-700">Workstation</th>
+                                                <th className="px-2 py-1 text-left font-semibold text-gray-700">Type</th>
                                                 <th className="px-2 py-1 text-right font-semibold text-gray-700">Time (hrs)</th>
                                                 <th className="px-2 py-1 text-right font-semibold text-gray-700">Sequence</th>
                                               </tr>
@@ -1524,6 +1639,11 @@ export default function ProductionPlanningForm() {
                                                 <tr key={opIdx} className={opIdx % 2 === 0 ? 'bg-white' : 'bg-yellow-50'}>
                                                   <td className="px-2 py-1 font-medium text-gray-900">{op.operation_name || op.operation || 'N/A'}</td>
                                                   <td className="px-2 py-1 text-gray-700">{op.workstation_id || op.workstation || 'N/A'}</td>
+                                                  <td className="px-2 py-1 text-xs">
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${(op.operation_type || 'IN_HOUSE') === 'OUTSOURCED' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`}>
+                                                      {(op.operation_type || 'IN_HOUSE') === 'OUTSOURCED' ? 'Outsourced' : 'In-House'}
+                                                    </span>
+                                                  </td>
                                                   <td className="px-2 py-1 text-right font-bold text-blue-600">{(Number(op.operation_time || op.time || 0)).toFixed(2)}</td>
                                                   <td className="px-2 py-1 text-right font-bold text-gray-900">{op.sequence || op.seq || op.operation_sequence || '-'}</td>
                                                 </tr>
@@ -1589,6 +1709,7 @@ export default function ProductionPlanningForm() {
                                                                 <tr>
                                                                   <th className="px-2 py-1 text-left font-semibold text-gray-700">Operation</th>
                                                                   <th className="px-2 py-1 text-left font-semibold text-gray-700">Workstation</th>
+                                                                  <th className="px-2 py-1 text-left font-semibold text-gray-700">Type</th>
                                                                   <th className="px-2 py-1 text-right font-semibold text-gray-700">Time (hrs)</th>
                                                                   <th className="px-2 py-1 text-right font-semibold text-gray-700">Sequence</th>
                                                                 </tr>
@@ -1598,6 +1719,11 @@ export default function ProductionPlanningForm() {
                                                                   <tr key={opIdx} className={opIdx % 2 === 0 ? 'bg-white' : 'bg-purple-50'}>
                                                                     <td className="px-2 py-1 font-medium text-gray-900">{op.operation_name || op.operation || 'N/A'}</td>
                                                                     <td className="px-2 py-1 text-gray-700">{op.workstation_id || op.workstation || 'N/A'}</td>
+                                                                    <td className="px-2 py-1 text-xs">
+                                                                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${(op.operation_type || 'IN_HOUSE') === 'OUTSOURCED' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`}>
+                                                                        {(op.operation_type || 'IN_HOUSE') === 'OUTSOURCED' ? 'Outsourced' : 'In-House'}
+                                                                      </span>
+                                                                    </td>
                                                                     <td className="px-2 py-1 text-right font-bold text-blue-600">{(Number(op.operation_time || op.time || 0)).toFixed(2)}</td>
                                                                     <td className="px-2 py-1 text-right font-bold text-gray-900">{op.sequence || op.seq || op.operation_sequence || '-'}</td>
                                                                   </tr>
@@ -1635,6 +1761,7 @@ export default function ProductionPlanningForm() {
                                 <tr>
                                   <th className="px-2 py-1 text-left font-semibold text-gray-700">Operation</th>
                                   <th className="px-2 py-1 text-left font-semibold text-gray-700">Workstation</th>
+                                  <th className="px-2 py-1 text-left font-semibold text-gray-700">Type</th>
                                   <th className="px-2 py-1 text-right font-semibold text-gray-700">Time (hrs)</th>
                                   <th className="px-2 py-1 text-right font-semibold text-gray-700">Sequence</th>
                                 </tr>
@@ -1644,6 +1771,11 @@ export default function ProductionPlanningForm() {
                                   <tr key={opIdx} className={opIdx % 2 === 0 ? 'bg-white' : 'bg-orange-50'}>
                                     <td className="px-2 py-1 font-medium text-gray-900">{op.operation_name || op.operation || 'N/A'}</td>
                                     <td className="px-2 py-1 text-gray-700">{op.workstation_id || op.workstation || 'N/A'}</td>
+                                    <td className="px-2 py-1 text-xs">
+                                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${(op.operation_type || 'IN_HOUSE') === 'OUTSOURCED' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`}>
+                                        {(op.operation_type || 'IN_HOUSE') === 'OUTSOURCED' ? 'Outsourced' : 'In-House'}
+                                      </span>
+                                    </td>
                                     <td className="px-2 py-1 text-right font-bold text-blue-600">{(Number(op.operation_time || op.time || 0)).toFixed(2)}</td>
                                     <td className="px-2 py-1 text-right font-bold text-gray-900">{op.sequence || op.seq || op.operation_sequence || '-'}</td>
                                   </tr>
@@ -1771,11 +1903,16 @@ export default function ProductionPlanningForm() {
                       setError('Please select a sales order')
                       return
                     }
-                    await prepareWorkOrderData()
+                    if (subAssemblyBomMaterials.length > 0) {
+                      await createWorkOrders()
+                    } else {
+                      await prepareWorkOrderData()
+                    }
                   }}
-                  className="px-3 py-1.5 bg-orange-600 text-white rounded text-sm font-medium hover:bg-orange-700 transition flex items-center gap-2"
+                  className="px-3 py-1.5 bg-orange-600 text-white rounded text-sm font-medium hover:bg-orange-700 transition flex items-center gap-2 disabled:bg-gray-400"
+                  disabled={creatingWorkOrders}
                 >
-                  <Zap size={16} /> Create Work Order
+                  <Zap size={16} /> {creatingWorkOrders ? 'Creating...' : 'Create Work Order'}
                 </button>
               </>
             )}

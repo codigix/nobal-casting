@@ -261,7 +261,7 @@ export default function CustomerStatistics() {
   return (
     <div className="p-0 bg-slate-50 min-h-screen">
       <div className="bg-gradient-to-br from-white to-slate-100 px-2 py-2 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-6xl mx-auto">
+        <div className="w-full mx-auto">
           <div className="flex items-center gap-4 mb-2">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-white text-xl">
               📊
@@ -278,7 +278,7 @@ export default function CustomerStatistics() {
         </div>
       </div>
 
-      <div className="p-3 max-w-6xl mx-auto">
+      <div className="p-3 w-full mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 shadow-md border border-yellow-200 relative overflow-hidden">
             <div className="absolute -top-5 -right-5 opacity-5 text-8xl">

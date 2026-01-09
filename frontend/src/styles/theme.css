@@ -274,7 +274,6 @@ input, textarea, select {
   color: var(--input-text);
   background-color: var(--input-bg);
   border: 1px solid var(--input-border);
-  border-radius: var(--radius-md);
   padding: var(--spacing-2) var(--spacing-3);
   transition: all var(--transition-base);
 }

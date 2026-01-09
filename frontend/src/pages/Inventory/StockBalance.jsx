@@ -28,6 +28,15 @@ export default function StockBalance() {
     fetchStockBalance()
   }, [warehouseFilter])
 
+  useEffect(() => {
+    const handleMaterialRequestApproved = () => {
+      fetchStockBalance()
+    }
+    
+    window.addEventListener('materialRequestApproved', handleMaterialRequestApproved)
+    return () => window.removeEventListener('materialRequestApproved', handleMaterialRequestApproved)
+  }, [warehouseFilter])
+
   const fetchWarehouses = async () => {
     try {
       const response = await api.get('/stock/warehouses')
@@ -115,13 +124,28 @@ export default function StockBalance() {
     { key: 'uom', label: 'UOM' },
     {
       key: 'available_qty',
-      label: 'Balance Qty',
+      label: 'Available Qty',
+      render: (value) => <strong>{Number(value || 0).toFixed(2)}</strong>
+    },
+    {
+      key: 'reserved_qty',
+      label: 'Reserved Qty',
       render: (value) => Number(value || 0).toFixed(2)
     },
     {
       key: 'total_value',
-      label: 'Balance Value',
+      label: 'Total Value',
       render: (value) => `₹${Number(value || 0).toFixed(2)}`
+    },
+    {
+      key: 'last_receipt_date',
+      label: 'Last Receipt',
+      render: (value) => value ? new Date(value).toLocaleDateString() : '-'
+    },
+    {
+      key: 'last_issue_date',
+      label: 'Last Issue',
+      render: (value) => value ? new Date(value).toLocaleDateString() : '-'
     },
     {
       key: 'opening_qty',
@@ -157,11 +181,6 @@ export default function StockBalance() {
       key: 'valuation_rate',
       label: 'Valuation Rate',
       render: (value) => `₹${Number(value || 0).toFixed(4)}`
-    },
-    {
-      key: 'reserved_qty',
-      label: 'Reserved Stock',
-      render: (value) => Number(value || 0).toFixed(2)
     },
     {
       key: 'stock_status',
@@ -374,16 +393,32 @@ export default function StockBalance() {
                       <p className="text-sm font-bold text-neutral-900 dark:text-white">{Number(stock.current_qty || 0).toFixed(2)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">UOM</p>
-                      <p className="text-xs font-semibold  text-neutral-900 dark:text-white">{stock.uom || '-'}</p>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Available Qty</p>
+                      <p className="text-sm font-bold text-green-600 dark:text-green-400">{Number(stock.available_qty || 0).toFixed(2)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Balance Value</p>
-                      <p className="text-xs font-semibold  text-neutral-900 dark:text-white">₹{Number(stock.total_value || 0).toFixed(2)}</p>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Reserved Qty</p>
+                      <p className="text-xs font-semibold text-neutral-900 dark:text-white">{Number(stock.reserved_qty || 0).toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">UOM</p>
+                      <p className="text-xs font-semibold text-neutral-900 dark:text-white">{stock.uom || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Total Value</p>
+                      <p className="text-xs font-semibold text-neutral-900 dark:text-white">₹{Number(stock.total_value || 0).toFixed(2)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Valuation Rate</p>
-                      <p className="text-xs font-semibold  text-neutral-900 dark:text-white">₹{Number(stock.valuation_rate || 0).toFixed(4)}</p>
+                      <p className="text-xs font-semibold text-neutral-900 dark:text-white">₹{Number(stock.valuation_rate || 0).toFixed(4)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Last Receipt</p>
+                      <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{stock.last_receipt_date ? new Date(stock.last_receipt_date).toLocaleDateString() : '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Last Issue</p>
+                      <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{stock.last_issue_date ? new Date(stock.last_issue_date).toLocaleDateString() : '-'}</p>
                     </div>
                     <div>
                       <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Warehouse</p>

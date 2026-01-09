@@ -14,8 +14,19 @@ export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
     setError(null)
 
     try {
+      const approvedItems = (grn.items || []).filter(item => item.accepted_qty > 0).map(item => ({
+        id: item.id,
+        accepted_qty: parseFloat(item.accepted_qty || 0),
+        rejected_qty: parseFloat(item.rejected_qty || 0),
+        warehouse_name: item.warehouse_name || 'Main Warehouse',
+        valuation_rate: parseFloat(item.valuation_rate || item.rate || 0),
+        qc_status: item.qc_status || 'pass',
+        bin_rack: item.bin_rack || null
+      }))
+
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/grn-requests/${grn.id}/inventory-approve`
+        `${import.meta.env.VITE_API_URL}/grn-requests/${grn.id}/inventory-approve`,
+        { approvedItems }
       )
 
       if (response.data.success) {
@@ -24,15 +35,16 @@ export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
         setError(response.data.error || 'Failed to approve GRN')
       }
     } catch (err) {
+      console.error('Inventory approval error:', err)
       setError(err.response?.data?.error || 'Error approving GRN')
     } finally {
       setLoading(false)
     }
   }
 
-  const acceptedItems = grn.items?.filter(item => item.accepted_qty > 0) || []
-  const totalAccepted = acceptedItems.reduce((sum, item) => sum + (item.accepted_qty || 0), 0)
-  const totalRejected = grn.items?.reduce((sum, item) => sum + (item.rejected_qty || 0), 0) || 0
+  const acceptedItems = grn.items?.filter(item => parseFloat(item.accepted_qty || 0) > 0) || []
+  const totalAccepted = acceptedItems.reduce((sum, item) => sum + (parseFloat(item.accepted_qty) || 0), 0)
+  const totalRejected = grn.items?.reduce((sum, item) => sum + (parseFloat(item.rejected_qty) || 0), 0) || 0
 
   return (
     <Modal 

@@ -67,9 +67,9 @@
   }
 
   // Create stock ledger entry
-  static async create(data) {
+  static async create(data, dbConnection = null) {
     try {
-      const db = this.getDb()
+      const db = dbConnection || this.getDb()
       const {
         item_code,
         warehouse_id,

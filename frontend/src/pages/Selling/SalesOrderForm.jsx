@@ -741,52 +741,73 @@ export default function SalesOrderForm() {
   }
 
   return (
-    <div className="max-w-full m-8 p-0">
-      <Card>
-        <div className="mb-6 pb-4 border-b-2 border-gray-200 flex items-center justify-between">
-          <div>
-            <h2 className="m-0 text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <span className="text-blue-600">📋</span>
-              {isReadOnly ? 'View Sales Order' : isEditMode ? 'Edit Sales Order' : 'New Sales Order'}
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">{isReadOnly ? 'Review order details' : 'Create and manage sales orders'}</p>
-          </div>
-        </div>
-
-        {error && <Alert variant="danger">{error}</Alert>}
-        {success && <Alert variant="success">{success}</Alert>}
-
-        <form onSubmit={(e) => e.preventDefault()}>
-          <div className="mb-6">
-            <div className="flex gap-1 overflow-x-auto ">
-              {tabs.map((tab, idx) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTabIndex(idx)}
-                  className={`p-2 text-sm font-semibold cursor-pointer  transition-all whitespace-nowrap ${activeTabIndex === idx
-                      ? 'bg-white text-blue-700  border-b-2 border-blue-200'
-                      : 'text-gray-600 hover:text-gray-700 hover:bg-white hover:bg-opacity-50'
-                    }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+    <div className="min-h-screen bg-gray-50">
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-2.5 bg-blue-100 rounded-lg">
+              <span className="text-xl">📋</span>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {isReadOnly ? 'Sales Order Details' : isEditMode ? 'Edit Sales Order' : 'New Sales Order'}
+              </h1>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {isReadOnly ? 'View and manage order information' : 'Create and configure sales orders'}
+              </p>
             </div>
           </div>
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <Card>
+          {error && <Alert variant="danger">{error}</Alert>}
+          {success && <Alert variant="success">{success}</Alert>}
+
+          <form onSubmit={(e) => e.preventDefault()}>
+            <div className="mb-8">
+              <div className="border-b border-gray-200">
+                <div className="flex gap-8 overflow-x-auto">
+                  {tabs.map((tab, idx) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveTabIndex(idx)}
+                      className={`py-4 px-1 text-sm font-semibold whitespace-nowrap transition-all border-b-2 ${
+                        activeTabIndex === idx
+                          ? 'text-blue-600 border-blue-600'
+                          : 'text-gray-600 border-transparent hover:text-gray-900 hover:border-gray-300'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
 
           {currentTab.id === 'basicDetails' && (
             <div className="space-y-6">
-              <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-xs">
-                <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <div className="w-1 h-5 bg-blue-600 rounded-full"></div>
-                  Order Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100">
+                  <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                    <span className="text-lg">📅</span>
+                    Order Information
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="flex flex-col">
-                    <label className="text-xs font-semibold text-gray-700 mb-2">Series</label>
+                    <label className="text-sm font-semibold text-gray-700 mb-2">Series</label>
                     <input
-                      className="p-2 text-sm border border-gray-300 rounded bg-gray-50 text-gray-600 cursor-not-allowed text-xs"
+                      className="p-2 text-sm border border-gray-300  bg-gray-50 text-gray-600 cursor-not-allowed focus:outline-none"
                       type="text"
                       name="series"
                       value={formData.series || 'Auto-generated'}
@@ -795,9 +816,9 @@ export default function SalesOrderForm() {
                     />
                   </div>
                   <div className="flex flex-col">
-                    <label className="text-xs font-semibold text-gray-700 mb-2">Order Date *</label>
+                    <label className="text-sm font-semibold text-gray-700 mb-2">Order Date *</label>
                     <input
-                      className={`p-2 text-xs border border-gray-300ed focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
+                      className={`p-2 text-sm border border-gray-300 rounded-0 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
                       type="date"
                       name="date"
                       value={formData.date}
@@ -807,9 +828,9 @@ export default function SalesOrderForm() {
                     />
                   </div>
                   <div className="flex flex-col">
-                    <label className="text-xs font-semibold text-gray-700 mb-2">Delivery Date</label>
+                    <label className="text-sm font-semibold text-gray-700 mb-2">Delivery Date</label>
                     <input
-                      className={`p-2 text-xs border border-gray-300ed focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
+                      className={`p-2 text-sm border border-gray-300 rounded-0 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
                       type="date"
                       name="delivery_date"
                       value={formData.delivery_date}
@@ -818,110 +839,123 @@ export default function SalesOrderForm() {
                     />
                   </div>
                   <div className="flex flex-col">
-                    <label className="text-xs font-semibold text-gray-700 mb-2">Order Type</label>
-                    <select className={`p-2 text-xs border border-gray-300ed focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`} name="order_type" value={formData.order_type} onChange={handleChange} disabled={isReadOnly}>
+                    <label className="text-sm font-semibold text-gray-700 mb-2">Order Type</label>
+                    <select className={`p-2 text-sm border border-gray-300 rounded-0 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`} name="order_type" value={formData.order_type} onChange={handleChange} disabled={isReadOnly}>
                       <option value="Sales">Sales</option>
                       <option value="Purchase">Purchase</option>
                     </select>
                   </div>
-                </div>
+                    </div>
+                  </div>
               </div>
 
-              <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-xs">
-                <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <div className="w-1 h-5 bg-amber-600 rounded-full"></div>
-                  Customer Details
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="md:col-span-2 flex flex-col">
-                    <label className="text-xs font-semibold text-gray-700 mb-2">Customer *</label>
-                    <SearchableSelect
-                      value={formData.customer_id}
-                      onChange={(val) => handleCustomerChange(val)}
-                      options={customers.filter(c => c && c.customer_id && c.customer_name).map(c => ({ label: c.customer_name, value: c.customer_id }))}
-                      placeholder="Search customer..."
-                      disabled={isReadOnly}
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-xs font-semibold text-gray-700 mb-2">Email</label>
-                    <input
-                      className="p-2 text-sm border border-gray-300 rounded bg-gray-50 text-gray-600 cursor-not-allowed text-xs"
-                      type="email"
-                      value={formData.customer_email}
-                      disabled
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-xs font-semibold text-gray-700 mb-2">Phone</label>
-                    <input
-                      className="p-2 text-sm border border-gray-300 rounded bg-gray-50 text-gray-600 cursor-not-allowed text-xs"
-                      type="text"
-                      value={formData.customer_phone}
-                      disabled
-                    />
-                  </div>
+              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-amber-100">
+                  <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                    <span className="text-lg">👥</span>
+                    Customer Details
+                  </h3>
                 </div>
-              </div>
-
-              <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-xs">
-                <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <div className="w-1 h-5 bg-green-600 rounded-full"></div>
-                  BOM & Inventory
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="md:col-span-2 flex flex-col">
-                    <label className="text-xs font-semibold text-gray-700 mb-2">Select BOM *</label>
-                    <SearchableSelect
-                      value={formData.bom_id}
-                      onChange={(val) => handleBomChange(val)}
-                      options={boms}
-                      placeholder="Search BOM..."
-                      disabled={isReadOnly}
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-xs font-semibold text-gray-700 mb-2">Order Quantity *</label>
-                    <input
-                      className={`p-2 text-xs border border-gray-300ed focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
-                      type="number"
-                      name="quantity"
-                      value={formData.qty === '' ? '' : parseFloat(formData.qty) || ''}
-                      onChange={handleQuantityChange}
-                      min="1"
-                      step="0.01"
-                      disabled={isReadOnly}
-                      placeholder="Qty"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-xs font-semibold text-gray-700 mb-2">Warehouse</label>
-                    <SearchableSelect
-                      value={formData.source_warehouse}
-                      onChange={(val) => setFormData({ ...formData, source_warehouse: val })}
-                      options={warehouses}
-                      placeholder="Select warehouse..."
-                      disabled={isReadOnly}
-                    />
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="lg:col-span-2 flex flex-col">
+                      <label className="text-sm font-semibold text-gray-700 mb-2">Customer *</label>
+                      <SearchableSelect
+                        value={formData.customer_id}
+                        onChange={(val) => handleCustomerChange(val)}
+                        options={customers.filter(c => c && c.customer_id && c.customer_name).map(c => ({ label: c.customer_name, value: c.customer_id }))}
+                        placeholder="Search customer..."
+                        disabled={isReadOnly}
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="text-sm font-semibold text-gray-700 mb-2">Email</label>
+                      <input
+                        className="p-2 text-sm border border-gray-300  bg-gray-50 text-gray-600 cursor-not-allowed focus:outline-none"
+                        type="email"
+                        value={formData.customer_email}
+                        disabled
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="text-sm font-semibold text-gray-700 mb-2">Phone</label>
+                      <input
+                        className="p-2 text-sm border border-gray-300  bg-gray-50 text-gray-600 cursor-not-allowed focus:outline-none"
+                        type="text"
+                        value={formData.customer_phone}
+                        disabled
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-xs">
-                <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <div className="w-1 h-5 bg-purple-600 rounded-full"></div>
-                  Order Status
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col">
-                    <label className="text-xs font-semibold text-gray-700 mb-2">Status</label>
-                    <SearchableSelect
-                      value={formData.status}
-                      onChange={(val) => handleSearchableChange('status', val)}
-                      options={statuses}
-                      placeholder="Select status..."
-                      disabled={isReadOnly}
-                    />
+              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-green-100">
+                  <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                    <span className="text-lg">📦</span>
+                    BOM & Inventory
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="lg:col-span-2 flex flex-col">
+                      <label className="text-sm font-semibold text-gray-700 mb-2">Select BOM *</label>
+                      <SearchableSelect
+                        value={formData.bom_id}
+                        onChange={(val) => handleBomChange(val)}
+                        options={boms}
+                        placeholder="Search BOM..."
+                        disabled={isReadOnly}
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="text-sm font-semibold text-gray-700 mb-2">Order Quantity *</label>
+                      <input
+                        className={`p-2 text-sm border border-gray-300 rounded-0 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
+                        type="number"
+                        name="quantity"
+                        value={formData.qty === '' ? '' : parseFloat(formData.qty) || ''}
+                        onChange={handleQuantityChange}
+                        min="1"
+                        step="0.01"
+                        disabled={isReadOnly}
+                        placeholder="Qty"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="text-sm font-semibold text-gray-700 mb-2">Warehouse</label>
+                      <SearchableSelect
+                        value={formData.source_warehouse}
+                        onChange={(val) => setFormData({ ...formData, source_warehouse: val })}
+                        options={warehouses}
+                        placeholder="Select warehouse..."
+                        disabled={isReadOnly}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-purple-100">
+                  <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                    <span className="text-lg">⚙️</span>
+                    Order Status
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex flex-col">
+                      <label className="text-sm font-semibold text-gray-700 mb-2">Status</label>
+                      <SearchableSelect
+                        value={formData.status}
+                        onChange={(val) => handleSearchableChange('status', val)}
+                        options={statuses}
+                        placeholder="Select status..."
+                        disabled={isReadOnly}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -970,12 +1004,12 @@ export default function SalesOrderForm() {
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50 border-b border-gray-200">
                           <tr>
-                            <th className="text-left p-2 font-semibold text-gray-700">Item Code</th>
-                            <th className="text-left p-2 font-semibold text-gray-700">Description</th>
-                            <th className="text-left p-2 font-semibold text-gray-700">Type</th>
-                            <th className=" p-2 font-semibold text-gray-700">Qty</th>
-                            <th className="text-left p-2 font-semibold text-gray-700">Rate</th>
-                            <th className=" p-2 font-semibold text-gray-700">Amount</th>
+                            <th className="text-left p-2 font-semibold text-gray-700 text-left">Item Code</th>
+                            <th className="text-left p-2 font-semibold text-gray-700 text-left">Description</th>
+                            <th className="text-left p-2 font-semibold text-gray-700 text-left">Type</th>
+                            <th className=" p-2 font-semibold text-gray-700 text-left">Qty</th>
+                            <th className="text-left p-2 font-semibold text-gray-700 text-left">Rate</th>
+                            <th className=" p-2 font-semibold text-gray-700 text-left">Amount</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1017,7 +1051,7 @@ export default function SalesOrderForm() {
                                   </div>
                                 )}
                               </td>
-                              <td className="p-2 text-right font-bold text-green-700">₹ {itemAmount.toFixed(2)}</td>
+                              <td className="p-2 text-left font-bold text-green-700">₹ {itemAmount.toFixed(2)}</td>
                             </tr>
                             )
                           })}
@@ -1047,14 +1081,14 @@ export default function SalesOrderForm() {
                       <table className="w-full text-sm">
                         <thead className="bg-amber-50 border-b border-amber-200">
                           <tr>
-                            <th className="text-left p-2 font-semibold text-gray-700">Item Group</th>
-                            <th className="text-left p-2 font-semibold text-gray-700">Item Code</th>
-                            <th className="text-left p-2 font-semibold text-gray-700">Item Name</th>
-                            <th className=" p-2 font-semibold text-gray-700">Qty</th>
-                            <th className="text-left p-2 font-semibold text-gray-700">UOM</th>
-                            <th className="text-left p-2 font-semibold text-gray-700">Rate</th>
-                            <th className=" p-2 font-semibold text-gray-700">Amount</th>
-                            <th className="text-left p-2 font-semibold text-gray-700">Warehouse</th>
+                            <th className="text-left p-2 font-semibold text-gray-700 text-left">Item Group</th>
+                            <th className="text-left p-2 font-semibold text-gray-700 text-left">Item Code</th>
+                            <th className="text-left p-2 font-semibold text-gray-700 text-left">Item Name</th>
+                            <th className=" p-2 font-semibold text-gray-700 text-left">Qty</th>
+                            <th className="text-left p-2 font-semibold text-gray-700 text-left">UOM</th>
+                            <th className="text-left p-2 font-semibold text-gray-700 text-left">Rate</th>
+                            <th className=" p-2 font-semibold text-gray-700 text-left">Amount</th>
+                            <th className="text-left p-2 font-semibold text-gray-700 text-left">Warehouse</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1070,7 +1104,7 @@ export default function SalesOrderForm() {
                               <td className="p-2 text-right font-medium text-gray-900">{formatQty(multipliedQty)}</td>
                               <td className="p-2 text-gray-600 text-sm">{item.uom || '-'}</td>
                               <td className="p-2 font-medium text-gray-900">₹ {parseFloat(item.rate || 0).toFixed(2)}</td>
-                              <td className="p-2 text-right font-bold text-green-700">₹ {itemAmount.toFixed(2)}</td>
+                              <td className="p-2 text-left font-bold text-green-700">₹ {itemAmount.toFixed(2)}</td>
                               <td className="p-2 text-gray-600">{item.source_warehouse || '-'}</td>
                             </tr>
                             )
@@ -1112,10 +1146,10 @@ export default function SalesOrderForm() {
                                     <tr className="border-b border-amber-200 bg-amber-50">
                                       <th className="text-left py-3 px-3 font-semibold text-gray-700">Item Code</th>
                                       <th className="text-left py-3 px-3 font-semibold text-gray-700">Item Name</th>
-                                      <th className="text-right py-3 px-3 font-semibold text-gray-700">Qty</th>
+                                      <th className=" py-3 px-3 font-semibold text-gray-700 text-left">Qty</th>
                                       <th className="text-center py-3 px-3 font-semibold text-gray-700">UOM</th>
-                                      <th className="text-right py-3 px-3 font-semibold text-gray-700">Rate (₹)</th>
-                                      <th className="text-right py-3 px-3 font-semibold text-gray-700">Amount (₹)</th>
+                                      <th className=" py-3 px-3 font-semibold text-gray-700 text-left">Rate (₹)</th>
+                                      <th className=" py-3 px-3 font-semibold text-gray-700 text-left">Amount (₹)</th>
                                       <th className="text-left py-3 px-3 font-semibold text-gray-700">Warehouse</th>
                                     </tr>
                                   </thead>
@@ -1129,7 +1163,7 @@ export default function SalesOrderForm() {
                                       <tr key={itemIdx} className="border-b border-amber-100 hover:bg-amber-50 transition">
                                         <td className="py-2.5 px-3 font-medium text-gray-900">{item.item_code || '-'}</td>
                                         <td className="py-2.5 px-3 text-gray-700">{item.item_name || '-'}</td>
-                                        <td className="py-2.5 px-3 text-right font-semibold text-gray-900">
+                                        <td className="py-2.5 px-3 text-left font-semibold text-gray-900">
                                           {isEditMode && !isReadOnly ? (
                                             <input
                                               type="number"
@@ -1143,7 +1177,7 @@ export default function SalesOrderForm() {
                                           )}
                                         </td>
                                         <td className="py-2.5 px-3 text-center text-gray-600">{item.uom || '-'}</td>
-                                        <td className="py-2.5 px-3 text-right">
+                                        <td className="py-2.5 px-3 text-left">
                                           {isEditMode && !isReadOnly ? (
                                             <input
                                               type="number"
@@ -1156,7 +1190,7 @@ export default function SalesOrderForm() {
                                             parseFloat(item.rate || 0).toFixed(2)
                                           )}
                                         </td>
-                                        <td className="py-2.5 px-3 text-right font-semibold text-green-600">₹{itemAmount.toFixed(2)}</td>
+                                        <td className="py-2.5 px-3 text-left font-semibold text-green-600">₹{itemAmount.toFixed(2)}</td>
                                         <td className="py-2.5 px-3 text-xs text-gray-500">{item.source_warehouse || '-'}</td>
                                       </tr>
                                       )
@@ -1185,16 +1219,21 @@ export default function SalesOrderForm() {
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50 border-b border-gray-200">
                           <tr>
-                            <th className="text-left p-2 font-semibold text-gray-700">Operation</th>
-                            <th className="text-left p-2 font-semibold text-gray-700">Workstation</th>
-                            <th className=" p-2 font-semibold text-gray-700">Time (Hours)</th>
-                            <th className=" p-2 font-semibold text-gray-700">Cost</th>
+                            <th className="text-left p-2 font-semibold text-gray-700 text-left">Operation</th>
+                            <th className="text-left p-2 font-semibold text-gray-700 text-left">Workstation</th>
+                            <th className=" p-2 font-semibold text-gray-700 text-left">Time (Hours)</th>
+                            <th className=" p-2 font-semibold text-gray-700 text-left">Cost</th>
                           </tr>
                         </thead>
                         <tbody>
                           {bomOperations.map((op, idx) => {
-                            const operationCostPerUnit = (parseFloat(op.operating_cost || op.cost || 0))
-                            const totalOperationCost = operationCostPerUnit * (parseFloat(formData.qty) || 1)
+                            const cycleTime = parseFloat(op.operation_time || 0)
+                            const setupTime = parseFloat(op.fixed_time || 0)
+                            const qty = parseFloat(formData.qty) || 1
+                            const totalTimeMinutes = (cycleTime * qty) + setupTime
+                            const totalTimeHours = totalTimeMinutes / 60
+                            const operationCostPerUnit = parseFloat(op.operating_cost || op.cost || 0)
+                            const totalOperationCost = operationCostPerUnit * qty
                             return (
                             <tr key={idx} className="border-b border-gray-100 hover:bg-purple-50 transition">
                               <td className="p-2 font-medium text-gray-900">{op.operation || op.operation_name || '-'}</td>
@@ -1204,24 +1243,26 @@ export default function SalesOrderForm() {
                                   <input
                                     type="number"
                                     step="0.01"
-                                    value={op.operation_time || op.time_in_hours || op.hours || 0}
-                                    onChange={(e) => handleBomOperationEdit(idx, 'operation_time', e.target.value)}
-                                    className="w-fit px-2 py-1.5 border border-gray-300 rounded text-right text-xs focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    value={totalTimeHours.toFixed(2)}
+                                    readOnly
+                                    className="w-fit px-2 py-1.5 border border-gray-300 rounded text-right text-xs bg-gray-100 cursor-not-allowed"
+                                    title={`Calculated: (${cycleTime} × ${qty}) + ${setupTime} = ${totalTimeMinutes} min = ${totalTimeHours.toFixed(2)} hrs`}
                                   />
                                 ) : (
-                                  <span className="font-medium">{op.operation_time || op.time_in_hours || op.hours || '-'}</span>
+                                  <span className="font-medium">{totalTimeHours.toFixed(2)} hrs</span>
                                 )}
                               </td>
-                              <td className="p-2 text-right font-bold text-green-700">
+                              <td className="p-2 text-left font-bold text-green-700">
                                 {isEditMode && !isReadOnly ? (
-                                  <div className="flex items-center gap-1 justify-end">
+                                  <div className="flex items-center gap-1">
                                     <span className="text-gray-600">₹</span>
                                     <input
                                       type="number"
                                       step="0.01"
-                                      value={op.operating_cost || op.cost || 0}
-                                      onChange={(e) => handleBomOperationEdit(idx, 'operating_cost', e.target.value)}
-                                      className="w-20 px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                      value={totalOperationCost.toFixed(2)}
+                                      readOnly
+                                      className="w-20 px-2 py-1.5 border border-gray-300 rounded text-xs bg-gray-100 cursor-not-allowed"
+                                      title={`Calculated: ${operationCostPerUnit} × ${qty}`}
                                     />
                                   </div>
                                 ) : (
@@ -1348,6 +1389,7 @@ export default function SalesOrderForm() {
           </div>
         </form>
       </Card>
+      </div>
     </div>
   )
 }

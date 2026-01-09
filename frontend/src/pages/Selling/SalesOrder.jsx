@@ -670,11 +670,24 @@ export default function SalesOrder() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
                   <p className="text-xs text-slate-600 font-medium mb-1">Total Amount</p>
                   <p className="text-2xl font-bold text-green-600">
-                    ₹{filteredOrders.reduce((sum, order) => sum + (parseFloat(order.order_amount) || 0), 0).toFixed(2)}
+                    ₹{filteredOrders.reduce((sum, order) => {
+                      if (order.order_amount && parseFloat(order.order_amount) > 0) {
+                        return sum + parseFloat(order.order_amount)
+                      }
+                      if (order.items && order.items.length > 0) {
+                        const orderTotal = order.items.reduce((itemSum, item) => {
+                          const itemQty = parseFloat(item.qty) || 0
+                          const itemRate = parseFloat(item.amount) || parseFloat(item.rate) || 0
+                          return itemSum + (itemQty * itemRate)
+                        }, 0)
+                        return sum + orderTotal
+                      }
+                      return sum
+                    }, 0).toFixed(2)}
                   </p>
                 </div>
                 <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
@@ -687,6 +700,25 @@ export default function SalesOrder() {
                       }
                       return sum
                     }, 0).toFixed(2)}
+                  </p>
+                </div>
+                <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
+                  <p className="text-xs text-slate-600 font-medium mb-1">Avg Order Value</p>
+                  <p className="text-2xl font-bold text-purple-600">
+                    ₹{filteredOrders.length > 0 ? (filteredOrders.reduce((sum, order) => {
+                      if (order.order_amount && parseFloat(order.order_amount) > 0) {
+                        return sum + parseFloat(order.order_amount)
+                      }
+                      if (order.items && order.items.length > 0) {
+                        const orderTotal = order.items.reduce((itemSum, item) => {
+                          const itemQty = parseFloat(item.qty) || 0
+                          const itemRate = parseFloat(item.amount) || parseFloat(item.rate) || 0
+                          return itemSum + (itemQty * itemRate)
+                        }, 0)
+                        return sum + orderTotal
+                      }
+                      return sum
+                    }, 0) / filteredOrders.length).toFixed(2) : '0.00'}
                   </p>
                 </div>
                 <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">

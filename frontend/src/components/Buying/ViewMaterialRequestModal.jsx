@@ -4,7 +4,7 @@ import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
 import Badge from '../Badge/Badge'
 import Alert from '../Alert/Alert'
-import { Printer, CheckCircle, XCircle, Trash2 } from 'lucide-react'
+import { Printer, CheckCircle, XCircle, Trash2, FileText, ShoppingCart } from 'lucide-react'
 
 export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStatusChange }) {
   const [request, setRequest] = useState(null)
@@ -18,15 +18,26 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
 
   useEffect(() => {
     if (isOpen && mrId) {
-      fetchRequestDetails()
-      fetchWarehouses()
+      const initializeModal = async () => {
+        await fetchRequestDetails()
+        fetchWarehouses()
+      }
+      initializeModal()
     } else {
       setRequest(null)
       setError(null)
       setSuccess(null)
       setSelectedSourceWarehouse('')
+      setStockData({})
     }
   }, [isOpen, mrId])
+
+  useEffect(() => {
+    if (request && selectedSourceWarehouse) {
+      console.log('Warehouse selected, re-checking stock for warehouse:', selectedSourceWarehouse)
+      checkStockAvailability(request)
+    }
+  }, [selectedSourceWarehouse])
 
   const fetchWarehouses = async () => {
     try {
@@ -58,7 +69,10 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
     try {
       setCheckingStock(true)
       const warehouse = selectedSourceWarehouse || requestData?.source_warehouse
+      const warehouseObj = warehouse ? warehouses.find(w => w.id == warehouse) : null
+      const warehouseName = warehouseObj ? `${warehouseObj.warehouse_name} (${warehouseObj.warehouse_code})` : 'All Warehouses'
       
+      console.log(`Checking stock for warehouse ID: ${warehouse}, Name: ${warehouseName}`)
       const stockInfo = {}
       
       for (const item of requestData.items || []) {
@@ -71,6 +85,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
             params.warehouseId = warehouse
           }
           
+          console.log(`Fetching stock for ${item.item_code} with params:`, params)
           const res = await api.get(`/stock/stock-balance`, { params })
           const balance = res.data.data || res.data
           
@@ -97,7 +112,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
             available: availableQty,
             requested: requestedQty,
             isAvailable: itemExists && availableQty > 0 && hasRequiredQty,
-            warehouse: warehouse || 'All Warehouses',
+            warehouse: warehouseName,
             foundInInventory: itemExists,
             error: !itemExists
           }
@@ -107,7 +122,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
             available: 0,
             requested: parseFloat(item.qty || 0),
             isAvailable: false,
-            warehouse: warehouse || 'All Warehouses',
+            warehouse: warehouseName,
             foundInInventory: false,
             error: true
           }
@@ -215,38 +230,86 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
         return
       }
 
-      if (request?.department === 'Production' && request?.purpose !== 'material_issue') {
-        setError('Production department requests must use "Material Issue" purpose. Cannot send for purchase.')
-        return
-      }
-
       setLoading(true)
 
       const itemsToSend = unavailableItems.map(item => ({
         item_code: item.item_code,
         item_name: item.item_name,
         qty: item.qty,
-        uom: item.uom
+        uom: item.uom || 'Kg',
+        rate: parseFloat(item.rate || 0)
       }))
 
-      const response = await api.post('/purchase-receipts/from-material-request', {
-        mr_id: mrId,
+      const grnData = {
+        material_request_id: mrId,
         items: itemsToSend,
         department: request?.department,
-        purpose: request?.purpose
-      })
+        purpose: 'purchase',
+        notes: `GRN created from Material Request: ${request.series_no} - Unavailable items for purchase`
+      }
 
-      if (response.data.success) {
-        setSuccess(`Purchase Receipt created successfully for ${unavailableItems.length} item(s). Redirecting to Purchase Receipts...`)
+      const response = await api.post('/stock/grns/from-material-request', grnData)
+
+      if (response.data.success || response.status === 201) {
+        setSuccess(`GRN request created successfully for ${unavailableItems.length} unavailable item(s). Redirecting to Purchase Receipts...`)
         
         setTimeout(() => {
           window.location.href = '/inventory/purchase-receipts'
         }, 2000)
       }
     } catch (err) {
-      const errorMsg = err.response?.data?.error || err.message || 'Failed to create Purchase Receipt'
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to create GRN request'
       setError(errorMsg)
       console.error('Send for purchase error:', {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreateGRN = async () => {
+    try {
+      setLoading(true)
+      
+      if (request?.items?.length === 0) {
+        setError('No items in this material request')
+        return
+      }
+
+      const itemsForGRN = request.items.map(item => ({
+        item_code: item.item_code,
+        item_name: item.item_name,
+        qty: parseFloat(item.qty || 0),
+        uom: item.uom || 'Kg',
+        rate: parseFloat(item.rate || 0)
+      }))
+
+      const grnData = {
+        material_request_id: mrId,
+        items: itemsForGRN,
+        department: request?.department,
+        purpose: request?.purpose,
+        notes: `GRN created from Material Request: ${request.series_no}`
+      }
+
+      const response = await api.post('/stock/grns/from-material-request', grnData)
+      
+      if (response.data.success || response.status === 201) {
+        setSuccess(`GRN created successfully. Items added to inventory.`)
+        fetchRequestDetails()
+        if (onStatusChange) onStatusChange()
+        
+        setTimeout(() => {
+          window.location.href = '/inventory/grn-management'
+        }, 2000)
+      }
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to create GRN'
+      setError(errorMsg)
+      console.error('Create GRN error:', {
         status: err.response?.status,
         data: err.response?.data,
         message: err.message
@@ -315,7 +378,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                         <option value="">Select Source Warehouse *</option>
                         {warehouses && warehouses.length > 0 ? (
                           warehouses.map((w) => (
-                            <option key={w.id} value={w.warehouse_code || w.warehouse_name || w.id}>
+                            <option key={w.id} value={w.id}>
                               {w.warehouse_name} ({w.warehouse_code})
                             </option>
                           ))
@@ -330,9 +393,10 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                         variant="warning"
                         size="sm"
                         className="flex items-center gap-2"
+                        disabled={loading}
                         title={`Send ${getUnavailableItems().length} unavailable item(s) for purchase`}
                       >
-                        Send for Purchase
+                        <ShoppingCart size={16} /> Send for Purchase
                       </Button>
                     )}
                     {getAvailableItems().length > 0 && (
@@ -352,6 +416,28 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                       className="flex items-center gap-2"
                     >
                       <XCircle size={16} /> Reject
+                    </Button>
+                    <Button 
+                      onClick={handleDelete}
+                      variant="outline-danger"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <Trash2 size={16} /> Delete
+                    </Button>
+                  </>
+                )}
+                {request.status === 'approved' && request?.purpose === 'purchase' && (
+                  <>
+                    <Button 
+                      onClick={handleCreateGRN}
+                      variant="success"
+                      size="sm"
+                      className="flex items-center gap-2"
+                      disabled={loading}
+                      title="Create Goods Received Note to add items to inventory"
+                    >
+                      <FileText size={16} /> Create GRN
                     </Button>
                     <Button 
                       onClick={handleDelete}

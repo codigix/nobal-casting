@@ -305,14 +305,14 @@ export class SellingController {
             const incomingType = incomingItemTypes.get(existingItem.item_code || existingItem.component_code)
             const existingType = existingItem.fg_sub_assembly || existingItem.component_type
             
-            if (incomingType === 'FG' && this.isSubAssemblyType(existingType)) {
+            if (incomingType === 'FG' && SellingController.isSubAssemblyType(existingType)) {
               return {
                 order_id: order.sales_order_id,
                 conflict: `Finished Good item is already in use as sub-assembly in sales order ${order.sales_order_id}`
               }
             }
             
-            if (this.isSubAssemblyType(incomingType) && existingType === 'FG') {
+            if (SellingController.isSubAssemblyType(incomingType) && existingType === 'FG') {
               return {
                 order_id: order.sales_order_id,
                 conflict: `Sub-Assembly item is already in use as finished good in sales order ${order.sales_order_id}`
@@ -357,7 +357,7 @@ export class SellingController {
       const finalCustomerEmail = customer_email || customer.email || ''
       const finalCustomerPhone = customer_phone || customer.phone || ''
 
-      const duplicateCheck = await this.checkDuplicateSalesOrder(db, items)
+      const duplicateCheck = await SellingController.checkDuplicateSalesOrder(db, items)
       if (duplicateCheck) {
         return res.status(409).json({ error: duplicateCheck.conflict })
       }
@@ -631,7 +631,7 @@ export class SellingController {
       }
 
       if (items !== undefined) {
-        const duplicateCheck = await this.checkDuplicateSalesOrder(db, items, id)
+        const duplicateCheck = await SellingController.checkDuplicateSalesOrder(db, items, id)
         if (duplicateCheck) {
           return res.status(409).json({ error: duplicateCheck.conflict })
         }

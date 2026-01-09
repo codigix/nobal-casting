@@ -122,9 +122,10 @@ export default function StockLedger() {
     const csvContent = [
       headers.join(','),
       ...ledgers.map(row => {
-        const balance = row.balance_qty || row.balance || 0
-        const rate = row.valuation_rate || row.rate || 0
-        return `${row.item_code},${row.warehouse_name},${row.posting_date},${row.transaction_type},${row.qty_in || 0},${row.qty_out || 0},${balance},${rate},${(balance * rate).toFixed(2)}`
+        const balance = row.balance_qty || 0
+        const rate = row.valuation_rate || 0
+        const value = Number(row.transaction_value) || 0
+        return `${row.item_code},${row.warehouse_name},${row.posting_date},${row.transaction_type},${row.qty_in || 0},${row.qty_out || 0},${balance},${rate},${value.toFixed(2)}`
       })
     ].join('\n')
 
@@ -170,19 +171,19 @@ export default function StockLedger() {
       render: (value, row) => row && row.qty_out ? `-${row.qty_out}` : '-'
     },
     {
-      key: 'balance',
+      key: 'balance_qty',
       label: 'Balance',
       render: (value, row) => row && row.balance_qty ? `${row.balance_qty}` : '-'
     },
     {
-      key: 'rate',
+      key: 'valuation_rate',
       label: 'Rate',
-      render: (value, row) => row ? `₹${row.rate || 0}` : '-'
+      render: (value, row) => row ? `₹${row.valuation_rate || 0}` : '-'
     },
     {
-      key: 'value',
+      key: 'transaction_value',
       label: 'Value',
-      render: (value, row) => row ? `₹${((row.balance_qty || row.balance || 0) * (row.valuation_rate || row.rate || 0)).toFixed(2)}` : '-'
+      render: (value, row) => row ? `₹${(Number(row.transaction_value) || 0).toFixed(2)}` : '-'
     }
   ]
 
@@ -337,11 +338,11 @@ export default function StockLedger() {
                       </div>
                       <div>
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Balance</p>
-                        <p className="text-sm font-bold text-neutral-900 dark:text-white">{entry.balance_qty || entry.balance || 0}</p>
+                        <p className="text-sm font-bold text-neutral-900 dark:text-white">{entry.balance_qty || 0}</p>
                       </div>
                       <div>
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Rate</p>
-                        <p className="text-xs font-semibold  text-neutral-900 dark:text-white">₹{entry.valuation_rate || entry.rate || 0}</p>
+                        <p className="text-xs font-semibold  text-neutral-900 dark:text-white">₹{entry.valuation_rate || 0}</p>
                       </div>
                     </div>
 
@@ -357,7 +358,7 @@ export default function StockLedger() {
 
                     <div className="pt-2">
                       <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Value</p>
-                      <p className="text-sm font-bold text-neutral-900 dark:text-white">₹{(((entry.balance_qty || entry.balance || 0) * (entry.valuation_rate || entry.rate || 0)).toFixed(2))}</p>
+                      <p className="text-sm font-bold text-neutral-900 dark:text-white">₹{(Number(entry.transaction_value) || 0).toFixed(2)}</p>
                     </div>
                   </div>
                 </div>

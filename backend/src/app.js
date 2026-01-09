@@ -742,6 +742,7 @@ function setupRoutes() {
   app.use('/api/purchase-orders', purchaseOrderRoutes)
   app.use('/api/purchase-receipts', purchaseReceiptRoutes)
   app.use('/api/grn-requests', grnRequestRoutes)
+  app.use('/api/stock/grns', grnRequestRoutes)
   app.use('/api/warehouses', stockWarehouseRoutes)
   app.use('/api/stock/warehouses', stockWarehouseRoutes)
   app.use('/api/stock/stock-balance', stockBalanceRoutes)

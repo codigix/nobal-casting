@@ -134,14 +134,8 @@ export default function SearchableSelect({
   return (
     <div className="form-group" ref={containerRef}>
       {label && <label>{label}{required && ' *'}</label>}
-      <div style={{ position: 'relative' }}>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          border: '1px solid #d1d5db',
-          borderRadius: '4px',
-          background: 'white'
-        }}>
+      <div className="relative">
+        <div className="flex p-2 items-center border border-gray-300 rounded bg-white">
           <input
             type="text"
             value={searchTerm}
@@ -154,70 +148,39 @@ export default function SearchableSelect({
             }}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            style={{
-              flex: 1,
-              padding: '6px',
-              border: 'none',
-              outline: 'none',
-              fontSize: '12px',
-              background: isDisabled ? '#f3f4f6' : 'white',
-              cursor: isDisabled ? 'not-allowed' : 'text'
-            }}
+            className={`flex-1 p-0 border-none outline-none text-xs ${
+              isDisabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white cursor-text'
+            }`}
             disabled={isLoading || isDisabled}
           />
           {isClearable && searchTerm && !isDisabled && (
             <button
               type="button"
               onClick={handleClear}
-              style={{
-                marginRight: '4px',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: '#6b7280',
-                padding: '0 4px',
-                display: 'flex',
-                alignItems: 'center'
-              }}
+              className="mr-1 bg-none border-none cursor-pointer text-gray-500 px-1 py-0 flex items-center hover:text-gray-700 transition"
             >
               ×
             </button>
           )}
           <ChevronDown 
             size={18} 
-            style={{
-              marginRight: '8px',
-              color: '#6b7280',
-              transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.2s'
-            }}
+            className={`mr-2 text-gray-500 transition-transform duration-200 ${
+              isOpen ? 'rotate-180' : 'rotate-0'
+            }`}
           />
         </div>
 
         {isOpen && (
           <div 
             ref={dropdownRef}
-            style={{
-              position: 'absolute',
-              top: '100%',
-              left: 0,
-              right: 0,
-              marginTop: '4px',
-              background: 'white',
-              border: '1px solid #d1d5db',
-              borderRadius: '4px',
-              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-              zIndex: 10,
-              maxHeight: '200px',
-              overflowY: 'auto'
-            }}>
+            className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded shadow-md z-10 max-h-48 overflow-y-auto">
             {isLoading && (
-              <div style={{ padding: '10px', color: '#9ca3af', textAlign: 'center' }}>
+              <div className="p-2.5 text-gray-400 text-center text-xs">
                 Loading...
               </div>
             )}
             {!isLoading && filteredOptions.length === 0 && options.length === 0 && (
-              <div style={{ padding: '10px', color: '#9ca3af', textAlign: 'center', fontSize: '10px' }}>
+              <div className="p-2.5 text-gray-400 text-center text-xs">
                 No options found
               </div>
             )}
@@ -226,15 +189,11 @@ export default function SearchableSelect({
                 <div
                   key={option.value}
                   onClick={() => handleSelect(option)}
-                  style={{
-                    padding: '6px',
-                    cursor: 'pointer',
-                    background: highlightedIndex === index ? '#f3f4f6' : 'white',
-                    color: option.value === value ? '#2563eb' : '#1f2937',
-                    fontWeight: option.value === value ? '600' : 'normal',
-                    borderBottom: '1px solid #f3f3f3',
-                    fontSize: '10px'
-                  }}
+                  className={`px-1.5 py-1.5 cursor-pointer border-b border-gray-100 text-xs transition ${
+                    highlightedIndex === index ? 'bg-gray-100' : 'bg-white'
+                  } ${
+                    option.value === value ? 'text-blue-600 font-semibold' : 'text-gray-900'
+                  }`}
                   onMouseEnter={() => setHighlightedIndex(index)}
                 >
                   {option.label}
@@ -244,7 +203,7 @@ export default function SearchableSelect({
           </div>
         )}
       </div>
-      {error && <span style={{ color: '#ef4444', fontSize: '12px' }}>{error}</span>}
+      {error && <span className="text-red-500 text-xs">{error}</span>}
     </div>
   )
 }

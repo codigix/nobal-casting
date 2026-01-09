@@ -385,10 +385,10 @@ export default function AdminPanel() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left p-2 font-semibold text-gray-700">Machine ID</th>
-                      <th className="text-left p-2 font-semibold text-gray-700">Name</th>
-                      <th className="text-left p-2 font-semibold text-gray-700">Status</th>
-                      <th className="text-left p-2 font-semibold text-gray-700">Days Since Maintenance</th>
+                      <th className="text-left p-2 font-semibold text-gray-700 text-left">Machine ID</th>
+                      <th className="text-left p-2 font-semibold text-gray-700 text-left">Name</th>
+                      <th className="text-left p-2 font-semibold text-gray-700 text-left">Status</th>
+                      <th className="text-left p-2 font-semibold text-gray-700 text-left">Days Since Maintenance</th>
                     </tr>
                   </thead>
                   <tbody>

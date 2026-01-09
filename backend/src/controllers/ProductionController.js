@@ -8,7 +8,7 @@ class ProductionController {
   // Create operation
   async createOperation(req, res) {
     try {
-      const { name, operation_name, default_workstation, is_corrective_operation, create_job_card_based_on_batch_size, batch_size, quality_inspection_template, description, sub_operations } = req.body
+      const { name, operation_name, default_workstation, is_corrective_operation, create_job_card_based_on_batch_size, batch_size, quality_inspection_template, description, operation_type, sub_operations } = req.body
 
       if (!name) {
         return res.status(400).json({
@@ -25,7 +25,8 @@ class ProductionController {
         create_job_card_based_on_batch_size,
         batch_size,
         quality_inspection_template,
-        description
+        description,
+        operation_type
       })
 
       if (sub_operations && Array.isArray(sub_operations)) {

@@ -623,7 +623,7 @@ export default function ProductionPlanning() {
         transition_date: new Date().toISOString().split('T')[0],
         requested_by_id: 'System',
         department: 'Production',
-        purpose: 'purchase',
+        purpose: 'material_issue',
         required_by_date: requiredByDate.toISOString().split('T')[0],
         target_warehouse: '',
         source_warehouse: '',

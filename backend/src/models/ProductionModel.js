@@ -13,10 +13,10 @@ class ProductionModel {
       }
       
       await this.db.query(
-        `INSERT INTO operation (name, operation_name, default_workstation, is_corrective_operation, create_job_card_based_on_batch_size, batch_size, quality_inspection_template, description)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO operation (name, operation_name, default_workstation, is_corrective_operation, create_job_card_based_on_batch_size, batch_size, quality_inspection_template, description, operation_type)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [data.name, data.operation_name, data.default_workstation, data.is_corrective_operation, 
-         data.create_job_card_based_on_batch_size, data.batch_size, data.quality_inspection_template, data.description]
+         data.create_job_card_based_on_batch_size, data.batch_size, data.quality_inspection_template, data.description, data.operation_type || 'IN_HOUSE']
       )
       return data
     } catch (error) {
@@ -67,6 +67,7 @@ class ProductionModel {
       if (data.batch_size) { fields.push('batch_size = ?'); values.push(data.batch_size) }
       if (data.quality_inspection_template) { fields.push('quality_inspection_template = ?'); values.push(data.quality_inspection_template) }
       if (data.description) { fields.push('description = ?'); values.push(data.description) }
+      if (data.operation_type) { fields.push('operation_type = ?'); values.push(data.operation_type) }
 
       if (fields.length === 0) return false
 
@@ -542,7 +543,13 @@ class ProductionModel {
     
     let rawMaterials = []
     try {
-      const [rawMats] = await this.db.query('SELECT * FROM bom_raw_material WHERE bom_id = ? ORDER BY sequence', [bom_id])
+      const [rawMats] = await this.db.query(`
+        SELECT brm.*, i.item_group 
+        FROM bom_raw_material brm 
+        LEFT JOIN item i ON brm.item_code = i.item_code 
+        WHERE brm.bom_id = ? 
+        ORDER BY brm.sequence
+      `, [bom_id])
       rawMaterials = rawMats || []
     } catch (err) {
       rawMaterials = []
@@ -562,7 +569,7 @@ class ProductionModel {
 async getBOMRawMaterials(bom_id) {
   try {
     const [materials] = await this.db.query(
-      `SELECT * FROM bom_raw_material WHERE bom_id = ? ORDER BY sequence`,
+      `SELECT brm.*, i.item_group FROM bom_raw_material brm LEFT JOIN item i ON brm.item_code = i.item_code WHERE brm.bom_id = ? ORDER BY brm.sequence`,
       [bom_id]
     )
     return materials || []
@@ -700,10 +707,10 @@ async deleteAllBOMRawMaterials(bom_id) {
   async addBOMOperation(bom_id, operation) {
     try {
       await this.db.query(
-        `INSERT INTO bom_operation (bom_id, operation_name, workstation_type, operation_time, fixed_time, operating_cost, sequence, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO bom_operation (bom_id, operation_name, workstation_type, operation_time, fixed_time, operating_cost, operation_type, sequence, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [bom_id, operation.operation_name, operation.workstation_type, operation.operation_time, 
-         operation.fixed_time, operation.operating_cost, operation.sequence, operation.notes]
+         operation.fixed_time, operation.operating_cost, operation.operation_type || 'IN_HOUSE', operation.sequence, operation.notes]
       )
     } catch (error) {
       throw error

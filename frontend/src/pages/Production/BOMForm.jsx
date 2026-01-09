@@ -73,6 +73,7 @@ export default function BOMForm() {
     operation_time: '0',
     fixed_time: '0',
     operating_cost: '0',
+    operation_type: 'IN_HOUSE',
     target_warehouse: '',
     notes: ''
   })
@@ -552,6 +553,7 @@ export default function BOMForm() {
       operation_time: '0',
       fixed_time: '0',
       operating_cost: '0',
+      operation_type: 'IN_HOUSE',
       target_warehouse: '',
       notes: ''
     })
@@ -562,8 +564,8 @@ export default function BOMForm() {
   }
 
   const addScrapItem = () => {
-    if (!newScrapItem.item_code || !newScrapItem.quantity) {
-      setError('Please fill item code and quantity')
+    if (!newScrapItem.quantity) {
+      setError('Please fill quantity')
       return
     }
     setScrapItems([...scrapItems, { ...newScrapItem, id: Date.now() }])
@@ -603,8 +605,8 @@ export default function BOMForm() {
 
     const payload = {
   ...formData,
-  lines: bomLines,
-  rawMaterials: rawMaterials,
+  lines: bomLines.filter(line => line.item_code && line.item_code.trim()),
+  rawMaterials: rawMaterials.filter(rm => rm.item_code && rm.item_code.trim()),
   operations: operations,
   scrapItems: scrapItems,
   quantity: parseFloat(formData.quantity),
@@ -663,7 +665,7 @@ export default function BOMForm() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100  px-6 py-6">
-      <div className="max-w-6xl mx-auto">
+      <div className="w-full mx-auto">
         <div className="flex justify-between items-start mb-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -1342,6 +1344,13 @@ export default function BOMForm() {
                         <input type="number" name="operating_cost" value={newOperation.operating_cost} onChange={(e) => setNewOperation({...newOperation, operating_cost: e.target.value})} onKeyDown={handleKeyDown} step="0.01" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-purple-400 focus:ring-1 focus:ring-purple-100" />
                       </div>
                       <div className="flex flex-col">
+                        <label className="text-xs font-bold text-gray-700 mb-1">Type</label>
+                        <select value={newOperation.operation_type} onChange={(e) => setNewOperation({...newOperation, operation_type: e.target.value})} className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-purple-400 focus:ring-1 focus:ring-purple-100">
+                          <option value="IN_HOUSE">In-House</option>
+                          <option value="OUTSOURCED">Outsourced</option>
+                        </select>
+                      </div>
+                      <div className="flex flex-col">
                         <label className="text-xs font-bold text-gray-700 mb-1">Target Warehouse</label>
                         <SearchableSelect
                           value={newOperation.target_warehouse}
@@ -1377,6 +1386,7 @@ export default function BOMForm() {
                               <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Cycle (min)</th>
                               <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Setup (min)</th>
                               <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Cost (₹)</th>
+                              <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Type</th>
                               <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Target Warehouse</th>
                               <th className="px-2 py-1.5 text-center text-xs font-bold text-gray-600 w-8">Del</th>
                             </tr>
@@ -1390,6 +1400,11 @@ export default function BOMForm() {
                                 <td className="px-2 py-1.5 text-xs text-right text-gray-700">{op.operation_time}</td>
                                 <td className="px-2 py-1.5 text-xs text-right text-gray-700">{op.fixed_time}</td>
                                 <td className="px-2 py-1.5 text-xs text-right font-semibold text-gray-900">₹{parseFloat(op.operating_cost).toFixed(0)}</td>
+                                <td className="px-2 py-1.5 text-xs">
+                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${op.operation_type === 'OUTSOURCED' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`}>
+                                    {op.operation_type === 'OUTSOURCED' ? 'Outsourced' : 'In-House'}
+                                  </span>
+                                </td>
                                 <td className="px-2 py-1.5 text-xs text-gray-700">{op.target_warehouse || '-'}</td>
                                 <td className="px-2 py-1.5 text-center">
                                   <button type="button" onClick={() => removeOperation(op.id)} className="p-1 text-red-600 hover:bg-red-100 rounded transition">

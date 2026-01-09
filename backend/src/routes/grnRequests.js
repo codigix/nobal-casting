@@ -5,6 +5,7 @@ const router = express.Router()
 
 router.get('/generate-grn-no', GRNRequestController.generateGRNNo)
 router.post('/', GRNRequestController.createGRNRequest)
+router.post('/from-material-request', GRNRequestController.createGRNFromMaterialRequest)
 router.get('/', GRNRequestController.getAllGRNRequests)
 router.get('/:id', GRNRequestController.getGRNRequest)
 router.post('/:id/start-inspection', GRNRequestController.startInspection)
