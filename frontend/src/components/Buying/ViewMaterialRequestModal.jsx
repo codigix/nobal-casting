@@ -524,7 +524,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
 
             <div className="mb-6">
               <h4 className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Items & Stock Status</h4>
-              <div className="overflow-x-auto border rounded-lg">
+              <div className=" border rounded-lg">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-gray-100 text-gray-700 uppercase font-bold text-xs">
                     <tr>

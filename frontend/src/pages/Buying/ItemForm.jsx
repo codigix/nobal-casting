@@ -801,6 +801,7 @@ export default function ItemForm() {
           <label>Item Code *</label>
           <input
             type="text"
+            className='p-2  border border-gray-300 rounded bg-white'
             name="item_code"
             value={formData.item_code}
             onChange={(e) => {
@@ -819,6 +820,7 @@ export default function ItemForm() {
           <input
             type="text"
             name="item_name"
+            className='p-2  border border-gray-300 rounded bg-white'
             value={formData.item_name}
             onChange={(e) => {
               handleChange(e)
@@ -865,6 +867,7 @@ export default function ItemForm() {
           <input
             type="number"
             name="valuation_rate"
+            className='p-2  border border-gray-300 rounded bg-white'
             value={formData.valuation_rate}
             onChange={handleChange}
             placeholder="0.00"
@@ -875,6 +878,7 @@ export default function ItemForm() {
           <label>No. of Cavity (for mould items)</label>
           <input
             type="number"
+            className='p-2  border border-gray-300 rounded bg-white'
             name="no_of_cavities"
             value={formData.no_of_cavities}
             onChange={handleChange}
@@ -887,6 +891,7 @@ export default function ItemForm() {
           <input
             type="number"
             name="weight_per_unit"
+            className='p-2  border border-gray-300 rounded bg-white'
             value={formData.weight_per_unit}
             onChange={handleChange}
             placeholder="0.00"
@@ -907,6 +912,7 @@ export default function ItemForm() {
           <input
             type="text"
             name="drawing_no"
+            className='p-2  border border-gray-300 rounded bg-white'
             value={formData.drawing_no}
             onChange={handleChange}
             placeholder="Enter drawing number"
@@ -917,6 +923,7 @@ export default function ItemForm() {
           <input
             type="text"
             name="revision"
+            className='p-2  border border-gray-300 rounded bg-white'
             value={formData.revision}
             onChange={handleChange}
             placeholder="Enter revision"
@@ -927,6 +934,7 @@ export default function ItemForm() {
           <input
             type="text"
             name="material_grade"
+            className='p-2  border border-gray-300 rounded bg-white'
             value={formData.material_grade}
             onChange={handleChange}
             placeholder="Enter material grade"

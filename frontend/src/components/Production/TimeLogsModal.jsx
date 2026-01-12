@@ -475,7 +475,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
           </h3>
           
           {timeLogs.length > 0 ? (
-            <div className="overflow-x-auto border border-gray-200 rounded-lg">
+            <div className=" border border-gray-200 rounded-lg">
               <table className="w-full text-sm">
                 <thead className="bg-gray-100 border-b border-gray-200">
                   <tr>

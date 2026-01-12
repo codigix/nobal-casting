@@ -105,7 +105,7 @@ export default function Workstations() {
                 🏭
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Workstations</h1>
+                <h1 className="text-xl font-bold text-gray-900">Workstations</h1>
                 <p className="text-xs text-gray-600 mt-0">Manage manufacturing equipment</p>
               </div>
             </div>
@@ -150,8 +150,8 @@ export default function Workstations() {
           </div>
         ) : filteredWorkstations.length > 0 ? (
           <>
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
+            <div className="bg-white rounded-lg shadow-sm">
+              <div className="">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">

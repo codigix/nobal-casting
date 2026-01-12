@@ -941,7 +941,7 @@ export default function MachineAnalysis() {
             <Rocket size={20} className="text-slate-600" />
             <h3 className="text-base font-bold text-slate-900 m-0">Machine Details</h3>
           </div>
-          <div className="overflow-x-auto">
+          <div className="">
             <table className="w-full border-collapse border border-gray-200">
               <thead>
                 <tr className="bg-slate-50 border-b-2 border-gray-200">
@@ -1038,7 +1038,7 @@ export default function MachineAnalysis() {
             <Wrench size={20} className="text-slate-600" />
             <h3 className="text-base font-bold text-slate-900 m-0">Workstations</h3>
           </div>
-          <div className="overflow-x-auto">
+          <div className="">
             <table className="w-full border-collapse border border-gray-200">
               <thead>
                 <tr className="bg-slate-50 border-b-2 border-gray-200">

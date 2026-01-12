@@ -523,7 +523,7 @@ export default function PurchaseReceipts() {
                 </p>
               </div>
             ) : viewMode === 'table' ? (
-              <div className="overflow-x-auto">
+              <div className="">
                 <DataTable columns={columns} data={grns} />
               </div>
             ) : (
@@ -643,7 +643,7 @@ export default function PurchaseReceipts() {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="">
                 <table className="w-full border-collapse border border-neutral-200 dark:border-neutral-700 text-sm">
                   <thead>
                     <tr className="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
@@ -856,7 +856,7 @@ export default function PurchaseReceipts() {
               <h4 className="mb-3 text-xs font-semibold  text-gray-900">
                 Items for Approval
               </h4>
-              <div className="overflow-x-auto">
+              <div className="">
                 <table className="w-full border-collapse border border-gray-200 text-xs">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
@@ -922,7 +922,7 @@ export default function PurchaseReceipts() {
               <h4 className="mb-3 text-xs font-semibold  text-gray-900">
                 Storage Information
               </h4>
-              <div className="overflow-x-auto">
+              <div className="">
                 <table className="w-full border-collapse border border-gray-200 text-xs">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">

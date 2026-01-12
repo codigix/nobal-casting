@@ -1064,7 +1064,7 @@ export default function WorkOrderForm() {
                   <Factory size={16} className="text-blue-600" />
                   Operations ({bomOperations.length})
                 </h3>
-                <div className="overflow-x-auto border rounded">
+                <div className=" border rounded">
                   <table className="w-full text-xs border-collapse">
                     <thead>
                       <tr className="bg-gray-100 border-b border-gray-200">
@@ -1161,7 +1161,7 @@ export default function WorkOrderForm() {
                   <Boxes size={16} className="text-purple-600" />
                   Required Items ({bomMaterials.length})
                 </h3>
-                <div className="overflow-x-auto border rounded">
+                <div className=" border rounded">
                   <table className="w-full text-xs border-collapse">
                     <thead>
                       <tr className="bg-gray-100 border-b border-gray-200">
@@ -1263,7 +1263,7 @@ export default function WorkOrderForm() {
                     Job Cards ({jobCards.length})
                   </h3>
                 </div>
-                <div className="overflow-x-auto border-t border-gray-200">
+                <div className=" border-t border-gray-200">
                   <table className="w-full text-xs border-collapse">
                     <thead>
                       <tr className="bg-gray-100 border-b border-gray-200">
@@ -1398,7 +1398,7 @@ export default function WorkOrderForm() {
                   <Package size={16} className="text-orange-600" />
                   Sub-Assemblies
                 </h3>
-                <div className="overflow-x-auto border rounded">
+                <div className=" border rounded">
                   <table className="w-full text-xs border-collapse">
                     <thead>
                       <tr className="bg-gray-100 border-b border-gray-200">

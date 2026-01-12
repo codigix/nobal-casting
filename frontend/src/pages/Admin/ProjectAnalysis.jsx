@@ -549,7 +549,7 @@ export default function ProjectAnalysis() {
             </button>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="">
             <table className="w-full border-collapse border border-gray-200 text-xs">
               <thead>
                 <tr className="bg-slate-50 border-b-2 border-gray-200">

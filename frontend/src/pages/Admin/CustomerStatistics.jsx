@@ -386,7 +386,7 @@ export default function CustomerStatistics() {
 
           <div className="p-3">
             {activeProjectTab === 'tata' ? (
-              <div className="overflow-x-auto">
+              <div className="">
                 <table className="w-full border-collapse border border-gray-200">
                   <thead>
                     <tr className="border-b-2 border-gray-200 bg-slate-50">
@@ -440,7 +440,7 @@ export default function CustomerStatistics() {
                 </table>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="">
                 <table className="w-full border-collapse border border-gray-200">
                   <thead>
                     <tr className="border-b-2 border-gray-200 bg-slate-50">

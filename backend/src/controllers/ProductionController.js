@@ -1248,9 +1248,15 @@ class ProductionController {
       })
 
       if (success) {
-        if (status && (status || '').toLowerCase() === 'completed') {
-          const jobCard = await this.productionModel.getJobCardDetails(job_card_id)
-          if (jobCard?.work_order_id) {
+        const jobCard = await this.productionModel.getJobCardDetails(job_card_id)
+        if (jobCard?.work_order_id) {
+          const statusNormalized = (status || '').toLowerCase()
+          
+          if (statusNormalized === 'in-progress' || statusNormalized === 'pending') {
+            await this.productionModel.checkAndUpdateWorkOrderProgress(jobCard.work_order_id)
+          }
+          
+          if (statusNormalized === 'completed') {
             await this.productionModel.checkAndUpdateWorkOrderCompletion(jobCard.work_order_id)
           }
         }
@@ -1269,6 +1275,34 @@ class ProductionController {
       res.status(400).json({
         success: false,
         message: 'Error updating job card',
+        error: error.message
+      })
+    }
+  }
+
+  async updateJobCardStatus(req, res) {
+    try {
+      const { job_card_id } = req.params
+      const { status } = req.body
+
+      if (!status) {
+        return res.status(400).json({
+          success: false,
+          message: 'Status is required'
+        })
+      }
+
+      const result = await this.productionModel.updateJobCardStatus(job_card_id, status)
+
+      res.status(200).json({
+        success: true,
+        message: 'Job card status and related entities updated successfully',
+        data: result
+      })
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        message: 'Error updating job card status',
         error: error.message
       })
     }

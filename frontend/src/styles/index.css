@@ -86,7 +86,7 @@
   }
 
   .table-responsive {
-    @apply overflow-x-auto;
+
     border: 1px solid var(--border-color, #e5e7eb);
   }
 

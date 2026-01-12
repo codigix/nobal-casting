@@ -694,7 +694,7 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
               </form>
 
               {timeLogs.length > 0 ? (
-                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                <div className=" border border-gray-200 rounded-lg">
                   <table className="w-full text-xs">
                     <thead className="bg-gray-100 border-b border-gray-200">
                       <tr>
@@ -807,7 +807,7 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
               </form>
 
               {rejections.length > 0 ? (
-                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                <div className=" border border-gray-200 rounded-lg">
                   <table className="w-full text-xs">
                     <thead className="bg-gray-100 border-b border-gray-200">
                       <tr>
@@ -930,7 +930,7 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
               </form>
 
               {downtimes.length > 0 ? (
-                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                <div className=" border border-gray-200 rounded-lg">
                   <table className="w-full text-xs">
                     <thead className="bg-gray-100 border-b border-gray-200">
                       <tr>

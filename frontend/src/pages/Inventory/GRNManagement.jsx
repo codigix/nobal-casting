@@ -380,7 +380,7 @@ export default function GRNManagement() {
       ) : (
         /* Table View */
         <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="">
             <table className="w-full text-sm text-left">
               <thead className="bg-neutral-50 text-neutral-600 font-semibold border-b border-neutral-200">
                 <tr>

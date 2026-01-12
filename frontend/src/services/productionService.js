@@ -126,6 +126,11 @@ export const updateJobCard = async (jc_id, data) => {
   return response.data
 }
 
+export const updateJobCardStatus = async (jc_id, status) => {
+  const response = await api.put(`/production/job-cards/${jc_id}/status`, { status })
+  return response.data
+}
+
 export const deleteJobCard = async (jc_id) => {
   const response = await api.delete(`/production/job-cards/${jc_id}`)
   return response.data

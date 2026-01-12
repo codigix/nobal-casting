@@ -246,7 +246,7 @@ export default function GRNRequestDetail() {
               <h3 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 mb-4 flex items-center gap-2">
                 <Truck size={16} /> Workflow Progress
               </h3>
-              <div className="flex items-center justify-between overflow-x-auto pb-2">
+              <div className="flex items-center justify-between  pb-2">
                 {[
                   { status: 'pending', label: 'Received', icon: Truck },
                   { status: 'inspecting', label: 'Inspecting', icon: FileCheck },

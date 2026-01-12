@@ -89,7 +89,7 @@ export default function ProductionPlan() {
                 📅
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Production Plans</h1>
+                <h1 className="text-xl font-bold text-gray-900">Production Plans</h1>
                 <p className="text-xs text-gray-600 mt-0">Schedule and track production</p>
               </div>
             </div>
@@ -133,7 +133,7 @@ export default function ProductionPlan() {
                 name="status" 
                 value={filters.status} 
                 onChange={handleFilterChange}
-                className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
+                className="p-2 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
               >
                 <option value="">All Status</option>
                 <option value="draft">Draft</option>
@@ -151,7 +151,7 @@ export default function ProductionPlan() {
                 placeholder="Plan ID or product..." 
                 value={filters.search} 
                 onChange={handleFilterChange}
-                className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
+                className="p-2 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
               />
             </div>
           </div>
@@ -163,7 +163,7 @@ export default function ProductionPlan() {
           </div>
         ) : plans.length > 0 ? (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
+            
               <table className="w-full text-xs border-collapse">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
@@ -239,7 +239,7 @@ export default function ProductionPlan() {
                   })}
                 </tbody>
               </table>
-            </div>
+            
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 text-center">

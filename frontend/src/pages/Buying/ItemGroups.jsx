@@ -216,7 +216,7 @@ export default function ItemGroups() {
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">

@@ -342,7 +342,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
             </span>
           </div>
           
-          <div className="overflow-x-auto mb-3 rounded border border-gray-200 max-h-96 overflow-y-auto">
+          <div className=" mb-3 rounded border border-gray-200 max-h-96 overflow-y-auto">
             <table className="w-full border-collapse border border-gray-200 text-xs" style={{ minWidth: '900px' }}>
               <thead>
                 <tr className="bg-gray-100">

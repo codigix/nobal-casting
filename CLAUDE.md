@@ -382,3 +382,114 @@ MySQL: add-material-request-purpose-mr-tracking.sql ✅
    - Check Purchase Receipts page for MR-sourced receipts
    - Verify QC inspection workflow works correctly
    - Update received quantities and accept items into stock
+
+---
+
+# Phase 15: Scrap Quantity Calculation
+
+## Overview
+Implemented scrap/loss percentage tracking and automatic scrap quantity calculation based on the formula:
+```
+Scrap Qty = Input Material Qty × Loss % / 100
+```
+
+## Database Changes
+
+### Migration Script
+**File**: `backend/scripts/add-scrap-calculation-fields.js`
+
+### Run Migration
+```bash
+cd backend
+node scripts/add-scrap-calculation-fields.js
+```
+
+### Columns Added
+- **item.loss_percentage** (DECIMAL(5,2), DEFAULT 0)
+  - Default loss percentage for an item across all BOMs
+  
+- **bom_line.loss_percentage** (DECIMAL(5,2))
+  - Override loss percentage at BOM line level
+  
+- **bom_line.scrap_qty** (DECIMAL(18,6), DEFAULT 0)
+  - Auto-calculated scrap quantity = (quantity × loss_percentage) / 100
+  
+- **Index**: idx_loss_percentage on bom_line.loss_percentage for performance
+
+### Result
+All scrap calculation fields successfully added to database.
+
+## Backend Implementation
+
+### ItemModel Updates
+- Added `loss_percentage` to item create/update allowed fields
+- Allows storing per-item default loss percentage
+
+### ProductionModel Updates
+**addBOMLine()**
+- Fetches item's loss_percentage if not provided
+- Supports loss_percentage override per BOM line
+- Auto-calculates: `scrap_qty = (quantity × loss_percentage) / 100`
+
+**updateBOMLine()** (NEW)
+- Updates BOM line with recalculated scrap qty
+- Handles loss_percentage from item master or line override
+
+**getBOMDetails()**
+- Enhanced JOIN to fetch loss_percentage from item table
+- Returns loss_percentage and scrap_qty for each line
+
+## Frontend Implementation
+
+### BOMForm.jsx Updates
+
+**State Management**
+- Added `loss_percentage` and `scrap_qty` to newLine state
+- Added `totalScrapQty` calculation
+
+**Input Form**
+- New "Loss % (Scrap)" input field for manual override
+- Min/max validation (0-100)
+- Auto-populated from item master when component selected
+
+**Display**
+- **Table columns**:
+  - Loss %: Shows percentage value
+  - Scrap Qty: Highlighted in amber
+  
+- **Table footer**: Shows Total Scrap Qty with amber background
+- **Cost summary**: Shows total scrap qty with UOM
+
+**Auto-Calculation**
+- When quantity changes: `scrap_qty = (quantity × loss_percentage) / 100`
+- When loss_percentage changes: Updates scrap_qty accordingly
+- Item selection: Auto-populates loss_percentage from master
+
+## Key Features
+
+1. **Item Master Integration**: loss_percentage stored at item level
+2. **Line-level Override**: Can override per BOM line if needed
+3. **Automatic Calculation**: Instant recalculation on input changes
+4. **Visual Distinction**: Scrap qty highlighted in amber/orange colors
+5. **Summary Displays**: Total scrap visible in multiple locations
+6. **Error Handling**: Gracefully handles missing/null values
+
+## Formula Applied
+```javascript
+// In addBOMLine()
+const scrapQty = (quantity * lossPercentage) / 100
+
+// In BOM form
+const totalScrapQty = bomLines.reduce((sum, line) => sum + (parseFloat(line.scrap_qty) || 0), 0)
+```
+
+## Testing Checklist
+
+- [x] Migration script creates columns successfully
+- [x] Item master stores loss_percentage
+- [x] BOM lines calculate scrap_qty automatically
+- [x] Frontend displays scrap in table and footer
+- [x] Total scrap shown in cost summary
+- [x] Auto-population from item master works
+- [x] Loss % override per line works
+- [x] Frontend build passes without errors

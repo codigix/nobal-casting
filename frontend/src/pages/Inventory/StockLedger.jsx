@@ -306,7 +306,7 @@ export default function StockLedger() {
             <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center max-w-md">Ledger entries will appear once stock movements are recorded.</p>
           </div>
         ) : viewMode === 'table' ? (
-          <div className="overflow-x-auto ">
+          <div className=" ">
             <DataTable columns={columns} data={ledgers} />
           </div>
         ) : (

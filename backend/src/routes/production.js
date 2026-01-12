@@ -206,6 +206,11 @@ router.delete(
     authMiddleware,
     productionController.updateJobCard.bind(productionController)
   )
+  router.put(
+    '/job-cards/:job_card_id/status',
+    authMiddleware,
+    productionController.updateJobCardStatus.bind(productionController)
+  )
   router.delete(
     '/job-cards/:job_card_id',
     authMiddleware,

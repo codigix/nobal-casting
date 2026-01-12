@@ -427,7 +427,7 @@ export default function Suppliers() {
             </button>
           </div>
         ) : viewMode === 'table' ? (
-          <div className="overflow-x-auto ">
+          <div className=" ">
             <table className="w-full">
               <thead>
                 <tr className="bg-neutral-100 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">

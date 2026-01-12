@@ -518,7 +518,7 @@ export default function SalesOrder() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex justify-between items-end">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-1">Sales Orders</h1>
+            <h1 className="text-xl font-bold text-slate-900 mb-1">Sales Orders</h1>
             <p className="text-slate-600 text-xs">Manage and track all your sales orders</p>
           </div>
           <div className="flex gap-2">
@@ -669,76 +669,7 @@ export default function SalesOrder() {
               </button>
             </div>
           ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
-                  <p className="text-xs text-slate-600 font-medium mb-1">Total Amount</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    ₹{filteredOrders.reduce((sum, order) => {
-                      if (order.order_amount && parseFloat(order.order_amount) > 0) {
-                        return sum + parseFloat(order.order_amount)
-                      }
-                      if (order.items && order.items.length > 0) {
-                        const orderTotal = order.items.reduce((itemSum, item) => {
-                          const itemQty = parseFloat(item.qty) || 0
-                          const itemRate = parseFloat(item.amount) || parseFloat(item.rate) || 0
-                          return itemSum + (itemQty * itemRate)
-                        }, 0)
-                        return sum + orderTotal
-                      }
-                      return sum
-                    }, 0).toFixed(2)}
-                  </p>
-                </div>
-                <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
-                  <p className="text-xs text-slate-600 font-medium mb-1">Total Items Quantity</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {filteredOrders.reduce((sum, order) => {
-                      if (order.qty) return sum + parseFloat(order.qty)
-                      if (order.items?.length > 0) {
-                        return sum + order.items.reduce((itemSum, item) => itemSum + (parseFloat(item.qty) || 0), 0)
-                      }
-                      return sum
-                    }, 0).toFixed(2)}
-                  </p>
-                </div>
-                <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
-                  <p className="text-xs text-slate-600 font-medium mb-1">Avg Order Value</p>
-                  <p className="text-2xl font-bold text-purple-600">
-                    ₹{filteredOrders.length > 0 ? (filteredOrders.reduce((sum, order) => {
-                      if (order.order_amount && parseFloat(order.order_amount) > 0) {
-                        return sum + parseFloat(order.order_amount)
-                      }
-                      if (order.items && order.items.length > 0) {
-                        const orderTotal = order.items.reduce((itemSum, item) => {
-                          const itemQty = parseFloat(item.qty) || 0
-                          const itemRate = parseFloat(item.amount) || parseFloat(item.rate) || 0
-                          return itemSum + (itemQty * itemRate)
-                        }, 0)
-                        return sum + orderTotal
-                      }
-                      return sum
-                    }, 0) / filteredOrders.length).toFixed(2) : '0.00'}
-                  </p>
-                </div>
-                <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
-                  <p className="text-xs text-slate-600 font-medium mb-1">Earliest Delivery Date</p>
-                  <p className="text-2xl font-bold text-orange-600">
-                    {filteredOrders
-                      .map(o => o.delivery_date)
-                      .filter(d => d)
-                      .sort()[0]
-                      ? new Date(filteredOrders
-                          .map(o => o.delivery_date)
-                          .filter(d => d)
-                          .sort()[0]).toLocaleDateString('en-IN')
-                      : '-'
-                    }
-                  </p>
-                </div>
-              </div>
-              <DataTable columns={columns} data={filteredOrders} filterable={false} />
-            </>
+            <DataTable columns={columns} data={filteredOrders} filterable={false} />
           )}
         </div>
       </div>

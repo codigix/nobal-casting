@@ -256,6 +256,185 @@ export default function ProductionPlanningForm() {
     }
   }
 
+  const fetchSubAssemblyBomMaterials = async (subAssemblyItems) => {
+    if (!subAssemblyItems || subAssemblyItems.length === 0) {
+      console.warn('No sub-assembly items to fetch materials for')
+      return
+    }
+
+    try {
+      console.log('=== STARTING SUB-ASSEMBLY BOM MATERIALS FETCH ===')
+      console.log('Total sub-assemblies to process:', subAssemblyItems.length)
+      console.log('Input items structure:', subAssemblyItems)
+      
+      const token = localStorage.getItem('token')
+      const allSubAsmMaterials = []
+
+      for (let idx = 0; idx < subAssemblyItems.length; idx++) {
+        const subAsm = subAssemblyItems[idx]
+        const subAsmCode = subAsm.item_code || subAsm.component_code
+        const subAsmName = subAsm.item_name || subAsm.component_description || subAsmCode
+        const subAsmQty = subAsm.quantity || subAsm.qty || 1
+
+        console.log(`\n--- Processing Sub-Assembly ${idx + 1}/${subAssemblyItems.length} ---`)
+        console.log('Sub-Assembly Code:', subAsmCode)
+        console.log('Sub-Assembly Name:', subAsmName)
+        console.log('Sub-Assembly Quantity:', subAsmQty)
+        console.log('Sub-Assembly Item Details:', JSON.stringify(subAsm, null, 2))
+        console.log('Checking for BOM ID in item:')
+        console.log('  bom_id:', subAsm.bom_id)
+        console.log('  bom_no:', subAsm.bom_no)
+        console.log('  bom:', subAsm.bom)
+        console.log('  All fields:', Object.keys(subAsm).join(', '))
+
+        try {
+          let bomId = null
+          let bomData = null
+          
+          console.log(`Fetching BOMs for sub-assembly item_code: ${subAsmCode}`)
+          console.log(`Note: Ignoring any BOM ID from raw materials (${subAsm.bom_id || subAsm.bom_no}) as it's likely the finished goods BOM`)
+          
+          const subAsmBomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms?item_code=${subAsmCode}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+          
+          if (!subAsmBomRes.ok) {
+            console.warn(`Failed to fetch BOMs. Status: ${subAsmBomRes.status}`)
+            continue
+          }
+          
+          const subAsmBomData = await subAsmBomRes.json()
+          const bomList = subAsmBomData.data || []
+          console.log(`API Response structure:`, JSON.stringify(subAsmBomData, null, 2).substring(0, 500))
+          console.log(`BOMs found: ${bomList.length}`)
+          bomList.forEach((bom, i) => {
+            console.log(`  BOM ${i + 1}: ${bom.bom_id || bom.id} | item: ${bom.item || bom.item_code || 'N/A'} | name: ${bom.bom_name || 'N/A'}`)
+          })
+          
+          if (bomList.length === 0) {
+            console.warn(`No BOM found for sub-assembly: ${subAsmCode}`)
+            continue
+          }
+          
+          let selectedBom = null
+          
+          for (const bom of bomList) {
+            const testBomId = bom.bom_id || bom.id
+            try {
+              const testBomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${testBomId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              })
+              
+              if (testBomRes.ok) {
+                const testBomData = await testBomRes.json()
+                const bomDetail = testBomData.data || testBomData
+                const bomItemCode = bomDetail.item_code || bomDetail.item || ''
+                const bomName = bomDetail.bom_name || bomDetail.name || ''
+                
+                console.log(`Testing BOM ${testBomId}:`)
+                console.log(`  Detail item_code: "${bomItemCode}"`)
+                console.log(`  Detail name: "${bomName}"`)
+                console.log(`  Looking for: "${subAsmCode}"`)
+                console.log(`  Full detail:`, JSON.stringify(bomDetail, null, 2).substring(0, 300))
+                
+                if (bomItemCode.toLowerCase() === subAsmCode.toLowerCase()) {
+                  console.log(`✓✓ MATCHED! Found correct sub-assembly BOM: ${testBomId}`)
+                  selectedBom = bom
+                  bomData = bomDetail
+                  break
+                } else {
+                  console.log(`✗ No match (expected "${subAsmCode}", got "${bomItemCode}")`)
+                }
+              }
+            } catch (e) {
+              console.warn(`Failed to check BOM ${testBomId}`)
+            }
+          }
+          
+          if (!selectedBom) {
+            selectedBom = bomList[0]
+            console.log(`Using first available BOM as fallback`)
+            const bomDetailsRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${selectedBom.bom_id || selectedBom.id}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            })
+            
+            if (bomDetailsRes.ok) {
+              const bomDetails = await bomDetailsRes.json()
+              bomData = bomDetails.data || bomDetails
+            }
+          }
+          
+          bomId = selectedBom.bom_id || selectedBom.id
+          console.log(`BOM ID extracted from API: ${bomId}`)
+          
+          if (!bomId || !bomData) {
+            console.warn(`Could not determine BOM ID or fetch BOM data for sub-assembly: ${subAsmCode}`)
+            continue
+          }
+          
+          console.log(`Using BOM ID: ${bomId}`)
+          
+          const rawMaterials = bomData.rawMaterials || bomData.bom_raw_materials || []
+          const operations = bomData.operations || bomData.bom_operations || []
+          
+          console.log(`Raw Materials in BOM: ${rawMaterials.length}`)
+          rawMaterials.forEach((mat, i) => {
+            console.log(`  Material ${i + 1}: ${mat.item_code || mat.component_code} - Qty: ${mat.quantity || mat.qty}`)
+          })
+          
+          console.log(`Operations in BOM: ${operations.length}`)
+          operations.forEach((op, i) => {
+            console.log(`  Operation ${i + 1}: ${op.operation_name || op.name} - Time: ${op.operation_time}`)
+          })
+          
+          const filteredMaterials = rawMaterials.filter(m => !isSubAssemblyGroup(m.item_group))
+          console.log(`Filtered Materials (after removing sub-assemblies): ${filteredMaterials.length}`)
+          
+          filteredMaterials.forEach(mat => {
+            const matQty = (mat.qty || mat.quantity || 0) * subAsmQty
+            const matEntry = {
+              ...mat,
+              sub_assembly_code: subAsmCode,
+              sub_assembly_name: subAsmName,
+              bom_id: bomId,
+              quantity: matQty,
+              qty: matQty
+            }
+            allSubAsmMaterials.push(matEntry)
+            console.log(`  Added material: ${mat.item_code || mat.component_code} - Qty: ${matQty}`)
+          })
+          
+          operations.forEach(op => {
+            const opTime = (op.operation_time || op.time || 0) * subAsmQty
+            const opEntry = {
+              ...op,
+              sub_assembly_code: subAsmCode,
+              sub_assembly_name: subAsmName,
+              bom_id: bomId,
+              is_operation: true,
+              operation_qty: opTime,
+              operation_time: opTime
+            }
+            allSubAsmMaterials.push(opEntry)
+            console.log(`  Added operation: ${op.operation_name || op.name} - Time: ${opTime}`)
+          })
+          
+          console.log(`✓ Sub-assembly ${subAsmCode} processed successfully`)
+        } catch (err) {
+          console.error(`✗ Error processing sub-assembly ${subAsmCode}:`, err)
+        }
+      }
+      
+      console.log('\n=== FETCH COMPLETE ===')
+      console.log('Total items fetched (materials + operations):', allSubAsmMaterials.length)
+      
+      setSubAssemblyBomMaterials(allSubAsmMaterials)
+      console.log('Sub-Assembly BOM Materials state updated')
+    } catch (err) {
+      console.error('Error fetching sub-assembly BOM materials:', err)
+    }
+  }
+
   const loadSubAssemblyMaterials = async (subAssemblySku) => {
     if (subAssemblyMaterials[subAssemblySku]) {
       return subAssemblyMaterials[subAssemblySku]
@@ -388,8 +567,39 @@ export default function ProductionPlanningForm() {
 
       const bomFinishedGoods = bomFinishedGoodsFromSO.length > 0 ? bomFinishedGoodsFromSO : (bomData?.lines || bomData?.finished_goods || bomData?.bom_finished_goods || [])
       
-      if (bomFinishedGoods.length > 0) {
-        const fgItemsFromBOM = bomFinishedGoods.map(fgItem => ({
+      const isSubAssemblyType = (itemType, itemGroup = '') => {
+        if (!itemType && !itemGroup) return false
+        
+        const normalizeStr = (str) => str ? str.toLowerCase().replace(/[-\s]/g, '').trim() : ''
+        
+        const typeNorm = normalizeStr(itemType)
+        const groupNorm = normalizeStr(itemGroup)
+        
+        const subAsmPatterns = ['subassemblies', 'subassembly', 'subassembries', 'sub-assembly', 'assembly']
+        
+        return subAsmPatterns.some(pattern => 
+          typeNorm.includes(pattern) || groupNorm.includes(pattern)
+        )
+      }
+      
+      console.log('=== BOM FINISHED GOODS ANALYSIS ===')
+      console.log('Total items in BOM Finished Goods:', bomFinishedGoods.length)
+      bomFinishedGoods.forEach((item, idx) => {
+        const typeField = item.fg_sub_assembly || item.component_type
+        const groupField = item.item_group || item.group || ''
+        const isSubAsm = isSubAssemblyType(typeField, groupField)
+        console.log(`Item ${idx + 1}: Code=${item.item_code || item.component_code}, Type="${typeField}", Group="${groupField}", IsSubAssembly=${isSubAsm}, Full=${JSON.stringify({type: typeField, group: groupField})}`)
+      })
+      
+      const finishedGoodsOnly = bomFinishedGoods.filter(item => !isSubAssemblyType(item.fg_sub_assembly || item.component_type, item.item_group))
+      const subAssembliesOnly = bomFinishedGoods.filter(item => isSubAssemblyType(item.fg_sub_assembly || item.component_type, item.item_group))
+      
+      console.log('Separated Finished Goods:', finishedGoodsOnly.length)
+      console.log('Separated Sub-Assemblies:', subAssembliesOnly.length)
+      console.log('Sub-Assemblies Detail:', subAssembliesOnly)
+      
+      if (finishedGoodsOnly.length > 0) {
+        const fgItemsFromBOM = finishedGoodsOnly.map(fgItem => ({
           item_code: fgItem.item_code || fgItem.component_code || itemCode,
           item_name: fgItem.item_name || fgItem.component_description || fgItem.product_name || itemName,
           quantity: (fgItem.qty || fgItem.quantity || 1) * quantity,
@@ -410,6 +620,25 @@ export default function ProductionPlanningForm() {
         setFGItems([fgFromBOM])
       } else {
         setFGItems([fg])
+      }
+
+      if (subAssembliesOnly.length > 0) {
+        const subAsmItemsFromBOM = subAssembliesOnly.map(subAsmItem => ({
+          item_code: subAsmItem.item_code || subAsmItem.component_code,
+          item_name: subAsmItem.item_name || subAsmItem.component_description,
+          quantity: (subAsmItem.qty || subAsmItem.quantity || subAsmItem.bom_qty || 1) * quantity,
+          sales_order_quantity: quantity,
+          fg_sub_assembly: subAsmItem.fg_sub_assembly || subAsmItem.component_type || 'Sub-Assembly',
+          planned_start_date: new Date().toISOString().split('T')[0],
+          planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        }))
+        console.log('Setting Sub-Assembly Items:', subAsmItemsFromBOM)
+        setSubAssemblyItems(subAsmItemsFromBOM)
+        
+        await fetchSubAssemblyBomMaterials(subAsmItemsFromBOM)
+      } else {
+        setSubAssemblyItems([])
+        setSubAssemblyBomMaterials([])
       }
 
       const allMaterials = bomRawMaterialsFromSO.length > 0 ? bomRawMaterialsFromSO : (bomData?.rawMaterials || bomData?.bom_raw_materials || [])
@@ -451,17 +680,55 @@ export default function ProductionPlanningForm() {
       const token = localStorage.getItem('token')
       const nestedMaterials = []
 
-      const bomDetailsResponse = await fetch(
+      let bomDetailsResponse = await fetch(
         `${import.meta.env.VITE_API_URL}/production/boms/${bomId}`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       )
 
+      if (!bomDetailsResponse.ok && bomDetailsResponse.status === 404) {
+        console.warn(`BOM ID ${bomId} not found, trying to fetch BOMs list...`)
+        try {
+          const bomListResponse = await fetch(`${import.meta.env.VITE_API_URL}/production/boms?limit=1000`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+          if (bomListResponse.ok) {
+            const bomListData = await bomListResponse.json()
+            const bomList = bomListData.data || []
+            const foundBom = bomList.find(b => b.bom_id === bomId || b.item_code === bomId)
+            if (foundBom) {
+              bomDetailsResponse = await fetch(
+                `${import.meta.env.VITE_API_URL}/production/boms/${foundBom.bom_id}`,
+                { headers: { 'Authorization': `Bearer ${token}` } }
+              )
+            } else {
+              console.warn(`No BOM found for ${bomId}`)
+            }
+          }
+        } catch (fallbackErr) {
+          console.error('Error in BOM fallback lookup:', fallbackErr)
+        }
+      }
+
       if (!bomDetailsResponse.ok) {
-        throw new Error(`Failed to fetch BOM ${bomId}: ${bomDetailsResponse.status}`)
+        console.warn(`BOM ${bomId} not found, skipping nested material details`)
+        setNestedMaterialsData(prev => ({...prev, [detailKey]: []}))
+        setExpandedMaterialDetails(prev => ({...prev, [detailKey]: false}))
+        return
       }
 
       const bomDetails = await bomDetailsResponse.json()
-      const bom = bomDetails.data || bomDetails
+      let bom = bomDetails.data || bomDetails
+      
+      if (!bom) {
+        console.warn(`No BOM data returned for ${bomId}`)
+        setNestedMaterialsData(prev => ({...prev, [detailKey]: []}))
+        setExpandedMaterialDetails(prev => ({...prev, [detailKey]: false}))
+        return
+      }
+      
+      if (Array.isArray(bom)) {
+        bom = bom[0]
+      }
       console.log('BOM data fetched:', bom)
       
       const bomLines = bom.rawMaterials || bom.lines || bom.bom_raw_materials || []
@@ -550,7 +817,8 @@ export default function ProductionPlanningForm() {
       }))
     } catch (err) {
       console.error('Error fetching nested material details:', err)
-      alert('Failed to fetch nested material details')
+      setNestedMaterialsData(prev => ({...prev, [detailKey]: []}))
+      setExpandedMaterialDetails(prev => ({...prev, [detailKey]: false}))
     }
   }
 
@@ -686,7 +954,11 @@ export default function ProductionPlanningForm() {
 
       const createdWorkOrders = []
 
+      console.log('=== STEP 1: Creating work orders for sub-assemblies ===')
+      console.log(`Creating ${uniqueSubAssemblies.length} sub-assembly work orders...`)
+
       for (const subAsm of uniqueSubAssemblies) {
+        console.log(`  Creating work order for: ${subAsm.item_code}`)
         const woPayload = {
           item_code: subAsm.item_code,
           quantity: salesOrderQuantity,
@@ -723,7 +995,11 @@ export default function ProductionPlanningForm() {
         }
       }
 
+      console.log('=== STEP 2: Creating work orders for finished goods ===')
+      console.log(`Creating ${fgItems.length} finished goods work orders...`)
+
       for (const fgItem of fgItems) {
+        console.log(`  Creating work order for: ${fgItem.item_code}`)
         const fgBom = Array.from(new Set(subAssemblyBomMaterials.map(m => m.bom_id)))
         
         const fgWoPayload = {
@@ -762,7 +1038,15 @@ export default function ProductionPlanningForm() {
         }
       }
 
-      setSuccess(`Created ${createdWorkOrders.length} work orders successfully`)
+      const subAsmCount = createdWorkOrders.filter(wo => wo.type === 'sub-assembly').length
+      const fgCount = createdWorkOrders.filter(wo => wo.type === 'finished-good').length
+      
+      console.log('=== WORK ORDER CREATION COMPLETE ===')
+      console.log(`✓ Sub-assembly work orders: ${subAsmCount}`)
+      console.log(`✓ Finished goods work orders: ${fgCount}`)
+      console.log(`✓ Total work orders: ${createdWorkOrders.length}`)
+      
+      setSuccess(`Created ${subAsmCount} sub-assembly + ${fgCount} finished goods = ${createdWorkOrders.length} work orders`)
       
       setTimeout(() => {
         navigate('/production/work-orders')
@@ -775,7 +1059,7 @@ export default function ProductionPlanningForm() {
     }
   }
 
-  const fetchSubAssemblyBomMaterials = async () => {
+  const _oldFetchSubAssemblyBomMaterials = async () => {
     console.log('=== fetchSubAssemblyBomMaterials CALLED ===')
     console.log('rawMaterialItems:', rawMaterialItems)
     console.log('salesOrderQuantity:', salesOrderQuantity)
@@ -805,20 +1089,52 @@ export default function ProductionPlanningForm() {
         
         try {
           console.log(`Fetching BOM details for ${bomId}...`)
-          const bomDetailsResponse = await fetch(
+          let bomDetailsResponse = await fetch(
             `${import.meta.env.VITE_API_URL}/production/boms/${bomId}`,
             { headers: { 'Authorization': `Bearer ${token}` } }
           )
           console.log(`BOM details response status: ${bomDetailsResponse.status}`)
           
+          if (!bomDetailsResponse.ok && bomDetailsResponse.status === 404) {
+            console.warn(`BOM ID ${bomId} not found, trying to fetch BOM by item code ${itemCode}...`)
+            try {
+              const bomListResponse = await fetch(
+                `${import.meta.env.VITE_API_URL}/production/boms?item_code=${itemCode}`,
+                { headers: { 'Authorization': `Bearer ${token}` } }
+              )
+              if (bomListResponse.ok) {
+                const bomListData = await bomListResponse.json()
+                const bomList = bomListData.data || []
+                if (bomList.length > 0) {
+                  console.log(`Found BOM for item ${itemCode}:`, bomList[0].bom_id)
+                  bomDetailsResponse = await fetch(
+                    `${import.meta.env.VITE_API_URL}/production/boms/${bomList[0].bom_id}`,
+                    { headers: { 'Authorization': `Bearer ${token}` } }
+                  )
+                } else {
+                  console.warn(`No BOM found for item ${itemCode}`)
+                }
+              }
+            } catch (fallbackErr) {
+              console.error('Error in BOM fallback lookup:', fallbackErr)
+            }
+          }
+          
           if (bomDetailsResponse.ok) {
-            const bomDetails = await bomDetailsResponse.json()
-            const bom = bomDetails.data || bomDetails
+            let bomDetails = await bomDetailsResponse.json()
+            let bom = bomDetails.data || bomDetails
+            
+            if (Array.isArray(bom)) {
+              bom = bom[0]
+            }
+            
             console.log(`BOM details for ${itemCode}:`, bom)
             
             const materials = bom.bom_raw_materials || bom.rawMaterials || bom.lines || []
             const operations = bom.bom_operations || bom.operations || []
             console.log(`Materials found: ${materials.length}, Operations found: ${operations.length}`)
+            
+            const actualBomId = bom.bom_id || bomId
             
             materials.forEach(material => {
               if (material.item_group === 'Consumable') {
@@ -830,7 +1146,7 @@ export default function ProductionPlanningForm() {
               const actualQty = bomQty * salesOrderQuantity
               console.log(`Adding material: ${material.item_code}, BOM qty: ${bomQty}, Actual qty: ${actualQty}`)
               allMaterials.push({
-                bom_id: bomId,
+                bom_id: actualBomId,
                 sub_assembly_code: itemCode,
                 sub_assembly_name: rawMat.item_name,
                 item_code: material.item_code || material.component_code,
@@ -844,7 +1160,7 @@ export default function ProductionPlanningForm() {
               })
             })
           } else {
-            console.warn(`Failed to fetch BOM details: ${bomDetailsResponse.status}`)
+            console.warn(`Failed to fetch BOM details for ${bomId}: ${bomDetailsResponse.status}`)
           }
         } catch (err) {
           console.error(`Error fetching BOM for ${itemCode}:`, err)
@@ -1187,42 +1503,7 @@ export default function ProductionPlanningForm() {
           >
             ← Back
           </button>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">Production Plan</h1>
-              <p className="text-xs text-gray-500">{planHeader.plan_id}</p>
-            </div>
-            <div className="flex gap-2">
-              {!plan_id && (
-                <button 
-                  onClick={async () => {
-                    if (!selectedSalesOrders.length) {
-                      setError('Please select a sales order')
-                      return
-                    }
-                    await prepareWorkOrderData()
-                  }}
-                  className="px-3 py-1.5 bg-orange-600 text-white rounded text-sm font-medium hover:bg-orange-700 transition"
-                >
-                  ⚡ Create Work Order
-                </button>
-              )}
-              {plan_id && (
-                <button 
-                  onClick={async () => {
-                    if (!selectedSalesOrders.length || selectedSalesOrders.length === 0) {
-                      setError('Please select a sales order')
-                      return
-                    }
-                    await prepareWorkOrderData()
-                  }}
-                  className="px-3 py-1.5 bg-orange-600 text-white rounded text-sm font-medium hover:bg-orange-700 transition"
-                >
-                  ⚡ Create Work Order
-                </button>
-              )}
-            </div>
-          </div>
+          
         </div>
 
         {/* Messages */}
@@ -1460,8 +1741,31 @@ export default function ProductionPlanningForm() {
                   onClick={(e) => {
                     console.log('Get Sub-Asm Materials button clicked!')
                     e.stopPropagation()
-                    console.log('About to call fetchSubAssemblyBomMaterials...')
-                    fetchSubAssemblyBomMaterials()
+                    console.log('Raw Material Items count:', rawMaterialItems.length)
+                    console.log('Raw Material Items:', rawMaterialItems)
+                    
+                    const subAsmFromRawMaterials = rawMaterialItems.filter(item => 
+                      (item.item_code || '').startsWith('SA-') || 
+                      (item.fg_sub_assembly || item.component_type || '').toLowerCase().includes('sub')
+                    )
+                    
+                    console.log('Extracted sub-assemblies from raw materials:', subAsmFromRawMaterials.length)
+                    subAsmFromRawMaterials.forEach((item, idx) => {
+                      console.log(`Sub-Assembly ${idx + 1}: ${item.item_code} - BOM ID: ${item.bom_id || item.bom_no || 'NOT FOUND'}`)
+                      console.log(`  Full Item Data:`, JSON.stringify(item, null, 2))
+                    })
+                    
+                    if (subAsmFromRawMaterials.length === 0) {
+                      console.warn('No sub-assemblies found in raw materials')
+                      alert('No sub-assemblies found in raw materials')
+                      return
+                    }
+                    
+                    console.log('About to call fetchSubAssemblyBomMaterials with extracted items...')
+                    setFetchingSubAssemblyBoms(true)
+                    fetchSubAssemblyBomMaterials(subAsmFromRawMaterials).finally(() => {
+                      setFetchingSubAssemblyBoms(false)
+                    })
                   }}
                   disabled={fetchingSubAssemblyBoms}
                   className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white text-xs font-semibold rounded transition"
@@ -1474,7 +1778,7 @@ export default function ProductionPlanningForm() {
             </button>
 
             {expandedSections[3] && (
-              <div className="px-4 py-3 border-t border-gray-200 overflow-x-auto">
+              <div className="px-4 py-3 border-t border-gray-200 ">
                 <table className="w-full text-xs">
                   <thead className="bg-gray-100 border-b border-gray-300">
                     <tr>
@@ -1482,6 +1786,7 @@ export default function ProductionPlanningForm() {
                       <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Item Name</th>
                       <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Qty</th>
                       <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Warehouse</th>
+                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">BOM ID</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1491,6 +1796,7 @@ export default function ProductionPlanningForm() {
                         <td className="px-2 py-1 text-gray-700">{item.item_name}</td>
                         <td className="px-2 py-1 text-right font-bold text-gray-900">{item.quantity || item.qty_as_per_bom}</td>
                         <td className="px-2 py-1 text-gray-700">{item.for_warehouse || '-'}</td>
+                        <td className="px-2 py-1 text-gray-700 font-mono text-xs">{item.bom_id || item.bom_no || '-'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1556,6 +1862,8 @@ export default function ProductionPlanningForm() {
                 {Array.from(new Set(subAssemblyBomMaterials.map(m => m.sub_assembly_code))).map((subAsmCode) => {
                   const subAsmMaterials = subAssemblyBomMaterials.filter(m => m.sub_assembly_code === subAsmCode)
                   const subAsmInfo = subAsmMaterials[0]
+                  const materialsOnly = subAsmMaterials.filter(m => !m.is_operation)
+                  const operationsOnly = subAsmMaterials.filter(m => m.is_operation)
                   
                   return (
                     <div key={subAsmCode} className="border border-cyan-200 rounded bg-cyan-50 p-3">
@@ -1563,226 +1871,76 @@ export default function ProductionPlanningForm() {
                         <h4 className="font-semibold text-sm text-cyan-900">
                           {subAsmCode} - {subAsmInfo.sub_assembly_name}
                         </h4>
-                        <p 
-                          className="text-xs text-cyan-700 cursor-pointer hover:text-cyan-900 hover:underline"
-                          onClick={() => fetchBomOperations(subAsmInfo.bom_id)}
-                        >
+                        <p className="text-xs text-cyan-700 mt-1">
                           BOM ID: <span className="font-semibold">{subAsmInfo.bom_id}</span>
+                          <span className="ml-3">| Materials: {materialsOnly.length}</span>
+                          <span className="ml-3">| Operations: {operationsOnly.length}</span>
                         </p>
                       </div>
                       
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
-                          <thead className="bg-cyan-100 border-b border-cyan-300">
-                            <tr>
-                              <th className="px-2 py-1 text-left font-semibold text-gray-700">Item Code <span className="text-xs text-gray-600">(click to expand ops)</span></th>
-                              <th className="px-2 py-1 text-left font-semibold text-gray-700">Item Name</th>
-                              <th className="px-2 py-1 text-left font-semibold text-gray-700">Item Group</th>
-                              <th className="px-2 py-1 text-right font-semibold text-gray-700">Qty</th>
-                              <th className="px-2 py-1 text-right font-semibold text-gray-700">Operations Hours</th>
-                              <th className="px-2 py-1 text-right font-semibold text-gray-700">Ops Count <span className="text-xs text-gray-600">(click to fetch materials)</span></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {subAsmMaterials.map((item, idx) => {
-                              const detailKey = `${item.sub_assembly_code}-${item.bom_id}`
-                              const nestedData = nestedMaterialsData[detailKey] || []
-                              const isExpanded = expandedMaterialDetails[detailKey]
-                              
-                              return (
-                                <React.Fragment key={idx}>
+                      {materialsOnly.length > 0 && (
+                        <div className="mb-4">
+                          <h5 className="text-xs font-semibold text-cyan-900 mb-2">📦 Raw Materials ({materialsOnly.length})</h5>
+                          <table className="w-full text-xs">
+                            <thead className="bg-green-100 border-b border-green-300">
+                              <tr>
+                                <th className="px-2 py-1 text-left font-semibold text-gray-700">Item Code</th>
+                                <th className="px-2 py-1 text-left font-semibold text-gray-700">Item Name</th>
+                                <th className="px-2 py-1 text-left font-semibold text-gray-700">Item Group</th>
+                                <th className="px-2 py-1 text-right font-semibold text-gray-700">Quantity</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {materialsOnly.map((item, idx) => {
+                                const itemCode = item.item_code || item.component_code || '-'
+                                const itemName = item.item_name || item.component_description || '-'
+                                const itemGroup = item.item_group || item.group || '-'
+                                const itemQty = item.qty || item.quantity || '0'
+                                
+                                return (
                                   <tr 
-                                    className={`${idx % 2 === 0 ? 'bg-white' : 'bg-cyan-25'} cursor-pointer hover:bg-cyan-100 transition`}
+                                    key={idx}
+                                    className={`${idx % 2 === 0 ? 'bg-white' : 'bg-green-25'} hover:bg-green-100 transition`}
                                   >
-                                    <td 
-                                      className="px-2 py-1 font-medium text-gray-900"
-                                      onClick={() => {
-                                        const opKey = `${item.sub_assembly_code}-${item.bom_id}-ops`
-                                        setExpandedOperations(prev => ({
-                                          ...prev,
-                                          [opKey]: !prev[opKey]
-                                        }))
-                                      }}
-                                    >
-                                      {item.item_code}
-                                    </td>
-                                    <td className="px-2 py-1 text-gray-700">{item.item_name}</td>
-                                    <td className="px-2 py-1 text-gray-700 text-xs"><span className="bg-gray-100 px-2 py-1 rounded">{item.item_group}</span></td>
-                                    <td className="px-2 py-1 text-right font-bold text-gray-900">{item.qty}</td>
-                                    <td className="px-2 py-1 text-right font-bold text-blue-600">{(Number(item.operations_qty) || 0).toFixed(2)}h</td>
-                                    <td 
-                                      className="px-2 py-1 text-right font-bold text-green-600 cursor-pointer"
-                                      onClick={() => fetchNestedMaterialDetails(item.sub_assembly_code, item.bom_id)}
-                                    >
-                                      {item.operations_count}
-                                    </td>
+                                    <td className="px-2 py-1 font-medium text-gray-900">{itemCode}</td>
+                                    <td className="px-2 py-1 text-gray-700">{itemName}</td>
+                                    <td className="px-2 py-1 text-gray-700 text-xs"><span className="bg-gray-100 px-2 py-1 rounded">{itemGroup}</span></td>
+                                    <td className="px-2 py-1 text-right font-bold text-gray-900">{Number(itemQty).toFixed(2)}</td>
                                   </tr>
-                                  {expandedOperations[`${item.sub_assembly_code}-${item.bom_id}-ops`] && item.operations && item.operations.length > 0 && (
-                                    <tr className="bg-yellow-25">
-                                      <td colSpan="6" className="px-4 py-2">
-                                        <div className="bg-yellow-50 rounded border border-yellow-200 p-2 ml-4">
-                                          <h5 className="font-semibold text-xs text-yellow-900 mb-2">
-                                            Operations for {item.item_code}
-                                          </h5>
-                                          <table className="w-full text-xs">
-                                            <thead className="bg-yellow-100 border-b border-yellow-300">
-                                              <tr>
-                                                <th className="px-2 py-1 text-left font-semibold text-gray-700">Operation</th>
-                                                <th className="px-2 py-1 text-left font-semibold text-gray-700">Workstation</th>
-                                                <th className="px-2 py-1 text-left font-semibold text-gray-700">Type</th>
-                                                <th className="px-2 py-1 text-right font-semibold text-gray-700">Time (hrs)</th>
-                                                <th className="px-2 py-1 text-right font-semibold text-gray-700">Sequence</th>
-                                              </tr>
-                                            </thead>
-                                            <tbody>
-                                              {item.operations.map((op, opIdx) => (
-                                                <tr key={opIdx} className={opIdx % 2 === 0 ? 'bg-white' : 'bg-yellow-50'}>
-                                                  <td className="px-2 py-1 font-medium text-gray-900">{op.operation_name || op.operation || 'N/A'}</td>
-                                                  <td className="px-2 py-1 text-gray-700">{op.workstation_id || op.workstation || 'N/A'}</td>
-                                                  <td className="px-2 py-1 text-xs">
-                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${(op.operation_type || 'IN_HOUSE') === 'OUTSOURCED' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`}>
-                                                      {(op.operation_type || 'IN_HOUSE') === 'OUTSOURCED' ? 'Outsourced' : 'In-House'}
-                                                    </span>
-                                                  </td>
-                                                  <td className="px-2 py-1 text-right font-bold text-blue-600">{(Number(op.operation_time || op.time || 0)).toFixed(2)}</td>
-                                                  <td className="px-2 py-1 text-right font-bold text-gray-900">{op.sequence || op.seq || op.operation_sequence || '-'}</td>
-                                                </tr>
-                                              ))}
-                                            </tbody>
-                                          </table>
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  )}
-                                  {isExpanded && nestedData.length > 0 && (
-                                    <tr className="bg-indigo-25">
-                                      <td colSpan="6" className="px-4 py-2">
-                                        <div className="bg-indigo-50 rounded border border-indigo-200 p-2 ml-4">
-                                          <h5 className="font-semibold text-xs text-indigo-900 mb-2">
-                                            Sub-Assembly Materials: {item.item_code}
-                                          </h5>
-                                          <table className="w-full text-xs">
-                                            <thead className="bg-indigo-100 border-b border-indigo-300">
-                                              <tr>
-                                                <th className="px-2 py-1 text-left font-semibold text-gray-700">Sub-Asm Code</th>
-                                                <th className="px-2 py-1 text-left font-semibold text-gray-700">Sub-Asm Name</th>
-                                                <th className="px-2 py-1 text-left font-semibold text-gray-700">BOM ID</th>
-                                                <th className="px-2 py-1 text-left font-semibold text-gray-700">Item Code</th>
-                                                <th className="px-2 py-1 text-left font-semibold text-gray-700">Item Name</th>
-                                                <th className="px-2 py-1 text-left font-semibold text-gray-700">Item Group</th>
-                                                <th className="px-2 py-1 text-right font-semibold text-gray-700">Qty</th>
-                                                <th className="px-2 py-1 text-right font-semibold text-gray-700">Ops Hours</th>
-                                                <th className="px-2 py-1 text-right font-semibold text-gray-700">Ops Count</th>
-                                              </tr>
-                                            </thead>
-                                            <tbody>
-                                              {nestedData.map((nested, nestedIdx) => {
-                                                const matOpKey = `${item.sub_assembly_code}-${item.bom_id}-${nested.item_code}-mat-ops`
-                                                const matOps = materialOperationsData[matOpKey] || []
-                                                const isMatOpsExpanded = expandedMaterialOps[matOpKey]
-                                                
-                                                return (
-                                                  <React.Fragment key={nestedIdx}>
-                                                    <tr 
-                                                      onClick={() => fetchMaterialOperations(nested.item_code, item.sub_assembly_code, item.bom_id)}
-                                                      className={`${nestedIdx % 2 === 0 ? 'bg-white' : 'bg-indigo-50'} cursor-pointer hover:bg-indigo-100 transition`}
-                                                    >
-                                                      <td className="px-2 py-1 font-medium text-gray-900">{nested.parent_code}</td>
-                                                      <td className="px-2 py-1 text-gray-700">{nested.parent_name}</td>
-                                                      <td className="px-2 py-1 font-medium text-indigo-600">{nested.parent_bom_id}</td>
-                                                      <td className="px-2 py-1 font-medium text-gray-900">{nested.item_code}</td>
-                                                      <td className="px-2 py-1 text-gray-700">{nested.item_name}</td>
-                                                      <td className="px-2 py-1 text-gray-700 text-xs"><span className="bg-gray-100 px-2 py-1 rounded">{nested.item_group}</span></td>
-                                                      <td className="px-2 py-1 text-right font-bold text-gray-900">{nested.qty}</td>
-                                                      <td className="px-2 py-1 text-right font-bold text-blue-600">{(Number(nested.operations_qty) || 0).toFixed(2)}h</td>
-                                                      <td className="px-2 py-1 text-right font-bold text-green-600">{nested.operations_count}</td>
-                                                    </tr>
-                                                    {isMatOpsExpanded && matOps.length > 0 && (
-                                                      <tr className="bg-purple-25">
-                                                        <td colSpan="9" className="px-4 py-2">
-                                                          <div className="bg-purple-50 rounded border border-purple-200 p-2 ml-4">
-                                                            <h6 className="font-semibold text-xs text-purple-900 mb-2">
-                                                              Material Operations: {nested.item_code}
-                                                            </h6>
-                                                            <table className="w-full text-xs">
-                                                              <thead className="bg-purple-100 border-b border-purple-300">
-                                                                <tr>
-                                                                  <th className="px-2 py-1 text-left font-semibold text-gray-700">Operation</th>
-                                                                  <th className="px-2 py-1 text-left font-semibold text-gray-700">Workstation</th>
-                                                                  <th className="px-2 py-1 text-left font-semibold text-gray-700">Type</th>
-                                                                  <th className="px-2 py-1 text-right font-semibold text-gray-700">Time (hrs)</th>
-                                                                  <th className="px-2 py-1 text-right font-semibold text-gray-700">Sequence</th>
-                                                                </tr>
-                                                              </thead>
-                                                              <tbody>
-                                                                {matOps.map((op, opIdx) => (
-                                                                  <tr key={opIdx} className={opIdx % 2 === 0 ? 'bg-white' : 'bg-purple-50'}>
-                                                                    <td className="px-2 py-1 font-medium text-gray-900">{op.operation_name || op.operation || 'N/A'}</td>
-                                                                    <td className="px-2 py-1 text-gray-700">{op.workstation_id || op.workstation || 'N/A'}</td>
-                                                                    <td className="px-2 py-1 text-xs">
-                                                                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${(op.operation_type || 'IN_HOUSE') === 'OUTSOURCED' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`}>
-                                                                        {(op.operation_type || 'IN_HOUSE') === 'OUTSOURCED' ? 'Outsourced' : 'In-House'}
-                                                                      </span>
-                                                                    </td>
-                                                                    <td className="px-2 py-1 text-right font-bold text-blue-600">{(Number(op.operation_time || op.time || 0)).toFixed(2)}</td>
-                                                                    <td className="px-2 py-1 text-right font-bold text-gray-900">{op.sequence || op.seq || op.operation_sequence || '-'}</td>
-                                                                  </tr>
-                                                                ))}
-                                                              </tbody>
-                                                            </table>
-                                                          </div>
-                                                        </td>
-                                                      </tr>
-                                                    )}
-                                                  </React.Fragment>
-                                                )
-                                              })}
-                                            </tbody>
-                                          </table>
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  )}
-                                </React.Fragment>
-                              )
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                      
-                      {expandedBomOps[subAsmInfo.bom_id] && bomOperationsData[subAsmInfo.bom_id] && bomOperationsData[subAsmInfo.bom_id].length > 0 && (
-                        <div className="mt-3 bg-orange-50 rounded border border-orange-200 p-3">
-                          <h5 className="font-semibold text-xs text-orange-900 mb-2">
-                            BOM Operations: {subAsmInfo.bom_id}
-                          </h5>
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-xs">
-                              <thead className="bg-orange-100 border-b border-orange-300">
-                                <tr>
-                                  <th className="px-2 py-1 text-left font-semibold text-gray-700">Operation</th>
-                                  <th className="px-2 py-1 text-left font-semibold text-gray-700">Workstation</th>
-                                  <th className="px-2 py-1 text-left font-semibold text-gray-700">Type</th>
-                                  <th className="px-2 py-1 text-right font-semibold text-gray-700">Time (hrs)</th>
-                                  <th className="px-2 py-1 text-right font-semibold text-gray-700">Sequence</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {bomOperationsData[subAsmInfo.bom_id].map((op, opIdx) => (
-                                  <tr key={opIdx} className={opIdx % 2 === 0 ? 'bg-white' : 'bg-orange-50'}>
-                                    <td className="px-2 py-1 font-medium text-gray-900">{op.operation_name || op.operation || 'N/A'}</td>
-                                    <td className="px-2 py-1 text-gray-700">{op.workstation_id || op.workstation || 'N/A'}</td>
-                                    <td className="px-2 py-1 text-xs">
-                                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${(op.operation_type || 'IN_HOUSE') === 'OUTSOURCED' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`}>
-                                        {(op.operation_type || 'IN_HOUSE') === 'OUTSOURCED' ? 'Outsourced' : 'In-House'}
-                                      </span>
-                                    </td>
-                                    <td className="px-2 py-1 text-right font-bold text-blue-600">{(Number(op.operation_time || op.time || 0)).toFixed(2)}</td>
-                                    <td className="px-2 py-1 text-right font-bold text-gray-900">{op.sequence || op.seq || op.operation_sequence || '-'}</td>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+
+                      {operationsOnly.length > 0 && (
+                        <div>
+                          <h5 className="text-xs font-semibold text-cyan-900 mb-2">⚙️ Operations ({operationsOnly.length})</h5>
+                          <table className="w-full text-xs">
+                            <thead className="bg-purple-100 border-b border-purple-300">
+                              <tr>
+                                <th className="px-2 py-1 text-left font-semibold text-gray-700">Operation Name</th>
+                                <th className="px-2 py-1 text-right font-semibold text-gray-700">Time</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {operationsOnly.map((item, idx) => {
+                                const opName = item.operation_name || item.name || '-'
+                                const opTime = item.operation_time || item.operation_qty || '0'
+                                
+                                return (
+                                  <tr 
+                                    key={idx}
+                                    className={`${idx % 2 === 0 ? 'bg-white' : 'bg-purple-25'} hover:bg-purple-100 transition`}
+                                  >
+                                    <td className="px-2 py-1 font-medium text-gray-900">{opName}</td>
+                                    <td className="px-2 py-1 text-right font-bold text-gray-900">{Number(opTime).toFixed(2)}</td>
                                   </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                                )
+                              })}
+                            </tbody>
+                          </table>
                         </div>
                       )}
                     </div>
@@ -1853,7 +2011,7 @@ export default function ProductionPlanningForm() {
             </button>
 
             {expandedSections[5] && (
-              <div className="px-4 py-3 border-t border-gray-200 overflow-x-auto">
+              <div className="px-4 py-3 border-t border-gray-200 ">
                 <table className="w-full text-xs">
                   <thead className="bg-gray-100 border-b border-gray-300">
                     <tr>
@@ -1897,23 +2055,7 @@ export default function ProductionPlanningForm() {
                 >
                   <Save size={16} /> {savingPlan ? 'Saving...' : 'Save Plan'}
                 </button>
-                <button
-                  onClick={async () => {
-                    if (!selectedSalesOrders.length) {
-                      setError('Please select a sales order')
-                      return
-                    }
-                    if (subAssemblyBomMaterials.length > 0) {
-                      await createWorkOrders()
-                    } else {
-                      await prepareWorkOrderData()
-                    }
-                  }}
-                  className="px-3 py-1.5 bg-orange-600 text-white rounded text-sm font-medium hover:bg-orange-700 transition flex items-center gap-2 disabled:bg-gray-400"
-                  disabled={creatingWorkOrders}
-                >
-                  <Zap size={16} /> {creatingWorkOrders ? 'Creating...' : 'Create Work Order'}
-                </button>
+                
               </>
             )}
           </div>
@@ -1974,7 +2116,7 @@ export default function ProductionPlanningForm() {
                         Operations ({workOrderData.operations.length})
                       </h3>
                     </div>
-                    <div className="overflow-x-auto max-h-40">
+                    <div className=" max-h-40">
                       <table className="w-full text-xs">
                         <thead className="bg-gray-50 sticky top-0 border-b border-gray-200">
                           <tr>
@@ -2006,7 +2148,7 @@ export default function ProductionPlanningForm() {
                         Raw Materials ({workOrderData.required_items.length})
                       </h3>
                     </div>
-                    <div className="overflow-x-auto max-h-40">
+                    <div className=" max-h-40">
                       <table className="w-full text-xs">
                         <thead className="bg-gray-50 sticky top-0 border-b border-gray-200">
                           <tr>

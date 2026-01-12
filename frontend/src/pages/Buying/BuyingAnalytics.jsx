@@ -158,7 +158,7 @@ export default function BuyingAnalytics() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex gap-2 mb-6 overflow-x-auto">
+      <div className="flex gap-2 mb-6 ">
         {[
           { id: 'overview', label: 'Overview' },
           { id: 'suppliers', label: 'Top Suppliers' },
@@ -245,7 +245,7 @@ export default function BuyingAnalytics() {
         {activeTab === 'suppliers' && (
           <Card>
             <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-6">Top 10 Suppliers by PO Value</h3>
-            <div className="overflow-x-auto">
+            <div className="">
               <table className="w-full">
                 <thead className="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
                   <tr>

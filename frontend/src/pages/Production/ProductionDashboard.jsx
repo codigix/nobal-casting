@@ -43,6 +43,23 @@ export default function ProductionDashboard() {
     fetchDashboardData()
   }, [])
 
+  const normalizeStatus = (status) => {
+    if (!status) return 'draft'
+    return String(status).toLowerCase().trim()
+  }
+
+  const getStatusDisplayName = (status) => {
+    const normalized = normalizeStatus(status)
+    const displayNames = {
+      'completed': 'Completed',
+      'in-progress': 'In Progress',
+      'pending': 'Pending',
+      'draft': 'Draft',
+      'cancelled': 'Cancelled'
+    }
+    return displayNames[normalized] || status
+  }
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
@@ -66,9 +83,9 @@ export default function ProductionDashboard() {
       const ws = Array.isArray(wsRes) ? wsRes : wsRes.data || []
       const pe = Array.isArray(peRes) ? peRes : peRes.data || []
 
-      const completedCount = jc.filter(j => j.status === 'Completed').length
-      const inProgressCount = jc.filter(j => j.status === 'In Progress').length
-      const pendingCount = jc.filter(j => j.status === 'Pending').length
+      const completedCount = jc.filter(j => normalizeStatus(j.status) === 'completed').length
+      const inProgressCount = jc.filter(j => normalizeStatus(j.status) === 'in-progress').length
+      const pendingCount = jc.filter(j => ['pending', 'draft'].includes(normalizeStatus(j.status))).length
 
       setStats({
         workOrders: wo.length,
@@ -84,67 +101,54 @@ export default function ProductionDashboard() {
 
       const workOrdersData = wo.length > 0 ? wo.map((item, idx) => ({
         id: item.wo_id || item.id || `WO-${idx + 1}`,
-        name: item.name || `Work Order ${idx + 1}`,
-        status: item.status || 'Pending',
-        priority: item.priority || 'Medium'
+        name: item.wo_id || item.name || `Work Order ${idx + 1}`,
+        status: getStatusDisplayName(item.status),
+        priority: item.priority || 'medium'
       })) : []
 
       const bomData = bom.length > 0 ? bom.map((item, idx) => ({
         id: item.bom_id || item.id || `BOM-${idx + 1}`,
         name: item.bom_name || item.name || `BOM ${idx + 1}`,
-        status: item.status || 'Active',
+        status: normalizeStatus(item.status),
         items: item.total_items || item.items || 0
       })) : []
 
       const prodPlanData = pp.length > 0 ? pp.map((item, idx) => ({
         id: item.plan_id || item.id || `PP-${idx + 1}`,
         name: item.plan_name || item.name || `Production Plan ${idx + 1}`,
-        status: item.status || 'Planning',
+        status: normalizeStatus(item.status),
         quantity: item.total_quantity || item.quantity || 0
       })) : []
 
       const jobCardData = jc.length > 0 ? jc.map((item, idx) => ({
         id: item.jc_id || item.id || `JC-${idx + 1}`,
         name: item.jc_code || item.name || `Job Card ${idx + 1}`,
-        status: item.status || 'Pending',
-        priority: item.priority || 'Medium'
+        status: getStatusDisplayName(item.status),
+        priority: item.priority || 'medium'
       })) : []
 
       const workstationData = ws.length > 0 ? ws.map((item, idx) => ({
         id: item.ws_id || item.id || `WS-${idx + 1}`,
         name: item.ws_name || item.name || `Workstation ${idx + 1}`,
-        status: item.status || (idx % 2 === 0 ? 'Active' : 'Idle'),
-        utilization: item.utilization_percent || Math.round(Math.random() * 100)
+        status: item.status || 'active',
+        utilization: item.utilization_percent || 0
       })) : []
 
       const operationsData = op.length > 0 ? op.map((item, idx) => ({
-        id: item.op_id || item.id || `OP-${idx + 1}`,
+        id: item.op_id || item.name || `OP-${idx + 1}`,
         name: item.op_name || item.name || `Operation ${idx + 1}`,
-        status: item.status || 'Pending',
-        duration: item.standard_time || Math.round(Math.random() * 120) + 15
+        status: getStatusDisplayName(item.status),
+        duration: item.standard_time || 0
       })) : []
 
       const dailyData = pe.length > 0 
         ? generateDailyProductionChart(pe)
-        : [
-            { day: 'Mon', completed: 12, inProgress: 8, pending: 3 },
-            { day: 'Tue', completed: 15, inProgress: 10, pending: 2 },
-            { day: 'Wed', completed: 18, inProgress: 9, pending: 1 },
-            { day: 'Thu', completed: 14, inProgress: 11, pending: 4 },
-            { day: 'Fri', completed: 20, inProgress: 7, pending: 2 },
-            { day: 'Sat', completed: 6, inProgress: 5, pending: 1 }
-          ]
+        : generateEmptyDailyChart()
 
       const capacityData = ws.length > 0 ? ws.map(item => ({
-        station: item.ws_name || item.name || `Station ${Math.random()}`,
-        usage: item.utilization_percent || Math.round(Math.random() * 100)
-      })) : [
-        { station: 'Station 1', usage: 85 },
-        { station: 'Station 2', usage: 72 },
-        { station: 'Station 3', usage: 91 },
-        { station: 'Station 4', usage: 68 },
-        { station: 'Station 5', usage: 78 }
-      ]
+        station: item.ws_name || item.name || `Station`,
+        usage: Math.max(0, Math.min(100, item.utilization_percent || 0))
+      })) : []
 
       setDataEntries({
         workOrders: workOrdersData,
@@ -155,6 +159,13 @@ export default function ProductionDashboard() {
         operations: operationsData
       })
 
+      const workOrderStatusBreakdown = [
+        { status: 'In Progress', value: wo.filter(w => normalizeStatus(w.status) === 'in-progress').length, fill: '#3b82f6' },
+        { status: 'Completed', value: wo.filter(w => normalizeStatus(w.status) === 'completed').length, fill: '#10b981' },
+        { status: 'Pending', value: wo.filter(w => normalizeStatus(w.status) === 'pending').length, fill: '#ef4444' },
+        { status: 'Draft', value: wo.filter(w => normalizeStatus(w.status) === 'draft').length, fill: '#f59e0b' }
+      ]
+
       setChartData({
         jobStatus: [
           { name: 'Completed', value: completedCount, fill: '#10b981' },
@@ -162,11 +173,7 @@ export default function ProductionDashboard() {
           { name: 'Pending', value: pendingCount, fill: '#ef4444' }
         ],
         dailyProduction: dailyData,
-        workOrderStatus: [
-          { status: 'Active', value: wo.filter(w => w.status === 'Active').length, fill: '#3b82f6' },
-          { status: 'Completed', value: wo.filter(w => w.status === 'Completed').length, fill: '#10b981' },
-          { status: 'On Hold', value: wo.filter(w => w.status === 'On Hold').length, fill: '#f59e0b' }
-        ],
+        workOrderStatus: workOrderStatusBreakdown,
         capacityUtilization: capacityData
       })
     } catch (err) {
@@ -188,6 +195,23 @@ export default function ProductionDashboard() {
     }
   }
 
+  const generateEmptyDailyChart = () => {
+    const last7Days = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      last7Days.push(d.toISOString().split('T')[0])
+    }
+
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    return last7Days.map((dateStr) => ({
+      day: dayNames[new Date(dateStr).getDay()],
+      completed: 0,
+      inProgress: 0,
+      pending: 0
+    }))
+  }
+
   const generateDailyProductionChart = (entries) => {
     const last7Days = []
     for (let i = 6; i >= 0; i--) {
@@ -203,9 +227,9 @@ export default function ProductionDashboard() {
         return entryDate === dateStr
       })
       
-      const completed = dayEntry.filter(e => e.status === 'Completed').length
-      const inProgress = dayEntry.filter(e => e.status === 'In Progress').length
-      const pending = dayEntry.filter(e => e.status === 'Pending').length
+      const completed = dayEntry.filter(e => normalizeStatus(e.status) === 'completed').length
+      const inProgress = dayEntry.filter(e => normalizeStatus(e.status) === 'in-progress').length
+      const pending = dayEntry.filter(e => ['pending', 'draft'].includes(normalizeStatus(e.status))).length
 
       return {
         day: dayNames[new Date(dateStr).getDay()],
@@ -224,7 +248,7 @@ export default function ProductionDashboard() {
           {Icon && <Icon size={20} color={borderColor} />}
         </div>
       </div>
-      <div className="text-2xl font-bold text-gray-900">{value}</div>
+      <div className="text-xl font-bold text-gray-900">{value}</div>
       <div className="text-xs font-medium" style={{ color: borderColor }}>
         {subtitle}
       </div>
@@ -236,6 +260,7 @@ export default function ProductionDashboard() {
       'Completed': { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' },
       'In Progress': { bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-300' },
       'Pending': { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300' },
+      'Draft': { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300' },
       'Active': { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300' },
       'Idle': { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-300' }
     }
@@ -252,6 +277,7 @@ export default function ProductionDashboard() {
       'Completed': { color: '#10b981' },
       'In Progress': { color: '#f59e0b' },
       'Pending': { color: '#ef4444' },
+      'Draft': { color: '#3b82f6' },
       'Active': { color: '#3b82f6' },
       'Idle': { color: '#6b7280' }
     }
@@ -307,6 +333,17 @@ export default function ProductionDashboard() {
       {children}
     </div>
   )
+
+  if (loading) {
+    return (
+      <div className="min-h-screen w-full p-6 flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen w-full p-6 relative overflow-hidden bg-gray-50">
@@ -384,7 +421,7 @@ export default function ProductionDashboard() {
                 </RechartsPie>
               </ResponsiveContainer>
             </ChartContainer>
-            <ChartContainer title="Work Order Status Breakdown" subtitle="Active, completed, and on-hold orders">
+            <ChartContainer title="Work Order Status Breakdown" subtitle="Order distribution by status">
               <ResponsiveContainer width="100%" height={320}>
                 <RechartsPie data={chartData.workOrderStatus}>
                   <Pie data={chartData.workOrderStatus} cx="50%" cy="50%" labelLine={true} label={({ status, value, percent }) => `${status} ${(percent * 100).toFixed(0)}%`} outerRadius={110} fill="#8884d8" dataKey="value">
@@ -605,7 +642,7 @@ export default function ProductionDashboard() {
                   <XAxis dataKey="name"  style={{ fontSize: '10px' }} angle={-45} textAnchor="end" height={80} />
                   <YAxis  style={{ fontSize: '10px' }} label={{ value: 'Duration (minutes)', angle: -90, position: 'insideLeft' }} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="duration" fill="url(#colorDuration)" name="Duration (min)" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="duration" fill="url(#colorDuration)" name="Duration (min)" radius={[12, 12, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
@@ -614,19 +651,19 @@ export default function ProductionDashboard() {
               <ChartContainer title="Operations Status Distribution" subtitle="Count by operation status">
                 <ResponsiveContainer width="100%" height={340}>
                   <RechartsPie data={[
-                    { name: 'Completed', value: dataEntries.operations.filter(o => o.status === 'Completed').length, fill: '#10b981' },
-                    { name: 'In Progress', value: dataEntries.operations.filter(o => o.status === 'In Progress').length, fill: '#f59e0b' },
-                    { name: 'Pending', value: dataEntries.operations.filter(o => o.status === 'Pending').length, fill: '#ef4444' }
+                    { name: 'Completed', value: dataEntries.operations.filter(o => normalizeStatus(o.status) === 'completed').length, fill: '#10b981' },
+                    { name: 'In Progress', value: dataEntries.operations.filter(o => normalizeStatus(o.status) === 'in-progress').length, fill: '#f59e0b' },
+                    { name: 'Pending', value: dataEntries.operations.filter(o => ['pending', 'draft'].includes(normalizeStatus(o.status))).length, fill: '#ef4444' }
                   ]}>
                     <Pie data={[
-                      { name: 'Completed', value: dataEntries.operations.filter(o => o.status === 'Completed').length, fill: '#10b981' },
-                      { name: 'In Progress', value: dataEntries.operations.filter(o => o.status === 'In Progress').length, fill: '#f59e0b' },
-                      { name: 'Pending', value: dataEntries.operations.filter(o => o.status === 'Pending').length, fill: '#ef4444' }
+                      { name: 'Completed', value: dataEntries.operations.filter(o => normalizeStatus(o.status) === 'completed').length, fill: '#10b981' },
+                      { name: 'In Progress', value: dataEntries.operations.filter(o => normalizeStatus(o.status) === 'in-progress').length, fill: '#f59e0b' },
+                      { name: 'Pending', value: dataEntries.operations.filter(o => ['pending', 'draft'].includes(normalizeStatus(o.status))).length, fill: '#ef4444' }
                     ]} cx="50%" cy="50%" labelLine={true} label={({ name, value, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={110} fill="#8884d8" dataKey="value">
                       {[
-                        { name: 'Completed', value: dataEntries.operations.filter(o => o.status === 'Completed').length, fill: '#10b981' },
-                        { name: 'In Progress', value: dataEntries.operations.filter(o => o.status === 'In Progress').length, fill: '#f59e0b' },
-                        { name: 'Pending', value: dataEntries.operations.filter(o => o.status === 'Pending').length, fill: '#ef4444' }
+                        { name: 'Completed', value: dataEntries.operations.filter(o => normalizeStatus(o.status) === 'completed').length, fill: '#10b981' },
+                        { name: 'In Progress', value: dataEntries.operations.filter(o => normalizeStatus(o.status) === 'in-progress').length, fill: '#f59e0b' },
+                        { name: 'Pending', value: dataEntries.operations.filter(o => ['pending', 'draft'].includes(normalizeStatus(o.status))).length, fill: '#ef4444' }
                       ].map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.fill} />
                       ))}
@@ -639,9 +676,9 @@ export default function ProductionDashboard() {
               <ChartContainer title="Average Duration by Status" subtitle="Mean operation time per status">
                 <ResponsiveContainer width="100%" height={340}>
                   <BarChart data={[
-                    { status: 'Completed', duration: Math.round(dataEntries.operations.filter(o => o.status === 'Completed').reduce((a, o) => a + o.duration, 0) / Math.max(dataEntries.operations.filter(o => o.status === 'Completed').length, 1)) },
-                    { status: 'In Progress', duration: Math.round(dataEntries.operations.filter(o => o.status === 'In Progress').reduce((a, o) => a + o.duration, 0) / Math.max(dataEntries.operations.filter(o => o.status === 'In Progress').length, 1)) },
-                    { status: 'Pending', duration: Math.round(dataEntries.operations.filter(o => o.status === 'Pending').reduce((a, o) => a + o.duration, 0) / Math.max(dataEntries.operations.filter(o => o.status === 'Pending').length, 1)) }
+                    { status: 'Completed', duration: Math.round(dataEntries.operations.filter(o => normalizeStatus(o.status) === 'completed').reduce((a, o) => a + o.duration, 0) / Math.max(dataEntries.operations.filter(o => normalizeStatus(o.status) === 'completed').length, 1)) },
+                    { status: 'In Progress', duration: Math.round(dataEntries.operations.filter(o => normalizeStatus(o.status) === 'in-progress').reduce((a, o) => a + o.duration, 0) / Math.max(dataEntries.operations.filter(o => normalizeStatus(o.status) === 'in-progress').length, 1)) },
+                    { status: 'Pending', duration: Math.round(dataEntries.operations.filter(o => ['pending', 'draft'].includes(normalizeStatus(o.status))).reduce((a, o) => a + o.duration, 0) / Math.max(dataEntries.operations.filter(o => ['pending', 'draft'].includes(normalizeStatus(o.status))).length, 1)) }
                   ]} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                     <defs>
                       <linearGradient id="colorAvgDuration" x1="0" y1="0" x2="0" y2="1">
@@ -670,26 +707,6 @@ export default function ProductionDashboard() {
               </div>
             )}
           </div>
-        )}
-
-        {activeTab === 'capacity' && (
-          <ChartContainer title="Workstation Capacity Utilization" subtitle="Overall capacity usage across production floor">
-            <ResponsiveContainer width="100%" height={450}>
-              <BarChart data={chartData.capacityUtilization} layout="vertical" margin={{ top: 20, right: 30, left: 150, bottom: 20 }}>
-                <defs>
-                  <linearGradient id="colorCapacity" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.9}/>
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.5}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" horizontal={false} />
-                <XAxis type="number" stroke="#6b7280" style={{ fontSize: '12px' }} label={{ value: 'Capacity Usage (%)', position: 'insideBottomRight', offset: -10 }} />
-                <YAxis dataKey="station" type="category" stroke="#6b7280" style={{ fontSize: '12px' }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="usage" fill="url(#colorCapacity)" name="Usage %" radius={[0, 12, 12, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
         )}
       </div>
     </div>

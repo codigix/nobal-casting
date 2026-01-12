@@ -46,7 +46,9 @@ export default function BOMForm() {
     uom: 'Kg',
     item_group: '',
     rate: '0',
-    notes: ''
+    notes: '',
+    loss_percentage: '0',
+    scrap_qty: '0'
   })
   const [editingLineId, setEditingLineId] = useState(null)
   const [editingRowId, setEditingRowId] = useState(null)
@@ -72,6 +74,7 @@ export default function BOMForm() {
     workstation_type: '',
     operation_time: '0',
     fixed_time: '0',
+    hourly_rate: '0',
     operating_cost: '0',
     operation_type: 'IN_HOUSE',
     target_warehouse: '',
@@ -80,7 +83,9 @@ export default function BOMForm() {
   const [newScrapItem, setNewScrapItem] = useState({
     item_code: '',
     item_name: '',
-    quantity: '0',
+    input_quantity: '0',
+    loss_percentage: '0',
+    scrap_qty: '0',
     rate: '0'
   })
   const [manualEntry, setManualEntry] = useState({
@@ -281,10 +286,28 @@ export default function BOMForm() {
     try {
       const response = await productionService.getBOMDetails(bomId)
       const bom = response.data
+      
+      let itemGroupValue = bom.item_group || bom.items_group || ''
+      let productNameValue = bom.product_name || ''
+      
+      if (bom.item_code) {
+        try {
+          const itemResponse = await productionService.getItemDetails(bom.item_code)
+          if (itemResponse.success && itemResponse.data) {
+            const itemData = itemResponse.data
+            itemGroupValue = itemData.item_group || itemGroupValue
+            productNameValue = itemData.name || itemData.item_name || productNameValue
+          }
+        } catch (itemErr) {
+          console.warn('Failed to fetch item details:', itemErr)
+        }
+      }
+      
       setFormData({
         bom_id: bom.bom_id,
         item_code: bom.item_code,
-        product_name: bom.product_name || '',
+        product_name: productNameValue,
+        item_group: itemGroupValue,
         quantity: bom.quantity || 1,
         uom: bom.uom || 'Kg',
         status: bom.status || 'draft',
@@ -301,7 +324,12 @@ export default function BOMForm() {
         with_operations: bom.with_operations === true,
         process_loss_percentage: bom.process_loss_percentage || 0
       })
-      const linesWithIds = (bom.lines || []).map((l, idx) => ({...l, id: l.id || `line-${Date.now()}-${idx}`}))
+      const linesWithIds = (bom.lines || []).map((l, idx) => ({
+        ...l, 
+        id: l.id || `line-${Date.now()}-${idx}`,
+        qty: l.qty || l.quantity || 0,
+        component_name: l.component_name || l.component_description || ''
+      }))
       setBomLines(linesWithIds)
       const materialsWithIds = (bom.rawMaterials || []).map((m, idx) => ({...m, id: m.id || `mat-${Date.now()}-${idx}`}))
       setRawMaterials(materialsWithIds)
@@ -475,7 +503,9 @@ export default function BOMForm() {
       return
     }
     const amount = (parseFloat(newLine.qty) || 0) * (parseFloat(newLine.rate) || 0)
-    setBomLines([...bomLines, { ...newLine, id: Date.now(), amount }])
+    const lossPercentage = parseFloat(newLine.loss_percentage) || 0
+    const scrapQty = (parseFloat(newLine.qty) * lossPercentage) / 100
+    setBomLines([...bomLines, { ...newLine, id: Date.now(), amount, loss_percentage: lossPercentage, scrap_qty: scrapQty }])
     setNewLine({
       component_code: '',
       component_name: '',
@@ -483,7 +513,9 @@ export default function BOMForm() {
       uom: 'Kg',
       item_group: '',
       rate: '0',
-      notes: ''
+      notes: '',
+      loss_percentage: '0',
+      scrap_qty: '0'
     })
   }
 
@@ -541,17 +573,25 @@ export default function BOMForm() {
     setError(null)
   }
 
+  const calculateOperationCost = (cycleTime, hourlyRate) => {
+    const timeInMinutes = parseFloat(cycleTime) || 0
+    const rate = parseFloat(hourlyRate) || 0
+    return (timeInMinutes / 60) * rate
+  }
+
   const addOperation = () => {
     if (!newOperation.operation_name) {
       setError('Please enter operation name')
       return
     }
-    setOperations([...operations, { ...newOperation, id: Date.now() }])
+    const calculatedCost = calculateOperationCost(newOperation.operation_time, newOperation.hourly_rate)
+    setOperations([...operations, { ...newOperation, operating_cost: calculatedCost.toFixed(2), id: Date.now() }])
     setNewOperation({
       operation_name: '',
       workstation_type: '',
       operation_time: '0',
       fixed_time: '0',
+      hourly_rate: '0',
       operating_cost: '0',
       operation_type: 'IN_HOUSE',
       target_warehouse: '',
@@ -564,17 +604,25 @@ export default function BOMForm() {
   }
 
   const addScrapItem = () => {
-    if (!newScrapItem.quantity) {
-      setError('Please fill quantity')
+    if (!newScrapItem.input_quantity) {
+      setError('Please fill Input Qty')
       return
     }
     setScrapItems([...scrapItems, { ...newScrapItem, id: Date.now() }])
     setNewScrapItem({
       item_code: '',
       item_name: '',
-      quantity: '0',
+      input_quantity: '0',
+      loss_percentage: '0',
+      scrap_qty: '0',
       rate: '0'
     })
+  }
+
+  const updateScrapItemLoss = (itemId, lossPercent) => {
+    setScrapItems(scrapItems.map(item => 
+      item.id === itemId ? { ...item, loss_percentage: lossPercent } : item
+    ))
   }
 
   const removeScrapItem = (itemId) => {
@@ -605,7 +653,7 @@ export default function BOMForm() {
 
     const payload = {
   ...formData,
-  lines: bomLines.filter(line => line.item_code && line.item_code.trim()),
+  lines: bomLines.filter(line => line.component_code && line.component_code.trim()),
   rawMaterials: rawMaterials.filter(rm => rm.item_code && rm.item_code.trim()),
   operations: operations,
   scrapItems: scrapItems,
@@ -635,11 +683,18 @@ export default function BOMForm() {
   const totalComponentCost = bomLines.reduce((sum, line) => sum + (parseFloat(line.amount) || 0), 0)
   const totalRawMaterialCost = rawMaterials.reduce((sum, rm) => sum + (parseFloat(rm.amount) || 0), 0)
   const totalOperationCost = operations.reduce((sum, op) => sum + (parseFloat(op.operating_cost) || 0), 0)
+  const totalScrapQty = bomLines.reduce((sum, line) => sum + (parseFloat(line.scrap_qty) || 0), 0)
+  const totalScrapLossCost = scrapItems.reduce((sum, item) => {
+    const inputQty = parseFloat(item.input_quantity) || 0
+    const lossPercent = parseFloat(item.loss_percentage) || 0
+    const scrapQty = (inputQty * lossPercent) / 100
+    const rate = parseFloat(item.rate) || 0
+    return sum + (scrapQty * rate)
+  }, 0)
   
-  const materialCost = totalComponentCost + totalRawMaterialCost
+  const materialCost = totalComponentCost - totalScrapLossCost
   const labourCost = totalOperationCost
-  const overheadCost = (materialCost + labourCost) * 0.1
-  const totalBOMCost = materialCost + labourCost + overheadCost
+  const totalBOMCost = materialCost + labourCost
 
   const groupRawMaterialsByItemGroup = () => {
     const grouped = {}
@@ -673,7 +728,7 @@ export default function BOMForm() {
                 {id ? '✏️' : '📋'}
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{id ? 'Edit BOM' : 'Create BOM'}</h1>
+                <h1 className="text-xl font-bold text-gray-900">{id ? 'Edit BOM' : 'Create BOM'}</h1>
                 <p className="text-xs text-gray-600 mt-0">{id ? 'Modify BOM details' : 'Create BOM'}</p>
               </div>
             </div>
@@ -778,7 +833,7 @@ export default function BOMForm() {
                   <div className="grid grid-cols-3 gap-3">
                     <div className="flex flex-col">
                       <label className="text-xs font-bold text-gray-600 mb-1">Quantity *</label>
-                      <input type="number" name="quantity" value={formData.quantity} onChange={handleInputChange} onKeyDown={handleKeyDown} step="0.01" required className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
+                      <input type="number" name="quantity" value={formData.quantity} onChange={handleInputChange} onKeyDown={handleKeyDown} step="0.01" required className="p-2 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
                     </div>
                     <div className="flex flex-col">
                       <label className="text-xs font-bold text-gray-600 mb-1">UOM</label>
@@ -794,7 +849,7 @@ export default function BOMForm() {
                     </div>
                     <div className="flex flex-col">
                       <label className="text-xs font-bold text-gray-600 mb-1">Revision</label>
-                      <input type="number" name="revision" value={formData.revision} onChange={handleInputChange} onKeyDown={handleKeyDown} step="1" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
+                      <input type="number" name="revision" value={formData.revision} onChange={handleInputChange} onKeyDown={handleKeyDown} step="1" className="p-2 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
                     </div>
                   </div>
 
@@ -860,8 +915,22 @@ export default function BOMForm() {
                         <SearchableSelect
                           value={newLine.component_code}
                           onChange={async (value) => {
-                            const item = items.find(i => i.item_code === value)
+                            let item = items.find(i => i.item_code === value)
                             let rate = item?.valuation_rate || '0'
+                            let componentName = item?.name || ''
+                            
+                            if (!componentName) {
+                              try {
+                                const itemResp = await productionService.getItemDetails(value)
+                                if (itemResp && itemResp.data) {
+                                  componentName = itemResp.data.name || itemResp.data.item_name || ''
+                                  rate = itemResp.data.valuation_rate || rate
+                                  item = itemResp.data
+                                }
+                              } catch (e) {
+                                console.warn(`Failed to fetch item details for ${value}:`, e)
+                              }
+                            }
                             
                             if (item?.item_group === 'Sub Assemblies' || item?.item_group === 'Sub-assembly') {
                               try {
@@ -904,7 +973,9 @@ export default function BOMForm() {
                               }
                             }
                             
-                            setNewLine({...newLine, component_code: value, component_name: item?.name || '', rate})
+                            const selectedItem = items.find(i => i.item_code === value)
+                            const lossPercentage = selectedItem?.loss_percentage || '0'
+                            setNewLine({...newLine, component_code: value, component_name: componentName, rate, loss_percentage: lossPercentage})
                           }}
                           options={items.filter(item => item && item.item_code && item.name).map(item => ({
                             label: `${item.item_code} - ${item.name}`,
@@ -915,7 +986,7 @@ export default function BOMForm() {
                       </div>
                       <div className="flex flex-col">
                         <label className="text-xs font-bold text-gray-700 mb-1">Qty *</label>
-                        <input type="number" value={newLine.qty} onChange={(e) => setNewLine({...newLine, qty: e.target.value})} onKeyDown={handleKeyDown} step="0.01" placeholder="1" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
+                        <input type="number" value={newLine.qty} onChange={(e) => setNewLine({...newLine, qty: e.target.value})} onKeyDown={handleKeyDown} step="0.01" placeholder="1" className="p-2 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
                       </div>
                       <div className="flex flex-col">
                         <label className="text-xs font-bold text-gray-700 mb-1">UOM</label>
@@ -929,11 +1000,15 @@ export default function BOMForm() {
                       </div>
                       <div className="flex flex-col">
                         <label className="text-xs font-bold text-gray-700 mb-1">Rate (₹)</label>
-                        <input type="number" value={newLine.rate} onChange={(e) => setNewLine({...newLine, rate: e.target.value})} onKeyDown={handleKeyDown} step="0.01" placeholder="0" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
+                        <input type="number" value={newLine.rate} onChange={(e) => setNewLine({...newLine, rate: e.target.value})} onKeyDown={handleKeyDown} step="0.01" placeholder="0" className="p-2 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-xs font-bold text-gray-700 mb-1">Loss % (Scrap)</label>
+                        <input type="number" value={newLine.loss_percentage} onChange={(e) => setNewLine({...newLine, loss_percentage: e.target.value})} onKeyDown={handleKeyDown} step="0.01" placeholder="0" min="0" max="100" className="p-2 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
                       </div>
                       <div className="flex flex-col">
                         <label className="text-xs font-bold text-gray-700 mb-1">Notes</label>
-                        <input type="text" value={newLine.notes} onChange={(e) => setNewLine({...newLine, notes: e.target.value})} onKeyDown={handleKeyDown} placeholder="Notes" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
+                        <input type="text" value={newLine.notes} onChange={(e) => setNewLine({...newLine, notes: e.target.value})} onKeyDown={handleKeyDown} placeholder="Notes" className="p-2 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
                       </div>
                       <button type="button" onClick={addBomLine} className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded font-semibold text-xs flex items-center justify-center gap-1 hover:from-blue-600 hover:to-blue-700 transition shadow-sm h-9">
                         <Plus size={14} /> Add
@@ -949,7 +1024,7 @@ export default function BOMForm() {
                           Components Added ({bomLines.length})
                         </div>
                       </div>
-                      <div className="overflow-x-auto">
+                      <div className="">
                         <table className="w-full text-xs border-collapse">
                           <thead>
                             <tr className="bg-gray-50 border-b border-blue-200">
@@ -960,6 +1035,8 @@ export default function BOMForm() {
                               <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">UOM</th>
                               <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Rate</th>
                               <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Amount</th>
+                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Loss %</th>
+                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Scrap Qty</th>
                               <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Notes</th>
                               <th className="px-2 py-1.5 text-center text-xs font-bold text-gray-600 w-8">Actions</th>
                             </tr>
@@ -974,6 +1051,8 @@ export default function BOMForm() {
                                 <td className="px-2 py-1.5 text-xs text-gray-700">{line.uom}</td>
                                 <td className="px-2 py-1.5 text-xs text-right text-gray-700">₹{parseFloat(line.rate || 0).toFixed(2)}</td>
                                 <td className="px-2 py-1.5 text-xs text-right font-semibold text-gray-900">₹{parseFloat(line.amount || 0).toFixed(2)}</td>
+                                <td className="px-2 py-1.5 text-xs text-right text-gray-700">{parseFloat(line.loss_percentage || 0).toFixed(2)}%</td>
+                                <td className="px-2 py-1.5 text-xs text-right text-amber-700 font-semibold">{parseFloat(line.scrap_qty || 0).toFixed(2)}</td>
                                 <td className="px-2 py-1.5 text-xs text-gray-600">{line.notes || '-'}</td>
                                 <td className="px-2 py-1.5 text-center">
                                   <button type="button" onClick={() => removeBomLine(line.id)} className="p-1 text-red-600 hover:bg-red-100 rounded transition">
@@ -983,6 +1062,13 @@ export default function BOMForm() {
                               </tr>
                             ))}
                           </tbody>
+                          <tfoot>
+                            <tr className="bg-amber-50 border-t-2 border-amber-200 font-semibold">
+                              <td colSpan="7" className="px-2 py-2 text-right text-xs text-amber-900">Total Scrap Qty:</td>
+                              <td className="px-2 py-2 text-right text-sm font-bold text-amber-700">{totalScrapQty.toFixed(2)}</td>
+                              <td colSpan="3"></td>
+                            </tr>
+                          </tfoot>
                         </table>
                       </div>
                     </div>
@@ -1171,7 +1257,7 @@ export default function BOMForm() {
                             </button>
 
                             {isExpanded && (
-                              <div className="overflow-x-auto">
+                              <div className="">
                                 <table className="w-full text-xs border-collapse">
                                   <thead>
                                     <tr className="bg-gray-50 border-b border-red-200">
@@ -1340,8 +1426,14 @@ export default function BOMForm() {
                         <input type="number" name="fixed_time" value={newOperation.fixed_time} onChange={(e) => setNewOperation({...newOperation, fixed_time: e.target.value})} onKeyDown={handleKeyDown} step="0.01" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-purple-400 focus:ring-1 focus:ring-purple-100" />
                       </div>
                       <div className="flex flex-col">
+                        <label className="text-xs font-bold text-gray-700 mb-1">Hourly Rate (₹)</label>
+                        <input type="number" name="hourly_rate" value={newOperation.hourly_rate} onChange={(e) => setNewOperation({...newOperation, hourly_rate: e.target.value})} onKeyDown={handleKeyDown} step="0.01" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-purple-400 focus:ring-1 focus:ring-purple-100" />
+                      </div>
+                      <div className="flex flex-col">
                         <label className="text-xs font-bold text-gray-700 mb-1">Cost (₹)</label>
-                        <input type="number" name="operating_cost" value={newOperation.operating_cost} onChange={(e) => setNewOperation({...newOperation, operating_cost: e.target.value})} onKeyDown={handleKeyDown} step="0.01" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-purple-400 focus:ring-1 focus:ring-purple-100" />
+                        <div className="px-2 py-1.5 border border-gray-300 rounded text-xs font-semibold bg-gray-100 text-gray-700">
+                          {calculateOperationCost(newOperation.operation_time, newOperation.hourly_rate).toFixed(2)}
+                        </div>
                       </div>
                       <div className="flex flex-col">
                         <label className="text-xs font-bold text-gray-700 mb-1">Type</label>
@@ -1376,7 +1468,7 @@ export default function BOMForm() {
                           Operations
                         </div>
                       </div>
-                      <div className="overflow-x-auto">
+                      <div className="">
                         <table className="w-full text-xs border-collapse">
                           <thead>
                             <tr className="bg-gray-50 border-b border-gray-200">
@@ -1385,6 +1477,7 @@ export default function BOMForm() {
                               <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Workstation</th>
                               <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Cycle (min)</th>
                               <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Setup (min)</th>
+                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Hourly Rate (₹)</th>
                               <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Cost (₹)</th>
                               <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Type</th>
                               <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Target Warehouse</th>
@@ -1399,7 +1492,8 @@ export default function BOMForm() {
                                 <td className="px-2 py-1.5 text-xs text-gray-700">{op.workstation_type || '-'}</td>
                                 <td className="px-2 py-1.5 text-xs text-right text-gray-700">{op.operation_time}</td>
                                 <td className="px-2 py-1.5 text-xs text-right text-gray-700">{op.fixed_time}</td>
-                                <td className="px-2 py-1.5 text-xs text-right font-semibold text-gray-900">₹{parseFloat(op.operating_cost).toFixed(0)}</td>
+                                <td className="px-2 py-1.5 text-xs text-right text-gray-700">₹{parseFloat(op.hourly_rate || 0).toFixed(2)}</td>
+                                <td className="px-2 py-1.5 text-xs text-right font-semibold text-gray-900">₹{parseFloat(op.operating_cost).toFixed(2)}</td>
                                 <td className="px-2 py-1.5 text-xs">
                                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${op.operation_type === 'OUTSOURCED' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`}>
                                     {op.operation_type === 'OUTSOURCED' ? 'Outsourced' : 'In-House'}
@@ -1468,8 +1562,12 @@ export default function BOMForm() {
                         <input type="text" name="item_name" value={newScrapItem.item_name} onChange={handleScrapItemChange} onKeyDown={handleKeyDown} placeholder="Name" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-orange-400 focus:ring-1 focus:ring-orange-100" />
                       </div>
                       <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Qty *</label>
-                        <input type="number" name="quantity" value={newScrapItem.quantity} onChange={handleScrapItemChange} onKeyDown={handleKeyDown} step="0.01" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-orange-400 focus:ring-1 focus:ring-orange-100" />
+                        <label className="text-xs font-bold text-gray-700 mb-1">Input Qty *</label>
+                        <input type="number" name="input_quantity" value={newScrapItem.input_quantity} onChange={handleScrapItemChange} onKeyDown={handleKeyDown} step="0.01" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-orange-400 focus:ring-1 focus:ring-orange-100" placeholder="Material qty" />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-xs font-bold text-gray-700 mb-1">Loss %</label>
+                        <input type="number" name="loss_percentage" value={newScrapItem.loss_percentage} onChange={handleScrapItemChange} onKeyDown={handleKeyDown} step="0.01" min="0" max="100" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-orange-400 focus:ring-1 focus:ring-orange-100" placeholder="0-100" />
                       </div>
                       <div className="flex flex-col">
                         <label className="text-xs font-bold text-gray-700 mb-1">Rate (₹)</label>
@@ -1489,50 +1587,59 @@ export default function BOMForm() {
                           Scrap Items
                         </div>
                       </div>
-                      <div className="overflow-x-auto">
+                      <div className="">
                         <table className="w-full text-xs border-collapse">
                           <thead>
                             <tr className="bg-gray-50 border-b border-gray-200">
                               <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Item</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Qty</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Rate</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Total</th>
+                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Input Qty</th>
+                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Loss %</th>
+                              <th className="px-2 py-1.5 text-right text-xs font-bold text-orange-700 bg-orange-50">Scrap Qty</th>
+                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Rate (₹)</th>
+                              <th className="px-2 py-1.5 text-right text-xs font-bold text-orange-700 bg-orange-50">Total (₹)</th>
                               <th className="px-2 py-1.5 text-center text-xs font-bold text-gray-600 w-8">Del</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {scrapItems.map((item, index) => (
-                              <tr key={item.id} className={`border-b border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}>
-                                <td className="px-2 py-1.5 text-xs font-medium text-gray-900">{item.item_code}</td>
-                                <td className="px-2 py-1.5 text-xs text-right text-gray-700">{item.quantity}</td>
-                                <td className="px-2 py-1.5 text-xs text-right text-gray-700">₹{parseFloat(item.rate).toFixed(0)}</td>
-                                <td className="px-2 py-1.5 text-xs text-right font-semibold text-gray-900">₹{(parseFloat(item.quantity) * parseFloat(item.rate)).toFixed(0)}</td>
-                                <td className="px-2 py-1.5 text-center">
-                                  <button type="button" onClick={() => removeScrapItem(item.id)} className="p-1 text-red-600 hover:bg-red-100 rounded transition">
-                                    <Trash2 size={12} />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
+                            {scrapItems.map((item, index) => {
+                              const inputQty = parseFloat(item.input_quantity) || 0
+                              const lossPercent = parseFloat(item.loss_percentage) || 0
+                              const scrapQty = (inputQty * lossPercent) / 100
+                              const rate = parseFloat(item.rate) || 0
+                              const totalValue = scrapQty * rate
+                              return (
+                                <tr key={item.id} className={`border-b border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}>
+                                  <td className="px-2 py-1.5 text-xs font-medium text-gray-900">{item.item_code}</td>
+                                  <td className="px-2 py-1.5 text-xs text-right text-gray-700">{inputQty.toFixed(2)}</td>
+                                  <td className="px-2 py-1.5 text-xs text-right">
+                                    <input 
+                                      type="number" 
+                                      value={item.loss_percentage || '0'}
+                                      onChange={(e) => updateScrapItemLoss(item.id, e.target.value)}
+                                      min="0"
+                                      max="100"
+                                      step="0.01"
+                                      className="w-full px-1 py-0.5 border border-gray-200 rounded text-xs text-right hover:border-orange-300 focus:border-orange-400 focus:ring-1 focus:ring-orange-100"
+                                    />
+                                  </td>
+                                  <td className="px-2 py-1.5 text-xs text-right font-semibold text-orange-700 bg-orange-50">{scrapQty.toFixed(4)}</td>
+                                  <td className="px-2 py-1.5 text-xs text-right text-gray-700">₹{rate.toFixed(2)}</td>
+                                  <td className="px-2 py-1.5 text-xs text-right font-bold text-orange-700 bg-orange-50">₹{totalValue.toFixed(2)}</td>
+                                  <td className="px-2 py-1.5 text-center">
+                                    <button type="button" onClick={() => removeScrapItem(item.id)} className="p-1 text-red-600 hover:bg-red-100 rounded transition">
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </td>
+                                </tr>
+                              )
+                            })}
                           </tbody>
                         </table>
                       </div>
                     </div>
                   )}
 
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-gray-600 mb-1">Loss %</label>
-                    <input 
-                      type="number" 
-                      name="process_loss_percentage" 
-                      value={formData.process_loss_percentage} 
-                      onChange={handleInputChange} 
-                      step="0.01" 
-                      placeholder="0.00"
-                      className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100 max-w-xs"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Included in BOM cost</p>
-                  </div>
+
                 </div>
               )}
             </div>
@@ -1563,18 +1670,14 @@ export default function BOMForm() {
                   <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
                     <div className="text-xs font-semibold text-blue-700 mb-1">Material Cost</div>
                     <div className="text-lg font-bold text-blue-900">₹{materialCost.toFixed(2)}</div>
-                    <p className="text-xs text-blue-600 mt-1">Components + RM</p>
+                    <p className="text-xs text-blue-600 mt-1">(Components − Scrap)</p>
                   </div>
                   <div className="rounded-lg border border-purple-200 bg-purple-50 p-3">
                     <div className="text-xs font-semibold text-purple-700 mb-1">Labour Cost</div>
                     <div className="text-lg font-bold text-purple-900">₹{labourCost.toFixed(2)}</div>
                     <p className="text-xs text-purple-600 mt-1">Operations</p>
                   </div>
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                    <div className="text-xs font-semibold text-amber-700 mb-1">Overhead (10%)</div>
-                    <div className="text-lg font-bold text-amber-900">₹{overheadCost.toFixed(2)}</div>
-                    <p className="text-xs text-amber-600 mt-1">Auto Calculated</p>
-                  </div>
+
                   <div className="rounded-lg border border-green-200 bg-green-50 p-3">
                     <div className="text-xs font-semibold text-green-700 mb-1">Total BOM Cost</div>
                     <div className="text-lg font-bold text-green-900">₹{totalBOMCost.toFixed(2)}</div>
@@ -1588,13 +1691,21 @@ export default function BOMForm() {
                       <span className="text-gray-600">Components Cost:</span>
                       <span className="font-semibold text-gray-900">₹{totalComponentCost.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-600">Raw Materials Cost:</span>
-                      <span className="font-semibold text-gray-900">₹{totalRawMaterialCost.toFixed(2)}</span>
+                    <div className="flex justify-between text-xs text-red-600">
+                      <span className="text-gray-600">Scrap Loss (Deduction):</span>
+                      <span className="font-semibold">−₹{totalScrapLossCost.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs bg-blue-50 px-2 py-1.5 rounded border border-blue-200">
+                      <span className="text-blue-800 font-semibold">Material Cost (after Scrap):</span>
+                      <span className="font-bold text-blue-700">₹{materialCost.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-600">Operations Cost:</span>
                       <span className="font-semibold text-gray-900">₹{totalOperationCost.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs bg-amber-50 px-2 py-1.5 rounded border border-amber-200">
+                      <span className="text-amber-800 font-semibold">Total Scrap Qty:</span>
+                      <span className="font-bold text-amber-700">{totalScrapQty.toFixed(2)} {formData.uom}</span>
                     </div>
                     <div className="flex justify-between text-xs border-t border-gray-300 pt-2 mt-2">
                       <span className="text-gray-700 font-semibold">Cost Per Unit:</span>

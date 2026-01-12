@@ -284,7 +284,7 @@ export default function EmployeesDesignations() {
                 👥
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Employees & Designations</h1>
+                <h1 className="text-xl font-bold text-gray-900">Employees & Designations</h1>
                 <p className="text-xs text-gray-600 mt-0">Manage employees and job designations</p>
               </div>
             </div>
@@ -476,8 +476,8 @@ export default function EmployeesDesignations() {
                 <div className="text-sm text-gray-600">Loading employees...</div>
               </div>
             ) : filteredEmployees.length > 0 ? (
-              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
+              <div className="bg-white rounded-lg shadow-sm">
+                <div className="">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-200">
@@ -624,8 +624,8 @@ export default function EmployeesDesignations() {
                 <div className="text-sm text-gray-600">Loading designations...</div>
               </div>
             ) : filteredDesignations.length > 0 ? (
-              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
+              <div className="bg-white rounded-lg shadow-sm">
+                <div className="">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-200">

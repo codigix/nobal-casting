@@ -220,7 +220,20 @@ export default function JobCard() {
         }
       }
 
-      await productionService.updateJobCard(jobCardId, inlineEditData)
+      const currentCard = jobCardsByWO[currentWO?.[0]]?.find(c => c.job_card_id === jobCardId)
+      const statusChanged = currentCard && (currentCard.status !== inlineEditData.status)
+
+      const updateData = { ...inlineEditData }
+      if (statusChanged) {
+        delete updateData.status
+      }
+
+      await productionService.updateJobCard(jobCardId, updateData)
+      
+      if (statusChanged) {
+        await productionService.updateJobCardStatus(jobCardId, inlineEditData.status)
+      }
+      
       toast.addToast('Job card updated successfully', 'success')
       setInlineEditingId(null)
       setInlineEditData({})
@@ -288,8 +301,21 @@ export default function JobCard() {
 
       setLoading(true)
       
-      await productionService.updateJobCard(jobCardId, { status: 'pending' })
       await productionService.updateJobCard(jobCardId, { status: 'in-progress' })
+      
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      try {
+        const jobCardsResponse = await productionService.getJobCards({ work_order_id: woId })
+        setJobCardsByWO(prev => ({
+          ...prev,
+          [woId]: jobCardsResponse.data || []
+        }))
+      } catch (err) {
+        console.error('Failed to refresh job cards:', err)
+      }
+      
+      await fetchWorkOrders()
       
       toast.addToast('Job card started. Redirecting to production entry...', 'success')
       
@@ -342,10 +368,12 @@ export default function JobCard() {
 
   const getStatusWorkflow = () => {
     return {
-      'draft': ['pending', 'cancelled'],
-      'pending': ['in-progress', 'cancelled'],
-      'in-progress': ['completed', 'cancelled'],
+      'draft': ['in-progress', 'hold', 'completed'],
+      'in-progress': ['completed', 'hold'],
+      'hold': ['in-progress', 'completed'],
       'completed': ['completed'],
+      'open': ['in-progress', 'hold', 'completed'],
+      'pending': ['in-progress', 'hold', 'completed'],
       'cancelled': ['cancelled']
     }
   }
@@ -389,7 +417,7 @@ export default function JobCard() {
                 🎫
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Job Cards</h1>
+                <h1 className="text-xl font-bold text-gray-900">Job Cards</h1>
                 <p className="text-xs text-gray-600 mt-0">View and manage job cards</p>
               </div>
             </div>
@@ -474,7 +502,7 @@ export default function JobCard() {
         ) : workOrders.length > 0 ? (
           <div className="space-y-2">
             {workOrders.map(wo => (
-              <div key={wo.wo_id} className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div key={wo.wo_id} className="bg-white rounded-lg shadow-sm">
                 <div 
                   className="border-l-4 border-purple-400 bg-gray-50 hover:bg-gray-100 transition p-3 flex items-center gap-2"
                 >
@@ -526,7 +554,7 @@ export default function JobCard() {
                 {expandedWO === wo.wo_id && (
                   <>
                     {jobCardsByWO[wo.wo_id] && jobCardsByWO[wo.wo_id].length > 0 ? (
-                      <div className="overflow-x-auto">
+                      <div className="">
                         <table className="w-full text-xs border-collapse">
                       <thead>
                         <tr className="bg-gray-100 border border-gray-200">
@@ -569,15 +597,19 @@ export default function JobCard() {
                                     <label className="text-xs text-gray-600 block mb-1">Status</label>
                                     <select value={inlineEditData.status} onChange={(e) => handleInlineInputChange('status', e.target.value)} className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500">
                                       {(() => {
-                                        const allowedStatuses = getAllowedStatuses(inlineEditData.status)
+                                        const currentStatus = (inlineEditData.status || 'draft').toLowerCase()
+                                        const allowedStatuses = getAllowedStatuses(currentStatus)
                                         const statusLabels = {
                                           'draft': 'Draft',
                                           'pending': 'Pending',
                                           'in-progress': 'In Progress',
+                                          'hold': 'Hold',
                                           'completed': 'Completed',
-                                          'cancelled': 'Cancelled'
+                                          'cancelled': 'Cancelled',
+                                          'open': 'Open'
                                         }
-                                        return allowedStatuses.map(status => (
+                                        const optionsToShow = [currentStatus, ...allowedStatuses].filter((status, idx, arr) => arr.indexOf(status) === idx)
+                                        return optionsToShow.map(status => (
                                           <option key={status} value={status}>{statusLabels[status] || status}</option>
                                         ))
                                       })()}

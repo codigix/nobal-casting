@@ -181,7 +181,7 @@ export default function StockMovements() {
           <p className="text-neutral-600">No stock movements found</p>
         </Card>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="">
           <table className="w-full text-sm">
             <thead className="bg-neutral-100 dark:bg-neutral-800">
               <tr>

@@ -197,7 +197,7 @@ export default function AdminPanel() {
         {error && <Alert type="danger">{error}</Alert>}
 
         {/* Tabs */}
-        <div className="flex gap-4 mb-8 border-b border-gray-200 overflow-x-auto">
+        <div className="flex gap-4 mb-8 border-b border-gray-200 ">
           {['overview', 'machines', 'projects', 'reports', 'departments', 'masters', 'security'].map((tab) => (
             <button
               key={tab}
@@ -381,7 +381,7 @@ export default function AdminPanel() {
             {/* Machine Details Table */}
             <Card>
               <h3 className="text-lg font-bold text-gray-800 mb-4">Machine Information</h3>
-              <div className="overflow-x-auto">
+              <div className="">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200">
@@ -627,7 +627,7 @@ export default function AdminPanel() {
                 {productionReports.reports.length > 0 && (
                   <Card>
                     <h3 className="text-lg font-bold text-gray-800 mb-4">Production Details</h3>
-                    <div className="overflow-x-auto">
+                    <div className="">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-gray-200">
@@ -693,7 +693,7 @@ export default function AdminPanel() {
                 {productionReports.reports.length > 0 && (
                   <Card>
                     <h3 className="text-lg font-bold text-gray-800 mb-4">Weekly Production Breakdown</h3>
-                    <div className="overflow-x-auto">
+                    <div className="">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-gray-200">
@@ -759,7 +759,7 @@ export default function AdminPanel() {
                 {productionReports.reports.length > 0 && (
                   <Card>
                     <h3 className="text-lg font-bold text-gray-800 mb-4">Monthly Production Summary</h3>
-                    <div className="overflow-x-auto">
+                    <div className="">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-gray-200">
@@ -825,7 +825,7 @@ export default function AdminPanel() {
                 {productionReports.reports.length > 0 && (
                   <Card>
                     <h3 className="text-lg font-bold text-gray-800 mb-4">Yearly Production Summary</h3>
-                    <div className="overflow-x-auto">
+                    <div className="">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-gray-200">

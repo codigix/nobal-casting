@@ -388,7 +388,7 @@ export default function PurchaseOrderForm() {
               <p className="text-xs text-neutral-500 dark:text-neutral-500 m-0">Click "Add Item" button above to start adding items to this purchase order</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="">
               <table className="w-full border-collapse border border-gray-200 text-sm">
                 <thead>
                   <tr className="bg-neutral-100 dark:bg-neutral-700 border-b-2 border-neutral-200 dark:border-neutral-600">

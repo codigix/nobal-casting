@@ -155,7 +155,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
           {timeLogs.length > 0 && (
             <div className="mb-5">
               <label className="block text-xs font-semibold text-gray-600 mb-2">Time Logs ({timeLogs.length})</label>
-              <div className="overflow-x-auto">
+              <div className="">
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-gray-200">
@@ -185,7 +185,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
           {rejections.length > 0 && (
             <div className="mb-5">
               <label className="block text-xs font-semibold text-gray-600 mb-2">Rejections ({rejections.length})</label>
-              <div className="overflow-x-auto">
+              <div className="">
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-gray-200">
@@ -211,7 +211,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
           {downtimes.length > 0 && (
             <div className="mb-5">
               <label className="block text-xs font-semibold text-gray-600 mb-2">Downtimes ({downtimes.length})</label>
-              <div className="overflow-x-auto">
+              <div className="">
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="bg-gray-200">

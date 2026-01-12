@@ -127,7 +127,7 @@ export default function WorkOrder() {
                 📋
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
+                <h1 className="text-xl font-bold text-gray-900">Work Orders</h1>
                 <p className="text-xs text-gray-600 mt-0">Manage and track production work</p>
               </div>
             </div>
@@ -220,8 +220,8 @@ export default function WorkOrder() {
             <div className="text-xs text-gray-600">Loading work orders...</div>
           </div>
         ) : orders.length > 0 ? (
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
+          <div className="bg-white rounded-lg shadow-sm">
+            
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
@@ -245,8 +245,8 @@ export default function WorkOrder() {
                         <td className="px-3 py-2 font-semibold text-gray-900">{order.wo_id}</td>
                         <td className="px-3 py-2 text-gray-700">{order.item_name || order.item_code}</td>
                         <td className="px-3 py-2 text-right text-gray-700">{order.qty_to_manufacture || order.quantity}</td>
-                        <td className="px-3 py-2 text-right text-gray-700">₹{order.unit_cost?.toFixed(0) || '0'}</td>
-                        <td className="px-3 py-2 text-right text-gray-700 font-semibold">₹{order.total_cost?.toFixed(0) || '0'}</td>
+                        <td className="px-3 py-2 text-right text-gray-700">₹{(Number(order.unit_cost) || 0).toFixed(0)}</td>
+                        <td className="px-3 py-2 text-right text-gray-700 font-semibold">₹{(Number(order.total_cost) || 0).toFixed(0)}</td>
                         <td className="px-3 py-2">
                           <span className={`inline-block px-2 py-1 rounded border ${priorityConfig.bg} ${priorityConfig.text} ${priorityConfig.border} border text-xs capitalize`}>
                             {order.priority}
@@ -299,7 +299,7 @@ export default function WorkOrder() {
                   })}
                 </tbody>
               </table>
-            </div>
+            
           </div>
         ) : (
           <div className="bg-white rounded-lg p-3 text-center shadow-sm">

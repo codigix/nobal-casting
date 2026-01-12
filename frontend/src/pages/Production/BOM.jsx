@@ -21,8 +21,19 @@ export default function BOM() {
   })
   const [filters, setFilters] = useState({
     status: '',
-    search: ''
+    search: '',
+    type: ''
   })
+
+  const getBOMType = (bom) => {
+    const itemGroup = (bom.item_group || bom.items_group || '').toLowerCase()
+    const itemCode = bom.item_code || ''
+    
+    if (itemGroup.includes('finished') || itemCode.startsWith('FG-')) {
+      return 'Finished Good'
+    }
+    return 'Sub-Assembly'
+  }
 
   useEffect(() => {
     fetchBOMs()
@@ -32,7 +43,12 @@ export default function BOM() {
     try {
       setLoading(true)
       const response = await productionService.getBOMs(filters)
-      const bomData = response.data || []
+      let bomData = response.data || []
+      
+      // Apply type filter on client side
+      if (filters.type) {
+        bomData = bomData.filter(bom => getBOMType(bom) === filters.type)
+      }
       
       // Fetch sales orders to calculate total quantity
       let bomsWithTotals = bomData
@@ -135,6 +151,20 @@ export default function BOM() {
     return colors[status] || 'status-draft'
   }
 
+  const getBOMTypeColor = (type) => {
+    if (type === 'Finished Good') {
+      return 'bg-blue-100 text-blue-800 border border-blue-300'
+    }
+    return 'bg-purple-100 text-purple-800 border border-purple-300'
+  }
+
+  const getBOMTypeIcon = (type) => {
+    if (type === 'Finished Good') {
+      return '✓'
+    }
+    return '⚙️'
+  }
+
   const columns = [
     {
       key: 'item_code',
@@ -148,6 +178,19 @@ export default function BOM() {
           <div className="text-xs text-gray-600">{row.bom_id}</div>
         </div>
       )
+    },
+    {
+      key: 'bom_type',
+      label: 'Type',
+      render: (value, row) => {
+        const type = getBOMType(row)
+        return (
+          <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold ${getBOMTypeColor(type)}`}>
+            <span>{getBOMTypeIcon(type)}</span>
+            {type}
+          </span>
+        )
+      }
     },
     {
       key: 'is_active',
@@ -303,6 +346,19 @@ export default function BOM() {
             <option value="active">Active</option>
             <option value="draft">Draft</option>
             <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div className="flex flex-col gap-2 flex-1">
+          <label className="text-xs font-semibold text-gray-700">Type</label>
+          <select 
+            name="type" 
+            value={filters.type} 
+            onChange={handleFilterChange}
+            className=" border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 cursor-pointer transition-all focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="">All Types</option>
+            <option value="Finished Good">Finished Good</option>
+            <option value="Sub-Assembly">Sub-Assembly</option>
           </select>
         </div>
         <div className="flex flex-col gap-2 flex-1">

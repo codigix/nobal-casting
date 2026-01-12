@@ -213,7 +213,7 @@ export default function WorkstationForm() {
   }
 
   const FormSection = ({ title, section, children, icon }) => (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-3">
+    <div className="bg-white rounded-lg border border-gray-200 mb-3">
       <button
         type="button"
         onClick={() => toggleSection(section)}
@@ -318,7 +318,7 @@ export default function WorkstationForm() {
                 🏭
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-xl font-bold text-gray-900">
                   {id ? 'Edit Workstation' : 'Create Workstation'}
                 </h1>
                 <p className="text-xs text-gray-600 mt-0.5">

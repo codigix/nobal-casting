@@ -503,7 +503,7 @@ export default function Warehouses() {
                 <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center max-w-md">Try adjusting your search or filters.</p>
               </div>
             ) : viewMode === 'table' ? (
-              <div className="overflow-x-auto ">
+              <div className=" ">
                 <DataTable columns={columns} data={paginatedData} />
               </div>
             ) : (

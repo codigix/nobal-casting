@@ -760,7 +760,7 @@ export default function ProductionPlanning() {
                 📊
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Production Planning</h1>
+                <h1 className="text-xl font-bold text-gray-900">Production Planning</h1>
                 <p className="text-xs text-gray-600 mt-0">Create and manage production plans</p>
               </div>
             </div>
@@ -814,8 +814,8 @@ export default function ProductionPlanning() {
           </div>
         ) : filteredPlans.length > 0 ? (
           <>
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
+            <div className="bg-white rounded-lg shadow-sm">
+              
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
@@ -893,7 +893,7 @@ export default function ProductionPlanning() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              
             </div>
             <div className="mt-2 px-3 py-2 text-right text-xs text-gray-600">
               Showing {filteredPlans.length} of {plans.length} production plans
@@ -965,7 +965,7 @@ export default function ProductionPlanning() {
                       Operations ({workOrderData.operations.length})
                     </h3>
                   </div>
-                  <div className="overflow-x-auto max-h-40">
+                  <div className=" max-h-40">
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50 sticky top-0 border-b border-gray-200">
                         <tr>
@@ -996,7 +996,7 @@ export default function ProductionPlanning() {
                       Sub-Assemblies ({workOrderData.sub_assemblies.length})
                     </h3>
                   </div>
-                  <div className="overflow-x-auto max-h-40">
+                  <div className=" max-h-40">
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50 sticky top-0 border-b border-gray-200">
                         <tr>
@@ -1050,7 +1050,7 @@ export default function ProductionPlanning() {
                       Raw Materials ({workOrderData.required_items.length})
                     </h3>
                   </div>
-                  <div className="overflow-x-auto max-h-40">
+                  <div className=" max-h-40">
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50 sticky top-0 border-b border-gray-200">
                         <tr>
@@ -1179,7 +1179,7 @@ export default function ProductionPlanning() {
                       Checking stock availability...
                     </div>
                   )}
-                  <div className="overflow-x-auto max-h-40">
+                  <div className=" max-h-40">
                     <table className="w-full text-xs">
                       <thead className="bg-gray-50 sticky top-0 border-b border-gray-200">
                         <tr>

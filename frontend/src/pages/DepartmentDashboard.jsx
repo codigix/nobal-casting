@@ -228,7 +228,7 @@ export default function DepartmentDashboard() {
                 Stock Movement Analysis
               </h2>
               <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-300">
-                <div className="flex gap-5 border-b border-gray-200 mb-6 pb-0 overflow-x-auto">
+                <div className="flex gap-5 border-b border-gray-200 mb-6 pb-0 ">
                   {['Overview', 'Inbound', 'Outbound'].map((tab) => (
                     <button
                       key={tab}
@@ -508,7 +508,7 @@ export default function DepartmentDashboard() {
             {typeof Icon === 'string' ? <span className="text-lg">{Icon}</span> : <Icon size={16} color={borderColor} />}
           </div>
         </div>
-        <div className="text-2xl font-bold text-gray-900 mb-1">{value}</div>
+        <div className="text-xl font-bold text-gray-900 mb-1">{value}</div>
         <div className="text-xs font-medium flex items-center gap-1" style={{ color: borderColor }}>
           <TrendingUp size={12} /> {statusText}
         </div>
