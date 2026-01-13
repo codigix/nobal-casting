@@ -272,6 +272,7 @@ export default function SalesOrderForm() {
           item_name: subItemName,
           field_description: subItemDescription,
           fg_sub_assembly: subItem.component_type || subItem.fg_sub_assembly || 'Component',
+          item_group: subItem.item_group || '',
           delivery_date: '',
           commit_date: subItem.commit_date || '',
           qty: subTotalQty,
@@ -343,7 +344,7 @@ export default function SalesOrderForm() {
         const itemCode = item.component_code || item.item_code || ''
         const bomQty = item.quantity || item.qty || 1
         const totalQty = bomQty * salesQty
-        const itemType = item.component_type || item.fg_sub_assembly || (isFromSeparateField ? 'Sub-Assembly' : 'Component')
+        const itemType = item.component_type || item.fg_sub_assembly || item.item_group || (isFromSeparateField ? 'Sub-Assembly' : 'Component')
         
         componentQties[itemCode] = bomQty
         
@@ -357,6 +358,7 @@ export default function SalesOrderForm() {
           item_name: itemName,
           field_description: itemDescription,
           fg_sub_assembly: itemType,
+          item_group: item.item_group || '',
           delivery_date: '',
           commit_date: item.commit_date || '',
           qty: totalQty,
@@ -378,7 +380,7 @@ export default function SalesOrderForm() {
         const itemCode = item.component_code || item.item_code || ''
         const bomQty = item.quantity || item.qty || 1
         const totalQty = bomQty * salesQty
-        const itemType = item.component_type || item.fg_sub_assembly || 'Sub-Assembly'
+        const itemType = item.component_type || item.fg_sub_assembly || item.item_group || 'Sub-Assembly'
         
         componentQties[itemCode] = bomQty
         
@@ -406,6 +408,7 @@ export default function SalesOrderForm() {
           item_name: itemName,
           field_description: itemDescription,
           fg_sub_assembly: itemType,
+          item_group: item.item_group || '',
           delivery_date: '',
           commit_date: item.commit_date || '',
           qty: totalQty,
@@ -463,15 +466,21 @@ export default function SalesOrderForm() {
         console.log(`Item ${idx}: ${item.item_code} | Type: "${item.fg_sub_assembly}" | IsSubAssembly: ${isSubAssembly}`)
       })
       
-      const finishedGoodsItems = allItems.filter(item => !isSubAssemblyType(item.fg_sub_assembly))
-      const subAssemblyItems = allItems.filter(item => isSubAssemblyType(item.fg_sub_assembly))
+      const finishedGoodsItems = allItems.filter(item => !isSubAssemblyType(item.fg_sub_assembly) && item.item_group !== 'Sub Assemblies')
+      const subAssemblyItems = allItems.filter(item => isSubAssemblyType(item.fg_sub_assembly) || item.item_group === 'Sub Assemblies')
+      
+      const rawMatSubAssemblies = allRawMaterials.filter(material => isSubAssemblyType(material.component_type || material.fg_sub_assembly || material.item_group))
+      const actualRawMaterials = allRawMaterials.filter(material => !isSubAssemblyType(material.component_type || material.fg_sub_assembly || material.item_group))
+      
+      subAssemblyItems.push(...rawMatSubAssemblies)
       
       console.log('Separated finished goods:', finishedGoodsItems.length, finishedGoodsItems)
       console.log('Separated sub-assemblies:', subAssemblyItems.length, subAssemblyItems)
-      console.log('All raw materials (finished goods + sub-assemblies):', allRawMaterials.length, allRawMaterials)
+      console.log('Raw material sub-assemblies extracted:', rawMatSubAssemblies.length, rawMatSubAssemblies)
+      console.log('Actual raw materials (after removing sub-assemblies):', actualRawMaterials.length, actualRawMaterials)
       
       setBomComponentQties(componentQties)
-      setBomRawMaterials(allRawMaterials)
+      setBomRawMaterials(actualRawMaterials)
       setBomOperations(allOperations)
       setBomFinishedGoods(finishedGoodsItems)
       setBomSubAssemblies(subAssemblyItems)
@@ -598,7 +607,7 @@ export default function SalesOrderForm() {
             console.log(`  Operation ${i + 1}: ${op.operation_name || op.name} - Time: ${op.operation_time}`)
           })
           
-          const filteredMaterials = subAsmRawMaterials.filter(m => !isSubAssemblyType(m.component_type || m.fg_sub_assembly))
+          const filteredMaterials = subAsmRawMaterials.filter(m => !isSubAssemblyType(m.component_type || m.fg_sub_assembly || m.item_group))
           
           console.log(`Filtered Materials (after removing sub-assemblies): ${filteredMaterials.length}`)
           
@@ -801,7 +810,26 @@ export default function SalesOrderForm() {
   }
 
   const calculateGrandTotal = () => {
-    return calculateSubtotal()
+    const qty = parseFloat(formData.qty) || 1
+    
+    const fgUnitCost = bomFinishedGoods.reduce((sum, item) => {
+      const itemRate = parseFloat(item.rate) || 0
+      return sum + itemRate
+    }, 0)
+    
+    const subAsmUnitCost = bomSubAssemblies.reduce((sum, item) => {
+      const itemRate = parseFloat(item.rate) || 0
+      return sum + itemRate
+    }, 0)
+    
+    const totalUnitCost = fgUnitCost + subAsmUnitCost
+    const subtotal = totalUnitCost * qty
+    
+    const cgstRate = parseFloat(formData.cgst_rate) || 0
+    const sgstRate = parseFloat(formData.sgst_rate) || 0
+    const totalGstRate = (cgstRate + sgstRate) / 100
+    const gstAmount = subtotal * totalGstRate
+    return subtotal + gstAmount
   }
 
   const handleQuantityChange = (e) => {
@@ -969,21 +997,24 @@ export default function SalesOrderForm() {
   const calculateBomGrandTotal = () => {
     const qty = parseFloat(formData.qty) || 1
 
-    const finishedGoodsTotal = bomFinishedGoods.reduce((sum, item) => {
-      const bomQty = parseFloat(item.quantity || item.qty || 1)
-      const itemAmount = bomQty * qty * (parseFloat(item.rate) || 0)
-      return sum + itemAmount
+    const subAssemblyUnitCost = bomSubAssemblies.reduce((sum, item) => {
+      const itemRate = parseFloat(item.rate) || 0
+      return sum + itemRate
     }, 0)
 
-    const operationsTotal = bomOperations.reduce((sum, op) => {
-      const cycleTime = parseFloat(op.operation_time || 0)
-      const hourlyRate = parseFloat(op.hourly_rate || 0)
-      const costPerUnit = (cycleTime / 60) * hourlyRate
-      const totalCost = costPerUnit * qty
-      return sum + totalCost
+    const finishedGoodUnitCost = bomFinishedGoods.reduce((sum, item) => {
+      const itemRate = parseFloat(item.rate) || 0
+      return sum + itemRate
     }, 0)
 
-    return finishedGoodsTotal + operationsTotal
+    const totalUnitCost = finishedGoodUnitCost + subAssemblyUnitCost
+    const subtotal = totalUnitCost * qty
+    const cgstRate = parseFloat(formData.cgst_rate) || 0
+    const sgstRate = parseFloat(formData.sgst_rate) || 0
+    const totalGstRate = (cgstRate + sgstRate) / 100
+    const gstAmount = subtotal * totalGstRate
+    
+    return subtotal + gstAmount
   }
 
   const groupedRawMaterials = groupRawMaterialsByItemGroup()
@@ -1050,40 +1081,27 @@ export default function SalesOrderForm() {
 
           {currentTab.id === 'basicDetails' && (
             <div className="space-y-6">
-              {(bomFinishedGoods.length > 0 || bomRawMaterials.length > 0 || bomOperations.length > 0) && (
+              {(bomFinishedGoods.length > 0 || bomSubAssemblies.length > 0 || bomRawMaterials.length > 0 || bomOperations.length > 0) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-300 rounded-lg p-4">
-                    <p className="text-xs font-semibold text-green-900 mb-1">Final Amount</p>
+                    <p className="text-xs font-semibold text-green-900 mb-1">Sales Order Price</p>
                     <p className="text-2xl font-bold text-green-700">₹{(() => {
-                      let total = 0
-                      if (bomFinishedGoods.length > 0) {
-                        total += bomFinishedGoods.reduce((sum, item) => {
-                          const bomQty = parseFloat(item.quantity || item.qty || 1)
-                          const itemAmount = bomQty * (parseFloat(formData.qty) || 1) * (parseFloat(item.rate) || 0)
-                          return sum + itemAmount
-                        }, 0)
-                      }
-                      if (bomRawMaterials.length > 0) {
-                        total += bomRawMaterials.reduce((sum, material) => {
-                          const qty = parseFloat(material.quantity || material.qty || 0) * (parseFloat(formData.qty) || 1)
-                          const amount = qty * (parseFloat(material.rate) || 0)
-                          return sum + amount
-                        }, 0)
-                      }
-                      if (bomOperations.length > 0) {
-                        total += bomOperations.reduce((sum, op) => {
-                          const cycleTime = parseFloat(op.operation_time || 0)
-                          const hourlyRate = parseFloat(op.hourly_rate || 0)
-                          const costPerUnit = (cycleTime / 60) * hourlyRate
-                          const totalCost = costPerUnit * (parseFloat(formData.qty) || 1)
-                          return sum + totalCost
-                        }, 0)
-                      }
+                      const qty = parseFloat(formData.qty) || 1
+                      const fgUnitCost = bomFinishedGoods.reduce((sum, item) => {
+                        const itemRate = parseFloat(item.rate) || 0
+                        return sum + itemRate
+                      }, 0)
+                      const subAsmUnitCost = bomSubAssemblies.reduce((sum, item) => {
+                        const itemRate = parseFloat(item.rate) || 0
+                        return sum + itemRate
+                      }, 0)
+                      const totalUnitCost = fgUnitCost + subAsmUnitCost
+                      const subtotal = totalUnitCost * qty
                       const cgstRate = parseFloat(formData.cgst_rate) || 0
                       const sgstRate = parseFloat(formData.sgst_rate) || 0
-                      const cgstAmount = (total * cgstRate) / 100
-                      const sgstAmount = (total * sgstRate) / 100
-                      const grandTotal = total + cgstAmount + sgstAmount
+                      const totalGstRate = (cgstRate + sgstRate) / 100
+                      const gstAmount = subtotal * totalGstRate
+                      const grandTotal = subtotal + gstAmount
                       return grandTotal.toFixed(2)
                     })()}</p>
                   </div>
@@ -1594,111 +1612,52 @@ export default function SalesOrderForm() {
                 </div>
               )}
 
-              {(bomFinishedGoods.length > 0 || bomRawMaterials.length > 0 || bomOperations.length > 0) && (
+              {(bomFinishedGoods.length > 0 || bomSubAssemblies.length > 0 || bomRawMaterials.length > 0 || bomOperations.length > 0) && (
                 <div className="mt-6 pt-4 border-t border-gray-200">
                   <div className="flex justify-end">
                     <div className="bg-white border-2 border-gray-300 rounded-lg p-5 min-w-96 shadow-sm">
                       <h4 className="text-sm font-bold text-gray-900 mb-4">Cost Breakdown</h4>
                       <div className="space-y-2">
-                        {bomFinishedGoods.length > 0 && (() => {
-                          const fgTotal = bomFinishedGoods.reduce((sum, item) => {
-                            const bomQty = parseFloat(item.quantity || item.qty || 1)
-                            const itemAmount = bomQty * (parseFloat(formData.qty) || 1) * (parseFloat(item.rate) || 0)
-                            return sum + itemAmount
-                          }, 0)
-                          return (
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-700">Finished Goods ({bomFinishedGoods.length}):</span>
-                              <span className="font-semibold text-gray-900">₹{fgTotal.toFixed(2)}</span>
-                            </div>
-                          )
-                        })()}
-
-                        {bomRawMaterials.length > 0 && (() => {
-                          const rmTotal = bomRawMaterials.reduce((sum, material) => {
-                            const qty = parseFloat(material.quantity || material.qty || 0) * (parseFloat(formData.qty) || 1)
-                            const amount = qty * (parseFloat(material.rate) || 0)
-                            return sum + amount
-                          }, 0)
-                          return (
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-700">Raw Materials ({bomRawMaterials.length}):</span>
-                              <span className="font-semibold text-gray-900">₹{rmTotal.toFixed(2)}</span>
-                            </div>
-                          )
-                        })()}
-
-                        {bomOperations.length > 0 && (() => {
-                          const opTotal = bomOperations.reduce((sum, op) => {
-                            const cycleTime = parseFloat(op.operation_time || 0)
-                            const hourlyRate = parseFloat(op.hourly_rate || 0)
-                            const costPerUnit = (cycleTime / 60) * hourlyRate
-                            const totalCost = costPerUnit * (parseFloat(formData.qty) || 1)
-                            return sum + totalCost
-                          }, 0)
-                          return (
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-700">Operations ({bomOperations.length}):</span>
-                              <span className="font-semibold text-gray-900">₹{opTotal.toFixed(2)}</span>
-                            </div>
-                          )
-                        })()}
-
                         {(() => {
-                          const subtotal = (() => {
-                            let total = 0
-                            if (bomFinishedGoods.length > 0) {
-                              total += bomFinishedGoods.reduce((sum, item) => {
-                                const bomQty = parseFloat(item.quantity || item.qty || 1)
-                                const itemAmount = bomQty * (parseFloat(formData.qty) || 1) * (parseFloat(item.rate) || 0)
-                                return sum + itemAmount
-                              }, 0)
-                            }
-                            if (bomRawMaterials.length > 0) {
-                              total += bomRawMaterials.reduce((sum, material) => {
-                                const qty = parseFloat(material.quantity || material.qty || 0) * (parseFloat(formData.qty) || 1)
-                                const amount = qty * (parseFloat(material.rate) || 0)
-                                return sum + amount
-                              }, 0)
-                            }
-                            if (bomOperations.length > 0) {
-                              total += bomOperations.reduce((sum, op) => {
-                                const cycleTime = parseFloat(op.operation_time || 0)
-                                const hourlyRate = parseFloat(op.hourly_rate || 0)
-                                const costPerUnit = (cycleTime / 60) * hourlyRate
-                                const totalCost = costPerUnit * (parseFloat(formData.qty) || 1)
-                                return sum + totalCost
-                              }, 0)
-                            }
-                            return total
-                          })()
+                          const qty = parseFloat(formData.qty) || 1
+                          
+                          const fgUnitCost = bomFinishedGoods.reduce((sum, item) => {
+                            const itemRate = parseFloat(item.rate) || 0
+                            return sum + itemRate
+                          }, 0)
+                          
+                          const subAsmUnitCost = bomSubAssemblies.reduce((sum, item) => {
+                            const itemRate = parseFloat(item.rate) || 0
+                            return sum + itemRate
+                          }, 0)
+
+                          const totalUnitCost = fgUnitCost + subAsmUnitCost
+                          const subtotal = totalUnitCost * qty
                           const cgstRate = parseFloat(formData.cgst_rate) || 0
                           const sgstRate = parseFloat(formData.sgst_rate) || 0
-                          const cgstAmount = (subtotal * cgstRate) / 100
-                          const sgstAmount = (subtotal * sgstRate) / 100
-                          const grandTotal = subtotal + cgstAmount + sgstAmount
+                          const totalGstRate = (cgstRate + sgstRate) / 100
+                          const gstAmount = subtotal * totalGstRate
+                          const grandTotal = subtotal + gstAmount
                           return (
                             <>
-                              <div className="border-t border-gray-200 pt-2 mt-2 space-y-2">
+                              <div className="flex justify-between text-sm border-b border-gray-200 pb-2 mb-2">
+                                <span className="text-gray-700">Finished Good Cost (Unit):</span>
+                                <span className="font-semibold text-gray-900">₹{totalUnitCost.toFixed(2)}</span>
+                              </div>
+                              <div className="border-t border-gray-200 pt-3 space-y-2">
                                 <div className="flex justify-between text-sm">
-                                  <span className="text-gray-600">Subtotal:</span>
+                                  <span className="text-gray-600">Subtotal (Cost × Quantity {qty}):</span>
                                   <span className="font-semibold text-gray-900">₹{subtotal.toFixed(2)}</span>
                                 </div>
-                                {cgstRate > 0 && (
+                                {(cgstRate + sgstRate) > 0 && (
                                   <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">CGST ({cgstRate}%):</span>
-                                    <span className="font-semibold text-gray-900">₹{cgstAmount.toFixed(2)}</span>
-                                  </div>
-                                )}
-                                {sgstRate > 0 && (
-                                  <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">SGST ({sgstRate}%):</span>
-                                    <span className="font-semibold text-gray-900">₹{sgstAmount.toFixed(2)}</span>
+                                    <span className="text-gray-600">GST ({(cgstRate + sgstRate).toFixed(1)}%):</span>
+                                    <span className="font-semibold text-gray-900">₹{gstAmount.toFixed(2)}</span>
                                   </div>
                                 )}
                               </div>
                               <div className="border-t-2 border-gray-300 pt-3 mt-3 flex justify-between items-center">
-                                <span className="font-bold text-gray-900">Grand Total:</span>
+                                <span className="font-bold text-gray-900">Sales Order Price:</span>
                                 <span className="font-bold text-2xl text-green-600">₹{grandTotal.toFixed(2)}</span>
                               </div>
                             </>
@@ -1710,7 +1669,7 @@ export default function SalesOrderForm() {
                 </div>
               )}
 
-              {bomFinishedGoods.length === 0 && bomOperations.length === 0 && (
+              {bomFinishedGoods.length === 0 && bomSubAssemblies.length === 0 && bomOperations.length === 0 && (
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 text-center">
                   <p className="text-blue-900 font-semibold mb-1">📦 No BOM Selected</p>
                   <p className="text-blue-700 text-sm">Select a BOM in the <strong>Basic Details</strong> tab to view materials, operations, and finished goods here.</p>
