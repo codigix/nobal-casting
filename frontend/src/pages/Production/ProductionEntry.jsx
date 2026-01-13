@@ -132,7 +132,9 @@ export default function ProductionEntry() {
       if (currentOperation) {
         const currentOpIndex = operations.findIndex(op => 
           op.operation_name === currentOperation || 
-          op.name === currentOperation
+          op.name === currentOperation ||
+          op.operation_id === currentOperation ||
+          op.id === currentOperation
         )
         
         if (currentOpIndex !== -1 && currentOpIndex < operations.length - 1) {
@@ -228,7 +230,13 @@ export default function ProductionEntry() {
         return op
       })
       
-      setOperations(enrichedOperations)
+      const sortedOperations = enrichedOperations.sort((a, b) => {
+        const seqA = parseInt(a.sequence || a.seq || a.operation_seq || 0)
+        const seqB = parseInt(b.sequence || b.seq || b.operation_seq || 0)
+        return seqA - seqB
+      })
+      
+      setOperations(sortedOperations)
       
       if (jobCard?.work_order_id) {
         fetchItemName(jobCard.work_order_id)

@@ -198,6 +198,11 @@ export class MaterialRequestModel {
       if (!mrRows.length) throw new Error('Material request not found')
       const request = mrRows[0]
 
+      // Allow idempotent approval - if already approved, just return
+      if (request.status === 'approved') {
+        return await this.getById(db, mrId)
+      }
+
       if (request.status !== 'draft' && request.status !== 'pending') throw new Error('Only draft or pending MRs can be approved')
 
       // Get items

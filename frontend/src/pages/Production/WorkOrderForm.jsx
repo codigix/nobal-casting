@@ -1125,7 +1125,7 @@ export default function WorkOrderForm() {
                           </td>
                           <td className="px-2 py-1 text-right">
                             {isReadOnly ? (
-                              <span className="text-gray-700">₹{(op.operating_cost || 0).toFixed(2)}</span>
+                              <span className="text-gray-700">₹{(parseFloat(op.operating_cost) || 0).toFixed(2)}</span>
                             ) : (
                               <input
                                 type="number"

@@ -61,6 +61,7 @@ export default function ProductionPlanningForm() {
   const [subAssemblyItems, setSubAssemblyItems] = useState([])
   const [rawMaterialItems, setRawMaterialItems] = useState([])
   const [operationItems, setOperationItems] = useState([])
+  const [fgOperations, setFGOperations] = useState([])
   const [consolidateSubAssembly, setConsolidateSubAssembly] = useState(false)
   const [skipAvailableSubAssembly, setSkipAvailableSubAssembly] = useState(false)
   const [selectedSubAssemblyItems, setSelectedSubAssemblyItems] = useState(new Set())
@@ -125,6 +126,7 @@ export default function ProductionPlanningForm() {
           setFGItems(plan.fg_items || [])
           setSubAssemblyItems(plan.sub_assembly_items || [])
           setRawMaterialItems(plan.raw_materials || [])
+          setFGOperations(plan.fg_operations || [])
           setOperationItems(plan.operations || [])
           
           const planQty = plan.fg_items?.[0]?.planned_qty || plan.fg_items?.[0]?.quantity || 1
@@ -604,6 +606,7 @@ export default function ProductionPlanningForm() {
           item_name: fgItem.item_name || fgItem.component_description || fgItem.product_name || itemName,
           quantity: (fgItem.qty || fgItem.quantity || 1) * quantity,
           sales_order_quantity: quantity,
+          bom_id: bomId,
           planned_start_date: new Date().toISOString().split('T')[0],
           planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         }))
@@ -614,6 +617,7 @@ export default function ProductionPlanningForm() {
           item_name: bomData.product_name || itemName,
           quantity: quantity,
           sales_order_quantity: quantity,
+          bom_id: bomId,
           planned_start_date: new Date().toISOString().split('T')[0],
           planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         }
@@ -654,11 +658,22 @@ export default function ProductionPlanningForm() {
 
       setRawMaterialItems(proportionalMaterials)
 
-      const proportionalOperations = (bomOperationsFromSO.length > 0 ? bomOperationsFromSO : (bomData?.operations || bomData?.bom_operations || [])).map(op => ({
+      const allOperations = bomOperationsFromSO.length > 0 ? bomOperationsFromSO : (bomData?.operations || bomData?.bom_operations || [])
+      
+      const fgOpsData = bomData?.bom_operations_fg || bomData?.fg_operations || allOperations.filter(op => op.for_finished_goods === true) || []
+      const fgOpsToDisplay = fgOpsData.length > 0 ? fgOpsData : allOperations
+      
+      const proportionalFGOperations = fgOpsToDisplay.map(op => ({
         ...op,
         proportional_time: (op.time || op.operation_time || 0) * quantity
       }))
 
+      const proportionalOperations = allOperations.map(op => ({
+        ...op,
+        proportional_time: (op.time || op.operation_time || 0) * quantity
+      }))
+
+      setFGOperations(proportionalFGOperations)
       setOperationItems(proportionalOperations)
     } else {
       setFGItems([fg])
@@ -1000,17 +1015,36 @@ export default function ProductionPlanningForm() {
 
       for (const fgItem of fgItems) {
         console.log(`  Creating work order for: ${fgItem.item_code}`)
-        const fgBom = Array.from(new Set(subAssemblyBomMaterials.map(m => m.bom_id)))
+        
+        let bomIdForFG = fgItem.bom_id || selectedBomId
+        if (!bomIdForFG) {
+          console.log(`No BOM ID found for ${fgItem.item_code}, attempting to fetch BOM...`)
+          try {
+            const bomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms?item_code=${fgItem.item_code}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            })
+            if (bomRes.ok) {
+              const bomData = await bomRes.json()
+              const boms = bomData.data || []
+              if (boms.length > 0) {
+                bomIdForFG = boms[0].bom_id || boms[0].id
+                console.log(`Found BOM for ${fgItem.item_code}: ${bomIdForFG}`)
+              }
+            }
+          } catch (err) {
+            console.warn(`Could not fetch BOM for ${fgItem.item_code}:`, err)
+          }
+        }
         
         const fgWoPayload = {
           item_code: fgItem.item_code,
           quantity: salesOrderQuantity,
-          bom_no: selectedBomId || null,
+          bom_no: bomIdForFG || null,
           priority: 'high',
           notes: `Finished good for production plan ${planHeader.plan_id}`,
           sales_order_id: selectedSalesOrders[0] || null,
           planned_start_date: new Date().toISOString().split('T')[0],
-          operations: operationItems
+          operations: fgOperations.length > 0 ? fgOperations : operationItems
         }
 
         const fgWoResponse = await fetch(
@@ -1259,6 +1293,7 @@ export default function ProductionPlanningForm() {
             fg_items: fgItems,
             sub_assemblies: subAssemblyItems,
             raw_materials: rawMaterialItems,
+            fg_operations: fgOperations,
             operations: operationItems
           })
         })
@@ -1719,6 +1754,47 @@ export default function ProductionPlanningForm() {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Section 2.5: Finished Goods Operations */}
+        {fgOperations.length > 0 && (
+          <div className="bg-white rounded shadow mb-3">
+            <button
+              onClick={() => toggleSection(2.5)}
+              className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-emerald-600">2.5</span>
+                <h2 className="text-sm font-semibold text-gray-900">Finished Goods Operations ({fgOperations.length})</h2>
+              </div>
+              <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[2.5] ? 'rotate-180' : ''}`} />
+            </button>
+
+            {expandedSections[2.5] && (
+              <div className="px-4 py-3 border-t border-gray-200">
+                <table className="w-full text-xs">
+                  <thead className="bg-gray-100 border-b border-gray-300">
+                    <tr>
+                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Operation</th>
+                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Workstation</th>
+                      <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Time (hrs)</th>
+                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Seq</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fgOperations.map((item, idx) => (
+                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="px-2 py-1 font-medium text-gray-900">{item.operation || item.operation_name}</td>
+                        <td className="px-2 py-1 text-gray-700">{item.workstation || item.workstation_type || '-'}</td>
+                        <td className="px-2 py-1 text-right font-bold text-gray-900">{item.time || item.operation_time || 0}</td>
+                        <td className="px-2 py-1 text-gray-700">{item.sequence || idx + 1}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
