@@ -692,7 +692,7 @@ export default function BOMForm() {
     return sum + (scrapQty * rate)
   }, 0)
   
-  const materialCost = totalComponentCost - totalScrapLossCost
+  const materialCost = (totalComponentCost + totalRawMaterialCost) - totalScrapLossCost
   const labourCost = totalOperationCost
   const totalBOMCost = materialCost + labourCost
 
@@ -1305,7 +1305,7 @@ export default function BOMForm() {
                                               `₹${parseFloat(material.rate).toFixed(2)}`
                                             )}
                                           </td>
-                                          <td className="px-2 py-1.5 text-xs text-right font-semibold text-gray-900">₹{parseFloat(material.amount || 0).toFixed(2)}</td>
+                                          <td className="px-2 py-1.5 text-xs text-right font-semibold text-gray-900">₹{parseFloat(isEditing ? (parseFloat(data.qty || 0) * parseFloat(data.rate || 0)) : (material.amount || 0)).toFixed(2)}</td>
                                           <td className="px-2 py-1.5 text-xs text-gray-700">
                                             {isEditing ? (
                                               <select value={data.source_warehouse || ''} onChange={(e) => setEditingRowData({...data, source_warehouse: e.target.value})} className="px-2 py-1 border border-gray-300 rounded text-xs w-full">
@@ -1333,7 +1333,7 @@ export default function BOMForm() {
                                           <td className="px-2 py-1.5 text-center flex gap-1 justify-center">
                                             {isEditing ? (
                                               <>
-                                                <button type="button" onClick={async () => {const updated = rawMaterials.map(m => m.id === material.id ? editingRowData : m); setRawMaterials(updated); if(id) {try {setLoading(true); const payload = {...formData, lines: bomLines, rawMaterials: updated, operations, scrapItems, quantity: parseFloat(formData.quantity), revision: parseInt(formData.revision), process_loss_percentage: parseFloat(formData.process_loss_percentage)}; await productionService.updateBOM(id, payload); setError(null);} catch(err) {setError('Failed to save: ' + err.message);} finally {setLoading(false);}} setEditingRowId(null)}} className="p-1 text-green-600 hover:bg-green-100 rounded" title="Save">
+                                                <button type="button" onClick={async () => {const updatedData = {...editingRowData, amount: (parseFloat(editingRowData.qty || 0) * parseFloat(editingRowData.rate || 0))}; const updated = rawMaterials.map(m => m.id === material.id ? updatedData : m); setRawMaterials(updated); if(id) {try {setLoading(true); const payload = {...formData, lines: bomLines, rawMaterials: updated, operations, scrapItems, quantity: parseFloat(formData.quantity), revision: parseInt(formData.revision), process_loss_percentage: parseFloat(formData.process_loss_percentage)}; await productionService.updateBOM(id, payload); setError(null);} catch(err) {setError('Failed to save: ' + err.message);} finally {setLoading(false);}} setEditingRowId(null)}} className="p-1 text-green-600 hover:bg-green-100 rounded" title="Save">
                                                   <Check size={12} />
                                                 </button>
                                                 <button type="button" onClick={() => setEditingRowId(null)} className="p-1 text-gray-600 hover:bg-gray-200 rounded" title="Cancel">
@@ -1690,6 +1690,10 @@ export default function BOMForm() {
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-600">Components Cost:</span>
                       <span className="font-semibold text-gray-900">₹{totalComponentCost.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-600">Raw Materials Cost:</span>
+                      <span className="font-semibold text-gray-900">₹{totalRawMaterialCost.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-xs text-red-600">
                       <span className="text-gray-600">Scrap Loss (Deduction):</span>
