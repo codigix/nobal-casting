@@ -872,7 +872,7 @@ export default function SalesOrderForm() {
       return
     }
 
-    const totalBomItems = bomFinishedGoods.length + bomRawMaterials.length + bomOperations.length
+    const totalBomItems = bomFinishedGoods.length + bomSubAssemblies.length + bomRawMaterials.length + bomOperations.length
     if (totalBomItems === 0) {
       setError('Please select a BOM to populate items')
       return
@@ -1123,7 +1123,7 @@ export default function SalesOrderForm() {
                   <div className="flex flex-col">
                     <label className="text-sm font-semibold text-gray-700 mb-2">Series</label>
                     <input
-                      className="p-2 text-sm border border-gray-300  bg-gray-50 text-gray-600 cursor-not-allowed focus:outline-none"
+                      className="p-2 text-xs border border-gray-300  bg-gray-50 text-gray-600 cursor-not-allowed focus:outline-none"
                       type="text"
                       name="series"
                       value={formData.series || 'Auto-generated'}
@@ -1134,7 +1134,7 @@ export default function SalesOrderForm() {
                   <div className="flex flex-col">
                     <label className="text-sm font-semibold text-gray-700 mb-2">Order Date *</label>
                     <input
-                      className={`p-2 text-sm border border-gray-300 rounded-0 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
+                      className={`p-2 text-xs border border-gray-300 rounded-0 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
                       type="date"
                       name="date"
                       value={formData.date}
@@ -1146,7 +1146,7 @@ export default function SalesOrderForm() {
                   <div className="flex flex-col">
                     <label className="text-sm font-semibold text-gray-700 mb-2">Delivery Date</label>
                     <input
-                      className={`p-2 text-sm border border-gray-300 rounded-0 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
+                      className={`p-2 text-xs border border-gray-300 rounded-0 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
                       type="date"
                       name="delivery_date"
                       value={formData.delivery_date}
@@ -1156,7 +1156,7 @@ export default function SalesOrderForm() {
                   </div>
                   <div className="flex flex-col">
                     <label className="text-sm font-semibold text-gray-700 mb-2">Order Type</label>
-                    <select className={`p-2 text-sm border border-gray-300 rounded-0 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`} name="order_type" value={formData.order_type} onChange={handleChange} disabled={isReadOnly}>
+                    <select className={`p-2 text-xs border border-gray-300 rounded-0 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`} name="order_type" value={formData.order_type} onChange={handleChange} disabled={isReadOnly}>
                       <option value="Sales">Sales</option>
                       <option value="Purchase">Purchase</option>
                     </select>
@@ -1187,7 +1187,7 @@ export default function SalesOrderForm() {
                     <div className="flex flex-col">
                       <label className="text-sm font-semibold text-gray-700 mb-2">Email</label>
                       <input
-                        className="p-2 text-sm border border-gray-300  bg-gray-50 text-gray-600 cursor-not-allowed focus:outline-none"
+                        className="p-2 text-xs border border-gray-300  bg-gray-50 text-gray-600 cursor-not-allowed focus:outline-none"
                         type="email"
                         value={formData.customer_email}
                         disabled
@@ -1196,7 +1196,7 @@ export default function SalesOrderForm() {
                     <div className="flex flex-col">
                       <label className="text-sm font-semibold text-gray-700 mb-2">Phone</label>
                       <input
-                        className="p-2 text-sm border border-gray-300  bg-gray-50 text-gray-600 cursor-not-allowed focus:outline-none"
+                        className="p-2 text-xs border border-gray-300  bg-gray-50 text-gray-600 cursor-not-allowed focus:outline-none"
                         type="text"
                         value={formData.customer_phone}
                         disabled
@@ -1228,7 +1228,7 @@ export default function SalesOrderForm() {
                     <div className="flex flex-col">
                       <label className="text-sm font-semibold text-gray-700 mb-2">Order Quantity *</label>
                       <input
-                        className={`p-2 text-sm border border-gray-300 rounded-0 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
+                        className={`p-2 text-xs border border-gray-300 rounded-0 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
                         type="number"
                         name="quantity"
                         value={formData.qty === '' ? '' : parseFloat(formData.qty) || ''}
@@ -1275,7 +1275,7 @@ export default function SalesOrderForm() {
                     <div className="flex flex-col">
                       <label className="text-sm font-semibold text-gray-700 mb-2">CGST Rate (%)</label>
                       <input
-                        className={`p-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
+                        className={`p-2 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
                         type="number"
                         name="cgst_rate"
                         value={formData.cgst_rate || 0}
@@ -1290,7 +1290,7 @@ export default function SalesOrderForm() {
                     <div className="flex flex-col">
                       <label className="text-sm font-semibold text-gray-700 mb-2">SGST Rate (%)</label>
                       <input
-                        className={`p-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
+                        className={`p-2 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
                         type="number"
                         name="sgst_rate"
                         value={formData.sgst_rate || 0}
