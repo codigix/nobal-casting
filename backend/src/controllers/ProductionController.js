@@ -192,6 +192,7 @@ class ProductionController {
         }
       }
 
+      let createdJobCards = []
       if (operations && Array.isArray(operations) && operations.length > 0) {
         for (let i = 0; i < operations.length; i++) {
           await this.productionModel.addWorkOrderOperation(wo_id, { ...operations[i], sequence: i + 1 })
@@ -199,28 +200,35 @@ class ProductionController {
 
         for (let i = 0; i < operations.length; i++) {
           const operation = operations[i]
-          const jc_id = `JC-${Date.now()}-${i + 1}`
-          await this.productionModel.createJobCard({
+          const jc_id = `JC-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          const operationName = operation.operation_name || operation.operation || ''
+          const workstationType = operation.workstation_type || operation.workstation || operation.machine_id || ''
+          const operationTime = operation.operation_time || operation.time || operation.proportional_time || 0
+          
+          const jobCard = await this.productionModel.createJobCard({
             job_card_id: jc_id,
             work_order_id: wo_id,
-            operation: operation.operation_name || operation.operation || '',
-            machine_id: operation.workstation_type || operation.workstation || '',
+            operation: operationName,
+            machine_id: workstationType,
             operator_id: '',
             planned_quantity: quantity,
-            operation_time: operation.operation_time || operation.time || 0,
+            operation_time: parseFloat(operationTime) || 0,
             scheduled_start_date: new Date(),
             scheduled_end_date: new Date(),
             status: 'draft',
             created_by: req.user?.username || 'system',
             notes: operation.notes || ''
           })
+          createdJobCards.push(jobCard)
         }
       }
 
       res.status(201).json({
         success: true,
-        message: 'Work order and job cards created successfully',
-        data: workOrder
+        message: `Work order created successfully with ${createdJobCards.length} job card(s)`,
+        data: workOrder,
+        jobCardsCreated: createdJobCards.length,
+        jobCards: createdJobCards
       })
     } catch (error) {
       res.status(500).json({

@@ -136,6 +136,7 @@
   -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border-color, #e5e7eb);
   overflow-y: visible;
+  overflow: auto;
 }
 
 .data-table {

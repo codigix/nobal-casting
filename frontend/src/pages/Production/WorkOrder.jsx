@@ -283,15 +283,13 @@ export default function WorkOrder() {
                             >
                               <Truck size={14} className="text-green-600" />
                             </button>
-                            {order.status === 'draft' && (
-                              <button 
-                                onClick={() => handleDelete(order.wo_id)} 
-                                title="Delete"
-                                className="p-1 hover:bg-red-50 rounded transition"
-                              >
-                                <Trash2 size={14} className="text-red-600" />
-                              </button>
-                            )}
+                            <button 
+                              onClick={() => handleDelete(order.wo_id)} 
+                              title="Delete"
+                              className="p-1 hover:bg-red-50 rounded transition"
+                            >
+                              <Trash2 size={14} className="text-red-600" />
+                            </button>
                           </div>
                         </td>
                       </tr>

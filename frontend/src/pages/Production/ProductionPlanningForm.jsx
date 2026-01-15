@@ -951,11 +951,15 @@ export default function ProductionPlanningForm() {
       setCreatingWorkOrders(true)
       const token = localStorage.getItem('token')
       
-      if (subAssemblyBomMaterials.length === 0) {
-        alert('Please fetch sub-assembly materials first')
+      if (subAssemblyBomMaterials.length === 0 && fgItems.length === 0) {
+        alert('Please fetch sub-assembly materials and add finished goods first')
         return
       }
 
+      const createdWorkOrders = []
+
+      console.log('=== STEP 1: Creating work orders for sub-assemblies ===')
+      
       const uniqueSubAssemblies = Array.from(new Set(subAssemblyBomMaterials.map(m => m.sub_assembly_code)))
         .map(code => {
           const info = subAssemblyBomMaterials.find(m => m.sub_assembly_code === code)
@@ -966,47 +970,77 @@ export default function ProductionPlanningForm() {
             operations: bomOperationsData[info.bom_id] || []
           }
         })
-
-      const createdWorkOrders = []
-
-      console.log('=== STEP 1: Creating work orders for sub-assemblies ===')
+      
       console.log(`Creating ${uniqueSubAssemblies.length} sub-assembly work orders...`)
 
       for (const subAsm of uniqueSubAssemblies) {
-        console.log(`  Creating work order for: ${subAsm.item_code}`)
-        const woPayload = {
-          item_code: subAsm.item_code,
-          quantity: salesOrderQuantity,
-          bom_no: subAsm.bom_id,
-          priority: 'medium',
-          notes: `Sub-assembly for production plan ${planHeader.plan_id}`,
-          sales_order_id: selectedSalesOrders[0] || null,
-          planned_start_date: new Date().toISOString().split('T')[0],
-          operations: subAsm.operations
-        }
-
-        const woResponse = await fetch(
-          `${import.meta.env.VITE_API_URL}/production/work-orders`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(woPayload)
+        try {
+          console.log(`Creating work order for sub-assembly: ${subAsm.item_code}`)
+          
+          let operations = subAsm.operations || []
+          
+          if (operations.length === 0 && subAsm.bom_id) {
+            console.log(`No operations found for BOM ${subAsm.bom_id}, fetching from API...`)
+            try {
+              const bomDetailsResponse = await fetch(
+                `${import.meta.env.VITE_API_URL}/production/boms/${subAsm.bom_id}`,
+                { headers: { 'Authorization': `Bearer ${token}` } }
+              )
+              if (bomDetailsResponse.ok) {
+                const bomDetails = await bomDetailsResponse.json()
+                const bom = bomDetails.data || bomDetails
+                operations = bom.bom_operations || bom.operations || []
+              }
+            } catch (err) {
+              console.warn(`Could not fetch operations for BOM ${subAsm.bom_id}:`, err)
+            }
           }
-        )
-
-        if (woResponse.ok) {
-          const woData = await woResponse.json()
-          createdWorkOrders.push({
-            type: 'sub-assembly',
-            work_order_id: woData.data?.wo_id,
+          
+          const woPayload = {
             item_code: subAsm.item_code,
-            item_name: subAsm.item_name
-          })
-        } else {
-          console.error(`Failed to create work order for ${subAsm.item_code}`)
+            quantity: salesOrderQuantity,
+            bom_no: subAsm.bom_id,
+            priority: 'medium',
+            notes: `Sub-assembly for production plan ${planHeader.plan_id}`,
+            sales_order_id: selectedSalesOrders[0] || null,
+            planned_start_date: new Date().toISOString().split('T')[0],
+            operations: operations.map(op => ({
+              operation_name: op.operation_name || op.operation || '',
+              workstation_type: op.workstation || op.machine_id || '',
+              operation_time: op.time || op.operation_time || 0,
+              notes: op.notes || ''
+            }))
+          }
+
+          const woResponse = await fetch(
+            `${import.meta.env.VITE_API_URL}/production/work-orders`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(woPayload)
+            }
+          )
+
+          if (woResponse.ok) {
+            const woData = await woResponse.json()
+            const jobCardsCount = woData.jobCardsCreated || 0
+            createdWorkOrders.push({
+              type: 'sub-assembly',
+              work_order_id: woData.data?.wo_id,
+              item_code: subAsm.item_code,
+              item_name: subAsm.item_name,
+              jobCardsCreated: jobCardsCount
+            })
+            console.log(`✓ Created work order ${woData.data?.wo_id} with ${jobCardsCount} job cards`)
+          } else {
+            const errorData = await woResponse.json()
+            console.error(`Failed to create work order for ${subAsm.item_code}:`, errorData)
+          }
+        } catch (err) {
+          console.error(`Error creating work order for sub-assembly ${subAsm.item_code}:`, err)
         }
       }
 
@@ -1014,80 +1048,108 @@ export default function ProductionPlanningForm() {
       console.log(`Creating ${fgItems.length} finished goods work orders...`)
 
       for (const fgItem of fgItems) {
-        console.log(`  Creating work order for: ${fgItem.item_code}`)
-        
-        let bomIdForFG = fgItem.bom_id || selectedBomId
-        if (!bomIdForFG) {
-          console.log(`No BOM ID found for ${fgItem.item_code}, attempting to fetch BOM...`)
-          try {
-            const bomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms?item_code=${fgItem.item_code}`, {
-              headers: { 'Authorization': `Bearer ${token}` }
-            })
-            if (bomRes.ok) {
-              const bomData = await bomRes.json()
-              const boms = bomData.data || []
-              if (boms.length > 0) {
-                bomIdForFG = boms[0].bom_id || boms[0].id
-                console.log(`Found BOM for ${fgItem.item_code}: ${bomIdForFG}`)
+        try {
+          console.log(`Creating work order for finished good: ${fgItem.item_code}`)
+          
+          let bomIdForFG = fgItem.bom_id || selectedBomId
+          let fgOpsToSend = fgOperations.length > 0 ? fgOperations : operationItems
+          
+          if (!bomIdForFG) {
+            console.log(`No BOM ID found for ${fgItem.item_code}, attempting to fetch BOM...`)
+            try {
+              const bomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms?item_code=${fgItem.item_code}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              })
+              if (bomRes.ok) {
+                const bomData = await bomRes.json()
+                const boms = bomData.data || []
+                if (boms.length > 0) {
+                  bomIdForFG = boms[0].bom_id || boms[0].id
+                  console.log(`Found BOM for ${fgItem.item_code}: ${bomIdForFG}`)
+                  
+                  const bomDetailsResponse = await fetch(
+                    `${import.meta.env.VITE_API_URL}/production/boms/${bomIdForFG}`,
+                    { headers: { 'Authorization': `Bearer ${token}` } }
+                  )
+                  if (bomDetailsResponse.ok) {
+                    const bomDetails = await bomDetailsResponse.json()
+                    const bom = bomDetails.data || bomDetails
+                    const allOps = bom.bom_operations || bom.operations || []
+                    fgOpsToSend = allOps
+                  }
+                }
               }
+            } catch (err) {
+              console.warn(`Could not fetch BOM for ${fgItem.item_code}:`, err)
             }
-          } catch (err) {
-            console.warn(`Could not fetch BOM for ${fgItem.item_code}:`, err)
           }
-        }
-        
-        const fgWoPayload = {
-          item_code: fgItem.item_code,
-          quantity: salesOrderQuantity,
-          bom_no: bomIdForFG || null,
-          priority: 'high',
-          notes: `Finished good for production plan ${planHeader.plan_id}`,
-          sales_order_id: selectedSalesOrders[0] || null,
-          planned_start_date: new Date().toISOString().split('T')[0],
-          operations: fgOperations.length > 0 ? fgOperations : operationItems
-        }
-
-        const fgWoResponse = await fetch(
-          `${import.meta.env.VITE_API_URL}/production/work-orders`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(fgWoPayload)
-          }
-        )
-
-        if (fgWoResponse.ok) {
-          const fgWoData = await fgWoResponse.json()
-          createdWorkOrders.push({
-            type: 'finished-good',
-            work_order_id: fgWoData.data?.wo_id,
+          
+          const fgWoPayload = {
             item_code: fgItem.item_code,
-            item_name: fgItem.item_name
-          })
-        } else {
-          console.error(`Failed to create work order for ${fgItem.item_code}`)
+            quantity: salesOrderQuantity,
+            bom_no: bomIdForFG || null,
+            priority: 'high',
+            notes: `Finished good for production plan ${planHeader.plan_id}`,
+            sales_order_id: selectedSalesOrders[0] || null,
+            planned_start_date: new Date().toISOString().split('T')[0],
+            operations: fgOpsToSend.map(op => ({
+              operation_name: op.operation_name || op.operation || '',
+              workstation_type: op.workstation || op.machine_id || '',
+              operation_time: op.time || op.operation_time || op.proportional_time || 0,
+              notes: op.notes || ''
+            }))
+          }
+
+          const fgWoResponse = await fetch(
+            `${import.meta.env.VITE_API_URL}/production/work-orders`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(fgWoPayload)
+            }
+          )
+
+          if (fgWoResponse.ok) {
+            const fgWoData = await fgWoResponse.json()
+            const jobCardsCount = fgWoData.jobCardsCreated || 0
+            createdWorkOrders.push({
+              type: 'finished-good',
+              work_order_id: fgWoData.data?.wo_id,
+              item_code: fgItem.item_code,
+              item_name: fgItem.item_name,
+              jobCardsCreated: jobCardsCount
+            })
+            console.log(`✓ Created work order ${fgWoData.data?.wo_id} with ${jobCardsCount} job cards`)
+          } else {
+            const errorData = await fgWoResponse.json()
+            console.error(`Failed to create work order for ${fgItem.item_code}:`, errorData)
+          }
+        } catch (err) {
+          console.error(`Error creating work order for finished good ${fgItem.item_code}:`, err)
         }
       }
 
       const subAsmCount = createdWorkOrders.filter(wo => wo.type === 'sub-assembly').length
       const fgCount = createdWorkOrders.filter(wo => wo.type === 'finished-good').length
+      const totalJobCards = createdWorkOrders.reduce((sum, wo) => sum + (wo.jobCardsCreated || 0), 0)
       
       console.log('=== WORK ORDER CREATION COMPLETE ===')
       console.log(`✓ Sub-assembly work orders: ${subAsmCount}`)
       console.log(`✓ Finished goods work orders: ${fgCount}`)
       console.log(`✓ Total work orders: ${createdWorkOrders.length}`)
+      console.log(`✓ Total job cards created: ${totalJobCards}`)
       
-      setSuccess(`Created ${subAsmCount} sub-assembly + ${fgCount} finished goods = ${createdWorkOrders.length} work orders`)
+      setSuccess(`Created ${subAsmCount} sub-assembly + ${fgCount} finished goods = ${createdWorkOrders.length} work orders with ${totalJobCards} job cards`)
       
       setTimeout(() => {
-        navigate('/production/work-orders')
-      }, 2000)
+        navigate('/manufacturing/work-orders')
+      }, 2500)
     } catch (err) {
       console.error('Error creating work orders:', err)
-      setError('Failed to create work orders')
+      setError(`Failed to create work orders: ${err.message}`)
     } finally {
       setCreatingWorkOrders(false)
     }

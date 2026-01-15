@@ -1,6 +1,7 @@
 import express from 'express'
 import ProductionController from '../controllers/ProductionController.js'
 import ProductionModel from '../models/ProductionModel.js'
+import InventoryController from '../controllers/InventoryController.js'
 import { SellingController } from '../controllers/SellingController.js'
 import authMiddleware from '../middleware/authMiddleware.js'
 
@@ -8,6 +9,7 @@ export function createProductionRoutes(db) {
   const router = express.Router()
   const productionModel = new ProductionModel(db)
   const productionController = new ProductionController(productionModel)
+  const inventoryController = new InventoryController(db)
 
   // ============= OPERATIONS =============
   router.post(
@@ -384,6 +386,56 @@ router.delete(
     '/inward-challans/:id',
     authMiddleware,
     productionController.updateInwardChallan.bind(productionController)
+  )
+
+  // ============= MATERIAL DEDUCTION FLOW =============
+  // Step 1: Allocate materials when work order is created
+  router.post(
+    '/inventory/allocate-materials',
+    authMiddleware,
+    inventoryController.allocateMaterialsForWorkOrder.bind(inventoryController)
+  )
+
+  // Step 2: Track material consumption during job card execution
+  router.post(
+    '/inventory/track-consumption',
+    authMiddleware,
+    inventoryController.trackMaterialConsumption.bind(inventoryController)
+  )
+
+  // Step 3: Finalize deduction when work order completes
+  router.post(
+    '/inventory/finalize/:work_order_id',
+    authMiddleware,
+    inventoryController.finalizeWorkOrderMaterials.bind(inventoryController)
+  )
+
+  // Step 4: Return unused materials
+  router.post(
+    '/inventory/return-materials',
+    authMiddleware,
+    inventoryController.returnMaterialToInventory.bind(inventoryController)
+  )
+
+  // Reports: Material allocation details
+  router.get(
+    '/inventory/allocations/:work_order_id',
+    authMiddleware,
+    inventoryController.getMaterialAllocationForWorkOrder.bind(inventoryController)
+  )
+
+  // Reports: Waste analysis
+  router.get(
+    '/inventory/waste-report/:work_order_id',
+    authMiddleware,
+    inventoryController.getMaterialWasteReport.bind(inventoryController)
+  )
+
+  // Reports: Deduction audit log
+  router.get(
+    '/inventory/audit-log/:work_order_id',
+    authMiddleware,
+    inventoryController.getMaterialDeductionAuditLog.bind(inventoryController)
   )
 
   return router

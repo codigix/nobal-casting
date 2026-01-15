@@ -904,11 +904,12 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async createJobCard(data) {
     try {
+      const statusNormalized = ((data.status || 'draft').toLowerCase().replace(/\s+/g, '-')).trim()
       await this.db.query(
         `INSERT INTO job_card (job_card_id, work_order_id, machine_id, operator_id, operation, operation_sequence, planned_quantity, operation_time, scheduled_start_date, scheduled_end_date, status, created_by, notes)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [data.job_card_id, data.work_order_id, data.machine_id, data.operator_id, data.operation || null, data.operation_sequence || null,
-         data.planned_quantity, data.operation_time || 0, data.scheduled_start_date, data.scheduled_end_date, (data.status || 'draft').toLowerCase(), data.created_by, data.notes]
+         data.planned_quantity, data.operation_time || 0, data.scheduled_start_date, data.scheduled_end_date, statusNormalized, data.created_by, data.notes]
       )
       return data
     } catch (error) {
@@ -924,7 +925,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       if (data.operation) { fields.push('operation = ?'); values.push(data.operation) }
       if (data.operation_sequence) { fields.push('operation_sequence = ?'); values.push(data.operation_sequence) }
       if (data.status !== undefined) { 
-        const statusValue = (data.status || '').toLowerCase()
+        const statusValue = (data.status || '').toLowerCase().replace(/\s+/g, '-').trim()
         if (statusValue.length > 50) {
           throw new Error(`Status value too long: "${statusValue}" (${statusValue.length} characters, max 50 allowed)`)
         }
@@ -1085,8 +1086,13 @@ async deleteAllBOMRawMaterials(bom_id) {
         'cancelled': ['cancelled']
       }
 
-      const currentStatusNormalized = (jobCard.status || '').toLowerCase()
-      const newStatusNormalized = (newStatus || '').toLowerCase()
+      const normalizeStatus = (status) => {
+        if (!status) return ''
+        return status.toLowerCase().replace(/\s+/g, '-').trim()
+      }
+
+      const currentStatusNormalized = normalizeStatus(jobCard.status)
+      const newStatusNormalized = normalizeStatus(newStatus)
       const allowedNextStatuses = statusWorkflow[currentStatusNormalized] || []
       if (!allowedNextStatuses.includes(newStatusNormalized)) {
         const statusLabels = {
@@ -1100,7 +1106,7 @@ async deleteAllBOMRawMaterials(bom_id) {
         }
         const currentLabel = statusLabels[currentStatusNormalized] || jobCard.status
         const allowedLabels = allowedNextStatuses.map(s => statusLabels[s] || s)
-        throw new Error(`Job Card Status Error: Cannot transition from "${currentLabel}" to "${newStatus}". Allowed next statuses: ${allowedLabels.join(', ')}. Please follow the proper workflow sequence.`)
+        throw new Error(`Job Card Status Error: Cannot transition from "${currentLabel}" to "${statusLabels[newStatusNormalized] || newStatus}". Allowed next statuses: ${allowedLabels.join(', ')}. Please follow the proper workflow sequence.`)
       }
 
       if (newStatusNormalized === 'in-progress') {
@@ -1710,7 +1716,7 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async updateJobCardStatus(jobCardId, newStatus) {
     try {
-      const normalizedStatus = (newStatus || '').toLowerCase().trim()
+      const normalizedStatus = ((newStatus || '').toLowerCase().replace(/\s+/g, '-')).trim()
       await this.db.query(
         'UPDATE job_card SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE job_card_id = ?',
         [normalizedStatus, jobCardId]

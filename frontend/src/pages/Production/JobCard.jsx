@@ -224,7 +224,7 @@ export default function JobCard() {
       const statusChanged = currentCard && (currentCard.status !== inlineEditData.status)
 
       const updateData = { ...inlineEditData }
-      if (statusChanged) {
+      if (!statusChanged) {
         delete updateData.status
       }
 

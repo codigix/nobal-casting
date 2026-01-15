@@ -696,7 +696,8 @@ export default function WorkOrderForm() {
       }
 
       if (response.success) {
-        setSuccess(`Work order ${id ? 'updated' : 'created'} successfully`)
+        const jobCardMsg = !id && response.jobCardsCreated ? ` + ${response.jobCardsCreated} job card(s) created` : ''
+        setSuccess(`Work order ${id ? 'updated' : 'created'} successfully${jobCardMsg}`)
         setTimeout(() => {
           navigate('/manufacturing/work-orders')
         }, 2000)
