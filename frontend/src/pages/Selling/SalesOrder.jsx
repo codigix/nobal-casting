@@ -486,6 +486,35 @@ export default function SalesOrder() {
       }
     },
     { 
+      label: 'Sales Order Price', 
+      key: 'sales_order_price',
+      render: (val, row) => {
+        if (!row) return '₹0.00'
+        
+        if (row.items && row.items.length > 0) {
+          const fgItems = row.items.filter(item => item.fg_sub_assembly === 'FG' || item.fg_sub_assembly === 'Finished Good')
+          
+          const fgUnitCost = fgItems.reduce((sum, item) => sum + (parseFloat(item.rate) || 0), 0)
+          const qty = parseFloat(row.qty) || 1
+          const baseCost = fgUnitCost * qty
+          
+          const profitMarginPct = parseFloat(row.profit_margin_percentage) || 0
+          const profitAmount = baseCost * (profitMarginPct / 100)
+          const costWithProfit = baseCost + profitAmount
+          
+          const cgstRate = parseFloat(row.cgst_rate) || 0
+          const sgstRate = parseFloat(row.sgst_rate) || 0
+          const totalGstRate = (cgstRate + sgstRate) / 100
+          const gstAmount = costWithProfit * totalGstRate
+          const grandTotal = costWithProfit + gstAmount
+          
+          return `₹${grandTotal.toFixed(2)}`
+        }
+        
+        return '₹0.00'
+      }
+    },
+    { 
       label: 'Delivery Date', 
       key: 'delivery_date',
       render: (val) => {

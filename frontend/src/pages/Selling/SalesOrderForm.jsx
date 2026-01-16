@@ -22,12 +22,14 @@ export default function SalesOrderForm() {
   const isReadOnly = searchParams.get('readonly') === 'true'
   const isEditMode = id && id !== 'new' && !isReadOnly
 
-  const tabs = [
-    { id: 'basicDetails', label: 'Basic Details' },
-    { id: 'bomDetails', label: 'BOM Details' }
-  ]
-
-  const [activeTabIndex, setActiveTabIndex] = useState(0)
+  const [expandedSections, setExpandedSections] = useState({
+    orderInfo: true,
+    customer: true,
+    bom: true,
+    taxes: true,
+    bomDetails: true,
+    bomCost: true
+  })
 
   const [formData, setFormData] = useState({
     series: '',
@@ -73,13 +75,35 @@ export default function SalesOrderForm() {
   const [expandedItemGroups, setExpandedItemGroups] = useState({})
   const [bomName, setBomName] = useState('')
 
-  useEffect(() => {
-    if (activeTabIndex === tabs.length - 1) {
-      setCanSave(false)
-      const timer = setTimeout(() => setCanSave(true), 1000)
-      return () => clearTimeout(timer)
-    }
-  }, [activeTabIndex])
+  const toggleSection = (sectionId) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [sectionId]: !prev[sectionId]
+    }))
+  }
+
+  const CollapsibleSection = ({ id, title, icon, children, expanded = true }) => (
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+      <button
+        type="button"
+        onClick={() => toggleSection(id)}
+        className="w-full p-2 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-150 transition flex items-center justify-between group"
+      >
+        <h3 className="text-xs font-bold text-gray-900 flex items-center gap-3">
+          <span className="text-lg group-hover:scale-110 transition-transform">{icon}</span>
+          {title}
+        </h3>
+        <span className={`text-gray-600 transition-transform ${expandedSections[id] ? 'rotate-180' : ''}`}>
+          ▼
+        </span>
+      </button>
+      {expandedSections[id] && (
+        <div className="p-3">
+          {children}
+        </div>
+      )}
+    </div>
+  )
 
   useEffect(() => {
     fetchRequiredData()
@@ -360,7 +384,7 @@ export default function SalesOrderForm() {
 
       // Create a virtual finished good from BOM metadata if no lines exist
       if (bomLines.length === 0 && bomData.item_code) {
-        const finishedGoodName = formatItemCodeAsName(bomData.item_code)
+        const finishedGoodName = bomData.product_name || bomData.name || formatItemCodeAsName(bomData.item_code)
         const totalCost = parseFloat(bomData.total_cost) || 0
         const finishedGoodItem = {
           item_code: bomData.item_code,
@@ -961,20 +985,6 @@ export default function SalesOrderForm() {
     }
   }
 
-  const nextTab = () => {
-    if (activeTabIndex < tabs.length - 1) {
-      setActiveTabIndex(activeTabIndex + 1)
-    }
-  }
-
-  const prevTab = () => {
-    if (activeTabIndex > 0) {
-      setActiveTabIndex(activeTabIndex - 1)
-    }
-  }
-
-  const currentTab = tabs[activeTabIndex]
-
   const formatQty = (qty) => {
     return parseFloat(qty || 0).toString()
   }
@@ -1107,70 +1117,12 @@ export default function SalesOrderForm() {
           {success && <Alert variant="success">{success}</Alert>}
 
           <form onSubmit={(e) => e.preventDefault()}>
-            <div className="mb-8">
-              <div className="border-b border-gray-200">
-                <div className="flex gap-8 ">
-                  {tabs.map((tab, idx) => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setActiveTabIndex(idx)}
-                      className={`py-4 px-1 text-sm font-semibold whitespace-nowrap transition-all border-b-2 ${
-                        activeTabIndex === idx
-                          ? 'text-blue-600 border-blue-600'
-                          : 'text-gray-600 border-transparent hover:text-gray-900 hover:border-gray-300'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-          {currentTab.id === 'basicDetails' && (
-            <div className="space-y-6">
-              {(bomFinishedGoods.length > 0 || bomSubAssemblies.length > 0 || bomRawMaterials.length > 0 || bomOperations.length > 0) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-300 rounded-lg p-4">
-                    <p className="text-xs font-semibold text-green-900 mb-1">Sales Order Price</p>
-                    <p className="text-2xl font-bold text-green-700">₹{(() => {
-                      const qty = parseFloat(formData.qty) || 1
-                      const fgUnitCost = bomFinishedGoods.reduce((sum, item) => {
-                        const itemRate = parseFloat(item.rate) || 0
-                        return sum + itemRate
-                      }, 0)
-                      const subAsmUnitCost = bomSubAssemblies.reduce((sum, item) => {
-                        const itemRate = parseFloat(item.rate) || 0
-                        return sum + itemRate
-                      }, 0)
-                      const totalUnitCost = fgUnitCost + subAsmUnitCost
-                      const subtotal = totalUnitCost * qty
-                      const cgstRate = parseFloat(formData.cgst_rate) || 0
-                      const sgstRate = parseFloat(formData.sgst_rate) || 0
-                      const totalGstRate = (cgstRate + sgstRate) / 100
-                      const gstAmount = subtotal * totalGstRate
-                      const grandTotal = subtotal + gstAmount
-                      return grandTotal.toFixed(2)
-                    })()}</p>
-                  </div>
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-300 rounded-lg p-4">
-                    <p className="text-xs font-semibold text-blue-900 mb-1">Delivery Date</p>
-                    <p className="text-2xl font-bold text-blue-700">{formData.delivery_date ? new Date(formData.delivery_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</p>
-                  </div>
-                </div>
-              )}
-              <div className="bg-white rounded-lg border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100">
-                  <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                    <span className="text-lg">📅</span>
-                    Order Information
-                  </h3>
-                </div>
-                <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="space-y-4">
+              
+              <CollapsibleSection id="orderInfo" title="Order Information" icon="📅">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="flex flex-col">
-                    <label className="text-sm font-semibold text-gray-700 mb-2">Series</label>
+                    <label className="text-xs  text-gray-700">Series</label>
                     <input
                       className="p-2 text-xs border border-gray-300  bg-gray-50 text-gray-600 cursor-not-allowed focus:outline-none"
                       type="text"
@@ -1181,9 +1133,9 @@ export default function SalesOrderForm() {
                     />
                   </div>
                   <div className="flex flex-col">
-                    <label className="text-sm font-semibold text-gray-700 mb-2">Order Date *</label>
+                    <label className="text-xs  text-gray-700">Order Date *</label>
                     <input
-                      className={`p-2 text-xs border border-gray-300 rounded-0 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
+                      className={`p-2 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
                       type="date"
                       name="date"
                       value={formData.date}
@@ -1193,9 +1145,9 @@ export default function SalesOrderForm() {
                     />
                   </div>
                   <div className="flex flex-col">
-                    <label className="text-sm font-semibold text-gray-700 mb-2">Delivery Date</label>
+                    <label className="text-xs  text-gray-700">Delivery Date</label>
                     <input
-                      className={`p-2 text-xs border border-gray-300 rounded-0 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
+                      className={`p-2 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
                       type="date"
                       name="delivery_date"
                       value={formData.delivery_date}
@@ -1204,210 +1156,153 @@ export default function SalesOrderForm() {
                     />
                   </div>
                   <div className="flex flex-col">
-                    <label className="text-sm font-semibold text-gray-700 mb-2">Order Type</label>
-                    <select className={`p-2 text-xs border border-gray-300 rounded-0 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`} name="order_type" value={formData.order_type} onChange={handleChange} disabled={isReadOnly}>
+                    <label className="text-xs  text-gray-700">Order Type</label>
+                    <select className={`p-2 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`} name="order_type" value={formData.order_type} onChange={handleChange} disabled={isReadOnly}>
                       <option value="Sales">Sales</option>
                       <option value="Purchase">Purchase</option>
                     </select>
                   </div>
-                    </div>
-                  </div>
-              </div>
-
-              <div className="bg-white rounded-lg border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-amber-100">
-                  <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                    <span className="text-lg">👥</span>
-                    Customer Details
-                  </h3>
                 </div>
-                <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="lg:col-span-2 flex flex-col">
-                      <label className="text-sm font-semibold text-gray-700 mb-2">Customer *</label>
-                      <SearchableSelect
-                        value={formData.customer_id}
-                        onChange={(val) => handleCustomerChange(val)}
-                        options={customers.filter(c => c && c.customer_id && c.customer_name).map(c => ({ label: c.customer_name, value: c.customer_id }))}
-                        placeholder="Search customer..."
-                        disabled={isReadOnly}
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-sm font-semibold text-gray-700 mb-2">Email</label>
-                      <input
-                        className="p-2 text-xs border border-gray-300  bg-gray-50 text-gray-600 cursor-not-allowed focus:outline-none"
-                        type="email"
-                        value={formData.customer_email}
-                        disabled
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-sm font-semibold text-gray-700 mb-2">Phone</label>
-                      <input
-                        className="p-2 text-xs border border-gray-300  bg-gray-50 text-gray-600 cursor-not-allowed focus:outline-none"
-                        type="text"
-                        value={formData.customer_phone}
-                        disabled
-                      />
-                    </div>
+              </CollapsibleSection>
+
+              <CollapsibleSection id="customer" title="Customer Details" icon="👥">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="lg:col-span-2 flex flex-col">
+                    <label className="text-xs  text-gray-700">Customer *</label>
+                    <SearchableSelect
+                      value={formData.customer_id}
+                      onChange={(val) => handleCustomerChange(val)}
+                      options={customers.filter(c => c && c.customer_id && c.customer_name).map(c => ({ label: c.customer_name, value: c.customer_id }))}
+                      placeholder="Search customer..."
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-xs  text-gray-700">Email</label>
+                    <input
+                      className="p-2 text-xs border border-gray-300  bg-gray-50 text-gray-600 cursor-not-allowed focus:outline-none"
+                      type="email"
+                      value={formData.customer_email}
+                      disabled
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-xs  text-gray-700">Phone</label>
+                    <input
+                      className="p-2 text-xs border border-gray-300  bg-gray-50 text-gray-600 cursor-not-allowed focus:outline-none"
+                      type="text"
+                      value={formData.customer_phone}
+                      disabled
+                    />
                   </div>
                 </div>
-              </div>
+              </CollapsibleSection>
 
-              <div className="bg-white rounded-lg border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-green-100">
-                  <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                    <span className="text-lg">📦</span>
-                    BOM & Inventory
-                  </h3>
-                </div>
-                <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="lg:col-span-2 flex flex-col">
-                      <label className="text-sm font-semibold text-gray-700 mb-2">Select BOM *</label>
-                      <SearchableSelect
-                        value={formData.bom_id}
-                        onChange={(val) => handleBomChange(val)}
-                        options={boms}
-                        placeholder="Search BOM..."
-                        disabled={isReadOnly}
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-sm font-semibold text-gray-700 mb-2">Order Quantity *</label>
-                      <input
-                        className={`p-2 text-xs border border-gray-300 rounded-0 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
-                        type="number"
-                        name="quantity"
-                        value={formData.qty === '' ? '' : parseFloat(formData.qty) || ''}
-                        onChange={handleQuantityChange}
-                        min="1"
-                        step="0.01"
-                        disabled={isReadOnly}
-                        placeholder="Qty"
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-sm font-semibold text-gray-700 mb-2">Warehouse</label>
-                      <SearchableSelect
-                        value={formData.source_warehouse}
-                        onChange={(val) => setFormData({ ...formData, source_warehouse: val })}
-                        options={warehouses}
-                        placeholder="Select warehouse..."
-                        disabled={isReadOnly}
-                      />
-                    </div>
+              <CollapsibleSection id="bom" title="BOM & Inventory" icon="📦">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="lg:col-span-2 flex flex-col">
+                    <label className="text-xs  text-gray-700">Select BOM *</label>
+                    <SearchableSelect
+                      value={formData.bom_id}
+                      onChange={(val) => handleBomChange(val)}
+                      options={boms}
+                      placeholder="Search BOM..."
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-xs  text-gray-700">Order Quantity *</label>
+                    <input
+                      className={`p-2 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
+                      type="number"
+                      name="quantity"
+                      value={formData.qty === '' ? '' : parseFloat(formData.qty) || ''}
+                      onChange={handleQuantityChange}
+                      min="1"
+                      step="0.01"
+                      disabled={isReadOnly}
+                      placeholder="Qty"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-xs  text-gray-700">Warehouse</label>
+                    <SearchableSelect
+                      value={formData.source_warehouse}
+                      onChange={(val) => setFormData({ ...formData, source_warehouse: val })}
+                      options={warehouses}
+                      placeholder="Select warehouse..."
+                      disabled={isReadOnly}
+                    />
                   </div>
                 </div>
-              </div>
+              </CollapsibleSection>
 
-              <div className="bg-white rounded-lg border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-purple-100">
-                  <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                    <span className="text-lg">⚙️</span>
-                    Order Status & Taxes
-                  </h3>
-                </div>
-                <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="flex flex-col">
-                      <label className="text-sm font-semibold text-gray-700 mb-2">Status</label>
-                      <SearchableSelect
-                        value={formData.status}
-                        onChange={(val) => handleSearchableChange('status', val)}
-                        options={statuses}
-                        placeholder="Select status..."
-                        disabled={isReadOnly}
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-sm font-semibold text-gray-700 mb-2">CGST Rate (%)</label>
-                      <input
-                        className={`p-2 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
-                        type="number"
-                        name="cgst_rate"
-                        value={formData.cgst_rate || 0}
-                        onChange={handleChange}
-                        min="0"
-                        max="100"
-                        step="0.01"
-                        disabled={isReadOnly}
-                        placeholder="0"
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-sm font-semibold text-gray-700 mb-2">SGST Rate (%)</label>
-                      <input
-                        className={`p-2 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
-                        type="number"
-                        name="sgst_rate"
-                        value={formData.sgst_rate || 0}
-                        onChange={handleChange}
-                        min="0"
-                        max="100"
-                        step="0.01"
-                        disabled={isReadOnly}
-                        placeholder="0"
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-sm font-semibold text-gray-700 mb-2">Profit Margin (%)</label>
-                      <input
-                        className={`p-2 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
-                        type="number"
-                        name="profit_margin_percentage"
-                        value={formData.profit_margin_percentage || 0}
-                        onChange={handleChange}
-                        min="0"
-                        max="1000"
-                        step="0.01"
-                        disabled={isReadOnly}
-                        placeholder="0"
-                      />
-                    </div>
+              <CollapsibleSection id="taxes" title="Order Status & Taxes" icon="⚙️">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="flex flex-col">
+                    <label className="text-xs  text-gray-700">Status</label>
+                    <SearchableSelect
+                      value={formData.status}
+                      onChange={(val) => handleSearchableChange('status', val)}
+                      options={statuses}
+                      placeholder="Select status..."
+                      disabled={isReadOnly}
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-xs  text-gray-700">CGST Rate (%)</label>
+                    <input
+                      className={`p-2 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
+                      type="number"
+                      name="cgst_rate"
+                      value={formData.cgst_rate || 0}
+                      onChange={handleChange}
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      disabled={isReadOnly}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-xs  text-gray-700">SGST Rate (%)</label>
+                    <input
+                      className={`p-2 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
+                      type="number"
+                      name="sgst_rate"
+                      value={formData.sgst_rate || 0}
+                      onChange={handleChange}
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      disabled={isReadOnly}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-xs  text-gray-700">Profit Margin (%)</label>
+                    <input
+                      className={`p-2 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
+                      type="number"
+                      name="profit_margin_percentage"
+                      value={formData.profit_margin_percentage || 0}
+                      onChange={handleChange}
+                      min="0"
+                      max="1000"
+                      step="0.01"
+                      disabled={isReadOnly}
+                      placeholder="0"
+                    />
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
+              </CollapsibleSection>
 
-
-          {currentTab.id === 'bomDetails' && (
-            <div className="space-y-6">
-              {console.log('BOM Details tab is active. formData.items count:', formData.items.length)}
-              <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-blue-900 mb-1">BOM Details Status</p>
-                    <p className="text-xs text-blue-800">
-                      <strong>{bomFinishedGoods.length + bomSubAssemblies.length + bomRawMaterials.length + bomOperations.length}</strong> items loaded • 
-                      <strong className="ml-1">{bomFinishedGoods.length}</strong> Finished Goods • 
-                      <strong className="ml-1">{bomSubAssemblies.length}</strong> Sub-Assemblies • 
-                      <strong className="ml-1">{bomRawMaterials.length}</strong> Materials • 
-                      <strong className="ml-1">{bomOperations.length}</strong> Operations
-                    </p>
-                    {formData.bom_id && <p className="text-xs text-blue-700 mt-2">BOM ID: <strong>{formData.bom_id}</strong></p>}
-                  </div>
-                  {formData.bom_id && !isReadOnly && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        console.log('Refresh BOM Details button clicked. Current qty:', formData.qty)
-                        fetchBomDetails(formData.bom_id, formData.qty)
-                      }}
-                      disabled={refreshingBom}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition disabled:bg-gray-400"
-                    >
-                      {refreshingBom ? '⏳ Refreshing...' : '🔄 Refresh'}
-                    </button>
-                  )}
-                </div>
-              </div>
+              <CollapsibleSection id="bomDetails" title="BOM Details" icon="📋" expanded={false}>
+                <div className="space-y-6">
               {bomFinishedGoods.length > 0 && (
                 <div className="mb-5">
                   <div className="bg-white rounded-lg border border-gray-200 shadow-xs">
-                    <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-5 py-3.5 border-b border-blue-200">
+                    <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-2 border-b border-blue-200">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-lg">📦</span>
                         <h3 className="font-bold text-sm text-gray-900">Finished Goods <span className="font-normal text-gray-600">({bomFinishedGoods.length})</span></h3>
@@ -1424,7 +1319,6 @@ export default function SalesOrderForm() {
                         <thead className="bg-gray-50 border-b border-gray-200">
                           <tr>
                             <th className="text-left p-2 font-semibold text-gray-700 text-left">Item Code</th>
-                            <th className="text-left p-2 font-semibold text-gray-700 text-left">Description</th>
                             <th className="text-left p-2 font-semibold text-gray-700 text-left">Type</th>
                             <th className=" p-2 font-semibold text-gray-700 text-left">Qty</th>
                             <th className="text-left p-2 font-semibold text-gray-700 text-left">Rate</th>
@@ -1438,8 +1332,7 @@ export default function SalesOrderForm() {
                             const itemAmount = multipliedQty * (parseFloat(item.rate) || 0)
                             return (
                             <tr key={idx} className="border-b border-gray-100 hover:bg-blue-50 transition">
-                              <td className="p-2 font-medium text-gray-900">{item.component_code || item.item_code || '-'}</td>
-                              <td className="p-2 text-gray-700">{item.component_description || item.item_name || '-'}</td>
+                              <td className="p-2 font-medium text-gray-900 text-xs">{item.component_code || item.item_code || '-'}</td>
                               <td className="p-2 text-gray-600 text-xs">{item.component_type || item.fg_sub_assembly || '-'}</td>
                               <td className="p-2 text-right font-medium text-gray-900">
                                 {isReadOnly ? (
@@ -1507,7 +1400,7 @@ export default function SalesOrderForm() {
                             const itemAmount = multipliedQty * (parseFloat(item.rate) || 0)
                             return (
                             <tr key={idx} className="border-b border-gray-100 hover:bg-orange-50 transition">
-                              <td className="p-2 font-medium text-gray-900">{item.component_code || item.item_code || '-'}</td>
+                              <td className="p-2 font-medium text-gray-900 text-xs">{item.component_code || item.item_code || '-'}</td>
                               <td className="p-2 text-gray-700">{item.component_description || item.item_name || '-'}</td>
                               <td className="p-2 text-gray-600 text-xs">{item.component_type || item.fg_sub_assembly || '-'}</td>
                               <td className="p-2 text-right font-medium text-gray-900">
@@ -1564,7 +1457,7 @@ export default function SalesOrderForm() {
                             const itemAmount = itemQty * (parseFloat(material.rate || 0))
                             return (
                             <tr key={idx} className="border-b border-gray-100 hover:bg-green-50 transition">
-                              <td className="p-2 font-medium text-gray-900">{material.item_code || material.component_code || '-'}</td>
+                              <td className="p-2 font-medium text-gray-900 text-xs">{material.item_code || material.component_code || '-'}</td>
                               <td className="p-2 text-gray-700">{material.item_name || material.component_description || '-'}</td>
                               <td className="p-2 text-gray-600 text-xs">{material.item_group || '-'}</td>
                               <td className="p-2 text-gray-700 font-mono text-xs">{material.bom_id || material.bom_no || '-'}</td>
@@ -1623,7 +1516,7 @@ export default function SalesOrderForm() {
                             const isMissingRate = hourlyRate === 0 || !op.hourly_rate
                             return (
                             <tr key={idx} className={`border-b border-gray-100 hover:bg-purple-50 transition ${isMissingRate ? 'bg-yellow-50' : ''}`}>
-                              <td className="p-2 font-medium text-gray-900">{op.operation || op.operation_name || '-'}</td>
+                              <td className="p-2 font-medium text-gray-900 text-xs">{op.operation || op.operation_name || '-'}</td>
                               <td className="p-2 text-gray-700">{op.workstation_type || op.workstation || op.default_workstation || '-'}</td>
                               <td className="p-2 text-left text-gray-700 font-medium">{cycleTime}</td>
                               <td className="p-2 text-left text-gray-700 font-medium">
@@ -1754,50 +1647,26 @@ export default function SalesOrderForm() {
                   <p className="text-blue-700 text-sm">Select a BOM in the <strong>Basic Details</strong> tab to view materials, operations, and finished goods here.</p>
                 </div>
               )}
+                </div>
+              </CollapsibleSection>
             </div>
-          )}
 
-          <div className="flex gap-4 justify-between items-center mt-8 pt-6 border-t border-gray-200">
+          <div className="flex gap-4 justify-end items-center mt-8 pt-6 border-t border-gray-200">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => navigate(-1)}
+            >
+              ← Back
+            </Button>
             {!isReadOnly && (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={prevTab}
-                disabled={activeTabIndex === 0}
-                className="px-6 py-2.5 text-sm font-semibold"
-              >
-                ← Previous
-              </Button>
-            )}
-
-            <span className="text-sm font-medium text-gray-600">
-              Step <span className="font-bold text-gray-900">{activeTabIndex + 1}</span> of <span className="font-bold text-gray-900">{tabs.length}</span>
-            </span>
-
-            {isReadOnly ? (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => navigate('/selling/sales-orders')}
-              >
-                ← Back
-              </Button>
-            ) : activeTabIndex === tabs.length - 1 ? (
               <Button
                 type="button"
                 variant="primary"
                 onClick={handleSubmit}
                 disabled={loading}
               >
-                {loading ? 'Saving...' : 'Save Sales Order'}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="primary"
-                onClick={nextTab}
-              >
-                Next →
+                {loading ? '⏳ Saving...' : '💾 Save Sales Order'}
               </Button>
             )}
           </div>
