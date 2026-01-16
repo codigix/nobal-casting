@@ -1989,14 +1989,6 @@ export default function ProductionPlanningForm() {
 
             {expandedSections[3.5] && (
               <div className="px-4 py-3 border-t border-gray-200 space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded p-2 mb-2">
-                  <p className="text-xs text-blue-800"><strong>📋 How to use:</strong></p>
-                  <ul className="text-xs text-blue-700 mt-1 space-y-0.5">
-                    <li>• Click <strong>"Fetch All Details"</strong> button to load all nested materials for each sub-assembly</li>
-                    <li>• Click item code to expand <strong>operations</strong> for that item</li>
-                    <li>• Click <strong>ops count</strong> number to expand <strong>nested raw materials</strong> from sub-BOM</li>
-                  </ul>
-                </div>
                 {Array.from(new Set(subAssemblyBomMaterials.map(m => m.sub_assembly_code))).map((subAsmCode) => {
                   const subAsmMaterials = subAssemblyBomMaterials.filter(m => m.sub_assembly_code === subAsmCode)
                   const subAsmInfo = subAsmMaterials[0]
