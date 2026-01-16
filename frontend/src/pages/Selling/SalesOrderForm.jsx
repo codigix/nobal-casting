@@ -22,14 +22,7 @@ export default function SalesOrderForm() {
   const isReadOnly = searchParams.get('readonly') === 'true'
   const isEditMode = id && id !== 'new' && !isReadOnly
 
-  const [expandedSections, setExpandedSections] = useState({
-    orderInfo: true,
-    customer: true,
-    bom: true,
-    taxes: true,
-    bomDetails: true,
-    bomCost: true
-  })
+
 
   const [formData, setFormData] = useState({
     series: '',
@@ -75,33 +68,10 @@ export default function SalesOrderForm() {
   const [expandedItemGroups, setExpandedItemGroups] = useState({})
   const [bomName, setBomName] = useState('')
 
-  const toggleSection = (sectionId) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [sectionId]: !prev[sectionId]
-    }))
-  }
-
-  const CollapsibleSection = ({ id, title, icon, children, expanded = true }) => (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-      <button
-        type="button"
-        onClick={() => toggleSection(id)}
-        className="w-full p-2 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-150 transition flex items-center justify-between group"
-      >
-        <h3 className="text-xs font-bold text-gray-900 flex items-center gap-3">
-          <span className="text-lg group-hover:scale-110 transition-transform">{icon}</span>
-          {title}
-        </h3>
-        <span className={`text-gray-600 transition-transform ${expandedSections[id] ? 'rotate-180' : ''}`}>
-          ▼
-        </span>
-      </button>
-      {expandedSections[id] && (
-        <div className="p-3">
-          {children}
-        </div>
-      )}
+  const SectionHeader = ({ title, icon }) => (
+    <div className="flex items-center gap-3 mb-6 pt-6 border-t border-gray-200">
+      <span className="text-2xl">{icon}</span>
+      <h2 className="text-lg font-bold text-gray-900">{title}</h2>
     </div>
   )
 
@@ -1118,9 +1088,8 @@ export default function SalesOrderForm() {
 
           <form onSubmit={(e) => e.preventDefault()}>
             <div className="space-y-4">
-              
-              <CollapsibleSection id="orderInfo" title="Order Information" icon="📅">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <SectionHeader title="Order Information" icon="📅" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="flex flex-col">
                     <label className="text-xs  text-gray-700">Series</label>
                     <input
@@ -1163,9 +1132,8 @@ export default function SalesOrderForm() {
                     </select>
                   </div>
                 </div>
-              </CollapsibleSection>
 
-              <CollapsibleSection id="customer" title="Customer Details" icon="👥">
+              <SectionHeader title="Customer Details" icon="👥" />
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="lg:col-span-2 flex flex-col">
                     <label className="text-xs  text-gray-700">Customer *</label>
@@ -1174,7 +1142,7 @@ export default function SalesOrderForm() {
                       onChange={(val) => handleCustomerChange(val)}
                       options={customers.filter(c => c && c.customer_id && c.customer_name).map(c => ({ label: c.customer_name, value: c.customer_id }))}
                       placeholder="Search customer..."
-                      disabled={isReadOnly}
+                      isDisabled={isReadOnly}
                     />
                   </div>
                   <div className="flex flex-col">
@@ -1196,9 +1164,8 @@ export default function SalesOrderForm() {
                     />
                   </div>
                 </div>
-              </CollapsibleSection>
 
-              <CollapsibleSection id="bom" title="BOM & Inventory" icon="📦">
+              <SectionHeader title="BOM & Inventory" icon="📦" />
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="lg:col-span-2 flex flex-col">
                     <label className="text-xs  text-gray-700">Select BOM *</label>
@@ -1207,7 +1174,7 @@ export default function SalesOrderForm() {
                       onChange={(val) => handleBomChange(val)}
                       options={boms}
                       placeholder="Search BOM..."
-                      disabled={isReadOnly}
+                      isDisabled={isReadOnly}
                     />
                   </div>
                   <div className="flex flex-col">
@@ -1215,8 +1182,8 @@ export default function SalesOrderForm() {
                     <input
                       className={`p-2 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${isReadOnly ? 'bg-gray-50' : 'bg-white'}`}
                       type="number"
-                      name="quantity"
-                      value={formData.qty === '' ? '' : parseFloat(formData.qty) || ''}
+                      name="qty"
+                      value={formData.qty || ''}
                       onChange={handleQuantityChange}
                       min="1"
                       step="0.01"
@@ -1231,13 +1198,12 @@ export default function SalesOrderForm() {
                       onChange={(val) => setFormData({ ...formData, source_warehouse: val })}
                       options={warehouses}
                       placeholder="Select warehouse..."
-                      disabled={isReadOnly}
+                      isDisabled={isReadOnly}
                     />
                   </div>
                 </div>
-              </CollapsibleSection>
 
-              <CollapsibleSection id="taxes" title="Order Status & Taxes" icon="⚙️">
+              <SectionHeader title="Order Status & Taxes" icon="⚙️" />
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="flex flex-col">
                     <label className="text-xs  text-gray-700">Status</label>
@@ -1246,7 +1212,7 @@ export default function SalesOrderForm() {
                       onChange={(val) => handleSearchableChange('status', val)}
                       options={statuses}
                       placeholder="Select status..."
-                      disabled={isReadOnly}
+                      isDisabled={isReadOnly}
                     />
                   </div>
                   <div className="flex flex-col">
@@ -1295,9 +1261,8 @@ export default function SalesOrderForm() {
                     />
                   </div>
                 </div>
-              </CollapsibleSection>
 
-              <CollapsibleSection id="bomDetails" title="BOM Details" icon="📋" expanded={false}>
+              <SectionHeader title="BOM Details" icon="📋" />
                 <div className="space-y-6">
               {bomFinishedGoods.length > 0 && (
                 <div className="mb-5">
@@ -1648,7 +1613,6 @@ export default function SalesOrderForm() {
                 </div>
               )}
                 </div>
-              </CollapsibleSection>
             </div>
 
           <div className="flex gap-4 justify-end items-center mt-8 pt-6 border-t border-gray-200">
