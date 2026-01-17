@@ -573,10 +573,12 @@ export default function BOMForm() {
     setError(null)
   }
 
-  const calculateOperationCost = (cycleTime, hourlyRate) => {
-    const timeInMinutes = parseFloat(cycleTime) || 0
+  const calculateOperationCost = (cycleTime, setupTime, hourlyRate) => {
+    const cycleTimeMinutes = parseFloat(cycleTime) || 0
+    const setupTimeMinutes = parseFloat(setupTime) || 0
+    const totalTimeMinutes = cycleTimeMinutes + setupTimeMinutes
     const rate = parseFloat(hourlyRate) || 0
-    return (timeInMinutes / 60) * rate
+    return (totalTimeMinutes / 60) * rate
   }
 
   const addOperation = () => {
@@ -584,7 +586,7 @@ export default function BOMForm() {
       setError('Please enter operation name')
       return
     }
-    const calculatedCost = calculateOperationCost(newOperation.operation_time, newOperation.hourly_rate)
+    const calculatedCost = calculateOperationCost(newOperation.operation_time, newOperation.fixed_time, newOperation.hourly_rate)
     setOperations([...operations, { ...newOperation, operating_cost: calculatedCost.toFixed(2), id: Date.now() }])
     setNewOperation({
       operation_name: '',
@@ -1475,7 +1477,7 @@ export default function BOMForm() {
                       <div className="flex flex-col">
                         <label className="text-xs font-bold text-gray-700 mb-1">Cost (₹)</label>
                         <div className="px-2 py-1.5 border border-gray-300 rounded text-xs font-semibold bg-gray-100 text-gray-700">
-                          {calculateOperationCost(newOperation.operation_time, newOperation.hourly_rate).toFixed(2)}
+                          {calculateOperationCost(newOperation.operation_time, newOperation.fixed_time, newOperation.hourly_rate).toFixed(2)}
                         </div>
                       </div>
                       <div className="flex flex-col">
