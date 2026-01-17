@@ -631,12 +631,12 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async createBOM(data) {
     try {
-      const query = `INSERT INTO bom (bom_id, item_code, description, quantity, uom, status, revision, effective_date, created_by)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      const query = `INSERT INTO bom (bom_id, item_code, description, quantity, uom, status, revision, effective_date, created_by, total_cost)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       await this.db.query(
         query,
         [data.bom_id, data.item_code, data.description, data.quantity || 1, 
-         data.uom, data.status, data.revision, data.effective_date, data.created_by]
+         data.uom, data.status, data.revision, data.effective_date, data.created_by, data.total_cost || 0]
       )
       return data
     } catch (error) {

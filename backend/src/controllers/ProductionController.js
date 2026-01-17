@@ -929,7 +929,8 @@ class ProductionController {
         status: status || 'Draft',
         revision: revision || 1,
         effective_date,
-        created_by: req.user?.username || 'system'
+        created_by: req.user?.username || 'system',
+        total_cost: total_cost || 0
       })
 
       if (lines && lines.length > 0) {

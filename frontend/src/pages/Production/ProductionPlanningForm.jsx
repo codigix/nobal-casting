@@ -563,7 +563,7 @@ export default function ProductionPlanningForm() {
       const bomRawMaterialsFromSO = soDetails.bom_raw_materials || []
       const bomOperationsFromSO = soDetails.bom_operations || []
 
-      if (bomFinishedGoodsFromSO.length === 0 || bomRawMaterialsFromSO.length === 0) {
+      if (bomFinishedGoodsFromSO.length === 0 || bomRawMaterialsFromSO.length === 0 || bomOperationsFromSO.length === 0) {
         bomData = await fetchBOMDetails(bomId)
       }
 
@@ -1749,47 +1749,6 @@ export default function ProductionPlanningForm() {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Section 2.5: Finished Goods Operations */}
-        {fgOperations.length > 0 && (
-          <div className="bg-white rounded shadow mb-3">
-            <button
-              onClick={() => toggleSection(2.5)}
-              className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-emerald-600">2.5</span>
-                <h2 className="text-sm font-semibold text-gray-900">Finished Goods Operations ({fgOperations.length})</h2>
-              </div>
-              <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[2.5] ? 'rotate-180' : ''}`} />
-            </button>
-
-            {expandedSections[2.5] && (
-              <div className="px-4 py-3 border-t border-gray-200">
-                <table className="w-full text-xs">
-                  <thead className="bg-gray-100 border-b border-gray-300">
-                    <tr>
-                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Operation</th>
-                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Workstation</th>
-                      <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Time (hrs)</th>
-                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Seq</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fgOperations.map((item, idx) => (
-                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="px-2 py-1 font-medium text-gray-900">{item.operation || item.operation_name}</td>
-                        <td className="px-2 py-1 text-gray-700">{item.workstation || item.workstation_type || '-'}</td>
-                        <td className="px-2 py-1 text-right font-bold text-gray-900">{item.time || item.operation_time || 0}</td>
-                        <td className="px-2 py-1 text-gray-700">{item.sequence || idx + 1}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               </div>
             )}
           </div>

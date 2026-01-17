@@ -218,8 +218,7 @@ export default function BOM() {
       key: 'total_cost',
       label: 'Total Cost',
       render: (value, row) => {
-        const costPerUnit = parseFloat(row.total_cost || 0) / parseFloat(row.quantity || 1)
-        return <div className="text-left">₹{costPerUnit.toFixed(2)}</div>
+        return <div className="text-left font-semibold">₹{parseFloat(row.total_cost || 0).toFixed(2)}</div>
       }
     },
     {

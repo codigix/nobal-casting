@@ -101,7 +101,7 @@ export default function BOMForm() {
     raw_materials: true,
     operations: true,
     scrap: false,
-    costing: false
+    costing: true
   })
   const [expandedItemGroups, setExpandedItemGroups] = useState({})
   const [showDrafts, setShowDrafts] = useState(false)
