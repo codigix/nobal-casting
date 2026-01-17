@@ -10,7 +10,7 @@ export class ItemModel {
       const fields = [
         'item_code', 'name', 'item_group', 'description', 'uom', 'hsn_code', 'gst_rate', 'is_active',
         'disabled', 'allow_alternative_item', 'maintain_stock', 'has_variants', 'opening_stock',
-        'valuation_rate', 'valuation_method', 'standard_selling_rate', 'is_fixed_asset',
+        'valuation_rate', 'valuation_method', 'standard_selling_rate', 'selling_rate', 'is_fixed_asset',
         'shelf_life_in_days', 'warranty_period_in_days', 'end_of_life', 'weight_per_unit',
         'weight_uom', 'allow_negative_stock', 'has_batch_no', 'has_serial_no',
         'automatically_create_batch', 'batch_number_series', 'has_expiry_date', 'retain_sample',
@@ -26,7 +26,7 @@ export class ItemModel {
         data.uom || 'Nos', data.hsn_code, data.gst_rate || 0, data.disabled ? false : true,
         data.disabled || false, data.allow_alternative_item || false, data.maintain_stock !== false,
         data.has_variants || false, data.opening_stock || 0, data.valuation_rate || 0,
-        data.valuation_method || 'FIFO', data.standard_selling_rate || 0, data.is_fixed_asset || false,
+        data.valuation_method || 'FIFO', data.standard_selling_rate || 0, data.selling_rate || 0, data.is_fixed_asset || false,
         data.shelf_life_in_days || null, data.warranty_period_in_days || null, data.end_of_life || null,
         data.weight_per_unit || null, data.weight_uom || null, data.allow_negative_stock || false,
         data.has_batch_no || false, data.has_serial_no || false, data.automatically_create_batch || false,
@@ -287,7 +287,7 @@ export class ItemModel {
       const allowedFields = [
         'name', 'item_group', 'description', 'uom', 'hsn_code', 'gst_rate', 'is_active',
         'disabled', 'allow_alternative_item', 'maintain_stock', 'has_variants', 'opening_stock',
-        'valuation_rate', 'valuation_method', 'standard_selling_rate', 'is_fixed_asset',
+        'valuation_rate', 'valuation_method', 'standard_selling_rate', 'selling_rate', 'is_fixed_asset',
         'shelf_life_in_days', 'warranty_period_in_days', 'end_of_life', 'weight_per_unit',
         'weight_uom', 'allow_negative_stock', 'has_batch_no', 'has_serial_no',
         'automatically_create_batch', 'batch_number_series', 'has_expiry_date', 'retain_sample',

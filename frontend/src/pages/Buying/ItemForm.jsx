@@ -48,6 +48,7 @@ export default function ItemForm() {
     valuation_rate: 0,
     valuation_method: 'FIFO',
     standard_selling_rate: 0,
+    selling_rate: 0,
     is_fixed_asset: false,
     shelf_life_in_days: '',
     warranty_period_in_days: '',
@@ -869,6 +870,18 @@ export default function ItemForm() {
             name="valuation_rate"
             className='p-2  border border-gray-300 rounded bg-white'
             value={formData.valuation_rate}
+            onChange={handleChange}
+            placeholder="0.00"
+            step="0.01"
+          />
+        </div>
+        <div className="form-group">
+          <label>Selling Rate</label>
+          <input
+            type="number"
+            name="selling_rate"
+            className='p-2  border border-gray-300 rounded bg-white'
+            value={formData.selling_rate}
             onChange={handleChange}
             placeholder="0.00"
             step="0.01"
