@@ -186,7 +186,7 @@ export default function DepartmentDashboard() {
     return (
       <div className="w-full p-0 bg-gray-50 min-h-screen">
         <div className="p-6">
-          <div className="max-w-7xl mx-auto">
+          <div className=" mx-auto">
             <div className="mb-7">
               <h1 className="text-xl font-bold text-gray-900 -tracking-tight">
                 Stock Overview

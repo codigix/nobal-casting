@@ -216,7 +216,7 @@ export default function Suppliers() {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-4 sm:p-5 lg:p-6">
-      <div className="max-w-7xl mx-auto">
+      <div className=" mx-auto">
         {success && <Alert variant="success">{success}</Alert>}
         {error && <Alert variant="danger">{error}</Alert>}
 

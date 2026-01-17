@@ -574,7 +574,8 @@ export default function ProductionPlanningForm() {
       console.log('BOM ID:', bomId)
       console.log('BOM Lines (these are Sub-Assemblies for FG):', bomLines.length)
       bomLines.forEach((item, idx) => {
-        console.log(`Line ${idx + 1}: Code=${item.component_code || item.item_code}, Name=${item.component_description || item.item_name}, Qty=${item.quantity || item.qty}`)
+        const scrapPct = item.loss_percentage || item.item_loss_percentage || 0
+        console.log(`Line ${idx + 1}: Code=${item.component_code || item.item_code}, Name=${item.component_description || item.item_name}, Qty=${item.quantity || item.qty}, Scrap%=${scrapPct}`)
       })
       
       // Set Finished Good from BOM metadata
@@ -592,17 +593,32 @@ export default function ProductionPlanningForm() {
 
       // All lines in a FG BOM are Sub-Assemblies
       if (bomLines.length > 0) {
-        const subAsmItemsFromBOM = bomLines.map(subAsmItem => ({
-          item_code: subAsmItem.component_code || subAsmItem.item_code,
-          item_name: subAsmItem.component_description || subAsmItem.item_name,
-          quantity: (subAsmItem.quantity || subAsmItem.qty || subAsmItem.bom_qty || 1) * quantity,
-          sales_order_quantity: quantity,
-          fg_sub_assembly: 'Sub-Assembly',
-          component_type: subAsmItem.component_type || 'Sub-Assembly',
-          planned_start_date: new Date().toISOString().split('T')[0],
-          planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        }))
+        const subAsmItemsFromBOM = bomLines.map(subAsmItem => {
+          const baseQty = subAsmItem.quantity || subAsmItem.qty || subAsmItem.bom_qty || 1
+          const totalQtyBeforeScrap = baseQty * quantity
+          const scrapPercentage = parseFloat(subAsmItem.loss_percentage || subAsmItem.item_loss_percentage || 0)
+          const qtyAfterScrap = totalQtyBeforeScrap + (totalQtyBeforeScrap * scrapPercentage / 100)
+          
+          return {
+            item_code: subAsmItem.component_code || subAsmItem.item_code,
+            item_name: subAsmItem.component_description || subAsmItem.item_name,
+            quantity: qtyAfterScrap,
+            qty_before_scrap: totalQtyBeforeScrap,
+            scrap_percentage: scrapPercentage,
+            qty_after_scrap: qtyAfterScrap,
+            planned_qty_before_scrap: totalQtyBeforeScrap,
+            planned_qty: qtyAfterScrap,
+            sales_order_quantity: quantity,
+            fg_sub_assembly: 'Sub-Assembly',
+            component_type: subAsmItem.component_type || 'Sub-Assembly',
+            planned_start_date: new Date().toISOString().split('T')[0],
+            planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          }
+        })
         console.log('✓ Extracted Sub-Assemblies from BOM Lines:', subAsmItemsFromBOM.length)
+        subAsmItemsFromBOM.forEach((item, idx) => {
+          console.log(`  Sub-Assembly ${idx + 1}: ${item.item_code} | Qty Before Scrap: ${item.qty_before_scrap.toFixed(2)} | Scrap%: ${item.scrap_percentage}% | Qty After Scrap: ${item.qty_after_scrap.toFixed(2)}`)
+        })
         console.log('Sub-Assemblies:', subAsmItemsFromBOM)
         setSubAssemblyItems(subAsmItemsFromBOM)
         
@@ -1583,21 +1599,6 @@ export default function ProductionPlanningForm() {
           </div>
         )}
 
-        {/* DEBUG PANEL */}
-        <div className="bg-red-50 border border-red-300 rounded p-3 mb-3">
-          <p className="text-xs font-bold text-red-700">DEBUG INFO:</p>
-          <p className="text-xs text-red-600">rawMaterialItems: {rawMaterialItems.length}</p>
-          <p className="text-xs text-red-600">salesOrderQuantity: {salesOrderQuantity}</p>
-          <p className="text-xs text-red-600">selectedSalesOrders: {selectedSalesOrders.length}</p>
-          <button
-            type="button"
-            onClick={() => console.log('Test button clicked! rawMaterialItems:', rawMaterialItems)}
-            className="mt-2 px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
-          >
-            Test Console Log
-          </button>
-        </div>
-
         {/* Section 0: Plan Header */}
         <div className="bg-white rounded shadow mb-3">
           <button
@@ -1704,46 +1705,6 @@ export default function ProductionPlanningForm() {
           )}
         </div>
 
-        {/* Section 1.5: BOM Selection */}
-        {(selectedSalesOrderDetails || fgItems.length > 0) && (
-          <div className="bg-white rounded shadow mb-3">
-            <button
-              onClick={() => toggleSection(1.5)}
-              className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-blue-600">1.5</span>
-                <h2 className="text-sm font-semibold text-gray-900">BOM Details</h2>
-              </div>
-              <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[1.5] ? 'rotate-180' : ''}`} />
-            </button>
-
-            {expandedSections[1.5] && (
-              <div className="px-4 py-3 border-t border-gray-200">
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-                  <div className="bg-blue-50 rounded p-2">
-                    <p className="text-xs text-gray-600 font-semibold">Item</p>
-                    <p className="text-xs font-bold text-gray-900">
-                      {(fgItems[0]?.item_code || selectedSalesOrderDetails?.item_code || 'N/A')}
-                      {(fgItems[0]?.item_name || selectedSalesOrderDetails?.item_name) && (
-                        <span> - {fgItems[0]?.item_name || selectedSalesOrderDetails?.item_name}</span>
-                      )}
-                    </p>
-                  </div>
-                  <div className="bg-green-50 rounded p-2">
-                    <p className="text-xs text-gray-600 font-semibold">BOM No</p>
-                    <p className="text-xs font-bold text-gray-900">{selectedBomId || 'N/A'}</p>
-                  </div>
-                  <div className="bg-orange-50 rounded p-2">
-                    <p className="text-xs text-gray-600 font-semibold">Quantity</p>
-                    <p className="text-xs font-bold text-gray-900">{salesOrderQuantity || fgItems[0]?.quantity || 1}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Section 2: Finished Goods */}
         {fgItems.length > 0 && (
           <div className="bg-white rounded shadow mb-3">
@@ -1763,7 +1724,7 @@ export default function ProductionPlanningForm() {
                 <div className="space-y-2">
                   {fgItems.map((item, idx) => (
                     <div key={idx} className="bg-gradient-to-r from-green-50 to-green-100 rounded p-2 border border-green-200">
-                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+                      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 text-xs">
                         <div>
                           <p className="text-xs text-gray-600 font-semibold">Item Code</p>
                           <p className="font-bold text-gray-900">{item.item_code || selectedSalesOrderDetails?.item_code || 'N/A'}</p>
@@ -1771,6 +1732,10 @@ export default function ProductionPlanningForm() {
                         <div>
                           <p className="text-xs text-gray-600 font-semibold">Item Name</p>
                           <p className="font-bold text-gray-900">{item.item_name || selectedSalesOrderDetails?.item_name || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-semibold">BOM No</p>
+                          <p className="font-bold text-gray-900">{selectedBomId || item.bom_id || item.bom_no || 'N/A'}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 font-semibold">Qty</p>
@@ -1893,18 +1858,41 @@ export default function ProductionPlanningForm() {
                       <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Qty</th>
                       <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Warehouse</th>
                       <th className="px-2 py-1.5 text-left font-semibold text-gray-700">BOM ID</th>
+                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">MR ID</th>
+                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Material Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {rawMaterialItems.map((item, idx) => (
-                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="px-2 py-1 font-medium text-gray-900">{item.item_code}</td>
-                        <td className="px-2 py-1 text-gray-700">{item.item_name}</td>
-                        <td className="px-2 py-1 text-right font-bold text-gray-900">{item.quantity || item.qty_as_per_bom}</td>
-                        <td className="px-2 py-1 text-gray-700">{item.for_warehouse || '-'}</td>
-                        <td className="px-2 py-1 text-gray-700 font-mono text-xs">{item.bom_id || item.bom_no || '-'}</td>
-                      </tr>
-                    ))}
+                    {rawMaterialItems.map((item, idx) => {
+                      const getStatusBadgeColor = (status) => {
+                        switch(status) {
+                          case 'approved': return 'bg-green-100 text-green-800'
+                          case 'requested': return 'bg-blue-100 text-blue-800'
+                          case 'pending': return 'bg-gray-100 text-gray-800'
+                          case 'completed': return 'bg-emerald-100 text-emerald-800'
+                          default: return 'bg-gray-100 text-gray-800'
+                        }
+                      }
+                      return (
+                        <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                          <td className="px-2 py-1 font-medium text-gray-900">{item.item_code}</td>
+                          <td className="px-2 py-1 text-gray-700">{item.item_name}</td>
+                          <td className="px-2 py-1 text-right font-bold text-gray-900">{item.quantity || item.qty_as_per_bom}</td>
+                          <td className="px-2 py-1 text-gray-700">{item.for_warehouse || '-'}</td>
+                          <td className="px-2 py-1 text-gray-700 font-mono text-xs">{item.bom_id || item.bom_no || '-'}</td>
+                          <td className="px-2 py-1 font-mono text-xs text-blue-600">{item.mr_id || '-'}</td>
+                          <td className="px-2 py-1">
+                            {item.material_status ? (
+                              <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getStatusBadgeColor(item.material_status)}`}>
+                                {item.material_status.charAt(0).toUpperCase() + item.material_status.slice(1)}
+                              </span>
+                            ) : (
+                              <span className="text-gray-500">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

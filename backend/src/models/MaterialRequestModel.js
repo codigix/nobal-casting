@@ -233,76 +233,117 @@ export class MaterialRequestModel {
         ['approved', mrId]
       )
 
+      console.log(`[MR Approval] Updating production plan material status for MR ${mrId}`)
+
+      // Update Production Plan Material Status
+      // Extract plan_id from series_no (format: PLAN-{plan_id})
+      if (request.series_no && request.series_no.startsWith('PLAN-')) {
+        const plan_id = request.series_no.replace('PLAN-', '')
+        console.log(`[MR Approval] Found plan_id: ${plan_id}`)
+
+        try {
+          await db.execute(
+            `UPDATE production_plan_raw_material 
+             SET material_status = ? 
+             WHERE plan_id = ? AND mr_id = ?`,
+            ['approved', plan_id, mrId]
+          )
+          console.log(`[MR Approval] Production plan material status updated to 'approved'`)
+        } catch (error) {
+          console.error(`[MR Approval] Error updating production plan material status:`, error.message)
+        }
+      }
+
       // Execute Stock Movements
       if (isStockTransaction) {
+        console.log(`[MR Approval] Processing stock movements for MR ${mrId}, purpose: ${request.purpose}`)
         const sourceWarehouseId = await this.getWarehouseId(db, finalSourceWarehouse)
         const targetWarehouseId = request.target_warehouse ? await this.getWarehouseId(db, request.target_warehouse) : null
+        
+        console.log(`[MR Approval] Source Warehouse ID: ${sourceWarehouseId}, Target: ${targetWarehouseId}`)
         
         for (const item of items) {
           const qty = Number(item.qty)
 
           // Get current stock
-          const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, finalSourceWarehouse)
+          const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, sourceWarehouseId)
           const currentValuation = sourceBalance ? Number(sourceBalance.valuation_rate) : 0
           const currentQty = sourceBalance ? Number(sourceBalance.current_qty) : 0
           const availableQty = sourceBalance ? Number(sourceBalance.available_qty) : 0
           
+          console.log(`[MR Approval] Item ${item.item_code}: Requested ${qty}, Current Stock ${currentQty}, Available ${availableQty}`)
+          
           // Deduct only what's available (allow zero stock items)
           const qtyToDeduct = Math.min(qty, Math.max(0, currentQty))
           
+          console.log(`[MR Approval] Will deduct ${qtyToDeduct} from ${item.item_code}`)
+          
           if (qtyToDeduct > 0) {
-            // Deduct from Source
-            await StockBalanceModel.upsert(item.item_code, sourceWarehouseId, {
-              current_qty: currentQty - qtyToDeduct,
-              reserved_qty: sourceBalance ? Number(sourceBalance.reserved_qty) : 0,
-              valuation_rate: currentValuation,
-              last_issue_date: new Date()
-            }, db)
-
-            // Add Ledger Entry (OUT)
-            await StockLedgerModel.create({
-              item_code: item.item_code,
-              warehouse_id: sourceWarehouseId,
-              transaction_date: new Date(),
-              transaction_type: request.purpose === 'material_transfer' ? 'Transfer' : 'Issue',
-              qty_in: 0,
-              qty_out: qtyToDeduct,
-              valuation_rate: currentValuation,
-              reference_doctype: 'Material Request',
-              reference_name: mrId,
-              remarks: `Approved Material Request ${mrId}`,
-              created_by: approvedBy
-            }, db)
-
-            // If Transfer, Add to Target
-            if (request.purpose === 'material_transfer' && targetWarehouseId) {
-              const targetBalance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, request.target_warehouse)
-              const targetQty = targetBalance ? Number(targetBalance.current_qty) : 0
-              
-              await StockBalanceModel.upsert(item.item_code, targetWarehouseId, {
-                current_qty: targetQty + qtyToDeduct,
-                reserved_qty: targetBalance ? Number(targetBalance.reserved_qty) : 0,
+            try {
+              // Deduct from Source
+              console.log(`[MR Approval] Updating stock balance for ${item.item_code}`)
+              await StockBalanceModel.upsert(item.item_code, sourceWarehouseId, {
+                current_qty: currentQty - qtyToDeduct,
+                reserved_qty: sourceBalance ? Number(sourceBalance.reserved_qty) : 0,
                 valuation_rate: currentValuation,
-                last_receipt_date: new Date()
+                last_issue_date: new Date()
               }, db)
 
-              // Add Ledger Entry (IN)
-              await StockLedgerModel.create({
+              // Add Ledger Entry (OUT)
+              console.log(`[MR Approval] Creating ledger entry for ${item.item_code}`)
+              const ledgerData = {
                 item_code: item.item_code,
-                warehouse_id: targetWarehouseId,
+                warehouse_id: sourceWarehouseId,
                 transaction_date: new Date(),
-                transaction_type: 'Transfer',
-                qty_in: qtyToDeduct,
-                qty_out: 0,
+                transaction_type: request.purpose === 'material_transfer' ? 'Transfer' : 'Issue',
+                qty_in: 0,
+                qty_out: qtyToDeduct,
                 valuation_rate: currentValuation,
                 reference_doctype: 'Material Request',
                 reference_name: mrId,
-                remarks: `Incoming Transfer from MR ${mrId}`,
+                remarks: `Approved Material Request ${mrId}`,
                 created_by: approvedBy
-              }, db)
+              }
+              console.log(`[MR Approval] Ledger data:`, ledgerData)
+              await StockLedgerModel.create(ledgerData, db)
+              console.log(`[MR Approval] Ledger entry created successfully`)
+
+              // If Transfer, Add to Target
+              if (request.purpose === 'material_transfer' && targetWarehouseId) {
+                const targetBalance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, targetWarehouseId)
+                const targetQty = targetBalance ? Number(targetBalance.current_qty) : 0
+                
+                await StockBalanceModel.upsert(item.item_code, targetWarehouseId, {
+                  current_qty: targetQty + qtyToDeduct,
+                  reserved_qty: targetBalance ? Number(targetBalance.reserved_qty) : 0,
+                  valuation_rate: currentValuation,
+                  last_receipt_date: new Date()
+                }, db)
+
+                // Add Ledger Entry (IN)
+                await StockLedgerModel.create({
+                  item_code: item.item_code,
+                  warehouse_id: targetWarehouseId,
+                  transaction_date: new Date(),
+                  transaction_type: 'Transfer',
+                  qty_in: qtyToDeduct,
+                  qty_out: 0,
+                  valuation_rate: currentValuation,
+                  reference_doctype: 'Material Request',
+                  reference_name: mrId,
+                  remarks: `Incoming Transfer from MR ${mrId}`,
+                  created_by: approvedBy
+                }, db)
+              }
+            } catch (err) {
+              console.error(`[MR Approval] Error processing item ${item.item_code}:`, err.message)
+              throw err
             }
           }
         }
+        console.log(`[MR Approval] Stock movements completed for MR ${mrId}`)
+      } else {
+        console.log(`[MR Approval] Not a stock transaction (purpose: ${request.purpose}), skipping stock movements`)
       }
 
       return await this.getById(db, mrId)

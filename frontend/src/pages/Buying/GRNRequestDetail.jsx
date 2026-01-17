@@ -199,7 +199,7 @@ export default function GRNRequestDetail() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className=" mx-auto space-y-6">
         {/* Header Section */}
         <div className="flex items-center gap-3 mb-6">
           <Button

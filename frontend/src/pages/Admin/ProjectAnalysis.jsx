@@ -392,7 +392,7 @@ export default function ProjectAnalysis() {
   return (
     <div className="p-0 bg-slate-50 min-h-screen">
       <div className="bg-gradient-to-br from-white to-slate-100 p-2 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto">
+        <div className=" mx-auto">
           <div className="flex items-center gap-3 mb-1">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white text-lg">
               📊
@@ -409,7 +409,7 @@ export default function ProjectAnalysis() {
         </div>
       </div>
 
-      <div className="p-4 max-w-7xl mx-auto">
+      <div className="p-4  mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           {stats.map((stat, idx) => {
             const Icon = stat.icon

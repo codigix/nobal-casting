@@ -527,6 +527,11 @@ export class ProductionPlanningModel {
           'INSERT INTO material_request_item (mr_item_id, mr_id, item_code, qty, uom, purpose) VALUES (?, ?, ?, ?, ?, ?)',
           [mr_item_id, mr_id, material.item_code, material.plan_to_request_qty || material.qty_as_per_bom || 0, 'Kg', null]
         )
+
+        await this.db.execute(
+          'UPDATE production_plan_raw_material SET mr_id = ?, material_status = ? WHERE plan_id = ? AND item_code = ?',
+          [mr_id, 'requested', plan_id, material.item_code]
+        )
       }
 
       return mr_id

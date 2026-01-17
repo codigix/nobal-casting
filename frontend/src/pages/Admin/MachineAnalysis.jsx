@@ -598,7 +598,7 @@ export default function MachineAnalysis() {
   return (
     <div className="p-0 bg-slate-50 min-h-screen">
       <div className="bg-gradient-to-br from-white to-slate-100 px-2 py-2 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto">
+        <div className=" mx-auto">
           <div className="flex items-center gap-4 mb-2">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white">
               <Factory size={24} />
@@ -615,7 +615,7 @@ export default function MachineAnalysis() {
         </div>
       </div>
 
-      <div className="p-3 max-w-7xl mx-auto">
+      <div className="p-3  mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm">
             <div className="flex items-center justify-between">

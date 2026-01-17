@@ -127,16 +127,7 @@ export default function StockBalance() {
       label: 'Available Qty',
       render: (value) => <strong>{Number(value || 0).toFixed(2)}</strong>
     },
-    {
-      key: 'reserved_qty',
-      label: 'Reserved Qty',
-      render: (value) => Number(value || 0).toFixed(2)
-    },
-    {
-      key: 'total_value',
-      label: 'Total Value',
-      render: (value) => `₹${Number(value || 0).toFixed(2)}`
-    },
+
     {
       key: 'last_receipt_date',
       label: 'Last Receipt',
@@ -147,41 +138,42 @@ export default function StockBalance() {
       label: 'Last Issue',
       render: (value) => value ? new Date(value).toLocaleDateString() : '-'
     },
-    {
-      key: 'opening_qty',
-      label: 'Opening Qty',
-      render: (value) => Number(value || 0).toFixed(2)
-    },
-    {
-      key: 'opening_value',
-      label: 'Opening Value',
-      render: (value) => `₹${Number(value || 0).toFixed(2)}`
-    },
+
     {
       key: 'in_quantity',
-      label: 'IN Quantity',
-      render: (value) => Number(value || 0).toFixed(2)
-    },
-    {
-      key: 'in_value',
-      label: 'IN Value',
-      render: (value) => `₹${Number(value || 0).toFixed(2)}`
+      label: 'Inward Movement',
+      render: (value, row) => {
+        if (!row) return null
+        const qty = Number(value || 0)
+        const val = Number(row.in_value || 0)
+        return (
+          <div className="flex flex-col gap-1 min-w-max">
+            <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded px-2 py-1">
+              <span className="text-xs font-semibold text-green-700 dark:text-green-400">↓ {qty.toFixed(2)}</span>
+              <span className="text-xs text-green-600 dark:text-green-500 block">₹{val.toFixed(2)}</span>
+            </div>
+          </div>
+        )
+      }
     },
     {
       key: 'out_quantity',
-      label: 'OUT Quantity',
-      render: (value) => Number(value || 0).toFixed(2)
+      label: 'Outward Movement',
+      render: (value, row) => {
+        if (!row) return null
+        const qty = Number(value || 0)
+        const val = Number(row.out_value || 0)
+        return (
+          <div className="flex flex-col gap-1 min-w-max">
+            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded px-2 py-1">
+              <span className="text-xs font-semibold text-red-700 dark:text-red-400">↑ {qty.toFixed(2)}</span>
+              <span className="text-xs text-red-600 dark:text-red-500 block">₹{val.toFixed(2)}</span>
+            </div>
+          </div>
+        )
+      }
     },
-    {
-      key: 'out_value',
-      label: 'OUT Value',
-      render: (value) => `₹${Number(value || 0).toFixed(2)}`
-    },
-    {
-      key: 'valuation_rate',
-      label: 'Valuation Rate',
-      render: (value) => `₹${Number(value || 0).toFixed(4)}`
-    },
+
     {
       key: 'stock_status',
       label: 'Status',
@@ -222,7 +214,7 @@ export default function StockBalance() {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-4 sm:p-5 lg:p-6">
-      <div className="max-w-7xl mx-auto">
+      <div className=" mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-6">
           <div>

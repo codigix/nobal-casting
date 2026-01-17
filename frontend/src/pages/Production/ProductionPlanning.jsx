@@ -103,24 +103,40 @@ const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms 
     
     const bomData = await bomRes.json()
     const bom = bomData.data || bomData
+    
+    console.log(`\n========== Processing BOM ${bomId} ==========`)
+    console.log(`BOM Data:`, bom)
+    
+    let materialsToProcess = []
+    const bomLines = bom.lines || bom.items || []
     const rawMaterials = bom.bom_raw_materials || bom.rawMaterials || []
     const consumables = bom.bom_consumables || bom.consumables || []
     
-    console.log(`\n========== Processing BOM ${bomId} ==========`)
-    console.log(`Found ${rawMaterials.length} raw materials and ${consumables.length} consumables`)
-    console.log(`Raw Materials:`, rawMaterials)
-    console.log(`Consumables:`, consumables)
+    console.log(`BOM Lines (potential sub-assemblies): ${bomLines.length}`)
+    console.log(`Raw Materials: ${rawMaterials.length}`)
+    console.log(`Consumables: ${consumables.length}`)
     
-    const allMaterials = [...rawMaterials, ...consumables]
+    if (bomLines.length > 0) {
+      materialsToProcess = [...bomLines, ...rawMaterials, ...consumables]
+      console.log(`FG BOM detected with ${bomLines.length} sub-assemblies`)
+    } else {
+      materialsToProcess = [...rawMaterials, ...consumables]
+      console.log(`Regular BOM with direct raw materials`)
+    }
     
-    for (const material of allMaterials) {
+    console.log(`Total items to process: ${materialsToProcess.length}`)
+    
+    for (const material of materialsToProcess) {
       const itemCode = material.item_code || material.component_code
       if (!itemCode) continue
       
       const baseQty = parseFloat(material.qty) || parseFloat(material.quantity) || parseFloat(material.bom_qty) || 1
       const totalQty = baseQty * plannedQty
       
-      const isSubAssembly = isSubAssemblyGroup(material.item_group)
+      const isSubAssembly = isSubAssemblyGroup(material.item_group) || 
+                            material.fg_sub_assembly === 'Sub-Assembly' ||
+                            material.component_type === 'Sub-Assembly' ||
+                            (itemCode && itemCode.startsWith('SA-'))
       
       if (isSubAssembly) {
         console.log(`\n=== SUB-ASSEMBLY: ${itemCode} ===`)
@@ -135,55 +151,14 @@ const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms 
         
         if (subBomId && subBomId !== bomId) {
           console.log(`Found BOM ${subBomId} for sub-assembly ${itemCode}, fetching its materials...`)
-          
-          try {
-            const subBomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${subBomId}`, {
-              headers: { 'Authorization': `Bearer ${token}` }
-            })
-            if (subBomRes.ok) {
-              const subBomData = await subBomRes.json()
-              const subBom = subBomData.data || subBomData
-              const subBomMaterials = subBom.bom_raw_materials || subBom.rawMaterials || []
-              console.log(`Sub-assembly BOM ${subBomId} (${itemCode}) has ${subBomMaterials.length} materials:`, subBomMaterials)
-              
-              const subMaterials = await collectAllRawMaterials(subBomId, totalQty, token, visitedBoms)
-              console.log(`Sub-assembly ${itemCode} returned ${Object.keys(subMaterials).length} aggregated materials`)
-              for (const [subItemCode, subMaterial] of Object.entries(subMaterials)) {
-                if (allRawMaterials[subItemCode]) {
-                  allRawMaterials[subItemCode].qty += subMaterial.qty
-                  allRawMaterials[subItemCode].quantity += subMaterial.qty
-                } else {
-                  allRawMaterials[subItemCode] = subMaterial
-                }
-              }
+          const subMaterials = await collectAllRawMaterials(subBomId, totalQty, token, visitedBoms)
+          console.log(`Sub-assembly ${itemCode} returned ${Object.keys(subMaterials).length} aggregated materials`)
+          for (const [subItemCode, subMaterial] of Object.entries(subMaterials)) {
+            if (allRawMaterials[subItemCode]) {
+              allRawMaterials[subItemCode].qty += subMaterial.qty
+              allRawMaterials[subItemCode].quantity += subMaterial.qty
             } else {
-              console.log(`BOM ${subBomId} not found (status: ${subBomRes.status}), treating ${itemCode} as raw material`)
-              if (allRawMaterials[itemCode]) {
-                allRawMaterials[itemCode].qty += totalQty
-                allRawMaterials[itemCode].quantity += totalQty
-              } else {
-                allRawMaterials[itemCode] = {
-                  item_code: itemCode,
-                  item_name: material.item_name || material.name || itemCode,
-                  qty: totalQty,
-                  quantity: totalQty,
-                  uom: material.uom || 'pcs'
-                }
-              }
-            }
-          } catch (err) {
-            console.error(`Error fetching sub-assembly BOM ${subBomId}:`, err)
-            if (allRawMaterials[itemCode]) {
-              allRawMaterials[itemCode].qty += totalQty
-              allRawMaterials[itemCode].quantity += totalQty
-            } else {
-              allRawMaterials[itemCode] = {
-                item_code: itemCode,
-                item_name: material.item_name || material.name || itemCode,
-                qty: totalQty,
-                quantity: totalQty,
-                uom: material.uom || 'pcs'
-              }
+              allRawMaterials[subItemCode] = subMaterial
             }
           }
         } else {
@@ -194,7 +169,7 @@ const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms 
           } else {
             allRawMaterials[itemCode] = {
               item_code: itemCode,
-              item_name: material.item_name || material.name || itemCode,
+              item_name: material.item_name || material.component_description || material.name || itemCode,
               qty: totalQty,
               quantity: totalQty,
               uom: material.uom || 'pcs'
@@ -209,7 +184,7 @@ const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms 
         } else {
           allRawMaterials[itemCode] = {
             item_code: itemCode,
-            item_name: material.item_name || material.name || itemCode,
+            item_name: material.item_name || material.component_description || material.name || itemCode,
             qty: totalQty,
             quantity: totalQty,
             uom: material.uom || 'pcs'
@@ -217,7 +192,8 @@ const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms 
         }
       }
     }
-    console.log(`BOM ${bomId} processing complete, total materials: ${Object.keys(allRawMaterials).length}`)
+    console.log(`BOM ${bomId} processing complete, total raw materials: ${Object.keys(allRawMaterials).length}`)
+    console.log(`Raw Materials collected:`, allRawMaterials)
   } catch (err) {
     console.error(`Error fetching BOM ${bomId}:`, err)
   }
@@ -243,10 +219,81 @@ export default function ProductionPlanning() {
   const [materialStockData, setMaterialStockData] = useState({})
   const [workOrderStockData, setWorkOrderStockData] = useState({})
   const [checkingStock, setCheckingStock] = useState(false)
+  const [planProgress, setPlanProgress] = useState({})
 
   useEffect(() => {
     fetchPlans()
   }, [])
+
+  const fetchPlanOperationProgress = async (planId) => {
+    try {
+      const token = localStorage.getItem('token')
+      const woRes = await fetch(`${import.meta.env.VITE_API_URL}/production/work-orders?production_plan_id=${planId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (!woRes.ok) {
+        setPlanProgress(prev => ({
+          ...prev,
+          [planId]: { progress: 0, currentOp: 'No operations', totalOps: 0, completedOps: 0 }
+        }))
+        return
+      }
+
+      const woData = await woRes.json()
+      const workOrders = Array.isArray(woData) ? woData : (woData.data || [])
+
+      if (workOrders.length === 0) {
+        setPlanProgress(prev => ({
+          ...prev,
+          [planId]: { progress: 0, currentOp: 'No work orders', totalOps: 0, completedOps: 0 }
+        }))
+        return
+      }
+
+      let totalOps = 0
+      let completedOps = 0
+      let lastInProgressOp = 'Not Started'
+
+      for (const wo of workOrders) {
+        const jcRes = await fetch(`${import.meta.env.VITE_API_URL}/production/job-cards?work_order_id=${wo.wo_id || wo.work_order_id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+
+        if (jcRes.ok) {
+          const jcData = await jcRes.json()
+          const jobCards = Array.isArray(jcData) ? jcData : (jcData.data || [])
+
+          jobCards.forEach(jc => {
+            totalOps++
+            if (jc.status === 'completed') {
+              completedOps++
+            } else if (jc.status === 'in-progress') {
+              lastInProgressOp = `${jc.operation || 'Operation'} (${jc.operation_sequence || 'Seq'}) - In Progress`
+            }
+          })
+        }
+      }
+
+      const progress = totalOps > 0 ? Math.round((completedOps / totalOps) * 100) : 0
+
+      setPlanProgress(prev => ({
+        ...prev,
+        [planId]: { 
+          progress, 
+          currentOp: lastInProgressOp, 
+          totalOps, 
+          completedOps 
+        }
+      }))
+    } catch (err) {
+      console.error(`Error fetching progress for plan ${planId}:`, err)
+      setPlanProgress(prev => ({
+        ...prev,
+        [planId]: { progress: 0, currentOp: 'Error loading', totalOps: 0, completedOps: 0 }
+      }))
+    }
+  }
 
   const fetchBOMProductName = async (bomId) => {
     if (bomCache[bomId]) return bomCache[bomId]
@@ -370,6 +417,10 @@ export default function ProductionPlanning() {
         setBomCache(newBomCache)
         setPlans(plansData)
         setError(null)
+        
+        plansData.forEach(plan => {
+          fetchPlanOperationProgress(plan.plan_id)
+        })
       } else {
         setError('Failed to fetch production plans')
       }
@@ -752,7 +803,7 @@ export default function ProductionPlanning() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100  px-6 py-6">
-      <div className="max-w-7xl mx-auto">
+      <div className=" mx-auto">
         <div className="flex justify-between items-start mb-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -822,75 +873,115 @@ export default function ProductionPlanning() {
                       <th className="px-3 py-2 text-left text-gray-700 font-semibold">Plan ID</th>
                       <th className="px-3 py-2 text-left text-gray-700 font-semibold">Company</th>
                       <th className="px-3 py-2 text-left text-gray-700 font-semibold">Status</th>
+                      <th className="px-3 py-2 text-left text-gray-700 font-semibold">Production Progress</th>
                       <th className="px-3 py-2 text-center text-gray-700 font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredPlans.map((plan, idx) => (
-                      <tr key={plan.plan_id} className={`border-b border-gray-200 hover:bg-gray-50 transition ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                        <td className="px-3 py-2">
-                          <div className="text-left">
-                            <div className="font-semibold text-gray-900">{plan.plan_id}</div>
-                            {plan.bom_id && bomCache[plan.bom_id] && (
-                              <div className="text-xs text-gray-600 mt-1">{bomCache[plan.bom_id]}</div>
-                            )}
-                            {plan.fg_items && plan.fg_items.length > 0 && !bomCache[plan.bom_id] && (
-                              <div className="text-xs text-gray-600 mt-1">
-                                {plan.fg_items.map((item, idx) => {
-                                  const bomNo = item.bom_no || plan.bom_id || ''
-                                  const displayText = bomNo && item.item_code ? `${item.item_code} - ${bomNo}` : (item.item_code || bomNo || '')
-                                  return <div key={idx}>{displayText}</div>
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-gray-700">{plan.company || '-'}</td>
-                        <td className="px-3 py-2">
-                          <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getStatusColor(plan.status)}`}>
-                            {plan.status || 'Draft'}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2">
-                          <div className="flex gap-1 justify-center">
-                            
-                            <button 
-                              onClick={() => handleCreateWorkOrder(plan)}
-                              title="Create Work Order"
-                              className="p-1 hover:bg-green-50 rounded transition"
-                            >
-                              <Zap size={14} className="text-green-600" />
-                            </button>
-                            <button 
-                              onClick={() => handleSendMaterialRequest(plan)}
-                              title="Send Material Request"
-                              disabled={sendingMaterialRequest}
-                              className="p-1 hover:bg-purple-50 rounded transition disabled:opacity-60"
-                            >
-                              {sendingMaterialRequest ? (
-                                <Loader size={14} className="text-purple-600 animate-spin" />
-                              ) : (
-                                <Send size={14} className="text-purple-600" />
+                    {filteredPlans.map((plan, idx) => {
+                      const progress = planProgress[plan.plan_id]
+                      const progressValue = progress?.progress || 0
+                      const currentOp = progress?.currentOp || '-'
+                      const opsInfo = progress ? `${progress.completedOps}/${progress.totalOps}` : '-'
+                      
+                      return (
+                        <tr key={plan.plan_id} className={`border-b border-gray-200 hover:bg-gray-50 transition ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                          <td className="px-3 py-2">
+                            <div className="text-left">
+                              <div className="font-semibold text-gray-900">{plan.plan_id}</div>
+                              {plan.bom_id && bomCache[plan.bom_id] && (
+                                <div className="text-xs text-gray-600 mt-1">{bomCache[plan.bom_id]}</div>
                               )}
-                            </button>
-                            <button 
-                              onClick={() => handleEdit(plan)}
-                              title="Edit"
-                              className="p-1 hover:bg-blue-50 rounded transition"
-                            >
-                              <Edit2 size={14} className="text-blue-600" />
-                            </button>
-                            <button 
-                              onClick={() => handleDelete(plan.plan_id)}
-                              title="Delete"
-                              className="p-1 hover:bg-red-50 rounded transition"
-                            >
-                              <Trash2 size={14} className="text-red-600" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              {plan.fg_items && plan.fg_items.length > 0 && !bomCache[plan.bom_id] && (
+                                <div className="text-xs text-gray-600 mt-1">
+                                  {plan.fg_items.map((item, idx) => {
+                                    const bomNo = item.bom_no || plan.bom_id || ''
+                                    const displayText = bomNo && item.item_code ? `${item.item_code} - ${bomNo}` : (item.item_code || bomNo || '')
+                                    return <div key={idx}>{displayText}</div>
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 text-gray-700">{plan.company || '-'}</td>
+                          <td className="px-3 py-2">
+                            <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getStatusColor(plan.status)}`}>
+                              {plan.status || 'Draft'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full transition-all duration-500 rounded-full ${
+                                        progressValue === 0 ? 'bg-gray-300' :
+                                        progressValue < 50 ? 'bg-orange-500' :
+                                        progressValue < 100 ? 'bg-blue-500' :
+                                        'bg-green-500'
+                                      }`}
+                                      style={{ width: `${Math.max(progressValue, 3)}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-xs font-bold text-gray-900 w-10 text-right">{progressValue}%</span>
+                                </div>
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                <div className="truncate">📍 {currentOp}</div>
+                                <div className="text-gray-500">ops: {opsInfo}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="flex gap-1 justify-center">
+                              <button 
+                                onClick={() => {
+                                  fetchPlanOperationProgress(plan.plan_id)
+                                }}
+                                title="Refresh Progress"
+                                className="p-1 hover:bg-yellow-50 rounded transition"
+                              >
+                                🔄
+                              </button>
+                              <button 
+                                onClick={() => handleCreateWorkOrder(plan)}
+                                title="Create Work Order"
+                                className="p-1 hover:bg-green-50 rounded transition"
+                              >
+                                <Zap size={14} className="text-green-600" />
+                              </button>
+                              <button 
+                                onClick={() => handleSendMaterialRequest(plan)}
+                                title="Send Material Request"
+                                disabled={sendingMaterialRequest}
+                                className="p-1 hover:bg-purple-50 rounded transition disabled:opacity-60"
+                              >
+                                {sendingMaterialRequest ? (
+                                  <Loader size={14} className="text-purple-600 animate-spin" />
+                                ) : (
+                                  <Send size={14} className="text-purple-600" />
+                                )}
+                              </button>
+                              <button 
+                                onClick={() => handleEdit(plan)}
+                                title="Edit"
+                                className="p-1 hover:bg-blue-50 rounded transition"
+                              >
+                                <Edit2 size={14} className="text-blue-600" />
+                              </button>
+                              <button 
+                                onClick={() => handleDelete(plan.plan_id)}
+                                title="Delete"
+                                className="p-1 hover:bg-red-50 rounded transition"
+                              >
+                                <Trash2 size={14} className="text-red-600" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               

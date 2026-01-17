@@ -16,10 +16,26 @@ class StockBalanceModel {
           i.item_group,
           i.uom,
           w.warehouse_code,
-          w.warehouse_name
+          w.warehouse_name,
+          COALESCE(sl_in.total_in_qty, 0) as in_quantity,
+          COALESCE(sl_in.total_in_value, 0) as in_value,
+          COALESCE(sl_out.total_out_qty, 0) as out_quantity,
+          COALESCE(sl_out.total_out_value, 0) as out_value
         FROM stock_balance sb
         LEFT JOIN item i ON sb.item_code = i.item_code
         LEFT JOIN warehouses w ON sb.warehouse_id = w.id
+        LEFT JOIN (
+          SELECT item_code, warehouse_id, SUM(qty_in) as total_in_qty, SUM(transaction_value) as total_in_value
+          FROM stock_ledger
+          WHERE qty_in > 0
+          GROUP BY item_code, warehouse_id
+        ) sl_in ON sb.item_code = sl_in.item_code AND sb.warehouse_id = sl_in.warehouse_id
+        LEFT JOIN (
+          SELECT item_code, warehouse_id, SUM(qty_out) as total_out_qty, SUM(transaction_value) as total_out_value
+          FROM stock_ledger
+          WHERE qty_out > 0
+          GROUP BY item_code, warehouse_id
+        ) sl_out ON sb.item_code = sl_out.item_code AND sb.warehouse_id = sl_out.warehouse_id
         WHERE 1=1
       `
 
@@ -79,10 +95,26 @@ class StockBalanceModel {
         params.push(warehouseIdentifier, warehouseIdentifier)
       }
       
-      const query = `SELECT sb.*, i.item_code, i.name as item_name, i.item_group, i.uom, w.warehouse_code, w.warehouse_name
+      const query = `SELECT sb.*, i.item_code, i.name as item_name, i.item_group, i.uom, w.warehouse_code, w.warehouse_name,
+                            COALESCE(sl_in.total_in_qty, 0) as in_quantity,
+                            COALESCE(sl_in.total_in_value, 0) as in_value,
+                            COALESCE(sl_out.total_out_qty, 0) as out_quantity,
+                            COALESCE(sl_out.total_out_value, 0) as out_value
                      FROM stock_balance sb
                      LEFT JOIN item i ON sb.item_code = i.item_code
                      LEFT JOIN warehouses w ON sb.warehouse_id = w.id
+                     LEFT JOIN (
+                       SELECT item_code, warehouse_id, SUM(qty_in) as total_in_qty, SUM(transaction_value) as total_in_value
+                       FROM stock_ledger
+                       WHERE qty_in > 0
+                       GROUP BY item_code, warehouse_id
+                     ) sl_in ON sb.item_code = sl_in.item_code AND sb.warehouse_id = sl_in.warehouse_id
+                     LEFT JOIN (
+                       SELECT item_code, warehouse_id, SUM(qty_out) as total_out_qty, SUM(transaction_value) as total_out_value
+                       FROM stock_ledger
+                       WHERE qty_out > 0
+                       GROUP BY item_code, warehouse_id
+                     ) sl_out ON sb.item_code = sl_out.item_code AND sb.warehouse_id = sl_out.warehouse_id
                      WHERE ${whereClause}`
       
       const [rows] = await db.query(query, params)
@@ -143,10 +175,26 @@ class StockBalanceModel {
           sb.*,
           i.item_name,
           w.warehouse_code,
-          w.warehouse_name
+          w.warehouse_name,
+          COALESCE(sl_in.total_in_qty, 0) as in_quantity,
+          COALESCE(sl_in.total_in_value, 0) as in_value,
+          COALESCE(sl_out.total_out_qty, 0) as out_quantity,
+          COALESCE(sl_out.total_out_value, 0) as out_value
         FROM stock_balance sb
         LEFT JOIN item i ON sb.item_code = i.item_code
         LEFT JOIN warehouses w ON sb.warehouse_id = w.id
+        LEFT JOIN (
+          SELECT item_code, warehouse_id, SUM(qty_in) as total_in_qty, SUM(transaction_value) as total_in_value
+          FROM stock_ledger
+          WHERE qty_in > 0
+          GROUP BY item_code, warehouse_id
+        ) sl_in ON sb.item_code = sl_in.item_code AND sb.warehouse_id = sl_in.warehouse_id
+        LEFT JOIN (
+          SELECT item_code, warehouse_id, SUM(qty_out) as total_out_qty, SUM(transaction_value) as total_out_value
+          FROM stock_ledger
+          WHERE qty_out > 0
+          GROUP BY item_code, warehouse_id
+        ) sl_out ON sb.item_code = sl_out.item_code AND sb.warehouse_id = sl_out.warehouse_id
         WHERE sb.available_qty > 0
       `
       const params = []

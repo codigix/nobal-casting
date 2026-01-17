@@ -381,7 +381,7 @@ export default function PurchaseReceipts() {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-4 sm:p-6 lg:p-3">
-      <div className="max-w-7xl mx-auto">
+      <div className=" mx-auto">
         {/* Header Section */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">

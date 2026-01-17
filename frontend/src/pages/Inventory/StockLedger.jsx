@@ -15,7 +15,8 @@ export default function StockLedger() {
     warehouse_id: '',
     item_code: '',
     from_date: '',
-    to_date: ''
+    to_date: '',
+    search: ''
   })
   const [warehouses, setWarehouses] = useState([])
   const [items, setItems] = useState([])
@@ -90,7 +91,8 @@ export default function StockLedger() {
       warehouse_id: '',
       item_code: '',
       from_date: '',
-      to_date: ''
+      to_date: '',
+      search: ''
     })
     setCurrentPage(1)
   }
@@ -112,16 +114,27 @@ export default function StockLedger() {
     return 'text-blue-600 dark:text-blue-400'
   }
 
-  const totalPages = Math.ceil(ledgers.length / itemsPerPage)
+  const filteredLedgers = ledgers.filter(ledger => {
+    if (!filters.search) return true
+    const searchLower = filters.search.toLowerCase()
+    return (
+      ledger.item_code?.toLowerCase().includes(searchLower) ||
+      ledger.item_name?.toLowerCase().includes(searchLower) ||
+      ledger.warehouse_name?.toLowerCase().includes(searchLower) ||
+      ledger.transaction_type?.toLowerCase().includes(searchLower)
+    )
+  })
+
+  const totalPages = Math.ceil(filteredLedgers.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
-  const paginatedData = ledgers.slice(startIndex, endIndex)
+  const paginatedData = filteredLedgers.slice(startIndex, endIndex)
 
   const handleDownload = () => {
     const headers = ['Item Code', 'Warehouse', 'Date', 'Transaction Type', 'Qty In', 'Qty Out', 'Balance', 'Rate', 'Value']
     const csvContent = [
       headers.join(','),
-      ...ledgers.map(row => {
+      ...filteredLedgers.map(row => {
         const balance = row.balance_qty || 0
         const rate = row.valuation_rate || 0
         const value = Number(row.transaction_value) || 0
@@ -162,34 +175,64 @@ export default function StockLedger() {
     },
     {
       key: 'qty_in',
-      label: 'In',
-      render: (value, row) => row && row.qty_in ? `+${row.qty_in}` : '-'
-    },
-    {
-      key: 'qty_out',
-      label: 'Out',
-      render: (value, row) => row && row.qty_out ? `-${row.qty_out}` : '-'
+      label: 'Movement',
+      render: (value, row) => {
+        if (!row) return '-'
+        const qtyIn = Number(row.qty_in || 0)
+        const qtyOut = Number(row.qty_out || 0)
+        const transValue = Number(row.transaction_value || 0)
+        
+        if (qtyIn > 0) {
+          return (
+            <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded px-2 py-1 inline-block whitespace-nowrap">
+              <span className="text-xs font-semibold text-green-700 dark:text-green-400">↓ +{qtyIn}</span>
+              <span className="text-xs text-green-600 dark:text-green-500 block">₹{transValue.toFixed(2)}</span>
+            </div>
+          )
+        } else if (qtyOut > 0) {
+          return (
+            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded px-2 py-1 inline-block whitespace-nowrap">
+              <span className="text-xs font-semibold text-red-700 dark:text-red-400">↑ -{qtyOut}</span>
+              <span className="text-xs text-red-600 dark:text-red-500 block">₹{transValue.toFixed(2)}</span>
+            </div>
+          )
+        }
+        return '-'
+      }
     },
     {
       key: 'balance_qty',
       label: 'Balance',
-      render: (value, row) => row && row.balance_qty ? `${row.balance_qty}` : '-'
+      render: (value, row) => {
+        if (!row || !row.balance_qty) return '-'
+        const balance = Number(row.balance_qty)
+        return (
+          <div className={`rounded px-2 py-1 inline-block ${
+            balance > 0 
+              ? 'bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900' 
+              : 'bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900'
+          }`}>
+            <span className={`text-xs font-semibold ${
+              balance > 0
+                ? 'text-blue-700 dark:text-blue-400'
+                : 'text-yellow-700 dark:text-yellow-400'
+            }`}>
+              {balance.toFixed(2)}
+            </span>
+          </div>
+        )
+      }
     },
     {
       key: 'valuation_rate',
       label: 'Rate',
-      render: (value, row) => row ? `₹${row.valuation_rate || 0}` : '-'
-    },
-    {
-      key: 'transaction_value',
-      label: 'Value',
-      render: (value, row) => row ? `₹${(Number(row.transaction_value) || 0).toFixed(2)}` : '-'
+      render: (value, row) => row ? `₹${Number(row.valuation_rate || 0).toFixed(4)}` : '-'
     }
   ]
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-4 sm:p-5 lg:p-6">
-      <div className="max-w-7xl mx-auto">
+      <div className=" mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-6">
           <div>
             <h1 className="text-xl font-black text-neutral-900 dark:text-white flex items-center gap-3">
@@ -212,6 +255,15 @@ export default function StockLedger() {
 
         {ledgers.length > 0 && (
           <div className="mb-5 flex flex-col sm:flex-row gap-3 flex-wrap">
+            <input
+              type="text"
+              placeholder="Search by item code, name, warehouse or type..."
+              name="search"
+              value={filters.search}
+              onChange={handleFilterChange}
+              className="flex-1 p-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
             <select 
               name="warehouse_id" 
               value={filters.warehouse_id} 
@@ -255,7 +307,7 @@ export default function StockLedger() {
               className="p-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
 
-            {(filters.warehouse_id || filters.item_code || filters.from_date || filters.to_date) && (
+            {(filters.search || filters.warehouse_id || filters.item_code || filters.from_date || filters.to_date) && (
               <button 
                 onClick={handleClearFilters}
                 className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center gap-1 text-sm"
@@ -297,17 +349,17 @@ export default function StockLedger() {
             </div>
             <p className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">Loading stock ledger...</p>
           </div>
-        ) : ledgers.length === 0 ? (
+        ) : filteredLedgers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800">
             <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-4 mb-4">
               <BookOpen size={40} className="text-neutral-400 dark:text-neutral-600" />
             </div>
-            <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">No Ledger Entries Found</h3>
-            <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center max-w-md">Ledger entries will appear once stock movements are recorded.</p>
+            <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">{ledgers.length === 0 ? 'No Ledger Entries Found' : 'No Entries Match Your Search'}</h3>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center max-w-md">{ledgers.length === 0 ? 'Ledger entries will appear once stock movements are recorded.' : 'Try adjusting your search filters.'}</p>
           </div>
         ) : viewMode === 'table' ? (
           <div className=" ">
-            <DataTable columns={columns} data={ledgers} />
+            <DataTable columns={columns} data={filteredLedgers} />
           </div>
         ) : (
           <>
@@ -328,21 +380,53 @@ export default function StockLedger() {
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Warehouse</p>
                         <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{entry.warehouse_name}</p>
                       </div>
-                      <div>
-                        <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">In</p>
-                        <p className="text-sm font-bold text-green-600 dark:text-green-400">{entry.qty_in ? `+${entry.qty_in}` : '-'}</p>
+                    </div>
+
+                    {entry.qty_in > 0 || entry.qty_out > 0 ? (
+                      <div className={`rounded-lg p-3 border ${
+                        entry.qty_in > 0 
+                          ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900' 
+                          : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900'
+                      }`}>
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold mb-2">Movement</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <p className={`text-xs font-bold ${
+                              entry.qty_in > 0 
+                                ? 'text-green-700 dark:text-green-400' 
+                                : 'text-neutral-600 dark:text-neutral-500'
+                            }`}>
+                              {entry.qty_in > 0 ? `↓ +${entry.qty_in}` : '—'}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-xs font-semibold ${
+                              entry.qty_out > 0 
+                                ? 'text-red-700 dark:text-red-400' 
+                                : 'text-neutral-600 dark:text-neutral-500'
+                            }`}>
+                              {entry.qty_out > 0 ? `↑ −${entry.qty_out}` : '—'}
+                            </p>
+                          </div>
+                        </div>
+                        <p className={`text-xs font-bold mt-2 ${
+                          entry.qty_in > 0 
+                            ? 'text-green-700 dark:text-green-400' 
+                            : 'text-red-700 dark:text-red-400'
+                        }`}>
+                          ₹{(Number(entry.transaction_value) || 0).toFixed(2)}
+                        </p>
                       </div>
-                      <div>
-                        <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Out</p>
-                        <p className="text-sm font-bold text-red-600 dark:text-red-400">{entry.qty_out ? `-${entry.qty_out}` : '-'}</p>
-                      </div>
+                    ) : null}
+
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Balance</p>
-                        <p className="text-sm font-bold text-neutral-900 dark:text-white">{entry.balance_qty || 0}</p>
+                        <p className="text-sm font-bold text-blue-600 dark:text-blue-400">{entry.balance_qty || 0}</p>
                       </div>
                       <div>
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Rate</p>
-                        <p className="text-xs font-semibold  text-neutral-900 dark:text-white">₹{entry.valuation_rate || 0}</p>
+                        <p className="text-xs font-semibold  text-neutral-900 dark:text-white">₹{Number(entry.valuation_rate || 0).toFixed(4)}</p>
                       </div>
                     </div>
 
@@ -354,11 +438,6 @@ export default function StockLedger() {
                           {entry.transaction_type}
                         </p>
                       </div>
-                    </div>
-
-                    <div className="pt-2">
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Value</p>
-                      <p className="text-sm font-bold text-neutral-900 dark:text-white">₹{(Number(entry.transaction_value) || 0).toFixed(2)}</p>
                     </div>
                   </div>
                 </div>
