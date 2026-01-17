@@ -124,7 +124,7 @@ export default function ProductionPlanningForm() {
           })
 
           setFGItems(plan.fg_items || [])
-          setSubAssemblyItems(plan.sub_assembly_items || [])
+          setSubAssemblyItems(plan.sub_assemblies || plan.sub_assembly_items || [])
           setRawMaterialItems(plan.raw_materials || [])
           setFGOperations(plan.fg_operations || [])
           setOperationItems(plan.operations || [])
@@ -567,80 +567,48 @@ export default function ProductionPlanningForm() {
         bomData = await fetchBOMDetails(bomId)
       }
 
-      const bomFinishedGoods = bomFinishedGoodsFromSO.length > 0 ? bomFinishedGoodsFromSO : (bomData?.lines || bomData?.finished_goods || bomData?.bom_finished_goods || [])
+      // For a Finished Good BOM, the lines ARE sub-assemblies
+      const bomLines = bomData?.lines || bomData?.items || []
       
-      const isSubAssemblyType = (itemType, itemGroup = '') => {
-        if (!itemType && !itemGroup) return false
-        
-        const normalizeStr = (str) => str ? str.toLowerCase().replace(/[-\s]/g, '').trim() : ''
-        
-        const typeNorm = normalizeStr(itemType)
-        const groupNorm = normalizeStr(itemGroup)
-        
-        const subAsmPatterns = ['subassemblies', 'subassembly', 'subassembries', 'sub-assembly', 'assembly']
-        
-        return subAsmPatterns.some(pattern => 
-          typeNorm.includes(pattern) || groupNorm.includes(pattern)
-        )
-      }
-      
-      console.log('=== BOM FINISHED GOODS ANALYSIS ===')
-      console.log('Total items in BOM Finished Goods:', bomFinishedGoods.length)
-      bomFinishedGoods.forEach((item, idx) => {
-        const typeField = item.fg_sub_assembly || item.component_type
-        const groupField = item.item_group || item.group || ''
-        const isSubAsm = isSubAssemblyType(typeField, groupField)
-        console.log(`Item ${idx + 1}: Code=${item.item_code || item.component_code}, Type="${typeField}", Group="${groupField}", IsSubAssembly=${isSubAsm}, Full=${JSON.stringify({type: typeField, group: groupField})}`)
+      console.log('=== PRODUCTION PLANNING: FETCHING SUB-ASSEMBLIES ===')
+      console.log('BOM ID:', bomId)
+      console.log('BOM Lines (these are Sub-Assemblies for FG):', bomLines.length)
+      bomLines.forEach((item, idx) => {
+        console.log(`Line ${idx + 1}: Code=${item.component_code || item.item_code}, Name=${item.component_description || item.item_name}, Qty=${item.quantity || item.qty}`)
       })
       
-      const finishedGoodsOnly = bomFinishedGoods.filter(item => !isSubAssemblyType(item.fg_sub_assembly || item.component_type, item.item_group))
-      const subAssembliesOnly = bomFinishedGoods.filter(item => isSubAssemblyType(item.fg_sub_assembly || item.component_type, item.item_group))
-      
-      console.log('Separated Finished Goods:', finishedGoodsOnly.length)
-      console.log('Separated Sub-Assemblies:', subAssembliesOnly.length)
-      console.log('Sub-Assemblies Detail:', subAssembliesOnly)
-      
-      if (finishedGoodsOnly.length > 0) {
-        const fgItemsFromBOM = finishedGoodsOnly.map(fgItem => ({
-          item_code: fgItem.item_code || fgItem.component_code || itemCode,
-          item_name: fgItem.item_name || fgItem.component_description || fgItem.product_name || itemName,
-          quantity: (fgItem.qty || fgItem.quantity || 1) * quantity,
-          sales_order_quantity: quantity,
-          bom_id: bomId,
-          planned_start_date: new Date().toISOString().split('T')[0],
-          planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        }))
-        setFGItems(fgItemsFromBOM)
-      } else if (bomData?.item_code || bomData?.product_name) {
-        const fgFromBOM = {
-          item_code: bomData.item_code || itemCode,
-          item_name: bomData.product_name || itemName,
-          quantity: quantity,
-          sales_order_quantity: quantity,
-          bom_id: bomId,
-          planned_start_date: new Date().toISOString().split('T')[0],
-          planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        }
-        setFGItems([fgFromBOM])
-      } else {
-        setFGItems([fg])
+      // Set Finished Good from BOM metadata
+      const fgFromBOM = {
+        item_code: bomData?.item_code || itemCode,
+        item_name: bomData?.product_name || itemName,
+        quantity: quantity,
+        sales_order_quantity: quantity,
+        bom_id: bomId,
+        planned_start_date: new Date().toISOString().split('T')[0],
+        planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       }
+      setFGItems([fgFromBOM])
+      console.log('✓ Finished Good set:', fgFromBOM)
 
-      if (subAssembliesOnly.length > 0) {
-        const subAsmItemsFromBOM = subAssembliesOnly.map(subAsmItem => ({
-          item_code: subAsmItem.item_code || subAsmItem.component_code,
-          item_name: subAsmItem.item_name || subAsmItem.component_description,
-          quantity: (subAsmItem.qty || subAsmItem.quantity || subAsmItem.bom_qty || 1) * quantity,
+      // All lines in a FG BOM are Sub-Assemblies
+      if (bomLines.length > 0) {
+        const subAsmItemsFromBOM = bomLines.map(subAsmItem => ({
+          item_code: subAsmItem.component_code || subAsmItem.item_code,
+          item_name: subAsmItem.component_description || subAsmItem.item_name,
+          quantity: (subAsmItem.quantity || subAsmItem.qty || subAsmItem.bom_qty || 1) * quantity,
           sales_order_quantity: quantity,
-          fg_sub_assembly: subAsmItem.fg_sub_assembly || subAsmItem.component_type || 'Sub-Assembly',
+          fg_sub_assembly: 'Sub-Assembly',
+          component_type: subAsmItem.component_type || 'Sub-Assembly',
           planned_start_date: new Date().toISOString().split('T')[0],
           planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         }))
-        console.log('Setting Sub-Assembly Items:', subAsmItemsFromBOM)
+        console.log('✓ Extracted Sub-Assemblies from BOM Lines:', subAsmItemsFromBOM.length)
+        console.log('Sub-Assemblies:', subAsmItemsFromBOM)
         setSubAssemblyItems(subAsmItemsFromBOM)
         
         await fetchSubAssemblyBomMaterials(subAsmItemsFromBOM)
       } else {
+        console.warn('⚠️ No sub-assemblies found in BOM lines')
         setSubAssemblyItems([])
         setSubAssemblyBomMaterials([])
       }
@@ -2004,7 +1972,6 @@ export default function ProductionPlanningForm() {
                         <p className="text-xs text-cyan-700 mt-1">
                           BOM ID: <span className="font-semibold">{subAsmInfo.bom_id}</span>
                           <span className="ml-3">| Materials: {materialsOnly.length}</span>
-                          <span className="ml-3">| Operations: {operationsOnly.length}</span>
                         </p>
                       </div>
                       
@@ -2044,35 +2011,8 @@ export default function ProductionPlanningForm() {
                         </div>
                       )}
 
-                      {operationsOnly.length > 0 && (
-                        <div>
-                          <h5 className="text-xs font-semibold text-cyan-900 mb-2">⚙️ Operations ({operationsOnly.length})</h5>
-                          <table className="w-full text-xs">
-                            <thead className="bg-purple-100 border-b border-purple-300">
-                              <tr>
-                                <th className="px-2 py-1 text-left font-semibold text-gray-700">Operation Name</th>
-                                <th className="px-2 py-1 text-right font-semibold text-gray-700">Time</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {operationsOnly.map((item, idx) => {
-                                const opName = item.operation_name || item.name || '-'
-                                const opTime = item.operation_time || item.operation_qty || '0'
-                                
-                                return (
-                                  <tr 
-                                    key={idx}
-                                    className={`${idx % 2 === 0 ? 'bg-white' : 'bg-purple-25'} hover:bg-purple-100 transition`}
-                                  >
-                                    <td className="px-2 py-1 font-medium text-gray-900">{opName}</td>
-                                    <td className="px-2 py-1 text-right font-bold text-gray-900">{Number(opTime).toFixed(2)}</td>
-                                  </tr>
-                                )
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
+                      {/* Operations fetched but not displayed */}
+                      {/* operationsOnly data is available in state but hidden from UI */}
                     </div>
                   )
                 })}
@@ -2100,7 +2040,7 @@ export default function ProductionPlanningForm() {
                 <div className="space-y-2">
                   {subAssemblyItems.map((item, idx) => (
                     <div key={idx} className="bg-blue-50 rounded p-2 border border-blue-200">
-                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+                      <div className="grid grid-cols-2 lg:grid-cols-6 gap-2 text-xs">
                         <div>
                           <p className="text-xs text-gray-600 font-semibold">Item Code</p>
                           <p className="font-bold text-gray-900">{item.item_code}</p>
@@ -2110,8 +2050,16 @@ export default function ProductionPlanningForm() {
                           <p className="font-bold text-gray-900">{item.item_name}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-600 font-semibold">Qty</p>
-                          <p className="font-bold text-gray-900">{item.required_qty || item.qty}</p>
+                          <p className="text-xs text-gray-600 font-semibold">Qty Before Scrap</p>
+                          <p className="font-bold text-gray-900">{item.planned_qty_before_scrap || item.required_qty || item.qty || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-semibold">Scrap %</p>
+                          <p className="font-bold text-red-600">{item.scrap_percentage || 0}%</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-semibold">Final Qty</p>
+                          <p className="font-bold text-green-600">{item.planned_qty || item.required_qty || item.qty || '-'}</p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 font-semibold">Warehouse</p>
@@ -2126,46 +2074,8 @@ export default function ProductionPlanningForm() {
           </div>
         )}
 
-        {/* Section 5: Operations */}
-        {operationItems.length > 0 && (
-          <div className="bg-white rounded shadow mb-3">
-            <button
-              onClick={() => toggleSection(5)}
-              className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-indigo-600">5</span>
-                <h2 className="text-sm font-semibold text-gray-900">Operations ({operationItems.length})</h2>
-              </div>
-              <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[5] ? 'rotate-180' : ''}`} />
-            </button>
-
-            {expandedSections[5] && (
-              <div className="px-4 py-3 border-t border-gray-200 ">
-                <table className="w-full text-xs">
-                  <thead className="bg-gray-100 border-b border-gray-300">
-                    <tr>
-                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Operation</th>
-                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Workstation</th>
-                      <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Time (hrs)</th>
-                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Seq</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {operationItems.map((item, idx) => (
-                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="px-2 py-1 font-medium text-gray-900">{item.operation || item.operation_name}</td>
-                        <td className="px-2 py-1 text-gray-700">{item.workstation || item.workstation_type || '-'}</td>
-                        <td className="px-2 py-1 text-right font-bold text-gray-900">{item.time || item.operation_time || 0}</td>
-                        <td className="px-2 py-1 text-gray-700">{item.sequence || idx + 1}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Section 5: Operations - Fetched but not displayed */}
+        {/* Operations are fetched and stored in operationItems state but not shown in UI */}
 
         {/* Action Buttons */}
         <div className="flex gap-2 justify-between pt-3 mb-3">

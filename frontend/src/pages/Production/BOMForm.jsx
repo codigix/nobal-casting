@@ -809,7 +809,7 @@ export default function BOMForm() {
                         options={items
                           .filter(item => item.item_group === 'Finished Goods' || item.item_group === 'Finished Good' || item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')
                           .map(item => ({
-                            label: item.item_code,
+                            label: item.name,
                             value: item.item_code
                           }))}
                         placeholder="Search items..."
@@ -911,7 +911,7 @@ export default function BOMForm() {
                     </h3>
                     <div className="grid auto-fit gap-2 items-end" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))'}}>
                       <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Component Code *</label>
+                        <label className="text-xs font-bold text-gray-700 mb-1">Component/ Sub assemblies *</label>
                         <SearchableSelect
                           value={newLine.component_code}
                           onChange={async (value) => {
@@ -932,7 +932,10 @@ export default function BOMForm() {
                               }
                             }
                             
-                            if (item?.item_group === 'Sub Assemblies' || item?.item_group === 'Sub-assembly') {
+                            const isFinishedGoods = item?.item_group === 'Finished Goods' || item?.item_group === 'Finished good'
+                            const isSubAssembly = item?.item_group === 'Sub Assemblies' || item?.item_group === 'Sub-assembly'
+                            
+                            if (isFinishedGoods || isSubAssembly) {
                               try {
                                 const bomsResponse = await productionService.getBOMs({ item_code: value })
                                 if (bomsResponse && bomsResponse.data && bomsResponse.data.length > 0) {
@@ -946,16 +949,56 @@ export default function BOMForm() {
                                       const bomDetails = bomDetailsResponse && bomDetailsResponse.data ? bomDetailsResponse.data : bomDetailsResponse
                                       if (bomDetails && bomDetails.lines && bomDetails.lines.length > 0) {
                                         totalCost = 0
-                                        for (const line of bomDetails.lines) {
-                                          try {
-                                            const itemResp = await productionService.getItemDetails(line.component_code)
-                                            if (itemResp && itemResp.data) {
-                                              const itemRate = parseFloat(itemResp.data.valuation_rate || 0)
+                                        
+                                        if (isFinishedGoods) {
+                                          const newBomLines = []
+                                          for (const line of bomDetails.lines) {
+                                            try {
+                                              const itemResp = await productionService.getItemDetails(line.component_code)
+                                              const itemRate = itemResp?.data?.valuation_rate || 0
                                               const qty = parseFloat(line.quantity || 0)
-                                              totalCost += (itemRate * qty)
+                                              const lossPercentage = itemResp?.data?.loss_percentage || line.item_loss_percentage || '0'
+                                              const amount = (itemRate * qty).toFixed(2)
+                                              const scrapQty = (qty * (parseFloat(lossPercentage) / 100)).toFixed(2)
+                                              
+                                              totalCost += parseFloat(amount)
+                                              
+                                              newBomLines.push({
+                                                id: Date.now() + Math.random(),
+                                                component_code: line.component_code,
+                                                component_name: line.component_name || itemResp?.data?.name || '',
+                                                qty: qty.toString(),
+                                                uom: line.uom || 'Kg',
+                                                item_group: line.item_group,
+                                                rate: itemRate.toString(),
+                                                amount: amount,
+                                                loss_percentage: lossPercentage,
+                                                scrap_qty: scrapQty,
+                                                notes: line.notes || ''
+                                              })
+                                            } catch (e) {
+                                              console.warn(`Failed to fetch details for ${line.component_code}:`, e)
                                             }
-                                          } catch (e) {
-                                            console.warn(`Failed to fetch cost for ${line.component_code}:`, e)
+                                          }
+                                          
+                                          if (newBomLines.length > 0) {
+                                            setBomLines([...bomLines, ...newBomLines])
+                                            alert(`✓ Added ${newBomLines.length} sub-assemblies from ${componentName}`)
+                                            setNewLine({component_code: '', component_name: '', qty: '1', uom: 'Kg', item_group: '', rate: '0', notes: '', loss_percentage: '0', scrap_qty: '0'})
+                                            return
+                                          }
+                                        } else {
+                                          for (const line of bomDetails.lines) {
+                                            try {
+                                              const itemResp = await productionService.getItemDetails(line.component_code)
+                                              if (itemResp && itemResp.data) {
+                                                const itemRate = parseFloat(itemResp.data.valuation_rate || 0)
+                                                const qty = parseFloat(line.quantity || 0)
+                                                totalCost += (itemRate * qty)
+                                              }
+                                            } catch (e) {
+                                              console.warn(`Failed to fetch cost for ${line.component_code}:`, e)
+                                            }
                                           }
                                         }
                                       }
@@ -969,7 +1012,7 @@ export default function BOMForm() {
                                   rate = costPerUnit.toFixed(2)
                                 }
                               } catch (bomErr) {
-                                console.warn('Failed to fetch BOM for sub-assembly:', bomErr)
+                                console.warn('Failed to fetch BOM for component:', bomErr)
                               }
                             }
                             
@@ -978,7 +1021,7 @@ export default function BOMForm() {
                             setNewLine({...newLine, component_code: value, component_name: componentName, rate, loss_percentage: lossPercentage})
                           }}
                           options={items.filter(item => item && item.item_code && item.name).map(item => ({
-                            label: `${item.item_code} - ${item.name}`,
+                            label: item.name,
                             value: item.item_code
                           }))}
                           placeholder="Search component..."
@@ -1551,7 +1594,7 @@ export default function BOMForm() {
                             handleScrapItemChange({target: {name: 'item_code', value: value}})
                           }}
                           options={items.filter(item => item && item.item_code && item.name).map(item => ({
-                            label: item.item_code,
+                            label: item.name,
                             value: item.item_code
                           }))}
                           placeholder="Search items..."

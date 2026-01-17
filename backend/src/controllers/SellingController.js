@@ -19,11 +19,10 @@ export class SellingController {
 
       const finalCustomerId = customer_id || `CUST-${Date.now()}`
       const gstinValue = gstin || gst_no
-      const isActive = status === 'inactive' ? 0 : 1
 
       await db.execute(
-        `INSERT INTO customer 
-         (customer_id, name, email, phone, gstin, billing_address, shipping_address, credit_limit, is_active)
+        `INSERT INTO selling_customer 
+         (customer_id, name, email, phone, gstin, billing_address, shipping_address, credit_limit, status)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           finalCustomerId,
@@ -34,7 +33,7 @@ export class SellingController {
           billing_address || null,
           shipping_address || null,
           credit_limit || 0,
-          isActive
+          status || 'active'
         ]
       )
 
@@ -63,7 +62,7 @@ export class SellingController {
     const { name, status } = req.query
 
     try {
-      let query = 'SELECT customer_id, name, email, phone FROM customer WHERE deleted_at IS NULL'
+      let query = 'SELECT customer_id, name, email, phone FROM selling_customer WHERE deleted_at IS NULL'
       const params = []
 
       if (name) {
@@ -71,8 +70,8 @@ export class SellingController {
         params.push(`%${name}%`)
       }
       if (status) {
-        query += ' AND is_active = ?'
-        params.push(status === 'active' ? 1 : 0)
+        query += ' AND status = ?'
+        params.push(status)
       }
 
       query += ' ORDER BY created_at DESC'
@@ -99,7 +98,7 @@ export class SellingController {
 
     try {
       const [rows] = await db.execute(
-        'SELECT * FROM customer WHERE customer_id = ? AND deleted_at IS NULL',
+        'SELECT * FROM selling_customer WHERE customer_id = ? AND deleted_at IS NULL',
         [id]
       )
 
@@ -133,7 +132,7 @@ export class SellingController {
 
       // Validate customer exists
       const [customerCheck] = await db.execute(
-        'SELECT customer_id FROM customer WHERE customer_id = ? AND deleted_at IS NULL',
+        'SELECT customer_id FROM selling_customer WHERE customer_id = ? AND deleted_at IS NULL',
         [customer_id]
       )
 
@@ -174,7 +173,7 @@ export class SellingController {
     try {
       let query = `SELECT sq.*, sc.name as customer_name 
                    FROM selling_quotation sq
-                   LEFT JOIN customer sc ON sq.customer_id = sc.customer_id
+                   LEFT JOIN selling_customer sc ON sq.customer_id = sc.customer_id
                    WHERE sq.deleted_at IS NULL`
       const params = []
 
@@ -222,7 +221,7 @@ export class SellingController {
       const [updated] = await db.execute(
         `SELECT sq.*, sc.name as customer_name 
          FROM selling_quotation sq
-         LEFT JOIN customer sc ON sq.customer_id = sc.customer_id
+         LEFT JOIN selling_customer sc ON sq.customer_id = sc.customer_id
          WHERE sq.quotation_id = ?`,
         [id]
       )
@@ -342,9 +341,22 @@ export class SellingController {
         return res.status(400).json({ error: 'Customer is required' })
       }
 
+      if (!bom_id) {
+        return res.status(400).json({ error: 'BOM must be selected. Sales Order must always link to a Finished Goods BOM.' })
+      }
+
+      const [bomRows] = await db.execute(
+        'SELECT bom_id FROM bom WHERE bom_id = ?',
+        [bom_id]
+      )
+
+      if (!bomRows.length) {
+        return res.status(400).json({ error: 'Selected BOM not found.' })
+      }
+
       // Fetch customer details
       const [customerRows] = await db.execute(
-        'SELECT customer_id, name, email, phone FROM customer WHERE customer_id = ? AND deleted_at IS NULL',
+        'SELECT customer_id, name, email, phone FROM selling_customer WHERE customer_id = ? AND deleted_at IS NULL',
         [customer_id]
       )
 
@@ -429,7 +441,7 @@ export class SellingController {
                           COALESCE(c.email, sso.customer_email, '') as customer_email_alt,
                           COALESCE(c.phone, sso.customer_phone, '') as customer_phone_alt
                    FROM selling_sales_order sso
-                   LEFT JOIN customer c ON sso.customer_id = c.customer_id
+                   LEFT JOIN selling_customer c ON sso.customer_id = c.customer_id
                    WHERE sso.deleted_at IS NULL`
       const params = []
 
@@ -494,7 +506,7 @@ export class SellingController {
                 COALESCE(c.email, '') as customer_email,
                 COALESCE(c.phone, '') as customer_phone
          FROM selling_sales_order sso
-         LEFT JOIN customer c ON sso.customer_id = c.customer_id
+         LEFT JOIN selling_customer c ON sso.customer_id = c.customer_id
          WHERE sso.sales_order_id = ?`,
         [id]
       )
@@ -529,7 +541,7 @@ export class SellingController {
                 COALESCE(c.email, sso.customer_email, '') as customer_email_alt,
                 COALESCE(c.phone, sso.customer_phone, '') as customer_phone_alt
          FROM selling_sales_order sso
-         LEFT JOIN customer c ON sso.customer_id = c.customer_id
+         LEFT JOIN selling_customer c ON sso.customer_id = c.customer_id
          WHERE sso.sales_order_id = ? AND sso.deleted_at IS NULL`,
         [id]
       )
@@ -569,7 +581,7 @@ export class SellingController {
       const [orders] = await db.execute(
         `SELECT sso.sales_order_id, sso.customer_id, sso.order_amount, sso.delivery_date, sso.status, sso.items, sso.bom_id, sso.bom_name, sso.customer_name, sso.customer_email, sso.customer_phone, c.name, c.email, c.phone
          FROM selling_sales_order sso
-         LEFT JOIN customer c ON sso.customer_id = c.customer_id
+         LEFT JOIN selling_customer c ON sso.customer_id = c.customer_id
          WHERE sso.deleted_at IS NULL AND sso.status != 'cancelled'`,
         []
       )
@@ -755,7 +767,7 @@ export class SellingController {
                 COALESCE(c.email, '') as customer_email,
                 COALESCE(c.phone, '') as customer_phone
          FROM selling_sales_order sso
-         LEFT JOIN customer c ON sso.customer_id = c.customer_id
+         LEFT JOIN selling_customer c ON sso.customer_id = c.customer_id
          WHERE sso.sales_order_id = ?`,
         [id]
       )
@@ -1018,7 +1030,7 @@ export class SellingController {
                    FROM selling_invoice si
                    LEFT JOIN selling_delivery_note sdn ON si.delivery_note_id = sdn.delivery_note_id
                    LEFT JOIN selling_sales_order sso ON sdn.sales_order_id = sso.sales_order_id
-                   LEFT JOIN customer sc ON sso.customer_id = sc.customer_id
+                   LEFT JOIN selling_customer sc ON sso.customer_id = sc.customer_id
                    WHERE si.deleted_at IS NULL`
       const params = []
 
@@ -1074,7 +1086,7 @@ export class SellingController {
          FROM selling_invoice si
          LEFT JOIN selling_delivery_note sdn ON si.delivery_note_id = sdn.delivery_note_id
          LEFT JOIN selling_sales_order sso ON sdn.sales_order_id = sso.sales_order_id
-         LEFT JOIN customer sc ON sso.customer_id = sc.customer_id
+         LEFT JOIN selling_customer sc ON sso.customer_id = sc.customer_id
          WHERE si.invoice_id = ?`,
         [id]
       )
@@ -1146,7 +1158,7 @@ export class SellingController {
         `SELECT sdn.*, so.order_amount, sc.name as customer_name 
          FROM selling_delivery_note sdn
          LEFT JOIN selling_sales_order so ON sdn.sales_order_id = so.sales_order_id
-         LEFT JOIN customer sc ON so.customer_id = sc.customer_id
+         LEFT JOIN selling_customer sc ON so.customer_id = sc.customer_id
          WHERE sdn.delivery_note_id = ?`,
         [id]
       )

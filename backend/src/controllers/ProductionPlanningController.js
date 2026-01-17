@@ -1,8 +1,11 @@
 import { ProductionPlanningModel } from '../models/ProductionPlanningModel.js'
+import { ProductionPlanningService } from '../services/ProductionPlanningService.js'
 
 export class ProductionPlanningController {
-  constructor(model) {
+  constructor(model, db) {
     this.model = model
+    this.db = db
+    this.service = new ProductionPlanningService(db)
   }
 
   async createPlan(req, res) {
@@ -272,6 +275,32 @@ export class ProductionPlanningController {
       res.json({ success: true, message: 'All production plans truncated successfully' })
     } catch (error) {
       console.error('Error truncating production plans:', error)
+      res.status(500).json({ success: false, error: error.message })
+    }
+  }
+
+  async generateFromSalesOrder(req, res) {
+    try {
+      const { sales_order_id } = req.params
+
+      if (!sales_order_id) {
+        return res.status(400).json({ success: false, error: 'Sales Order ID is required' })
+      }
+
+      const plan = await this.service.generateProductionPlanFromSalesOrder(sales_order_id)
+
+      const planId = await this.service.savePlanToDatabase(sales_order_id, plan)
+
+      res.status(201).json({ 
+        success: true, 
+        message: 'Production plan generated successfully',
+        data: {
+          plan_id: planId,
+          ...plan
+        }
+      })
+    } catch (error) {
+      console.error('Error generating production plan from sales order:', error)
       res.status(500).json({ success: false, error: error.message })
     }
   }

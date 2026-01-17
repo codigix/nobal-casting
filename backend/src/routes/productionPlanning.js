@@ -6,10 +6,11 @@ import authMiddleware from '../middleware/authMiddleware.js'
 export function createProductionPlanningRoutes(db) {
   const router = express.Router()
   const model = new ProductionPlanningModel(db)
-  const controller = new ProductionPlanningController(model)
+  const controller = new ProductionPlanningController(model, db)
 
   router.post('/', authMiddleware, controller.createPlan.bind(controller))
   router.get('/', authMiddleware, controller.getAllPlans.bind(controller))
+  router.post('/generate/sales-order/:sales_order_id', authMiddleware, controller.generateFromSalesOrder.bind(controller))
   router.delete('/truncate/all', authMiddleware, controller.truncatePlans.bind(controller))
   router.get('/item/:itemCode', authMiddleware, controller.getByItemCode.bind(controller))
   router.get('/:plan_id', authMiddleware, controller.getPlan.bind(controller))

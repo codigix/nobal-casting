@@ -284,6 +284,9 @@ async function createProductionPlanningTables() {
         target_warehouse VARCHAR(100),
         schedule_date DATE,
         required_qty DECIMAL(18,6),
+        planned_qty DECIMAL(18,6),
+        planned_qty_before_scrap DECIMAL(18,6),
+        scrap_percentage DECIMAL(5,2) DEFAULT 0,
         manufacturing_type VARCHAR(50),
         item_group VARCHAR(100),
         bom_no VARCHAR(100),
@@ -324,6 +327,23 @@ async function createProductionPlanningTables() {
       )
     `)
     console.log('✓ Production plan raw material items table ready')
+
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS production_plan_operations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        plan_id VARCHAR(100) NOT NULL,
+        operation_name VARCHAR(255),
+        total_time_minutes DECIMAL(18,6),
+        total_hours DECIMAL(18,6),
+        hourly_rate DECIMAL(15,2),
+        total_cost DECIMAL(15,2),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (plan_id) REFERENCES production_plan(plan_id) ON DELETE CASCADE,
+        INDEX idx_plan_id (plan_id)
+      )
+    `)
+    console.log('✓ Production plan operations table ready')
   } catch (error) {
     console.log('Note:', error.message)
   }

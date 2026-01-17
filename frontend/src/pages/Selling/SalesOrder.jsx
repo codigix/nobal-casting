@@ -6,9 +6,10 @@ import DataTable from '../../components/Table/DataTable'
 import { useNavigate } from 'react-router-dom'
 import { 
   Edit2, Eye, Package, CheckCircle, Trash2, Plus, TrendingUp, AlertTriangle, AlertCircle,
-  Truck, Clock, Calendar, DollarSign, Check, Search, Trash
+  Truck, Clock, Calendar, DollarSign, Check, Search, Trash, Factory
 } from 'lucide-react'
 import ViewSalesOrderModal from '../../components/Selling/ViewSalesOrderModal'
+import ProductionPlanGenerationModal from '../../components/Production/ProductionPlanGenerationModal'
 import './Selling.css'
 
 const iconColorMap = {
@@ -32,6 +33,7 @@ export default function SalesOrder() {
   const [orders, setOrders] = useState([])
   const [filteredOrders, setFilteredOrders] = useState([])
   const [viewOrderId, setViewOrderId] = useState(null)
+  const [generatingPlanForOrder, setGeneratingPlanForOrder] = useState(null)
   const [stats, setStats] = useState({
     total: 0,
     draft: 0,
@@ -376,10 +378,17 @@ export default function SalesOrder() {
           </>
         )}
         {row.status?.toLowerCase() === 'confirmed' && (
-          <ActionButton
-            icon={Truck}
-            onClick={() => navigate(`/selling/delivery-notes/new?order=${row.sales_order_id}`)}
-          />
+          <>
+            <ActionButton
+              icon={Factory}
+              onClick={() => setGeneratingPlanForOrder(row.sales_order_id)}
+              title="Generate Production Plan"
+            />
+            <ActionButton
+              icon={Truck}
+              onClick={() => navigate(`/selling/delivery-notes/new?order=${row.sales_order_id}`)}
+            />
+          </>
         )}
         <ActionButton
           icon={Trash2}
@@ -707,6 +716,12 @@ export default function SalesOrder() {
         isOpen={!!viewOrderId}
         orderId={viewOrderId}
         onClose={() => setViewOrderId(null)}
+      />
+
+      <ProductionPlanGenerationModal
+        isOpen={!!generatingPlanForOrder}
+        onClose={() => setGeneratingPlanForOrder(null)}
+        salesOrderId={generatingPlanForOrder}
       />
     </div>
   )

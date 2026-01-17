@@ -94,7 +94,11 @@ export default function SalesOrderForm() {
         api.get('/items').catch(() => ({ data: { data: [] } }))
       ])
 
-      setCustomers(custRes.data.data || [])
+      const customersData = custRes.data.data || []
+      setCustomers(customersData)
+      console.log('Customers API Response:', custRes.data)
+      console.log('Customers Data:', customersData)
+      
       const bomsData = bomRes.data.data || []
       
       const finishedGoodsBoms = bomsData.filter(b => 
@@ -311,8 +315,6 @@ export default function SalesOrderForm() {
       
       const bomData = response.data && response.data.data ? response.data.data : response.data
       console.log('BOM Data extracted:', bomData)
-      console.log('BOM Data type:', typeof bomData)
-      console.log('BOM Data is null/undefined:', bomData === null || bomData === undefined)
       
       if (!bomData) {
         throw new Error('BOM data is null or undefined')
@@ -331,237 +333,50 @@ export default function SalesOrderForm() {
           .join(' ')
       }
       
-      const extractedBomName = bomData.name || bomData.bom_name || bomData.product_name || formatItemCodeAsName(bomData.item_code) || ''
-      setBomName(extractedBomName)
-      console.log('BOM Name extracted:', extractedBomName)
+      const finishedGoodName = bomData.product_name || bomData.name || formatItemCodeAsName(bomData.item_code)
+      setBomName(finishedGoodName)
+      console.log('BOM Name:', finishedGoodName)
 
-      const bomLines = bomData.lines || bomData.items || []
-      const bomSubAssemblyLines = bomData.subAssemblies || bomData.sub_assemblies || bomData.subassemblies || []
-      const bomRawMaterials = bomData.rawMaterials || bomData.raw_materials || []
-      const operations = bomData.operations || []
-      const salesQty = parseFloat(quantity !== undefined ? quantity : formData.qty) || 1
-      
-      console.log('=== BOM FETCH DEBUG ===')
-      console.log('BOM Lines (Finished Goods) - Count:', bomLines.length)
-      console.log('BOM Operations - Count:', operations.length)
-      console.log('BOM Raw Materials - Count:', bomRawMaterials.length)
-      
-      const componentQties = {}
-      let allItems = []
-      let allOperations = [...operations]
-      let allRawMaterials = [...bomRawMaterials]
-      let idCounter = 0
-
-      // Create a virtual finished good from BOM metadata if no lines exist
-      if (bomLines.length === 0 && bomData.item_code) {
-        const finishedGoodName = bomData.product_name || bomData.name || formatItemCodeAsName(bomData.item_code)
-        const totalCost = parseFloat(bomData.total_cost) || 0
-        const finishedGoodItem = {
-          item_code: bomData.item_code,
-          item_name: finishedGoodName,
-          field_description: bomData.product_name || finishedGoodName,
-          fg_sub_assembly: 'Finished Good',
-          item_group: 'Finished Goods',
-          delivery_date: '',
-          commit_date: '',
-          qty: 1,
-          ordered_qty: 1,
-          rate: totalCost,
-          amount: totalCost,
-          input_group: '',
-          source_warehouse: '',
-          bom_qty: 1,
-          id: Date.now() + Math.random() + idCounter++
-        }
-        allItems.push(finishedGoodItem)
-        console.log('✓ Created synthetic finished good with total_cost:', {item: finishedGoodItem, bomTotalCost: totalCost})
+      const finishedGoodItem = {
+        item_code: bomData.item_code,
+        item_name: finishedGoodName,
+        field_description: finishedGoodName,
+        fg_sub_assembly: 'Finished Good',
+        item_group: 'Finished Goods',
+        delivery_date: '',
+        commit_date: '',
+        qty: 1,
+        ordered_qty: 1,
+        rate: parseFloat(bomData.total_cost) || 0,
+        amount: parseFloat(bomData.total_cost) || 0,
+        input_group: '',
+        source_warehouse: '',
+        bom_qty: 1,
+        bom_id: bomData.bom_id,
+        id: Date.now()
       }
 
-      const processSubAssemblyLine = (item, isFromSeparateField = false) => {
-        const itemCode = item.component_code || item.item_code || ''
-        const bomQty = item.quantity || item.qty || 1
-        const totalQty = bomQty * salesQty
-        const itemType = item.component_type || item.fg_sub_assembly || item.item_group || (isFromSeparateField ? 'Sub-Assembly' : 'Component')
-        
-        componentQties[itemCode] = bomQty
-        
-        console.log(`Processing sub-assembly - Code: ${itemCode}, Type: ${itemType}, Qty: ${bomQty}, FromSeparateField: ${isFromSeparateField}`)
-
-        let itemName = item.component_description || item.item_name || ''
-        let itemDescription = item.component_description || item.field_description || ''
-
-        const itemObj = {
-          item_code: itemCode,
-          item_name: itemName,
-          field_description: itemDescription,
-          fg_sub_assembly: itemType,
-          item_group: item.item_group || '',
-          delivery_date: '',
-          commit_date: item.commit_date || '',
-          qty: totalQty,
-          ordered_qty: item.ordered_qty || item.quantity || 1,
-          rate: item.rate || 0,
-          amount: totalQty * (item.rate || 0),
-          input_group: item.input_group || '',
-          source_warehouse: item.source_warehouse || '',
-          bom_qty: bomQty,
-          id: Date.now() + Math.random() + idCounter++
-        }
-        
-        allItems.push(itemObj)
-        console.log('Added sub-assembly item:', itemObj)
-        return itemObj
-      }
-
-      for (const item of bomLines) {
-        const itemCode = item.component_code || item.item_code || ''
-        const bomQty = item.quantity || item.qty || 1
-        const totalQty = bomQty * salesQty
-        const itemType = item.component_type || item.fg_sub_assembly || item.item_group || 'Sub-Assembly'
-        
-        componentQties[itemCode] = bomQty
-        
-        console.log(`Processing BOM line - Code: ${itemCode}, Type: ${itemType}, Qty: ${bomQty}`)
-
-        let itemName = item.component_description || item.item_name || ''
-        let itemDescription = item.component_description || item.field_description || ''
-        
-        if (!itemName && itemCode) {
-          try {
-            const itemDetails = await productionService.getItemDetails(itemCode)
-            if (itemDetails && itemDetails.data) {
-              itemName = itemDetails.data.name || itemDetails.data.item_name || itemCode
-              itemDescription = itemDetails.data.description || itemName
-              console.log(`Fetched item details for ${itemCode}: ${itemName}`)
-            }
-          } catch (err) {
-            console.warn(`Failed to fetch item details for ${itemCode}:`, err)
-            itemName = itemCode
-          }
-        }
-
-        const itemObj = {
-          item_code: itemCode,
-          item_name: itemName,
-          field_description: itemDescription,
-          fg_sub_assembly: itemType,
-          item_group: item.item_group || '',
-          delivery_date: '',
-          commit_date: item.commit_date || '',
-          qty: totalQty,
-          ordered_qty: item.ordered_qty || item.quantity || 1,
-          rate: item.rate || 0,
-          amount: totalQty * (item.rate || 0),
-          input_group: item.input_group || '',
-          source_warehouse: item.source_warehouse || '',
-          bom_qty: bomQty,
-          id: Date.now() + Math.random() + idCounter++
-        }
-        
-        allItems.push(itemObj)
-        console.log('Added item to allItems:', itemObj)
-
-        if (isSubAssemblyType(itemType)) {
-          console.log(`Fetching sub-assembly items for: ${itemCode}`)
-          const subAssemblyData = await fetchSubAssemblyItems(itemCode, bomQty, salesQty)
-          const { items: subItems, operations: subOperations, rawMaterials: subRawMaterials } = subAssemblyData
-          console.log(`Got ${subItems.length} sub-items for ${itemCode}:`, subItems)
-          console.log(`Got ${subOperations.length} sub-operations for ${itemCode}:`, subOperations)
-          console.log(`Got ${subRawMaterials.length} sub-assembly raw materials for ${itemCode}:`, subRawMaterials)
-          allItems = allItems.concat(subItems)
-          allOperations = allOperations.concat(subOperations)
-          allRawMaterials = allRawMaterials.concat(subRawMaterials)
-          
-          for (const subItem of subItems) {
-            if (!componentQties[subItem.item_code]) {
-              componentQties[subItem.item_code] = 0
-            }
-            componentQties[subItem.item_code] += subItem.ordered_qty
-          }
-        }
-      }
-
-      if (bomSubAssemblyLines.length > 0) {
-        console.log('Processing sub-assembly lines from separate field:', bomSubAssemblyLines.length)
-        for (const subAssemblyItem of bomSubAssemblyLines) {
-          processSubAssemblyLine(subAssemblyItem, true)
-        }
-      }
-
-      console.log('Final allItems array:', allItems)
-      console.log('Total items to display:', allItems.length)
+      console.log('✓ Finished Good Item:', finishedGoodItem)
       
-      if (allItems.length === 0) {
-        console.warn('WARNING: No items were processed from BOM lines!')
-        console.warn('bomLines:', bomLines)
-        console.warn('bomLines.length:', bomLines.length)
-        console.warn('First bomLine sample:', bomLines[0])
-      }
+      const finishedGoodsItems = [finishedGoodItem]
       
-      console.log('=== DETAILED ITEM ANALYSIS ===')
-      allItems.forEach((item, idx) => {
-        const isSubAssembly = isSubAssemblyType(item.fg_sub_assembly)
-        console.log(`Item ${idx}: ${item.item_code} | Type: "${item.fg_sub_assembly}" | IsSubAssembly: ${isSubAssembly}`)
-      })
-      
-      console.log('allItems before filtering:', allItems.length, allItems)
-      
-      const finishedGoodsItems = allItems.filter(item => {
-        const isSub = isSubAssemblyType(item.fg_sub_assembly)
-        const isItemGroupSub = item.item_group === 'Sub Assemblies'
-        const isIncluded = !isSub && !isItemGroupSub
-        console.log(`Filter check - ${item.item_code}: isSubAssembly=${isSub}, itemGroup="${item.item_group}", isItemGroupSub=${isItemGroupSub}, INCLUDE=${isIncluded}`)
-        return isIncluded
-      })
-      
-      console.log('Filtered finishedGoodsItems - Count:', finishedGoodsItems.length, 'Items:', finishedGoodsItems)
-      const subAssemblyItems = allItems.filter(item => isSubAssemblyType(item.fg_sub_assembly) || item.item_group === 'Sub Assemblies')
-      
-      const rawMatSubAssemblies = allRawMaterials.filter(material => isSubAssemblyType(material.component_type || material.fg_sub_assembly || material.item_group))
-      const actualRawMaterials = allRawMaterials.filter(material => !isSubAssemblyType(material.component_type || material.fg_sub_assembly || material.item_group))
-      
-      subAssemblyItems.push(...rawMatSubAssemblies)
-      
-      console.log('Separated finished goods:', finishedGoodsItems.length, finishedGoodsItems)
-      console.log('Separated sub-assemblies:', subAssemblyItems.length, subAssemblyItems)
-      console.log('Raw material sub-assemblies extracted:', rawMatSubAssemblies.length, rawMatSubAssemblies)
-      console.log('Actual raw materials (after removing sub-assemblies):', actualRawMaterials.length, actualRawMaterials)
-      
-      setBomComponentQties(componentQties)
+      setBomComponentQties({})
       setBomRawMaterials([])
       setBomOperations([])
       setBomFinishedGoods(finishedGoodsItems)
       setBomSubAssemblies([])
-      
-      const groupedMaterials = {}
-      allRawMaterials.forEach(material => {
-        const group = material.item_group || 'Unclassified'
-        if (!groupedMaterials[group]) {
-          groupedMaterials[group] = true
-        }
-      })
-      setExpandedItemGroups(groupedMaterials)
+      setExpandedItemGroups({})
 
       console.log('Setting formData.items to:', finishedGoodsItems)
-      setFormData(prev => {
-        console.log('Previous formData:', prev)
-        const newData = {
-          ...prev,
-          items: finishedGoodsItems
-        }
-        console.log('New formData being set:', newData)
-        return newData
-      })
+      setFormData(prev => ({
+        ...prev,
+        items: finishedGoodsItems
+      }))
       
-      console.log('After setFormData call - items should be populated')
+      console.log('✓ BOM Details loaded - Finished Good only')
     } catch (err) {
       setError('Failed to fetch BOM details')
       console.error('Error fetching BOM:', err)
-      console.error('Error details:', {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      })
     } finally {
       setRefreshingBom(false)
     }

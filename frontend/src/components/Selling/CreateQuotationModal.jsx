@@ -47,7 +47,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
     setFormData(prev => ({
       ...prev,
       customer_id: customerId,
-      customer_name: customer?.name || ''
+      customer_name: customer?.customer_name || ''
     }))
     setError(null)
   }
@@ -141,7 +141,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
               <option value="">Select Customer</option>
               {customers.map(customer => (
                 <option key={customer.customer_id} value={customer.customer_id}>
-                  {customer.name}
+                  {customer.customer_name}
                 </option>
               ))}
             </select>

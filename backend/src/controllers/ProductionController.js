@@ -923,17 +923,13 @@ class ProductionController {
       const bom = await this.productionModel.createBOM({
         bom_id,
         item_code,
-        product_name,
         description,
         quantity,
         uom,
         status: status || 'Draft',
         revision: revision || 1,
         effective_date,
-        total_cost: total_cost || 0,
-        created_by: req.user?.username || 'system',
-        item_group,
-        items_group: items_group || 'Finished Goods'
+        created_by: req.user?.username || 'system'
       })
 
       if (lines && lines.length > 0) {

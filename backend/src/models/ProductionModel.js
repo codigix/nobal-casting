@@ -631,38 +631,16 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async createBOM(data) {
     try {
-      const query = `INSERT INTO bom (bom_id, item_code, product_name, item_group, items_group, description, quantity, uom, status, revision, effective_date, total_cost, created_by)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      const query = `INSERT INTO bom (bom_id, item_code, description, quantity, uom, status, revision, effective_date, created_by)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
       await this.db.query(
         query,
-        [data.bom_id, data.item_code, data.product_name, data.item_group, data.items_group || 'Finished Goods', data.description, data.quantity || 1, 
-         data.uom, data.status, data.revision, data.effective_date, data.total_cost || 0, data.created_by]
+        [data.bom_id, data.item_code, data.description, data.quantity || 1, 
+         data.uom, data.status, data.revision, data.effective_date, data.created_by]
       )
       return data
     } catch (error) {
-      if (error.code !== 'ER_BAD_FIELD_ERROR') {
-        throw error
-      }
-      try {
-        await this.db.query(
-          `INSERT INTO bom (bom_id, item_code, description, quantity, uom, status, revision, effective_date, total_cost, created_by)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [data.bom_id, data.item_code, data.description, data.quantity || 1, 
-           data.uom, data.status, data.revision, data.effective_date, data.total_cost || 0, data.created_by]
-        )
-      } catch (innerError) {
-        if (innerError.code === 'ER_BAD_FIELD_ERROR') {
-          await this.db.query(
-            `INSERT INTO bom (bom_id, item_code, product_name, item_group, items_group, description, quantity, uom, status, revision, effective_date, total_cost, created_by)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [data.bom_id, data.item_code, data.product_name || '', data.item_group || '', data.items_group || 'Finished Goods', data.description, data.quantity || 1, 
-             data.uom, data.status, data.revision, data.effective_date, data.total_cost || 0, data.created_by]
-          )
-        } else {
-          throw innerError
-        }
-      }
-      return data
+      throw error
     }
   }
 
