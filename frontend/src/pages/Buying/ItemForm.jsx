@@ -876,6 +876,18 @@ export default function ItemForm() {
           />
         </div>
         <div className="form-group">
+          <label>Selling Rate</label>
+          <input
+            type="number"
+            name="selling_rate"
+            className='p-2  border border-gray-300 rounded bg-white'
+            value={formData.selling_rate}
+            onChange={handleChange}
+            placeholder="0.00"
+            step="0.01"
+          />
+        </div>
+        <div className="form-group">
           <label>No. of Cavity (for mould items)</label>
           <input
             type="number"
@@ -1717,17 +1729,6 @@ export default function ItemForm() {
             type="number"
             name="valuation_rate"
             value={formData.valuation_rate}
-            onChange={handleChange}
-            placeholder="0.00"
-            step="0.01"
-          />
-        </div>
-        <div className="form-group">
-          <label>Selling Rate</label>
-          <input
-            type="number"
-            name="selling_rate"
-            value={formData.selling_rate}
             onChange={handleChange}
             placeholder="0.00"
             step="0.01"
