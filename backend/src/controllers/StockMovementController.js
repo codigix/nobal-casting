@@ -54,6 +54,8 @@ export async function createStockMovement(req, res) {
     const {
       item_code,
       warehouse_id,
+      source_warehouse_id,
+      target_warehouse_id,
       movement_type,
       quantity,
       reference_type,
@@ -61,18 +63,40 @@ export async function createStockMovement(req, res) {
       notes
     } = req.body
 
-    if (!item_code || !warehouse_id || !movement_type || !quantity) {
+    if (!item_code || !movement_type || !quantity) {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields'
       })
     }
 
-    if (!['IN', 'OUT'].includes(movement_type)) {
+    if (!['IN', 'OUT', 'TRANSFER'].includes(movement_type)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid movement type. Must be IN or OUT'
+        error: 'Invalid movement type. Must be IN, OUT, or TRANSFER'
       })
+    }
+
+    if (movement_type === 'TRANSFER') {
+      if (!source_warehouse_id || !target_warehouse_id) {
+        return res.status(400).json({
+          success: false,
+          error: 'Transfer requires both source and target warehouses'
+        })
+      }
+      if (source_warehouse_id === target_warehouse_id) {
+        return res.status(400).json({
+          success: false,
+          error: 'Source and target warehouses must be different'
+        })
+      }
+    } else {
+      if (!warehouse_id) {
+        return res.status(400).json({
+          success: false,
+          error: 'Warehouse is required for IN/OUT movements'
+        })
+      }
     }
 
     const transactionNo = await StockMovementModel.generateTransactionNo()
@@ -81,7 +105,9 @@ export async function createStockMovement(req, res) {
     const movement = await StockMovementModel.create({
       transaction_no: transactionNo,
       item_code,
-      warehouse_id,
+      warehouse_id: movement_type === 'TRANSFER' ? null : warehouse_id,
+      source_warehouse_id: movement_type === 'TRANSFER' ? source_warehouse_id : null,
+      target_warehouse_id: movement_type === 'TRANSFER' ? target_warehouse_id : null,
       movement_type,
       quantity: parseFloat(quantity),
       reference_type: reference_type || 'Manual',

@@ -89,7 +89,7 @@ export default function Operations() {
         <div className="flex justify-between items-start mb-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
+              <div className="w-9 h-9 rounded-xs bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
                 ⚙️
               </div>
               <div>
@@ -120,7 +120,7 @@ export default function Operations() {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow-sm p-3 mb-3">
+        <div className="bg-white rounded-xs shadow-sm p-3 mb-3">
           <label className="text-xs font-semibold text-gray-700 block mb-1">Search</label>
           <input 
             type="text" 
@@ -132,13 +132,13 @@ export default function Operations() {
         </div>
 
         {loading ? (
-          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+          <div className="bg-white rounded-xs p-3 text-center shadow-sm">
             <div className="text-3xl mb-2">⏳</div>
             <div className="text-xs text-gray-600">Loading operations...</div>
           </div>
         ) : filteredOperations.length > 0 ? (
           <>
-            <div className="bg-white rounded-lg shadow-sm">
+            <div className="bg-white rounded-xs shadow-sm">
               <div className="">
                 <table className="w-full text-xs">
                   <thead>
@@ -186,7 +186,7 @@ export default function Operations() {
             </div>
           </>
         ) : (
-          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+          <div className="bg-white rounded-xs p-3 text-center shadow-sm">
             <div className="text-3xl mb-2">📭</div>
             <div className="text-xs font-semibold  text-gray-900">
               {search ? 'No operations found' : 'No operations created yet'}

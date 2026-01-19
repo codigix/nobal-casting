@@ -225,7 +225,7 @@ export default function BOM() {
       key: 'updated_at',
       label: 'Last Updated On',
       render: (value, row) => (
-        <div className="text-sm text-gray-600">
+        <div className="text-xs text-gray-600">
           {row.updated_at ? new Date(row.updated_at).toLocaleDateString('en-IN') : 'N/A'}
         </div>
       )
@@ -254,7 +254,7 @@ export default function BOM() {
       <div className="mb-7 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-gray-900 mb-1">📋 Bill of Materials</h1>
-          <p className="text-sm text-gray-600">Manage product BOMs and components</p>
+          <p className="text-xs text-gray-600">Manage product BOMs and components</p>
         </div>
         <div className="flex gap-2">
           <button 
@@ -275,13 +275,13 @@ export default function BOM() {
 
       {/* Alerts */}
       {success && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 p-2 text-sm text-green-800">
+        <div className="mb-4 flex items-center gap-2 rounded-xs border border-green-300 bg-green-50 p-2 text-xs text-green-800">
           <span>✓</span> {success}
         </div>
       )}
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 p-2 text-sm text-red-800">
+        <div className="mb-4 flex items-center gap-2 rounded-xs border border-red-300 bg-red-50 p-2 text-xs text-red-800">
           <span>✕</span> {error}
         </div>
       )}
@@ -289,7 +289,7 @@ export default function BOM() {
       {/* Stats */}
       {!loading && (
         <div className="mb-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="flex items-center gap-3 rounded-lg border-l-4 border-l-blue-500 bg-white p-4">
+          <div className="flex items-center gap-3 rounded-xs border-l-4 border-l-blue-500 bg-white p-2">
             <div className="text-2xl text-blue-600">
               <FileText size={24} />
             </div>
@@ -299,7 +299,7 @@ export default function BOM() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 rounded-lg border-l-4 border-l-green-500 bg-white p-4">
+          <div className="flex items-center gap-3 rounded-xs border-l-4 border-l-green-500 bg-white p-2">
             <div className="text-2xl text-green-600">
               <Zap size={24} />
             </div>
@@ -309,7 +309,7 @@ export default function BOM() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 rounded-lg border-l-4 border-l-amber-500 bg-white p-4">
+          <div className="flex items-center gap-3 rounded-xs border-l-4 border-l-amber-500 bg-white p-2">
             <div className="text-2xl text-amber-600">
               <AlertCircle size={24} />
             </div>
@@ -319,7 +319,7 @@ export default function BOM() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 rounded-lg border-l-4 border-l-purple-500 bg-white p-4">
+          <div className="flex items-center gap-3 rounded-xs border-l-4 border-l-purple-500 bg-white p-2">
             <div className="text-2xl text-purple-600">
               <TrendingUp size={24} />
             </div>
@@ -339,7 +339,7 @@ export default function BOM() {
             name="status" 
             value={filters.status} 
             onChange={handleFilterChange}
-            className=" border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 cursor-pointer transition-all focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className=" border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 cursor-pointer transition-all focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           >
             <option value="">All Status</option>
             <option value="active">Active</option>
@@ -353,7 +353,7 @@ export default function BOM() {
             name="type" 
             value={filters.type} 
             onChange={handleFilterChange}
-            className=" border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 cursor-pointer transition-all focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className=" border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 cursor-pointer transition-all focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           >
             <option value="">All Types</option>
             <option value="Finished Good">Finished Good</option>
@@ -375,9 +375,9 @@ export default function BOM() {
 
       {/* Table */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center rounded-lg bg-white py-12 text-gray-500">
+        <div className="flex flex-col items-center justify-center rounded-xs bg-white py-12 text-gray-500">
           <BarChart3 size={48} className="mb-3 opacity-50" />
-          <p className="text-sm">Loading BOMs...</p>
+          <p className="text-xs">Loading BOMs...</p>
         </div>
       ) : boms.length > 0 ? (
         <div className="overflow-hidden ">
@@ -391,9 +391,9 @@ export default function BOM() {
           />
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg bg-gray-50 py-12 text-gray-500">
+        <div className="flex flex-col items-center justify-center rounded-xs bg-gray-50 py-12 text-gray-500">
           <FileText size={48} className="mb-3 opacity-50" />
-          <p className="text-sm">No BOMs found</p>
+          <p className="text-xs">No BOMs found</p>
           <p className="mt-2 text-xs text-gray-400">Create your first BOM to get started</p>
         </div>
       )}

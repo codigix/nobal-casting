@@ -16,8 +16,8 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
-      <div className={`bg-white rounded-lg shadow-lg  max-w-xl ${sizes[size]} w-full flex flex-col max-h-[90vh]`}>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-2">
+      <div className={`bg-white rounded-xs shadow-lg  max-w-xl ${sizes[size]} w-full flex flex-col max-h-[90vh]`}>
         {/* Header */}
         <div className="flex-shrink-0 flex items-center justify-between p-2 border-b border-neutral-200">
           <h3 className="text-lg font-semibold">{title}</h3>
@@ -30,7 +30,7 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
         </div>
 
         {/* Body - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-2">
           {children}
         </div>
 

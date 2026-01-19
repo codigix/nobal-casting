@@ -74,7 +74,7 @@ const ToolRoomDashboard = () => {
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Maintenance Cost Trend */}
-          <div className="bg-white p-6 rounded-lg shadow-lg">
+          <div className="bg-white p-6 rounded-xs shadow-lg">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Maintenance Cost Trend</h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={analytics?.maintenanceCostTrend || []}>
@@ -89,7 +89,7 @@ const ToolRoomDashboard = () => {
           </div>
 
           {/* Tool Status Distribution */}
-          <div className="bg-white p-6 rounded-lg shadow-lg">
+          <div className="bg-white p-6 rounded-xs shadow-lg">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Tool Status Distribution</h3>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
@@ -113,7 +113,7 @@ const ToolRoomDashboard = () => {
           </div>
 
           {/* Die Utilization by Tool Type */}
-          <div className="bg-white p-6 rounded-lg shadow-lg">
+          <div className="bg-white p-6 rounded-xs shadow-lg">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Die Utilization by Tool Type</h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={analytics?.dieUtilizationByType || []}>
@@ -128,7 +128,7 @@ const ToolRoomDashboard = () => {
           </div>
 
           {/* Downtime Analysis */}
-          <div className="bg-white p-6 rounded-lg shadow-lg">
+          <div className="bg-white p-6 rounded-xs shadow-lg">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Downtime Analysis (Hours)</h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={analytics?.downtimeAnalysis || []}>
@@ -172,8 +172,8 @@ const KPICard = ({ title, value, icon, color }) => {
   }[color]
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition">
-      <div className={`${colorClass} w-12 h-12 rounded-lg flex items-center justify-center mb-4`}>
+    <div className="bg-white p-6 rounded-xs shadow-md hover:shadow-lg transition">
+      <div className={`${colorClass} w-12 h-12 rounded-xs flex items-center justify-center mb-4`}>
         {icon}
       </div>
       <h3 className="text-gray-600 text-xs font-medium">{title}</h3>
@@ -184,11 +184,11 @@ const KPICard = ({ title, value, icon, color }) => {
 
 const SummaryCard = ({ title, items }) => {
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg">
+    <div className="bg-white p-6 rounded-xs shadow-lg">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
       <ul className="space-y-3">
         {items.slice(0, 5).map((item, idx) => (
-          <li key={idx} className="flex justify-between text-sm text-gray-600 border-b pb-2">
+          <li key={idx} className="flex justify-between text-xs text-gray-600 border-b pb-2">
             <span>{item.name || item.title}</span>
             <span className="font-semibold text-gray-900">{item.value || item.status}</span>
           </li>

@@ -109,7 +109,7 @@ const ToolMasterList = () => {
           </div>
           <button
             onClick={() => handleOpenModal()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xs flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
             Add Tool
@@ -117,13 +117,13 @@ const ToolMasterList = () => {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-2 rounded-lg mb-6">
+          <div className="bg-red-50 border border-red-200 text-red-700 p-2 rounded-xs mb-6">
             {error}
           </div>
         )}
 
         {/* Search Bar */}
-        <div className="bg-white p-4 rounded-lg shadow mb-6">
+        <div className="bg-white p-2 rounded-sm shadow mb-6">
           <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded">
             <Search className="w-5 h-5 text-gray-400" />
             <input
@@ -137,7 +137,7 @@ const ToolMasterList = () => {
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-xs shadow overflow-hidden">
           {loading ? (
             <div className="p-3 text-center text-gray-500">Loading...</div>
           ) : (
@@ -157,19 +157,19 @@ const ToolMasterList = () => {
                 {filteredTools.length > 0 ? (
                   filteredTools.map(tool => (
                     <tr key={tool.id} className="hover:bg-gray-50">
-                      <td className="p-2 text-sm text-gray-900 font-medium">{tool.toolName}</td>
-                      <td className="p-2 text-sm text-gray-600">{tool.toolCode}</td>
-                      <td className="p-2 text-sm text-gray-600">{tool.toolType}</td>
-                      <td className="p-2 text-sm text-gray-600">{tool.location}</td>
+                      <td className="p-2 text-xs text-gray-900 font-medium">{tool.toolName}</td>
+                      <td className="p-2 text-xs text-gray-600">{tool.toolCode}</td>
+                      <td className="p-2 text-xs text-gray-600">{tool.toolType}</td>
+                      <td className="p-2 text-xs text-gray-600">{tool.location}</td>
                       <td className="p-2">
-                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
                           tool.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                         }`}>
                           {tool.status}
                         </span>
                       </td>
-                      <td className="p-2 text-sm text-gray-900 font-medium">₹{tool.cost}</td>
-                      <td className="p-2 text-center">
+                      <td className="p-2 text-xs text-gray-900 font-medium">₹{tool.cost}</td>
+                      <td className="p-2 text-center text-xs">
                         <div className="flex justify-center gap-2">
                           <button
                             onClick={() => handleOpenModal(tool)}
@@ -201,7 +201,7 @@ const ToolMasterList = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="bg-white rounded-xs shadow-xl max-w-md w-full mx-4">
             <div className="flex justify-between items-center p-6 border-b">
               <h2 className="text-xl font-bold text-gray-900">
                 {editingId ? 'Edit Tool' : 'Add New Tool'}
@@ -219,7 +219,7 @@ const ToolMasterList = () => {
                   value={formData.toolName}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -230,7 +230,7 @@ const ToolMasterList = () => {
                   value={formData.toolCode}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -240,7 +240,7 @@ const ToolMasterList = () => {
                   name="toolType"
                   value={formData.toolType}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -250,7 +250,7 @@ const ToolMasterList = () => {
                   name="location"
                   value={formData.location}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -260,7 +260,7 @@ const ToolMasterList = () => {
                   name="cost"
                   value={formData.cost}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -269,7 +269,7 @@ const ToolMasterList = () => {
                   name="status"
                   value={formData.status}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
@@ -280,13 +280,13 @@ const ToolMasterList = () => {
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-xs text-gray-700 hover:bg-gray-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xs hover:bg-blue-700"
                 >
                   {editingId ? 'Update' : 'Create'}
                 </button>

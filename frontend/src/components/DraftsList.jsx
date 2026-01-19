@@ -19,24 +19,24 @@ export default function DraftsList({ formName, onLoadDraft, onDeleteDraft, onClo
     return (
       <div className="text-center py-8">
         <File size={32} className="mx-auto text-gray-300 mb-3" />
-        <p className="text-gray-500 text-sm">No saved drafts</p>
+        <p className="text-gray-500 text-xs">No saved drafts</p>
       </div>
     )
   }
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-bold text-gray-900 mb-3">Saved Drafts</h3>
+      <h3 className="text-xs font-bold text-gray-900 mb-3">Saved Drafts</h3>
       {drafts.map((draft) => (
         <div
           key={draft.id}
-          className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition group"
+          className="flex items-center justify-between p-3 border border-gray-200 rounded-xs hover:bg-gray-50 transition group"
         >
           <div
             className="flex-1 cursor-pointer"
             onClick={() => handleLoadDraft(draft)}
           >
-            <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition">
+            <p className="text-xs font-medium text-gray-900 group-hover:text-blue-600 transition">
               {draft.label}
             </p>
             <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">

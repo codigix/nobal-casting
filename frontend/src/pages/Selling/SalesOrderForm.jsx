@@ -67,6 +67,7 @@ export default function SalesOrderForm() {
   const [refreshingBom, setRefreshingBom] = useState(false)
   const [expandedItemGroups, setExpandedItemGroups] = useState({})
   const [bomName, setBomName] = useState('')
+  const [customersLastUpdated, setCustomersLastUpdated] = useState(localStorage.getItem('customersUpdatedAt'))
 
   const SectionHeader = ({ title, icon }) => (
     <div className="flex items-center gap-3 mb-6 pt-6 border-t border-gray-200">
@@ -83,21 +84,46 @@ export default function SalesOrderForm() {
     }
   }, [])
 
+  useEffect(() => {
+    const checkCustomersUpdate = () => {
+      const updatedTime = localStorage.getItem('customersUpdatedAt')
+      if (updatedTime && updatedTime !== customersLastUpdated) {
+        setCustomersLastUpdated(updatedTime)
+        fetchCustomersOnly()
+      }
+    }
 
+    const interval = setInterval(checkCustomersUpdate, 1000)
+    return () => clearInterval(interval)
+  }, [customersLastUpdated])
+
+  const fetchCustomersOnly = async () => {
+    try {
+      const custRes = await api.get('/customers').catch(() => ({ data: { data: [] } }))
+      const customersData = custRes.data.data || custRes.data || []
+      console.log('API Response:', custRes)
+      console.log('Customers data:', customersData)
+      console.log('Customers refreshed:', customersData.length)
+      setCustomers(customersData)
+    } catch (err) {
+      console.error('Failed to refresh customers:', err)
+    }
+  }
 
   const fetchRequiredData = async () => {
     try {
       setDataLoading(true)
       const [custRes, bomRes, itemsRes] = await Promise.all([
-        api.get('/selling/customers').catch(() => ({ data: { data: [] } })),
+        api.get('/customers').catch(() => ({ data: { data: [] } })),
         api.get('/production/boms?limit=1000').catch(() => ({ data: { data: [] } })),
         api.get('/items').catch(() => ({ data: { data: [] } }))
       ])
 
-      const customersData = custRes.data.data || []
+      const customersData = custRes.data.data || custRes.data || []
       setCustomers(customersData)
-      console.log('Customers API Response:', custRes.data)
+      console.log('Customers API Response:', custRes)
       console.log('Customers Data:', customersData)
+      console.log('Total customers:', customersData.length)
       
       const bomsData = bomRes.data.data || []
       
@@ -873,23 +899,23 @@ export default function SalesOrderForm() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
-        <div className=" mx-auto px-6 py-4 flex items-center justify-between">
+        <div className=" mx-auto p-2 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-2.5 bg-blue-100 rounded-lg">
+            <div className="p-2.5 bg-blue-100 rounded-xs">
               <span className="text-xl">📋</span>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-xl font-bold text-gray-900">
                 {isReadOnly ? 'Sales Order Details' : isEditMode ? 'Edit Sales Order' : 'New Sales Order'}
               </h1>
-              <p className="text-sm text-gray-500 mt-0.5">
+              <p className="text-xs text-gray-500 mt-0.5">
                 {isReadOnly ? 'View and manage order information' : 'Create and configure sales orders'}
               </p>
             </div>
           </div>
           <button
             onClick={() => navigate(-1)}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xs transition"
           >
             ✕
           </button>
@@ -951,7 +977,7 @@ export default function SalesOrderForm() {
               <SectionHeader title="Customer Details" icon="👥" />
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="lg:col-span-2 flex flex-col">
-                    <label className="text-xs  text-gray-700">Customer *</label>
+                    <label className="text-xs  text-gray-700">Customer * ({customers.length} available)</label>
                     <SearchableSelect
                       value={formData.customer_id}
                       onChange={(val) => handleCustomerChange(val)}
@@ -1081,11 +1107,11 @@ export default function SalesOrderForm() {
                 <div className="space-y-6">
               {bomFinishedGoods.length > 0 && (
                 <div className="mb-5">
-                  <div className="bg-white rounded-lg border border-gray-200 shadow-xs">
+                  <div className="bg-white rounded-xs border border-gray-200 shadow-xs">
                     <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-2 border-b border-blue-200">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-lg">📦</span>
-                        <h3 className="font-bold text-sm text-gray-900">Finished Goods <span className="font-normal text-gray-600">({bomFinishedGoods.length})</span></h3>
+                        <h3 className="font-bold text-xs text-gray-900">Finished Goods <span className="font-normal text-gray-600">({bomFinishedGoods.length})</span></h3>
                       </div>
                       {bomName && (
                         <div className="pl-6 text-xs text-blue-700">
@@ -1095,7 +1121,7 @@ export default function SalesOrderForm() {
                       )}
                     </div>
                     <div className="">
-                      <table className="w-full text-sm">
+                      <table className="w-full text-xs">
                         <thead className="bg-gray-50 border-b border-gray-200">
                           <tr>
                             <th className="text-left p-2 font-semibold text-gray-700 text-left">Item Code</th>
@@ -1112,7 +1138,7 @@ export default function SalesOrderForm() {
                             const itemAmount = multipliedQty * (parseFloat(item.rate) || 0)
                             return (
                             <tr key={idx} className="border-b border-gray-100 hover:bg-blue-50 transition">
-                              <td className="p-2 font-medium text-gray-900 text-xs">{item.component_code || item.item_code || '-'}</td>
+                              <td className="p-2 font-medium text-gray-900 text-xs text-xs">{item.component_code || item.item_code || '-'}</td>
                               <td className="p-2 text-gray-600 text-xs">{item.component_type || item.fg_sub_assembly || '-'}</td>
                               <td className="p-2 text-right font-medium text-gray-900">
                                 {isReadOnly ? (
@@ -1156,13 +1182,13 @@ export default function SalesOrderForm() {
 
               {bomSubAssemblies.length > 0 && (
                 <div className="mb-5">
-                  <div className="bg-white rounded-lg border border-gray-200 shadow-xs">
+                  <div className="bg-white rounded-xs border border-gray-200 shadow-xs">
                     <div className="bg-gradient-to-r from-orange-50 to-orange-100 px-5 py-3.5 border-b border-orange-200 flex items-center gap-2">
                       <span className="text-lg">🔧</span>
-                      <h3 className="font-bold text-sm text-gray-900">Sub-Assemblies <span className="font-normal text-gray-600">({bomSubAssemblies.length})</span></h3>
+                      <h3 className="font-bold text-xs text-gray-900">Sub-Assemblies <span className="font-normal text-gray-600">({bomSubAssemblies.length})</span></h3>
                     </div>
                     <div className="">
-                      <table className="w-full text-sm">
+                      <table className="w-full text-xs">
                         <thead className="bg-gray-50 border-b border-gray-200">
                           <tr>
                             <th className="text-left p-2 font-semibold text-gray-700 text-left">Item Code</th>
@@ -1180,8 +1206,8 @@ export default function SalesOrderForm() {
                             const itemAmount = multipliedQty * (parseFloat(item.rate) || 0)
                             return (
                             <tr key={idx} className="border-b border-gray-100 hover:bg-orange-50 transition">
-                              <td className="p-2 font-medium text-gray-900 text-xs">{item.component_code || item.item_code || '-'}</td>
-                              <td className="p-2 text-gray-700">{item.component_description || item.item_name || '-'}</td>
+                              <td className="p-2 font-medium text-gray-900 text-xs text-xs">{item.component_code || item.item_code || '-'}</td>
+                              <td className="p-2 text-gray-700 text-xs">{item.component_description || item.item_name || '-'}</td>
                               <td className="p-2 text-gray-600 text-xs">{item.component_type || item.fg_sub_assembly || '-'}</td>
                               <td className="p-2 text-right font-medium text-gray-900">
                                 {formatQty(multipliedQty)}
@@ -1200,25 +1226,25 @@ export default function SalesOrderForm() {
 
               {bomRawMaterials.length > 0 && (
                 <div className="mb-5">
-                  <div className="bg-white rounded-lg border border-gray-200 shadow-xs">
+                  <div className="bg-white rounded-xs border border-gray-200 shadow-xs">
                     <div className="bg-gradient-to-r from-green-50 to-green-100 px-5 py-3.5 border-b border-green-200 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span className="text-lg">📦</span>
-                        <h3 className="font-bold text-sm text-gray-900">Raw Materials <span className="font-normal text-gray-600">({bomRawMaterials.length})</span></h3>
+                        <h3 className="font-bold text-xs text-gray-900">Raw Materials <span className="font-normal text-gray-600">({bomRawMaterials.length})</span></h3>
                       </div>
                       {bomSubAssemblies.length > 0 && !isReadOnly && (
                         <button
                           type="button"
                           onClick={fetchSubAssemblyMaterials}
                           disabled={refreshingBom}
-                          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white text-sm font-semibold rounded transition"
+                          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white text-xs font-semibold rounded transition"
                         >
                           {refreshingBom ? '⏳ Fetching...' : 'Get Sub-Asm Materials'}
                         </button>
                       )}
                     </div>
                     <div className="">
-                      <table className="w-full text-sm">
+                      <table className="w-full text-xs">
                         <thead className="bg-gray-50 border-b border-gray-200">
                           <tr>
                             <th className="text-left p-2 font-semibold text-gray-700 text-left">Item Code</th>
@@ -1237,12 +1263,12 @@ export default function SalesOrderForm() {
                             const itemAmount = itemQty * (parseFloat(material.rate || 0))
                             return (
                             <tr key={idx} className="border-b border-gray-100 hover:bg-green-50 transition">
-                              <td className="p-2 font-medium text-gray-900 text-xs">{material.item_code || material.component_code || '-'}</td>
-                              <td className="p-2 text-gray-700">{material.item_name || material.component_description || '-'}</td>
+                              <td className="p-2 font-medium text-gray-900 text-xs text-xs">{material.item_code || material.component_code || '-'}</td>
+                              <td className="p-2 text-gray-700 text-xs">{material.item_name || material.component_description || '-'}</td>
                               <td className="p-2 text-gray-600 text-xs">{material.item_group || '-'}</td>
-                              <td className="p-2 text-gray-700 font-mono text-xs">{material.bom_id || material.bom_no || '-'}</td>
+                              <td className="p-2 text-gray-700 text-xs font-mono text-xs">{material.bom_id || material.bom_no || '-'}</td>
                               <td className="p-2 text-right font-medium text-gray-900">{formatQty(itemQty)}</td>
-                              <td className="p-2 text-center text-gray-700">{material.uom || material.unit || '-'}</td>
+                              <td className="p-2 text-center text-xs text-gray-700">{material.uom || material.unit || '-'}</td>
                               <td className="p-2 text-gray-900 font-medium">₹ {parseFloat(material.rate || 0).toFixed(2)}</td>
                               <td className="p-2 text-left font-bold text-green-700">₹ {itemAmount.toFixed(2)}</td>
                             </tr>
@@ -1258,21 +1284,21 @@ export default function SalesOrderForm() {
               {bomOperations.length > 0 && (
                 <div className="mb-5">
                   {bomOperations.some(op => !op.hourly_rate || parseFloat(op.hourly_rate) === 0) && (
-                    <div className="mb-3 bg-yellow-50 border border-yellow-300 rounded-lg p-3 flex gap-2">
+                    <div className="mb-3 bg-yellow-50 border border-yellow-300 rounded-xs p-3 flex gap-2">
                       <span className="text-yellow-600 font-bold">⚠️</span>
                       <div>
-                        <p className="text-yellow-800 font-semibold text-sm">Missing Hourly Rates</p>
+                        <p className="text-yellow-800 font-semibold text-xs">Missing Hourly Rates</p>
                         <p className="text-yellow-700 text-xs">Some operations don't have hourly rates set. Please add hourly rates to calculate operation costs correctly.</p>
                       </div>
                     </div>
                   )}
-                  <div className="bg-white rounded-lg border border-gray-200 shadow-xs">
+                  <div className="bg-white rounded-xs border border-gray-200 shadow-xs">
                     <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-5 py-3.5 border-b border-purple-200 flex items-center gap-2">
                       <span className="text-lg">⚙️</span>
-                      <h3 className="font-bold text-sm text-gray-900">Operations <span className="font-normal text-gray-600">({bomOperations.length})</span></h3>
+                      <h3 className="font-bold text-xs text-gray-900">Operations <span className="font-normal text-gray-600">({bomOperations.length})</span></h3>
                     </div>
                     <div className="">
-                      <table className="w-full text-sm">
+                      <table className="w-full text-xs">
                         <thead className="bg-gray-50 border-b border-gray-200">
                           <tr>
                             <th className="text-left p-2 font-semibold text-gray-700 text-left">Operation</th>
@@ -1296,8 +1322,8 @@ export default function SalesOrderForm() {
                             const isMissingRate = hourlyRate === 0 || !op.hourly_rate
                             return (
                             <tr key={idx} className={`border-b border-gray-100 hover:bg-purple-50 transition ${isMissingRate ? 'bg-yellow-50' : ''}`}>
-                              <td className="p-2 font-medium text-gray-900 text-xs">{op.operation || op.operation_name || '-'}</td>
-                              <td className="p-2 text-gray-700">{op.workstation_type || op.workstation || op.default_workstation || '-'}</td>
+                              <td className="p-2 font-medium text-gray-900 text-xs text-xs">{op.operation || op.operation_name || '-'}</td>
+                              <td className="p-2 text-gray-700 text-xs">{op.workstation_type || op.workstation || op.default_workstation || '-'}</td>
                               <td className="p-2 text-left text-gray-700 font-medium">{cycleTime}</td>
                               <td className="p-2 text-left text-gray-700 font-medium">
                                 {isEditMode && !isReadOnly && isMissingRate ? (
@@ -1360,8 +1386,8 @@ export default function SalesOrderForm() {
               {(bomFinishedGoods.length > 0 || bomSubAssemblies.length > 0 || bomRawMaterials.length > 0 || bomOperations.length > 0) && (
                 <div className="mt-6 pt-4 border-t border-gray-200">
                   <div className="flex justify-end">
-                    <div className="bg-white border-2 border-gray-300 rounded-lg p-5 min-w-96 shadow-sm">
-                      <h4 className="text-sm font-bold text-gray-900 mb-4">Cost Breakdown</h4>
+                    <div className="bg-white border-2 border-gray-300 rounded-xs p-5 min-w-96 shadow-sm">
+                      <h4 className="text-xs font-bold text-gray-900 mb-4">Cost Breakdown</h4>
                       <div className="space-y-2">
                         {(() => {
                           const qty = parseFloat(formData.qty) || 1
@@ -1382,27 +1408,27 @@ export default function SalesOrderForm() {
                           const grandTotal = costWithProfit + gstAmount
                           return (
                             <>
-                              <div className="flex justify-between text-sm border-b border-gray-200 pb-2 mb-2">
+                              <div className="flex justify-between text-xs border-b border-gray-200 pb-2 mb-2">
                                 <span className="text-gray-700">Finished Goods Total Cost (Unit):</span>
                                 <span className="font-semibold text-gray-900">₹{fgUnitCost.toFixed(2)}</span>
                               </div>
                               <div className="border-t border-gray-200 pt-3 space-y-2">
-                                <div className="flex justify-between text-sm">
+                                <div className="flex justify-between text-xs">
                                   <span className="text-gray-600">Finished Goods Cost × Sales Quantity ({qty}):</span>
                                   <span className="font-semibold text-gray-900">₹{baseCost.toFixed(2)}</span>
                                 </div>
                                 {profitMarginPct > 0 && (
-                                  <div className="flex justify-between text-sm">
+                                  <div className="flex justify-between text-xs">
                                     <span className="text-gray-600">Profit Margin ({profitMarginPct.toFixed(2)}%):</span>
                                     <span className="font-semibold text-green-600">₹{profitAmount.toFixed(2)}</span>
                                   </div>
                                 )}
-                                <div className="flex justify-between text-sm border-t border-gray-200 pt-2">
+                                <div className="flex justify-between text-xs border-t border-gray-200 pt-2">
                                   <span className="text-gray-700 font-semibold">Cost with Profit:</span>
                                   <span className="font-semibold text-gray-900">₹{costWithProfit.toFixed(2)}</span>
                                 </div>
                                 {(cgstRate + sgstRate) > 0 && (
-                                  <div className="flex justify-between text-sm">
+                                  <div className="flex justify-between text-xs">
                                     <span className="text-gray-600">GST ({(cgstRate + sgstRate).toFixed(1)}%):</span>
                                     <span className="font-semibold text-gray-900">₹{gstAmount.toFixed(2)}</span>
                                   </div>
@@ -1422,9 +1448,9 @@ export default function SalesOrderForm() {
               )}
 
               {bomFinishedGoods.length === 0 && bomSubAssemblies.length === 0 && bomOperations.length === 0 && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 text-center">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xs p-6 text-center">
                   <p className="text-blue-900 font-semibold mb-1">📦 No BOM Selected</p>
-                  <p className="text-blue-700 text-sm">Select a BOM in the <strong>Basic Details</strong> tab to view materials, operations, and finished goods here.</p>
+                  <p className="text-blue-700 text-xs">Select a BOM in the <strong>Basic Details</strong> tab to view materials, operations, and finished goods here.</p>
                 </div>
               )}
                 </div>

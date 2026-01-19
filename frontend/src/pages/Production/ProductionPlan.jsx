@@ -85,7 +85,7 @@ export default function ProductionPlan() {
         <div className="flex justify-between items-start mb-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
+              <div className="w-9 h-9 rounded-xs bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
                 📅
               </div>
               <div>
@@ -97,7 +97,7 @@ export default function ProductionPlan() {
         </div>
 
         {success && (
-          <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-2 mb-2 flex items-start gap-2">
+          <div className="bg-green-50 border-l-4 border-green-500 rounded-xs p-2 mb-2 flex items-start gap-2">
             <div className="text-green-600 mt-0.5">✓</div>
             <div>
               <p className="font-semibold text-green-800 text-xs">Success</p>
@@ -107,7 +107,7 @@ export default function ProductionPlan() {
         )}
 
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-2 mb-2 flex items-start gap-2">
+          <div className="bg-red-50 border-l-4 border-red-500 rounded-xs p-2 mb-2 flex items-start gap-2">
             <div className="text-red-600 mt-0.5">✕</div>
             <div>
               <p className="font-semibold text-red-800 text-xs">Error</p>
@@ -125,7 +125,7 @@ export default function ProductionPlan() {
           planId={viewingPlanId}
         />
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-3">
+        <div className="bg-white rounded-xs shadow-sm border border-gray-200 p-3 mb-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col">
               <label className="text-xs font-bold text-gray-600 mb-1">Status</label>
@@ -158,11 +158,11 @@ export default function ProductionPlan() {
         </div>
 
         {loading ? (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 text-center">
+          <div className="bg-white rounded-xs shadow-sm border border-gray-200 p-3 text-center">
             <p className="text-gray-600 text-xs">Loading production plans...</p>
           </div>
         ) : plans.length > 0 ? (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xs shadow-sm border border-gray-200 overflow-hidden">
             
               <table className="w-full text-xs border-collapse">
                 <thead>
@@ -242,7 +242,7 @@ export default function ProductionPlan() {
             
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 text-center">
+          <div className="bg-white rounded-xs shadow-sm border border-gray-200 p-3 text-center">
             <p className="text-gray-600 text-xs">No production plans found</p>
           </div>
         )}

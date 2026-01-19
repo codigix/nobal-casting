@@ -86,7 +86,7 @@ export default function SupplierDetail() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <Card>
           <div className="text-center">
-            <p className="text-[var(--text-secondary)] text-sm mb-1">Status</p>
+            <p className="text-[var(--text-secondary)] text-xs mb-1">Status</p>
             <Badge variant={supplier.is_active ? 'success' : 'warning'}>
               {supplier.is_active ? 'Active' : 'Inactive'}
             </Badge>
@@ -95,8 +95,8 @@ export default function SupplierDetail() {
 
         <Card>
           <div className="text-center">
-            <p className="text-[var(--text-secondary)] text-sm mb-1">Rating</p>
-            <p className="text-2xl font-bold">
+            <p className="text-[var(--text-secondary)] text-xs mb-1">Rating</p>
+            <p className="text-xl font-bold">
               {supplier.rating ? `⭐ ${supplier.rating.toFixed(1)}` : '—'}
             </p>
           </div>
@@ -104,15 +104,15 @@ export default function SupplierDetail() {
 
         <Card>
           <div className="text-center">
-            <p className="text-[var(--text-secondary)] text-sm mb-1">Payment Terms</p>
-            <p className="text-2xl font-bold">{supplier.payment_terms_days} days</p>
+            <p className="text-[var(--text-secondary)] text-xs mb-1">Payment Terms</p>
+            <p className="text-xl font-bold">{supplier.payment_terms_days} days</p>
           </div>
         </Card>
 
         <Card>
           <div className="text-center">
-            <p className="text-[var(--text-secondary)] text-sm mb-1">Lead Time</p>
-            <p className="text-2xl font-bold">{supplier.lead_time_days} days</p>
+            <p className="text-[var(--text-secondary)] text-xs mb-1">Lead Time</p>
+            <p className="text-xl font-bold">{supplier.lead_time_days} days</p>
           </div>
         </Card>
       </div>
@@ -122,24 +122,24 @@ export default function SupplierDetail() {
         <h2 className="text-xl font-bold mb-6">Basic Information</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Supplier Name</label>
+            <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">Supplier Name</label>
             <p className="text-[var(--text-primary)]">{supplier.name}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">GSTIN</label>
+            <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">GSTIN</label>
             <p className="font-mono text-[var(--text-primary)]">{supplier.gstin}</p>
           </div>
 
           {supplier.supplier_group && (
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Supplier Group</label>
+              <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">Supplier Group</label>
               <p className="text-[var(--text-primary)]">{supplier.supplier_group}</p>
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Supplier ID</label>
+            <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">Supplier ID</label>
             <p className="text-[var(--text-primary)]">{supplier.supplier_id}</p>
           </div>
         </div>
@@ -154,13 +154,13 @@ export default function SupplierDetail() {
               <div key={index} className="border-l-4 border-primary-600 pl-4">
                 <p className="font-semibold text-[var(--text-primary)]">{contact.name}</p>
                 {contact.role && (
-                  <p className="text-sm text-[var(--text-secondary)]">{contact.role}</p>
+                  <p className="text-xs text-[var(--text-secondary)]">{contact.role}</p>
                 )}
                 {contact.email && (
-                  <p className="text-sm text-[var(--text-secondary)]">{contact.email}</p>
+                  <p className="text-xs text-[var(--text-secondary)]">{contact.email}</p>
                 )}
                 {contact.phone && (
-                  <p className="text-sm text-[var(--text-secondary)]">{contact.phone}</p>
+                  <p className="text-xs text-[var(--text-secondary)]">{contact.phone}</p>
                 )}
               </div>
             ))}
@@ -199,27 +199,27 @@ export default function SupplierDetail() {
           <h2 className="text-xl font-bold mb-6">Performance Scorecard</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Quality Score</label>
-              <p className="text-2xl font-bold">{supplier.scorecard.quality_score || '—'}</p>
+              <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">Quality Score</label>
+              <p className="text-xl font-bold">{supplier.scorecard.quality_score || '—'}</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Delivery Score</label>
-              <p className="text-2xl font-bold">{supplier.scorecard.delivery_score || '—'}</p>
+              <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">Delivery Score</label>
+              <p className="text-xl font-bold">{supplier.scorecard.delivery_score || '—'}</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Cost Score</label>
-              <p className="text-2xl font-bold">{supplier.scorecard.cost_score || '—'}</p>
+              <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">Cost Score</label>
+              <p className="text-xl font-bold">{supplier.scorecard.cost_score || '—'}</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">Overall Score</label>
-              <p className="text-2xl font-bold">{supplier.scorecard.overall_score || '—'}</p>
+              <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">Overall Score</label>
+              <p className="text-xl font-bold">{supplier.scorecard.overall_score || '—'}</p>
             </div>
           </div>
           {supplier.scorecard.last_evaluated_date && (
-            <p className="text-sm text-[var(--text-secondary)] mt-4">
+            <p className="text-xs text-[var(--text-secondary)] mt-4">
               Last evaluated: {new Date(supplier.scorecard.last_evaluated_date).toLocaleDateString()}
             </p>
           )}
@@ -229,7 +229,7 @@ export default function SupplierDetail() {
       {/* Timestamps */}
       {(supplier.created_at || supplier.updated_at) && (
         <Card>
-          <div className="text-sm text-[var(--text-secondary)] space-y-1">
+          <div className="text-xs text-[var(--text-secondary)] space-y-1">
             {supplier.created_at && (
               <p>Created on {new Date(supplier.created_at).toLocaleString()}</p>
             )}

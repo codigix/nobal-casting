@@ -213,7 +213,7 @@ export default function WorkstationForm() {
   }
 
   const FormSection = ({ title, section, children, icon }) => (
-    <div className="bg-white rounded-lg border border-gray-200 mb-3">
+    <div className="bg-white rounded-xs border border-gray-200 mb-3">
       <button
         type="button"
         onClick={() => toggleSection(section)}
@@ -314,7 +314,7 @@ export default function WorkstationForm() {
         <div className="flex justify-between items-start mb-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-white text-xl font-bold shadow-sm">
+              <div className="w-10 h-10 rounded-xs bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-white text-xl font-bold shadow-sm">
                 🏭
               </div>
               <div>
@@ -454,18 +454,18 @@ export default function WorkstationForm() {
           </FormSection>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 bg-white rounded-lg p-4 -mx-3 -mb-3">
+          <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 bg-white rounded-xsp-2 -mx-3 -mb-3">
             <button
               type="button"
               onClick={() => navigate('/manufacturing/workstations')}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 transition flex items-center gap-2"
+              className="px-4 py-2 border border-gray-300 rounded-xs text-xs font-semibold text-gray-700 hover:bg-gray-50 transition flex items-center gap-2"
             >
               <X size={16} /> Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !formData.name?.trim() || !formData.workstation_name?.trim()}
-              className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg text-xs font-semibold hover:from-cyan-600 hover:to-cyan-700 transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xs text-xs font-semibold hover:from-cyan-600 hover:to-cyan-700 transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
               title={!formData.name?.trim() ? 'Workstation ID is required' : !formData.workstation_name?.trim() ? 'Workstation Name is required' : ''}
             >
               <Save size={16} /> {loading ? 'Saving...' : 'Save Workstation'}

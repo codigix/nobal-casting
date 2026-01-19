@@ -807,7 +807,7 @@ export default function ProductionPlanning() {
         <div className="flex justify-between items-start mb-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
+              <div className="w-9 h-9 rounded-xs bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
                 📊
               </div>
               <div>
@@ -847,7 +847,7 @@ export default function ProductionPlanning() {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow-sm p-3 mb-3">
+        <div className="bg-white rounded-xs shadow-sm p-3 mb-3">
           <label className="text-xs font-semibold text-gray-700 block mb-1">Search</label>
           <input 
             type="text" 
@@ -859,13 +859,13 @@ export default function ProductionPlanning() {
         </div>
 
         {loading ? (
-          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+          <div className="bg-white rounded-xs p-3 text-center shadow-sm">
             <div className="text-3xl mb-2">⏳</div>
             <div className="text-xs text-gray-600">Loading production plans...</div>
           </div>
         ) : filteredPlans.length > 0 ? (
           <>
-            <div className="bg-white rounded-lg shadow-sm">
+            <div className="bg-white rounded-xs shadow-sm">
               
                 <table className="w-full text-xs">
                   <thead>
@@ -991,7 +991,7 @@ export default function ProductionPlanning() {
             </div>
           </>
         ) : (
-          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+          <div className="bg-white rounded-xs p-3 text-center shadow-sm">
             <div className="text-3xl mb-2">📭</div>
             <div className="text-xs font-semibold  text-gray-900">
               {search ? 'No production plans found' : 'No production plans created yet'}
@@ -1005,7 +1005,7 @@ export default function ProductionPlanning() {
         )}
 
       {showWorkOrderModal && workOrderData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99] p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99]p-2">
           <div className="bg-white rounded shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-gradient-to-r from-green-600 via-green-600 to-green-700 p-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1013,7 +1013,7 @@ export default function ProductionPlanning() {
                   <Boxes size={16} className="text-white" />
                 </div>
                 <div>
-                  <h2 className="text-white font-bold text-sm">Create Work Order</h2>
+                  <h2 className="text-white font-bold text-xs">Create Work Order</h2>
                   <p className="text-green-100 text-xs">Review details and confirm</p>
                 </div>
               </div>
@@ -1211,7 +1211,7 @@ export default function ProductionPlanning() {
       )}
 
       {showMaterialRequestModal && materialRequestData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99] p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99] p-2">
           <div className="bg-white rounded shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-gradient-to-r from-purple-600 via-purple-600 to-purple-700 p-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1219,7 +1219,7 @@ export default function ProductionPlanning() {
                   <Boxes size={16} className="text-white" />
                 </div>
                 <div>
-                  <h2 className="text-white font-bold text-sm">Create Material Request</h2>
+                  <h2 className="text-white font-bold text-xs">Create Material Request</h2>
                   <p className="text-purple-100 text-xs">Review and confirm material request</p>
                 </div>
               </div>

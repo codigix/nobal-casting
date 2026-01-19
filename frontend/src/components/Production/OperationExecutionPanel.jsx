@@ -277,49 +277,49 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
   if (isRunning) {
     return (
       <div className="space-y-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="bg-white rounded-xs border border-gray-200 p-2">
           <h3 className="font-semibold text-gray-900 mb-4">Operation Execution</h3>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xs text-red-700 text-xs">
               {error}
             </div>
           )}
 
           {success && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xs text-green-700 text-xs">
               {success}
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="p-3 bg-gray-50 rounded-xs border border-gray-200">
               <label className="block text-xs text-gray-600 mb-1">Workstation</label>
-              <div className="text-sm font-semibold text-gray-900">{currentWorkstation}</div>
+              <div className="text-xs font-semibold text-gray-900">{currentWorkstation}</div>
             </div>
 
-            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="p-3 bg-gray-50 rounded-xs border border-gray-200">
               <label className="block text-xs text-gray-600 mb-1">Operation</label>
-              <div className="text-sm font-semibold text-gray-900">{currentOperation}</div>
+              <div className="text-xs font-semibold text-gray-900">{currentOperation}</div>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4 mb-4">
-            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="p-3 bg-gray-50 rounded-xs border border-gray-200">
               <label className="block text-xs text-gray-600 mb-1">Operator</label>
-              <div className="text-sm font-semibold text-gray-900">
+              <div className="text-xs font-semibold text-gray-900">
                 {getOperatorName(jobCard?.employee_id || jobCard?.operator_id)}
               </div>
             </div>
 
-            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="p-3 bg-gray-50 rounded-xs border border-gray-200">
               <label className="block text-xs text-gray-600 mb-1">Quantity</label>
-              <div className="text-sm font-semibold text-gray-900">{executionData.quantity || '-'}</div>
+              <div className="text-xs font-semibold text-gray-900">{executionData.quantity || '-'}</div>
             </div>
 
-            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="p-3 bg-gray-50 rounded-xs border border-gray-200">
               <label className="block text-xs text-gray-600 mb-1">Start Time</label>
-              <div className="text-sm font-semibold text-gray-900">
+              <div className="text-xs font-semibold text-gray-900">
                 {jobCard?.actual_start_date ? new Date(jobCard.actual_start_date).toLocaleString() : '-'}
               </div>
             </div>
@@ -332,7 +332,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
                 type="date"
                 value={executionData.end_date}
                 onChange={(e) => setExecutionData({ ...executionData, end_date: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs"
                 disabled={loading}
               />
             </div>
@@ -343,7 +343,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
                 type="time"
                 value={executionData.end_time}
                 onChange={(e) => setExecutionData({ ...executionData, end_time: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs"
                 disabled={loading}
               />
             </div>
@@ -353,7 +353,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
             <button
               onClick={handleEndOperation}
               disabled={loading}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-500 text-white rounded-xs hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               <StopCircle size={16} /> End Operation
             </button>
@@ -361,18 +361,18 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
         </div>
 
         {jobCard?.job_card_id && (
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-white rounded-xs border border-gray-200 p-2">
             <h3 className="font-semibold text-gray-900 mb-3">Execution History</h3>
             <OperationExecutionLog jobCardId={jobCard.job_card_id} />
           </div>
         )}
 
         {inwardChallans.length > 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-white rounded-xs border border-gray-20 0p-2">
             <h3 className="font-semibold text-gray-900 mb-3">Inward Challans</h3>
             <div className="space-y-2">
               {inwardChallans.map(challan => (
-                <div key={challan.id} className="p-3 border border-gray-200 rounded-lg bg-gray-50">
+                <div key={challan.id} className="p-3 border border-gray-200 rounded-xs bg-gray-50">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <div className="font-semibold text-gray-900">{challan.challan_number}</div>
@@ -408,25 +408,25 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="bg-white rounded-xs border border-gray-200 p-2">
         <h3 className="font-semibold text-gray-900 mb-4">Operation Execution</h3>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xs text-red-700 text-xs">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xs text-green-700 text-xs">
             {success}
           </div>
         )}
 
         {isDelayed && (
-          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xs flex items-start gap-2">
             <AlertCircle size={18} className="text-amber-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-amber-700">
+            <div className="text-xs text-amber-700">
               <strong>⚠️ Operation is delayed!</strong>
               <p className="mt-1">Planned end date was {new Date(jobCard.planned_end_date).toLocaleString()}</p>
             </div>
@@ -448,9 +448,9 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
             />
           </div>
 
-          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="p-3 bg-gray-50 rounded-xs border border-gray-200">
             <label className="block text-xs text-gray-600 mb-1">Operation *</label>
-            <div className="text-sm font-semibold text-gray-900">{currentOperation}</div>
+            <div className="text-xs font-semibold text-gray-900">{currentOperation}</div>
           </div>
         </div>
 
@@ -478,7 +478,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
               placeholder="Enter quantity"
               step="0.01"
               min="0"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs"
               disabled={loading}
             />
           </div>
@@ -489,7 +489,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
               type="date"
               value={executionData.start_date}
               onChange={(e) => setExecutionData({ ...executionData, start_date: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs"
               disabled={loading}
             />
           </div>
@@ -502,12 +502,12 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
               type="time"
               value={executionData.start_time}
               onChange={(e) => setExecutionData({ ...executionData, start_time: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs"
               disabled={loading}
             />
           </div>
 
-          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="p-3 bg-gray-50 rounded-xs border border-gray-200">
             <label className="block text-xs text-gray-600 mb-1">Production Type</label>
             <div className="flex gap-3 mt-2">
               <label className="flex items-center gap-2 cursor-pointer">
@@ -517,7 +517,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
                   onChange={() => setExecutionData({ ...executionData, inhouse: true, outsource: false })}
                   className="w-4 h-4"
                 />
-                <span className="text-sm">Inhouse</span>
+                <span className="text-xs">Inhouse</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -526,15 +526,15 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
                   onChange={() => setExecutionData({ ...executionData, outsource: true, inhouse: false })}
                   className="w-4 h-4"
                 />
-                <span className="text-sm">Outsource</span>
+                <span className="text-xs">Outsource</span>
               </label>
             </div>
           </div>
         </div>
 
         {executionData.outsource && (
-          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-            <h4 className="text-sm font-semibold text-amber-900 mb-3">Outsource Challan Details</h4>
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xs">
+            <h4 className="text-xs font-semibold text-amber-900 mb-3">Outsource Challan Details</h4>
             <div className="space-y-3 mb-3">
               <div>
                 <label className="block text-xs text-gray-700 mb-1">Vendor Name *</label>
@@ -543,7 +543,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
                   value={challanData.vendor_name}
                   onChange={(e) => setChallanData({ ...challanData, vendor_name: e.target.value })}
                   placeholder="Enter vendor name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs"
                 />
               </div>
               <div>
@@ -552,7 +552,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
                   type="date"
                   value={challanData.expected_return_date}
                   onChange={(e) => setChallanData({ ...challanData, expected_return_date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs"
                 />
               </div>
               <div>
@@ -561,14 +561,14 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
                   value={challanData.challan_notes}
                   onChange={(e) => setChallanData({ ...challanData, challan_notes: e.target.value })}
                   placeholder="Add challan notes..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs resize-none"
                   rows="2"
                 />
               </div>
               <button
                 onClick={handleCreateOutwardChallan}
                 disabled={loading || !challanData.vendor_name || !challanData.expected_return_date}
-                className="w-full px-3 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-3 py-2 bg-amber-600 text-white rounded-xs text-xs font-medium hover:bg-amber-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Create Outward Challan
               </button>
@@ -593,7 +593,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
           <button
             onClick={handleStartOperation}
             disabled={loading || !executionData.employee_id || !executionData.workstation_id || !executionData.start_date || !executionData.start_time || executionData.quantity <= 0}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xs hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             <Play size={16} /> Start Operation
           </button>
@@ -601,7 +601,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
       </div>
 
       {jobCard?.job_card_id && (
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="bg-white rounded-xs border border-gray-200 p-2">
           <h3 className="font-semibold text-gray-900 mb-3">Execution History</h3>
           <OperationExecutionLog jobCardId={jobCard.job_card_id} />
         </div>

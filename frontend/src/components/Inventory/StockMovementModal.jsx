@@ -8,6 +8,8 @@ import { ArrowDown, ArrowUp } from 'lucide-react'
 export default function StockMovementModal({ onClose, onSuccess, initialItem = null }) {
   const [formData, setFormData] = useState({
     item_code: initialItem?.item_code || '',
+    source_warehouse_id: initialItem?.source_warehouse_id || '',
+    target_warehouse_id: initialItem?.target_warehouse_id || '',
     warehouse_id: initialItem?.warehouse_id || '',
     movement_type: initialItem?.movement_type || 'OUT',
     quantity: '',
@@ -50,11 +52,21 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
 
   useEffect(() => {
     if (initialItem) {
+      const newData = {
+        item_code: initialItem.item_code || '',
+        movement_type: initialItem.movement_type || 'OUT'
+      }
+      
+      if (initialItem.movement_type === 'TRANSFER') {
+        newData.source_warehouse_id = String(initialItem.source_warehouse_id || '')
+        newData.target_warehouse_id = String(initialItem.target_warehouse_id || '')
+      } else {
+        newData.warehouse_id = String(initialItem.warehouse_id || '')
+      }
+      
       setFormData(prev => ({
         ...prev,
-        item_code: initialItem.item_code || '',
-        warehouse_id: String(initialItem.warehouse_id || ''),
-        movement_type: initialItem.movement_type || 'OUT'
+        ...newData
       }))
     }
   }, [initialItem])
@@ -73,10 +85,27 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
       setFormError('Please select an item')
       return false
     }
-    if (!formData.warehouse_id) {
-      setFormError('Please select a warehouse')
-      return false
+    
+    if (formData.movement_type === 'TRANSFER') {
+      if (!formData.source_warehouse_id) {
+        setFormError('Please select a source warehouse')
+        return false
+      }
+      if (!formData.target_warehouse_id) {
+        setFormError('Please select a target warehouse')
+        return false
+      }
+      if (formData.source_warehouse_id === formData.target_warehouse_id) {
+        setFormError('Source and target warehouses must be different')
+        return false
+      }
+    } else {
+      if (!formData.warehouse_id) {
+        setFormError('Please select a warehouse')
+        return false
+      }
     }
+    
     if (!formData.quantity || parseFloat(formData.quantity) <= 0) {
       setFormError('Please enter a valid quantity')
       return false
@@ -90,17 +119,25 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
 
     setLoading(true)
     try {
+      const payload = {
+        item_code: formData.item_code,
+        movement_type: formData.movement_type,
+        quantity: parseFloat(formData.quantity),
+        reference_type: formData.reference_type,
+        reference_name: formData.reference_name,
+        notes: formData.notes
+      }
+
+      if (formData.movement_type === 'TRANSFER') {
+        payload.source_warehouse_id = parseInt(formData.source_warehouse_id)
+        payload.target_warehouse_id = parseInt(formData.target_warehouse_id)
+      } else {
+        payload.warehouse_id = parseInt(formData.warehouse_id)
+      }
+
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/stock/movements`,
-        {
-          item_code: formData.item_code,
-          warehouse_id: parseInt(formData.warehouse_id),
-          movement_type: formData.movement_type,
-          quantity: parseFloat(formData.quantity),
-          reference_type: formData.reference_type,
-          reference_name: formData.reference_name,
-          notes: formData.notes
-        }
+        payload
       )
 
       if (response.data.success) {
@@ -141,17 +178,17 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
       {error && <Alert type="danger" className="mb-4">{error}</Alert>}
       {formError && <Alert type="warning" className="mb-4">{formError}</Alert>}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit}>
         {/* Movement Type Selection */}
         <div>
-          <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-3">
+          <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-3">
             Movement Type
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <button
               type="button"
-              onClick={() => setFormData(prev => ({ ...prev, movement_type: 'IN' }))}
-              className={`p-4 rounded-lg border-2 transition-all flex items-center gap-3 ${
+              onClick={() => setFormData(prev => ({ ...prev, movement_type: 'IN', warehouse_id: '' }))}
+              className={`p-2 rounded-sm border-2 transition-all flex items-center gap-3 ${
                 formData.movement_type === 'IN'
                   ? 'border-green-500 bg-green-50 dark:bg-green-950/20'
                   : 'border-neutral-300 dark:border-neutral-700 hover:border-green-500'
@@ -165,8 +202,8 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
             </button>
             <button
               type="button"
-              onClick={() => setFormData(prev => ({ ...prev, movement_type: 'OUT' }))}
-              className={`p-4 rounded-lg border-2 transition-all flex items-center gap-3 ${
+              onClick={() => setFormData(prev => ({ ...prev, movement_type: 'OUT', warehouse_id: '' }))}
+              className={`p-2 rounded-sm border-2 transition-all flex items-center gap-3 ${
                 formData.movement_type === 'OUT'
                   ? 'border-red-500 bg-red-50 dark:bg-red-950/20'
                   : 'border-neutral-300 dark:border-neutral-700 hover:border-red-500'
@@ -178,20 +215,34 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">Remove from inventory</p>
               </div>
             </button>
+            <button
+              type="button"
+              onClick={() => setFormData(prev => ({ ...prev, movement_type: 'TRANSFER', source_warehouse_id: '', target_warehouse_id: '' }))}
+              className={`p-2 rounded-sm border-2 transition-all flex items-center gap-3 ${
+                formData.movement_type === 'TRANSFER'
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20'
+                  : 'border-neutral-300 dark:border-neutral-700 hover:border-blue-500'
+              }`}
+            >
+              <ArrowDown size={20} className="text-blue-600" style={{ transform: 'rotate(-90deg)' }} />
+              <div className="text-left">
+                <p className="font-semibold text-neutral-900 dark:text-neutral-100">Transfer</p>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400">Move between warehouses</p>
+              </div>
+            </button>
           </div>
         </div>
 
         {/* Item Selection */}
         <div>
-          <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+          <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
             Item *
           </label>
           <select
             name="item_code"
             value={formData.item_code}
             onChange={handleChange}
-            disabled={!!initialItem}
-            className="w-full px-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-neutral-100 disabled:cursor-not-allowed"
+            className="w-full p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
           >
             <option value="">Select Item</option>
             {items.map(item => (
@@ -208,29 +259,69 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
         </div>
 
         {/* Warehouse Selection */}
-        <div>
-          <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
-            Warehouse *
-          </label>
-          <select
-            name="warehouse_id"
-            value={formData.warehouse_id}
-            onChange={handleChange}
-            disabled={!!initialItem}
-            className="w-full px-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-neutral-100 disabled:cursor-not-allowed"
-          >
-            <option value="">Select Warehouse</option>
-            {warehouses.map(wh => (
-              <option key={wh.id} value={wh.id}>
-                {wh.warehouse_name} ({wh.warehouse_code})
-              </option>
-            ))}
-          </select>
-        </div>
+        {formData.movement_type === 'TRANSFER' ? (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+                Source Warehouse *
+              </label>
+              <select
+                name="source_warehouse_id"
+                value={formData.source_warehouse_id}
+                onChange={handleChange}
+                className="w-full p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+              >
+                <option value="">Select Source Warehouse</option>
+                {warehouses.map(wh => (
+                  <option key={wh.id} value={wh.id}>
+                    {wh.warehouse_name} ({wh.warehouse_code})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+                Target Warehouse *
+              </label>
+              <select
+                name="target_warehouse_id"
+                value={formData.target_warehouse_id}
+                onChange={handleChange}
+                className="w-full p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+              >
+                <option value="">Select Target Warehouse</option>
+                {warehouses.map(wh => (
+                  <option key={wh.id} value={wh.id}>
+                    {wh.warehouse_name} ({wh.warehouse_code})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+              Warehouse *
+            </label>
+            <select
+              name="warehouse_id"
+              value={formData.warehouse_id}
+              onChange={handleChange}
+              className="w-full p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+            >
+              <option value="">Select Warehouse</option>
+              {warehouses.map(wh => (
+                <option key={wh.id} value={wh.id}>
+                  {wh.warehouse_name} ({wh.warehouse_code})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Quantity */}
         <div>
-          <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+          <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
             Quantity *
           </label>
           <input
@@ -240,20 +331,20 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
             value={formData.quantity}
             onChange={handleChange}
             placeholder="0.00"
-            className="w-full px-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
           />
         </div>
 
         {/* Reference Type */}
         <div>
-          <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+          <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
             Reference Type
           </label>
           <select
             name="reference_type"
             value={formData.reference_type}
             onChange={handleChange}
-            className="w-full px-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
           >
             <option value="Manual">Manual</option>
             <option value="Production Request">Production Request</option>
@@ -265,7 +356,7 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
 
         {/* Reference Name */}
         <div>
-          <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+          <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
             Reference Name (Optional)
           </label>
           <input
@@ -274,13 +365,13 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
             value={formData.reference_name}
             onChange={handleChange}
             placeholder="e.g., PO-2024-001, PRD-2024-005"
-            className="w-full px-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
           />
         </div>
 
         {/* Notes */}
         <div>
-          <label className="block text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+          <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
             Notes
           </label>
           <textarea
@@ -289,13 +380,13 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
             onChange={handleChange}
             placeholder="Add any additional notes or remarks..."
             rows="3"
-            className="w-full px-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
           />
         </div>
 
         {/* Status Info */}
-        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-          <p className="text-sm text-blue-700 dark:text-blue-400">
+        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-xs p-2">
+          <p className="text-xs text-blue-700 dark:text-blue-400">
             <strong>Note:</strong> This movement will be created with "Pending" status. An authorized user must approve it before the inventory is updated.
           </p>
         </div>

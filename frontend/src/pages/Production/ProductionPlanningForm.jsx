@@ -1606,8 +1606,8 @@ export default function ProductionPlanningForm() {
             className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
           >
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-gray-600">0</span>
-              <h2 className="text-sm font-semibold text-gray-900">Plan Header</h2>
+              <span className="text-xs font-bold text-gray-600">0</span>
+              <h2 className="text-xs font-semibold text-gray-900">Plan Header</h2>
             </div>
             <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[0] ? 'rotate-180' : ''}`} />
           </button>
@@ -1659,8 +1659,8 @@ export default function ProductionPlanningForm() {
             className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
           >
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-orange-600">1</span>
-              <h2 className="text-sm font-semibold text-gray-900">Sales Order Selection</h2>
+              <span className="text-xs font-bold text-orange-600">1</span>
+              <h2 className="text-xs font-semibold text-gray-900">Sales Order Selection</h2>
             </div>
             <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[1] ? 'rotate-180' : ''}`} />
           </button>
@@ -1713,8 +1713,8 @@ export default function ProductionPlanningForm() {
               className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
             >
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-green-600">2</span>
-                <h2 className="text-sm font-semibold text-gray-900">Finished Goods ({fgItems.length})</h2>
+                <span className="text-xs font-bold text-green-600">2</span>
+                <h2 className="text-xs font-semibold text-gray-900">Finished Goods ({fgItems.length})</h2>
               </div>
               <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[2] ? 'rotate-180' : ''}`} />
             </button>
@@ -1762,8 +1762,8 @@ export default function ProductionPlanningForm() {
               className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
             >
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-purple-600">3</span>
-                <h2 className="text-sm font-semibold text-gray-900">Raw Materials ({rawMaterialItems.length})</h2>
+                <span className="text-xs font-bold text-purple-600">3</span>
+                <h2 className="text-xs font-semibold text-gray-900">Raw Materials ({rawMaterialItems.length})</h2>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -1867,8 +1867,8 @@ export default function ProductionPlanningForm() {
               className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
             >
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-cyan-600">3.5</span>
-                <h2 className="text-sm font-semibold text-gray-900">Sub-Assembly BOM Materials ({subAssemblyBomMaterials.length})</h2>
+                <span className="text-xs font-bold text-cyan-600">3.5</span>
+                <h2 className="text-xs font-semibold text-gray-900">Sub-Assembly BOM Materials ({subAssemblyBomMaterials.length})</h2>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -1913,7 +1913,7 @@ export default function ProductionPlanningForm() {
                   return (
                     <div key={subAsmCode} className="border border-cyan-200 rounded bg-cyan-50 p-3">
                       <div className="mb-2 pb-2 border-b border-cyan-200">
-                        <h4 className="font-semibold text-sm text-cyan-900">
+                        <h4 className="font-semibold text-xs text-cyan-900">
                           {subAsmCode} - {subAsmInfo.sub_assembly_name}
                         </h4>
                         <p className="text-xs text-cyan-700 mt-1">
@@ -1976,8 +1976,8 @@ export default function ProductionPlanningForm() {
               className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
             >
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-blue-600">4</span>
-                <h2 className="text-sm font-semibold text-gray-900">Sub-Assembly ({subAssemblyItems.length})</h2>
+                <span className="text-xs font-bold text-blue-600">4</span>
+                <h2 className="text-xs font-semibold text-gray-900">Sub-Assembly ({subAssemblyItems.length})</h2>
               </div>
               <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[4] ? 'rotate-180' : ''}`} />
             </button>
@@ -2028,7 +2028,7 @@ export default function ProductionPlanningForm() {
         <div className="flex gap-2 justify-between pt-3 mb-3">
           <button
             onClick={() => navigate('/manufacturing/production-planning')}
-            className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm font-medium hover:bg-gray-50 transition"
+            className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-50 transition"
           >
             ← Back to Plans
           </button>
@@ -2038,7 +2038,7 @@ export default function ProductionPlanningForm() {
                 <button
                   onClick={saveProductionPlan}
                   disabled={savingPlan || !selectedSalesOrders.length}
-                  className="px-3 py-1.5 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed transition flex items-center gap-2"
+                  className="px-3 py-1.5 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed transition flex items-center gap-2"
                 >
                   <Save size={16} /> {savingPlan ? 'Saving...' : 'Save Plan'}
                 </button>
@@ -2050,7 +2050,7 @@ export default function ProductionPlanningForm() {
 
         {/* Work Order Modal */}
         {showWorkOrderModal && workOrderData && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99] p-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99] p-2">
             <div className="bg-white rounded shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
               <div className="sticky top-0 bg-gradient-to-r from-orange-600 via-orange-600 to-orange-700 p-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -2058,7 +2058,7 @@ export default function ProductionPlanningForm() {
                     <Boxes size={16} className="text-white" />
                   </div>
                   <div>
-                    <h2 className="text-white font-bold text-sm">Create Work Order</h2>
+                    <h2 className="text-white font-bold text-xs">Create Work Order</h2>
                     <p className="text-orange-100 text-xs">Review details and confirm</p>
                   </div>
                 </div>

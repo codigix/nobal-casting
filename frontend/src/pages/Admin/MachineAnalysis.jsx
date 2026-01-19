@@ -50,16 +50,16 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
   if (!isOpen || !machine) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]p-2">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-gradient-to-r from-slate-900 to-slate-800 p-6 flex items-center justify-between text-white z-10">
           <div>
-            <h2 className="text-2xl font-bold m-0">{machine.name}</h2>
-            <p className="text-slate-300 text-sm mt-1 m-0">Machine ID: {machine.id}</p>
+            <h2 className="text-xl font-bold m-0">{machine.name}</h2>
+            <p className="text-slate-300 text-xs mt-1 m-0">Machine ID: {machine.id}</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-slate-700 rounded-xs transition-colors"
           >
             <X size={24} />
           </button>
@@ -95,7 +95,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 mb-8">
-            <div className="p-6 border-b border-gray-200">
+            <div className="">
               <div className="flex items-center gap-2 mb-4">
                 <Calendar size={20} className="text-slate-600" />
                 <h3 className="text-base font-bold text-slate-900 m-0">Historical Performance Metrics</h3>
@@ -103,7 +103,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => setActiveTab('daily')}
-                  className={`px-4 py-2 rounded-lg text-xs font-semibold  transition-colors ${
+                  className={`px-4 py-2 rounded-xs text-xs font-semibold  transition-colors ${
                     activeTab === 'daily'
                       ? 'bg-blue-600 text-white'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -113,7 +113,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
                 </button>
                 <button
                   onClick={() => setActiveTab('weekly')}
-                  className={`px-4 py-2 rounded-lg text-xs font-semibold  transition-colors ${
+                  className={`px-4 py-2 rounded-xs text-xs font-semibold  transition-colors ${
                     activeTab === 'weekly'
                       ? 'bg-green-600 text-white'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -123,7 +123,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
                 </button>
                 <button
                   onClick={() => setActiveTab('monthly')}
-                  className={`px-4 py-2 rounded-lg text-xs font-semibold  transition-colors ${
+                  className={`px-4 py-2 rounded-xs text-xs font-semibold  transition-colors ${
                     activeTab === 'monthly'
                       ? 'bg-purple-600 text-white'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -133,7 +133,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
                 </button>
                 <button
                   onClick={() => setActiveTab('yearly')}
-                  className={`px-4 py-2 rounded-lg text-xs font-semibold  transition-colors ${
+                  className={`px-4 py-2 rounded-xs text-xs font-semibold  transition-colors ${
                     activeTab === 'yearly'
                       ? 'bg-amber-600 text-white'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -146,18 +146,18 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
 
             <div className="p-6">
               {error && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-red-800 text-sm">{error}</p>
+                <div className="mb-4p-2 bg-red-50 border border-red-200 rounded-xs">
+                  <p className="text-red-800 text-xs">{error}</p>
                 </div>
               )}
               
               {historyLoading ? (
                 <div className="flex items-center justify-center h-80">
                   <div className="text-center">
-                    <div className="inline-block p-4 bg-slate-100 rounded-lg mb-2">
+                    <div className="inline-block p-2 bg-slate-100 rounded-xs mb-2">
                       <div className="animate-spin text-2xl">⏳</div>
                     </div>
-                    <p className="text-slate-600 text-sm">Loading metrics...</p>
+                    <p className="text-slate-600 text-xs">Loading metrics...</p>
                   </div>
                 </div>
               ) : (
@@ -243,7 +243,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
                   {(!historyData[activeTab] || historyData[activeTab].length === 0) && (
                     <div className="flex items-center justify-center h-80">
                       <div className="text-center">
-                        <p className="text-slate-500 text-sm">No data available for {activeTab}</p>
+                        <p className="text-slate-500 text-xs">No data available for {activeTab}</p>
                         <p className="text-slate-400 text-xs mt-1">Data: daily={historyData.daily?.length || 0}, weekly={historyData.weekly?.length || 0}, monthly={historyData.monthly?.length || 0}, yearly={historyData.yearly?.length || 0}</p>
                       </div>
                     </div>
@@ -261,19 +261,19 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="py-2 border-b border-slate-300">
                 <span className="text-xs font-semibold text-slate-600 uppercase">Assigned Operations</span>
-                <p className="text-sm font-bold text-slate-900 mt-1">{machine.operations || 'N/A'}</p>
+                <p className="text-xs font-bold text-slate-900 mt-1">{machine.operations || 'N/A'}</p>
               </div>
               <div className="py-2 border-b border-slate-300">
                 <span className="text-xs font-semibold text-slate-600 uppercase">Location</span>
-                <p className="text-sm font-bold text-slate-900 mt-1">{machine.location || 'N/A'}</p>
+                <p className="text-xs font-bold text-slate-900 mt-1">{machine.location || 'N/A'}</p>
               </div>
               <div className="py-2 border-b border-slate-300">
                 <span className="text-xs font-semibold text-slate-600 uppercase">Total Jobs</span>
-                <p className="text-sm font-bold text-slate-900 mt-1">{machine.totalJobs}</p>
+                <p className="text-xs font-bold text-slate-900 mt-1">{machine.totalJobs}</p>
               </div>
               <div className="py-2 border-b border-slate-300">
                 <span className="text-xs font-semibold text-slate-600 uppercase">Completed Jobs</span>
-                <p className="text-sm font-bold text-slate-900 mt-1">{machine.completedJobs}</p>
+                <p className="text-xs font-bold text-slate-900 mt-1">{machine.completedJobs}</p>
               </div>
             </div>
           </div>
@@ -285,7 +285,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-sm text-slate-600">Status:</span>
+                <span className="text-xs text-slate-600">Status:</span>
                 <span className={`font-bold px-3 py-1 rounded text-xs ${
                   machine.status === 'Operational' ? 'bg-green-100 text-green-800' :
                   machine.status === 'Maintenance' ? 'bg-amber-100 text-amber-800' :
@@ -293,23 +293,23 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
                 }`}>{machine.status}</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-sm text-slate-600">Performance:</span>
+                <span className="text-xs text-slate-600">Performance:</span>
                 <span className="font-bold text-slate-900">{machine.performance}%</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-sm text-slate-600">Last Maintenance:</span>
+                <span className="text-xs text-slate-600">Last Maintenance:</span>
                 <span className="font-bold text-slate-900">{machine.lastMaintenance}</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-sm text-slate-600">Next Maintenance:</span>
+                <span className="text-xs text-slate-600">Next Maintenance:</span>
                 <span className="font-bold text-slate-900">{machine.nextMaintenance}</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-sm text-slate-600">Total Uptime Hours:</span>
+                <span className="text-xs text-slate-600">Total Uptime Hours:</span>
                 <span className="font-bold text-slate-900">{machine.uptimeHours} hrs</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-sm text-slate-600">Rejection Rate:</span>
+                <span className="text-xs text-slate-600">Rejection Rate:</span>
                 <span className="font-bold text-slate-900">{machine.rejectionRate}%</span>
               </div>
             </div>
@@ -572,7 +572,7 @@ export default function MachineAnalysis() {
     return (
       <div className="p-3 bg-slate-50 min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block p-4 bg-white rounded-lg shadow-sm mb-4">
+          <div className="inline-block p-2 bg-white rounded-xs shadow-sm mb-4">
             <div className="animate-spin text-4xl">⏳</div>
           </div>
           <p className="text-slate-600">Loading machines analysis...</p>
@@ -585,11 +585,11 @@ export default function MachineAnalysis() {
     return (
       <div className="p-3 bg-slate-50 min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md">
-          <div className="inline-block p-4 bg-red-50 rounded-lg mb-4">
+          <div className="inline-block p-2 bg-red-50 rounded-xs mb-4">
             <span className="text-4xl">⚠️</span>
           </div>
           <p className="text-red-600 font-semibold mb-2">Error Loading Data</p>
-          <p className="text-slate-600 text-sm">{error}</p>
+          <p className="text-slate-600 text-xs">{error}</p>
         </div>
       </div>
     )
@@ -600,7 +600,7 @@ export default function MachineAnalysis() {
       <div className="bg-gradient-to-br from-white to-slate-100 px-2 py-2 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
         <div className=" mx-auto">
           <div className="flex items-center gap-4 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white">
+            <div className="w-10 h-10 rounded-xs bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white">
               <Factory size={24} />
             </div>
             <div>
@@ -623,7 +623,7 @@ export default function MachineAnalysis() {
                 <p className="text-xs font-semibold text-slate-500  m-0">Total Machines</p>
                 <p className="text-xl font-bold text-slate-900 mt-2 m-0">{machineDetails.length}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xs bg-blue-100 flex items-center justify-center">
                 <Factory size={24} className="text-blue-600" />
               </div>
             </div>
@@ -635,7 +635,7 @@ export default function MachineAnalysis() {
                 <p className="text-xs font-semibold text-slate-500  m-0">Avg Performance</p>
                 <p className="text-xl font-bold text-slate-900 mt-2 m-0">{averagePerformance}%</p>
               </div>
-              <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xs bg-green-100 flex items-center justify-center">
                 <TrendingUp size={24} className="text-green-600" />
               </div>
             </div>
@@ -647,7 +647,7 @@ export default function MachineAnalysis() {
                 <p className="text-xs font-semibold text-slate-500  m-0">Avg Utilization</p>
                 <p className="text-xl font-bold text-slate-900 mt-2 m-0">{averageUtilization}%</p>
               </div>
-              <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xs bg-purple-100 flex items-center justify-center">
                 <BarChart3 size={24} className="text-purple-600" />
               </div>
             </div>
@@ -659,7 +659,7 @@ export default function MachineAnalysis() {
                 <p className="text-xs font-semibold text-slate-500  m-0">Workstations</p>
                 <p className="text-xl font-bold text-slate-900 mt-2 m-0">{workstations.length}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg bg-indigo-100 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xs bg-indigo-100 flex items-center justify-center">
                 <Wrench size={24} className="text-indigo-600" />
               </div>
             </div>
@@ -873,7 +873,7 @@ export default function MachineAnalysis() {
                   <button
                     key={period}
                     onClick={() => setTimeFilterUtilization(period)}
-                    className={`p-2 rounded-lg text-xs font-semibold transition-colors ${
+                    className={`p-2 rounded-xs text-xs font-semibold transition-colors ${
                       timeFilterUtilization === period
                         ? 'bg-blue-600 text-white'
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -913,7 +913,7 @@ export default function MachineAnalysis() {
                 <button
                   key={period}
                   onClick={() => setTimeFilterEfficiency(period)}
-                  className={`p-2 rounded-lg text-xs font-semibold transition-colors ${
+                  className={`p-2 rounded-xs text-xs font-semibold transition-colors ${
                     timeFilterEfficiency === period
                       ? 'bg-green-600 text-white'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -964,7 +964,7 @@ export default function MachineAnalysis() {
                     <td className="p-2 text-xs text-gray-700">{machine.name}</td>
                     <td className="p-2 text-xs text-gray-700">{machine.operations || 'N/A'}</td>
                     <td className="p-2">
-                      <span className={`p-2 rounded-lg text-xs font-semibold ${getStatusBadgeColor(machine.status)}`}>
+                      <span className={`p-2 rounded-xs text-xs font-semibold ${getStatusBadgeColor(machine.status)}`}>
                         {machine.status}
                       </span>
                     </td>
@@ -996,7 +996,7 @@ export default function MachineAnalysis() {
                     <td className="p-4 text-center">
                       <button
                         onClick={() => openModal(machine)}
-                        className="inline-flex items-center gap-2 p-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-xs font-semibold transition-colors"
+                        className="inline-flex items-center gap-2 p-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-xs text-xs font-semibold transition-colors"
                       >
                         <Eye size={14} />
                         Details
@@ -1056,7 +1056,7 @@ export default function MachineAnalysis() {
                       <td className="p-2 text-xs text-gray-700">{workstation.workstation_name || workstation.name}</td>
                       <td className="p-2 text-xs text-gray-700">{workstation.description || '-'}</td>
                       <td className="p-4 text-center">
-                        <span className={`p-2 rounded-lg text-xs font-semibold ${getWorkstationStatusColor(workstation.status)}`}>
+                        <span className={`p-2 rounded-xs text-xs font-semibold ${getWorkstationStatusColor(workstation.status)}`}>
                           {workstation.status || 'active'}
                         </span>
                       </td>
@@ -1064,7 +1064,7 @@ export default function MachineAnalysis() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4" className="p-4 text-center text-sm text-gray-500">
+                    <td colSpan="4" className="p-4 text-center text-xs text-gray-500">
                       No workstations found
                     </td>
                   </tr>

@@ -1,3 +1,4 @@
+export { default as InventoryDashboard } from './InventoryDashboard'
 export { default as Warehouses } from './Warehouses'
 export { default as StockBalance } from './StockBalance'
 export { default as StockEntries } from './StockEntries'

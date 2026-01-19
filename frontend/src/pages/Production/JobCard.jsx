@@ -413,7 +413,7 @@ export default function JobCard() {
         <div className="flex justify-between items-start mb-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
+              <div className="w-9 h-9 rounded-xs bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
                 🎫
               </div>
               <div>
@@ -462,7 +462,7 @@ export default function JobCard() {
           jobCardId={viewingJobCardId}
         />
 
-        <div className="bg-white rounded-lg shadow-sm p-3 mb-3">
+        <div className="bg-white rounded-xs shadow-sm p-3 mb-3">
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs font-semibold text-gray-700 block mb-1">Status</label>
@@ -495,14 +495,14 @@ export default function JobCard() {
         </div>
 
         {loading ? (
-          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+          <div className="bg-white rounded-xs p-3 text-center shadow-sm">
             <div className="text-3xl mb-2">⏳</div>
             <div className="text-xs text-gray-600">Loading work orders...</div>
           </div>
         ) : workOrders.length > 0 ? (
           <div className="space-y-2">
             {workOrders.map(wo => (
-              <div key={wo.wo_id} className="bg-white rounded-lg shadow-sm">
+              <div key={wo.wo_id} className="bg-white rounded-xs shadow-sm">
                 <div 
                   className="border-l-4 border-purple-400 bg-gray-50 hover:bg-gray-100 transition p-3 flex items-center gap-2"
                 >
@@ -757,7 +757,7 @@ export default function JobCard() {
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+          <div className="bg-white rounded-xs p-3 text-center shadow-sm">
             <div className="text-3xl mb-2">📋</div>
             <div className="text-xs text-gray-600">No work orders found. Job cards will be auto-created when you expand a work order.</div>
           </div>

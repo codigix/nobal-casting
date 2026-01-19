@@ -117,7 +117,7 @@ export default function EmployeeList() {
       key: 'email',
       label: 'Email',
       width: '20%',
-      render: (val) => val ? <span className="font-mono text-sm">{val}</span> : '-'
+      render: (val) => val ? <span className="font-mono text-xs">{val}</span> : '-'
     },
     {
       key: 'phone',
@@ -364,7 +364,7 @@ export default function EmployeeList() {
       )}
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-r-md">
+        <div className="mb-6 p-2 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-r-md">
           <p className="text-red-800 dark:text-red-200">{error}</p>
         </div>
       )}
@@ -384,8 +384,6 @@ export default function EmployeeList() {
           filters={filters}
           onFilterChange={setFilters}
           filterConfig={filterConfig}
-          onReset={() => setFilters({ search: '', status: '', department: '' })}
-          showPresets={true}
         />
       </div>
 
@@ -393,7 +391,7 @@ export default function EmployeeList() {
         {filteredEmployees.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-[var(--text-secondary)] text-lg mb-4">No employees found</p>
-            <p className="text-[var(--text-secondary)] text-sm mb-4">Try adjusting your filters or create a new employee</p>
+            <p className="text-[var(--text-secondary)] text-xs mb-4">Try adjusting your filters or create a new employee</p>
             <Button variant="primary" size="sm" onClick={handleAddClick}>
               Create First Employee
             </Button>
@@ -535,7 +533,7 @@ function EmployeeForm({ formData, setFormData, formError }) {
           />
 
           <div className="form-group">
-            <label className="block mb-2 text-sm font-medium text-[var(--text-primary)]">Gender</label>
+            <label className="block mb-2 text-xs font-medium text-[var(--text-primary)]">Gender</label>
             <select
               className="input-base"
               value={formData.gender}
@@ -554,7 +552,7 @@ function EmployeeForm({ formData, setFormData, formError }) {
         <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Company Details</h3>
         <div className="grid grid-cols-2 gap-4">
           <div className="form-group">
-            <label className="block mb-2 text-sm font-medium text-[var(--text-primary)]">Department *</label>
+            <label className="block mb-2 text-xs font-medium text-[var(--text-primary)]">Department *</label>
             <select
               className="input-base"
               value={formData.department}
@@ -656,7 +654,7 @@ function EmployeeForm({ formData, setFormData, formError }) {
             onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
             className="w-4 h-4"
           />
-          <span className="text-sm font-medium text-neutral-700">Active</span>
+          <span className="text-xs font-medium text-neutral-700">Active</span>
         </label>
       </div>
     </div>

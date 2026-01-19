@@ -35,3 +35,10 @@ Thumbs.db
 
 # Database
 .mysql_history
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

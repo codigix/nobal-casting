@@ -391,6 +391,26 @@ CREATE TABLE IF NOT EXISTS stock_ledger (
   INDEX idx_posted_date (posted_date)
 );
 
+-- ===== NOTIFICATION SYSTEM =====
+
+CREATE TABLE IF NOT EXISTS notification (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  notification_type VARCHAR(50) NOT NULL COMMENT 'STOCK_IN, STOCK_OUT, TRANSFER, TRANSFER_COMPLETE, LOW_STOCK, MATERIAL_REQUEST_NEW, MATERIAL_REQUEST_APPROVED, MATERIAL_REQUEST_REJECTED',
+  title VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  reference_type VARCHAR(50) COMMENT 'StockMovement, MaterialRequest',
+  reference_id INT,
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  read_at TIMESTAMP NULL,
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  INDEX idx_user_id (user_id),
+  INDEX idx_notification_type (notification_type),
+  INDEX idx_is_read (is_read),
+  INDEX idx_created_at (created_at)
+);
+
 -- ===== CREATE INDEXES FOR PERFORMANCE =====
 
 CREATE INDEX idx_supplier_name ON supplier(name);

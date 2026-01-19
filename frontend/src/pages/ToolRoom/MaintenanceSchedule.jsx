@@ -147,7 +147,7 @@ const MaintenanceSchedule = () => {
           </div>
           <button
             onClick={() => handleOpenModal()}
-            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xs flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
             Add Maintenance
@@ -155,14 +155,14 @@ const MaintenanceSchedule = () => {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-2 rounded-lg mb-6 flex items-center gap-2">
+          <div className="bg-red-50 border border-red-200 text-red-700 p-2 rounded-xs mb-6 flex items-center gap-2">
             <AlertCircle className="w-5 h-5" />
             {error}
           </div>
         )}
 
         {/* Tabs */}
-        <div className="bg-white rounded-lg shadow mb-6">
+        <div className="bg-white rounded-xs shadow mb-6">
           <div className="flex border-b">
             <button
               onClick={() => setActiveTab('schedule')}
@@ -219,18 +219,18 @@ const MaintenanceSchedule = () => {
                 {filteredMaintenance.length > 0 ? (
                   filteredMaintenance.map(item => (
                     <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="p-2 text-sm text-gray-900 font-medium">{item.toolId}</td>
-                      <td className="p-2 text-sm text-gray-600">{item.maintenanceType}</td>
-                      <td className="p-2 text-sm text-gray-600">
+                      <td className="p-2 text-xs text-gray-900 font-medium">{item.toolId}</td>
+                      <td className="p-2 text-xs text-gray-600">{item.maintenanceType}</td>
+                      <td className="p-2 text-xs text-gray-600">
                         {new Date(item.scheduledDate).toLocaleDateString()}
                       </td>
-                      <td className="p-2 text-sm text-gray-900 font-medium">₹{item.cost}</td>
+                      <td className="p-2 text-xs text-gray-900 font-medium">₹{item.cost}</td>
                       <td className="p-2">
-                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(item.status)}`}>
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
                           {item.status}
                         </span>
                       </td>
-                      <td className="p-2 text-center">
+                      <td className="p-2 text-center text-xs">
                         <div className="flex justify-center gap-2">
                           <button
                             onClick={() => handleOpenModal(item)}
@@ -264,7 +264,7 @@ const MaintenanceSchedule = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="bg-white rounded-xs shadow-xl max-w-md w-full mx-4">
             <div className="flex justify-between items-center p-6 border-b">
               <h2 className="text-xl font-bold text-gray-900">
                 {editingId ? 'Edit Maintenance' : 'Add Maintenance'}
@@ -282,7 +282,7 @@ const MaintenanceSchedule = () => {
                   value={formData.toolId}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
               <div>
@@ -292,7 +292,7 @@ const MaintenanceSchedule = () => {
                   value={formData.maintenanceType}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="">Select type</option>
                   <option value="preventive">Preventive</option>
@@ -307,7 +307,7 @@ const MaintenanceSchedule = () => {
                   name="scheduledDate"
                   value={formData.scheduledDate}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
               <div>
@@ -317,7 +317,7 @@ const MaintenanceSchedule = () => {
                   name="cost"
                   value={formData.cost}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
               <div>
@@ -326,7 +326,7 @@ const MaintenanceSchedule = () => {
                   name="status"
                   value={formData.status}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="pending">Pending</option>
                   <option value="in_progress">In Progress</option>
@@ -341,20 +341,20 @@ const MaintenanceSchedule = () => {
                   value={formData.description}
                   onChange={handleInputChange}
                   rows="3"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-xs text-gray-700 hover:bg-gray-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                  className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-xs hover:bg-orange-700"
                 >
                   {editingId ? 'Update' : 'Create'}
                 </button>

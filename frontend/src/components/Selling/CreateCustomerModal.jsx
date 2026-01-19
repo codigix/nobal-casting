@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { AlertCircle } from 'lucide-react'
 import Modal from '../Modal'
+import api from '../../services/api'
 
 export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
@@ -24,9 +25,8 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
     const prefix = name.slice(0, 3).toUpperCase()
     
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/selling/customers`)
-      const data = await res.json()
-      const existingCustomers = data.data || []
+      const res = await api.get('/customers')
+      const existingCustomers = res.data.data || []
       
       const prefixedIds = existingCustomers
         .filter(c => c.customer_id && c.customer_id.startsWith(prefix))
@@ -83,27 +83,18 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
         throw new Error('Please enter a valid email address')
       }
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/selling/customers`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customer_id: customerId,
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          gst_no: formData.gst_no,
-          billing_address: formData.billing_address,
-          shipping_address: formData.shipping_address,
-          credit_limit: parseFloat(formData.credit_limit || 0),
-          customer_type: formData.customer_type,
-          status: formData.status,
-          total_sales: 0
-        })
+      const res = await api.post('/customers', {
+        customer_id: customerId,
+        customer_name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.billing_address,
+        customer_type: formData.customer_type,
+        status: formData.status
       })
 
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to create customer')
+      if (!res.status || res.status >= 400) {
+        throw new Error(res.data?.error || 'Failed to create customer')
       }
 
       setCustomerId('')
@@ -119,6 +110,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
         status: 'active'
       })
       
+      localStorage.setItem('customersUpdatedAt', new Date().getTime().toString())
       onSuccess?.()
       onClose()
     } catch (err) {
@@ -132,7 +124,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
     <Modal isOpen={isOpen} onClose={onClose} title="👤 Create New Customer" size="lg">
       <form onSubmit={handleSubmit}>
         {error && (
-          <div className="mb-5 p-3 bg-red-50 border border-red-300 rounded-lg text-red-700 text-sm flex items-center gap-2">
+          <div className="mb-5 p-3 bg-red-50 border border-red-300 rounded-xs text-red-700 text-xs flex items-center gap-2">
             <AlertCircle size={18} />
             {error}
           </div>
@@ -140,7 +132,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
 
         <div className="grid grid-cols-2 gap-5">
           <div>
-            <label className="block font-semibold text-gray-900 mb-2 text-sm">
+            <label className="block font-semibold text-gray-900 mb-2 text-xs">
               Customer Name *
             </label>
             <input
@@ -150,12 +142,12 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               value={formData.name}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-900 mb-2 text-sm">
+            <label className="block font-semibold text-gray-900 mb-2 text-xs">
               Customer ID * <span className="text-gray-500 font-normal">(Auto-generated)</span>
             </label>
             <input
@@ -163,12 +155,12 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               readOnly
               value={customerId}
               placeholder="Will auto-generate..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-900 mb-2 text-sm">
+            <label className="block font-semibold text-gray-900 mb-2 text-xs">
               Email *
             </label>
             <input
@@ -178,12 +170,12 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               value={formData.email}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-900 mb-2 text-sm">
+            <label className="block font-semibold text-gray-900 mb-2 text-xs">
               Phone *
             </label>
             <input
@@ -193,12 +185,12 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               value={formData.phone}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-900 mb-2 text-sm">
+            <label className="block font-semibold text-gray-900 mb-2 text-xs">
               GST Number
             </label>
             <input
@@ -207,19 +199,19 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               placeholder="22ABCDE1234F1Z5"
               value={formData.gst_no}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-900 mb-2 text-sm">
+            <label className="block font-semibold text-gray-900 mb-2 text-xs">
               Customer Type *
             </label>
             <select
               name="customer_type"
               value={formData.customer_type}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
               required
             >
               <option value="tata">TATA</option>
@@ -228,7 +220,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-900 mb-2 text-sm">
+            <label className="block font-semibold text-gray-900 mb-2 text-xs">
               Credit Limit (₹)
             </label>
             <input
@@ -239,19 +231,19 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               onChange={handleInputChange}
               step="0.01"
               min="0"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-900 mb-2 text-sm">
+            <label className="block font-semibold text-gray-900 mb-2 text-xs">
               Status
             </label>
             <select
               name="status"
               value={formData.status}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
             >
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
@@ -259,7 +251,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           <div className="col-span-2">
-            <label className="block font-semibold text-gray-900 mb-2 text-sm">
+            <label className="block font-semibold text-gray-900 mb-2 text-xs">
               Billing Address
             </label>
             <textarea
@@ -268,12 +260,12 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               value={formData.billing_address}
               onChange={handleInputChange}
               rows="2"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-vertical focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs resize-vertical focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
           <div className="col-span-2">
-            <label className="block font-semibold text-gray-900 mb-2 text-sm">
+            <label className="block font-semibold text-gray-900 mb-2 text-xs">
               Shipping Address
             </label>
             <textarea
@@ -282,7 +274,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               value={formData.shipping_address}
               onChange={handleInputChange}
               rows="2"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-vertical focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs resize-vertical focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
         </div>
@@ -291,14 +283,14 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700 cursor-pointer text-sm font-medium hover:bg-gray-200 transition"
+            className="px-6 py-2 bg-gray-100 border border-gray-300 rounded-xs text-gray-700 cursor-pointer text-xs font-medium hover:bg-gray-200 transition"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white border-none rounded-lg cursor-pointer text-xs font-semibold  hover:from-green-600 hover:to-green-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+            className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white border-none rounded-xs cursor-pointer text-xs font-semibold  hover:from-green-600 hover:to-green-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? 'Creating...' : '✓ Create Customer'}
           </button>

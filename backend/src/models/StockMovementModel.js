@@ -13,11 +13,15 @@ class StockMovementModel {
           i.item_code,
           i.name as item_name,
           w.warehouse_name,
+          sw.warehouse_name as source_warehouse_name,
+          tw.warehouse_name as target_warehouse_name,
           cu.full_name as created_by_user,
           au.full_name as approved_by_user
         FROM stock_movements sm
         LEFT JOIN item i ON sm.item_code = i.item_code
         LEFT JOIN warehouses w ON sm.warehouse_id = w.id
+        LEFT JOIN warehouses sw ON sm.source_warehouse_id = sw.id
+        LEFT JOIN warehouses tw ON sm.target_warehouse_id = tw.id
         LEFT JOIN users cu ON sm.created_by = cu.user_id
         LEFT JOIN users au ON sm.approved_by = au.user_id
         WHERE 1=1
@@ -78,11 +82,15 @@ class StockMovementModel {
           i.item_code,
           i.name as item_name,
           w.warehouse_name,
+          sw.warehouse_name as source_warehouse_name,
+          tw.warehouse_name as target_warehouse_name,
           cu.full_name as created_by_user,
           au.full_name as approved_by_user
         FROM stock_movements sm
         LEFT JOIN item i ON sm.item_code = i.item_code
         LEFT JOIN warehouses w ON sm.warehouse_id = w.id
+        LEFT JOIN warehouses sw ON sm.source_warehouse_id = sw.id
+        LEFT JOIN warehouses tw ON sm.target_warehouse_id = tw.id
         LEFT JOIN users cu ON sm.created_by = cu.user_id
         LEFT JOIN users au ON sm.approved_by = au.user_id
         WHERE sm.id = ?`,
@@ -102,6 +110,8 @@ class StockMovementModel {
         transaction_no,
         item_code,
         warehouse_id,
+        source_warehouse_id,
+        target_warehouse_id,
         movement_type,
         quantity,
         reference_type,
@@ -112,10 +122,11 @@ class StockMovementModel {
 
       const [result] = await db.query(
         `INSERT INTO stock_movements (
-          transaction_no, item_code, warehouse_id, movement_type, quantity,
-          reference_type, reference_name, notes, status, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?)`,
-        [transaction_no, item_code, warehouse_id, movement_type, quantity, reference_type, reference_name, notes, created_by]
+          transaction_no, item_code, warehouse_id, source_warehouse_id, target_warehouse_id, 
+          movement_type, quantity, reference_type, reference_name, notes, status, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?)`,
+        [transaction_no, item_code, warehouse_id, source_warehouse_id, target_warehouse_id, 
+         movement_type, quantity, reference_type, reference_name, notes, created_by]
       )
 
       return this.getById(result.insertId)
@@ -144,45 +155,117 @@ class StockMovementModel {
           [userId, id]
         )
 
-        // Create stock ledger entry
-        const qty_in = movement.movement_type === 'IN' ? movement.quantity : 0
-        const qty_out = movement.movement_type === 'OUT' ? movement.quantity : 0
-
-        await connection.query(
-          `INSERT INTO stock_ledger (
-            item_code, warehouse_id, transaction_date, transaction_type,
-            qty_in, qty_out, reference_doctype, reference_name, remarks, created_by
-          ) VALUES (?, ?, NOW(), ?, ?, ?, 'Stock Movement', ?, ?, ?)`,
-          [movement.item_code, movement.warehouse_id, movement.movement_type, qty_in, qty_out, movement.transaction_no, movement.notes, userId]
+        // Get item details
+        const [itemData] = await connection.query(
+          `SELECT uom FROM item WHERE item_code = ?`,
+          [movement.item_code]
         )
+        const uom = itemData?.[0]?.uom || 'Kg'
 
-        // Update stock balance
-        const currentBalance = await connection.query(
-          `SELECT current_qty FROM stock_balance WHERE item_code = ? AND warehouse_id = ?`,
-          [movement.item_code, movement.warehouse_id]
-        )
+        if (movement.movement_type === 'TRANSFER') {
+          // Handle transfer: deduct from source, add to target
+          const sourceBalance = await connection.query(
+            `SELECT current_qty FROM stock_balance WHERE item_code = ? AND warehouse_id = ?`,
+            [movement.item_code, movement.source_warehouse_id]
+          )
+          const sourceQty = sourceBalance[0]?.[0]?.current_qty || 0
 
-        const currentQty = currentBalance[0]?.[0]?.current_qty || 0
-        const newQty = qty_in > 0 ? currentQty + qty_in : currentQty - qty_out
+          if (sourceQty < movement.quantity) {
+            throw new Error(`Insufficient stock in source warehouse. Available: ${sourceQty}, Requested: ${movement.quantity}`)
+          }
 
-        if (currentBalance[0]?.length > 0) {
+          // Deduct from source warehouse
+          const newSourceQty = sourceQty - movement.quantity
+          if (sourceBalance[0]?.length > 0) {
+            await connection.query(
+              `UPDATE stock_balance SET current_qty = ? WHERE item_code = ? AND warehouse_id = ?`,
+              [newSourceQty, movement.item_code, movement.source_warehouse_id]
+            )
+          }
+
+          // Create ledger entry for source (OUT)
           await connection.query(
-            `UPDATE stock_balance SET current_qty = ? WHERE item_code = ? AND warehouse_id = ?`,
-            [newQty, movement.item_code, movement.warehouse_id]
+            `INSERT INTO stock_ledger (
+              item_code, warehouse_id, transaction_date, transaction_type,
+              qty_in, qty_out, reference_doctype, reference_name, remarks, created_by
+            ) VALUES (?, ?, NOW(), 'Transfer', 0, ?, 'Stock Movement', ?, ?, ?)`,
+            [movement.item_code, movement.source_warehouse_id, movement.quantity, movement.transaction_no, `Transfer to warehouse: ${movement.target_warehouse_name}`, userId]
+          )
+
+          // Add to target warehouse
+          const targetBalance = await connection.query(
+            `SELECT current_qty FROM stock_balance WHERE item_code = ? AND warehouse_id = ?`,
+            [movement.item_code, movement.target_warehouse_id]
+          )
+          const targetQty = targetBalance[0]?.[0]?.current_qty || 0
+          const newTargetQty = targetQty + movement.quantity
+
+          if (targetBalance[0]?.length > 0) {
+            await connection.query(
+              `UPDATE stock_balance SET current_qty = ? WHERE item_code = ? AND warehouse_id = ?`,
+              [newTargetQty, movement.item_code, movement.target_warehouse_id]
+            )
+          } else {
+            await connection.query(
+              `INSERT INTO stock_balance (item_code, warehouse_id, current_qty, uom) VALUES (?, ?, ?, ?)`,
+              [movement.item_code, movement.target_warehouse_id, newTargetQty, uom]
+            )
+          }
+
+          // Create ledger entry for target (IN)
+          await connection.query(
+            `INSERT INTO stock_ledger (
+              item_code, warehouse_id, transaction_date, transaction_type,
+              qty_in, qty_out, reference_doctype, reference_name, remarks, created_by
+            ) VALUES (?, ?, NOW(), 'Transfer', ?, 0, 'Stock Movement', ?, ?, ?)`,
+            [movement.item_code, movement.target_warehouse_id, movement.quantity, movement.transaction_no, `Transfer from warehouse: ${movement.source_warehouse_name}`, userId]
           )
         } else {
-          const item = await connection.query(
-            `SELECT uom FROM item WHERE item_code = ?`,
-            [movement.item_code]
-          )
+          // Handle IN/OUT movements
+          const qty_in = movement.movement_type === 'IN' ? movement.quantity : 0
+          const qty_out = movement.movement_type === 'OUT' ? movement.quantity : 0
+
           await connection.query(
-            `INSERT INTO stock_balance (item_code, warehouse_id, current_qty, uom) VALUES (?, ?, ?, ?)`,
-            [movement.item_code, movement.warehouse_id, newQty, item[0]?.[0]?.uom || 'Kg']
+            `INSERT INTO stock_ledger (
+              item_code, warehouse_id, transaction_date, transaction_type,
+              qty_in, qty_out, reference_doctype, reference_name, remarks, created_by
+            ) VALUES (?, ?, NOW(), ?, ?, ?, 'Stock Movement', ?, ?, ?)`,
+            [movement.item_code, movement.warehouse_id, movement.movement_type, qty_in, qty_out, movement.transaction_no, movement.notes, userId]
           )
+
+          // Update stock balance
+          const currentBalance = await connection.query(
+            `SELECT current_qty FROM stock_balance WHERE item_code = ? AND warehouse_id = ?`,
+            [movement.item_code, movement.warehouse_id]
+          )
+
+          const currentQty = currentBalance[0]?.[0]?.current_qty || 0
+          const newQty = qty_in > 0 ? currentQty + qty_in : currentQty - qty_out
+
+          if (currentBalance[0]?.length > 0) {
+            await connection.query(
+              `UPDATE stock_balance SET current_qty = ? WHERE item_code = ? AND warehouse_id = ?`,
+              [newQty, movement.item_code, movement.warehouse_id]
+            )
+          } else {
+            await connection.query(
+              `INSERT INTO stock_balance (item_code, warehouse_id, current_qty, uom) VALUES (?, ?, ?, ?)`,
+              [movement.item_code, movement.warehouse_id, newQty, uom]
+            )
+          }
         }
 
         await connection.commit()
-        return this.getById(id)
+
+        const approvedMovement = await this.getById(id)
+        
+        try {
+          await this.createNotifications(approvedMovement, userId)
+        } catch (notifError) {
+          console.log('Notification creation failed (non-critical):', notifError.message)
+        }
+        
+        return approvedMovement
       } catch (error) {
         await connection.rollback()
         throw error
@@ -191,6 +274,76 @@ class StockMovementModel {
       }
     } catch (error) {
       throw new Error(`Failed to approve stock movement: ${error.message}`)
+    }
+  }
+
+  static async createNotifications(movement, userId) {
+    try {
+      const NotificationModel = (await import('./NotificationModel.js')).default
+      const db = this.getDb()
+
+      let notificationType, title, message
+      
+      if (movement.movement_type === 'TRANSFER') {
+        notificationType = 'TRANSFER_COMPLETE'
+        title = `Stock Transfer Completed`
+        message = `${movement.quantity} units of ${movement.item_code} transferred from ${movement.source_warehouse_name} to ${movement.target_warehouse_name}`
+      } else if (movement.movement_type === 'IN') {
+        notificationType = 'STOCK_IN'
+        title = `Stock IN Approved`
+        message = `${movement.quantity} units of ${movement.item_code} received in ${movement.warehouse_name}`
+      } else {
+        notificationType = 'STOCK_OUT'
+        title = `Stock OUT Approved`
+        message = `${movement.quantity} units of ${movement.item_code} issued from ${movement.warehouse_name}`
+      }
+
+      const [warehouseUsers] = await db.execute(
+        `SELECT DISTINCT user_id FROM users WHERE department = 'Inventory' AND is_active = 1`
+      )
+
+      const userIds = warehouseUsers.map(u => u.user_id)
+      
+      if (userIds.length > 0) {
+        await NotificationModel.notifyUsers(userIds, {
+          notification_type: notificationType,
+          title,
+          message,
+          reference_type: 'StockMovement',
+          reference_id: movement.id
+        })
+      }
+
+      const lowStockThreshold = 20
+      const currentQty = movement.movement_type === 'TRANSFER' 
+        ? (await db.execute(
+            `SELECT current_qty FROM stock_balance WHERE item_code = ? AND warehouse_id = ?`,
+            [movement.item_code, movement.target_warehouse_id || movement.warehouse_id]
+          ))[0]?.[0]?.current_qty || 0
+        : (await db.execute(
+            `SELECT current_qty FROM stock_balance WHERE item_code = ? AND warehouse_id = ?`,
+            [movement.item_code, movement.warehouse_id]
+          ))[0]?.[0]?.current_qty || 0
+
+      if (currentQty < lowStockThreshold) {
+        const warehouseId = movement.movement_type === 'TRANSFER' ? movement.target_warehouse_id : movement.warehouse_id
+        const [materialRequestUsers] = await db.execute(
+          `SELECT DISTINCT user_id FROM users WHERE department IN ('Production', 'Purchase') AND is_active = 1`
+        )
+        
+        const mrUserIds = materialRequestUsers.map(u => u.user_id)
+        if (mrUserIds.length > 0) {
+          await NotificationModel.notifyUsers(mrUserIds, {
+            notification_type: 'LOW_STOCK',
+            title: `Low Stock Alert: ${movement.item_code}`,
+            message: `Stock level for ${movement.item_code} is now ${currentQty} units (below threshold of ${lowStockThreshold})`,
+            reference_type: 'StockMovement',
+            reference_id: movement.id
+          })
+        }
+      }
+    } catch (error) {
+      throw new Error(`Failed to create notifications: ${error.message}`)
     }
   }
 

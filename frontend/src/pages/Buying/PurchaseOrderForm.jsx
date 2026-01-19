@@ -345,7 +345,7 @@ export default function PurchaseOrderForm() {
               </label>
               <input
                 type="date"
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 value={po.order_date}
                 onChange={(e) => setPo({ ...po, order_date: e.target.value })}
               />
@@ -357,7 +357,7 @@ export default function PurchaseOrderForm() {
               </label>
               <input
                 type="date"
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 value={po.expected_date}
                 onChange={(e) => setPo({ ...po, expected_date: e.target.value })}
               />
@@ -383,21 +383,21 @@ export default function PurchaseOrderForm() {
           </div>
 
           {po.items.length === 0 ? (
-            <div className="py-10 px-5 text-center bg-neutral-50 dark:bg-neutral-800 rounded-lg border-2 border-dashed border-neutral-300 dark:border-neutral-600">
+            <div className="py-10 px-5 text-center bg-neutral-50 dark:bg-neutral-800 rounded-xs border-2 border-dashed border-neutral-300 dark:border-neutral-600">
               <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2">📋 No items added yet</p>
               <p className="text-xs text-neutral-500 dark:text-neutral-500 m-0">Click "Add Item" button above to start adding items to this purchase order</p>
             </div>
           ) : (
             <div className="">
-              <table className="w-full border-collapse border border-gray-200 text-sm">
+              <table className="w-full border-collapse border border-gray-200 text-xs">
                 <thead>
                   <tr className="bg-neutral-100 dark:bg-neutral-700 border-b-2 border-neutral-200 dark:border-neutral-600">
                     <th className="p-2 text-left font-semibold text-neutral-900 dark:text-neutral-100">Item Name</th>
-                    <th className="p-2 text-center font-semibold text-neutral-900 dark:text-neutral-100 w-24">Qty</th>
-                    <th className="p-2 text-center font-semibold text-neutral-900 dark:text-neutral-100 w-20">UOM</th>
+                    <th className="p-2 text-center text-xs font-semibold text-neutral-900 dark:text-neutral-100 w-24">Qty</th>
+                    <th className="p-2 text-center text-xs font-semibold text-neutral-900 dark:text-neutral-100 w-20">UOM</th>
                     <th className="p-2 text-right font-semibold text-neutral-900 dark:text-neutral-100 w-28">Rate</th>
                     <th className="p-2 text-right font-semibold text-neutral-900 dark:text-neutral-100 w-32">Amount</th>
-                    <th className="p-2 text-center font-semibold text-neutral-900 dark:text-neutral-100 w-16">Action</th>
+                    <th className="p-2 text-center text-xs font-semibold text-neutral-900 dark:text-neutral-100 w-16">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -414,7 +414,7 @@ export default function PurchaseOrderForm() {
                         />
                       </td>
 
-                      <td className="p-2 text-center">
+                      <td className="p-2 text-center text-xs">
                         <input
                           type="number"
                           placeholder="0"
@@ -424,11 +424,11 @@ export default function PurchaseOrderForm() {
                             newItems[index].qty = parseFloat(e.target.value) || 0
                             setPo({ ...po, items: newItems })
                           }}
-                          className="w-full px-2 py-1 border border-neutral-300 dark:border-neutral-600 rounded text-center text-sm bg-white dark:bg-neutral-700 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                          className="w-full px-2 py-1 border border-neutral-300 dark:border-neutral-600 rounded text-center text-xs bg-white dark:bg-neutral-700 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
                         />
                       </td>
 
-                      <td className="p-2 text-center">
+                      <td className="p-2 text-center text-xs">
                         <input
                           type="text"
                           placeholder="UOM"
@@ -438,7 +438,7 @@ export default function PurchaseOrderForm() {
                             newItems[index].uom = e.target.value
                             setPo({ ...po, items: newItems })
                           }}
-                          className={`w-full px-2 py-1 border rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 ${item.item_code ? 'border-emerald-300 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-neutral-100' : 'border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 dark:text-neutral-100'}`}
+                          className={`w-full px-2 py-1 border rounded text-center text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 ${item.item_code ? 'border-emerald-300 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-neutral-100' : 'border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 dark:text-neutral-100'}`}
                           disabled
                         />
                       </td>
@@ -453,7 +453,7 @@ export default function PurchaseOrderForm() {
                             newItems[index].rate = parseFloat(e.target.value) || 0
                             setPo({ ...po, items: newItems })
                           }}
-                          className={`w-full px-2 py-1 border rounded text-right text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 ${item.item_code && item.rate > 0 ? 'border-emerald-300 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-neutral-100' : 'border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 dark:text-neutral-100'}`}
+                          className={`w-full px-2 py-1 border rounded text-right text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 ${item.item_code && item.rate > 0 ? 'border-emerald-300 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-neutral-100' : 'border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 dark:text-neutral-100'}`}
                         />
                       </td>
 
@@ -461,7 +461,7 @@ export default function PurchaseOrderForm() {
                         ₹{(item.qty * item.rate).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                       </td>
 
-                      <td className="p-2 text-center">
+                      <td className="p-2 text-center text-xs">
                         <button
                           type="button"
                           onClick={() => handleRemoveItem(index)}
@@ -482,19 +482,19 @@ export default function PurchaseOrderForm() {
         {/* Section 3: Item Summary */}
         <Card className="mb-6 ">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-5 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            <div className="p-5 bg-emerald-50 dark:bg-emerald-900/20 rounded-xs border border-emerald-200 dark:border-emerald-800">
               <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase mb-2">📋 Total Items</p>
               <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 m-0">
                 {po.items.length}
               </p>
             </div>
-            <div className="p-5 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            <div className="p-5 bg-emerald-50 dark:bg-emerald-900/20 rounded-xs border border-emerald-200 dark:border-emerald-800">
               <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase mb-2">⚖️ Total Quantity</p>
               <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 m-0">
                 {getTotalQty().toLocaleString('en-IN', { maximumFractionDigits: 2 })}
               </p>
             </div>
-            <div className="p-5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="p-5 bg-blue-50 dark:bg-blue-900/20 rounded-xs border border-blue-200 dark:border-blue-800">
               <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase mb-2">💰 Subtotal</p>
               <p className="text-xl font-bold text-blue-600 dark:text-blue-400 m-0">
                 ₹{calculateSubtotal().toLocaleString('en-IN', { maximumFractionDigits: 2 })}
@@ -535,7 +535,7 @@ export default function PurchaseOrderForm() {
                 min="0"
                 step="0.01"
                 placeholder="0.00"
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 value={po.tax_rate}
                 onChange={(e) => setPo({ ...po, tax_rate: parseFloat(e.target.value) || 0 })}
               />
@@ -545,7 +545,7 @@ export default function PurchaseOrderForm() {
               <label className="block text-xs font-semibold  mb-2 text-neutral-700 dark:text-neutral-300">
                 Tax Amount
               </label>
-              <div className="px-3 py-2 border border-amber-300 dark:border-amber-700 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-300 font-semibold text-sm">
+              <div className="p-2 border border-amber-300 dark:border-amber-700 rounded-xs bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-300 font-semibold text-xs">
                 ₹{calculateTaxAmount().toLocaleString('en-IN', { maximumFractionDigits: 2 })}
               </div>
             </div>
@@ -559,7 +559,7 @@ export default function PurchaseOrderForm() {
                 min="0"
                 step="0.01"
                 placeholder="0.00"
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 value={po.advance_paid}
                 onChange={(e) => setPo({ ...po, advance_paid: parseFloat(e.target.value) || 0 })}
               />
@@ -574,7 +574,7 @@ export default function PurchaseOrderForm() {
               <input
                 type="text"
                 placeholder="e.g., FOB, CIF"
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 value={po.shipping_rule}
                 onChange={(e) => setPo({ ...po, shipping_rule: e.target.value })}
               />
@@ -609,28 +609,28 @@ export default function PurchaseOrderForm() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-5 bg-white dark:bg-neutral-800 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            <div className="p-5 bg-white dark:bg-neutral-800 rounded-xs border border-emerald-200 dark:border-emerald-800">
               <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase mb-2">Subtotal Amount</p>
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 m-0">
+              <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 m-0">
                 ₹{calculateSubtotal().toLocaleString('en-IN', { maximumFractionDigits: 2 })}
               </p>
             </div>
 
-            <div className="p-5 bg-white dark:bg-neutral-800 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            <div className="p-5 bg-white dark:bg-neutral-800 rounded-xs border border-emerald-200 dark:border-emerald-800">
               <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase mb-2">Tax ({po.tax_rate || 0}%)</p>
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 m-0">
+              <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 m-0">
                 ₹{calculateTaxAmount().toLocaleString('en-IN', { maximumFractionDigits: 2 })}
               </p>
             </div>
 
-            <div className="p-5 bg-white dark:bg-neutral-800 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            <div className="p-5 bg-white dark:bg-neutral-800 rounded-xs border border-emerald-200 dark:border-emerald-800">
               <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase mb-2">Advance Paid</p>
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 m-0">
+              <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 m-0">
                 ₹{(po.advance_paid || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
               </p>
             </div>
 
-            <div className="p-5 bg-emerald-600 dark:bg-emerald-700 rounded-lg border-2 border-emerald-700 dark:border-emerald-600">
+            <div className="p-5 bg-emerald-600 dark:bg-emerald-700 rounded-xs border-2 border-emerald-700 dark:border-emerald-600">
               <p className="text-xs font-semibold text-emerald-50 uppercase mb-2">💵 Final Amount (After Advance)</p>
               <p className="text-xl font-bold text-white m-0">
                 ₹{calculateTotal().toLocaleString('en-IN', { maximumFractionDigits: 2 })}
@@ -654,7 +654,7 @@ export default function PurchaseOrderForm() {
               <input
                 type="text"
                 placeholder="Street address"
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 value={po.shipping_address_line1}
                 onChange={(e) => setPo({ ...po, shipping_address_line1: e.target.value })}
               />
@@ -667,7 +667,7 @@ export default function PurchaseOrderForm() {
               <input
                 type="text"
                 placeholder="Apartment, suite, etc."
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 value={po.shipping_address_line2}
                 onChange={(e) => setPo({ ...po, shipping_address_line2: e.target.value })}
               />
@@ -680,7 +680,7 @@ export default function PurchaseOrderForm() {
               <input
                 type="text"
                 placeholder="City"
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 value={po.shipping_city}
                 onChange={(e) => setPo({ ...po, shipping_city: e.target.value })}
               />
@@ -693,7 +693,7 @@ export default function PurchaseOrderForm() {
               <input
                 type="text"
                 placeholder="State/Province"
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 value={po.shipping_state}
                 onChange={(e) => setPo({ ...po, shipping_state: e.target.value })}
               />
@@ -706,7 +706,7 @@ export default function PurchaseOrderForm() {
               <input
                 type="text"
                 placeholder="Postal code"
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 value={po.shipping_pincode}
                 onChange={(e) => setPo({ ...po, shipping_pincode: e.target.value })}
               />
@@ -719,7 +719,7 @@ export default function PurchaseOrderForm() {
               <input
                 type="text"
                 placeholder="Country"
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 value={po.shipping_country}
                 onChange={(e) => setPo({ ...po, shipping_country: e.target.value })}
               />
@@ -742,7 +742,7 @@ export default function PurchaseOrderForm() {
               <input
                 type="text"
                 placeholder="e.g., Net 30, Net 60, etc."
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 value={po.payment_terms_description}
                 onChange={(e) => setPo({ ...po, payment_terms_description: e.target.value })}
               />
@@ -754,7 +754,7 @@ export default function PurchaseOrderForm() {
               </label>
               <input
                 type="date"
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 value={po.due_date}
                 onChange={(e) => setPo({ ...po, due_date: e.target.value })}
               />
@@ -770,7 +770,7 @@ export default function PurchaseOrderForm() {
                 max="100"
                 step="0.01"
                 placeholder="100"
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 value={po.invoice_portion}
                 onChange={(e) => setPo({ ...po, invoice_portion: parseFloat(e.target.value) || 0 })}
               />
@@ -785,15 +785,15 @@ export default function PurchaseOrderForm() {
                 min="0"
                 step="0.01"
                 placeholder="0.00"
-                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-700 dark:text-neutral-100 transition-colors hover:border-primary-400 dark:hover:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 value={po.payment_amount}
                 onChange={(e) => setPo({ ...po, payment_amount: parseFloat(e.target.value) || 0 })}
               />
             </div>
           </div>
 
-          <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg mt-4">
-            <p className="text-sm text-amber-900 dark:text-amber-300 m-0 flex items-center gap-2">
+          <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xs mt-4">
+            <p className="text-xs text-amber-900 dark:text-amber-300 m-0 flex items-center gap-2">
               <span>💡</span>
               <span>
                 <strong>Payment Reminder:</strong> Due date {po.due_date ? `(${new Date(po.due_date).toLocaleDateString('en-IN')})` : '(not set)'} - Reminders will be sent to Accounts Department

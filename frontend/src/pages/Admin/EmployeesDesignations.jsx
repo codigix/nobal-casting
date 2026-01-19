@@ -280,7 +280,7 @@ export default function EmployeesDesignations() {
         <div className="flex justify-between items-start mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
+              <div className="w-9 h-9 rounded-xs bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
                 👥
               </div>
               <div>
@@ -292,13 +292,13 @@ export default function EmployeesDesignations() {
         </div>
 
         {error && (
-          <div className="mb-4 p-3 pl-4 bg-red-50 border-l-4 border-red-400 rounded text-sm text-red-800 flex gap-2">
+          <div className="mb-4 p-3 pl-4 bg-red-50 border-l-4 border-red-400 rounded text-xs text-red-800 flex gap-2">
             <span>✕</span>
             <span>{error}</span>
           </div>
         )}
 
-        <div className="mb-4 bg-white rounded-lg shadow-sm flex border-b border-gray-200">
+        <div className="mb-4 bg-white rounded-xs shadow-sm flex border-b border-gray-200">
           <button
             onClick={() => setActiveTab('employees')}
             className={`flex-1 px-4 py-3 font-medium flex items-center gap-2 justify-center transition ${
@@ -332,19 +332,19 @@ export default function EmployeesDesignations() {
                   placeholder="Search by name, email or designation..."
                   value={searchEmployee}
                   onChange={(e) => setSearchEmployee(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <button
                 onClick={handleAddEmployee}
-                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 flex items-center gap-2 transition text-sm"
+                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-xs hover:bg-blue-700 flex items-center gap-2 transition text-xs"
               >
                 <Plus size={16} /> Add Employee
               </button>
             </div>
 
             {showEmployeeForm && (
-              <div className="mb-4 bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+              <div className="mb-4 bg-white rounded-xs shadow-sm p-2 border border-gray-200">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">
                     {editingEmployee ? 'Edit Employee' : 'Add New Employee'}
@@ -365,7 +365,7 @@ export default function EmployeesDesignations() {
                         type="text"
                         value={employeeFormData.first_name}
                         onChange={(e) => setEmployeeFormData(prev => ({ ...prev, first_name: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       />
                     </div>
@@ -375,7 +375,7 @@ export default function EmployeesDesignations() {
                         type="text"
                         value={employeeFormData.last_name}
                         onChange={(e) => setEmployeeFormData(prev => ({ ...prev, last_name: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                     <div>
@@ -384,7 +384,7 @@ export default function EmployeesDesignations() {
                         type="email"
                         value={employeeFormData.email}
                         onChange={(e) => setEmployeeFormData(prev => ({ ...prev, email: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       />
                     </div>
@@ -394,7 +394,7 @@ export default function EmployeesDesignations() {
                         type="tel"
                         value={employeeFormData.phone}
                         onChange={(e) => setEmployeeFormData(prev => ({ ...prev, phone: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                     <div>
@@ -402,7 +402,7 @@ export default function EmployeesDesignations() {
                       <select
                         value={employeeFormData.designation}
                         onChange={(e) => setEmployeeFormData(prev => ({ ...prev, designation: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Select Designation</option>
                         {designations.map(des => (
@@ -417,7 +417,7 @@ export default function EmployeesDesignations() {
                       <select
                         value={employeeFormData.department}
                         onChange={(e) => setEmployeeFormData(prev => ({ ...prev, department: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Select Department</option>
                         <option value="Manufacturing">Manufacturing</option>
@@ -433,7 +433,7 @@ export default function EmployeesDesignations() {
                         type="date"
                         value={employeeFormData.joining_date}
                         onChange={(e) => setEmployeeFormData(prev => ({ ...prev, joining_date: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                     <div className="col-span-2">
@@ -444,7 +444,7 @@ export default function EmployeesDesignations() {
                           onChange={(e) => setEmployeeFormData(prev => ({ ...prev, is_active: e.target.checked }))}
                           className="rounded"
                         />
-                        <span className="text-sm font-medium text-gray-700">Active</span>
+                        <span className="text-xs font-medium text-gray-700">Active</span>
                       </label>
                     </div>
                   </div>
@@ -453,14 +453,14 @@ export default function EmployeesDesignations() {
                     <button
                       type="button"
                       onClick={() => setShowEmployeeForm(false)}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition"
+                      className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-xs hover:bg-gray-50 transition"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={loading}
-                      className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition flex items-center gap-2"
+                      className="px-4 py-2 bg-blue-600 text-white font-medium rounded-xs hover:bg-blue-700 disabled:bg-gray-400 transition flex items-center gap-2"
                     >
                       <Save size={16} />
                       {loading ? 'Saving...' : 'Save'}
@@ -471,14 +471,14 @@ export default function EmployeesDesignations() {
             )}
 
             {loading ? (
-              <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+              <div className="bg-white rounded-xs p-3 text-center shadow-sm">
                 <div className="text-3xl mb-2">⏳</div>
-                <div className="text-sm text-gray-600">Loading employees...</div>
+                <div className="text-xs text-gray-600">Loading employees...</div>
               </div>
             ) : filteredEmployees.length > 0 ? (
-              <div className="bg-white rounded-lg shadow-sm">
+              <div className="bg-white rounded-xs shadow-sm">
                 <div className="">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-200">
                         <th className="px-4 py-3 text-left text-gray-700 font-semibold">Name</th>
@@ -532,7 +532,7 @@ export default function EmployeesDesignations() {
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+              <div className="bg-white rounded-xs p-3 text-center shadow-sm">
                 <div className="text-3xl mb-2">📭</div>
                 <div className="text-xs font-semibold  text-gray-900">
                   {searchEmployee ? 'No employees found' : 'No employees created yet'}
@@ -549,19 +549,19 @@ export default function EmployeesDesignations() {
                   placeholder="Search designations..."
                   value={searchDesignation}
                   onChange={(e) => setSearchDesignation(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <button
                 onClick={handleAddDesignation}
-                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 flex items-center gap-2 transition text-sm"
+                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-xs hover:bg-blue-700 flex items-center gap-2 transition text-xs"
               >
                 <Plus size={16} /> Add Designation
               </button>
             </div>
 
             {showDesignationForm && (
-              <div className="mb-4 bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+              <div className="mb-4 bg-white rounded-xs shadow-smp-2 border border-gray-200">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">
                     {editingDesignation ? 'Edit Designation' : 'Add New Designation'}
@@ -582,7 +582,7 @@ export default function EmployeesDesignations() {
                         type="text"
                         value={designationFormData.name}
                         onChange={(e) => setDesignationFormData(prev => ({ ...prev, name: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       />
                     </div>
@@ -592,7 +592,7 @@ export default function EmployeesDesignations() {
                         value={designationFormData.description}
                         onChange={(e) => setDesignationFormData(prev => ({ ...prev, description: e.target.value }))}
                         rows="3"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
@@ -601,14 +601,14 @@ export default function EmployeesDesignations() {
                     <button
                       type="button"
                       onClick={() => setShowDesignationForm(false)}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition"
+                      className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-xs hover:bg-gray-50 transition"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={loading}
-                      className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition flex items-center gap-2"
+                      className="px-4 py-2 bg-blue-600 text-white font-medium rounded-xs hover:bg-blue-700 disabled:bg-gray-400 transition flex items-center gap-2"
                     >
                       <Save size={16} />
                       {loading ? 'Saving...' : 'Save'}
@@ -619,14 +619,14 @@ export default function EmployeesDesignations() {
             )}
 
             {loading ? (
-              <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+              <div className="bg-white rounded-xs p-3 text-center shadow-sm">
                 <div className="text-3xl mb-2">⏳</div>
-                <div className="text-sm text-gray-600">Loading designations...</div>
+                <div className="text-xs text-gray-600">Loading designations...</div>
               </div>
             ) : filteredDesignations.length > 0 ? (
-              <div className="bg-white rounded-lg shadow-sm">
+              <div className="bg-white rounded-xs shadow-sm">
                 <div className="">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-200">
                         <th className="px-4 py-3 text-left text-gray-700 font-semibold">Name</th>
@@ -664,7 +664,7 @@ export default function EmployeesDesignations() {
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+              <div className="bg-white rounded-xs p-3 text-center shadow-sm">
                 <div className="text-3xl mb-2">📭</div>
                 <div className="text-xs font-semibold  text-gray-900">
                   {searchDesignation ? 'No designations found' : 'No designations created yet'}

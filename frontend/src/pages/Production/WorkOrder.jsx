@@ -123,7 +123,7 @@ export default function WorkOrder() {
         <div className="flex justify-between items-start mb-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
+              <div className="w-9 h-9 rounded-xs bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
                 📋
               </div>
               <div>
@@ -164,25 +164,25 @@ export default function WorkOrder() {
         )}
 
         <div className="grid grid-cols-4 gap-2 mb-3">
-          <div className="bg-white rounded-lg p-3 border-l-4 border-blue-400 shadow-sm">
+          <div className="bg-white rounded-xs p-3 border-l-4 border-blue-400 shadow-sm">
             <div className="text-xs text-gray-600 font-semibold">Total</div>
             <div className="text-xl font-bold text-gray-900 mt-0.5">{stats.totalOrders}</div>
           </div>
-          <div className="bg-white rounded-lg p-3 border-l-4 border-amber-400 shadow-sm">
+          <div className="bg-white rounded-xs p-3 border-l-4 border-amber-400 shadow-sm">
             <div className="text-xs text-gray-600 font-semibold">In Progress</div>
             <div className="text-xl font-bold text-gray-900 mt-0.5">{stats.inProgress}</div>
           </div>
-          <div className="bg-white rounded-lg p-3 border-l-4 border-green-400 shadow-sm">
+          <div className="bg-white rounded-xs p-3 border-l-4 border-green-400 shadow-sm">
             <div className="text-xs text-gray-600 font-semibold">Completed</div>
             <div className="text-xl font-bold text-gray-900 mt-0.5">{stats.completed}</div>
           </div>
-          <div className="bg-white rounded-lg p-3 border-l-4 border-gray-400 shadow-sm">
+          <div className="bg-white rounded-xs p-3 border-l-4 border-gray-400 shadow-sm">
             <div className="text-xs text-gray-600 font-semibold">Pending</div>
             <div className="text-xl font-bold text-gray-900 mt-0.5">{stats.pending}</div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-3 mb-3">
+        <div className="bg-white rounded-xs shadow-sm p-3 mb-3">
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs font-semibold text-gray-700 block mb-1">Status</label>
@@ -215,12 +215,12 @@ export default function WorkOrder() {
         </div>
 
         {loading ? (
-          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+          <div className="bg-white rounded-xs p-3 text-center shadow-sm">
             <div className="text-3xl mb-2">⏳</div>
             <div className="text-xs text-gray-600">Loading work orders...</div>
           </div>
         ) : orders.length > 0 ? (
-          <div className="bg-white rounded-lg shadow-sm">
+          <div className="bg-white rounded-xs shadow-sm">
             
               <table className="w-full text-xs">
                 <thead>
@@ -300,7 +300,7 @@ export default function WorkOrder() {
             
           </div>
         ) : (
-          <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+          <div className="bg-white rounded-xs p-3 text-center shadow-sm">
             <div className="text-3xl mb-2">📭</div>
             <div className="text-xs font-semibold  text-gray-900">No work orders found</div>
             <div className="text-xs text-gray-600 mt-1">Create a new work order to get started</div>

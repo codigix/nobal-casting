@@ -113,8 +113,8 @@ export default function StockMovements() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Stock Movements</h1>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">Track material IN/OUT transactions with approval workflow</p>
+          <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">Stock Movements</h1>
+          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Track material IN/OUT transactions with approval workflow</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -143,12 +143,12 @@ export default function StockMovements() {
           placeholder="Search by transaction #, item code, or item name..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 px-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 px-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">All Status</option>
           <option value="Pending">Pending</option>
@@ -159,7 +159,7 @@ export default function StockMovements() {
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">All Types</option>
           <option value="IN">IN</option>
@@ -182,7 +182,7 @@ export default function StockMovements() {
         </Card>
       ) : (
         <div className="">
-          <table className="w-full text-sm">
+          <table className="w-full text-xs">
             <thead className="bg-neutral-100 dark:bg-neutral-800">
               <tr>
                 <th className="px-4 py-3 text-left font-semibold text-neutral-900 dark:text-neutral-100">Transaction #</th>
@@ -239,7 +239,7 @@ export default function StockMovements() {
                       </Badge>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-400">
+                  <td className="px-4 py-3 text-xs text-neutral-600 dark:text-neutral-400">
                     {new Date(movement.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3 text-center">

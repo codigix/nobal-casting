@@ -18,6 +18,7 @@ import {
 } from './pages/Buying'
 
 import {
+  InventoryDashboard,
   Warehouses,
   StockBalance,
   StockEntries,
@@ -96,7 +97,7 @@ function App() {
                 <ProtectedRoute>
                   <DepartmentLayout>
                     <DepartmentProtectedRoute departments={['inventory', 'admin']}>
-                      <DepartmentDashboard />
+                      <InventoryDashboard />
                     </DepartmentProtectedRoute>
                   </DepartmentLayout>
                 </ProtectedRoute>

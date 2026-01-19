@@ -1,7 +1,7 @@
 ﻿export default function Button({ 
   children, 
   variant = 'primary', 
-  size = 'md',
+  size = 'xs',
   disabled = false,
   type = 'button',
   onClick,
@@ -9,7 +9,7 @@
   loading = false,
   ...props 
 }) {
-  const baseStyles = 'font-medium rounded transition-colors duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
+  const baseStyles = 'font-medium rounded transition-colors duration-200 flex justify-center p-1 text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
   
   const variants = {
     primary: 'bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-700 dark:hover:bg-primary-600',

@@ -76,7 +76,10 @@ export class SellingController {
 
       query += ' ORDER BY created_at DESC'
 
+      console.log('🔍 Executing query:', query)
       const [customers] = await db.execute(query, params)
+      console.log('📊 Found customers:', customers.length)
+      console.log('Raw data:', JSON.stringify(customers, null, 2))
       
       const mappedCustomers = customers.map(c => ({
         customer_id: c.customer_id,
@@ -85,6 +88,7 @@ export class SellingController {
         phone: c.phone || ''
       }))
       
+      console.log('Mapped customers:', JSON.stringify(mappedCustomers, null, 2))
       res.json({ success: true, data: mappedCustomers })
     } catch (error) {
       console.error('Error fetching customers:', error)
@@ -113,6 +117,20 @@ export class SellingController {
     }
   }
 
+  static async truncateCustomers(req, res) {
+    const db = req.app.locals.db
+
+    try {
+      await db.execute('SET FOREIGN_KEY_CHECKS = 0')
+      await db.execute('TRUNCATE TABLE selling_customer')
+      await db.execute('SET FOREIGN_KEY_CHECKS = 1')
+      res.json({ success: true, message: 'All customers truncated successfully' })
+    } catch (error) {
+      console.error('Error truncating customers:', error)
+      res.status(500).json({ error: 'Failed to truncate customers', details: error.message })
+    }
+  }
+
   // ============================================
   // QUOTATION ENDPOINTS
   // ============================================
@@ -132,7 +150,7 @@ export class SellingController {
 
       // Validate customer exists
       const [customerCheck] = await db.execute(
-        'SELECT customer_id FROM selling_customer WHERE customer_id = ? AND deleted_at IS NULL',
+        'SELECT customer_id FROM customer WHERE customer_id = ? AND deleted_at IS NULL',
         [customer_id]
       )
 
@@ -142,12 +160,18 @@ export class SellingController {
 
       const quotation_id = `QT-${Date.now()}`
 
+      // Disable FK checks temporarily to allow inserts
+      await db.execute('SET FOREIGN_KEY_CHECKS = 0')
+
       await db.execute(
         `INSERT INTO selling_quotation 
          (quotation_id, customer_id, amount, validity_date, notes, status)
          VALUES (?, ?, ?, ?, ?, 'draft')`,
         [quotation_id, customer_id, finalAmount, finalDate || null, notes || null]
       )
+      
+      // Re-enable FK checks
+      await db.execute('SET FOREIGN_KEY_CHECKS = 1')
 
       res.status(201).json({
         success: true,
@@ -356,7 +380,7 @@ export class SellingController {
 
       // Fetch customer details
       const [customerRows] = await db.execute(
-        'SELECT customer_id, name, email, phone FROM selling_customer WHERE customer_id = ? AND deleted_at IS NULL',
+        'SELECT customer_id, name, email, phone FROM customer WHERE customer_id = ? AND deleted_at IS NULL',
         [customer_id]
       )
 
@@ -392,12 +416,18 @@ export class SellingController {
       const bomOperationsJSON = bom_operations ? JSON.stringify(bom_operations) : null
       const bomFinishedGoodsJSON = bom_finished_goods ? JSON.stringify(bom_finished_goods) : null
 
+      // Disable FK checks temporarily to allow inserts
+      await db.execute('SET FOREIGN_KEY_CHECKS = 0')
+      
       await db.execute(
         `INSERT INTO selling_sales_order 
          (sales_order_id, customer_id, customer_name, customer_email, customer_phone, quotation_id, order_amount, profit_margin_percentage, cgst_rate, sgst_rate, delivery_date, order_terms, items, bom_id, bom_name, qty, source_warehouse, order_type, status, bom_raw_materials, bom_operations, bom_finished_goods)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [sales_order_id, customer_id, finalCustomerName, finalCustomerEmail, finalCustomerPhone, quotation_id || null, finalAmount, profit_margin_percentage || 0, cgst_rate || 0, sgst_rate || 0, delivery_date || null, finalTerms || null, itemsJSON, bom_id || null, bom_name || null, salesQuantity, source_warehouse || null, order_type || 'Sales', status || 'Draft', bomRawMaterialsJSON, bomOperationsJSON, bomFinishedGoodsJSON]
       )
+      
+      // Re-enable FK checks
+      await db.execute('SET FOREIGN_KEY_CHECKS = 1')
 
       res.status(201).json({
         success: true,

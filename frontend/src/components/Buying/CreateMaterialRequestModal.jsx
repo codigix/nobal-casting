@@ -3,7 +3,7 @@ import api from '../../services/api'
 import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
-import { Plus, X, Edit } from 'lucide-react'
+import { Plus, X, Edit, Warehouse, Package, Calendar, User, FileText } from 'lucide-react'
 
 export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
@@ -135,6 +135,11 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
           purpose: value,
           target_warehouse: ''
         }))
+      } else if (value === 'material_transfer') {
+        setFormData(prev => ({ 
+          ...prev, 
+          purpose: value
+        }))
       }
     } else {
       setFormData({ ...formData, [name]: value })
@@ -264,50 +269,55 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Create Material Request" size="xl">
-      <div style={{ maxHeight: '85vh', overflowY: 'auto', padding: '4px' }}>
+      <div className="p-2">
         {error && <Alert type="danger">{error}</Alert>}
 
         <form onSubmit={handleSubmit}>
           {/* Section 1: Basic Information */}
-          <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
-            <h5 style={{ marginTop: 0, marginBottom: '16px', color: '#333', fontSize: '14px', fontWeight: '600' }}>Basic Information</h5>
+          <div className="mb-2 p-[10px] bg-white rounded-sm border border-gray-200 ">
+            <div className="flex items-center mb-4">
+              <FileText size={20} className="text-blue-500 mr-2.5" />
+              <h5 className="m-0 text-gray-900 text-base font-bold">Basic Information</h5>
+            </div>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '12px' }}>
+            <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>Series No</label>
+                <label className="block font-semibold text-xs text-gray-500">Series No</label>
                 <input 
                   type="text"
                   name="series_no"
                   value={formData.series_no}
                   readOnly
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', backgroundColor: '#f5f5f5', fontSize: '13px' }}
+                  className="w-full p-2 rounded-xs border border-gray-200 bg-gray-50 text-xs text-gray-500"
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>Transition Date</label>
+                <label className="block font-semibold text-xs text-gray-500">Transition Date</label>
                 <input 
                   type="date"
                   name="transition_date"
                   value={formData.transition_date}
                   onChange={handleChange}
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
+                  className="w-full p-2 rounded-sm border border-gray-300 text-xs text-gray-700 transition-all"
                 />
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '12px' }}>
+            <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>Requested By <span style={{ color: '#d32f2f' }}>*</span></label>
+                <label className="block font-semibold text-xs text-gray-500">
+                  Requested By <span className="text-red-500">*</span>
+                </label>
                 <input 
                   type="text"
                   name="requested_by_id"
                   value={formData.requested_by_id}
                   onChange={handleChange}
-                  placeholder="Enter name or select from list"
+                  placeholder="Select from list"
                   list="requestedByList"
                   required
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
+                  className="w-full p-2 rounded-sm border border-gray-300 text-xs text-gray-700 transition-all"
                 />
                 <datalist id="requestedByList">
                   {contacts.map(contact => (
@@ -319,13 +329,15 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>Department <span style={{ color: '#d32f2f' }}>*</span></label>
+                <label className="block font-semibold text-xs text-gray-500">
+                  Department <span className="text-red-500">*</span>
+                </label>
                 <select 
                   name="department"
                   value={formData.department}
                   onChange={handleChange}
                   required
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
+                  className="w-full p-2 rounded-sm border border-gray-300 text-xs text-gray-700 bg-white transition-all"
                 >
                   <option value="">Select Department</option>
                   {departments.map(dept => (
@@ -335,12 +347,12 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>
-                  Purpose <span style={{ color: '#d32f2f' }}>*</span>
+                <label className="block font-semibold text-xs text-gray-500">
+                  Purpose <span className="text-red-500">*</span>
                   {formData.department === 'Production' && (
-                    <span style={{ fontSize: '11px', color: '#666', fontWeight: 'normal', marginLeft: '8px' }}>
+                    <span className="text-[10px] text-gray-400 font-normal ml-2 block mt-0.5">
                       (Auto-set to Material Issue)
                     </span>
                   )}
@@ -351,15 +363,11 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                   onChange={handleChange}
                   disabled={formData.department === 'Production'}
                   required
-                  style={{ 
-                    width: '100%', 
-                    padding: '10px', 
-                    borderRadius: '4px', 
-                    border: '1px solid #ddd', 
-                    fontSize: '13px',
-                    backgroundColor: formData.department === 'Production' ? '#f5f5f5' : '#fff',
-                    cursor: formData.department === 'Production' ? 'not-allowed' : 'pointer'
-                  }}
+                  className={`w-full p-2 rounded-xs border text-xs transition-all text-xs ${
+                    formData.department === 'Production' 
+                      ? 'bg-gray-50 border-gray-300 text-gray-700 cursor-not-allowed' 
+                      : 'bg-white border-gray-300 text-gray-700 cursor-pointer'
+                  }`}
                 >
                   {formData.department === 'Production' ? (
                     <option value="material_issue">Material Issue (Release from Inventory)</option>
@@ -374,14 +382,17 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>Required By Date <span style={{ color: '#d32f2f' }}>*</span></label>
+                <label className="block font-semibold text-xs text-gray-500">
+                  Required By Date <span className="text-red-500">*</span>
+                </label>
                 <input 
                   type="date"
                   name="required_by_date"
                   value={formData.required_by_date}
                   onChange={handleChange}
+                  placeholder="dd-mm-yyyy"
                   required
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
+                  className="w-full p-2 rounded-sm border border-gray-300 text-xs text-gray-700 transition-all"
                 />
               </div>
             </div>
@@ -389,26 +400,29 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
 
           {/* Section 2: Warehouses */}
           {formData.purpose !== 'purchase' && (
-            <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
-              <h5 style={{ marginTop: 0, marginBottom: '16px', color: '#333', fontSize: '14px', fontWeight: '600' }}>
-                Warehouse Details
-                {formData.purpose === 'material_issue' && ' (Source for Release)'}
-                {formData.purpose === 'material_transfer' && ' (Transfer Details)'}
-              </h5>
+            <div className="mb-2 p-[10px] bg-white rounded-sm border border-gray-200 ">
+              <div className="flex items-center mb-4">
+                <Warehouse size={20} className="text-purple-500 mr-2.5" />
+                <h5 className="m-0 text-gray-900 text-base font-bold">
+                  Warehouse Details
+                  {formData.purpose === 'material_issue' && <span className="text-xs font-normal text-gray-500"> (Source for Release)</span>}
+                  {formData.purpose === 'material_transfer' && <span className="text-xs font-normal text-gray-500"> (Transfer Details)</span>}
+                </h5>
+              </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div className="grid grid-cols-2 gap-4">
                 {formData.purpose === 'material_transfer' && (
                   <>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>
-                        Source Warehouse <span style={{ color: '#d32f2f' }}>*</span>
+                      <label className="block font-semibold text-xs text-gray-500">
+                        Source Warehouse <span className="text-red-500">*</span>
                       </label>
                       <select 
                         name="source_warehouse"
                         value={formData.source_warehouse}
                         onChange={handleChange}
                         required={formData.purpose === 'material_transfer'}
-                        style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
+                        className="w-full p-2 rounded-sm border border-gray-300 text-xs text-gray-700 bg-white transition-all"
                       >
                         <option value="">Select Source Warehouse</option>
                         {warehouses.map(wh => (
@@ -418,15 +432,15 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                     </div>
 
                     <div>
-                      <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>
-                        Target Warehouse <span style={{ color: '#d32f2f' }}>*</span>
+                      <label className="block font-semibold text-xs text-gray-500">
+                        Target Warehouse <span className="text-red-500">*</span>
                       </label>
                       <select 
                         name="target_warehouse"
                         value={formData.target_warehouse}
                         onChange={handleChange}
                         required={formData.purpose === 'material_transfer'}
-                        style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
+                        className="w-full p-2 rounded-sm border border-gray-300 text-xs text-gray-700 bg-white transition-all"
                       >
                         <option value="">Select Target Warehouse</option>
                         {warehouses.map(wh => (
@@ -438,16 +452,16 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                 )}
 
                 {formData.purpose === 'material_issue' && (
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>
-                      Source Warehouse (Release From) <span style={{ color: '#d32f2f' }}>*</span>
+                  <div className="col-span-2">
+                    <label className="block font-semibold text-xs text-gray-500">
+                      Source Warehouse (Release From) <span className="text-red-500">*</span>
                     </label>
                     <select 
                       name="source_warehouse"
                       value={formData.source_warehouse}
                       onChange={handleChange}
                       required={formData.purpose === 'material_issue'}
-                      style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
+                      className="w-full p-2 rounded-sm border border-gray-300 text-xs text-gray-700 bg-white transition-all"
                     >
                       <option value="">Select Source Warehouse (Items will be released from here)</option>
                       {warehouses.map(wh => (
@@ -460,32 +474,18 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
             </div>
           )}
 
-          {/* Section 3: Notes */}
-          <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
-            <h5 style={{ marginTop: 0, marginBottom: '16px', color: '#333', fontSize: '14px', fontWeight: '600' }}>Additional Notes</h5>
-            
-            <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>Items Notes</label>
-              <textarea 
-                name="items_notes"
-                value={formData.items_notes}
-                onChange={handleChange}
-                placeholder="Enter any additional notes about the items"
-                rows="3"
-                style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontFamily: 'monospace', fontSize: '13px', resize: 'vertical' }}
-              />
+          {/* Section 3: Add Items */}
+          <div className="mb-2 p-[10px] bg-white rounded-sm border border-gray-200 ">
+            <div className="flex items-center mb-4">
+              <Package size={20} className="text-amber-500 mr-2.5" />
+              <h5 className="m-0 text-gray-900 text-base font-bold">
+                {editingItemIndex !== null ? 'Edit Material Item' : 'Add Material Items'}
+              </h5>
             </div>
-          </div>
-
-          {/* Section 4: Add Items */}
-          <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
-            <h5 style={{ marginTop: 0, marginBottom: '16px', color: '#333', fontSize: '14px', fontWeight: '600' }}>
-              {editingItemIndex !== null ? 'Edit Material Item' : 'Add Material Items'}
-            </h5>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '12px' }}>
-              <div>
-                <label style={{ fontSize: '13px', display: 'block', marginBottom: '6px', fontWeight: '500' }}>Item Code <span style={{ color: '#d32f2f' }}>*</span></label>
+            <div className="grid grid-cols-4 gap-4 mb-3">
+              <div className="col-span-2">
+                <label className="text-xs block  font-semibold text-gray-500">Item Code <span className="text-red-500">*</span></label>
                 <select 
                   value={newItem.item_code}
                   onChange={(e) => {
@@ -498,7 +498,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                       uom: item?.uom || 'pcs'
                     })
                   }}
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
+                  className="w-full p-2 rounded-sm border border-gray-300 text-xs text-gray-700 bg-white transition-all"
                 >
                   <option value="">
                     Select Item {formData.purpose === 'material_issue' ? '(Only items with stock shown)' : ''}
@@ -518,7 +518,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
               </div>
 
               <div>
-                <label style={{ fontSize: '13px', display: 'block', marginBottom: '6px', fontWeight: '500' }}>Quantity <span style={{ color: '#d32f2f' }}>*</span></label>
+                <label className="text-xs block  font-semibold text-gray-500">Quantity <span className="text-red-500">*</span></label>
                 <input 
                   type="number"
                   value={newItem.qty}
@@ -526,37 +526,35 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                   placeholder="0"
                   min="0"
                   step="0.01"
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
+                  className="w-full p-2 rounded-sm border border-gray-300 text-xs text-gray-700 transition-all"
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: '13px', display: 'block', marginBottom: '6px', fontWeight: '500' }}>UOM</label>
+                <label className="text-xs block  font-semibold text-gray-500">UOM</label>
                 <input 
                   type="text"
                   value={newItem.uom}
                   readOnly
                   disabled
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px', backgroundColor: '#e8e8e8' }}
+                  className="w-full p-2 rounded-xs border border-gray-200 text-xs text-gray-400 bg-gray-50"
                 />
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div className="flex gap-2 items-center">
               <Button 
                 onClick={handleAddItem}
                 variant="success"
                 type="button"
-                style={{ padding: '8px 16px', fontSize: '13px', whiteSpace: 'nowrap' }}
               >
-                <Plus size={16} /> {editingItemIndex !== null ? 'Update Item' : 'Add Item'}
+                <Plus size={16} className="mr-1.5" /> {editingItemIndex !== null ? 'Update Item' : 'Add Item'}
               </Button>
               {editingItemIndex !== null && (
                 <Button 
                   onClick={handleCancelEdit}
                   variant="secondary"
                   type="button"
-                  style={{ padding: '8px 16px', fontSize: '13px', whiteSpace: 'nowrap' }}
                 >
                   Cancel
                 </Button>
@@ -566,34 +564,43 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
 
           {/* Items List */}
           {formData.items.length > 0 && (
-            <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
-              <h5 style={{ marginTop: 0, marginBottom: '16px', color: '#333', fontSize: '14px', fontWeight: '600' }}>Selected Items ({formData.items.length})</h5>
-              <div style={{ overflowX: 'auto', border: '1px solid #ddd', borderRadius: '4px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                  <thead style={{ backgroundColor: '#f5f5f5' }}>
+            <div className="mb-2 p-[10px] bg-white rounded-sm border border-gray-200 ">
+              <h5 className="m-0 mb-4 text-gray-900 text-xs font-bold">Selected Items ({formData.items.length})</h5>
+              <div className="overflow-x-auto border border-gray-200 rounded-md">
+                <table className="w-full border-collapse text-xs">
+                  <thead className="bg-gray-100 border-b-2 border-gray-200">
                     <tr>
-                      <th style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #ddd', width: '50px' }}>No.</th>
-                      <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Item Code</th>
-                      <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Item Name</th>
-                      <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #ddd', width: '100px' }}>Quantity</th>
-                      <th style={{ padding: '8px', textAlign: 'left', borderBottom: '1px solid #ddd', width: '120px' }}>Unit of Measurement</th>
-                      <th style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #ddd', width: '80px' }}>Action</th>
+                      <th className="p-3 text-center w-12 font-semibold text-gray-500 text-xs uppercase tracking-wide">No.</th>
+                      <th className="p-3 text-left font-semibold text-gray-500 text-xs uppercase tracking-wide">Item Code</th>
+                      <th className="p-3 text-left font-semibold text-gray-500 text-xs uppercase tracking-wide">Item Name</th>
+                      <th className="p-3 text-left w-24 font-semibold text-gray-500 text-xs uppercase tracking-wide">Qty</th>
+                      <th className="p-3 text-left w-24 font-semibold text-gray-500 text-xs uppercase tracking-wide">UOM</th>
+                      <th className="p-3 text-center w-20 font-semibold text-gray-500 text-xs uppercase tracking-wide">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {formData.items.map((item, index) => (
-                      <tr key={item.id} style={{ borderBottom: '1px solid #ddd', backgroundColor: editingItemIndex === index ? '#fffbea' : 'transparent' }}>
-                        <td style={{ padding: '8px', textAlign: 'center' }}>{index + 1}</td>
-                        <td style={{ padding: '8px' }}>{item.item_code}</td>
-                        <td style={{ padding: '8px' }}>{item.item_name || '-'}</td>
-                        <td style={{ padding: '8px' }}>{item.qty}</td>
-                        <td style={{ padding: '8px' }}>{item.uom}</td>
-                        <td style={{ padding: '8px', textAlign: 'center' }}>
-                          <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                      <tr 
+                        key={item.id} 
+                        className={`border-b border-gray-200 transition-colors ${
+                          editingItemIndex === index 
+                            ? 'bg-yellow-50' 
+                            : index % 2 === 0 
+                            ? 'bg-white' 
+                            : 'bg-gray-50'
+                        }`}
+                      >
+                        <td className="p-3 text-center text-gray-500">{index + 1}</td>
+                        <td className="p-3 text-gray-900 font-medium">{item.item_code}</td>
+                        <td className="p-3 text-gray-700">{item.item_name || '-'}</td>
+                        <td className="p-3 text-gray-900 font-semibold">{item.qty}</td>
+                        <td className="p-3 text-gray-500">{item.uom}</td>
+                        <td className="p-3 text-center">
+                          <div className="flex gap-1.5 justify-center">
                             <button 
                               type="button"
                               onClick={() => handleEditItem(index)}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0066cc', padding: '4px', display: 'flex', alignItems: 'center' }}
+                              className="text-blue-500 p-1 flex items-center rounded transition-colors hover:bg-blue-100"
                               title="Edit"
                             >
                               <Edit size={16} />
@@ -601,7 +608,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                             <button 
                               type="button"
                               onClick={() => handleRemoveItem(index)}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '4px' }}
+                              className="text-red-500 p-1 flex items-center rounded transition-colors hover:bg-red-100"
                               title="Delete"
                             >
                               <X size={16} />
@@ -617,13 +624,12 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
           )}
 
           {/* Actions */}
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #e8e8e8' }}>
+          <div className="flex gap-3 justify-end mt-6 pt-5 border-t border-gray-200">
             <Button 
               type="button"
               variant="secondary"
               onClick={handleClose}
               disabled={loading}
-              style={{ padding: '10px 24px', fontSize: '13px' }}
             >
               Cancel
             </Button>
@@ -631,7 +637,6 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
               type="submit"
               variant="primary"
               disabled={loading}
-              style={{ padding: '10px 24px', fontSize: '13px' }}
             >
               {loading ? 'Creating...' : 'Create Material Request'}
             </Button>

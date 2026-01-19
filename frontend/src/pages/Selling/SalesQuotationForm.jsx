@@ -247,7 +247,7 @@ export default function SalesQuotationForm() {
     try {
       setDataLoading(true)
       const [custRes, itemRes, contactRes, payRes, letterRes, campRes, terrRes, sourceRes, lostRes, taxRes, shipRes, incoRes, stRes, partRes, couponRes, accRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/selling/customers').catch(() => ({ data: { data: [] } })),
+        axios.get('http://localhost:5000/api/customers').catch(() => ({ data: { data: [] } })),
         axios.get('/api/items?limit=1000').catch(() => ({ data: { data: [] } })),
         axios.get('/api/crm/contact-persons').catch(() => ({ data: { data: [] } })),
         axios.get('/api/setup/payment-terms').catch(() => ({ data: { data: [] } })),

@@ -22,14 +22,27 @@ export default function ProductionDashboard() {
     operations: 0
   })
   const [activeTab, setActiveTab] = useState('overview')
+  const [scheduleType, setScheduleType] = useState('weekly')
+  const [woScheduleType, setWoScheduleType] = useState('weekly')
+  const [bomScheduleType, setBomScheduleType] = useState('weekly')
+  const [ppScheduleType, setPpScheduleType] = useState('weekly')
+  const [jcScheduleType, setJcScheduleType] = useState('weekly')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [chartData, setChartData] = useState({
     jobStatus: [],
     dailyProduction: [],
     workOrderStatus: [],
-    capacityUtilization: []
+    capacityUtilization: [],
+    workOrderTimeline: [],
+    bomTimeline: [],
+    ppTimeline: [],
+    jcTimeline: []
   })
+  const [rawJobCards, setRawJobCards] = useState([])
+  const [rawWorkOrders, setRawWorkOrders] = useState([])
+  const [rawBOMs, setRawBOMs] = useState([])
+  const [rawProductionPlans, setRawProductionPlans] = useState([])
   const [dataEntries, setDataEntries] = useState({
     workOrders: [],
     boms: [],
@@ -42,6 +55,66 @@ export default function ProductionDashboard() {
   useEffect(() => {
     fetchDashboardData()
   }, [])
+
+  useEffect(() => {
+    if (rawJobCards.length > 0) {
+      console.log(`[Dashboard] Chart update: scheduleType=${scheduleType}, jobCards=${rawJobCards.length}`)
+      const dailyData = getProductionChartData(rawJobCards)
+      console.log(`[Dashboard] Generated ${scheduleType} chart data:`, dailyData)
+      setChartData(prev => ({
+        ...prev,
+        dailyProduction: dailyData
+      }))
+    }
+  }, [scheduleType, rawJobCards])
+
+  useEffect(() => {
+    if (rawWorkOrders.length > 0) {
+      console.log(`[Dashboard] WO Chart update: woScheduleType=${woScheduleType}, workOrders=${rawWorkOrders.length}`)
+      const woData = getWorkOrderChartData(rawWorkOrders)
+      console.log(`[Dashboard] Generated ${woScheduleType} WO chart data:`, woData)
+      setChartData(prev => ({
+        ...prev,
+        workOrderTimeline: woData
+      }))
+    }
+  }, [woScheduleType, rawWorkOrders])
+
+  useEffect(() => {
+    if (rawBOMs.length > 0) {
+      console.log(`[Dashboard] BOM Chart update: bomScheduleType=${bomScheduleType}, BOMs=${rawBOMs.length}`)
+      const bomData = getBOMChartData(rawBOMs)
+      console.log(`[Dashboard] Generated ${bomScheduleType} BOM chart data:`, bomData)
+      setChartData(prev => ({
+        ...prev,
+        bomTimeline: bomData
+      }))
+    }
+  }, [bomScheduleType, rawBOMs])
+
+  useEffect(() => {
+    if (rawProductionPlans.length > 0) {
+      console.log(`[Dashboard] PP Chart update: ppScheduleType=${ppScheduleType}, PPs=${rawProductionPlans.length}`)
+      const ppData = getPPChartData(rawProductionPlans)
+      console.log(`[Dashboard] Generated ${ppScheduleType} PP chart data:`, ppData)
+      setChartData(prev => ({
+        ...prev,
+        ppTimeline: ppData
+      }))
+    }
+  }, [ppScheduleType, rawProductionPlans])
+
+  useEffect(() => {
+    if (rawJobCards.length > 0) {
+      console.log(`[Dashboard] JC Chart update: jcScheduleType=${jcScheduleType}, JCs=${rawJobCards.length}`)
+      const jcData = getJCChartData(rawJobCards)
+      console.log(`[Dashboard] Generated ${jcScheduleType} JC chart data:`, jcData)
+      setChartData(prev => ({
+        ...prev,
+        jcTimeline: jcData
+      }))
+    }
+  }, [jcScheduleType, rawJobCards])
 
   const normalizeStatus = (status) => {
     if (!status) return 'draft'
@@ -141,14 +214,19 @@ export default function ProductionDashboard() {
         duration: item.standard_time || 0
       })) : []
 
-      const dailyData = pe.length > 0 
-        ? generateDailyProductionChart(pe)
+      const dailyData = jc.length > 0 
+        ? getProductionChartData(jc)
         : generateEmptyDailyChart()
 
       const capacityData = ws.length > 0 ? ws.map(item => ({
         station: item.ws_name || item.name || `Station`,
         usage: Math.max(0, Math.min(100, item.utilization_percent || 0))
       })) : []
+
+      setRawJobCards(jc)
+      setRawWorkOrders(wo)
+      setRawBOMs(bom)
+      setRawProductionPlans(pp)
 
       setDataEntries({
         workOrders: workOrdersData,
@@ -212,7 +290,7 @@ export default function ProductionDashboard() {
     }))
   }
 
-  const generateDailyProductionChart = (entries) => {
+  const generateDailyProductionChart = (jobCards) => {
     const last7Days = []
     for (let i = 6; i >= 0; i--) {
       const d = new Date()
@@ -222,14 +300,14 @@ export default function ProductionDashboard() {
 
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     return last7Days.map((dateStr, idx) => {
-      const dayEntry = entries.filter(e => {
-        const entryDate = e.created_at ? e.created_at.split('T')[0] : e.entry_date
-        return entryDate === dateStr
+      const dayEntries = jobCards.filter(jc => {
+        const createdDate = jc.created_at ? jc.created_at.split('T')[0] : jc.created_date
+        return createdDate === dateStr
       })
       
-      const completed = dayEntry.filter(e => normalizeStatus(e.status) === 'completed').length
-      const inProgress = dayEntry.filter(e => normalizeStatus(e.status) === 'in-progress').length
-      const pending = dayEntry.filter(e => ['pending', 'draft'].includes(normalizeStatus(e.status))).length
+      const completed = dayEntries.filter(jc => normalizeStatus(jc.status) === 'completed').length
+      const inProgress = dayEntries.filter(jc => normalizeStatus(jc.status) === 'in-progress').length
+      const pending = dayEntries.filter(jc => ['pending', 'draft', 'open'].includes(normalizeStatus(jc.status))).length
 
       return {
         day: dayNames[new Date(dateStr).getDay()],
@@ -240,8 +318,443 @@ export default function ProductionDashboard() {
     })
   }
 
+  const generateMonthlyProductionChart = (jobCards) => {
+    const last12Months = []
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date()
+      d.setMonth(d.getMonth() - i)
+      last12Months.push({
+        month: d.getMonth(),
+        year: d.getFullYear()
+      })
+    }
+
+    console.log('[Monthly] Job cards count:', jobCards.length)
+    console.log('[Monthly] Sample job card:', jobCards[0])
+
+    return last12Months.map(({ month, year }) => {
+      const monthEntries = jobCards.filter(jc => {
+        const createdDate = new Date(jc.created_at || jc.created_date)
+        return createdDate.getMonth() === month && createdDate.getFullYear() === year
+      })
+      
+      const completed = monthEntries.filter(jc => normalizeStatus(jc.status) === 'completed').length
+      const inProgress = monthEntries.filter(jc => normalizeStatus(jc.status) === 'in-progress').length
+      const pending = monthEntries.filter(jc => ['pending', 'draft', 'open'].includes(normalizeStatus(jc.status))).length
+
+      return {
+        day: `${monthNames[month]} '${year.toString().slice(-2)}`,
+        completed: completed || 0,
+        inProgress: inProgress || 0,
+        pending: pending || 0
+      }
+    })
+  }
+
+  const generateYearlyProductionChart = (jobCards) => {
+    const last5Years = []
+    
+    for (let i = 4; i >= 0; i--) {
+      const d = new Date()
+      d.setFullYear(d.getFullYear() - i)
+      last5Years.push(d.getFullYear())
+    }
+
+    console.log('[Yearly] Job cards count:', jobCards.length)
+    console.log('[Yearly] Sample job card:', jobCards[0])
+
+    return last5Years.map((year) => {
+      const yearEntries = jobCards.filter(jc => {
+        const createdDate = new Date(jc.created_at || jc.created_date)
+        return createdDate.getFullYear() === year
+      })
+      
+      const completed = yearEntries.filter(jc => normalizeStatus(jc.status) === 'completed').length
+      const inProgress = yearEntries.filter(jc => normalizeStatus(jc.status) === 'in-progress').length
+      const pending = yearEntries.filter(jc => ['pending', 'draft', 'open'].includes(normalizeStatus(jc.status))).length
+
+      return {
+        day: year.toString(),
+        completed: completed || 0,
+        inProgress: inProgress || 0,
+        pending: pending || 0
+      }
+    })
+  }
+
+  const getProductionChartData = (jobCards) => {
+    if (scheduleType === 'monthly') {
+      return generateMonthlyProductionChart(jobCards)
+    } else if (scheduleType === 'yearly') {
+      return generateYearlyProductionChart(jobCards)
+    } else {
+      return generateDailyProductionChart(jobCards)
+    }
+  }
+
+  const generateDailyWorkOrderChart = (workOrders) => {
+    const last7Days = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      last7Days.push(d.toISOString().split('T')[0])
+    }
+
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    return last7Days.map((dateStr) => {
+      const dayEntries = workOrders.filter(wo => {
+        const createdDate = wo.created_at ? wo.created_at.split('T')[0] : wo.created_date
+        return createdDate === dateStr
+      })
+      
+      const completed = dayEntries.filter(wo => normalizeStatus(wo.status) === 'completed').length
+      const inProgress = dayEntries.filter(wo => normalizeStatus(wo.status) === 'in-progress').length
+      const pending = dayEntries.filter(wo => ['pending', 'draft', 'open'].includes(normalizeStatus(wo.status))).length
+
+      return {
+        day: dayNames[new Date(dateStr).getDay()],
+        completed: completed || 0,
+        inProgress: inProgress || 0,
+        pending: pending || 0
+      }
+    })
+  }
+
+  const generateMonthlyWorkOrderChart = (workOrders) => {
+    const last12Months = []
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date()
+      d.setMonth(d.getMonth() - i)
+      last12Months.push({
+        month: d.getMonth(),
+        year: d.getFullYear()
+      })
+    }
+
+    console.log('[Monthly WO] Work orders count:', workOrders.length)
+    console.log('[Monthly WO] Sample work order:', workOrders[0])
+
+    return last12Months.map(({ month, year }) => {
+      const monthEntries = workOrders.filter(wo => {
+        const createdDate = new Date(wo.created_at || wo.created_date)
+        return createdDate.getMonth() === month && createdDate.getFullYear() === year
+      })
+      
+      const completed = monthEntries.filter(wo => normalizeStatus(wo.status) === 'completed').length
+      const inProgress = monthEntries.filter(wo => normalizeStatus(wo.status) === 'in-progress').length
+      const pending = monthEntries.filter(wo => ['pending', 'draft', 'open'].includes(normalizeStatus(wo.status))).length
+
+      return {
+        day: `${monthNames[month]} '${year.toString().slice(-2)}`,
+        completed: completed || 0,
+        inProgress: inProgress || 0,
+        pending: pending || 0
+      }
+    })
+  }
+
+  const generateYearlyWorkOrderChart = (workOrders) => {
+    const last5Years = []
+    
+    for (let i = 4; i >= 0; i--) {
+      const d = new Date()
+      d.setFullYear(d.getFullYear() - i)
+      last5Years.push(d.getFullYear())
+    }
+
+    console.log('[Yearly WO] Work orders count:', workOrders.length)
+    console.log('[Yearly WO] Sample work order:', workOrders[0])
+
+    return last5Years.map((year) => {
+      const yearEntries = workOrders.filter(wo => {
+        const createdDate = new Date(wo.created_at || wo.created_date)
+        return createdDate.getFullYear() === year
+      })
+      
+      const completed = yearEntries.filter(wo => normalizeStatus(wo.status) === 'completed').length
+      const inProgress = yearEntries.filter(wo => normalizeStatus(wo.status) === 'in-progress').length
+      const pending = yearEntries.filter(wo => ['pending', 'draft', 'open'].includes(normalizeStatus(wo.status))).length
+
+      return {
+        day: year.toString(),
+        completed: completed || 0,
+        inProgress: inProgress || 0,
+        pending: pending || 0
+      }
+    })
+  }
+
+  const getWorkOrderChartData = (workOrders) => {
+    if (woScheduleType === 'monthly') {
+      return generateMonthlyWorkOrderChart(workOrders)
+    } else if (woScheduleType === 'yearly') {
+      return generateYearlyWorkOrderChart(workOrders)
+    } else {
+      return generateDailyWorkOrderChart(workOrders)
+    }
+  }
+
+  const generateDailyBOMChart = (boms) => {
+    const last7Days = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      last7Days.push(d.toISOString().split('T')[0])
+    }
+
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    return last7Days.map((dateStr) => {
+      const dayEntries = boms.filter(bom => {
+        const createdDate = bom.created_at ? bom.created_at.split('T')[0] : bom.created_date
+        return createdDate === dateStr
+      })
+      return {
+        day: dayNames[new Date(dateStr).getDay()],
+        count: dayEntries.length || 0
+      }
+    })
+  }
+
+  const generateMonthlyBOMChart = (boms) => {
+    const last12Months = []
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date()
+      d.setMonth(d.getMonth() - i)
+      last12Months.push({
+        month: d.getMonth(),
+        year: d.getFullYear()
+      })
+    }
+
+    return last12Months.map(({ month, year }) => {
+      const monthEntries = boms.filter(bom => {
+        const createdDate = new Date(bom.created_at || bom.created_date)
+        return createdDate.getMonth() === month && createdDate.getFullYear() === year
+      })
+      return {
+        day: `${monthNames[month]} '${year.toString().slice(-2)}`,
+        count: monthEntries.length || 0
+      }
+    })
+  }
+
+  const generateYearlyBOMChart = (boms) => {
+    const last5Years = []
+    for (let i = 4; i >= 0; i--) {
+      const d = new Date()
+      d.setFullYear(d.getFullYear() - i)
+      last5Years.push(d.getFullYear())
+    }
+
+    return last5Years.map((year) => {
+      const yearEntries = boms.filter(bom => {
+        const createdDate = new Date(bom.created_at || bom.created_date)
+        return createdDate.getFullYear() === year
+      })
+      return {
+        day: year.toString(),
+        count: yearEntries.length || 0
+      }
+    })
+  }
+
+  const getBOMChartData = (boms) => {
+    if (bomScheduleType === 'monthly') {
+      return generateMonthlyBOMChart(boms)
+    } else if (bomScheduleType === 'yearly') {
+      return generateYearlyBOMChart(boms)
+    } else {
+      return generateDailyBOMChart(boms)
+    }
+  }
+
+  const generateDailyPPChart = (plans) => {
+    const last7Days = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      last7Days.push(d.toISOString().split('T')[0])
+    }
+
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    return last7Days.map((dateStr) => {
+      const dayEntries = plans.filter(pp => {
+        const createdDate = pp.created_at ? pp.created_at.split('T')[0] : pp.created_date
+        return createdDate === dateStr
+      })
+      const quantity = dayEntries.reduce((sum, pp) => sum + (pp.total_quantity || pp.quantity || 0), 0)
+      return {
+        day: dayNames[new Date(dateStr).getDay()],
+        count: dayEntries.length || 0,
+        quantity: quantity || 0
+      }
+    })
+  }
+
+  const generateMonthlyPPChart = (plans) => {
+    const last12Months = []
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date()
+      d.setMonth(d.getMonth() - i)
+      last12Months.push({
+        month: d.getMonth(),
+        year: d.getFullYear()
+      })
+    }
+
+    return last12Months.map(({ month, year }) => {
+      const monthEntries = plans.filter(pp => {
+        const createdDate = new Date(pp.created_at || pp.created_date)
+        return createdDate.getMonth() === month && createdDate.getFullYear() === year
+      })
+      const quantity = monthEntries.reduce((sum, pp) => sum + (pp.total_quantity || pp.quantity || 0), 0)
+      return {
+        day: `${monthNames[month]} '${year.toString().slice(-2)}`,
+        count: monthEntries.length || 0,
+        quantity: quantity || 0
+      }
+    })
+  }
+
+  const generateYearlyPPChart = (plans) => {
+    const last5Years = []
+    for (let i = 4; i >= 0; i--) {
+      const d = new Date()
+      d.setFullYear(d.getFullYear() - i)
+      last5Years.push(d.getFullYear())
+    }
+
+    return last5Years.map((year) => {
+      const yearEntries = plans.filter(pp => {
+        const createdDate = new Date(pp.created_at || pp.created_date)
+        return createdDate.getFullYear() === year
+      })
+      const quantity = yearEntries.reduce((sum, pp) => sum + (pp.total_quantity || pp.quantity || 0), 0)
+      return {
+        day: year.toString(),
+        count: yearEntries.length || 0,
+        quantity: quantity || 0
+      }
+    })
+  }
+
+  const getPPChartData = (plans) => {
+    if (ppScheduleType === 'monthly') {
+      return generateMonthlyPPChart(plans)
+    } else if (ppScheduleType === 'yearly') {
+      return generateYearlyPPChart(plans)
+    } else {
+      return generateDailyPPChart(plans)
+    }
+  }
+
+  const generateDailyJCChart = (jobCards) => {
+    const last7Days = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      last7Days.push(d.toISOString().split('T')[0])
+    }
+
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    return last7Days.map((dateStr) => {
+      const dayEntries = jobCards.filter(jc => {
+        const createdDate = jc.created_at ? jc.created_at.split('T')[0] : jc.created_date
+        return createdDate === dateStr
+      })
+      
+      const completed = dayEntries.filter(jc => normalizeStatus(jc.status) === 'completed').length
+      const inProgress = dayEntries.filter(jc => normalizeStatus(jc.status) === 'in-progress').length
+      const pending = dayEntries.filter(jc => ['pending', 'draft', 'open'].includes(normalizeStatus(jc.status))).length
+
+      return {
+        day: dayNames[new Date(dateStr).getDay()],
+        completed: completed || 0,
+        inProgress: inProgress || 0,
+        pending: pending || 0
+      }
+    })
+  }
+
+  const generateMonthlyJCChart = (jobCards) => {
+    const last12Months = []
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date()
+      d.setMonth(d.getMonth() - i)
+      last12Months.push({
+        month: d.getMonth(),
+        year: d.getFullYear()
+      })
+    }
+
+    return last12Months.map(({ month, year }) => {
+      const monthEntries = jobCards.filter(jc => {
+        const createdDate = new Date(jc.created_at || jc.created_date)
+        return createdDate.getMonth() === month && createdDate.getFullYear() === year
+      })
+      
+      const completed = monthEntries.filter(jc => normalizeStatus(jc.status) === 'completed').length
+      const inProgress = monthEntries.filter(jc => normalizeStatus(jc.status) === 'in-progress').length
+      const pending = monthEntries.filter(jc => ['pending', 'draft', 'open'].includes(normalizeStatus(jc.status))).length
+
+      return {
+        day: `${monthNames[month]} '${year.toString().slice(-2)}`,
+        completed: completed || 0,
+        inProgress: inProgress || 0,
+        pending: pending || 0
+      }
+    })
+  }
+
+  const generateYearlyJCChart = (jobCards) => {
+    const last5Years = []
+    for (let i = 4; i >= 0; i--) {
+      const d = new Date()
+      d.setFullYear(d.getFullYear() - i)
+      last5Years.push(d.getFullYear())
+    }
+
+    return last5Years.map((year) => {
+      const yearEntries = jobCards.filter(jc => {
+        const createdDate = new Date(jc.created_at || jc.created_date)
+        return createdDate.getFullYear() === year
+      })
+      
+      const completed = yearEntries.filter(jc => normalizeStatus(jc.status) === 'completed').length
+      const inProgress = yearEntries.filter(jc => normalizeStatus(jc.status) === 'in-progress').length
+      const pending = yearEntries.filter(jc => ['pending', 'draft', 'open'].includes(normalizeStatus(jc.status))).length
+
+      return {
+        day: year.toString(),
+        completed: completed || 0,
+        inProgress: inProgress || 0,
+        pending: pending || 0
+      }
+    })
+  }
+
+  const getJCChartData = (jobCards) => {
+    if (jcScheduleType === 'monthly') {
+      return generateMonthlyJCChart(jobCards)
+    } else if (jcScheduleType === 'yearly') {
+      return generateYearlyJCChart(jobCards)
+    } else {
+      return generateDailyJCChart(jobCards)
+    }
+  }
+
   const StatCard = ({ label, value, subtitle, icon: Icon, borderColor, bgColor }) => (
-    <div className="bg-white rounded-lg p-3 border-l-4 flex flex-col transition-all hover:shadow-lg hover:-translate-y-0.5" >
+    <div className="bg-white rounded-xs p-3 border-l-4 flex flex-col transition-all hover:shadow-lg hover:-translate-y-0.5" >
       <div className="flex justify-between items-start gap-3">
         <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">{label}</span>
         <div className="flex items-center justify-center w-9 h-9 rounded" style={{ backgroundColor: bgColor }}>
@@ -283,7 +796,7 @@ export default function ProductionDashboard() {
     }
     const statusColor = statusConfig[item[statusKey]]?.color || '#ef4444'
     return (
-      <div className="bg-gradient-to-br from-white to-gray-50 border-l-4 rounded-lg p-4 shadow-sm hover:shadow-md transition-all" style={{ borderLeftColor: statusColor }}>
+      <div className="bg-gradient-to-br from-white to-gray-50 border-l-4 rounded-xsp-2 shadow-sm hover:shadow-md transition-all" style={{ borderLeftColor: statusColor }}>
         <div className="flex justify-between items-start gap-3 mb-2">
           <div className="flex-1">
             <h4 className="text-xs font-semibold  text-gray-900">{item.name || item.id}</h4>
@@ -311,7 +824,7 @@ export default function ProductionDashboard() {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-3 rounded-lg shadow-xl border border-gray-200">
+        <div className="bg-white p-3 rounded-xs shadow-xl border border-gray-200">
           <p className="text-xs font-semibold text-gray-900">{label}</p>
           {payload.map((entry, index) => (
             <p key={index} style={{ color: entry.color }} className="text-xs font-medium">
@@ -327,7 +840,7 @@ export default function ProductionDashboard() {
   const ChartContainer = ({ children, title, subtitle }) => (
     <div className="bg-gradient-to-br from-white via-blue-50 to-white rounded-2xl shadow-lg border border-gray-100 p-6 hover:shadow-2xl transition-shadow">
       <div className="mb-4">
-        <h3 className="text-sm font-bold text-gray-900">{title}</h3>
+        <h3 className="text-xs font-bold text-gray-900">{title}</h3>
         {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
       </div>
       {children}
@@ -364,7 +877,7 @@ export default function ProductionDashboard() {
         </div>
 
         {error && (
-          <div className="flex items-center gap-3 p-3 rounded-lg mb-6 text-sm bg-amber-50 text-amber-900 border border-amber-200">
+          <div className="flex items-center gap-3 p-3 rounded-xs mb-6 text-xs bg-amber-50 text-amber-900 border border-amber-200">
             <AlertCircle size={16} />
             <span>{error}</span>
           </div>
@@ -386,8 +899,6 @@ export default function ProductionDashboard() {
               { id: 'boms', label: 'BOMs', icon: Package },
               { id: 'prodplans', label: 'Prod Plans', icon: Calendar },
               { id: 'jobcards', label: 'Job Cards', icon: FileText },
-              { id: 'workstations', label: 'Workstations', icon: Grid3x3 },
-              { id: 'operations', label: 'Operations', icon: Wrench },
             ].map(tab => {
               const TabIcon = tab.icon
               const isActive = activeTab === tab.id
@@ -437,9 +948,41 @@ export default function ProductionDashboard() {
         )}
 
         {activeTab === 'production' && (
-          <ChartContainer title="Weekly Production Trend" subtitle="Daily production metrics across completion status">
-            <ResponsiveContainer width="100%" height={420}>
-              <BarChart data={chartData.dailyProduction} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+          <div className="space-y-4">
+            <div className="flex gap-2 items-center">
+              <span className="text-xs font-semibold text-gray-600 mr-2">Schedule:</span>
+              {['weekly', 'monthly', 'yearly'].map(type => (
+                <button
+                  key={type}
+                  onClick={() => setScheduleType(type)}
+                  className={`px-4 py-2 text-xs font-medium rounded transition-all ${
+                    scheduleType === type
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </button>
+              ))}
+            </div>
+            <ChartContainer 
+              title={`${scheduleType.charAt(0).toUpperCase() + scheduleType.slice(1)} Production Trend`}
+              subtitle={
+                scheduleType === 'weekly' ? 'Daily production metrics across completion status' :
+                scheduleType === 'monthly' ? 'Monthly production aggregation across completion status' :
+                'Yearly production aggregation across completion status'
+              }
+            >
+              <ResponsiveContainer width="100%" height={420}>
+              <BarChart 
+                data={chartData.dailyProduction} 
+                margin={{ 
+                  top: 20, 
+                  right: 30, 
+                  left: 0, 
+                  bottom: scheduleType === 'weekly' ? 20 : scheduleType === 'monthly' ? 80 : 40
+                }}
+              >
                 <defs>
                   <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.9}/>
@@ -455,21 +998,151 @@ export default function ProductionDashboard() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
-                <XAxis dataKey="day" stroke="#6b7280" style={{ fontSize: '12px' }} />
-                <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-                <Tooltip content={<CustomTooltip />} />
+                <XAxis 
+                  dataKey="day" 
+                  stroke="#6b7280" 
+                  style={{ fontSize: '11px' }}
+                  angle={scheduleType === 'weekly' ? 0 : scheduleType === 'monthly' ? -45 : -30}
+                  textAnchor={scheduleType === 'weekly' ? 'middle' : 'end'}
+                  height={scheduleType === 'weekly' ? 30 : scheduleType === 'monthly' ? 80 : 60}
+                />
+                <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} label={{ value: 'Count', angle: -90, position: 'insideLeft' }} />
+                <Tooltip 
+                  content={<CustomTooltip />}
+                  contentStyle={{
+                    backgroundColor: '#fff',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                  }}
+                />
                 <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                <Bar dataKey="completed" fill="url(#colorCompleted)" name="Completed" radius={[12, 12, 0, 0]} />
-                <Bar dataKey="inProgress" fill="url(#colorProgress)" name="In Progress" radius={[12, 12, 0, 0]} />
-                <Bar dataKey="pending" fill="url(#colorPending)" name="Pending" radius={[12, 12, 0, 0]} />
+                <Bar 
+                  dataKey="completed" 
+                  fill="url(#colorCompleted)" 
+                  name="Completed" 
+                  radius={[12, 12, 0, 0]}
+                  animationDuration={600}
+                />
+                <Bar 
+                  dataKey="inProgress" 
+                  fill="url(#colorProgress)" 
+                  name="In Progress" 
+                  radius={[12, 12, 0, 0]}
+                  animationDuration={600}
+                />
+                <Bar 
+                  dataKey="pending" 
+                  fill="url(#colorPending)" 
+                  name="Pending" 
+                  radius={[12, 12, 0, 0]}
+                  animationDuration={600}
+                />
               </BarChart>
             </ResponsiveContainer>
-          </ChartContainer>
+            </ChartContainer>
+          </div>
         )}
 
         {activeTab === 'workorders' && (
           <div className="space-y-6">
-            <ChartContainer title="Work Order Distribution" subtitle="Count breakdown by order status">
+            <div className="space-y-4">
+              <div className="flex gap-2 items-center">
+                <span className="text-xs font-semibold text-gray-600 mr-2">Schedule:</span>
+                {['weekly', 'monthly', 'yearly'].map(type => (
+                  <button
+                    key={type}
+                    onClick={() => setWoScheduleType(type)}
+                    className={`px-4 py-2 text-xs font-medium rounded transition-all ${
+                      woScheduleType === type
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <ChartContainer 
+                title={`${woScheduleType.charAt(0).toUpperCase() + woScheduleType.slice(1)} Work Order Trend`}
+                subtitle={
+                  woScheduleType === 'weekly' ? 'Daily work order metrics across completion status' :
+                  woScheduleType === 'monthly' ? 'Monthly work order aggregation across completion status' :
+                  'Yearly work order aggregation across completion status'
+                }
+              >
+                <ResponsiveContainer width="100%" height={420}>
+                <BarChart 
+                  data={chartData.workOrderTimeline} 
+                  margin={{ 
+                    top: 20, 
+                    right: 30, 
+                    left: 0, 
+                    bottom: woScheduleType === 'weekly' ? 20 : woScheduleType === 'monthly' ? 80 : 40
+                  }}
+                >
+                  <defs>
+                    <linearGradient id="colorWOCompleted" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.9}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.6}/>
+                    </linearGradient>
+                    <linearGradient id="colorWOProgress" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.9}/>
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.6}/>
+                    </linearGradient>
+                    <linearGradient id="colorWOPending" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.9}/>
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.6}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
+                  <XAxis 
+                    dataKey="day" 
+                    stroke="#6b7280" 
+                    style={{ fontSize: '11px' }}
+                    angle={woScheduleType === 'weekly' ? 0 : woScheduleType === 'monthly' ? -45 : -30}
+                    textAnchor={woScheduleType === 'weekly' ? 'middle' : 'end'}
+                    height={woScheduleType === 'weekly' ? 30 : woScheduleType === 'monthly' ? 80 : 60}
+                  />
+                  <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} label={{ value: 'Count', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip 
+                    content={<CustomTooltip />}
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    }}
+                  />
+                  <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                  <Bar 
+                    dataKey="completed" 
+                    fill="url(#colorWOCompleted)" 
+                    name="Completed" 
+                    radius={[12, 12, 0, 0]}
+                    animationDuration={600}
+                  />
+                  <Bar 
+                    dataKey="inProgress" 
+                    fill="url(#colorWOProgress)" 
+                    name="In Progress" 
+                    radius={[12, 12, 0, 0]}
+                    animationDuration={600}
+                  />
+                  <Bar 
+                    dataKey="pending" 
+                    fill="url(#colorWOPending)" 
+                    name="Pending" 
+                    radius={[12, 12, 0, 0]}
+                    animationDuration={600}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+              </ChartContainer>
+            </div>
+            <ChartContainer title="Work Order Status Distribution" subtitle="Count breakdown by order status">
               <ResponsiveContainer width="100%" height={400}>
                 <BarChart data={chartData.workOrderStatus} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
                   <defs>
@@ -488,7 +1161,7 @@ export default function ProductionDashboard() {
             </ChartContainer>
             {dataEntries.workOrders.length > 0 && (
               <div>
-                <h3 className="text-sm font-bold text-gray-900 mb-4">Recent Work Orders</h3>
+                <h3 className="text-xs font-bold text-gray-900 mb-4">Recent Work Orders</h3>
                 <div className="space-y-4">
                   {dataEntries.workOrders.slice(0, 10).map(item => (
                     <EntryCard key={item.id} item={item} />
@@ -501,26 +1174,81 @@ export default function ProductionDashboard() {
 
         {activeTab === 'boms' && (
           <div className="space-y-6">
-            <ChartContainer title="Bill of Materials Overview" subtitle="Item count per BOM document">
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={dataEntries.boms} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+            <div className="space-y-4">
+              <div className="flex gap-2 items-center">
+                <span className="text-xs font-semibold text-gray-600 mr-2">Schedule:</span>
+                {['weekly', 'monthly', 'yearly'].map(type => (
+                  <button
+                    key={type}
+                    onClick={() => setBomScheduleType(type)}
+                    className={`px-4 py-2 text-xs font-medium rounded transition-all ${
+                      bomScheduleType === type
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <ChartContainer 
+                title={`${bomScheduleType.charAt(0).toUpperCase() + bomScheduleType.slice(1)} BOM Trend`}
+                subtitle={
+                  bomScheduleType === 'weekly' ? 'Daily BOM creation metrics' :
+                  bomScheduleType === 'monthly' ? 'Monthly BOM aggregation' :
+                  'Yearly BOM aggregation'
+                }
+              >
+                <ResponsiveContainer width="100%" height={420}>
+                <BarChart 
+                  data={chartData.bomTimeline} 
+                  margin={{ 
+                    top: 20, 
+                    right: 30, 
+                    left: 0, 
+                    bottom: bomScheduleType === 'weekly' ? 20 : bomScheduleType === 'monthly' ? 80 : 40
+                  }}
+                >
                   <defs>
-                    <linearGradient id="colorBOM" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id="colorBOMCount" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.9}/>
-                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.5}/>
+                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.6}/>
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
-                  <XAxis dataKey="name" stroke="#6b7280" style={{ fontSize: '12px' }} angle={-45} textAnchor="end" height={80} />
-                  <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="items" fill="url(#colorBOM)" name="Items" radius={[12, 12, 0, 0]} />
+                  <XAxis 
+                    dataKey="day" 
+                    stroke="#6b7280" 
+                    style={{ fontSize: '11px' }}
+                    angle={bomScheduleType === 'weekly' ? 0 : bomScheduleType === 'monthly' ? -45 : -30}
+                    textAnchor={bomScheduleType === 'weekly' ? 'middle' : 'end'}
+                    height={bomScheduleType === 'weekly' ? 30 : bomScheduleType === 'monthly' ? 80 : 60}
+                  />
+                  <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} label={{ value: 'Count', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip 
+                    content={<CustomTooltip />}
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    }}
+                  />
+                  <Bar 
+                    dataKey="count" 
+                    fill="url(#colorBOMCount)" 
+                    name="Count" 
+                    radius={[12, 12, 0, 0]}
+                    animationDuration={600}
+                  />
                 </BarChart>
               </ResponsiveContainer>
-            </ChartContainer>
+              </ChartContainer>
+            </div>
             {dataEntries.boms.length > 0 && (
               <div>
-                <h3 className="text-sm font-bold text-gray-900 mb-4">BOMs List</h3>
+                <h3 className="text-xs font-bold text-gray-900 mb-4">BOMs List</h3>
                 <div className="space-y-4">
                   {dataEntries.boms.slice(0, 10).map(item => (
                     <EntryCard key={item.id} item={item} />
@@ -533,26 +1261,93 @@ export default function ProductionDashboard() {
 
         {activeTab === 'prodplans' && (
           <div className="space-y-6">
-            <ChartContainer title="Production Plans Quantity Analysis" subtitle="Scheduled production quantities per plan">
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={dataEntries.productionPlans} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+            <div className="space-y-4">
+              <div className="flex gap-2 items-center">
+                <span className="text-xs font-semibold text-gray-600 mr-2">Schedule:</span>
+                {['weekly', 'monthly', 'yearly'].map(type => (
+                  <button
+                    key={type}
+                    onClick={() => setPpScheduleType(type)}
+                    className={`px-4 py-2 text-xs font-medium rounded transition-all ${
+                      ppScheduleType === type
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <ChartContainer 
+                title={`${ppScheduleType.charAt(0).toUpperCase() + ppScheduleType.slice(1)} Production Plan Trend`}
+                subtitle={
+                  ppScheduleType === 'weekly' ? 'Daily production plan metrics with quantities' :
+                  ppScheduleType === 'monthly' ? 'Monthly production plan aggregation with quantities' :
+                  'Yearly production plan aggregation with quantities'
+                }
+              >
+                <ResponsiveContainer width="100%" height={420}>
+                <BarChart 
+                  data={chartData.ppTimeline} 
+                  margin={{ 
+                    top: 20, 
+                    right: 30, 
+                    left: 0, 
+                    bottom: ppScheduleType === 'weekly' ? 20 : ppScheduleType === 'monthly' ? 80 : 40
+                  }}
+                >
                   <defs>
-                    <linearGradient id="colorProdPlan" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id="colorPPCount" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.9}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.5}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.6}/>
+                    </linearGradient>
+                    <linearGradient id="colorPPQuantity" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.9}/>
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.6}/>
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
-                  <XAxis dataKey="name" stroke="#6b7280" style={{ fontSize: '12px' }} angle={-45} textAnchor="end" height={80} />
-                  <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="quantity" fill="url(#colorProdPlan)" name="Quantity" radius={[12, 12, 0, 0]} />
+                  <XAxis 
+                    dataKey="day" 
+                    stroke="#6b7280" 
+                    style={{ fontSize: '11px' }}
+                    angle={ppScheduleType === 'weekly' ? 0 : ppScheduleType === 'monthly' ? -45 : -30}
+                    textAnchor={ppScheduleType === 'weekly' ? 'middle' : 'end'}
+                    height={ppScheduleType === 'weekly' ? 30 : ppScheduleType === 'monthly' ? 80 : 60}
+                  />
+                  <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} label={{ value: 'Count', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip 
+                    content={<CustomTooltip />}
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    }}
+                  />
+                  <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                  <Bar 
+                    dataKey="count" 
+                    fill="url(#colorPPCount)" 
+                    name="Count" 
+                    radius={[12, 12, 0, 0]}
+                    animationDuration={600}
+                  />
+                  <Bar 
+                    dataKey="quantity" 
+                    fill="url(#colorPPQuantity)" 
+                    name="Quantity" 
+                    radius={[12, 12, 0, 0]}
+                    animationDuration={600}
+                  />
                 </BarChart>
               </ResponsiveContainer>
-            </ChartContainer>
+              </ChartContainer>
+            </div>
             {dataEntries.productionPlans.length > 0 && (
               <div>
-                <h3 className="text-sm font-bold text-gray-900 mb-4">Production Plans</h3>
+                <h3 className="text-xs font-bold text-gray-900 mb-4">Production Plans</h3>
                 <div className="space-y-4">
                   {dataEntries.productionPlans.slice(0, 10).map(item => (
                     <EntryCard key={item.id} item={item} />
@@ -565,26 +1360,104 @@ export default function ProductionDashboard() {
 
         {activeTab === 'jobcards' && (
           <div className="space-y-6">
-            <ChartContainer title="Job Cards Performance" subtitle="Job card activity and distribution">
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={dataEntries.jobCards} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+            <div className="space-y-4">
+              <div className="flex gap-2 items-center">
+                <span className="text-xs font-semibold text-gray-600 mr-2">Schedule:</span>
+                {['weekly', 'monthly', 'yearly'].map(type => (
+                  <button
+                    key={type}
+                    onClick={() => setJcScheduleType(type)}
+                    className={`px-4 py-2 text-xs font-medium rounded transition-all ${
+                      jcScheduleType === type
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <ChartContainer 
+                title={`${jcScheduleType.charAt(0).toUpperCase() + jcScheduleType.slice(1)} Job Card Trend`}
+                subtitle={
+                  jcScheduleType === 'weekly' ? 'Daily job card metrics across completion status' :
+                  jcScheduleType === 'monthly' ? 'Monthly job card aggregation across completion status' :
+                  'Yearly job card aggregation across completion status'
+                }
+              >
+                <ResponsiveContainer width="100%" height={420}>
+                <BarChart 
+                  data={chartData.jcTimeline} 
+                  margin={{ 
+                    top: 20, 
+                    right: 30, 
+                    left: 0, 
+                    bottom: jcScheduleType === 'weekly' ? 20 : jcScheduleType === 'monthly' ? 80 : 40
+                  }}
+                >
                   <defs>
-                    <linearGradient id="colorJobCard" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id="colorJCCompleted" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#10b981" stopOpacity={0.9}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.5}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.6}/>
+                    </linearGradient>
+                    <linearGradient id="colorJCProgress" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.9}/>
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.6}/>
+                    </linearGradient>
+                    <linearGradient id="colorJCPending" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.9}/>
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.6}/>
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
-                  <XAxis dataKey="name" stroke="#6b7280" style={{ fontSize: '12px' }} angle={-45} textAnchor="end" height={80} />
-                  <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="id" fill="url(#colorJobCard)" name="Count" radius={[12, 12, 0, 0]} />
+                  <XAxis 
+                    dataKey="day" 
+                    stroke="#6b7280" 
+                    style={{ fontSize: '11px' }}
+                    angle={jcScheduleType === 'weekly' ? 0 : jcScheduleType === 'monthly' ? -45 : -30}
+                    textAnchor={jcScheduleType === 'weekly' ? 'middle' : 'end'}
+                    height={jcScheduleType === 'weekly' ? 30 : jcScheduleType === 'monthly' ? 80 : 60}
+                  />
+                  <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} label={{ value: 'Count', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip 
+                    content={<CustomTooltip />}
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    }}
+                  />
+                  <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                  <Bar 
+                    dataKey="completed" 
+                    fill="url(#colorJCCompleted)" 
+                    name="Completed" 
+                    radius={[12, 12, 0, 0]}
+                    animationDuration={600}
+                  />
+                  <Bar 
+                    dataKey="inProgress" 
+                    fill="url(#colorJCProgress)" 
+                    name="In Progress" 
+                    radius={[12, 12, 0, 0]}
+                    animationDuration={600}
+                  />
+                  <Bar 
+                    dataKey="pending" 
+                    fill="url(#colorJCPending)" 
+                    name="Pending" 
+                    radius={[12, 12, 0, 0]}
+                    animationDuration={600}
+                  />
                 </BarChart>
               </ResponsiveContainer>
-            </ChartContainer>
+              </ChartContainer>
+            </div>
             {dataEntries.jobCards.length > 0 && (
               <div>
-                <h3 className="text-sm font-bold text-gray-900 mb-4">Job Cards</h3>
+                <h3 className="text-xs font-bold text-gray-900 mb-4">Job Cards</h3>
                 <div className="space-y-4">
                   {dataEntries.jobCards.slice(0, 10).map(item => (
                     <EntryCard key={item.id} item={item} />
@@ -595,119 +1468,7 @@ export default function ProductionDashboard() {
           </div>
         )}
 
-        {activeTab === 'workstations' && (
-          <div className="space-y-6">
-            <ChartContainer title="Workstation Utilization Analytics" subtitle="Real-time capacity utilization by workstation">
-              <ResponsiveContainer width="100%" height={420}>
-                <BarChart data={dataEntries.workstations} layout="vertical" margin={{ top: 20, right: 30, left: 150, bottom: 20 }}>
-                  <defs>
-                    <linearGradient id="colorUtilization" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.9}/>
-                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.5}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" horizontal={false} />
-                  <XAxis type="number" stroke="#6b7280" style={{ fontSize: '12px' }} />
-                  <YAxis dataKey="name" type="category" stroke="#6b7280" style={{ fontSize: '12px' }} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="utilization" fill="url(#colorUtilization)" name="Utilization %" radius={[0, 12, 12, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-            {dataEntries.workstations.length > 0 && (
-              <div>
-                <h3 className="text-sm font-bold text-gray-900 mb-4">Workstations</h3>
-                <div className="space-y-4">
-                  {dataEntries.workstations.slice(0, 10).map(item => (
-                    <EntryCard key={item.id} item={item} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
-        {activeTab === 'operations' && (
-          <div className="space-y-6">
-            <ChartContainer title="Operations Duration Timeline" subtitle="Processing time per operation in minutes">
-              <ResponsiveContainer width="100%" height={420}>
-                <BarChart data={dataEntries.operations} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
-                  <defs>
-                    <linearGradient id="colorDuration" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ec4899" stopOpacity={0.9}/>
-                      <stop offset="95%" stopColor="#ec4899" stopOpacity={0.5}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
-                  <XAxis dataKey="name"  style={{ fontSize: '10px' }} angle={-45} textAnchor="end" height={80} />
-                  <YAxis  style={{ fontSize: '10px' }} label={{ value: 'Duration (minutes)', angle: -90, position: 'insideLeft' }} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="duration" fill="url(#colorDuration)" name="Duration (min)" radius={[12, 12, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ChartContainer title="Operations Status Distribution" subtitle="Count by operation status">
-                <ResponsiveContainer width="100%" height={340}>
-                  <RechartsPie data={[
-                    { name: 'Completed', value: dataEntries.operations.filter(o => normalizeStatus(o.status) === 'completed').length, fill: '#10b981' },
-                    { name: 'In Progress', value: dataEntries.operations.filter(o => normalizeStatus(o.status) === 'in-progress').length, fill: '#f59e0b' },
-                    { name: 'Pending', value: dataEntries.operations.filter(o => ['pending', 'draft'].includes(normalizeStatus(o.status))).length, fill: '#ef4444' }
-                  ]}>
-                    <Pie data={[
-                      { name: 'Completed', value: dataEntries.operations.filter(o => normalizeStatus(o.status) === 'completed').length, fill: '#10b981' },
-                      { name: 'In Progress', value: dataEntries.operations.filter(o => normalizeStatus(o.status) === 'in-progress').length, fill: '#f59e0b' },
-                      { name: 'Pending', value: dataEntries.operations.filter(o => ['pending', 'draft'].includes(normalizeStatus(o.status))).length, fill: '#ef4444' }
-                    ]} cx="50%" cy="50%" labelLine={true} label={({ name, value, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={110} fill="#8884d8" dataKey="value">
-                      {[
-                        { name: 'Completed', value: dataEntries.operations.filter(o => normalizeStatus(o.status) === 'completed').length, fill: '#10b981' },
-                        { name: 'In Progress', value: dataEntries.operations.filter(o => normalizeStatus(o.status) === 'in-progress').length, fill: '#f59e0b' },
-                        { name: 'Pending', value: dataEntries.operations.filter(o => ['pending', 'draft'].includes(normalizeStatus(o.status))).length, fill: '#ef4444' }
-                      ].map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} />
-                  </RechartsPie>
-                </ResponsiveContainer>
-              </ChartContainer>
-
-              <ChartContainer title="Average Duration by Status" subtitle="Mean operation time per status">
-                <ResponsiveContainer width="100%" height={340}>
-                  <BarChart data={[
-                    { status: 'Completed', duration: Math.round(dataEntries.operations.filter(o => normalizeStatus(o.status) === 'completed').reduce((a, o) => a + o.duration, 0) / Math.max(dataEntries.operations.filter(o => normalizeStatus(o.status) === 'completed').length, 1)) },
-                    { status: 'In Progress', duration: Math.round(dataEntries.operations.filter(o => normalizeStatus(o.status) === 'in-progress').reduce((a, o) => a + o.duration, 0) / Math.max(dataEntries.operations.filter(o => normalizeStatus(o.status) === 'in-progress').length, 1)) },
-                    { status: 'Pending', duration: Math.round(dataEntries.operations.filter(o => ['pending', 'draft'].includes(normalizeStatus(o.status))).reduce((a, o) => a + o.duration, 0) / Math.max(dataEntries.operations.filter(o => ['pending', 'draft'].includes(normalizeStatus(o.status))).length, 1)) }
-                  ]} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
-                    <defs>
-                      <linearGradient id="colorAvgDuration" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.9}/>
-                        <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.5}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
-                    <XAxis dataKey="status" stroke="#6b7280" style={{ fontSize: '12px' }} />
-                    <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} label={{ value: 'Avg Duration (min)', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="duration" fill="url(#colorAvgDuration)" name="Avg Duration" radius={[12, 12, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </div>
-
-            {dataEntries.operations.length > 0 && (
-              <div>
-                <h3 className="text-sm font-bold text-gray-900 mb-4">Operations List</h3>
-                <div className="space-y-4">
-                  {dataEntries.operations.slice(0, 10).map(item => (
-                    <EntryCard key={item.id} item={item} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   )

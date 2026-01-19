@@ -104,7 +104,7 @@ export default function DataTable({
   return (
     <>
      {!hideColumnToggle && (
-        <div className="table-toolbar">
+        <div className="table-toolbar mt-3">
           <div className="column-toggle-container">
             <button
               className="column-toggle-btn"

@@ -4,12 +4,10 @@ import Button from '../../components/Button/Button'
 import DataTable from '../../components/Table/DataTable'
 import AdvancedFilters from '../../components/AdvancedFilters'
 import Alert from '../../components/Alert/Alert'
-import Card from '../../components/Card/Card'
 import Badge from '../../components/Badge/Badge'
 import CreateMaterialRequestModal from '../../components/Buying/CreateMaterialRequestModal'
 import ViewMaterialRequestModal from '../../components/Buying/ViewMaterialRequestModal'
 import { Plus, Eye, CheckCircle, XCircle, Trash2, AlertCircle, CheckCheck, Clock } from 'lucide-react'
-import './Buying.css'
 
 export default function MaterialRequests() {
   const [requests, setRequests] = useState([])
@@ -248,9 +246,9 @@ export default function MaterialRequests() {
   ]
 
   const renderActions = (row) => (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1 justify-center">
       <Button 
-        size="sm"
+        size="xs"
         variant="icon"
         onClick={() => {
           setSelectedMrId(row.mr_id)
@@ -297,26 +295,28 @@ export default function MaterialRequests() {
     </div>
   )
 
-  const StatCard = ({ label, value, icon: Icon, color, onClick }) => (
-    <div
-      onClick={onClick}
-      className={`bg-white dark:bg-neutral-800 rounded-sm p-3 border-l-4 transition-all hover:shadow-lg ${onClick ? 'cursor-pointer' : ''}`}
-      style={{ borderLeftColor: { primary: '#3b82f6', success: '#10b981', warning: '#f59e0b', danger: '#ef4444' }[color] }}
-    >
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-            {label}
-          </p>
-          <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">{value}</p>
-        </div>
-        <Icon size={28} className="text-neutral-400 dark:text-neutral-600" />
+  const StatCard = ({ label, value, icon: Icon, color, onClick }) => {
+    const colorMap = {
+      primary: 'from-blue-50 to-blue-100 text-blue-700',
+      success: 'from-green-50 to-green-100 text-green-700',
+      warning: 'from-amber-50 to-amber-100 text-amber-700',
+      danger: 'from-red-50 to-red-100 text-red-700',
+      info: 'from-purple-50 to-purple-100 text-purple-700'
+    }
+    
+    return (
+      <div
+        onClick={onClick}
+        className={`bg-gradient-to-br ${colorMap[color] || colorMap.primary} p-2 rounded-sm border border-opacity-30 shadow-sm hover:shadow-md transition-all ${onClick ? 'cursor-pointer' : ''}`}
+      >
+        <p className="text-xs font-medium text-gray-600 mb-2">{label}</p>
+        <p className="text-xl font-bold">{value}</p>
       </div>
-    </div>
-  )
+    )
+  }
 
   return (
-    <div className="buying-container">
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       <CreateMaterialRequestModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -336,16 +336,14 @@ export default function MaterialRequests() {
         mrId={selectedMrId}
         onStatusChange={() => {
           fetchRequests()
-          // Optionally close modal if deleted, or keep open if approved/rejected
-          // For delete, the modal closes itself in handleDelete
         }}
       />
 
       {/* Header Section */}
-      <div className="flex justify-between items-start mb-8">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">Material Requests</h2>
-          <p className="text-neutral-600 dark:text-neutral-400 mt-1">Create and manage material requisitions</p>
+          <h1 className="text-xl font-bold text-gray-900">Material Requests</h1>
+          <p className="text-xs text-gray-500 mt-1">Create and manage material requisitions</p>
         </div>
         <Button 
           onClick={() => setIsModalOpen(true)}
@@ -356,13 +354,11 @@ export default function MaterialRequests() {
         </Button>
       </div>
 
-      {/* Error & Success Alerts */}
       {error && <Alert type="danger">{error}</Alert>}
       {success && <Alert type="success">{success}</Alert>}
 
-      {/* Stats Dashboard */}
       {!loading && requests.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <StatCard
             label="Total Requests"
             value={stats.total}
@@ -401,64 +397,62 @@ export default function MaterialRequests() {
         </div>
       )}
 
-      {/* Main Content Card */}
-      <Card>
-        <AdvancedFilters 
-          filters={filters}
-          onFilterChange={setFilters}
-          filterConfig={[
-            {
-              key: 'status',
-              label: 'Status',
-              type: 'select',
-              options: [
-                { value: 'draft', label: 'Draft' },
-                { value: 'approved', label: 'Approved' },
-                { value: 'converted', label: 'Converted' },
-                { value: 'cancelled', label: 'Cancelled' }
-              ]
-            },
-            {
-              key: 'department',
-              label: 'Department',
-              type: 'select',
-              options: departments.map(dept => ({ value: dept, label: dept }))
-            },
-            {
-              key: 'search',
-              label: 'Search',
-              type: 'text',
-              placeholder: 'MR ID, requester name...'
-            }
-          ]}
-          onApply={fetchRequests}
-          onReset={() => {
-            setFilters({ status: '', department: '', search: '' })
-          }}
-          showPresets={true}
-        />
+      <div className="">
+        <div className="">
+          <AdvancedFilters 
+            filters={filters}
+            onFilterChange={setFilters}
+            filterConfig={[
+              {
+                key: 'status',
+                label: 'Status',
+                type: 'select',
+                options: [
+                  { value: 'draft', label: 'Draft' },
+                  { value: 'approved', label: 'Approved' },
+                  { value: 'converted', label: 'Converted' },
+                  { value: 'cancelled', label: 'Cancelled' }
+                ]
+              },
+              {
+                key: 'department',
+                label: 'Department',
+                type: 'select',
+                options: departments.map(dept => ({ value: dept, label: dept }))
+              },
+              {
+                key: 'search',
+                label: 'Search',
+                type: 'text',
+                placeholder: 'MR ID, requester name...'
+              }
+            ]}
+          />
+        </div>
 
         {loading ? (
           <div className="py-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-            <p className="text-neutral-600 dark:text-neutral-400 mt-4">Loading...</p>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="text-gray-600 mt-4">Loading...</p>
           </div>
         ) : requests.length === 0 ? (
           <div className="py-12 text-center">
-            <AlertCircle size={48} className="mx-auto text-neutral-400 dark:text-neutral-600 mb-4" />
-            <p className="text-neutral-600 dark:text-neutral-400">No material requests found</p>
+            <AlertCircle size={48} className="mx-auto text-gray-300 mb-4" />
+            <p className="text-gray-500">No material requests found</p>
           </div>
         ) : (
-          <DataTable 
-            columns={columns}
-            data={requests}
-            renderActions={renderActions}
-            filterable={true}
-            sortable={true}
-            pageSize={10}
-          />
+          <div className="overflow-x-auto">
+            <DataTable 
+              columns={columns}
+              data={requests}
+              renderActions={renderActions}
+              filterable={true}
+              sortable={true}
+              pageSize={10}
+            />
+          </div>
         )}
-      </Card>
+      </div>
     </div>
   )
 }

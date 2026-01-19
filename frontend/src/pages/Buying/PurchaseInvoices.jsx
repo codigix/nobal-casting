@@ -158,7 +158,7 @@ export default function PurchaseInvoices() {
       </div>
 
       {error && (
-        <Card className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500">
+        <Card className="mb-6 p-2 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500">
           <p className="text-red-700 dark:text-red-400">{error}</p>
         </Card>
       )}
@@ -167,7 +167,6 @@ export default function PurchaseInvoices() {
         filters={filters}
         onFilterChange={setFilters}
         filterConfig={filterConfig}
-        showPresets={true}
       />
 
       <Card>

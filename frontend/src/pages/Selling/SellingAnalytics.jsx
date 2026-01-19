@@ -79,7 +79,7 @@ export default function SellingAnalytics() {
               borderRadius: 'var(--radius-lg)',
               background: 'var(--input-bg)',
               color: 'var(--text-primary)',
-              fontSize: 'var(--text-sm)'
+              fontSize: 'var(--text-xs)'
             }}
           >
             <option value="weekly">Weekly</option>

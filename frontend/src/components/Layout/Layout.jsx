@@ -54,12 +54,12 @@ export default function Layout({ children }) {
         {/* Header */}
         <header className="px-8 py-4 flex-between border-b" style={{ backgroundColor: 'var(--header-bg)', borderColor: 'var(--header-border)' }}>
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Aluminium Precision Casting ERP</h1>
-            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Manage your operations efficiently</p>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Aluminium Precision Casting ERP</h1>
+            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Manage your operations efficiently</p>
           </div>
           <div className="flex items-center gap-4">
-            <button className="p-2 rounded-lg transition-colors hover:bg-opacity-80" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-tertiary)' }}>🔔</button>
-            <button className="p-2 rounded-lg transition-colors hover:bg-opacity-80" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-tertiary)' }}>👤</button>
+            <button className="p-2 rounded-xs transition-colors hover:bg-opacity-80" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-tertiary)' }}>🔔</button>
+            <button className="p-2 rounded-xs transition-colors hover:bg-opacity-80" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-tertiary)' }}>👤</button>
           </div>
         </header>
 
@@ -69,7 +69,7 @@ export default function Layout({ children }) {
         </main>
 
         {/* Footer */}
-        <footer className="px-8 py-4 text-center text-sm border-t" style={{ backgroundColor: 'var(--header-bg)', borderColor: 'var(--header-border)', color: 'var(--text-secondary)' }}>
+        <footer className="px-8 py-4 text-center text-xs border-t" style={{ backgroundColor: 'var(--header-bg)', borderColor: 'var(--header-border)', color: 'var(--text-secondary)' }}>
           <p>&copy; 2025 Aluminium Precision Casting ERP. All rights reserved.</p>
         </footer>
       </div>

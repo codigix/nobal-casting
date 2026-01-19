@@ -204,7 +204,7 @@ export default function SupplierList() {
           </div>
           <Button
             onClick={handleAddClick}
-            className="flex items-center gap-2 bg-blue-500 text-white px-5 py-2.5 rounded-md font-semibold text-sm"
+            className="flex items-center gap-2 bg-blue-500 text-white px-5 py-2.5 rounded-md font-semibold text-xs"
           >
             <Plus size={18} />
             Add New Supplier
@@ -212,7 +212,7 @@ export default function SupplierList() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg p-5 border border-gray-200">
+      <div className="bg-white rounded-xs p-5 border border-gray-200">
         <div className="grid grid-cols-4 gap-4 mb-5">
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-2">Search</label>
@@ -257,7 +257,7 @@ export default function SupplierList() {
       </div>
 
       {showAddForm && (
-        <div className="bg-gray-50 rounded-lg p-6 border-l-4 border-blue-500">
+        <div className="bg-gray-50 rounded-xs p-6 border-l-4 border-blue-500">
           <div className="flex justify-between items-center mb-5">
             <h3 className="text-lg font-semibold text-gray-800">Add New Supplier</h3>
             <button
@@ -350,7 +350,7 @@ export default function SupplierList() {
                 onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                 className="w-4 h-4 cursor-pointer"
               />
-              <label htmlFor="is_active" className="text-sm text-gray-800 cursor-pointer">Active Supplier</label>
+              <label htmlFor="is_active" className="text-xs text-gray-800 cursor-pointer">Active Supplier</label>
             </div>
 
             <div className="flex gap-3 justify-end">
@@ -373,9 +373,9 @@ export default function SupplierList() {
       )}
 
       {filteredSuppliers.length === 0 ? (
-        <div className="bg-white rounded-lg p-10 text-center border border-gray-200">
+        <div className="bg-white rounded-xs p-10 text-center border border-gray-200">
           <p className="text-base text-gray-600 mb-4">No suppliers found</p>
-          <p className="text-sm text-gray-500 mb-5">Try adjusting your filters or create a new supplier</p>
+          <p className="text-xs text-gray-500 mb-5">Try adjusting your filters or create a new supplier</p>
           <Button
             onClick={handleAddClick}
             className="inline-block px-5 py-2.5 bg-blue-500 text-white rounded-md text-xs font-semibold  hover:bg-blue-600"
@@ -384,7 +384,7 @@ export default function SupplierList() {
           </Button>
         </div>
       ) : (
-        <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
+        <div className="bg-white rounded-xs overflow-hidden border border-gray-200">
           <table className="w-full border-collapse border border-gray-200">
             <thead>
               <tr className="bg-gray-100 border-b-2 border-gray-200">
@@ -411,7 +411,7 @@ export default function SupplierList() {
                               type="text"
                               value={formData.name}
                               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                              className="w-full px-2.5 py-2 text-sm border border-blue-500 rounded-sm"
+                              className="w-full px-2.5 py-2 text-xs border border-blue-500 rounded-sm"
                             />
                           </div>
 
@@ -421,7 +421,7 @@ export default function SupplierList() {
                               type="text"
                               value={formData.gstin}
                               onChange={(e) => setFormData({ ...formData, gstin: e.target.value })}
-                              className="w-full px-2.5 py-2 text-sm border border-blue-500 rounded-sm"
+                              className="w-full px-2.5 py-2 text-xs border border-blue-500 rounded-sm"
                             />
                           </div>
 
@@ -444,7 +444,7 @@ export default function SupplierList() {
                               step="0.1"
                               value={formData.rating}
                               onChange={(e) => setFormData({ ...formData, rating: parseFloat(e.target.value) || 0 })}
-                              className="w-full px-2.5 py-2 text-sm border border-blue-500 rounded-sm"
+                              className="w-full px-2.5 py-2 text-xs border border-blue-500 rounded-sm"
                             />
                           </div>
 
@@ -455,7 +455,7 @@ export default function SupplierList() {
                               min="0"
                               value={formData.payment_terms_days}
                               onChange={(e) => setFormData({ ...formData, payment_terms_days: parseInt(e.target.value) || 0 })}
-                              className="w-full px-2.5 py-2 text-sm border border-blue-500 rounded-sm"
+                              className="w-full px-2.5 py-2 text-xs border border-blue-500 rounded-sm"
                             />
                           </div>
 
@@ -466,7 +466,7 @@ export default function SupplierList() {
                               min="0"
                               value={formData.lead_time_days}
                               onChange={(e) => setFormData({ ...formData, lead_time_days: parseInt(e.target.value) || 0 })}
-                              className="w-full px-2.5 py-2 text-sm border border-blue-500 rounded-sm"
+                              className="w-full px-2.5 py-2 text-xs border border-blue-500 rounded-sm"
                             />
                           </div>
                         </div>
@@ -508,22 +508,22 @@ export default function SupplierList() {
                   </tr>
                 ) : (
                   <tr key={supplier.supplier_id} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="px-4 py-4 text-sm text-gray-800 font-medium">
+                    <td className="px-4 py-4 text-xs text-gray-800 font-medium">
                       {supplier.name}
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-600 font-mono">
+                    <td className="px-4 py-4 text-xs text-gray-600 font-mono">
                       {supplier.supplier_id}
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-600 font-mono">
+                    <td className="px-4 py-4 text-xs text-gray-600 font-mono">
                       {supplier.gstin || '-'}
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-600">
+                    <td className="px-4 py-4 text-xs text-gray-600">
                       {supplier.supplier_group || '-'}
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-600 text-center">
+                    <td className="px-4 py-4 text-xs text-gray-600 text-center">
                       {supplier.rating ? `⭐ ${Number(supplier.rating).toFixed(1)}` : '—'}
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-600 text-center">
+                    <td className="px-4 py-4 text-xs text-gray-600 text-center">
                       {supplier.lead_time_days || 0} days
                     </td>
                     <td className="px-4 py-4 text-center">

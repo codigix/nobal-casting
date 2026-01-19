@@ -242,7 +242,7 @@ export default function ItemForm() {
       const [groupsRes, suppliersRes, customersRes, uomRes] = await Promise.all([
         axios.get(`${apiUrl}/item-groups`).catch(() => ({ data: { data: [] } })),
         axios.get(`${apiUrl}/suppliers?limit=1000`),
-        axios.get(`${apiUrl}/selling/customers?limit=1000`),
+        axios.get(`${apiUrl}/customers?limit=1000`),
         axios.get(`${apiUrl}/uom?limit=1000`).catch(() => ({ data: { data: [] } }))
       ])
 
@@ -1807,7 +1807,7 @@ export default function ItemForm() {
           />
         </div>
       </div>
-      <p className="text-neutral-500 text-sm">Quality control features can be configured here</p>
+      <p className="text-neutral-500 text-xs">Quality control features can be configured here</p>
     </div>
   )
 

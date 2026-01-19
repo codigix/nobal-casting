@@ -715,7 +715,7 @@ export default function WorkOrderForm() {
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-3">
       <div className="w-full mx-auto">
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-white rounded-xs shadow">
           <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
             <div className="flex items-center gap-2">
               <Factory className="w-6 h-6 text-blue-600" />
@@ -751,26 +751,26 @@ export default function WorkOrderForm() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               <div className="bg-blue-50 border border-blue-200 rounded p-3">
                 <p className="text-xs text-gray-600 font-semibold">Item Code</p>
-                <p className="text-sm font-bold text-blue-900 mt-1">{formData.item_to_manufacture || 'N/A'}</p>
+                <p className="text-xs font-bold text-blue-900 mt-1">{formData.item_to_manufacture || 'N/A'}</p>
               </div>
               <div className="bg-green-50 border border-green-200 rounded p-3">
                 <p className="text-xs text-gray-600 font-semibold">Quantity to Produce</p>
-                <p className="text-sm font-bold text-green-900 mt-1">{formData.qty_to_manufacture || 1}</p>
+                <p className="text-xs font-bold text-green-900 mt-1">{formData.qty_to_manufacture || 1}</p>
               </div>
               <div className="bg-purple-50 border border-purple-200 rounded p-3">
                 <p className="text-xs text-gray-600 font-semibold">Priority</p>
-                <p className="text-sm font-bold text-purple-900 mt-1 capitalize">{formData.priority || 'N/A'}</p>
+                <p className="text-xs font-bold text-purple-900 mt-1 capitalize">{formData.priority || 'N/A'}</p>
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded p-3">
                 <p className="text-xs text-gray-600 font-semibold">Status</p>
-                <p className="text-sm font-bold text-amber-900 mt-1 capitalize">{formData.status || 'N/A'}</p>
+                <p className="text-xs font-bold text-amber-900 mt-1 capitalize">{formData.status || 'N/A'}</p>
               </div>
             </div>
 
             {/* Details Table */}
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border rounded-xs overflow-hidden">
               <div className="flex items-center justify-between bg-gray-50 px-3 py-2 border-b border-gray-200">
-                <h3 className="text-sm font-bold text-gray-900">Work Order Details</h3>
+                <h3 className="text-xs font-bold text-gray-900">Work Order Details</h3>
                 {!isReadOnly && (
                   <button
                     onClick={() => setIsEditMode(!isEditMode)}
@@ -1061,7 +1061,7 @@ export default function WorkOrderForm() {
             {/* Operations Section */}
             {bomOperations.length > 0 && (
               <div className="border-t pt-3 mt-3">
-                <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1">
+                <h3 className="text-xs font-bold text-gray-900 mb-2 flex items-center gap-1">
                   <Factory size={16} className="text-blue-600" />
                   Operations ({bomOperations.length})
                 </h3>
@@ -1158,7 +1158,7 @@ export default function WorkOrderForm() {
             {/* Materials/Required Items Section */}
             {bomMaterials.length > 0 && (
               <div className="border-t pt-3 mt-3">
-                <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1">
+                <h3 className="text-xs font-bold text-gray-900 mb-2 flex items-center gap-1">
                   <Boxes size={16} className="text-purple-600" />
                   Required Items ({bomMaterials.length})
                 </h3>
@@ -1257,9 +1257,9 @@ export default function WorkOrderForm() {
 
             {/* Job Cards Section */}
             {jobCards.length > 0 && (
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-xs overflow-hidden">
                 <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
-                  <h3 className="text-sm font-bold text-gray-900 flex items-center gap-1">
+                  <h3 className="text-xs font-bold text-gray-900 flex items-center gap-1">
                     <BarChart3 size={16} className="text-indigo-600" />
                     Job Cards ({jobCards.length})
                   </h3>
@@ -1395,7 +1395,7 @@ export default function WorkOrderForm() {
             {/* Sub-Assemblies Section (separate from raw materials) */}
             {bomMaterials.length > 0 && bomMaterials.some(mat => mat.item_code?.startsWith('SA-')) && (
               <div className="border-t pt-3 mt-3">
-                <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1">
+                <h3 className="text-xs font-bold text-gray-900 mb-2 flex items-center gap-1">
                   <Package size={16} className="text-orange-600" />
                   Sub-Assemblies
                 </h3>
@@ -1427,7 +1427,7 @@ export default function WorkOrderForm() {
             {/* Cost Summary Section */}
             {(bomOperations.length > 0 || bomMaterials.length > 0) && (
               <div className="border-t pt-3 mt-3">
-                <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1">
+                <h3 className="text-xs font-bold text-gray-900 mb-2 flex items-center gap-1">
                   <BarChart3 size={16} className="text-green-600" />
                   Cost Summary
                 </h3>
@@ -1435,19 +1435,19 @@ export default function WorkOrderForm() {
                   {bomMaterials.length > 0 && (
                     <div className="bg-blue-50 rounded p-2 border border-blue-200">
                       <p className="text-xs text-gray-600">Raw Materials (Qty)</p>
-                      <p className="text-sm font-bold text-blue-900">{bomMaterials.length}</p>
+                      <p className="text-xs font-bold text-blue-900">{bomMaterials.length}</p>
                     </div>
                   )}
                   {bomOperations.length > 0 && (
                     <div className="bg-purple-50 rounded p-2 border border-purple-200">
                       <p className="text-xs text-gray-600">Operations (Qty)</p>
-                      <p className="text-sm font-bold text-purple-900">{bomOperations.length}</p>
+                      <p className="text-xs font-bold text-purple-900">{bomOperations.length}</p>
                     </div>
                   )}
                   {bomOperations.length > 0 && (
                     <div className="bg-orange-50 rounded p-2 border border-orange-200">
                       <p className="text-xs text-gray-600">Total Operation Hours</p>
-                      <p className="text-sm font-bold text-orange-900">
+                      <p className="text-xs font-bold text-orange-900">
                         {bomOperations.reduce((sum, op) => sum + (parseFloat(op.operation_time) || 0), 0).toFixed(2)} hrs
                       </p>
                     </div>
@@ -1455,7 +1455,7 @@ export default function WorkOrderForm() {
                   {bomOperations.length > 0 && (
                     <div className="bg-green-50 rounded p-2 border border-green-200">
                       <p className="text-xs text-gray-600">Total Operation Cost</p>
-                      <p className="text-sm font-bold text-green-900">
+                      <p className="text-xs font-bold text-green-900">
                         ₹{bomOperations.reduce((sum, op) => sum + (parseFloat(op.operating_cost) || 0) * (formData.qty_to_manufacture || 1), 0).toFixed(2)}
                       </p>
                     </div>
@@ -1468,7 +1468,7 @@ export default function WorkOrderForm() {
             <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 mt-4">
               <button
                 onClick={() => navigate('/manufacturing/work-orders')}
-                className="px-4 py-1.5 border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition"
+                className="px-4 py-1.5 border border-gray-300 text-gray-700 text-xs font-medium rounded hover:bg-gray-50 transition"
               >
                 {isReadOnly ? 'Close' : 'Cancel'}
               </button>
@@ -1476,7 +1476,7 @@ export default function WorkOrderForm() {
                 <button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:bg-gray-400 transition flex items-center gap-1"
+                  className="px-4 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 disabled:bg-gray-400 transition flex items-center gap-1"
                 >
                   <Save size={16} />
                   {loading ? 'Saving...' : 'Save'}

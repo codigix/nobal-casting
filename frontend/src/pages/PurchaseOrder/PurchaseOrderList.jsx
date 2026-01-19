@@ -85,9 +85,9 @@ export default function PurchaseOrderList() {
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <button className="text-[var(--primary-600)] hover:text-[var(--primary-700)] text-sm">View</button>
-                    <button className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm">Download</button>
-                    <button className="text-[var(--danger-600)] hover:text-[var(--danger-700)] text-sm">Cancel</button>
+                    <button className="text-[var(--primary-600)] hover:text-[var(--primary-700)] text-xs">View</button>
+                    <button className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs">Download</button>
+                    <button className="text-[var(--danger-600)] hover:text-[var(--danger-700)] text-xs">Cancel</button>
                   </div>
                 </TableCell>
               </TableRow>

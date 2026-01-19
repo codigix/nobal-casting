@@ -228,6 +228,21 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
       }
 
       setLoading(true)
+      const completedQty = parseFloat(timeLogForm.completed_qty) || 0
+      const acceptedQty = parseFloat(timeLogForm.accepted_qty) || 0
+      const rejectedQty = parseFloat(timeLogForm.rejected_qty) || 0
+      const scrapQty = parseFloat(timeLogForm.scrap_qty) || 0
+
+      if (completedQty <= 0) {
+        toast.addToast('Completed quantity must be greater than 0', 'error')
+        return
+      }
+
+      if (acceptedQty + rejectedQty + scrapQty > completedQty) {
+        toast.addToast(`Accepted (${acceptedQty}) + Rejected (${rejectedQty}) + Scrap (${scrapQty}) cannot exceed Completed (${completedQty})`, 'error')
+        return
+      }
+
       const payload = {
         job_card_id: jobCardId,
         employee_id: timeLogForm.employee_id,
@@ -236,10 +251,10 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
         shift: timeLogForm.shift,
         from_time: timeLogForm.from_time,
         to_time: timeLogForm.to_time,
-        completed_qty: parseFloat(timeLogForm.completed_qty) || 0,
-        accepted_qty: parseFloat(timeLogForm.accepted_qty) || 0,
-        rejected_qty: parseFloat(timeLogForm.rejected_qty) || 0,
-        scrap_qty: parseFloat(timeLogForm.scrap_qty) || 0,
+        completed_qty: completedQty,
+        accepted_qty: acceptedQty,
+        rejected_qty: rejectedQty,
+        scrap_qty: scrapQty,
         inhouse: timeLogForm.inhouse ? 1 : 0,
         outsource: timeLogForm.outsource ? 1 : 0,
         time_in_minutes: calculateTimeDuration()
@@ -417,7 +432,7 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
         operation: operations.find(op => op.operation_id === nextOperationForm.next_operation_id)?.name,
         machine_id: jobCardData.machine_id || jobCardData.assigned_workstation_id,
         operator_id: nextOperationForm.next_operator_id,
-        planned_quantity: timeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0),
+        planned_quantity: totalAcceptedQty,
         status: 'Open'
       }
 
@@ -432,17 +447,19 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
     }
   }
 
-  const totalProducedQty = timeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0)
-  const totalAcceptedQty = timeLogs.reduce((sum, log) => sum + (parseFloat(log.accepted_qty) || 0), 0)
-  const totalRejectedQty = rejections.reduce((sum, r) => sum + (r.rejected_qty || 0), 0)
-  const totalDowntimeMinutes = downtimes.reduce((sum, d) => sum + (d.duration_minutes || 0), 0)
+  // OLD (wrong calculation):
+
+// NEW (correct calculation):
+const totalProducedQty = timeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0)
+const totalRejectedQty = rejections.reduce((sum, r) => sum + (r.rejected_qty || 0), 0)
+const totalAcceptedQty = totalProducedQty - totalRejectedQty
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Production Entry" size="xl">
       <div className="p-4">
         {jobCardData && (
-          <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="grid grid-cols-4 gap-4 text-sm">
+          <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-xs">
+            <div className="grid grid-cols-4 gap-4 text-xs">
               <div>
                 <p className="text-gray-600 text-xs font-semibold">Job Card</p>
                 <p className="text-gray-900 font-medium">{jobCardData.job_card_id}</p>
@@ -463,12 +480,12 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
           </div>
         )}
 
-        <div className="mb-6 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <h4 className="font-semibold text-gray-900 mb-3 text-sm">Production Summary</h4>
+        <div className="mb-6 p-3 bg-amber-50 border border-amber-200 rounded-xs">
+          <h4 className="font-semibold text-gray-900 mb-3 text-xs">Production Summary</h4>
           <div className="grid grid-cols-5 gap-3 text-xs">
             <div>
               <p className="text-gray-600 font-semibold">Produced</p>
-              <p className="text-sm font-bold text-gray-900">{totalProducedQty.toFixed(2)}</p>
+              <p className="text-xs font-bold text-gray-900">{totalProducedQty.toFixed(2)}</p>
             </div>
             <div>
               <p className="text-gray-600 font-semibold">Accepted</p>
@@ -493,8 +510,8 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
 
         <div className="max-h-[70vh] overflow-y-auto space-y-6">
           {/* Operation Execution Section */}
-          <div className="p-4 bg-gradient-to-br from-green-50 to-blue-50 border border-green-200 rounded-lg">
-            <h3 className="text-sm font-bold text-gray-900 mb-4">Operation Execution</h3>
+          <div className="p-4 bg-gradient-to-br from-green-50 to-blue-50 border border-green-200 rounded-xs">
+            <h3 className="text-xs font-bold text-gray-900 mb-4">Operation Execution</h3>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div>
                 <label className="text-xs text-gray-600 font-semibold block mb-1">Start Date</label>
@@ -508,13 +525,13 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
           </div>
 
           {/* Time Logs Section */}
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-            <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <div className="p-4 bg-gray-50 border border-gray-200 rounded-xs">
+            <h3 className="text-xs font-bold text-gray-900 mb-4 flex items-center gap-2">
               Time Logs ({timeLogs.length})
             </h3>
             <div>
-              <form onSubmit={handleAddTimeLog} className="mb-6 p-3 bg-white border border-gray-200 rounded-lg">
-                <h3 className="mb-4 font-semibold text-gray-900 flex items-center gap-2 text-sm">
+              <form onSubmit={handleAddTimeLog} className="mb-6 p-3 bg-white border border-gray-200 rounded-xs">
+                <h3 className="mb-4 font-semibold text-gray-900 flex items-center gap-2 text-xs">
                   <Plus size={16} /> Add Time Log Entry
                 </h3>
                 
@@ -652,13 +669,42 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
 
                   <div className="flex items-end">
                     <div className="w-full text-xs font-medium text-gray-600">
-                      Total: {parseFloat(timeLogForm.completed_qty || 0).toFixed(2)}
+                      Completed: {parseFloat(timeLogForm.completed_qty || 0).toFixed(2)}
                     </div>
                   </div>
                 </div>
 
+                {(() => {
+                  const completed = parseFloat(timeLogForm.completed_qty || 0)
+                  const accepted = parseFloat(timeLogForm.accepted_qty || 0)
+                  const rejected = parseFloat(timeLogForm.rejected_qty || 0)
+                  const scrap = parseFloat(timeLogForm.scrap_qty || 0)
+                  const total = accepted + rejected + scrap
+                  const isValid = total <= completed && total > 0
+
+                  return (
+                    <div className={`mb-3 p-2 rounded-xs border text-xs ${
+                      isValid 
+                        ? 'bg-green-50 border-green-300 text-green-700' 
+                        : 'bg-red-50 border-red-300 text-red-700'
+                    }`}>
+                      <p className="font-semibold">Quality Summary</p>
+                      <p>Accepted ({accepted.toFixed(2)}) + Rejected ({rejected.toFixed(2)}) + Scrap ({scrap.toFixed(2)}) = {total.toFixed(2)}</p>
+                      {total > completed && (
+                        <p className="mt-1 font-semibold">⚠️ Total exceeds completed quantity!</p>
+                      )}
+                      {total === 0 && completed > 0 && (
+                        <p className="mt-1 font-semibold">⚠️ Please specify accepted, rejected, or scrap quantities</p>
+                      )}
+                      {isValid && (
+                        <p className="mt-1">✓ Next operation will receive {accepted.toFixed(2)} units (accepted qty)</p>
+                      )}
+                    </div>
+                  )
+                })()}
+
                 <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div className="flex items-center gap-3 p-2 bg-white rounded-lg border border-gray-300">
+                  <div className="flex items-center gap-3 p-2 bg-white rounded-xs border border-gray-300">
                     <input
                       type="checkbox"
                       id="inhouse"
@@ -670,7 +716,7 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
                       Inhouse
                     </label>
                   </div>
-                  <div className="flex items-center gap-3 p-2 bg-white rounded-lg border border-gray-300">
+                  <div className="flex items-center gap-3 p-2 bg-white rounded-xs border border-gray-300">
                     <input
                       type="checkbox"
                       id="outsource"
@@ -687,14 +733,14 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white font-medium text-sm rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white font-medium text-xs rounded-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Adding...' : 'Add Time Log'}
                 </button>
               </form>
 
               {timeLogs.length > 0 ? (
-                <div className=" border border-gray-200 rounded-lg">
+                <div className=" border border-gray-200 rounded-xs">
                   <table className="w-full text-xs">
                     <thead className="bg-gray-100 border-b border-gray-200">
                       <tr>
@@ -739,21 +785,21 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
                   </table>
                 </div>
               ) : (
-                <div className="p-8 text-center bg-gray-50 border border-gray-200 rounded-lg text-gray-500">
+                <div className="p-8 text-center bg-gray-50 border border-gray-200 rounded-xs text-gray-500">
                   <Clock size={28} className="mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No time logs recorded yet</p>
+                  <p className="text-xs">No time logs recorded yet</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Rejections Section */}
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-            <h3 className="text-sm font-bold text-gray-900 mb-4">Rejections ({rejections.length})</h3>
+          <div className="p-4 bg-gray-50 border border-gray-200 rounded-xs">
+            <h3 className="text-xs font-bold text-gray-900 mb-4">Rejections ({rejections.length})</h3>
             {true && (
             <div>
-              <form onSubmit={handleAddRejection} className="mb-6 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                <h3 className="mb-4 font-semibold text-gray-900 flex items-center gap-2 text-sm">
+              <form onSubmit={handleAddRejection} className="mb-6 p-3 bg-gray-50 border border-gray-200 rounded-xs">
+                <h3 className="mb-4 font-semibold text-gray-900 flex items-center gap-2 text-xs">
                   <Plus size={16} /> Add Rejection Entry
                 </h3>
 
@@ -800,14 +846,14 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2 px-4 bg-red-500 hover:bg-red-600 text-white font-medium text-sm rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-2 px-4 bg-red-500 hover:bg-red-600 text-white font-medium text-xs rounded-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Adding...' : 'Add Rejection'}
                 </button>
               </form>
 
               {rejections.length > 0 ? (
-                <div className=" border border-gray-200 rounded-lg">
+                <div className=" border border-gray-200 rounded-xs">
                   <table className="w-full text-xs">
                     <thead className="bg-gray-100 border-b border-gray-200">
                       <tr>
@@ -839,9 +885,9 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
                   </table>
                 </div>
               ) : (
-                <div className="p-8 text-center bg-gray-50 border border-gray-200 rounded-lg text-gray-500">
+                <div className="p-8 text-center bg-gray-50 border border-gray-200 rounded-xs text-gray-500">
                   <AlertCircle size={28} className="mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No rejection entries recorded</p>
+                  <p className="text-xs">No rejection entries recorded</p>
                 </div>
               )}
             </div>
@@ -849,12 +895,12 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
           </div>
 
           {/* Downtimes Section */}
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-            <h3 className="text-sm font-bold text-gray-900 mb-4">Downtimes ({downtimes.length})</h3>
+          <div className="p-4 bg-gray-50 border border-gray-200 rounded-xs">
+            <h3 className="text-xs font-bold text-gray-900 mb-4">Downtimes ({downtimes.length})</h3>
             {true && (
             <div>
-              <form onSubmit={handleAddDowntime} className="mb-6 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                <h3 className="mb-4 font-semibold text-gray-900 flex items-center gap-2 text-sm">
+              <form onSubmit={handleAddDowntime} className="mb-6 p-3 bg-gray-50 border border-gray-200 rounded-xs">
+                <h3 className="mb-4 font-semibold text-gray-900 flex items-center gap-2 text-xs">
                   <Plus size={16} /> Add Downtime Entry
                 </h3>
 
@@ -923,14 +969,14 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2 px-4 bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-2 px-4 bg-orange-500 hover:bg-orange-600 text-white font-medium text-xs rounded-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Adding...' : 'Add Downtime'}
                 </button>
               </form>
 
               {downtimes.length > 0 ? (
-                <div className=" border border-gray-200 rounded-lg">
+                <div className=" border border-gray-200 rounded-xs">
                   <table className="w-full text-xs">
                     <thead className="bg-gray-100 border-b border-gray-200">
                       <tr>
@@ -966,9 +1012,9 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
                   </table>
                 </div>
               ) : (
-                <div className="p-8 text-center bg-gray-50 border border-gray-200 rounded-lg text-gray-500">
+                <div className="p-8 text-center bg-gray-50 border border-gray-200 rounded-xs text-gray-500">
                   <Clock size={28} className="mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No downtime entries recorded</p>
+                  <p className="text-xs">No downtime entries recorded</p>
                 </div>
               )}
             </div>
@@ -976,10 +1022,21 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
           </div>
 
           {/* Next Operation Section */}
-          <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+          <div className="p-4 bg-purple-50 border border-purple-200 rounded-xs">
             {true && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Assign Next Operation</h3>
+
+              {totalAcceptedQty > 0 && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-300 rounded-xs">
+                  <p className="text-xs font-semibold text-blue-900">
+                    📦 Next operation will start with {totalAcceptedQty.toFixed(2)} units
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    This is the accepted quantity from current operation (Completed: {totalProducedQty.toFixed(2)} - Rejected: {totalRejectedQty.toFixed(2)})
+                  </p>
+                </div>
+              )}
               
               <div className="grid grid-cols-3 gap-4 mb-4">
                 <div>
@@ -987,7 +1044,7 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
                   <select
                     value={nextOperationForm.next_operator_id}
                     onChange={(e) => setNextOperationForm({ ...nextOperationForm, next_operator_id: e.target.value })}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full p-2 border border-gray-300 rounded-xs text-xs focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     <option value="">Select operator</option>
                     {operators.map(op => (
@@ -1003,7 +1060,7 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
                   <select
                     value={nextOperationForm.next_warehouse_id}
                     onChange={(e) => setNextOperationForm({ ...nextOperationForm, next_warehouse_id: e.target.value })}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full p-2 border border-gray-300 rounded-xs text-xs focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     <option value="">Select warehouse</option>
                     {warehouses.map(wh => (
@@ -1019,7 +1076,7 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
                   <select
                     value={nextOperationForm.next_operation_id}
                     onChange={(e) => setNextOperationForm({ ...nextOperationForm, next_operation_id: e.target.value })}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full p-2 border border-gray-300 rounded-xs text-xs focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     <option value="">Select operation</option>
                     {operations.map(op => (
@@ -1031,7 +1088,7 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
                 </div>
               </div>
 
-              <div className="mb-4 p-3 bg-white border border-purple-200 rounded-lg">
+              <div className="mb-4 p-3 bg-white border border-purple-200 rounded-xs">
                 <label className="block text-xs font-semibold text-gray-700 mb-3">Production Type</label>
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -1045,7 +1102,7 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
                       })}
                       className="w-4 h-4 rounded border-gray-300"
                     />
-                    <span className="text-sm font-medium text-gray-700">Inhouse</span>
+                    <span className="text-xs font-medium text-gray-700">Inhouse</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -1058,7 +1115,7 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
                       })}
                       className="w-4 h-4 rounded border-gray-300"
                     />
-                    <span className="text-sm font-medium text-gray-700">Outsource</span>
+                    <span className="text-xs font-medium text-gray-700">Outsource</span>
                   </label>
                 </div>
               </div>
@@ -1066,7 +1123,7 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
               <button
                 onClick={handleSubmitProduction}
                 disabled={isSubmitting || !nextOperationForm.next_operator_id || !nextOperationForm.next_warehouse_id || !nextOperationForm.next_operation_id}
-                className="w-full py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Assigning...' : 'Submit & Complete Production'}
               </button>

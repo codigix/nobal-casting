@@ -24,16 +24,16 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
   ]
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-2">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-gradient-to-r from-slate-900 to-slate-800 p-6 flex items-center justify-between text-white z-10">
           <div>
-            <h2 className="text-2xl font-bold m-0">{machine.name}</h2>
-            <p className="text-slate-300 text-sm mt-1 m-0">OEE Breakdown Analysis</p>
+            <h2 className="text-xl font-bold m-0">{machine.name}</h2>
+            <p className="text-slate-300 text-xs mt-1 m-0">OEE Breakdown Analysis</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-slate-700 rounded-xs transition-colors"
           >
             <X size={24} />
           </button>
@@ -108,27 +108,27 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-sm text-slate-600">Total Operating Hours:</span>
+                <span className="text-xs text-slate-600">Total Operating Hours:</span>
                 <span className="font-bold text-slate-900">8,432 hrs</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-sm text-slate-600">Good Products:</span>
+                <span className="text-xs text-slate-600">Good Products:</span>
                 <span className="font-bold text-slate-900">45,892 units</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-sm text-slate-600">Downtime:</span>
+                <span className="text-xs text-slate-600">Downtime:</span>
                 <span className="font-bold text-slate-900">412 min</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-sm text-slate-600">Defective Products:</span>
+                <span className="text-xs text-slate-600">Defective Products:</span>
                 <span className="font-bold text-slate-900">1,254 units</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-sm text-slate-600">Theoretical Output:</span>
+                <span className="text-xs text-slate-600">Theoretical Output:</span>
                 <span className="font-bold text-slate-900">50,000 units</span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-sm text-slate-600">Last Maintenance:</span>
+                <span className="text-xs text-slate-600">Last Maintenance:</span>
                 <span className="font-bold text-slate-900">{machine.lastMaintenance}</span>
               </div>
             </div>
@@ -212,7 +212,7 @@ export default function OEE() {
       <div className="bg-gradient-to-br from-white to-slate-100 px-2 py-2 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
         <div className=" mx-auto">
           <div className="flex items-center gap-4 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-400 to-indigo-500 flex items-center justify-center text-white">
+            <div className="w-10 h-10 rounded-xs bg-gradient-to-br from-indigo-400 to-indigo-500 flex items-center justify-center text-white">
               <BarChart3 size={24} />
             </div>
             <div>
@@ -321,12 +321,12 @@ export default function OEE() {
                     <td className="p-2 text-xs text-gray-700 font-semibold">{machine.id}</td>
                     <td className="p-2 text-xs text-gray-700">{machine.name}</td>
                     <td className="p-4">
-                      <span className={`p-2 rounded-lg text-xs font-semibold ${getStatusBadgeColor(machine.status)}`}>
+                      <span className={`p-2 rounded-xs text-xs font-semibold ${getStatusBadgeColor(machine.status)}`}>
                         {machine.status}
                       </span>
                     </td>
                     <td className="p-4 text-center">
-                      <span className={`text-sm font-bold ${getOEEColor(machine.oee)}`}>
+                      <span className={`text-xs font-bold ${getOEEColor(machine.oee)}`}>
                         {machine.oee}%
                       </span>
                     </td>
@@ -357,7 +357,7 @@ export default function OEE() {
                     <td className="p-4 text-center">
                       <button
                         onClick={() => openModal(machine)}
-                        className="inline-flex items-center gap-2 p-2 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg text-xs font-semibold transition-colors"
+                        className="inline-flex items-center gap-2 p-2 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-xs text-xs font-semibold transition-colors"
                       >
                         <Eye size={14} />
                         Details

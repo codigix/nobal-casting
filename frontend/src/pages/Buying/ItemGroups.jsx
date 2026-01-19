@@ -110,7 +110,7 @@ export default function ItemGroups() {
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white">
+          <div className="w-9 h-9 rounded-xs bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white">
             <FolderOpen size={20} />
           </div>
           <div>
@@ -128,13 +128,13 @@ export default function ItemGroups() {
 
       {/* Alerts */}
       {success && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 p-3 text-xs text-green-800">
+        <div className="mb-4 flex items-center gap-2 rounded-xs border border-green-300 bg-green-50 p-3 text-xs text-green-800">
           <span>✓</span> {success}
         </div>
       )}
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-800">
+        <div className="mb-4 flex items-center gap-2 rounded-xs border border-red-300 bg-red-50 p-3 text-xs text-red-800">
           <span>✕</span> {error}
         </div>
       )}
@@ -142,7 +142,7 @@ export default function ItemGroups() {
       {/* Modal Form */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+          <div className="bg-white rounded-xs shadow-lg w-full max-w-md p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-4">
               {editingGroup ? 'Edit Item Group' : 'Add Item Group'}
             </h2>
@@ -158,7 +158,7 @@ export default function ItemGroups() {
                   value={formData.name}
                   onChange={handleInputChange}
                   placeholder="e.g., Raw Materials, Finished Goods..."
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                  className="w-full rounded-xs border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
                   required
                 />
               </div>
@@ -173,7 +173,7 @@ export default function ItemGroups() {
                   onChange={handleInputChange}
                   placeholder="Optional description..."
                   rows="3"
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                  className="w-full rounded-xs border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
                 />
               </div>
 
@@ -181,14 +181,14 @@ export default function ItemGroups() {
                 <button
                   type="button"
                   onClick={handleCloseForm}
-                  className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 transition-all"
+                  className="px-4 py-2 rounded-xs border border-gray-300 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-4 py-2 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 text-xs font-medium text-white hover:from-purple-500 hover:to-purple-700 disabled:opacity-50 transition-all"
+                  className="px-4 py-2 rounded-xs bg-gradient-to-br from-purple-400 to-purple-600 text-xs font-medium text-white hover:from-purple-500 hover:to-purple-700 disabled:opacity-50 transition-all"
                 >
                   {loading ? 'Saving...' : 'Save'}
                 </button>
@@ -199,18 +199,18 @@ export default function ItemGroups() {
       )}
 
       {/* Table */}
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="overflow-hidden rounded-xs border border-gray-200 bg-white">
         {loading && !showForm ? (
           <div className="flex items-center justify-center px-4 py-12 text-gray-500">
-            <div className="text-sm">Loading item groups...</div>
+            <div className="text-xs">Loading item groups...</div>
           </div>
         ) : groups.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-4 py-12 text-gray-500">
             <FolderOpen size={32} className="mb-3 opacity-50" />
-            <div className="text-sm">No item groups found</div>
+            <div className="text-xs">No item groups found</div>
             <button
               onClick={() => handleOpenForm()}
-              className="mt-4 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs font-semibold rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all"
+              className="mt-4 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs font-semibold rounded-xs hover:from-purple-600 hover:to-purple-700 transition-all"
             >
               Create First Item Group
             </button>

@@ -10,7 +10,7 @@ const Input = forwardRef(({
 }, ref) => {
   return (
     <div className="form-group">
-      {label && <label className="block mb-2 text-sm font-medium text-neutral-700">{label}</label>}
+      {label && <label className="block mb-2 text-xs font-medium text-neutral-700">{label}</label>}
       <input
         ref={ref}
         type={type}
@@ -18,7 +18,7 @@ const Input = forwardRef(({
         className={`input-base ${className}`.trim()}
         {...props}
       />
-      {error && <span className="text-danger text-sm mt-1 block">{error}</span>}
+      {error && <span className="text-danger text-xs mt-1 block">{error}</span>}
     </div>
   )
 })

@@ -2,14 +2,14 @@ import React, { useState } from 'react'
 import { useAuth } from '../hooks/AuthContext'
 import ThemeToggle from './ThemeToggle'
 import CommonHeaderButton from './CommonHeaderButton'
-import { Bell, LogOut, User, Menu } from 'lucide-react'
+import NotificationCenter from './NotificationCenter'
+import { LogOut, User, Menu } from 'lucide-react'
 import './Header.css'
 import { Link } from 'react-router-dom'
 
 export default function Header({ sidebarCollapsed, setSidebarCollapsed }) {
   const { user, logout } = useAuth()
   const [showProfileMenu, setShowProfileMenu] = useState(false)
-  const [showNotifications, setShowNotifications] = useState(false)
 
   return (
     <header className="app-header">
@@ -18,7 +18,7 @@ export default function Header({ sidebarCollapsed, setSidebarCollapsed }) {
           <div className="sidebar-brand">
             <Link to="/dashboard">
               <span className="brand-icon">🏭</span>
-              <span className="brand-text">Aluminium ERP</span>
+              <span className="brand-text">Nobal Casting</span>
             </Link>
           </div>
           <button
@@ -31,22 +31,7 @@ export default function Header({ sidebarCollapsed, setSidebarCollapsed }) {
         </div>
 
         <div className="header-right">
-          <CommonHeaderButton
-            className="notifications-btn"
-            onClick={() => setShowNotifications(!showNotifications)}
-            title="Notifications"
-            isActive={showNotifications}
-          >
-            <Bell size={20} />
-            <span className="notification-badge">3</span>
-            {showNotifications && (
-              <div className="notifications-popover">
-                <div className="notification-item">New purchase order received</div>
-                <div className="notification-item">Shipment delivered</div>
-                <div className="notification-item">Inventory low alert</div>
-              </div>
-            )}
-          </CommonHeaderButton>
+          <NotificationCenter />
 
           <ThemeToggle />
 
@@ -89,12 +74,11 @@ export default function Header({ sidebarCollapsed, setSidebarCollapsed }) {
         </div>
       </div>
 
-      {(showProfileMenu || showNotifications) && (
+      {showProfileMenu && (
         <div
           className="header-overlay"
           onClick={() => {
             setShowProfileMenu(false)
-            setShowNotifications(false)
           }}
         />
       )}

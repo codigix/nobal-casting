@@ -22,7 +22,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
 
   const fetchCustomers = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/selling/customers`)
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/customers`)
       const data = await res.json()
       if (data.success) {
         setCustomers(data.data || [])

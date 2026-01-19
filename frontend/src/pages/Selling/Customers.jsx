@@ -9,6 +9,7 @@ import {
   Plus, Eye, Edit2, Trash2, Users, Mail, MapPin, Phone, TrendingUp
 } from 'lucide-react'
 import CreateCustomerModal from '../../components/Selling/CreateCustomerModal'
+import api from '../../services/api'
 import './Selling.css'
 
 export default function Customers() {
@@ -42,8 +43,8 @@ export default function Customers() {
       const query = new URLSearchParams(
         Object.entries(filters).filter(([, v]) => v)
       )
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/selling/customers?${query}`)
-      const data = await res.json()
+      const res = await api.get(`/customers?${query}`)
+      const data = res.data
       if (data.success) {
         setCustomers(data.data || [])
         calculateStats(data.data || [])
@@ -97,12 +98,8 @@ export default function Customers() {
   const handleDeleteCustomer = async (id) => {
     if (!window.confirm('Are you sure you want to delete this customer?')) return
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/selling/customers/${id}`, {
-        method: 'DELETE'
-      })
-      if (res.ok) {
-        fetchCustomers()
-      }
+      await api.delete(`/customers/${id}`)
+      fetchCustomers()
     } catch (error) {
       console.error('Error deleting customer:', error)
     }

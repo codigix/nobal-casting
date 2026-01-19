@@ -55,7 +55,7 @@ const ToolRoomAnalytics = () => {
         </div>
 
         {/* Date Range Filter */}
-        <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
+        <div className="bg-white p-6 rounded-xs shadow-lg mb-8">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-gray-600" />
@@ -63,7 +63,7 @@ const ToolRoomAnalytics = () => {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-4 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <span className="text-gray-600">to</span>
@@ -72,12 +72,12 @@ const ToolRoomAnalytics = () => {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-4 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <button
               onClick={fetchAnalytics}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 ml-auto"
+              className="px-4 py-2 bg-blue-600 text-white rounded-xs hover:bg-blue-700 ml-auto"
             >
               Generate Report
             </button>
@@ -87,7 +87,7 @@ const ToolRoomAnalytics = () => {
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Utilization Trend */}
-          <div className="bg-white p-6 rounded-lg shadow-lg">
+          <div className="bg-white p-6 rounded-xs shadow-lg">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Utilization Trend</h3>
             {utilizationData?.trend ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -106,7 +106,7 @@ const ToolRoomAnalytics = () => {
           </div>
 
           {/* Cost Breakdown */}
-          <div className="bg-white p-6 rounded-lg shadow-lg">
+          <div className="bg-white p-6 rounded-xs shadow-lg">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h3>
             {costData?.breakdown ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -134,7 +134,7 @@ const ToolRoomAnalytics = () => {
           </div>
 
           {/* Downtime Analysis */}
-          <div className="bg-white p-6 rounded-lg shadow-lg">
+          <div className="bg-white p-6 rounded-xs shadow-lg">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Downtime by Tool</h3>
             {downtimeData?.byTool ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -153,7 +153,7 @@ const ToolRoomAnalytics = () => {
           </div>
 
           {/* Utilization by Tool Type */}
-          <div className="bg-white p-6 rounded-lg shadow-lg">
+          <div className="bg-white p-6 rounded-xs shadow-lg">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Utilization by Tool Type</h3>
             {utilizationData?.byType ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -197,9 +197,9 @@ const ToolRoomAnalytics = () => {
         {/* Detailed Tables */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
           {/* Tool Performance */}
-          <div className="bg-white p-6 rounded-lg shadow-lg">
+          <div className="bg-white p-6 rounded-xs shadow-lg">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Tool Performance</h3>
-            <table className="w-full text-sm">
+            <table className="w-full text-xs">
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="px-3 py-2 text-left text-gray-900">Tool</th>
@@ -220,9 +220,9 @@ const ToolRoomAnalytics = () => {
           </div>
 
           {/* Cost Summary */}
-          <div className="bg-white p-6 rounded-lg shadow-lg">
+          <div className="bg-white p-6 rounded-xs shadow-lg">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Categories</h3>
-            <table className="w-full text-sm">
+            <table className="w-full text-xs">
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="px-3 py-2 text-left text-gray-900">Category</th>
@@ -248,7 +248,7 @@ const ToolRoomAnalytics = () => {
 }
 
 const SummaryCard = ({ title, value, subtitle, icon }) => (
-  <div className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition">
+  <div className="bg-white p-6 rounded-xs shadow-lg hover:shadow-xl transition">
     <div className="flex items-start justify-between">
       <div>
         <p className="text-gray-600 text-xs">{title}</p>

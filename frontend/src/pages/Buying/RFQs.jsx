@@ -246,7 +246,6 @@ export default function RFQs() {
         filters={filters}
         onFilterChange={setFilters}
         filterConfig={filterConfig}
-        showPresets={true}
       />
 
       <Card>

@@ -213,7 +213,7 @@ export default function PurchaseOrders() {
           const color = days < 0 ? 'text-red-600' : days < 3 ? 'text-orange-600' : 'text-green-600'
           const icon = days < 0 ? '🔴' : days < 3 ? '🟡' : '🟢'
           return (
-            <div className="text-sm">
+            <div className="text-xs">
               <div>{dateStr}</div>
               <div className={`text-xs ${color} font-medium`}>
                 {icon} {Math.abs(days)} days {days < 0 ? 'overdue' : 'left'}
@@ -340,7 +340,7 @@ export default function PurchaseOrders() {
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
+          <p className="text-xs  text-neutral-600 dark:text-neutral-400">
             {label}
           </p>
           <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100">{value}</p>
@@ -374,7 +374,7 @@ export default function PurchaseOrders() {
 
       {/* Error Alert */}
       {error && (
-        <Card className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500">
+        <Card className="mb-6p-2 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500">
           <p className="text-red-700 dark:text-red-400 font-medium">{error}</p>
         </Card>
       )}
@@ -451,7 +451,6 @@ export default function PurchaseOrders() {
         filters={filters}
         onFilterChange={setFilters}
         filterConfig={filterConfig}
-        showPresets={true}
       />
 
       {/* Data Table */}

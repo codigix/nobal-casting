@@ -84,26 +84,26 @@ export default function BuyingAnalytics() {
       <Card className="mb-8">
         <div className="flex flex-col sm:flex-row gap-4 items-end">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">From Date</label>
+            <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-2">From Date</label>
             <div className="flex items-center gap-2">
               <Calendar size={18} className="text-neutral-500" />
               <input
                 type="date"
                 value={dateRange.startDate}
                 onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-                className="flex-1 px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
+                className="flex-1 px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
               />
             </div>
           </div>
           <div className="flex-1">
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">To Date</label>
+            <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-2">To Date</label>
             <div className="flex items-center gap-2">
               <Calendar size={18} className="text-neutral-500" />
               <input
                 type="date"
                 value={dateRange.endDate}
                 onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-                className="flex-1 px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
+                className="flex-1 px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
               />
             </div>
           </div>
@@ -112,48 +112,48 @@ export default function BuyingAnalytics() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white dark:bg-neutral-800 rounded-lg p-6 border-l-4 border-blue-500 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-white dark:bg-neutral-800 rounded-xs p-6 border-l-4 border-blue-500 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">Total POs</p>
+              <p className="text-xs  text-neutral-600 dark:text-neutral-400">Total POs</p>
               <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">{summary?.purchase_orders?.total_pos || 0}</p>
             </div>
             <Truck className="w-12 h-12 text-blue-500 opacity-20" />
           </div>
-          <p className="text-green-600 dark:text-green-400 text-sm mt-4 font-medium">✓ {summary?.purchase_orders?.completed_count || 0} Completed</p>
+          <p className="text-green-600 dark:text-green-400 text-xs mt-4 font-medium">✓ {summary?.purchase_orders?.completed_count || 0} Completed</p>
         </div>
 
-        <div className="bg-white dark:bg-neutral-800 rounded-lg p-6 border-l-4 border-green-500 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-white dark:bg-neutral-800 rounded-xs p-6 border-l-4 border-green-500 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">Total PO Value</p>
+              <p className="text-xs  text-neutral-600 dark:text-neutral-400">Total PO Value</p>
               <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">₹{summary?.purchase_orders?.total_value?.toLocaleString() || 0}</p>
             </div>
             <DollarSign className="w-12 h-12 text-green-500 opacity-20" />
           </div>
-          <p className="text-blue-600 dark:text-blue-400 text-sm mt-4 font-medium">Avg: ₹{summary?.purchase_orders?.avg_value?.toLocaleString()}</p>
+          <p className="text-blue-600 dark:text-blue-400 text-xs mt-4 font-medium">Avg: ₹{summary?.purchase_orders?.avg_value?.toLocaleString()}</p>
         </div>
 
-        <div className="bg-white dark:bg-neutral-800 rounded-lg p-6 border-l-4 border-orange-500 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-white dark:bg-neutral-800 rounded-xs p-6 border-l-4 border-orange-500 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">Total Invoices</p>
+              <p className="text-xs  text-neutral-600 dark:text-neutral-400">Total Invoices</p>
               <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">{summary?.invoices?.total_invoices || 0}</p>
             </div>
             <FileText className="w-12 h-12 text-orange-500 opacity-20" />
           </div>
-          <p className="text-red-600 dark:text-red-400 text-sm mt-4 font-medium">⚠ ₹{summary?.invoices?.pending_amount?.toLocaleString()} Pending</p>
+          <p className="text-red-600 dark:text-red-400 text-xs mt-4 font-medium">⚠ ₹{summary?.invoices?.pending_amount?.toLocaleString()} Pending</p>
         </div>
 
-        <div className="bg-white dark:bg-neutral-800 rounded-lg p-6 border-l-4 border-purple-500 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-white dark:bg-neutral-800 rounded-xs p-6 border-l-4 border-purple-500 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">Paid Amount</p>
+              <p className="text-xs  text-neutral-600 dark:text-neutral-400">Paid Amount</p>
               <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">₹{summary?.invoices?.paid_amount?.toLocaleString() || 0}</p>
             </div>
             <Package className="w-12 h-12 text-purple-500 opacity-20" />
           </div>
-          <p className="text-neutral-600 dark:text-neutral-400 text-sm mt-4 font-medium">{summary?.invoices?.paid_count || 0} Invoices Paid</p>
+          <p className="text-neutral-600 dark:text-neutral-400 text-xs mt-4 font-medium">{summary?.invoices?.paid_count || 0} Invoices Paid</p>
         </div>
       </div>
 
@@ -169,7 +169,7 @@ export default function BuyingAnalytics() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+            className={`px-4 py-2 rounded-xs font-medium transition-all whitespace-nowrap ${
               activeTab === tab.id
                 ? 'bg-primary-600 text-white shadow-md'
                 : 'bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700'
@@ -259,11 +259,11 @@ export default function BuyingAnalytics() {
                 <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
                   {topSuppliers.map((supplier) => (
                     <tr key={supplier.supplier_id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
-                      <td className="p-2 text-sm text-neutral-900 dark:text-neutral-100 font-medium">{supplier.supplier_name}</td>
+                      <td className="p-2 text-xs text-neutral-900 dark:text-neutral-100 font-medium">{supplier.supplier_name}</td>
                       <td className="p-2 text-xs text-neutral-600 dark:text-neutral-400">{supplier.po_count}</td>
-                      <td className="p-2 text-sm text-neutral-900 dark:text-neutral-100 font-semibold">₹{supplier.total_value?.toLocaleString()}</td>
+                      <td className="p-2 text-xs text-neutral-900 dark:text-neutral-100 font-semibold">₹{supplier.total_value?.toLocaleString()}</td>
                       <td className="p-2 text-xs text-neutral-600 dark:text-neutral-400">₹{supplier.avg_po_value?.toLocaleString()}</td>
-                      <td className="p-2 text-sm">
+                      <td className="p-2 text-xs">
                         <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs font-semibold">
                           {supplier.completion_rate}%
                         </span>
@@ -306,14 +306,14 @@ export default function BuyingAnalytics() {
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {overduePOs.length > 0 ? (
                   overduePOs.map((po) => (
-                    <div key={po.po_id} className="text-sm text-red-800 dark:text-red-200 bg-white dark:bg-neutral-800 p-3 rounded border border-red-100 dark:border-red-800">
+                    <div key={po.po_id} className="text-xs text-red-800 dark:text-red-200 bg-white dark:bg-neutral-800 p-3 rounded border border-red-100 dark:border-red-800">
                       <p className="font-semibold">{po.po_number} - {po.supplier_name}</p>
                       <p>Overdue by {po.days_overdue} days</p>
                       <p className="text-xs">Value: ₹{po.po_value?.toLocaleString()}</p>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-red-600 dark:text-red-400">No overdue POs</p>
+                  <p className="text-xs text-red-600 dark:text-red-400">No overdue POs</p>
                 )}
               </div>
             </Card>
@@ -326,14 +326,14 @@ export default function BuyingAnalytics() {
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {pendingGRNs.length > 0 ? (
                   pendingGRNs.map((grn) => (
-                    <div key={grn.po_id} className="text-sm text-amber-800 dark:text-amber-200 bg-white dark:bg-neutral-800 p-3 rounded border border-amber-100 dark:border-amber-800">
+                    <div key={grn.po_id} className="text-xs text-amber-800 dark:text-amber-200 bg-white dark:bg-neutral-800 p-3 rounded border border-amber-100 dark:border-amber-800">
                       <p className="font-semibold">{grn.po_number} - {grn.supplier_name}</p>
                       <p>Pending Qty: {grn.pending_qty}</p>
                       <p className="text-xs">Value: ₹{grn.po_value?.toLocaleString()}</p>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-amber-600 dark:text-amber-400">No pending GRNs</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400">No pending GRNs</p>
                 )}
               </div>
             </Card>
@@ -363,19 +363,19 @@ export default function BuyingAnalytics() {
             <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">Current (0-30)</p>
-                <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.current?.toLocaleString() || 0}</p>
+                <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.current?.toLocaleString() || 0}</p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">30-60 Days</p>
-                <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.thirty_to_sixty?.toLocaleString() || 0}</p>
+                <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.thirty_to_sixty?.toLocaleString() || 0}</p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">60-90 Days</p>
-                <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.sixty_to_ninety?.toLocaleString() || 0}</p>
+                <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.sixty_to_ninety?.toLocaleString() || 0}</p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">90+ Days</p>
-                <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.above_ninety?.toLocaleString() || 0}</p>
+                <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.above_ninety?.toLocaleString() || 0}</p>
               </div>
             </div>
           </Card>

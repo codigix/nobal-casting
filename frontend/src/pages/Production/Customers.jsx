@@ -118,13 +118,13 @@ export default function Customers() {
 
       {/* Alerts */}
       {success && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 p-2 text-xs text-green-800">
+        <div className="mb-4 flex items-center gap-2 rounded-xs border border-green-300 bg-green-50 p-2 text-xs text-green-800">
           <span>✓</span> {success}
         </div>
       )}
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 p-2 text-xs text-red-800">
+        <div className="mb-4 flex items-center gap-2 rounded-xs border border-red-300 bg-red-50 p-2 text-xs text-red-800">
           <span>✕</span> {error}
         </div>
       )}
@@ -192,7 +192,7 @@ export default function Customers() {
 
       {/* Table */}
       {loading ? (
-        <div className="flex items-center justify-center rounded-lg bg-white py-12 text-gray-500">
+        <div className="flex items-center justify-center rounded-xs bg-white py-12 text-gray-500">
           Loading customers...
         </div>
       ) : filteredCustomers.length > 0 ? (
@@ -200,15 +200,15 @@ export default function Customers() {
           <table className="w-full border-collapse border border-gray-200">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="w-10 p-2 text-center">
+                <th className="w-10 p-2 text-center text-xs">
                   <input type="checkbox" className="rounded" />
                 </th>
                 <th className="p-2 text-left text-xs font-semibold text-gray-700">ID</th>
                 <th className="p-2 text-left text-xs font-semibold text-gray-700">Name</th>
                 <th className="p-2 text-left text-xs font-semibold text-gray-700">Email</th>
                 <th className="p-2 text-left text-xs font-semibold text-gray-700">Phone</th>
-                <th className="p-2 text-center text-xs font-semibold text-gray-700">Status</th>
-                <th className="p-2 text-center text-xs font-semibold text-gray-700">Actions</th>
+                <th className="p-2 text-center text-xs text-xs font-semibold text-gray-700">Status</th>
+                <th className="p-2 text-center text-xs text-xs font-semibold text-gray-700">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -218,19 +218,19 @@ export default function Customers() {
                   className={`border-b border-gray-100 transition-colors duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                     } hover:bg-blue-50`}
                 >
-                  <td className="p-2 text-center">
+                  <td className="p-2 text-center text-xs">
                     <input type="checkbox" className="rounded" />
                   </td>
                   <td className="p-2 text-xs font-semibold text-gray-900">{customer.customer_id}</td>
                   <td className="p-2 text-xs text-gray-800">{customer.customer_name}</td>
                   <td className="p-2 text-xs text-gray-600">{customer.email || '—'}</td>
                   <td className="p-2 text-xs text-gray-600">{customer.phone || '—'}</td>
-                  <td className="p-2 text-center">
+                  <td className="p-2 text-center text-xs">
                     <span className={`work-order-status ${getStatusColor(customer.status)} text-xs`}>
                       {customer.status}
                     </span>
                   </td>
-                  <td className="p-2 text-center">
+                  <td className="p-2 text-center text-xs">
                     <div className="flex items-center justify-center gap-2">
                       <button
                         className="btn-edit rounded-md p-2 text-gray-600 hover:bg-blue-100 hover:text-blue-600 transition-colors"
@@ -254,7 +254,7 @@ export default function Customers() {
           </table>
         </div>
       ) : (
-        <div className="flex items-center justify-center rounded-lg bg-gray-50 py-12 text-gray-500">
+        <div className="flex items-center justify-center rounded-xs bg-gray-50 py-12 text-gray-500">
           <p>No customers found</p>
         </div>
       )}

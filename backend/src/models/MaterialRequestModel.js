@@ -47,6 +47,33 @@ export class MaterialRequestModel {
       query += ' ORDER BY mr.created_at DESC LIMIT 100'
 
       const [rows] = await db.execute(query, params)
+      
+      if (rows.length === 0) {
+        return rows
+      }
+
+      const mrIds = rows.map(r => r.mr_id)
+      const placeholders = mrIds.map(() => '?').join(',')
+      const [itemRows] = await db.execute(
+        `SELECT mri.*, i.name as item_name, i.uom, i.item_group 
+         FROM material_request_item mri 
+         LEFT JOIN item i ON mri.item_code = i.item_code 
+         WHERE mri.mr_id IN (${placeholders})`,
+        mrIds
+      )
+
+      const itemsByMrId = {}
+      itemRows.forEach(item => {
+        if (!itemsByMrId[item.mr_id]) {
+          itemsByMrId[item.mr_id] = []
+        }
+        itemsByMrId[item.mr_id].push(item)
+      })
+
+      rows.forEach(row => {
+        row.items = itemsByMrId[row.mr_id] || []
+      })
+
       return rows
     } catch (error) {
       throw new Error('Failed to fetch material requests: ' + error.message)
@@ -129,7 +156,15 @@ export class MaterialRequestModel {
         }
       }
 
-      return await this.getById(db, mr_id)
+      const createdMR = await this.getById(db, mr_id)
+
+      try {
+        await this.createNotifications(db, createdMR, 'MATERIAL_REQUEST_NEW', mrData.department)
+      } catch (notifError) {
+        console.log('Notification creation failed (non-critical):', notifError.message)
+      }
+
+      return createdMR
     } catch (error) {
       throw new Error('Failed to create material request: ' + error.message)
     }
@@ -346,7 +381,15 @@ export class MaterialRequestModel {
         console.log(`[MR Approval] Not a stock transaction (purpose: ${request.purpose}), skipping stock movements`)
       }
 
-      return await this.getById(db, mrId)
+      const approvedMR = await this.getById(db, mrId)
+
+      try {
+        await this.createNotifications(db, approvedMR, 'MATERIAL_REQUEST_APPROVED', request.department)
+      } catch (notifError) {
+        console.log('Notification creation failed (non-critical):', notifError.message)
+      }
+
+      return approvedMR
     } catch (error) {
       throw new Error('Failed to approve material request: ' + error.message)
     }
@@ -368,7 +411,15 @@ export class MaterialRequestModel {
         ['cancelled', mrId]
       )
 
-      return await this.getById(db, mrId)
+      const rejectedMR = await this.getById(db, mrId)
+
+      try {
+        await this.createNotifications(db, rejectedMR, 'MATERIAL_REQUEST_REJECTED', mr[0].department)
+      } catch (notifError) {
+        console.log('Notification creation failed (non-critical):', notifError.message)
+      }
+
+      return rejectedMR
     } catch (error) {
       throw new Error('Failed to reject material request: ' + error.message)
     }
@@ -528,6 +579,58 @@ export class MaterialRequestModel {
       throw new Error('Failed to create GRN from request: ' + error.message)
     } finally {
       connection.release()
+    }
+  }
+
+  static async createNotifications(db, materialRequest, notificationType, department) {
+    try {
+      const NotificationModel = (await import('./NotificationModel.js')).default
+
+      let title, message
+
+      if (notificationType === 'MATERIAL_REQUEST_NEW') {
+        title = `New Material Request: ${materialRequest.mr_id}`
+        message = `Material request from ${department} department for ${materialRequest.items?.length || 0} items`
+      } else if (notificationType === 'MATERIAL_REQUEST_APPROVED') {
+        title = `Material Request Approved: ${materialRequest.mr_id}`
+        message = `Material request from ${department} department has been approved`
+      } else if (notificationType === 'MATERIAL_REQUEST_REJECTED') {
+        title = `Material Request Rejected: ${materialRequest.mr_id}`
+        message = `Material request from ${department} department has been rejected`
+      }
+
+      let targetUsers = []
+
+      if (notificationType === 'MATERIAL_REQUEST_NEW') {
+        const [users] = await db.execute(
+          `SELECT DISTINCT user_id FROM users WHERE department = 'Purchase' AND is_active = 1`
+        )
+        targetUsers = users.map(u => u.user_id)
+      } else if (notificationType === 'MATERIAL_REQUEST_APPROVED') {
+        const [users] = await db.execute(
+          `SELECT DISTINCT user_id FROM users WHERE department = ? AND is_active = 1`,
+          [department]
+        )
+        targetUsers = users.map(u => u.user_id)
+      } else if (notificationType === 'MATERIAL_REQUEST_REJECTED') {
+        const [users] = await db.execute(
+          `SELECT DISTINCT user_id FROM users WHERE department = ? AND is_active = 1`,
+          [department]
+        )
+        targetUsers = users.map(u => u.user_id)
+      }
+
+      if (targetUsers.length > 0) {
+        await NotificationModel.notifyUsers(targetUsers, {
+          notification_type: notificationType,
+          title,
+          message,
+          reference_type: 'MaterialRequest',
+          reference_id: materialRequest.id
+        })
+      }
+    } catch (error) {
+      throw new Error(`Failed to create notifications: ${error.message}`)
     }
   }
 }

@@ -204,8 +204,8 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
     <Modal isOpen={isOpen} onClose={onClose} title="Time Logs" size="lg">
       <div className="">
         {jobCardData && (
-          <div className="mb-6 p-2 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="grid grid-cols-4 gap-4 text-sm">
+          <div className="mb-6 p-2 bg-blue-50 border border-blue-200 rounded-xs">
+            <div className="grid grid-cols-4 gap-4 text-xs">
               <div>
                 <p className="text-gray-600 text-xs font-semibold">Job Card</p>
                 <p className="text-gray-900 font-medium">{jobCardData.job_card_id}</p>
@@ -226,7 +226,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
           </div>
         )}
 
-        <form onSubmit={handleAddTimeLog} className="mb-8 p-2 bg-gray-50 border border-gray-200 rounded-lg">
+        <form onSubmit={handleAddTimeLog} className="mb-8 p-2 bg-gray-50 border border-gray-200 rounded-xs">
           <h3 className="mb-4 font-semibold text-gray-900 flex items-center gap-2">
             <Plus size={18} /> Add Time Log Entry
           </h3>
@@ -324,7 +324,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
                 type="number"
                 value={calculateTimeDuration()}
                 disabled
-                className="w-full  p-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-600"
+                className="w-full  p-2 border border-gray-300 rounded-md text-xs bg-gray-100 text-gray-600"
               />
             </div>
 
@@ -391,14 +391,14 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
             </div>
 
             <div className="flex items-end">
-              <div className="w-full text-sm font-medium text-gray-600">
+              <div className="w-full text-xs font-medium text-gray-600">
                 Total: {parseFloat(formData.completed_qty || 0).toFixed(2)}
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-300">
+            <div className="flex items-center gap-3 p-3 bg-white rounded-xs border border-gray-300">
               <input
                 type="checkbox"
                 id="inhouse"
@@ -406,11 +406,11 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
                 onChange={(e) => setFormData({ ...formData, inhouse: e.target.checked, outsource: e.target.checked ? false : formData.outsource })}
                 className="w-4 h-4 rounded border-gray-300 cursor-pointer"
               />
-              <label htmlFor="inhouse" className="text-sm font-medium text-gray-700 cursor-pointer">
+              <label htmlFor="inhouse" className="text-xs font-medium text-gray-700 cursor-pointer">
                 Inhouse
               </label>
             </div>
-            <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-300">
+            <div className="flex items-center gap-3 p-3 bg-white rounded-xs border border-gray-300">
               <input
                 type="checkbox"
                 id="outsource"
@@ -418,7 +418,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
                 onChange={(e) => setFormData({ ...formData, outsource: e.target.checked, inhouse: e.target.checked ? false : formData.inhouse })}
                 className="w-4 h-4 rounded border-gray-300 cursor-pointer"
               />
-              <label htmlFor="outsource" className="text-sm font-medium text-gray-700 cursor-pointer">
+              <label htmlFor="outsource" className="text-xs font-medium text-gray-700 cursor-pointer">
                 Outsource
               </label>
             </div>
@@ -427,18 +427,18 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Adding...' : 'Add Time Log'}
           </button>
         </form>
 
-        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <div className="mb-6 p-2 bg-amber-50 border border-amber-200 rounded-xs">
           <h4 className="font-semibold text-gray-900 mb-3">Production Summary</h4>
-          <div className="grid grid-cols-5 gap-4 text-sm">
+          <div className="grid grid-cols-5 gap-4 text-xs">
             <div>
               <p className="text-gray-600 text-xs font-semibold">Total Produced</p>
-              <p className="text-sm font-bold text-gray-900">
+              <p className="text-xs font-bold text-gray-900">
                 {timeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0).toFixed(2)}
               </p>
             </div>
@@ -475,8 +475,8 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
           </h3>
           
           {timeLogs.length > 0 ? (
-            <div className=" border border-gray-200 rounded-lg">
-              <table className="w-full text-sm">
+            <div className=" border border-gray-200 rounded-xs">
+              <table className="w-full text-xs">
                 <thead className="bg-gray-100 border-b border-gray-200">
                   <tr>
                     <th className="px-4 py-3 text-left font-semibold text-gray-700">Operator</th>
@@ -527,7 +527,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
               </table>
             </div>
           ) : (
-            <div className="p-8 text-center bg-gray-50 border border-gray-200 rounded-lg text-gray-500">
+            <div className="p-8 text-center bg-gray-50 border border-gray-200 rounded-xs text-gray-500">
               <Clock size={32} className="mx-auto mb-2 opacity-50" />
               <p>No time logs recorded yet</p>
             </div>

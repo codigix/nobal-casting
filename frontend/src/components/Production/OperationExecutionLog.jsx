@@ -73,7 +73,7 @@ export default function OperationExecutionLog({ jobCardId }) {
     return (
       <div className="text-center py-6 text-gray-500">
         <Clock size={24} className="mx-auto mb-2 opacity-50" />
-        <p className="text-sm">No execution events recorded yet</p>
+        <p className="text-xs">No execution events recorded yet</p>
       </div>
     )
   }
@@ -81,7 +81,7 @@ export default function OperationExecutionLog({ jobCardId }) {
   return (
     <div className="space-y-2">
       {logs.map((log, index) => (
-        <div key={log.id || index} className={`p-3 rounded-lg ${getEventColor(log.event_type)}`}>
+        <div key={log.id || index} className={`p-3 rounded-xs ${getEventColor(log.event_type)}`}>
           <div className="flex items-start gap-3">
             <div className="pt-0.5">
               {getEventIcon(log.event_type)}
@@ -89,7 +89,7 @@ export default function OperationExecutionLog({ jobCardId }) {
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-start gap-2">
                 <div>
-                  <span className="font-semibold text-sm text-gray-900">
+                  <span className="font-semibold text-xs text-gray-900">
                     {log.event_type}
                   </span>
                   {log.workstation_id && (

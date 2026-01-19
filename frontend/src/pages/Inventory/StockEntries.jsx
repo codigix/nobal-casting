@@ -369,7 +369,7 @@ export default function StockEntries() {
   ]
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-4 sm:p-5 lg:p-6">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-2 sm:p-5 lg:p-6">
       <div className=" mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-6">
           <div>
@@ -381,7 +381,7 @@ export default function StockEntries() {
           </div>
           <button
             onClick={formModal.open}
-            className="flex items-center justify-center gap-2 p-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 whitespace-nowrap text-sm"
+            className="flex items-center justify-center gap-2 p-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-xs shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 whitespace-nowrap text-xs"
           >
             <Plus size={18} />
             Create Entry
@@ -667,14 +667,14 @@ export default function StockEntries() {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 px-4">
-            <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-4 mb-4 animate-pulse">
+            <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-2 mb-4 animate-pulse">
               <Package size={40} className="text-neutral-400 dark:text-neutral-600" />
             </div>
             <p className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">Loading stock entries...</p>
           </div>
         ) : entries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800">
-            <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-4 mb-4">
+          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800">
+            <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-2 mb-4">
               <Package size={40} className="text-neutral-400 dark:text-neutral-600" />
             </div>
             <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">No Stock Entries Found</h3>
@@ -692,7 +692,7 @@ export default function StockEntries() {
                     setSearchTerm(e.target.value)
                     setCurrentPage(1)
                   }}
-                  className="flex-1 p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="flex-1 p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
                 <select 
                   value={typeFilter} 
@@ -700,7 +700,7 @@ export default function StockEntries() {
                     setTypeFilter(e.target.value)
                     setCurrentPage(1)
                   }}
-                  className="p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                 >
                   <option value="">All Types</option>
                   <option value="GRN">GRN</option>
@@ -714,7 +714,7 @@ export default function StockEntries() {
                     setWarehouseFilter(e.target.value)
                     setCurrentPage(1)
                   }}
-                  className="p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                 >
                   <option value="">All Warehouses</option>
                   {warehouses.map(wh => (
@@ -726,7 +726,7 @@ export default function StockEntries() {
                 {(searchTerm || typeFilter || warehouseFilter) && (
                   <button 
                     onClick={handleClearFilters}
-                    className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center gap-1 text-sm"
+                    className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center gap-1 text-xs"
                   >
                     <X size={14} />
                     Clear
@@ -735,14 +735,14 @@ export default function StockEntries() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => setViewMode('table')}
-                    className={`p-2 rounded-md transition-all ${viewMode === 'table' ? 'bg-amber-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
+                    className={`p-2 rounded-xs transition-all ${viewMode === 'table' ? 'bg-amber-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
                     title="Table view"
                   >
                     <List size={18} />
                   </button>
                   <button
                     onClick={() => setViewMode('card')}
-                    className={`p-2 rounded-md transition-all ${viewMode === 'card' ? 'bg-amber-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
+                    className={`p-2 rounded-xs transition-all ${viewMode === 'card' ? 'bg-amber-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
                     title="Card view"
                   >
                     <Grid3x3 size={18} />
@@ -752,8 +752,8 @@ export default function StockEntries() {
             )}
 
             {filteredEntries.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800">
-                <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-4 mb-4">
+              <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800">
+                <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-2 mb-4">
                   <Package size={40} className="text-neutral-400 dark:text-neutral-600" />
                 </div>
                 <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">No Matching Entries</h3>
@@ -768,11 +768,11 @@ export default function StockEntries() {
                 {paginatedData.map((entry) => (
                   <div
                     key={entry.id}
-                    className="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden"
+                    className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden"
                   >
-                    <div className={`bg-gradient-to-br ${getTypeColor(entry.entry_type || entry.reference_doctype)} p-4 flex items-start justify-between`}>
+                    <div className={`bg-gradient-to-br ${getTypeColor(entry.entry_type || entry.reference_doctype)}p-2 flex items-start justify-between`}>
                       <div className="flex items-start gap-2">
-                        <div className="p-1 bg-white/50 rounded-lg">
+                        <div className="p-1 bg-white/50 rounded-xs">
                           {getTypeIcon(entry.entry_type || entry.reference_doctype)}
                         </div>
                         <div>
@@ -811,7 +811,7 @@ export default function StockEntries() {
                       <div className="flex gap-2 pt-3 border-t border-neutral-200 dark:border-neutral-800">
                         <button
                           onClick={() => handleDelete(entry.entry_id || entry.id)}
-                          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/50 transition-all"
+                          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 rounded-xs hover:bg-red-100 dark:hover:bg-red-950/50 transition-all"
                         >
                           <Trash2 size={12} />
                           Delete
@@ -832,7 +832,7 @@ export default function StockEntries() {
                   <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     Previous
                   </button>
@@ -841,7 +841,7 @@ export default function StockEntries() {
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
-                        className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        className={`px-2 py-1.5 rounded-xs text-xs font-medium transition-all ${
                           currentPage === page
                             ? 'bg-amber-500 text-white'
                             : 'border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800'
@@ -854,7 +854,7 @@ export default function StockEntries() {
                   <button
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
-                    className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     Next
                   </button>

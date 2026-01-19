@@ -3,14 +3,12 @@ import api from '../../services/api'
 import Button from '../../components/Button/Button'
 import DataTable from '../../components/Table/DataTable'
 import Alert from '../../components/Alert/Alert'
-import Card from '../../components/Card/Card'
 import Badge from '../../components/Badge/Badge'
 
 import { CheckCircle, XCircle, Clock, AlertCircle, Eye, Package, ArrowRight, Info, Save, MapPin, Zap, Plus, Grid3x3, List } from 'lucide-react'
 import Modal from '../../components/Modal/Modal'
 import InventoryApprovalModal from '../../components/Buying/InventoryApprovalModal'
 import CreateGRNModal from '../../components/Buying/CreateGRNModal'
-import './Buying.css'
 
 export default function PurchaseReceipts() {
   const [grns, setGrns] = useState([])
@@ -183,7 +181,7 @@ export default function PurchaseReceipts() {
         <span className="flex items-center">
           {config.icon}
         </span>
-        <span className='text-sm'>{config.label}</span>
+        <span className='text-xs'>{config.label}</span>
       </div>
     )
   }
@@ -380,102 +378,74 @@ export default function PurchaseReceipts() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-4 sm:p-6 lg:p-3">
-      <div className=" mx-auto">
-        {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-            <div className='flex gap-3'>
-              <Package size={32} className="text-amber-500" />
-              <div>
-                <h1 className="text-xl font-black text-neutral-900 dark:text-white flex items-center gap-3">
-                Goods Receipt Notes
-              </h1>
-                            <p className="text-neutral-600 dark:text-neutral-400">Manage incoming material receipts and inventory approvals</p>
-
-              </div>
-            </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center text-xs justify-center gap-2 p-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-md shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 whitespace-nowrap"
-            >
-              <Plus size={15} />
-              Create GRN
-            </button>
-          </div>
-
-          {/* Tab Navigation */}
-          <div className="flex gap-2 mt-6 border-b border-neutral-200 dark:border-neutral-700">
-            <button
-              onClick={() => setCurrentTab('grn-requests')}
-              className={`px-4 py-3 font-semibold transition-all relative ${
-                currentTab === 'grn-requests'
-                  ? 'text-amber-600 dark:text-amber-400'
-                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
-              }`}
-            >
-              GRN Requests
-              {currentTab === 'grn-requests' && (
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500"></div>
-              )}
-            </button>
-            <button
-              onClick={() => {
-                setCurrentTab('available-items')
-                fetchAvailableItems()
-              }}
-              className={`px-4 py-3 font-semibold transition-all relative ${
-                currentTab === 'available-items'
-                  ? 'text-amber-600 dark:text-amber-400'
-                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
-              }`}
-            >
-              Available Items
-              {currentTab === 'available-items' && (
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500"></div>
-              )}
-            </button>
-          </div>
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Goods Receipt Notes</h1>
+          <p className="text-xs text-gray-500 mt-1">Manage incoming material receipts and inventory approvals</p>
         </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="inline-flex items-center gap-2 p-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xs transition-all text-xs"
+        >
+          <Plus size={18} />
+          Create GRN
+        </button>
+      </div>
 
-        {/* Metrics Grid - Only show for GRN Requests */}
-        {currentTab === 'grn-requests' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* Tab Navigation */}
+      <div className="flex gap-6 border-b border-gray-200">
+        <button
+          onClick={() => setCurrentTab('grn-requests')}
+          className={`p-2 font-semibold transition-all border-b-2 ${
+            currentTab === 'grn-requests'
+              ? 'text-blue-600 border-blue-600 text-xs'
+              : 'text-gray-600 border-transparent hover:text-gray-900 text-xs'
+          }`}
+        >
+          GRN Requests
+        </button>
+        <button
+          onClick={() => {
+            setCurrentTab('available-items')
+            fetchAvailableItems()
+          }}
+          className={`p-2 font-semibold transition-all border-b-2 ${
+            currentTab === 'available-items'
+              ? 'text-blue-600 border-blue-600 text-xs'
+              : 'text-gray-600 border-transparent hover:text-gray-900 text-xs'
+          }`}
+        >
+          Available Items
+        </button>
+      </div>
+
+      {/* Metrics Grid - Only show for GRN Requests */}
+      {currentTab === 'grn-requests' && (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           <MetricCard
             title="Pending Inspection"
             count={stats.pending}
-            icon={<Clock size={15} />}
             trend="Awaiting QC"
             bgColor="from-orange-50 to-amber-50"
-            darkBgColor="dark:from-orange-950/20 dark:to-amber-950/20"
-            iconColor="text-orange-500"
           />
           <MetricCard
             title="Under Inspection"
             count={stats.inspecting}
-            icon={<AlertCircle size={15} />}
             trend="In Progress"
             bgColor="from-blue-50 to-cyan-50"
-            darkBgColor="dark:from-blue-950/20 dark:to-cyan-950/20"
-            iconColor="text-blue-500"
           />
           <MetricCard
             title="Awaiting Approval"
             count={stats.awaiting}
-            icon={<Info size={15} />}
             trend="Ready to approve"
             bgColor="from-purple-50 to-pink-50"
-            darkBgColor="dark:from-purple-950/20 dark:to-pink-950/20"
-            iconColor="text-purple-500"
           />
           <MetricCard
             title="Approved & Stored"
             count={stats.approved}
-            icon={<CheckCircle size={15} />}
             trend="Successfully stored"
             bgColor="from-emerald-50 to-green-50"
-            darkBgColor="dark:from-emerald-950/20 dark:to-green-950/20"
-            iconColor="text-emerald-500"
           />
         </div>
         )}
@@ -484,54 +454,52 @@ export default function PurchaseReceipts() {
         {error && <Alert type="danger">{error}</Alert>}
         {success && <Alert type="success">{success}</Alert>}
 
-        {/* Main Content Card */}
-        {currentTab === 'grn-requests' && (
-        <div className=" dark:bg-neutral-900 rounded-lg  dark:border-neutral-800  overflow-hidden">
+      {/* Main Content Card */}
+      {currentTab === 'grn-requests' && (
+        <div className="">
           {/* Card Header */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-neutral-900 dark:text-white">GRN Requests</h2>
+          <div className="p-2 border-b border-gray-200 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-gray-900">GRN Requests</h2>
             {grns.length > 0 && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 bg-white rounded-xs p-1 border border-gray-200">
                 <button
                   onClick={() => setViewMode('table')}
-                  className={`p-2 rounded-md transition-all ${viewMode === 'table' ? 'bg-amber-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
+                  className={`p-2.5 rounded-md transition-all ${viewMode === 'table' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
                   title="Table view"
                 >
-                  <List size={15} />
+                  <List size={18} />
                 </button>
                 <button
                   onClick={() => setViewMode('card')}
-                  className={`p-2 rounded-md transition-all ${viewMode === 'card' ? 'bg-amber-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
+                  className={`p-2.5 rounded-md transition-all ${viewMode === 'card' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
                   title="Card view"
                 >
-                  <Grid3x3 size={15} />
+                  <Grid3x3 size={18} />
                 </button>
               </div>
             )}
           </div>
 
           {/* Card Body */}
-          <div className="mt-3">
+          <div>
             {grns.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-4">
-                <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-4 mb-4">
-                  <Package size={48} className="text-neutral-400 dark:text-neutral-600" />
-                </div>
-                <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">No GRN Requests Found</h3>
-                <p className="text-neutral-600 dark:text-neutral-400 text-center max-w-md">
+                <Package size={48} className="text-gray-300 mb-4" />
+                <h3 className="text-lg font-bold text-gray-900 mb-2">No GRN Requests Found</h3>
+                <p className="text-gray-500 text-center max-w-md">
                   No GRN requests available
                 </p>
               </div>
             ) : viewMode === 'table' ? (
-              <div className="">
+              <div className="overflow-x-auto">
                 <DataTable columns={columns} data={grns} />
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {grns.map(grn => (
-                  <div key={grn.id} className="bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow">
+                  <div key={grn.id} className="bg-white dark:bg-neutral-800 rounded-xs border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow">
                     <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 p-2 border-b border-neutral-200 dark:border-neutral-700">
-                      <div className="flex items-start justify-between text-sm">
+                      <div className="flex items-start justify-between text-xs">
                         <div>
                           <h3 className="font-semibold text-neutral-900 dark:text-white text-md">{grn.grn_no}</h3>
                           <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">{grn.supplier_name}</p>
@@ -615,65 +583,61 @@ export default function PurchaseReceipts() {
         </div>
         )}
 
-        {/* Available Items Tab */}
-        {currentTab === 'available-items' && (
-        <div className=" dark:bg-neutral-900 rounded-lg  dark:border-neutral-800  overflow-hidden">
+      {/* Available Items Tab */}
+      {currentTab === 'available-items' && (
+        <div className="">
           {/* Card Header */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-neutral-900 dark:text-white">Available Items in Stock</h2>
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-lg font-bold text-gray-900">Available Items in Stock</h2>
           </div>
 
           {/* Card Body */}
-          <div className="mt-3">
+          <div>
             {availableItemsLoading ? (
               <div className="flex flex-col items-center justify-center py-16 px-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-800 mb-4">
-                  <Package size={32} className="text-neutral-400 dark:text-neutral-600 animate-pulse" />
-                </div>
-                <p className="text-neutral-600 dark:text-neutral-400 font-medium">Loading available items...</p>
+                <Package size={32} className="text-gray-300 mb-4 animate-pulse" />
+                <p className="text-gray-500 font-medium">Loading available items...</p>
               </div>
             ) : availableItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-4">
-                <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-4 mb-4">
-                  <Package size={48} className="text-neutral-400 dark:text-neutral-600" />
-                </div>
-                <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">No Available Items</h3>
-                <p className="text-neutral-600 dark:text-neutral-400 text-center max-w-md">
+                <Package size={48} className="text-gray-300 mb-4" />
+                <h3 className="text-lg font-bold text-gray-900 mb-2">No Available Items</h3>
+                <p className="text-gray-500 text-center max-w-md">
                   All items are currently out of stock
                 </p>
               </div>
             ) : (
-              <div className="">
-                <table className="w-full border-collapse border border-neutral-200 dark:border-neutral-700 text-sm">
-                  <thead>
-                    <tr className="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
-                      <th className="px-4 py-3 text-left font-semibold text-neutral-700 dark:text-neutral-300">Item Code</th>
-                      <th className="px-4 py-3 text-left font-semibold text-neutral-700 dark:text-neutral-300">Item Name</th>
-                      <th className="px-4 py-3 text-right font-semibold text-neutral-700 dark:text-neutral-300">Available Qty</th>
-                      <th className="px-4 py-3 text-right font-semibold text-neutral-700 dark:text-neutral-300">Reserved Qty</th>
-                      <th className="px-4 py-3 text-right font-semibold text-neutral-700 dark:text-neutral-300">Rate</th>
-                      <th className="px-4 py-3 text-right font-semibold text-neutral-700 dark:text-neutral-300">Total Value</th>
-                      <th className="px-4 py-3 text-left font-semibold text-neutral-700 dark:text-neutral-300">Warehouse</th>
-                      <th className="px-4 py-3 text-left font-semibold text-neutral-700 dark:text-neutral-300">Last Received</th>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-gray-100 text-gray-700 font-semibold border-b border-gray-200">
+                    <tr>
+                      <th className="p-2 text-xs">Item Code</th>
+                      <th className="p-2 text-xs">Item Name</th>
+                      <th className="p-2 text-xs text-right">Available Qty</th>
+                      <th className="p-2 text-xs text-right">Reserved Qty</th>
+                      <th className="p-2 text-xs text-right">Rate</th>
+                      <th className="p-2 text-xs text-right">Total Value</th>
+                      <th className="p-2 text-xs">Warehouse</th>
+                      <th className="p-2 text-xs">Last Received</th>
                     </tr>
                   </thead>
                   <tbody>
                     {availableItems.map((item, idx) => {
                       const totalValue = (parseFloat(item.current_qty) || 0) * (parseFloat(item.valuation_rate) || 0)
                       return (
-                        <tr key={idx} className="border-b border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
-                          <td className="px-4 py-3 font-semibold text-neutral-900 dark:text-white">{item.item_code}</td>
-                          <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">{item.item_name}</td>
-                          <td className="px-4 py-3 text-right font-semibold text-neutral-900 dark:text-white">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold">
+                        <tr key={idx} className={`border-b border-gray-200 hover:bg-blue-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                          <td className="p-2 font-medium text-gray-900 whitespace-nowrap">{item.item_code}</td>
+                          <td className="p-3 text-gray-700">{item.item_name}</td>
+                          <td className="p-3 text-right">
+                            <span className="inline-flex items-center px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
                               {(parseFloat(item.current_qty) || 0).toFixed(2)}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-right text-neutral-700 dark:text-neutral-300">{(parseFloat(item.reserved_qty) || 0).toFixed(2)}</td>
-                          <td className="px-4 py-3 text-right text-neutral-700 dark:text-neutral-300">{(parseFloat(item.valuation_rate) || 0).toFixed(2)}</td>
-                          <td className="px-4 py-3 text-right font-semibold text-neutral-900 dark:text-white">{totalValue.toFixed(2)}</td>
-                          <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">{item.warehouse_name || '-'}</td>
-                          <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300 text-xs">
+                          <td className="p-3 text-right text-gray-700">{(parseFloat(item.reserved_qty) || 0).toFixed(2)}</td>
+                          <td className="p-3 text-right text-gray-700">{(parseFloat(item.valuation_rate) || 0).toFixed(2)}</td>
+                          <td className="p-3 text-right font-medium text-gray-900">{totalValue.toFixed(2)}</td>
+                          <td className="p-3 text-gray-700">{item.warehouse_name || '-'}</td>
+                          <td className="p-3 text-gray-700 text-xs">
                             {item.last_receipt_date ? new Date(item.last_receipt_date).toLocaleDateString() : '-'}
                           </td>
                         </tr>
@@ -685,8 +649,7 @@ export default function PurchaseReceipts() {
             )}
           </div>
         </div>
-        )}
-      </div>
+      )}
 
       <Modal
         isOpen={showDetails && !showApprovalForm}
@@ -729,9 +692,9 @@ export default function PurchaseReceipts() {
       >
         {selectedGRN && (
           <div>
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-5 flex gap-3 items-start">
+            <div className="bg-green-50 border border-green-200 rounded-xs p-2 mb-5 flex gap-3 items-start">
               <div>
-                <p className="m-0 text-sm text-green-900 font-medium">
+                <p className="m-0 text-xs text-green-900 font-medium">
                   <strong>GRN Status:</strong> {getStatusBadge(selectedGRN.status)}
                 </p>
               </div>
@@ -759,8 +722,8 @@ export default function PurchaseReceipts() {
             </div>
 
             {selectedGRN.rejection_reason && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-5">
-                <p className="m-0 text-sm text-red-900 font-medium">
+              <div className="bg-red-50 border border-red-200 rounded-xs p-3 mb-5">
+                <p className="m-0 text-xs text-red-900 font-medium">
                   <strong>Rejection Reason:</strong> {selectedGRN.rejection_reason}
                 </p>
               </div>
@@ -771,7 +734,7 @@ export default function PurchaseReceipts() {
                 📦 Received Items
               </h4>
               <div className="border border-gray-200 rounded overflow-hidden">
-                <table className="w-full border-collapse border border-gray-200 text-sm">
+                <table className="w-full border-collapse border border-gray-200 text-xs">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
                       <th className="px-3 py-2.5 text-left font-semibold text-gray-700">Item Code</th>
@@ -803,7 +766,7 @@ export default function PurchaseReceipts() {
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   placeholder="Enter reason for rejection..."
-                  className="w-full min-h-20 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full min-h-20 px-3 py-2 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             )}
@@ -846,7 +809,7 @@ export default function PurchaseReceipts() {
       >
         {selectedGRN && (
           <div>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5 text-sm text-amber-900">
+            <div className="bg-amber-50 border border-amber-200 rounded-xs p-3 mb-5 text-xs text-amber-900">
               <p className="m-0 font-medium">
                 ⚠️ <strong>Note:</strong> Review quantities and assign warehouse locations for each item.
               </p>
@@ -996,7 +959,7 @@ export default function PurchaseReceipts() {
               </div>
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-900">
+            <div className="bg-amber-50 border border-amber-200 rounded-xs p-3 text-xs text-amber-900">
               <p className="m-0 font-medium">
                 ⚠️ <strong>Required Fields:</strong> Warehouse location must be assigned for all accepted items before approval.
               </p>
@@ -1036,28 +999,21 @@ export default function PurchaseReceipts() {
   )
 }
 
-function MetricCard({ title, count, icon, trend, bgColor, darkBgColor, iconColor }) {
+function MetricCard({ title, count, icon, trend, bgColor }) {
+  const colorMap = {
+    'from-orange-50 to-amber-50': 'from-orange-50 to-amber-100 text-orange-700',
+    'from-blue-50 to-cyan-50': 'from-blue-50 to-cyan-100 text-blue-700',
+    'from-purple-50 to-pink-50': 'from-purple-50 to-pink-100 text-purple-700',
+    'from-emerald-50 to-green-50': 'from-emerald-50 to-green-100 text-emerald-700'
+  }
+  
   return (
-    <div className={`bg-gradient-to-br flex justify-between items-center w-full h-[100px] ${bgColor} ${darkBgColor} rounded-md p-4 border border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}>
-
-      <div>
-        <div className="text-xl font-black text-neutral-900 dark:text-white mb-1">
-          {count}
-        </div>
-        <div className="text-xs font-semibold  text-neutral-700 dark:text-neutral-300 ">
-          {title}
-        </div>
-        {trend && (
-          <div className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
-            {trend}
-          </div>
-        )}
-      </div>
-      <div className="flex items-start justify-between mb-2">
-        <div className={`p-3 rounded-lg bg-white dark:bg-neutral-800/50 ${iconColor}`}>
-          {icon}
-        </div>
-      </div>
+    <div className={`bg-gradient-to-br ${colorMap[bgColor] || bgColor} p-4 rounded-sm border border-opacity-30 shadow-sm hover:shadow-md transition-all`}>
+      <p className="text-xs font-medium text-gray-600 mb-2">{title}</p>
+      <p className="text-xl font-bold">{count}</p>
+      {trend && (
+        <p className="text-xs text-gray-600 mt-1">{trend}</p>
+      )}
     </div>
   )
 }

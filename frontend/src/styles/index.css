@@ -31,7 +31,7 @@
   }
 
   label {
-    @apply text-sm font-medium text-[var(--text-primary)];
+    @apply text-xs font-medium text-[var(--text-primary)];
   }
 }
 
@@ -66,7 +66,7 @@
   }
 
   .btn-sm {
-    @apply p-2 text-sm;
+    @apply p-2 text-xs;
   }
 
   .btn-lg {
@@ -74,7 +74,7 @@
   }
 
   .input-base {
-    @apply w-full px-4 py-2.5 border border-[var(--input-border)] rounded-lg text-base text-[var(--input-text)] bg-[var(--input-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-500)] focus:border-transparent;
+    @apply w-full px-4 py-2.5 border border-[var(--input-border)] rounded-xs text-base text-[var(--input-text)] bg-[var(--input-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-500)] focus:border-transparent;
   }
 
   .card {
@@ -99,7 +99,7 @@
   }
 
   .table-base td {
-    @apply p-2 border-b border-[var(--border-light)] text-sm text-[var(--text-secondary)] bg-[var(--card-bg)];
+    @apply p-2 border-b border-[var(--border-light)] text-xs text-[var(--text-secondary)] bg-[var(--card-bg)];
   }
 
   .table-base tbody tr:hover {
@@ -107,7 +107,7 @@
   }
 
   .badge {
-    @apply inline-flex items-center p-2 rounded-md gap-1;
+    @apply inline-flex items-center p-1 rounded-xs gap-1;
   }
 
   .badge-primary {
@@ -137,7 +137,7 @@
   }
 
   .alert {
-    @apply px-5 py-4 rounded-lg text-sm font-medium border;
+    @apply px-5 py-4 rounded-xs text-xs font-medium border;
   }
 
   .alert-content {

@@ -726,7 +726,7 @@ export default function BOMForm() {
         <div className="flex justify-between items-start mb-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
+              <div className="w-9 h-9 rounded-xs bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
                 {id ? '✏️' : '📋'}
               </div>
               <div>
@@ -739,7 +739,7 @@ export default function BOMForm() {
             <button 
               type="button" 
               onClick={() => setShowDrafts(true)}
-              className="px-4 py-1.5 bg-blue-50 text-blue-700 rounded-lg font-semibold text-xs hover:bg-blue-100 transition shadow-sm border border-blue-200 hover:border-blue-300 flex items-center gap-2"
+              className="px-4 py-1.5 bg-blue-50 text-blue-700 rounded-xs font-semibold text-xs hover:bg-blue-100 transition shadow-sm border border-blue-200 hover:border-blue-300 flex items-center gap-2"
             >
               <FileText size={14} />
               Drafts
@@ -747,7 +747,7 @@ export default function BOMForm() {
             <button 
               type="button" 
               onClick={() => navigate('/manufacturing/bom')} 
-              className="px-4 py-1.5 bg-white text-gray-700 rounded-lg font-semibold text-xs hover:bg-gray-100 transition shadow-sm border border-gray-200 hover:border-gray-300"
+              className="px-4 py-1.5 bg-white text-gray-700 rounded-xs font-semibold text-xs hover:bg-gray-100 transition shadow-sm border border-gray-200 hover:border-gray-300"
             >
               ← Back
             </button>
@@ -756,7 +756,7 @@ export default function BOMForm() {
 
         <form onSubmit={handleSubmit} className="space-y-2">
           {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-2 flex items-start gap-2">
+            <div className="bg-red-50 border-l-4 border-red-500 rounded-xs p-2 flex items-start gap-2">
               <AlertCircle size={16} className="text-red-500 mt-0 flex-shrink-0" />
               <div>
                 <p className="font-semibold text-red-800 text-xs">Error</p>
@@ -765,7 +765,7 @@ export default function BOMForm() {
             </div>
           )}
 
-          <div className=" rounded-lg shadow-sm border border-gray-200">
+          <div className=" rounded-xs shadow-sm border border-gray-200">
             {/* PRODUCT INFORMATION SECTION */}
             <div className={`border-b border-gray-200 p-2 ${expandedSections.product ? 'bg-blue-50 border-blue-200' : ''}`}>
               <button
@@ -774,9 +774,9 @@ export default function BOMForm() {
                 className="w-full flex items-center justify-between group"
               >
                 <div className="flex items-center gap-3 flex-1">
-                  <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">📦</div>
+                  <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">📦</div>
                   <div className="text-left">
-                    <h2 className="text-sm font-bold text-blue-900 group-hover:text-blue-700 transition">Product Information</h2>
+                    <h2 className="text-xs font-bold text-blue-900 group-hover:text-blue-700 transition">Product Information</h2>
                     <p className="text-xs text-gray-500 mt-0">Basics</p>
                   </div>
                 </div>
@@ -894,9 +894,9 @@ export default function BOMForm() {
                 className="w-full flex items-center justify-between group"
               >
                 <div className="flex items-center gap-3 flex-1">
-                  <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">📦</div>
+                  <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">📦</div>
                   <div className="text-left">
-                    <h2 className="text-sm font-bold text-blue-900 group-hover:text-blue-700 transition">Components/Sub-Assemblies</h2>
+                    <h2 className="text-xs font-bold text-blue-900 group-hover:text-blue-700 transition">Components/Sub-Assemblies</h2>
                     <p className="text-xs text-gray-500 mt-0">{bomLines.length} items • ₹{bomLines.reduce((sum, line) => sum + (parseFloat(line.amount) || 0), 0).toFixed(2)}</p>
                   </div>
                 </div>
@@ -1110,7 +1110,7 @@ export default function BOMForm() {
                           <tfoot>
                             <tr className="bg-amber-50 border-t-2 border-amber-200 font-semibold">
                               <td colSpan="7" className="px-2 py-2 text-right text-xs text-amber-900">Total Scrap Qty:</td>
-                              <td className="px-2 py-2 text-right text-sm font-bold text-amber-700">{totalScrapQty.toFixed(2)}</td>
+                              <td className="px-2 py-2 text-right text-xs font-bold text-amber-700">{totalScrapQty.toFixed(2)}</td>
                               <td colSpan="3"></td>
                             </tr>
                           </tfoot>
@@ -1130,9 +1130,9 @@ export default function BOMForm() {
                 className="w-full flex items-center justify-between group"
               >
                 <div className="flex items-center gap-3 flex-1">
-                  <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">🏭</div>
+                  <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">🏭</div>
                   <div className="text-left">
-                    <h2 className="text-sm font-bold text-emerald-900 group-hover:text-emerald-700 transition">Materials</h2>
+                    <h2 className="text-xs font-bold text-emerald-900 group-hover:text-emerald-700 transition">Materials</h2>
                     <p className="text-xs text-gray-500 mt-0">{rawMaterials.length} • ₹{rawMaterials.reduce((sum, rm) => sum + (parseFloat(rm.amount) || 0), 0).toFixed(2)}</p>
                   </div>
                 </div>
@@ -1292,7 +1292,7 @@ export default function BOMForm() {
                             >
                               <div className="flex items-center gap-3 flex-1">
                                 <div className="text-left">
-                                  <h3 className="text-sm font-bold text-red-900 group-hover:text-red-700">{groupName}</h3>
+                                  <h3 className="text-xs font-bold text-red-900 group-hover:text-red-700">{groupName}</h3>
                                   <p className="text-xs text-red-700 mt-0">{groupItems.length} items • ₹{groupCost.toFixed(2)}</p>
                                 </div>
                               </div>
@@ -1420,9 +1420,9 @@ export default function BOMForm() {
                 className="w-full flex items-center justify-between group"
               >
                 <div className="flex items-center gap-3 flex-1">
-                  <div className="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">⚙️</div>
+                  <div className="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">⚙️</div>
                   <div className="text-left">
-                    <h2 className="text-sm font-bold text-purple-900 group-hover:text-purple-700 transition">Operations</h2>
+                    <h2 className="text-xs font-bold text-purple-900 group-hover:text-purple-700 transition">Operations</h2>
                     <p className="text-xs text-gray-500 mt-0">{operations.length} • ₹{totalOperationCost.toFixed(0)}</p>
                   </div>
                 </div>
@@ -1569,9 +1569,9 @@ export default function BOMForm() {
                 className="w-full flex items-center justify-between group"
               >
                 <div className="flex items-center gap-3 flex-1">
-                  <div className="w-7 h-7 rounded-full bg-cyan-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">♻️</div>
+                  <div className="w-7 h-7 rounded-full bg-cyan-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">♻️</div>
                   <div className="text-left">
-                    <h2 className="text-sm font-bold text-cyan-900 group-hover:text-cyan-700 transition">Scrap & Loss</h2>
+                    <h2 className="text-xs font-bold text-cyan-900 group-hover:text-cyan-700 transition">Scrap & Loss</h2>
                     <p className="text-xs text-gray-500 mt-0">{scrapItems.length} item{scrapItems.length !== 1 ? 's' : ''}</p>
                   </div>
                 </div>
@@ -1698,9 +1698,9 @@ export default function BOMForm() {
               className="w-full flex items-center justify-between group"
             >
               <div className="flex items-center gap-3 flex-1">
-                <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">💰</div>
+                <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">💰</div>
                 <div className="text-left">
-                  <h2 className="text-sm font-bold text-indigo-900 group-hover:text-indigo-700 transition">BOM Costing</h2>
+                  <h2 className="text-xs font-bold text-indigo-900 group-hover:text-indigo-700 transition">BOM Costing</h2>
                   <p className="text-xs text-gray-500 mt-0">₹{totalBOMCost.toFixed(2)} Total Cost</p>
                 </div>
               </div>
@@ -1712,25 +1712,25 @@ export default function BOMForm() {
             {expandedSections.costing && (
               <div className="pt-3 border-t border-indigo-100">
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                  <div className="rounded-xs border border-blue-200 bg-blue-50 p-3">
                     <div className="text-xs font-semibold text-blue-700 mb-1">Material Cost</div>
                     <div className="text-lg font-bold text-blue-900">₹{materialCost.toFixed(2)}</div>
                     <p className="text-xs text-blue-600 mt-1">(Components − Scrap)</p>
                   </div>
-                  <div className="rounded-lg border border-purple-200 bg-purple-50 p-3">
+                  <div className="rounded-xs border border-purple-200 bg-purple-50 p-3">
                     <div className="text-xs font-semibold text-purple-700 mb-1">Labour Cost</div>
                     <div className="text-lg font-bold text-purple-900">₹{labourCost.toFixed(2)}</div>
                     <p className="text-xs text-purple-600 mt-1">Operations</p>
                   </div>
 
-                  <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+                  <div className="rounded-xs border border-green-200 bg-green-50 p-3">
                     <div className="text-xs font-semibold text-green-700 mb-1">Total BOM Cost</div>
                     <div className="text-lg font-bold text-green-900">₹{totalBOMCost.toFixed(2)}</div>
                     <p className="text-xs text-green-600 mt-1">Per {formData.quantity} {formData.uom}</p>
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-lg">
+                <div className="mt-4 grid gap-3 bg-gradient-to-br from-gray-50 to-gray-100 p-2 rounded-sm">
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-600">Components Cost:</span>
@@ -1789,9 +1789,9 @@ export default function BOMForm() {
 
         {showDrafts && (
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-lg shadow-xl w-96 max-h-96 overflow-y-auto p-4">
+            <div className="bg-white rounded-xs shadow-xl w-96 max-h-96 overflow-y-auto p-2">
               <div className="flex justify-between items-center mb-4 sticky top-0 bg-white">
-                <h2 className="text-sm font-bold text-gray-900">Load Draft</h2>
+                <h2 className="text-xs font-bold text-gray-900">Load Draft</h2>
                 <button
                   onClick={() => setShowDrafts(false)}
                   className="text-gray-400 hover:text-gray-600"

@@ -5,7 +5,7 @@ import { Star, TrendingUp, DollarSign, Users, Award, Target, ArrowUpRight, Arrow
 const CustomTooltip = ({ active, payload }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-gray-800 px-3 py-2.5 rounded-lg border border-gray-700 shadow-lg">
+      <div className="bg-gray-800 px-3 py-2.5 rounded-xs border border-gray-700 shadow-lg">
         <p className="text-gray-100 text-xs m-0">
           {payload[0].name}: <span className="font-semibold" style={{ color: payload[0].color }}>${payload[0].value.toLocaleString()}</span>
         </p>
@@ -28,16 +28,16 @@ const DetailModal = ({ isOpen, item, itemType, onClose }) => {
   ]
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-2">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-gradient-to-r from-slate-900 to-slate-800 p-6 flex items-center justify-between text-white z-10">
           <div>
-            <h2 className="text-2xl font-bold m-0">{item.name}</h2>
-            <p className="text-slate-300 text-sm mt-1 m-0">{itemType === 'customer' ? `Segment: ${item.segment}` : `Type: ${itemType}`}</p>
+            <h2 className="text-xl font-bold m-0">{item.name}</h2>
+            <p className="text-slate-300 text-xs mt-1 m-0">{itemType === 'customer' ? `Segment: ${item.segment}` : `Type: ${itemType}`}</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-slate-700 rounded-xs transition-colors"
           >
             <X size={24} />
           </button>
@@ -111,11 +111,11 @@ const DetailModal = ({ isOpen, item, itemType, onClose }) => {
               {itemType === 'customer' && (
                 <>
                   <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                    <span className="text-sm text-slate-600">Projects Active:</span>
+                    <span className="text-xs text-slate-600">Projects Active:</span>
                     <span className="font-bold text-slate-900">{item.projects}</span>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                    <span className="text-sm text-slate-600">Avg Order Value:</span>
+                    <span className="text-xs text-slate-600">Avg Order Value:</span>
                     <span className="font-bold text-slate-900">${(item.revenue / item.orders).toFixed(0)}</span>
                   </div>
                 </>
@@ -123,21 +123,21 @@ const DetailModal = ({ isOpen, item, itemType, onClose }) => {
               {itemType === 'project' && (
                 <>
                   <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                    <span className="text-sm text-slate-600">Status:</span>
+                    <span className="text-xs text-slate-600">Status:</span>
                     <span className="font-bold text-slate-900">{item.status}</span>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                    <span className="text-sm text-slate-600">Start Date:</span>
+                    <span className="text-xs text-slate-600">Start Date:</span>
                     <span className="font-bold text-slate-900">{item.startDate}</span>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                    <span className="text-sm text-slate-600">Customer:</span>
+                    <span className="text-xs text-slate-600">Customer:</span>
                     <span className="font-bold text-slate-900">{item.customer || 'Tata Steel'}</span>
                   </div>
                 </>
               )}
               <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-sm text-slate-600">Monthly Avg Revenue:</span>
+                <span className="text-xs text-slate-600">Monthly Avg Revenue:</span>
                 <span className="font-bold text-slate-900">${(item.revenue / 6 / 1000).toFixed(0)}k</span>
               </div>
             </div>
@@ -263,7 +263,7 @@ export default function CustomerStatistics() {
       <div className="bg-gradient-to-br from-white to-slate-100 px-2 py-2 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
         <div className="w-full mx-auto">
           <div className="flex items-center gap-4 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-white text-xl">
+            <div className="w-10 h-10 rounded-xs bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center text-white text-xl">
               📊
             </div>
             <div>
@@ -364,7 +364,7 @@ export default function CustomerStatistics() {
           <div className="flex border-b border-gray-200">
             <button
               onClick={() => setActiveProjectTab('tata')}
-              className={`flex-1 p-2 font-semibold text-sm transition-colors ${
+              className={`flex-1 p-2 font-semibold text-xs transition-colors ${
                 activeProjectTab === 'tata'
                   ? 'text-orange-600 border-b-2 border-orange-400 bg-orange-50'
                   : 'text-slate-600 hover:text-slate-900'
@@ -374,7 +374,7 @@ export default function CustomerStatistics() {
             </button>
             <button
               onClick={() => setActiveProjectTab('other')}
-              className={`flex-1 p-2 font-semibold text-sm transition-colors ${
+              className={`flex-1 p-2 font-semibold text-xs transition-colors ${
                 activeProjectTab === 'other'
                   ? 'text-purple-600 border-b-2 border-purple-400 bg-purple-50'
                   : 'text-slate-600 hover:text-slate-900'
@@ -403,15 +403,15 @@ export default function CustomerStatistics() {
                     {tataSteelProjects.map((project, idx) => (
                       <tr key={project.id} className={`border-b border-gray-200 ${idx % 2 === 0 ? 'bg-slate-50' : 'bg-white'}`}>
                         <td className="p-2 text-xs text-gray-700 font-medium">{project.name}</td>
-                        <td className="p-4 text-sm">
+                        <td className="p-4 text-xs">
                           <span className={`px-3 py-1 rounded text-xs font-semibold ${getStatusColor(project.status)}`}>
                             {project.status}
                           </span>
                         </td>
-                        <td className="p-4 text-sm text-green-600 font-semibold text-center">
+                        <td className="p-4 text-xs text-green-600 font-semibold text-center">
                           ${(project.revenue / 1000).toFixed(0)}k
                         </td>
-                        <td className="p-4 text-sm text-center">
+                        <td className="p-4 text-xs text-center">
                           <div className="flex items-center justify-center gap-2">
                             <div className="w-16 bg-gray-200 rounded-full h-2">
                               <div className="bg-green-500 h-2 rounded-full" style={{ width: `${project.completion}%` }}></div>
@@ -420,7 +420,7 @@ export default function CustomerStatistics() {
                           </div>
                         </td>
                         <td className="p-2 text-xs text-gray-700 text-center font-medium">{project.startDate}</td>
-                        <td className="p-4 text-sm text-center">
+                        <td className="p-4 text-xs text-center">
                           <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded text-xs font-semibold">
                             {project.orders}
                           </span>
@@ -428,7 +428,7 @@ export default function CustomerStatistics() {
                         <td className="p-4 text-center">
                           <button
                             onClick={() => openModal(project, 'project')}
-                            className="inline-flex items-center gap-2 p-2 bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-lg text-xs font-semibold transition-colors"
+                            className="inline-flex items-center gap-2 p-2 bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-xs text-xs font-semibold transition-colors"
                           >
                             <Eye size={14} />
                             Progress
@@ -458,15 +458,15 @@ export default function CustomerStatistics() {
                       <tr key={project.id} className={`border-b border-gray-200 ${idx % 2 === 0 ? 'bg-slate-50' : 'bg-white'}`}>
                         <td className="p-2 text-xs text-gray-700 font-medium">{project.name}</td>
                         <td className="p-2 text-xs text-gray-700 font-medium">{project.customer}</td>
-                        <td className="p-4 text-sm">
+                        <td className="p-4 text-xs">
                           <span className={`px-3 py-1 rounded text-xs font-semibold ${getStatusColor(project.status)}`}>
                             {project.status}
                           </span>
                         </td>
-                        <td className="p-4 text-sm text-green-600 font-semibold text-center">
+                        <td className="p-4 text-xs text-green-600 font-semibold text-center">
                           ${(project.revenue / 1000).toFixed(0)}k
                         </td>
-                        <td className="p-4 text-sm text-center">
+                        <td className="p-4 text-xs text-center">
                           <div className="flex items-center justify-center gap-2">
                             <div className="w-16 bg-gray-200 rounded-full h-2">
                               <div className="bg-purple-500 h-2 rounded-full" style={{ width: `${project.completion}%` }}></div>
@@ -478,7 +478,7 @@ export default function CustomerStatistics() {
                         <td className="p-4 text-center">
                           <button
                             onClick={() => openModal(project, 'project')}
-                            className="inline-flex items-center gap-2 p-2 bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-lg text-xs font-semibold transition-colors"
+                            className="inline-flex items-center gap-2 p-2 bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-xs text-xs font-semibold transition-colors"
                           >
                             <Eye size={14} />
                             Progress
@@ -598,25 +598,25 @@ export default function CustomerStatistics() {
             📊 Key Business Insights
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 border-l-4 border-l-amber-400">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xs p-6 border-l-4 border-l-amber-400">
               <p className="text-xs font-semibold text-yellow-900 mb-2 m-0 uppercase">Premium Revenue Share</p>
               <p className="text-3xl font-extrabold text-amber-700 m-0">87%</p>
               <p className="text-xs text-slate-500 mt-2">Premium customers generate majority of revenue despite being only 16% of base</p>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 border-l-4 border-l-blue-400">
+            <div className="bg-blue-50 border border-blue-200 rounded-xs p-6 border-l-4 border-l-blue-400">
               <p className="text-xs font-semibold text-blue-900 mb-2 m-0 uppercase">Regular Client Base</p>
               <p className="text-3xl font-extrabold text-blue-600 m-0">84%</p>
               <p className="text-xs text-slate-500 mt-2">Regular clients form bulk of customer base with high growth potential</p>
             </div>
 
-            <div className="bg-green-50 border border-green-200 rounded-lg p-6 border-l-4 border-l-green-400">
+            <div className="bg-green-50 border border-green-200 rounded-xs p-6 border-l-4 border-l-green-400">
               <p className="text-xs font-semibold text-green-900 mb-2 m-0 uppercase">Satisfaction Gap</p>
               <p className="text-3xl font-extrabold text-green-700 m-0">0.8 ⭐</p>
               <p className="text-xs text-slate-500 mt-2">Premium customers more satisfied - focus on regular client experience</p>
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 border-l-4 border-l-amber-400">
+            <div className="bg-amber-50 border border-amber-200 rounded-xs p-6 border-l-4 border-l-amber-400">
               <p className="text-xs font-semibold text-amber-900 mb-2 m-0 uppercase">Order Value Multiple</p>
               <p className="text-3xl font-extrabold text-amber-700 m-0">2.7x</p>
               <p className="text-xs text-slate-500 mt-2">Premium order values significantly higher than regular clients</p>

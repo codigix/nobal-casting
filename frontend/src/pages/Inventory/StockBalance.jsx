@@ -147,8 +147,8 @@ export default function StockBalance() {
         const qty = Number(value || 0)
         const val = Number(row.in_value || 0)
         return (
-          <div className="flex flex-col gap-1 min-w-max">
-            <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded px-2 py-1">
+          <div className="flex gap-1 min-w-max">
+            <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded p-1 flex gap-2">
               <span className="text-xs font-semibold text-green-700 dark:text-green-400">↓ {qty.toFixed(2)}</span>
               <span className="text-xs text-green-600 dark:text-green-500 block">₹{val.toFixed(2)}</span>
             </div>
@@ -164,8 +164,8 @@ export default function StockBalance() {
         const qty = Number(value || 0)
         const val = Number(row.out_value || 0)
         return (
-          <div className="flex flex-col gap-1 min-w-max">
-            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded px-2 py-1">
+          <div className="flex gap-1 min-w-max">
+            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded p-1 flex gap-2">
               <span className="text-xs font-semibold text-red-700 dark:text-red-400">↑ {qty.toFixed(2)}</span>
               <span className="text-xs text-red-600 dark:text-red-500 block">₹{val.toFixed(2)}</span>
             </div>
@@ -213,7 +213,7 @@ export default function StockBalance() {
   ]
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-4 sm:p-5 lg:p-6">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-2 sm:p-5 lg:p-6">
       <div className=" mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-6">
@@ -227,7 +227,7 @@ export default function StockBalance() {
           <button
             onClick={fetchStockBalance}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xs font-medium text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
             Refresh
@@ -238,37 +238,37 @@ export default function StockBalance() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-950/40 rounded-lg p-4 border border-blue-200 dark:border-blue-900">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-950/40 rounded-xs p-2 border border-blue-200 dark:border-blue-900">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase">Total Items</p>
                 <p className="text-2xl font-black text-blue-900 dark:text-blue-100 mt-1">{stats.total}</p>
               </div>
-              <div className="p-2 bg-blue-200 dark:bg-blue-900/50 rounded-lg">
+              <div className="p-2 bg-blue-200 dark:bg-blue-900/50 rounded-xs">
                 <Package size={20} className="text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/20 dark:to-amber-950/40 rounded-lg p-4 border border-amber-200 dark:border-amber-900">
+          <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/20 dark:to-amber-950/40 rounded-xs p-2 border border-amber-200 dark:border-amber-900">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase">Low Stock</p>
                 <p className="text-2xl font-black text-amber-900 dark:text-amber-100 mt-1">{stats.low}</p>
               </div>
-              <div className="p-2 bg-amber-200 dark:bg-amber-900/50 rounded-lg">
+              <div className="p-2 bg-amber-200 dark:bg-amber-900/50 rounded-xs">
                 <AlertTriangle size={20} className="text-amber-600 dark:text-amber-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-950/40 rounded-lg p-4 border border-red-200 dark:border-red-900">
+          <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-950/40 rounded-xs p-2 border border-red-200 dark:border-red-900">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-semibold text-red-700 dark:text-red-400 uppercase">Out of Stock</p>
                 <p className="text-2xl font-black text-red-900 dark:text-red-100 mt-1">{stats.outOfStock}</p>
               </div>
-              <div className="p-2 bg-red-200 dark:bg-red-900/50 rounded-lg">
+              <div className="p-2 bg-red-200 dark:bg-red-900/50 rounded-xs">
                 <AlertTriangle size={20} className="text-red-600 dark:text-red-400" />
               </div>
             </div>
@@ -286,7 +286,7 @@ export default function StockBalance() {
                 setSearchTerm(e.target.value)
                 setCurrentPage(1)
               }}
-              className="flex-1 p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="flex-1 p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
             <select 
               value={warehouseFilter} 
@@ -294,7 +294,7 @@ export default function StockBalance() {
                 setWarehouseFilter(e.target.value)
                 setCurrentPage(1)
               }}
-              className="p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
               <option value="">All Warehouses</option>
               {warehouses.map(wh => (
@@ -309,7 +309,7 @@ export default function StockBalance() {
                 setStatusFilter(e.target.value)
                 setCurrentPage(1)
               }}
-              className="p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
               <option value="">All Status</option>
               <option value="in-stock">In Stock</option>
@@ -319,7 +319,7 @@ export default function StockBalance() {
             {(searchTerm || statusFilter || warehouseFilter) && (
               <button 
                 onClick={handleClearFilters}
-                className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center gap-1 text-sm"
+                className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center gap-1 text-xs"
               >
                 <X size={14} />
                 Clear
@@ -328,14 +328,14 @@ export default function StockBalance() {
             <div className="flex gap-2">
               <button
                 onClick={() => setViewMode('table')}
-                className={`p-2 rounded-md transition-all ${viewMode === 'table' ? 'bg-amber-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
+                className={`p-1 rounded-xs transition-all ${viewMode === 'table' ? 'bg-amber-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
                 title="Table view"
               >
                 <List size={18} />
               </button>
               <button
                 onClick={() => setViewMode('card')}
-                className={`p-2 rounded-md transition-all ${viewMode === 'card' ? 'bg-amber-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
+                className={`p-2 rounded-xs transition-all ${viewMode === 'card' ? 'bg-amber-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
                 title="Card view"
               >
                 <Grid3x3 size={18} />
@@ -346,15 +346,15 @@ export default function StockBalance() {
 
         {/* Content */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800">
-            <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-4 mb-4 animate-pulse">
+          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800">
+            <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-2 mb-4 animate-pulse">
               <BarChart3 size={40} className="text-neutral-400 dark:text-neutral-600" />
             </div>
             <p className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">Loading stock balance...</p>
           </div>
         ) : filteredStocks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800">
-            <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-4 mb-4">
+          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800">
+            <div className="rounded-full bg-neutral-100 dark:bg-neutral-80 0 p-2 mb-4">
               <BarChart3 size={40} className="text-neutral-400 dark:text-neutral-600" />
             </div>
             <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">No Stock Items Found</h3>
@@ -373,7 +373,7 @@ export default function StockBalance() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {paginatedData.map((stock) => (
-              <div key={`${stock.item_code}-${stock.warehouse_name}`} className="bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow">
+              <div key={`${stock.item_code}-${stock.warehouse_name}`} className="bg-white dark:bg-neutral-800 rounded-xs border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-950/30 p-3 border-b border-neutral-200 dark:border-neutral-700">
                   <h3 className="font-bold text-neutral-900 dark:text-white">{stock.item_code}</h3>
                   <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">{stock.item_name}</p>
@@ -382,11 +382,11 @@ export default function StockBalance() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Current Stock</p>
-                      <p className="text-sm font-bold text-neutral-900 dark:text-white">{Number(stock.current_qty || 0).toFixed(2)}</p>
+                      <p className="text-xs font-bold text-neutral-900 dark:text-white">{Number(stock.current_qty || 0).toFixed(2)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Available Qty</p>
-                      <p className="text-sm font-bold text-green-600 dark:text-green-400">{Number(stock.available_qty || 0).toFixed(2)}</p>
+                      <p className="text-xs font-bold text-green-600 dark:text-green-400">{Number(stock.available_qty || 0).toFixed(2)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Reserved Qty</p>
@@ -447,7 +447,7 @@ export default function StockBalance() {
               <button
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 Previous
               </button>
@@ -456,7 +456,7 @@ export default function StockBalance() {
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    className={`px-2 py-1.5 rounded-xs text-xs font-medium transition-all ${
                       currentPage === page
                         ? 'bg-amber-500 text-white'
                         : 'border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800'
@@ -469,7 +469,7 @@ export default function StockBalance() {
               <button
                 onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
-                className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 Next
               </button>

@@ -243,11 +243,6 @@ export default function SupplierQuotations() {
               placeholder: 'Quote ID or supplier name...'
             }
           ]}
-          onApply={fetchQuotations}
-          onReset={() => {
-            setFilters({ status: '', search: '' })
-          }}
-          showPresets={true}
         />
 
         {loading ? (

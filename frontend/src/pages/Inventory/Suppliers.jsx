@@ -206,7 +206,7 @@ export default function Suppliers() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-neutral-50 dark:bg-neutral-950">
-        <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-4 mb-4 animate-pulse">
+        <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-2 mb-4 animate-pulse">
           <Users size={40} className="text-neutral-400 dark:text-neutral-600" />
         </div>
         <p className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">Loading suppliers...</p>
@@ -215,7 +215,7 @@ export default function Suppliers() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-4 sm:p-5 lg:p-6">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-2 sm:p-5 lg:p-6">
       <div className=" mx-auto">
         {success && <Alert variant="success">{success}</Alert>}
         {error && <Alert variant="danger">{error}</Alert>}
@@ -230,7 +230,7 @@ export default function Suppliers() {
           </div>
           <button
             onClick={handleAddClick}
-            className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2.5 rounded-lg font-semibold text-sm transition-all"
+            className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2.5 rounded-xs font-semibold text-xs transition-all"
           >
             <Plus size={18} />
             Add Supplier
@@ -238,7 +238,7 @@ export default function Suppliers() {
         </div>
 
         {showAddForm && (
-          <div className="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 p-6 mb-6">
+          <div className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800 p-6 mb-6">
             <div className="flex justify-between items-center mb-5">
               <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
                 {editingId ? 'Edit Supplier' : 'Add New Supplier'}
@@ -259,7 +259,7 @@ export default function Suppliers() {
                     placeholder="e.g., ABC Industries"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
 
@@ -270,7 +270,7 @@ export default function Suppliers() {
                     placeholder="e.g., 27AABCT1234H1Z0"
                     value={formData.gstin}
                     onChange={(e) => setFormData({ ...formData, gstin: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
 
@@ -293,7 +293,7 @@ export default function Suppliers() {
                     step="0.1"
                     value={formData.rating}
                     onChange={(e) => setFormData({ ...formData, rating: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
 
@@ -304,7 +304,7 @@ export default function Suppliers() {
                     min="0"
                     value={formData.payment_terms_days}
                     onChange={(e) => setFormData({ ...formData, payment_terms_days: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
 
@@ -315,7 +315,7 @@ export default function Suppliers() {
                     min="0"
                     value={formData.lead_time_days}
                     onChange={(e) => setFormData({ ...formData, lead_time_days: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
               </div>
@@ -328,20 +328,20 @@ export default function Suppliers() {
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                   className="w-4 h-4 cursor-pointer rounded border-neutral-300"
                 />
-                <label htmlFor="is_active" className="text-sm text-neutral-900 dark:text-white cursor-pointer">Active Supplier</label>
+                <label htmlFor="is_active" className="text-xs text-neutral-900 dark:text-white cursor-pointer">Active Supplier</label>
               </div>
 
               <div className="flex gap-3 justify-end">
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all text-xs font-semibold "
+                  className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all text-xs font-semibold "
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all text-xs font-semibold  flex items-center gap-1"
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xs transition-all text-xs font-semibold  flex items-center gap-1"
                 >
                   <Check size={16} />
                   {editingId ? 'Update Supplier' : 'Create Supplier'}
@@ -358,13 +358,13 @@ export default function Suppliers() {
               placeholder="Search by name, ID, or GSTIN..."
               value={filters.search}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              className="flex-1 p-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="flex-1 p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
 
             <select 
               value={filters.status} 
               onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="p-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
               {statusOptions.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -374,7 +374,7 @@ export default function Suppliers() {
             <select 
               value={filters.group} 
               onChange={(e) => setFilters({ ...filters, group: e.target.value })}
-              className="p-2 text-sm border border-neutral-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
               <option value="">All Groups</option>
               {supplierGroups.map(group => (
@@ -385,7 +385,7 @@ export default function Suppliers() {
             {(filters.search || filters.status !== 'all' || filters.group) && (
               <button 
                 onClick={() => setFilters({ search: '', status: 'all', group: '' })}
-                className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center gap-1 text-sm"
+                className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center gap-1 text-xs"
               >
                 <X size={14} />
                 Clear
@@ -395,14 +395,14 @@ export default function Suppliers() {
             <div className="flex gap-2">
               <button
                 onClick={() => setViewMode('table')}
-                className={`p-2 rounded-md transition-all ${viewMode === 'table' ? 'bg-purple-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
+                className={`p-2 rounded-xs transition-all ${viewMode === 'table' ? 'bg-purple-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
                 title="Table view"
               >
                 <List size={18} />
               </button>
               <button
                 onClick={() => setViewMode('card')}
-                className={`p-2 rounded-md transition-all ${viewMode === 'card' ? 'bg-purple-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
+                className={`p-2 rounded-xs transition-all ${viewMode === 'card' ? 'bg-purple-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
                 title="Card view"
               >
                 <Grid3x3 size={18} />
@@ -412,15 +412,15 @@ export default function Suppliers() {
         )}
 
         {filteredSuppliers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800">
-            <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-4 mb-4">
+          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800">
+            <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-2 mb-4">
               <Users size={40} className="text-neutral-400 dark:text-neutral-600" />
             </div>
             <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">No Suppliers Found</h3>
             <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center max-w-md mb-4">Try adjusting your filters or create a new supplier</p>
             <button
               onClick={handleAddClick}
-              className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-all"
+              className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-xs font-semibold text-xs transition-all"
             >
               <Plus size={16} />
               Create First Supplier
@@ -435,10 +435,10 @@ export default function Suppliers() {
                   <th className="p-2 text-left text-xs font-semibold text-neutral-700 dark:text-neutral-300">ID</th>
                   <th className="p-2 text-left text-xs font-semibold text-neutral-700 dark:text-neutral-300">GSTIN</th>
                   <th className="p-2 text-left text-xs font-semibold text-neutral-700 dark:text-neutral-300">Group</th>
-                  <th className="p-2 text-center text-xs font-semibold text-neutral-700 dark:text-neutral-300">Rating</th>
-                  <th className="p-2 text-center text-xs font-semibold text-neutral-700 dark:text-neutral-300">Lead Time</th>
-                  <th className="p-2 text-center text-xs font-semibold text-neutral-700 dark:text-neutral-300">Status</th>
-                  <th className="p-2 text-center text-xs font-semibold text-neutral-700 dark:text-neutral-300">Actions</th>
+                  <th className="p-2 text-center text-xs text-xs font-semibold text-neutral-700 dark:text-neutral-300">Rating</th>
+                  <th className="p-2 text-center text-xs text-xs font-semibold text-neutral-700 dark:text-neutral-300">Lead Time</th>
+                  <th className="p-2 text-center text-xs text-xs font-semibold text-neutral-700 dark:text-neutral-300">Status</th>
+                  <th className="p-2 text-center text-xs text-xs font-semibold text-neutral-700 dark:text-neutral-300">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -447,7 +447,7 @@ export default function Suppliers() {
                     <td className="p-2 text-xs font-semibold  text-neutral-900 dark:text-white">{supplier.name}</td>
                     <td className="p-2 text-xs text-neutral-600 dark:text-neutral-400 font-mono">{supplier.supplier_id}</td>
                     <td className="p-2 text-xs text-neutral-600 dark:text-neutral-400 font-mono">{supplier.gstin || '-'}</td>
-                    <td className="p-2 text-sm">
+                    <td className="p-2 text-xs">
                       {supplier.supplier_group ? (
                         <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getGroupTextColor(supplier.supplier_group)}`}>
                           {supplier.supplier_group}
@@ -456,7 +456,7 @@ export default function Suppliers() {
                         <span className="text-neutral-400">-</span>
                       )}
                     </td>
-                    <td className="p-2 text-sm text-center">
+                    <td className="p-2 text-xs text-center">
                       {supplier.rating ? (
                         <div className="flex items-center justify-center gap-1">
                           <Star size={14} className="text-amber-500 fill-amber-500" />
@@ -466,13 +466,13 @@ export default function Suppliers() {
                         <span className="text-neutral-400">—</span>
                       )}
                     </td>
-                    <td className="p-2 text-sm text-center text-neutral-600 dark:text-neutral-400">{supplier.lead_time_days || 0} days</td>
-                    <td className="p-2 text-center">
+                    <td className="p-2 text-xs text-center text-neutral-600 dark:text-neutral-400">{supplier.lead_time_days || 0} days</td>
+                    <td className="p-2 text-center text-xs">
                       <Badge variant={supplier.is_active ? 'success' : 'warning'}>
                         {supplier.is_active ? 'Active' : 'Inactive'}
                       </Badge>
                     </td>
-                    <td className="p-2 text-center">
+                    <td className="p-2 text-center text-xs">
                       <div className="flex gap-2 justify-center">
                         <button
                           onClick={() => handleEditClick(supplier)}
@@ -499,7 +499,7 @@ export default function Suppliers() {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {paginatedData.map((supplier) => (
-                <div key={supplier.supplier_id} className={`bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow`}>
+                <div key={supplier.supplier_id} className={`bg-white dark:bg-neutral-800 rounded-xs border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow`}>
                   <div className={`bg-gradient-to-r ${getGroupColor(supplier.supplier_group)} p-3 border-b border-neutral-200 dark:border-neutral-700`}>
                     <h3 className="font-bold text-neutral-900 dark:text-white">{supplier.name}</h3>
                     <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">{supplier.supplier_id}</p>
@@ -508,7 +508,7 @@ export default function Suppliers() {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">GSTIN</p>
-                        <p className="text-sm font-mono text-neutral-900 dark:text-white">{supplier.gstin || '-'}</p>
+                        <p className="text-xs font-mono text-neutral-900 dark:text-white">{supplier.gstin || '-'}</p>
                       </div>
                       <div>
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Group</p>
@@ -520,10 +520,10 @@ export default function Suppliers() {
                           {supplier.rating ? (
                             <>
                               <Star size={14} className="text-amber-500 fill-amber-500" />
-                              <span className="text-sm font-bold text-neutral-900 dark:text-white">{Number(supplier.rating).toFixed(1)}</span>
+                              <span className="text-xs font-bold text-neutral-900 dark:text-white">{Number(supplier.rating).toFixed(1)}</span>
                             </>
                           ) : (
-                            <span className="text-sm text-neutral-400">—</span>
+                            <span className="text-xs text-neutral-400">—</span>
                           )}
                         </div>
                       </div>
@@ -575,7 +575,7 @@ export default function Suppliers() {
                   <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     Previous
                   </button>
@@ -584,7 +584,7 @@ export default function Suppliers() {
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
-                        className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        className={`px-2 py-1.5 rounded-xs text-xs font-medium transition-all ${
                           currentPage === page
                             ? 'bg-purple-500 text-white'
                             : 'border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800'
@@ -597,7 +597,7 @@ export default function Suppliers() {
                   <button
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
-                    className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     Next
                   </button>

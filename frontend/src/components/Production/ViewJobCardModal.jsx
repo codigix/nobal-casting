@@ -147,7 +147,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
 
           <div className="mb-5">
             <label className="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
-            <p className="text-sm p-3 bg-gray-50 rounded min-h-15 whitespace-pre-wrap">
+            <p className="text-xs p-3 bg-gray-50 rounded min-h-15 whitespace-pre-wrap">
               {jobCard?.notes || 'No notes'}
             </p>
           </div>

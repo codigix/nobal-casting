@@ -25,6 +25,7 @@ import itemGroupRoutes from './routes/itemGroup.js'
 import materialRequestRoutes from './routes/materialRequests.js'
 import mastersRoutes from './routes/masters.js'
 import machinesRoutes from './routes/machines.js'
+import notificationRoutes from './routes/notifications.js'
 
 dotenv.config()
 
@@ -786,6 +787,8 @@ function setupRoutes() {
   app.use('/api/masters', mastersRoutes)
   
   app.use('/api/machines', machinesRoutes)
+  
+  app.use('/api/notifications', notificationRoutes)
   
   app.use((err, req, res, next) => {
     console.error(err.stack)

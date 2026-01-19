@@ -594,33 +594,33 @@ export default function ProductionEntry() {
           </button>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-4">
+        <div className="bg-white rounded-xs shadow-mdp-2">
           <h1 className="text-xl font-bold text-gray-900 mb-3">Production Entry</h1>
 
           {jobCardData && (
-            <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg">
+            <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xs">
               <div className="grid grid-cols-4 gap-3 text-xs">
                 <div>
                   <p className="text-gray-600 text-2xs font-semibold uppercase tracking-wide">Job Card</p>
-                  <p className="text-gray-900 font-bold text-sm mt-0.5">{jobCardData.job_card_id}</p>
+                  <p className="text-gray-900 font-bold text-xs mt-0.5">{jobCardData.job_card_id}</p>
                 </div>
                 <div>
                   <p className="text-gray-600 text-2xs font-semibold uppercase tracking-wide">Item</p>
-                  <p className="text-gray-900 font-bold text-sm mt-0.5">{itemName || jobCardData.item_name || 'Loading...'}</p>
+                  <p className="text-gray-900 font-bold text-xs mt-0.5">{itemName || jobCardData.item_name || 'Loading...'}</p>
                 </div>
                 <div>
                   <p className="text-gray-600 text-2xs font-semibold uppercase tracking-wide">Planned Qty</p>
-                  <p className="text-gray-900 font-bold text-sm mt-0.5">{jobCardData.planned_quantity}</p>
+                  <p className="text-gray-900 font-bold text-xs mt-0.5">{jobCardData.planned_quantity}</p>
                 </div>
                 <div>
                   <p className="text-gray-600 text-2xs font-semibold uppercase tracking-wide">Operation</p>
-                  <p className="text-gray-900 font-bold text-sm mt-0.5">{jobCardData.operation || 'N/A'}</p>
+                  <p className="text-gray-900 font-bold text-xs mt-0.5">{jobCardData.operation || 'N/A'}</p>
                 </div>
               </div>
             </div>
           )}
 
-          <div className="mb-4 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg">
+          <div className="mb-4 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xs">
             <h4 className="font-bold text-gray-900 mb-2 text-xs uppercase tracking-wide">Production Summary</h4>
             <div className="grid grid-cols-5 gap-2 text-xs">
               <div>
@@ -650,11 +650,11 @@ export default function ProductionEntry() {
 
           <div className="space-y-4">
             {/* Time Logs Section */}
-            <div className="p-3 bg-gradient-to-br from-blue-50 to-slate-50 border border-blue-200 rounded-lg">
+            <div className="p-3 bg-gradient-to-br from-blue-50 to-slate-50 border border-blue-200 rounded-xs">
               <h3 className="text-xs font-bold text-gray-900 mb-3 flex items-center gap-2 uppercase tracking-wide">
                 Time Logs ({timeLogs.length})
               </h3>
-              <form onSubmit={handleAddTimeLog} className="mb-4 p-2.5 bg-white border border-blue-200 rounded-lg">
+              <form onSubmit={handleAddTimeLog} className="mb-4 p-2.5 bg-white border border-blue-200 rounded-xs">
                 <h4 className="mb-3 font-bold text-gray-900 flex items-center gap-2 text-xs uppercase tracking-wide">
                   <Plus size={14} /> Add Time Log
                 </h4>
@@ -845,11 +845,11 @@ export default function ProductionEntry() {
             </div>
 
             {/* Rejections Section */}
-            <div className="p-3 bg-gradient-to-br from-red-50 to-slate-50 border border-red-200 rounded-lg">
+            <div className="p-3 bg-gradient-to-br from-red-50 to-slate-50 border border-red-200 rounded-xs">
               <h3 className="text-xs font-bold text-gray-900 mb-3 flex items-center gap-2 uppercase tracking-wide">
                 Quality Rejections ({rejections.length})
               </h3>
-              <form onSubmit={handleAddRejection} className="mb-4 p-2.5 bg-white border border-red-200 rounded-lg">
+              <form onSubmit={handleAddRejection} className="mb-4 p-2.5 bg-white border border-red-200 rounded-xs">
                 <h4 className="mb-3 font-bold text-gray-900 flex items-center gap-2 text-xs uppercase tracking-wide">
                   <Plus size={14} /> Record Rejection
                 </h4>
@@ -926,11 +926,11 @@ export default function ProductionEntry() {
             </div>
 
             {/* Downtimes Section */}
-            <div className="p-3 bg-gradient-to-br from-orange-50 to-slate-50 border border-orange-200 rounded-lg">
+            <div className="p-3 bg-gradient-to-br from-orange-50 to-slate-50 border border-orange-200 rounded-xs">
               <h3 className="text-xs font-bold text-gray-900 mb-3 flex items-center gap-2 uppercase tracking-wide">
                 Downtimes ({downtimes.length})
               </h3>
-              <form onSubmit={handleAddDowntime} className="mb-4 p-2.5 bg-white border border-orange-200 rounded-lg">
+              <form onSubmit={handleAddDowntime} className="mb-4 p-2.5 bg-white border border-orange-200 rounded-xs">
                 <h4 className="mb-3 font-bold text-gray-900 flex items-center gap-2 text-xs uppercase tracking-wide">
                   <Clock size={14} /> Record Downtime
                 </h4>
@@ -1029,7 +1029,7 @@ export default function ProductionEntry() {
           </div>
 
           {/* Completion Section */}
-          <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg">
+          <div className="mt-6 p-2 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xs">
             <h3 className="text-xs font-bold text-gray-900 mb-3 flex items-center gap-2 uppercase tracking-wide">
               <CheckCircle size={16} /> Complete Job Card
             </h3>
@@ -1088,7 +1088,7 @@ export default function ProductionEntry() {
                 type="button"
                 onClick={handleSubmitProduction}
                 disabled={isSubmitting}
-                className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-400 disabled:to-gray-400 text-white rounded-lg font-semibold transition flex items-center text-xs justify-center gap-2"
+                className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-400 disabled:to-gray-400 text-white rounded-xs font-semibold transition flex items-center text-xs justify-center gap-2"
               >
                 <CheckCircle size={16} />
                 {isSubmitting ? 'Completing...' : 'Complete Production & Create Next Job Card'}

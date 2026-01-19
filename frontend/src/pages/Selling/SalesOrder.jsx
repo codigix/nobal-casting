@@ -251,7 +251,7 @@ export default function SalesOrder() {
       <div className="relative inline-block w-full">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between  px-3 py-1 text-xs font-medium rounded-lg border-2 transition-all"
+          className="w-full flex items-center justify-between  px-3 py-1 text-xs font-medium rounded-xs border-2 transition-all"
           style={{
             backgroundColor: config.bg,
             borderColor: config.color,
@@ -266,7 +266,7 @@ export default function SalesOrder() {
         </button>
         
         {isOpen && (
-          <div className="absolute top-full mt-2 left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-xl z-20 overflow-hidden min-w-max">
+          <div className="absolute top-full mt-2 left-0 right-0 bg-white border border-gray-200 rounded-xs shadow-xl z-20 overflow-hidden min-w-max">
             {statuses.map((status) => {
               const cfg = statusConfig[status]
               const isSelected = currentStatus?.toLowerCase() === status
@@ -577,7 +577,7 @@ export default function SalesOrder() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-          <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-4">
+          <div className="Nobg-white rounded-xs shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-2">
             
             <div className='flex justify-between items-center'>
               <div className="text-md font-bold text-slate-900 mb-0.5">{stats.total}</div>
@@ -590,7 +590,7 @@ export default function SalesOrder() {
             <p className="text-xs text-slate-600 font-medium">Total Orders</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-4">
+          <div className="Nobg-white rounded-xs shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-2">
             <div className='flex justify-between items-center'>
               <div className="text-md font-bold text-slate-900 mb-0.5">{stats.draft}</div>
             <div className="flex items-start mb-3">
@@ -603,7 +603,7 @@ export default function SalesOrder() {
             <p className="text-xs text-slate-600 font-medium">Draft Orders</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-4">
+          <div className="Nobg-white rounded-xs shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-2">
                         <div className='flex justify-between items-center'>
                           <div className="text-md font-bold text-slate-900 mb-0.5">{stats.confirmed || 0}</div>
 
@@ -616,7 +616,7 @@ export default function SalesOrder() {
             <p className="text-xs text-slate-600 font-medium">Confirmed</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-4">
+          <div className="Nobg-white rounded-xs shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-2">
                        <div className='flex justify-between items-center'>
                          <div className="text-md font-bold text-slate-900 mb-0.5">₹{(stats.total_value / 100000).toFixed(1)}L</div>
 
@@ -629,7 +629,7 @@ export default function SalesOrder() {
             <p className="text-xs text-slate-600 font-medium">Total Revenue</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-4">
+          <div className="Nobg-white rounded-xs shadow-sm hover:shadow-md transition-shadow border border-slate-200 p-2">
             <div className='flex justify-between items-center'>
 
             <div className="text-md font-bold text-slate-900 mb-0.5">{stats.pending_delivery}</div>
@@ -644,7 +644,7 @@ export default function SalesOrder() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 mb-6">
+        <div className="bg-white rounded-xs shadow-sm border border-slate-200 p-2 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="flex flex-col gap-1.5 md:col-span-2">
               <label className="text-xs font-semibold text-slate-700">Search Orders</label>
@@ -690,7 +690,7 @@ export default function SalesOrder() {
               <div className="animate-spin mx-auto mb-3">
                 <Package size={28} />
               </div>
-              <p className="text-sm font-medium">Loading sales orders...</p>
+              <p className="text-xs font-medium">Loading sales orders...</p>
             </div>
           ) : filteredOrders.length === 0 ? (
             <div className="text-center py-12 px-6">

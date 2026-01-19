@@ -63,8 +63,8 @@ const DetailModal = ({ isOpen, project, onClose }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
-      <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-2">
+      <div className="bg-white rounded-xs shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto">
         <div className="sticky top-0 bg-gradient-to-r from-slate-900 to-slate-800 p-3 flex items-center justify-between text-white z-10">
           <div>
             <h2 className="text-lg font-bold m-0">{project.name}</h2>
@@ -80,24 +80,24 @@ const DetailModal = ({ isOpen, project, onClose }) => {
 
         <div className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-            <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+            <div className="bg-green-50 rounded-xs p-3 border border-green-200">
               <p className="text-xs font-semibold text-green-900 uppercase mb-1 m-0">Progress</p>
-              <p className="text-2xl font-bold text-green-700 m-0">{project.progress}%</p>
+              <p className="text-xl font-bold text-green-700 m-0">{project.progress}%</p>
               <p className="text-xs text-slate-600 mt-1">Overall completion</p>
             </div>
-            <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+            <div className="bg-blue-50 rounded-xs p-3 border border-blue-200">
               <p className="text-xs font-semibold text-blue-900 uppercase mb-1 m-0">Status</p>
               <div className="mt-1 mb-1">
                 <StatusBadge status={project.status} />
               </div>
               <p className="text-xs text-slate-600 mt-1">Current state</p>
             </div>
-            <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
+            <div className="bg-orange-50 rounded-xs p-3 border border-orange-200">
               <p className="text-xs font-semibold text-orange-900 uppercase mb-1 m-0">Timeline</p>
-              <p className="text-2xl font-bold text-orange-700 m-0">{project.daysLeft > 0 ? project.daysLeft : '0'}</p>
+              <p className="text-xl font-bold text-orange-700 m-0">{project.daysLeft > 0 ? project.daysLeft : '0'}</p>
               <p className="text-xs text-slate-600 mt-1">{project.daysLeft > 0 ? 'Days remaining' : 'Completed'}</p>
             </div>
-            <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+            <div className="bg-purple-50 rounded-xs p-3 border border-purple-200">
               <p className="text-xs font-semibold text-purple-900 uppercase mb-1 m-0">Revenue</p>
               <p className="text-lg font-bold text-purple-700 m-0">{project.revenue ? new Intl.NumberFormat('en-IN', {style: 'currency', currency: 'INR', minimumFractionDigits: 0}).format(project.revenue) : 'N/A'}</p>
               <p className="text-xs text-slate-600 mt-1">Order amount</p>
@@ -105,8 +105,8 @@ const DetailModal = ({ isOpen, project, onClose }) => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-            <div className="bg-white rounded-lg p-3 border border-gray-200">
-              <h3 className="text-sm font-bold text-slate-900 mb-2 m-0">📈 Weekly Progress Trend</h3>
+            <div className="bg-white rounded-xs p-3 border border-gray-200">
+              <h3 className="text-xs font-bold text-slate-900 mb-2 m-0">📈 Weekly Progress Trend</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <AreaChart data={timelineData}>
                   <defs>
@@ -124,8 +124,8 @@ const DetailModal = ({ isOpen, project, onClose }) => {
               </ResponsiveContainer>
             </div>
 
-            <div className="bg-white rounded-lg p-3 border border-gray-200">
-              <h3 className="text-sm font-bold text-slate-900 mb-2 m-0">📊 Tasks Completed Per Week</h3>
+            <div className="bg-white rounded-xs p-3 border border-gray-200">
+              <h3 className="text-xs font-bold text-slate-900 mb-2 m-0">📊 Tasks Completed Per Week</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={timelineData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -138,8 +138,8 @@ const DetailModal = ({ isOpen, project, onClose }) => {
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg p-3 border border-slate-200">
-            <h3 className="text-sm font-bold text-slate-900 mb-2 m-0">📋 Project Details</h3>
+          <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-xs p-3 border border-slate-200">
+            <h3 className="text-xs font-bold text-slate-900 mb-2 m-0">📋 Project Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
               <div className="flex items-center justify-between py-1 border-b border-slate-300">
                 <span className="text-slate-600">Project ID:</span>
@@ -192,60 +192,127 @@ export default function ProjectAnalysis() {
   const fetchProjectAnalysis = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/masters/sales-orders-analysis`)
-      const data = await response.json()
       
-      if (data.success) {
-        const { statusCounts, projects, monthlyTimeline, total, totalRevenue, completionRate } = data.data
-        console.log('API Response - statusCounts:', statusCounts, 'projects:', projects?.length, 'monthlyTimeline:', monthlyTimeline, 'totalRevenue:', totalRevenue, 'completionRate:', completionRate)
+      const apiUrl = import.meta.env.VITE_API_URL
+      const token = localStorage.getItem('token')
+      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      
+      const [salesOrdersRes, productionPlansRes, jobCardsRes] = await Promise.all([
+        fetch(`${apiUrl}/selling/sales-orders`, { headers }).then(r => r.json()).catch(() => []),
+        fetch(`${apiUrl}/production/plans`, { headers }).then(r => r.json()).catch(() => []),
+        fetch(`${apiUrl}/production/job-cards`, { headers }).then(r => r.json()).catch(() => [])
+      ])
+
+      const salesOrders = (salesOrdersRes.data || salesOrdersRes || []).filter(item => item)
+      const productionPlans = (productionPlansRes.data || productionPlansRes || []).filter(item => item)
+      const jobCards = (jobCardsRes.data || jobCardsRes || []).filter(item => item)
+
+      console.log('Real Data - Sales Orders:', salesOrders.length, 'Production Plans:', productionPlans.length, 'Job Cards:', jobCards.length)
+
+      const projectsWithMetrics = salesOrders.map((so, idx) => {
+        const relatedPlans = productionPlans.filter(pp => pp.sales_order_id === so.id || pp.so_id === so.id || pp.order_id === so.id)
+        const relatedJobCards = jobCards.filter(jc => jc.sales_order_id === so.id || jc.so_id === so.id)
         
-        const statusData = statusCounts && statusCounts.length > 0 ? statusCounts.map(item => {
-          let color = '#6b7280'
-          switch (item.status?.toLowerCase()) {
-            case 'delivered':
-              color = '#059669'
-              break
-            case 'dispatched':
-              color = '#8b5cf6'
-              break
-            case 'complete':
-              color = '#10b981'
-              break
-            case 'production':
-              color = '#06b6d4'
-              break
-            case 'on_hold':
-              color = '#f59e0b'
-              break
-            case 'draft':
-              color = '#f97316'
-              break
-          }
-          return {
-            name: item.status.charAt(0).toUpperCase() + item.status.replace('_', ' ').slice(1),
-            value: item.count,
-            color: color
-          }
-        }) : []
+        const completedJCs = relatedJobCards.filter(jc => {
+          const status = String(jc.status || '').toLowerCase().trim()
+          return status === 'completed' || status === 'delivered'
+        }).length
         
-        const timelineData = monthlyTimeline && monthlyTimeline.length > 0 ? monthlyTimeline.reverse().map(item => ({
-          month: item.month || 'N/A',
-          projects: item.total_projects || 0,
-          completed: item.completed || 0,
-          revenue: item.revenue || 0
-        })) : []
+        const totalJCs = relatedJobCards.length || 1
+        const progress = totalJCs > 0 ? Math.round((completedJCs / totalJCs) * 100) : 0
         
-        setProjectStatus(statusData)
-        setProjectTimeline(timelineData)
-        setAllProjects(projects || [])
-        setTotalRevenue(totalRevenue || 0)
-        setCompletionRate(completionRate || 0)
-      } else {
-        setError(data.message || 'Failed to fetch sales orders analysis')
-      }
+        const createdDate = new Date(so.creation_date || so.created_at || new Date())
+        const dueDate = new Date(so.delivery_date || so.due_date || new Date())
+        const today = new Date()
+        const daysLeft = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24))
+        
+        return {
+          id: so.id || so.sales_order_id || idx,
+          name: so.name || so.order_id || `SO-${idx + 1}`,
+          customer_name: so.customer_name || so.customer || 'Unknown',
+          status: so.status || so.order_status || 'draft',
+          progress: progress,
+          revenue: so.grand_total || so.total || so.amount || 0,
+          daysLeft: daysLeft,
+          dueDate: dueDate,
+          createdDate: createdDate,
+          total_qty: so.total_qty || so.qty || 0,
+          item_name: so.item_name || 'N/A',
+          production_plans_count: relatedPlans.length,
+          job_cards_count: relatedJobCards.length,
+          completed_job_cards: completedJCs
+        }
+      })
+
+      const statusCounts = {}
+      projectsWithMetrics.forEach(p => {
+        const status = p.status?.toLowerCase() || 'draft'
+        statusCounts[status] = (statusCounts[status] || 0) + 1
+      })
+
+      const statusData = Object.entries(statusCounts).map(([status, count]) => {
+        let color = '#6b7280'
+        switch (status.toLowerCase()) {
+          case 'delivered':
+          case 'completed':
+            color = '#059669'
+            break
+          case 'dispatched':
+            color = '#8b5cf6'
+            break
+          case 'complete':
+            color = '#10b981'
+            break
+          case 'production':
+          case 'in-progress':
+            color = '#06b6d4'
+            break
+          case 'on_hold':
+            color = '#f59e0b'
+            break
+          case 'draft':
+            color = '#f97316'
+            break
+        }
+        return {
+          name: status.charAt(0).toUpperCase() + status.replace('_', ' ').replace('-', ' ').slice(1),
+          value: count,
+          color: color
+        }
+      })
+
+      const monthlyTimeline = {}
+      projectsWithMetrics.forEach(p => {
+        const monthKey = p.createdDate.toLocaleDateString('en-IN', { year: 'numeric', month: 'short' })
+        if (!monthlyTimeline[monthKey]) {
+          monthlyTimeline[monthKey] = { month: monthKey, projects: 0, completed: 0, revenue: 0 }
+        }
+        monthlyTimeline[monthKey].projects += 1
+        monthlyTimeline[monthKey].revenue += p.revenue
+        if (p.status?.toLowerCase() === 'completed' || p.status?.toLowerCase() === 'delivered') {
+          monthlyTimeline[monthKey].completed += 1
+        }
+      })
+
+      const timelineData = Object.values(monthlyTimeline).reverse()
+
+      const totalRev = projectsWithMetrics.reduce((sum, p) => sum + (p.revenue || 0), 0)
+      const completedCount = projectsWithMetrics.filter(p => {
+        const status = String(p.status || '').toLowerCase().trim()
+        return status === 'completed' || status === 'delivered' || status === 'complete'
+      }).length
+      const compRate = projectsWithMetrics.length > 0 ? Math.round((completedCount / projectsWithMetrics.length) * 100) : 0
+
+      setProjectStatus(statusData)
+      setProjectTimeline(timelineData)
+      setAllProjects(projectsWithMetrics)
+      setTotalRevenue(totalRev)
+      setCompletionRate(compRate)
+
+      console.log('Processed:', projectsWithMetrics.length, 'projects with status breakdown:', statusData, 'timeline:', timelineData)
     } catch (err) {
-      console.error('Error fetching sales orders analysis:', err)
-      setError(err.message)
+      console.error('Error fetching production projects:', err)
+      setError(err.message || 'Failed to fetch projects from production')
     } finally {
       setLoading(false)
     }
@@ -326,7 +393,7 @@ export default function ProjectAnalysis() {
     return (
       <div className="p-3 bg-slate-50 min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block p-4 bg-white rounded-lg shadow-sm mb-4">
+          <div className="inline-block p-2 bg-white rounded-xs shadow-sm mb-4">
             <div className="animate-spin text-4xl">⏳</div>
           </div>
           <p className="text-slate-600">Loading sales orders analysis...</p>
@@ -339,11 +406,11 @@ export default function ProjectAnalysis() {
     return (
       <div className="p-3 bg-slate-50 min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md">
-          <div className="inline-block p-4 bg-red-50 rounded-lg mb-4">
+          <div className="inline-block p-2 bg-red-50 rounded-xs mb-4">
             <span className="text-4xl">⚠️</span>
           </div>
           <p className="text-red-600 font-semibold mb-2">Error Loading Data</p>
-          <p className="text-slate-600 text-sm">{error}</p>
+          <p className="text-slate-600 text-xs">{error}</p>
         </div>
       </div>
     )
@@ -394,7 +461,7 @@ export default function ProjectAnalysis() {
       <div className="bg-gradient-to-br from-white to-slate-100 p-2 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
         <div className=" mx-auto">
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white text-lg">
+            <div className="w-8 h-8 rounded-xs bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white text-lg">
               📊
             </div>
             <div>
@@ -414,7 +481,7 @@ export default function ProjectAnalysis() {
           {stats.map((stat, idx) => {
             const Icon = stat.icon
             return (
-              <div key={idx} className={`bg-gradient-to-br ${stat.bgColor} rounded-lg p-3 shadow-md border border-slate-200 relative overflow-hidden`}>
+              <div key={idx} className={`bg-gradient-to-br ${stat.bgColor} rounded-xs p-3 shadow-md border border-slate-200 relative overflow-hidden`}>
                 <div className="absolute -top-5 -right-5 opacity-5 text-4xl">
                   {idx === 0 ? '🎯' : idx === 1 ? '✓' : idx === 2 ? '⏱️' : '⚠️'}
                 </div>
@@ -433,8 +500,8 @@ export default function ProjectAnalysis() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
-          <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-            <h3 className="text-sm font-bold text-slate-900 mb-3 m-0">
+          <div className="bg-white rounded-xs p-2 border border-gray-200 shadow-sm">
+            <h3 className="text-xs font-bold text-slate-900 mb-3 m-0">
               📈 Project Status Distribution
             </h3>
             <ResponsiveContainer width="100%" height={250}>
@@ -466,8 +533,8 @@ export default function ProjectAnalysis() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-            <h3 className="text-sm font-bold text-slate-900 mb-3 m-0">
+          <div className="bg-white rounded-xs p-2 border border-gray-200 shadow-sm">
+            <h3 className="text-xs font-bold text-slate-900 mb-3 m-0">
               📊 Project Timeline (6 Months)
             </h3>
             <ResponsiveContainer width="100%" height={250}>
@@ -485,9 +552,9 @@ export default function ProjectAnalysis() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-white rounded-xs border border-gray-200 shadow-sm">
           <div className="p-3 border-b border-gray-200">
-            <h3 className="text-sm font-bold text-slate-900 m-0">
+            <h3 className="text-xs font-bold text-slate-900 m-0">
               🚀 Recent Projects
             </h3>
           </div>
@@ -584,7 +651,7 @@ export default function ProjectAnalysis() {
                       <td className="p-2 text-right">
                         <span className="text-xs font-semibold text-gray-900">{formatCurrency(project.revenue || 0)}</span>
                       </td>
-                      <td className="p-2 text-center">
+                      <td className="p-2 text-center text-xs">
                         <div className="flex items-center justify-center gap-1">
                           <div className="w-16 bg-gray-200 rounded-full h-1.5">
                             <div 
@@ -595,7 +662,7 @@ export default function ProjectAnalysis() {
                           <span className="text-xs font-semibold text-gray-700 w-6">{project.progress || 0}%</span>
                         </div>
                       </td>
-                      <td className="p-2 text-center">
+                      <td className="p-2 text-center text-xs">
                         {project.dueDate ? (
                           <div className="flex flex-col items-center justify-center gap-0.5">
                             <Calendar size={12} className="text-slate-500" />
@@ -612,7 +679,7 @@ export default function ProjectAnalysis() {
                           <span className="text-xs text-gray-500">N/A</span>
                         )}
                       </td>
-                      <td className="p-2 text-center">
+                      <td className="p-2 text-center text-xs">
                         <button
                           onClick={() => openModal(project)}
                           className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded text-xs font-semibold transition-colors"
@@ -630,7 +697,7 @@ export default function ProjectAnalysis() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3 border border-green-200 border-l-4 border-l-green-500">
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xs p-3 border border-green-200 border-l-4 border-l-green-500">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-semibold text-green-900 uppercase mb-0.5 m-0">Completion Rate</p>
@@ -643,7 +710,7 @@ export default function ProjectAnalysis() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-3 border border-amber-200 border-l-4 border-l-amber-500">
+          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xs p-3 border border-amber-200 border-l-4 border-l-amber-500">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-semibold text-amber-900 uppercase mb-0.5 m-0">At Risk</p>
@@ -656,7 +723,7 @@ export default function ProjectAnalysis() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 border border-blue-200 border-l-4 border-l-blue-500">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xs p-3 border border-blue-200 border-l-4 border-l-blue-500">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-semibold text-blue-900 uppercase mb-0.5 m-0">Total Revenue</p>

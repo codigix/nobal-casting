@@ -142,12 +142,12 @@ export default function ProductionStages() {
         <div className="flex justify-between items-start mb-6">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Production Stages</h1>
-            <p className="text-sm text-gray-600 mt-1">Define production workflow stages</p>
+            <p className="text-xs text-gray-600 mt-1">Define production workflow stages</p>
           </div>
           <div className="flex gap-2">
             <button 
               onClick={handleInitializeDefaults}
-              className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg border border-blue-200 hover:bg-blue-100 transition text-sm font-medium"
+              className="px-4 py-2 bg-blue-50 text-blue-600 rounded-xs border border-blue-200 hover:bg-blue-100 transition text-xs font-medium"
             >
               Load Defaults
             </button>
@@ -173,7 +173,7 @@ export default function ProductionStages() {
             <p className="text-gray-600 mb-4">No production stages defined</p>
             <button 
               onClick={handleInitializeDefaults}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+              className="px-4 py-2 bg-blue-500 text-white rounded-xs hover:bg-blue-600 transition"
             >
               Create Default Stages
             </button>
@@ -185,7 +185,7 @@ export default function ProductionStages() {
                 <div className="flex justify-between items-start gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600 text-sm">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600 text-xs">
                         {stage.stage_sequence}
                       </div>
                       <div>
@@ -207,14 +207,14 @@ export default function ProductionStages() {
                   <div className="flex gap-2">
                     <button 
                       onClick={() => handleOpenModal(stage)}
-                      className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                      className="p-2 text-gray-600 hover:bg-gray-100 rounded-xs transition"
                       title="Edit stage"
                     >
                       <Edit2 size={16} />
                     </button>
                     <button 
                       onClick={() => handleDelete(stage.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-xs transition"
                       title="Delete stage"
                     >
                       <Trash2 size={16} />
@@ -227,15 +227,15 @@ export default function ProductionStages() {
         )}
 
         {showModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50p-2">
             <Card className="w-full max-w-md">
-              <div className="flex justify-between items-center p-4 border-b">
+              <div className="flex justify-between items-centerp-2 border-b">
                 <h2 className="text-lg font-bold">
                   {editingId ? 'Edit Stage' : 'New Production Stage'}
                 </h2>
                 <button 
                   onClick={resetForm}
-                  className="p-1 hover:bg-gray-100 rounded-lg transition"
+                  className="p-1 hover:bg-gray-100 rounded-xs transition"
                 >
                   <X size={18} />
                 </button>
@@ -250,7 +250,7 @@ export default function ProductionStages() {
                     type="text"
                     value={formData.stage_code}
                     onChange={(e) => setFormData({ ...formData, stage_code: e.target.value.toUpperCase() })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="e.g., PLAN"
                   />
                 </div>
@@ -263,7 +263,7 @@ export default function ProductionStages() {
                     type="text"
                     value={formData.stage_name}
                     onChange={(e) => setFormData({ ...formData, stage_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="e.g., Planning"
                   />
                 </div>
@@ -276,7 +276,7 @@ export default function ProductionStages() {
                     type="number"
                     value={formData.stage_sequence}
                     onChange={(e) => setFormData({ ...formData, stage_sequence: parseInt(e.target.value) || '' })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="1"
                     min="1"
                   />
@@ -289,7 +289,7 @@ export default function ProductionStages() {
                   <textarea 
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                     rows="3"
                     placeholder="Stage description..."
                   />
@@ -303,22 +303,22 @@ export default function ProductionStages() {
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                     className="rounded border-gray-300"
                   />
-                  <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
+                  <label htmlFor="is_active" className="text-xs font-medium text-gray-700">
                     Active
                   </label>
                 </div>
               </div>
 
-              <div className="flex gap-2 p-4 border-t">
+              <div className="flex gap-2p-2 border-t">
                 <button 
                   onClick={resetForm}
-                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition font-medium"
+                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-xs hover:bg-gray-200 transition font-medium"
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={handleSave}
-                  className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-medium"
+                  className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-xs hover:bg-blue-600 transition font-medium"
                 >
                   {editingId ? 'Update' : 'Create'}
                 </button>

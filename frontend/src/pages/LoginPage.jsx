@@ -77,7 +77,7 @@ export default function LoginPage() {
                 <Building2 size={28} strokeWidth={1.5} />
               </div>
               <div className="brand-info">
-                <h1>Aluminium ERP</h1>
+                <h1>Nobal Casting</h1>
                 <p>Enterprise Management</p>
               </div>
             </div>

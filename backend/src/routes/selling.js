@@ -8,6 +8,7 @@ const router = express.Router()
 // ============================================
 router.post('/customers', SellingController.createCustomer)
 router.get('/customers', SellingController.getCustomers)
+router.delete('/customers/truncate/all', SellingController.truncateCustomers)
 router.get('/customers/:id', SellingController.getCustomerById)
 
 // ============================================

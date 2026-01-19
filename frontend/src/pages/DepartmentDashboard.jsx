@@ -10,6 +10,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area
 } from 'recharts'
+import * as productionService from '../services/productionService'
 import ProductionDashboard from './Production/ProductionDashboard'
 import './DepartmentDashboard.css'
 
@@ -102,16 +103,43 @@ export default function DepartmentDashboard() {
           lowStockItems: lowStock
         })
       } else if (userDept === 'manufacturing') {
+        const [woRes, bomRes, ppRes, jcRes, opRes, wsRes, peRes] = await Promise.all([
+          productionService.getWorkOrders().catch(() => []),
+          productionService.getBOMs().catch(() => []),
+          productionService.getProductionPlans().catch(() => []),
+          productionService.getJobCards().catch(() => []),
+          productionService.getOperationsList().catch(() => []),
+          productionService.getWorkstationsList().catch(() => []),
+          productionService.getProductionEntries().catch(() => [])
+        ])
+
+        const wo = Array.isArray(woRes) ? woRes : woRes.data || []
+        const bom = Array.isArray(bomRes) ? bomRes : bomRes.data || []
+        const pp = Array.isArray(ppRes) ? ppRes : ppRes.data || []
+        const jc = Array.isArray(jcRes) ? jcRes : jcRes.data || []
+        const op = Array.isArray(opRes) ? opRes : opRes.data || []
+        const ws = Array.isArray(wsRes) ? wsRes : wsRes.data || []
+        const pe = Array.isArray(peRes) ? peRes : peRes.data || []
+
+        const normalizeStatus = (status) => {
+          if (!status) return 'draft'
+          return String(status).toLowerCase().trim()
+        }
+
+        const completedCount = jc.filter(j => normalizeStatus(j.status) === 'completed').length
+        const inProgressCount = jc.filter(j => normalizeStatus(j.status) === 'in-progress').length
+        const pendingCount = jc.filter(j => ['pending', 'draft'].includes(normalizeStatus(j.status))).length
+
         setStats({
-          workOrders: 15,
-          boms: 8,
-          productionPlans: 5,
-          jobCards: 22,
-          completedToday: 6,
-          inProgress: 9,
-          pending: 3,
-          workstations: 12,
-          operations: 45
+          workOrders: wo.length,
+          boms: bom.length,
+          productionPlans: pp.length,
+          jobCards: jc.length,
+          completedToday: completedCount,
+          inProgress: inProgressCount,
+          pending: pendingCount,
+          workstations: ws.length,
+          operations: op.length
         })
       } else if (userDept === 'admin') {
         setStats({
@@ -227,13 +255,13 @@ export default function DepartmentDashboard() {
               <h2 className="text-lg font-bold mb-3 text-gray-900">
                 Stock Movement Analysis
               </h2>
-              <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-300">
+              <div className="bg-white rounded-xs border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-300">
                 <div className="flex gap-5 border-b border-gray-200 mb-6 pb-0 ">
                   {['Overview', 'Inbound', 'Outbound'].map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTabs({ ...activeTabs, overview: tab.toLowerCase() })}
-                      className={`text-sm font-medium px-0 py-2 whitespace-nowrap border-b-2 -mb-0.5 transition-colors ${
+                      className={`text-xs font-medium px-0 py-2 whitespace-nowrap border-b-2 -mb-0.5 transition-colors ${
                         activeTabs.overview === tab.toLowerCase()
                           ? 'border-blue-600 text-blue-600 font-semibold'
                           : 'border-transparent text-gray-400 hover:text-gray-600'
@@ -338,14 +366,14 @@ export default function DepartmentDashboard() {
                 <h2 className="text-lg font-bold mb-3 text-gray-900">
                   Warehouse Analysis
                 </h2>
-                <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-300">
+                <div className="bg-white rounded-xs border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-300">
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex gap-5 border-b border-gray-200 pb-0">
                       {['Distribution', 'Stock Value'].map((tab) => (
                         <button
                           key={tab}
                           onClick={() => setActiveTabs({ ...activeTabs, warehouse: tab.toLowerCase() })}
-                          className={`text-sm font-medium px-0 py-2 border-b-2 -mb-0.5 transition-colors ${
+                          className={`text-xs font-medium px-0 py-2 border-b-2 -mb-0.5 transition-colors ${
                             activeTabs.warehouse === tab.toLowerCase()
                               ? 'border-blue-600 text-blue-600 font-semibold'
                               : 'border-transparent text-gray-400 hover:text-gray-600'
@@ -453,13 +481,13 @@ export default function DepartmentDashboard() {
                 <h2 className="text-lg font-bold mb-3 text-gray-900">
                   Low Stock Alerts
                 </h2>
-                <div className="bg-white rounded-lg border border-gray-200 p-6 max-h-96 overflow-auto hover:shadow-lg transition-shadow duration-300">
+                <div className="bg-white rounded-xs border border-gray-200 p-6 max-h-96 overflow-auto hover:shadow-lg transition-shadow duration-300">
                   {chartData.lowStockItems && chartData.lowStockItems.length > 0 ? (
                     <div className="space-y-3">
                       {chartData.lowStockItems.map((item, idx) => (
                         <div 
                           key={idx} 
-                          className="p-4 rounded-lg bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border border-red-200 flex justify-between items-center hover:shadow-md hover:scale-102 transition-all duration-300 group"
+                          className="p-2 rounded-sm bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border border-red-200 flex justify-between items-center hover:shadow-md hover:scale-102 transition-all duration-300 group"
                           style={{ borderLeftColor: '#dc2626' }}
                         >
                           <div>
@@ -471,7 +499,7 @@ export default function DepartmentDashboard() {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-bold text-red-700 mb-1">
+                            <p className="text-xs font-bold text-red-700 mb-1">
                               {Number(item.current_qty).toFixed(2)} units
                             </p>
                             <p className="text-xs text-red-500 font-semibold">
@@ -501,7 +529,7 @@ export default function DepartmentDashboard() {
 
   const renderAdminDashboard = () => {
     const StatCardWithBorder = ({ label, value, icon: Icon, statusText, borderColor, bgColor }) => (
-      <div className={`bg-white rounded-lg p-4 border-l-4 border border-gray-200 shadow-sm`} style={{ borderLeftColor: borderColor }}>
+      <div className={`bg-white rounded-xsp-2 border-l-4 border border-gray-200 shadow-sm`} style={{ borderLeftColor: borderColor }}>
         <div className="flex justify-between items-start gap-3 mb-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">{label}</span>
           <div className="flex items-center justify-center w-8 h-8 rounded" style={{ backgroundColor: bgColor }}>
@@ -517,13 +545,13 @@ export default function DepartmentDashboard() {
 
     return (
       <div className="w-full p-3">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+        <div className="bg-white rounded-xs shadow-sm border border-gray-200 p-5">
           <div className="mb-6 pb-4 border-b-2 border-gray-200 flex justify-between items-center">
             <div>
               <h1 className="text-xl font-bold text-gray-900 mb-1">
                 Admin Dashboard 📊
               </h1>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs text-gray-500">
                 View analytics for projects, machines, and clients
               </p>
             </div>

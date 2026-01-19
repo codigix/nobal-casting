@@ -235,7 +235,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
     >
       <div className="max-h-[calc(90vh-120px)] overflow-y-auto pr-2">
         {/* Header Section */}
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg p-4 mb-4 text-white">
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xsp-2 mb-4 text-white">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="m-0 mb-0.5 text-lg font-bold text-white">Create New GRN Request</h2>
@@ -252,7 +252,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
         {/* Two Column Layout for Form Sections */}
         <div className="grid grid-cols-2 gap-4 mb-4">
           {/* GRN Header Section */}
-          <div className="bg-white border border-gray-200 rounded-lg p-3.5 shadow-sm">
+          <div className="bg-white border border-gray-200 rounded-xs p-3.5 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <FileText size={16} className="text-indigo-500" />
               <h3 className="m-0 text-xs font-semibold text-gray-900">GRN Information</h3>
@@ -286,7 +286,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           {/* Supplier Section */}
-          <div className="bg-white border border-gray-200 rounded-lg p-3.5 shadow-sm">
+          <div className="bg-white border border-gray-200 rounded-xs p-3.5 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <Truck size={16} className="text-indigo-500" />
               <h3 className="m-0 text-xs font-semibold text-gray-900">Supplier Information</h3>
@@ -333,7 +333,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
         </div>
 
         {/* Items Section */}
-        <div className="bg-white border border-gray-200 rounded-lg p-3.5 mb-4 shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-xs p-3.5 mb-4 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
             <Package size={16} className="text-indigo-500" />
             <h3 className="m-0 text-xs font-semibold text-gray-900">Received Items</h3>
@@ -450,7 +450,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
         </div>
 
         {/* Notes Section */}
-        <div className="bg-white border border-gray-200 rounded-lg p-3.5 shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-xs p-3.5 shadow-sm">
           <div className="flex items-center gap-2 mb-2.5">
             <AlertCircle size={16} className="text-indigo-500" />
             <h3 className="m-0 text-xs font-semibold text-gray-900">Additional Notes</h3>
