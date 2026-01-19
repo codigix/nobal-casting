@@ -34,6 +34,17 @@ export default function WorkOrderForm() {
   const [isEditMode, setIsEditMode] = useState(false)
   const [editingJobCardId, setEditingJobCardId] = useState(null)
   const [modifiedJobCards, setModifiedJobCards] = useState({})
+  const [completionMetrics, setCompletionMetrics] = useState({
+    totalPlanned: 0,
+    totalCompleted: 0,
+    allCompleted: false,
+    firstTimeLogDate: null,
+    lastTimeLogDate: null,
+    totalActualTime: 0,
+    expectedTime: 0,
+    efficiency: 0,
+    qualityScore: 0
+  })
   
   const [formData, setFormData] = useState({
     work_order_id: '',
@@ -71,8 +82,11 @@ export default function WorkOrderForm() {
   }, [id, productionPlanId, prefillItem, prefillBom])
 
   useEffect(() => {
-    if (jobCards.length > 0 && bomOperations.length > 0) {
-      populateWorkstationsForJobCards(jobCards, bomOperations)
+    if (jobCards.length > 0) {
+      calculateCompletionMetrics(jobCards)
+      if (bomOperations.length > 0) {
+        populateWorkstationsForJobCards(jobCards, bomOperations)
+      }
     }
   }, [jobCards.length, bomOperations.length])
 
@@ -140,8 +154,80 @@ export default function WorkOrderForm() {
     try {
       const response = await productionService.getJobCards({ work_order_id: workOrderId })
       setJobCards(response.data || [])
+      await calculateCompletionMetrics(response.data || [])
     } catch (err) {
       console.error('Failed to fetch job cards:', err)
+    }
+  }
+
+  const calculateCompletionMetrics = async (cards) => {
+    try {
+      const totalPlanned = cards.reduce((sum, jc) => sum + (parseFloat(jc.planned_quantity) || 0), 0)
+      const totalCompleted = cards.reduce((sum, jc) => sum + (parseFloat(jc.completed_quantity) || jc.actual_qty || 0), 0)
+      const allCompleted = cards.length > 0 && cards.every(jc => (jc.status || '').toLowerCase() === 'completed')
+      
+      let firstTimeLogDate = null
+      let lastTimeLogDate = null
+      let totalActualTime = 0
+      let totalAccepted = 0
+      
+      for (const jc of cards) {
+        try {
+          const timeLogs = await productionService.getTimeLogs({ job_card_id: jc.job_card_id || jc.id })
+          const logs = timeLogs.data || []
+          
+          if (logs.length > 0) {
+            const dates = logs.map(log => new Date(log.created_at || log.date)).filter(d => !isNaN(d))
+            if (dates.length > 0) {
+              const minDate = new Date(Math.min(...dates))
+              const maxDate = new Date(Math.max(...dates))
+              
+              if (!firstTimeLogDate || minDate < firstTimeLogDate) {
+                firstTimeLogDate = minDate
+              }
+              if (!lastTimeLogDate || maxDate > lastTimeLogDate) {
+                lastTimeLogDate = maxDate
+              }
+            }
+            
+            logs.forEach(log => {
+              if (log.from_time && log.to_time) {
+                totalActualTime += log.time_in_minutes || 0
+              }
+              totalAccepted += parseFloat(log.accepted_qty) || 0
+            })
+          }
+        } catch (err) {
+          console.error('Failed to fetch time logs for job card:', jc.job_card_id || jc.id)
+        }
+      }
+      
+      const expectedTime = (bomOperations || []).reduce((sum, op) => sum + (parseFloat(op.operation_time) || 0), 0) * 60
+      const efficiency = expectedTime > 0 ? ((expectedTime / totalActualTime) * 100).toFixed(0) : 0
+      const qualityScore = totalCompleted > 0 ? ((totalAccepted / totalCompleted) * 100).toFixed(1) : 0
+      
+      setCompletionMetrics({
+        totalPlanned,
+        totalCompleted,
+        allCompleted,
+        firstTimeLogDate,
+        lastTimeLogDate,
+        totalActualTime,
+        expectedTime,
+        efficiency,
+        qualityScore
+      })
+      
+      if (allCompleted && firstTimeLogDate && lastTimeLogDate) {
+        setFormData(prev => ({
+          ...prev,
+          actual_start_date: firstTimeLogDate.toISOString().split('T')[0],
+          actual_end_date: lastTimeLogDate.toISOString().split('T')[0],
+          status: 'completed'
+        }))
+      }
+    } catch (err) {
+      console.error('Failed to calculate completion metrics:', err)
     }
   }
 
@@ -767,6 +853,56 @@ export default function WorkOrderForm() {
               </div>
             </div>
 
+            {/* Completion Summary - Shows when work order is completed */}
+            {completionMetrics.allCompleted && (
+              <div className="border-2 border-green-300 rounded-xs p-4 bg-gradient-to-r from-green-50 to-emerald-50">
+                <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <CheckCircle size={18} className="text-green-600" />
+                  Production Completion Summary
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-white p-3 rounded border border-blue-200">
+                    <p className="text-xs text-gray-600 font-semibold mb-1">Total Planned</p>
+                    <p className="text-lg font-bold text-blue-600">{completionMetrics.totalPlanned.toFixed(0)}</p>
+                    <p className="text-xs text-gray-500 mt-1">units</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border border-green-200">
+                    <p className="text-xs text-gray-600 font-semibold mb-1">Total Completed</p>
+                    <p className="text-lg font-bold text-green-600">{completionMetrics.totalCompleted.toFixed(2)}</p>
+                    <p className="text-xs text-gray-500 mt-1">units</p>
+                  </div>
+                  <div className={`bg-white p-3 rounded border ${completionMetrics.efficiency >= 100 ? 'border-green-200' : completionMetrics.efficiency >= 80 ? 'border-yellow-200' : 'border-red-200'}`}>
+                    <p className="text-xs text-gray-600 font-semibold mb-1">⚡ Efficiency</p>
+                    <p className={`text-lg font-bold ${completionMetrics.efficiency >= 100 ? 'text-green-600' : completionMetrics.efficiency >= 80 ? 'text-yellow-600' : 'text-red-600'}`}>{completionMetrics.efficiency}%</p>
+                    <p className="text-xs text-gray-500 mt-1">vs expected</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border border-blue-200">
+                    <p className="text-xs text-gray-600 font-semibold mb-1">✓ Quality Score</p>
+                    <p className="text-lg font-bold text-blue-600">{completionMetrics.qualityScore}%</p>
+                    <p className="text-xs text-gray-500 mt-1">acceptance rate</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border border-orange-200">
+                    <p className="text-xs text-gray-600 font-semibold mb-1">Actual Duration</p>
+                    <p className="text-lg font-bold text-orange-600">{(completionMetrics.totalActualTime / 60).toFixed(1)}h</p>
+                    <p className="text-xs text-gray-500 mt-1">{completionMetrics.totalActualTime}m</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border border-purple-200">
+                    <p className="text-xs text-gray-600 font-semibold mb-1">Expected Duration</p>
+                    <p className="text-lg font-bold text-purple-600">{(completionMetrics.expectedTime / 60).toFixed(1)}h</p>
+                    <p className="text-xs text-gray-500 mt-1">{completionMetrics.expectedTime}m</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border border-indigo-200">
+                    <p className="text-xs text-gray-600 font-semibold mb-1">Start Date</p>
+                    <p className="text-sm font-bold text-indigo-600">{completionMetrics.firstTimeLogDate ? new Date(completionMetrics.firstTimeLogDate).toLocaleDateString() : '-'}</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border border-indigo-200">
+                    <p className="text-xs text-gray-600 font-semibold mb-1">End Date</p>
+                    <p className="text-sm font-bold text-indigo-600">{completionMetrics.lastTimeLogDate ? new Date(completionMetrics.lastTimeLogDate).toLocaleDateString() : '-'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Details Table */}
             <div className="border rounded-xs overflow-hidden">
               <div className="flex items-center justify-between bg-gray-50 px-3 py-2 border-b border-gray-200">
@@ -1162,93 +1298,161 @@ export default function WorkOrderForm() {
                   <Boxes size={16} className="text-purple-600" />
                   Required Items ({bomMaterials.length})
                 </h3>
-                <div className=" border rounded">
+                <div className="bg-blue-50 border border-blue-200 rounded p-2 mb-2 text-xs">
+                  <p className="text-gray-700 font-semibold">Material Tracking Logic:</p>
+                  <ul className="text-gray-600 mt-1 space-y-1 ml-4 list-disc">
+                    <li><strong>Req Qty</strong>: Required quantity from BOM</li>
+                    <li><strong>Trans Qty</strong>: Transferred from warehouse to production (usually = Req Qty or more)</li>
+                    <li><strong>Cons Qty</strong>: Actually consumed in production (≤ Trans Qty)</li>
+                    <li><strong>Ret Qty</strong>: Returned to warehouse unused (≤ Trans Qty)</li>
+                    <li><strong>Wastage</strong>: Trans Qty - Cons Qty - Ret Qty (process loss)</li>
+                  </ul>
+                </div>
+                <div className=" border rounded overflow-x-auto">
                   <table className="w-full text-xs border-collapse">
                     <thead>
                       <tr className="bg-gray-100 border-b border-gray-200">
                         <th className="px-2 py-1.5 text-center font-semibold text-gray-700 w-8">No</th>
-                        <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Item Code</th>
+                        <th className="px-2 py-1.5 text-left font-semibold text-gray-700 min-w-20">Item Code</th>
                         <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Item Name</th>
-                        <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Warehouse</th>
+                        <th className="px-2 py-1.5 text-left font-semibold text-gray-700">WH</th>
                         <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Req Qty</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700">UOM</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Trans Qty</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Cons Qty</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Ret Qty</th>
+                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700 w-12">UOM</th>
+                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700 bg-blue-100" title="Transferred to production">Trans Qty</th>
+                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700 bg-green-100" title="Used in production">Cons Qty</th>
+                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700 bg-amber-100" title="Returned unused">Ret Qty</th>
+                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700 bg-red-100" title="Process loss">Wastage</th>
+                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700 bg-red-100" title="Wastage %">Waste %</th>
                         {!isReadOnly && <th className="px-2 py-1.5 text-center font-semibold text-gray-700 w-8">Act</th>}
                       </tr>
                     </thead>
                     <tbody>
-                      {bomMaterials.map((mat, idx) => (
-                        <tr key={mat.id} className={`border-b border-gray-200 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                          <td className="px-2 py-1 text-center text-gray-900 font-medium">{idx + 1}</td>
-                          <td className="px-2 py-1 text-gray-900 font-medium text-xs">{mat.item_code || '-'}</td>
-                          <td className="px-2 py-1 text-gray-700 text-xs">{mat.item_name || mat.description || '-'}</td>
-                          <td className="px-2 py-1">
-                            <input
-                              type="text"
-                              value={mat.source_warehouse || ''}
-                              onChange={(e) => updateMaterial(mat.id, 'source_warehouse', e.target.value)}
-                              disabled={isReadOnly}
-                              placeholder="WH"
-                              className="w-24 px-1 py-0.5 border border-gray-300 rounded text-xs"
-                            />
-                          </td>
-                          <td className="px-2 py-1 text-right">
-                            <input
-                              type="number"
-                              step="0.001"
-                              value={mat.required_qty || 0}
-                              onChange={(e) => updateMaterial(mat.id, 'required_qty', parseFloat(e.target.value) || 0)}
-                              disabled={isReadOnly}
-                              className="w-16 px-1 py-0.5 border border-gray-300 rounded text-right text-xs"
-                            />
-                          </td>
-                          <td className="px-2 py-1 text-right text-xs text-gray-700">
-                            {mat.uom || '-'}
-                          </td>
-                          <td className="px-2 py-1 text-right">
-                            <input
-                              type="number"
-                              step="0.001"
-                              value={mat.transferred_qty || 0}
-                              onChange={(e) => updateMaterial(mat.id, 'transferred_qty', parseFloat(e.target.value) || 0)}
-                              disabled={isReadOnly}
-                              className="w-14 px-1 py-0.5 border border-gray-300 rounded text-right text-xs"
-                            />
-                          </td>
-                          <td className="px-2 py-1 text-right">
-                            <input
-                              type="number"
-                              step="0.001"
-                              value={mat.consumed_qty || 0}
-                              onChange={(e) => updateMaterial(mat.id, 'consumed_qty', parseFloat(e.target.value) || 0)}
-                              disabled={isReadOnly}
-                              className="w-14 px-1 py-0.5 border border-gray-300 rounded text-right text-xs"
-                            />
-                          </td>
-                          <td className="px-2 py-1 text-right">
-                            <input
-                              type="number"
-                              step="0.001"
-                              value={mat.returned_qty || 0}
-                              onChange={(e) => updateMaterial(mat.id, 'returned_qty', parseFloat(e.target.value) || 0)}
-                              disabled={isReadOnly}
-                              className="w-14 px-1 py-0.5 border border-gray-300 rounded text-right text-xs"
-                            />
-                          </td>
-                          {!isReadOnly && (
-                            <td className="px-2 py-1 text-center">
-                              <button
-                                onClick={() => setEditingMaterialId(editingMaterialId === mat.id ? null : mat.id)}
-                                className="p-0.5 hover:bg-blue-100 rounded transition"
-                              >
-                                <Edit2 size={12} className="text-blue-600" />
-                              </button>
+                      {bomMaterials.map((mat, idx) => {
+                        const transQty = parseFloat(mat.transferred_qty) || 0
+                        const consQty = parseFloat(mat.consumed_qty) || 0
+                        const retQty = parseFloat(mat.returned_qty) || 0
+                        const wastage = Math.max(0, transQty - consQty - retQty)
+                        const wastePercent = transQty > 0 ? ((wastage / transQty) * 100).toFixed(1) : '0.0'
+                        const isValidated = transQty >= (consQty + retQty)
+                        
+                        return (
+                          <tr key={mat.id} className={`border-b border-gray-200 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${!isValidated ? 'border-l-4 border-l-red-500' : ''}`}>
+                            <td className="px-2 py-1 text-center text-gray-900 font-medium">{idx + 1}</td>
+                            <td className="px-2 py-1 text-gray-900 font-medium text-xs">{mat.item_code || '-'}</td>
+                            <td className="px-2 py-1 text-gray-700 text-xs">{mat.item_name || mat.description || '-'}</td>
+                            <td className="px-2 py-1">
+                              <input
+                                type="text"
+                                value={mat.source_warehouse || ''}
+                                onChange={(e) => updateMaterial(mat.id, 'source_warehouse', e.target.value)}
+                                disabled={isReadOnly}
+                                placeholder="WH"
+                                className="w-16 px-1 py-0.5 border border-gray-300 rounded text-xs"
+                              />
                             </td>
-                          )}
-                        </tr>
-                      ))}
+                            <td className="px-2 py-1 text-right font-medium text-gray-900">
+                              <input
+                                type="number"
+                                step="0.001"
+                                value={mat.required_qty || 0}
+                                onChange={(e) => updateMaterial(mat.id, 'required_qty', parseFloat(e.target.value) || 0)}
+                                disabled={isReadOnly}
+                                className="w-16 px-1 py-0.5 border border-gray-300 rounded text-right text-xs"
+                              />
+                            </td>
+                            <td className="px-2 py-1 text-right text-xs text-gray-700">
+                              {mat.uom || '-'}
+                            </td>
+                            <td className="px-2 py-1 text-right bg-blue-50">
+                              <input
+                                type="number"
+                                step="0.001"
+                                value={mat.transferred_qty || 0}
+                                onChange={(e) => updateMaterial(mat.id, 'transferred_qty', parseFloat(e.target.value) || 0)}
+                                disabled={isReadOnly}
+                                className="w-16 px-1 py-0.5 border border-gray-300 rounded text-right text-xs"
+                                title="Material issued to production"
+                              />
+                            </td>
+                            <td className="px-2 py-1 text-right bg-green-50">
+                              <input
+                                type="number"
+                                step="0.001"
+                                value={mat.consumed_qty || 0}
+                                onChange={(e) => updateMaterial(mat.id, 'consumed_qty', parseFloat(e.target.value) || 0)}
+                                disabled={isReadOnly}
+                                className={`w-16 px-1 py-0.5 border rounded text-right text-xs ${consQty > transQty ? 'border-red-500 bg-red-100' : 'border-gray-300'}`}
+                                title="Material used in production"
+                              />
+                            </td>
+                            <td className="px-2 py-1 text-right bg-amber-50">
+                              <input
+                                type="number"
+                                step="0.001"
+                                value={mat.returned_qty || 0}
+                                onChange={(e) => updateMaterial(mat.id, 'returned_qty', parseFloat(e.target.value) || 0)}
+                                disabled={isReadOnly}
+                                className={`w-16 px-1 py-0.5 border rounded text-right text-xs ${retQty > transQty ? 'border-red-500 bg-red-100' : 'border-gray-300'}`}
+                                title="Material returned unused"
+                              />
+                            </td>
+                            <td className="px-2 py-1 text-right bg-red-50 font-medium text-gray-900">
+                              {wastage.toFixed(3)}
+                            </td>
+                            <td className={`px-2 py-1 text-right font-bold w-12 ${parseFloat(wastePercent) > 5 ? 'bg-red-100 text-red-700' : 'bg-red-50 text-gray-900'}`}>
+                              {wastePercent}%
+                            </td>
+                            {!isReadOnly && (
+                              <td className="px-2 py-1 text-center">
+                                <button
+                                  onClick={() => setEditingMaterialId(editingMaterialId === mat.id ? null : mat.id)}
+                                  className="p-0.5 hover:bg-blue-100 rounded transition"
+                                  title="Edit material"
+                                >
+                                  <Edit2 size={12} className="text-blue-600" />
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        )
+                      })}
+                      <tr className="bg-gray-100 border-t-2 border-gray-300 font-bold">
+                        <td colSpan="4" className="px-2 py-1.5 text-right">TOTAL:</td>
+                        <td className="px-2 py-1.5 text-right text-gray-900">
+                          {bomMaterials.reduce((sum, m) => sum + (parseFloat(m.required_qty) || 0), 0).toFixed(3)}
+                        </td>
+                        <td></td>
+                        <td className="px-2 py-1.5 text-right text-gray-900 bg-blue-100">
+                          {bomMaterials.reduce((sum, m) => sum + (parseFloat(m.transferred_qty) || 0), 0).toFixed(3)}
+                        </td>
+                        <td className="px-2 py-1.5 text-right text-gray-900 bg-green-100">
+                          {bomMaterials.reduce((sum, m) => sum + (parseFloat(m.consumed_qty) || 0), 0).toFixed(3)}
+                        </td>
+                        <td className="px-2 py-1.5 text-right text-gray-900 bg-amber-100">
+                          {bomMaterials.reduce((sum, m) => sum + (parseFloat(m.returned_qty) || 0), 0).toFixed(3)}
+                        </td>
+                        <td className="px-2 py-1.5 text-right text-gray-900 bg-red-100">
+                          {bomMaterials.reduce((sum, m) => {
+                            const t = parseFloat(m.transferred_qty) || 0
+                            const c = parseFloat(m.consumed_qty) || 0
+                            const r = parseFloat(m.returned_qty) || 0
+                            return sum + Math.max(0, t - c - r)
+                          }, 0).toFixed(3)}
+                        </td>
+                        <td className="px-2 py-1.5 text-right text-gray-900 bg-red-100">
+                          {(() => {
+                            const totalTrans = bomMaterials.reduce((sum, m) => sum + (parseFloat(m.transferred_qty) || 0), 0)
+                            const totalWaste = bomMaterials.reduce((sum, m) => {
+                              const t = parseFloat(m.transferred_qty) || 0
+                              const c = parseFloat(m.consumed_qty) || 0
+                              const r = parseFloat(m.returned_qty) || 0
+                              return sum + Math.max(0, t - c - r)
+                            }, 0)
+                            return totalTrans > 0 ? ((totalWaste / totalTrans) * 100).toFixed(1) : '0.0'
+                          })()}%
+                        </td>
+                        <td></td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>

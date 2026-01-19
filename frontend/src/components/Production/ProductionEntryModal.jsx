@@ -10,6 +10,7 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
   const [activeTab, setActiveTab] = useState('timeLogs')
   const [loading, setLoading] = useState(false)
   const [itemName, setItemName] = useState('')
+  const [operationCycleTime, setOperationCycleTime] = useState(0)
 
   const [timeLogs, setTimeLogs] = useState([])
   const [rejections, setRejections] = useState([])
@@ -85,9 +86,10 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
       fetchDowntimes()
       if (jobCardData && jobCardData.work_order_id) {
         fetchItemName()
+        fetchOperationCycleTime()
       }
     }
-  }, [isOpen, jobCardId])
+  }, [isOpen, jobCardId, jobCardData])
 
   useEffect(() => {
     if (workstations.length > 0 && jobCardData) {
@@ -139,6 +141,32 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
     } catch (err) {
       console.error('Failed to fetch item name:', err)
       setItemName(jobCardData?.item_name || 'N/A')
+    }
+  }
+
+  const fetchOperationCycleTime = async () => {
+    try {
+      if (!jobCardData?.work_order_id) return
+      
+      const workOrderResponse = await productionService.getWorkOrder(jobCardData.work_order_id)
+      const bomId = workOrderResponse?.data?.bom_id
+      
+      if (bomId) {
+        const bomResponse = await productionService.getBOMDetails(bomId)
+        const bom = bomResponse?.data || bomResponse
+        
+        if (bom?.bom_operations) {
+          const operation = bom.bom_operations.find(
+            op => op.name === jobCardData.operation || op.operation_name === jobCardData.operation
+          )
+          if (operation && operation.operation_time_per_unit) {
+            setOperationCycleTime(parseFloat(operation.operation_time_per_unit) || 0)
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch operation cycle time:', err)
+      setOperationCycleTime(0)
     }
   }
 
@@ -447,12 +475,11 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
     }
   }
 
-  // OLD (wrong calculation):
-
-// NEW (correct calculation):
 const totalProducedQty = timeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0)
-const totalRejectedQty = rejections.reduce((sum, r) => sum + (r.rejected_qty || 0), 0)
-const totalAcceptedQty = totalProducedQty - totalRejectedQty
+const totalAcceptedQty = timeLogs.reduce((sum, log) => sum + (parseFloat(log.accepted_qty) || 0), 0)
+const totalRejectedQty = timeLogs.reduce((sum, log) => sum + (parseFloat(log.rejected_qty) || 0), 0)
+const totalScrapQty = timeLogs.reduce((sum, log) => sum + (parseFloat(log.scrap_qty) || 0), 0)
+const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_minutes || 0), 0)
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Production Entry" size="xl">
@@ -507,6 +534,57 @@ const totalAcceptedQty = totalProducedQty - totalRejectedQty
             </div>
           </div>
         </div>
+
+        {(() => {
+          const expectedMinutes = (operationCycleTime || 0) * (jobCardData?.planned_quantity || 1)
+          const actualMinutes = timeLogs.reduce((sum, log) => {
+            if (log.from_time && log.to_time) {
+              const [fh, fm] = log.from_time.split(':').map(Number)
+              const [th, tm] = log.to_time.split(':').map(Number)
+              return sum + Math.max(0, (th * 60 + tm) - (fh * 60 + fm))
+            }
+            return sum
+          }, 0)
+          const efficiency = expectedMinutes > 0 ? ((expectedMinutes / actualMinutes) * 100).toFixed(0) : 0
+          const qualityScore = totalProducedQty > 0 ? ((totalAcceptedQty / totalProducedQty) * 100).toFixed(1) : 0
+          const isBottleneck = actualMinutes > expectedMinutes * 1.3
+          
+          return (
+            <div className="mb-4 p-3 rounded-xs border-2 border-purple-300 bg-gradient-to-r from-purple-50 to-pink-50">
+              <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                <div className="p-2 bg-white border border-orange-200 rounded">
+                  <p className="text-gray-600 font-semibold mb-1">Expected Duration</p>
+                  <p className="font-bold text-orange-700">{expectedMinutes.toFixed(0)} min</p>
+                </div>
+                <div className="p-2 bg-white border border-blue-200 rounded">
+                  <p className="text-gray-600 font-semibold mb-1">Actual Duration</p>
+                  <p className="font-bold text-blue-700">{actualMinutes.toFixed(0)} min</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div className={`p-2 rounded border ${efficiency >= 100 ? 'bg-green-50 border-green-200' : efficiency >= 80 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'}`}>
+                  <p className="text-gray-600 font-semibold mb-1">⚡ Efficiency</p>
+                  <p className={`font-bold text-lg ${efficiency >= 100 ? 'text-green-600' : efficiency >= 80 ? 'text-yellow-600' : 'text-red-600'}`}>
+                    {efficiency}%
+                  </p>
+                  {isBottleneck && <p className="text-red-600 text-xs mt-1">🚨 Bottleneck Detected</p>}
+                </div>
+                <div className="p-2 rounded bg-blue-50 border border-blue-200">
+                  <p className="text-gray-600 font-semibold mb-1">✓ Quality</p>
+                  <p className="font-bold text-lg text-blue-600">{qualityScore}%</p>
+                  <p className="text-gray-500 text-xs mt-1">Acceptance rate</p>
+                </div>
+                <div className="p-2 rounded bg-green-50 border border-green-200">
+                  <p className="text-gray-600 font-semibold mb-1">📦 Productivity</p>
+                  <p className="font-bold text-lg text-green-600">
+                    {actualMinutes > 0 ? ((totalAcceptedQty / (actualMinutes / 60)).toFixed(1)) : '0'} units/hr
+                  </p>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         <div className="max-h-[70vh] overflow-y-auto space-y-6">
           {/* Operation Execution Section */}
@@ -584,6 +662,22 @@ const totalAcceptedQty = totalProducedQty - totalRejectedQty
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">Operation Time per Unit (from BOM)</label>
+                    <div className="p-2 border border-purple-300 rounded-md text-xs bg-purple-50">
+                      <p className="font-semibold text-purple-700">{operationCycleTime.toFixed(2)} min</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">Expected Duration (for all {jobCardData?.planned_quantity || 0} units)</label>
+                    <div className="p-2 border border-orange-300 rounded-md text-xs bg-orange-50">
+                      <p className="font-semibold text-orange-700">{((operationCycleTime || 0) * (jobCardData?.planned_quantity || 1)).toFixed(0)} min</p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-4 gap-3 mb-3">
                   <div>
                     <label className="block text-xs text-gray-700 mb-1">From Time *</label>
@@ -608,17 +702,7 @@ const totalAcceptedQty = totalProducedQty - totalRejectedQty
                   </div>
 
                   <div>
-                    <label className="block text-xs text-gray-700 mb-1">Duration (min)</label>
-                    <input
-                      type="number"
-                      value={calculateTimeDuration()}
-                      disabled
-                      className="w-full p-2 border border-gray-300 rounded-md text-xs bg-gray-100 text-gray-600"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs text-gray-700 mb-1">Completed Qty</label>
+                    <label className="block text-xs text-gray-700 mb-1">Completed Qty *</label>
                     <input
                       type="number"
                       value={timeLogForm.completed_qty}
@@ -626,9 +710,32 @@ const totalAcceptedQty = totalProducedQty - totalRejectedQty
                       step="0.01"
                       min="0"
                       className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">Expected Duration</label>
+                    <div className="p-2 border border-orange-300 rounded-md text-xs bg-orange-50">
+                      <p className="font-semibold text-orange-700">{((operationCycleTime || 0) * (jobCardData?.planned_quantity || 1)).toFixed(0)} min</p>
+                    </div>
+                  </div>
                 </div>
+
+                <div className="grid grid-cols-4 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs text-gray-700 mb-1">Duration</label>
+                    <div className="p-2 border border-blue-300 rounded-md text-xs bg-blue-50">
+                      <p className="font-semibold text-blue-700">{calculateTimeDuration()} min</p>
+                    </div>
+                  </div>
+
+                  <div></div>
+                  <div></div>
+                  <div></div>
+                </div>
+
+
 
                 <div className="grid grid-cols-4 gap-3 mb-3">
                   <div>

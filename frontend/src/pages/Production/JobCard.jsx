@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, Eye, CheckCircle, ChevronDown, ChevronRight, AlertCircle, Zap, Trash } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as productionService from '../../services/productionService'
 import CreateJobCardModal from '../../components/Production/CreateJobCardModal'
 import ViewJobCardModal from '../../components/Production/ViewJobCardModal'
@@ -9,6 +9,7 @@ import { useToast } from '../../components/ToastContainer'
 
 export default function JobCard() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const toast = useToast()
   const [workOrders, setWorkOrders] = useState([])
   const [jobCardsByWO, setJobCardsByWO] = useState({})
@@ -35,6 +36,13 @@ export default function JobCard() {
   useEffect(() => {
     fetchWorkOrders()
   }, [filters])
+
+  useEffect(() => {
+    const filterWorkOrder = searchParams.get('filter_work_order')
+    if (filterWorkOrder && workOrders.length > 0) {
+      fetchJobCardsForWO(filterWorkOrder, true)
+    }
+  }, [searchParams, workOrders])
 
   const fetchData = async () => {
     try {
@@ -66,10 +74,14 @@ export default function JobCard() {
     }
   }
 
-  const fetchJobCardsForWO = async (wo_id) => {
+  const fetchJobCardsForWO = async (wo_id, skipToggle = false) => {
     try {
       if (jobCardsByWO[wo_id]) {
-        setExpandedWO(expandedWO === wo_id ? null : wo_id)
+        if (!skipToggle) {
+          setExpandedWO(expandedWO === wo_id ? null : wo_id)
+        } else {
+          setExpandedWO(wo_id)
+        }
         return
       }
       
@@ -558,21 +570,20 @@ export default function JobCard() {
                         <table className="w-full text-xs border-collapse">
                       <thead>
                         <tr className="bg-gray-100 border border-gray-200">
-                          <th className="px-3 py-2 text-left font-semibold text-gray-700">ID</th>
-                          <th className="px-3 py-2 text-left font-semibold text-gray-700">Work Order</th>
-                          <th className="px-3 py-2 text-left font-semibold text-gray-700">Item</th>
-                          <th className="px-3 py-2 text-right font-semibold text-gray-700">Qty To Manuf</th>
                           <th className="px-3 py-2 text-left font-semibold text-gray-700">Operation</th>
-                          <th className="px-3 py-2 text-left font-semibold text-gray-700">Workstation</th>
                           <th className="px-3 py-2 text-left font-semibold text-gray-700">Status</th>
-                          <th className="px-3 py-2 text-center font-semibold text-gray-700">Actions</th>
+                          <th className="px-3 py-2 text-right font-semibold text-gray-700">Qty To Manuf</th>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-700">Work Order</th>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-700">Workstation</th>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-700">ID</th>
+                          <th className="px-3 py-2 text-center font-semibold text-gray-700">Action</th>
                         </tr>
                       </thead>
                       <tbody>
                         {jobCardsByWO[wo.wo_id].map((card, idx) => (
                           inlineEditingId === card.job_card_id ? (
                             <tr key={card.job_card_id} className="bg-yellow-50 border border-yellow-200">
-                              <td colSpan="8" className="px-3 py-3">
+                              <td colSpan="7" className="px-3 py-3">
                                 <div className="text-xs font-semibold text-gray-700 mb-2">Editing: {card.job_card_id}</div>
                                 <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
                                   <div>
@@ -686,13 +697,7 @@ export default function JobCard() {
                             </tr>
                           ) : (
                             <tr key={card.job_card_id} className={`border border-gray-200 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
-                              <td className="px-3 py-2 text-gray-900 font-medium">{card.job_card_id}</td>
-                                <td className="px-3 py-2 text-gray-900">{wo.wo_id}</td>
-                                <td className="px-3 py-2 text-gray-900">{wo.item_name || wo.item_code || 'N/A'}</td>
-                                <td className="px-3 py-2 text-right text-gray-900 font-medium">{formatQuantity(card.planned_quantity)}</td>
                               <td className="px-3 py-2 text-gray-900 font-medium">{card.operation || 'N/A'}</td>
-                                <td className="px-3 py-2 text-gray-900">{getWorkstationName(card.machine_id)}</td>
-
                               <td className="px-3 py-2">
                                 <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
                                   card.status === 'completed' ? 'bg-green-100 text-green-800' :
@@ -704,8 +709,10 @@ export default function JobCard() {
                                   {card.status || 'Draft'}
                                 </span>
                               </td>
-                              
-                            
+                              <td className="px-3 py-2 text-right text-gray-900 font-medium">{formatQuantity(card.planned_quantity)}</td>
+                              <td className="px-3 py-2 text-gray-900">{wo.wo_id}</td>
+                              <td className="px-3 py-2 text-gray-900">{getWorkstationName(card.machine_id)}</td>
+                              <td className="px-3 py-2 text-gray-900 font-medium">{card.job_card_id}</td>
                               
                               <td className="px-3 py-2 text-center">
                                 <div className="flex items-center justify-center gap-1">

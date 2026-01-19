@@ -890,6 +890,37 @@ export default function ProductionDashboard() {
           <StatCard label="WORKSTATIONS" value={stats.workstations} subtitle="Available" icon={Grid3x3} borderColor="#8b5cf6" bgColor="#faf5ff" />
         </div>
 
+        {rawJobCards.length > 0 && (
+          <div className="mb-6 p-4 rounded-xs border border-orange-200 bg-orange-50">
+            <h3 className="font-semibold text-gray-900 mb-3 text-sm flex items-center gap-2">
+              <AlertCircle size={16} className="text-orange-600" /> Production Status & Alerts
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div className="bg-white p-3 rounded border border-orange-100">
+                <div className="text-gray-600 font-semibold mb-1">Jobs at Risk</div>
+                <div className="text-lg font-bold text-red-600">
+                  {rawJobCards.filter(jc => (jc.status || '').toLowerCase() === 'in-progress' && jc.actual_hours > jc.expected_hours * 1.2).length}
+                </div>
+                <div className="text-gray-500 mt-1">Running 20%+ over expected time</div>
+              </div>
+              <div className="bg-white p-3 rounded border border-blue-100">
+                <div className="text-gray-600 font-semibold mb-1">On Track</div>
+                <div className="text-lg font-bold text-green-600">
+                  {rawJobCards.filter(jc => (jc.status || '').toLowerCase() === 'in-progress' && jc.actual_hours <= jc.expected_hours).length}
+                </div>
+                <div className="text-gray-500 mt-1">Within expected duration</div>
+              </div>
+              <div className="bg-white p-3 rounded border border-green-100">
+                <div className="text-gray-600 font-semibold mb-1">Completed</div>
+                <div className="text-lg font-bold text-green-600">
+                  {rawJobCards.filter(jc => (jc.status || '').toLowerCase() === 'completed').length}
+                </div>
+                <div className="text-gray-500 mt-1">Successfully finished</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mb-6">
           <div className="flex gap-2 flex-wrap">
             {[

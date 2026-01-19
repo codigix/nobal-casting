@@ -873,7 +873,9 @@ export default function ProductionPlanning() {
                       <th className="px-3 py-2 text-left text-gray-700 font-semibold">Plan ID</th>
                       <th className="px-3 py-2 text-left text-gray-700 font-semibold">Company</th>
                       <th className="px-3 py-2 text-left text-gray-700 font-semibold">Status</th>
+                      <th className="px-3 py-2 text-left text-gray-700 font-semibold">Expected Completion</th>
                       <th className="px-3 py-2 text-left text-gray-700 font-semibold">Production Progress</th>
+                      <th className="px-3 py-2 text-left text-gray-700 font-semibold">Efficiency</th>
                       <th className="px-3 py-2 text-center text-gray-700 font-semibold">Actions</th>
                     </tr>
                   </thead>
@@ -910,6 +912,22 @@ export default function ProductionPlanning() {
                             </span>
                           </td>
                           <td className="px-3 py-2">
+                            <div className="text-xs">
+                              <div className="font-semibold text-gray-900">
+                                {plan.expected_completion_date 
+                                  ? new Date(plan.expected_completion_date).toLocaleDateString() 
+                                  : '-'}
+                              </div>
+                              {plan.expected_completion_date && (
+                                <div className={`text-xs mt-1 font-medium ${
+                                  new Date(plan.expected_completion_date) < new Date() ? 'text-red-600' : 'text-green-600'
+                                }`}>
+                                  {new Date(plan.expected_completion_date) < new Date() ? '⚠️ Overdue' : '✓ On track'}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2">
                             <div className="space-y-1.5">
                               <div className="flex items-center justify-between mb-1">
                                 <div className="flex items-center gap-2">
@@ -931,6 +949,29 @@ export default function ProductionPlanning() {
                                 <div className="truncate">📍 {currentOp}</div>
                                 <div className="text-gray-500">ops: {opsInfo}</div>
                               </div>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="text-xs">
+                              {plan.total_expected_hours && plan.total_actual_hours ? (
+                                <>
+                                  <div className="font-semibold text-gray-900">
+                                    {((plan.total_actual_hours / plan.total_expected_hours) * 100).toFixed(0)}%
+                                  </div>
+                                  <div className={`text-xs mt-1 font-medium ${
+                                    plan.total_actual_hours > plan.total_expected_hours * 1.1 ? 'text-red-600' :
+                                    plan.total_actual_hours > plan.total_expected_hours ? 'text-orange-600' :
+                                    'text-green-600'
+                                  }`}>
+                                    {plan.total_actual_hours > plan.total_expected_hours ? '⚠️ Behind' : '✓ Ahead'}
+                                  </div>
+                                  <div className="text-gray-500 text-xs mt-1">
+                                    {plan.total_actual_hours.toFixed(1)}h / {plan.total_expected_hours.toFixed(1)}h
+                                  </div>
+                                </>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
                             </div>
                           </td>
                           <td className="px-3 py-2">

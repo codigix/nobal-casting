@@ -94,7 +94,7 @@ export default function WorkOrder() {
   }
 
   const handleTrack = (order) => {
-    navigate(`/manufacturing/work-orders/tracking/${order.wo_id}`)
+    navigate(`/manufacturing/job-cards?filter_work_order=${order.wo_id}`)
   }
 
   const getStatusBadge = (status) => {
@@ -214,6 +214,51 @@ export default function WorkOrder() {
           </div>
         </div>
 
+        {!loading && orders.length > 0 && (
+          <div className="mb-4 p-4 rounded-xs bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200">
+            <h3 className="font-semibold text-gray-900 mb-3 text-sm">📊 Scheduling Analyzer</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+              <div className="bg-white p-3 rounded border border-red-100">
+                <div className="text-gray-600 font-semibold mb-1">High Priority</div>
+                <div className="text-lg font-bold text-red-600">
+                  {orders.filter(o => o.priority === 'high' && ['draft', 'planned'].includes(o.status)).length}
+                </div>
+                <div className="text-gray-500 mt-1">Pending execution</div>
+              </div>
+              <div className="bg-white p-3 rounded border border-amber-100">
+                <div className="text-gray-600 font-semibold mb-1">Due This Week</div>
+                <div className="text-lg font-bold text-amber-600">
+                  {orders.filter(o => {
+                    if (!o.planned_end_date) return false
+                    const dueDate = new Date(o.planned_end_date)
+                    const today = new Date()
+                    const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
+                    return dueDate >= today && dueDate <= weekFromNow
+                  }).length}
+                </div>
+                <div className="text-gray-500 mt-1">Urgent attention needed</div>
+              </div>
+              <div className="bg-white p-3 rounded border border-orange-100">
+                <div className="text-gray-600 font-semibold mb-1">Overdue</div>
+                <div className="text-lg font-bold text-orange-600">
+                  {orders.filter(o => {
+                    if (!o.planned_end_date) return false
+                    return new Date(o.planned_end_date) < new Date() && o.status !== 'completed'
+                  }).length}
+                </div>
+                <div className="text-gray-500 mt-1">Delayed orders</div>
+              </div>
+              <div className="bg-white p-3 rounded border border-green-100">
+                <div className="text-gray-600 font-semibold mb-1">On Schedule</div>
+                <div className="text-lg font-bold text-green-600">
+                  {orders.filter(o => o.status === 'completed').length}
+                </div>
+                <div className="text-gray-500 mt-1">Completed successfully</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="bg-white rounded-xs p-3 text-center shadow-sm">
             <div className="text-3xl mb-2">⏳</div>
@@ -225,39 +270,46 @@ export default function WorkOrder() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="px-3 py-2 text-left text-gray-700 font-semibold">WO ID</th>
-                    <th className="px-3 py-2 text-left text-gray-700 font-semibold">Item</th>
-                    <th className="px-3 py-2 text-right text-gray-700 font-semibold">Qty</th>
-                    <th className="px-3 py-2 text-right text-gray-700 font-semibold">Unit Cost</th>
-                    <th className="px-3 py-2 text-right text-gray-700 font-semibold">Total Cost</th>
-                    <th className="px-3 py-2 text-left text-gray-700 font-semibold">Priority</th>
-                    <th className="px-3 py-2 text-left text-gray-700 font-semibold">Due Date</th>
+                    <th className="px-3 py-2 text-left text-gray-700 font-semibold">
+                      <input type="checkbox" className="rounded" />
+                    </th>
+                    <th className="px-3 py-2 text-left text-gray-700 font-semibold">Item To Manufacture</th>
                     <th className="px-3 py-2 text-left text-gray-700 font-semibold">Status</th>
-                    <th className="px-3 py-2 text-center text-gray-700 font-semibold">Actions</th>
+                    <th className="px-3 py-2 text-right text-gray-700 font-semibold">Qty To Manufacture</th>
+                    <th className="px-3 py-2 text-left text-gray-700 font-semibold">Planned Start</th>
+                    <th className="px-3 py-2 text-left text-gray-700 font-semibold">Manufactured</th>
+                    <th className="px-3 py-2 text-left text-gray-700 font-semibold">Process Logs</th>
+                    <th className="px-3 py-2 text-left text-gray-700 font-semibold">ID</th>
+                    <th className="px-3 py-2 text-center text-gray-700 font-semibold">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {orders.map((order, idx) => {
                     const statusConfig = getStatusBadge(order.status)
-                    const priorityConfig = getPriorityBadge(order.priority)
                     return (
                       <tr key={order.wo_id} className={`border-b border-gray-200 hover:bg-gray-50 transition ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                        <td className="px-3 py-2 font-semibold text-gray-900">{order.wo_id}</td>
-                        <td className="px-3 py-2 text-gray-700">{order.item_name || order.item_code}</td>
-                        <td className="px-3 py-2 text-right text-gray-700">{order.qty_to_manufacture || order.quantity}</td>
-                        <td className="px-3 py-2 text-right text-gray-700">₹{(Number(order.unit_cost) || 0).toFixed(0)}</td>
-                        <td className="px-3 py-2 text-right text-gray-700 font-semibold">₹{(Number(order.total_cost) || 0).toFixed(0)}</td>
                         <td className="px-3 py-2">
-                          <span className={`inline-block px-2 py-1 rounded border ${priorityConfig.bg} ${priorityConfig.text} ${priorityConfig.border} border text-xs capitalize`}>
-                            {order.priority}
-                          </span>
+                          <input type="checkbox" className="rounded" />
                         </td>
-                        <td className="px-3 py-2 text-gray-700">{order.planned_end_date ? new Date(order.planned_end_date).toLocaleDateString() : 'N/A'}</td>
+                        <td className="px-3 py-2 text-gray-700">{order.item_name || order.item_code}</td>
                         <td className="px-3 py-2">
                           <span className={`inline-block px-2 py-1 rounded border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} border text-xs capitalize`}>
                             {order.status}
                           </span>
                         </td>
+                        <td className="px-3 py-2 text-right text-gray-700">{order.qty_to_manufacture || order.quantity}</td>
+                        <td className="px-3 py-2 text-gray-700">{order.planned_start_date ? new Date(order.planned_start_date).toLocaleDateString() : 'N/A'}</td>
+                        <td className="px-3 py-2 text-gray-700">{order.planned_end_date ? new Date(order.planned_end_date).toLocaleDateString() : 'N/A'}</td>
+                        <td className="px-3 py-2">
+                          <button
+                            onClick={() => handleTrack(order)}
+                            title="View Process Logs"
+                            className="p-1 hover:bg-blue-50 rounded transition"
+                          >
+                            <Eye size={14} className="text-blue-600" />
+                          </button>
+                        </td>
+                        <td className="px-3 py-2 font-semibold text-gray-900">{order.wo_id}</td>
                         <td className="px-3 py-2">
                           <div className="flex gap-1 justify-center">
                             <button
@@ -276,13 +328,6 @@ export default function WorkOrder() {
                                 <Edit2 size={14} className="text-amber-600" />
                               </button>
                             )}
-                            <button
-                              onClick={() => handleTrack(order)}
-                              title="Track"
-                              className="p-1 hover:bg-green-50 rounded transition"
-                            >
-                              <Truck size={14} className="text-green-600" />
-                            </button>
                             <button 
                               onClick={() => handleDelete(order.wo_id)} 
                               title="Delete"

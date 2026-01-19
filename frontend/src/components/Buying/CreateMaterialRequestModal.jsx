@@ -45,7 +45,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
   const fetchItems = async () => {
     try {
       const response = await api.get('/items?limit=1000')
-      const itemsData = response.data.data || []
+      const itemsData = response.data.data || response.data || []
       setItems(itemsData)
       return itemsData
     } catch (err) {
@@ -56,21 +56,11 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
 
   const fetchStockItems = async (itemsData = null) => {
     try {
-      const allItems = itemsData && itemsData.length > 0 ? itemsData : items
-      const response = await api.get('/stock/stock-balance')
-      const balances = response.data.data || response.data || []
-      
-      const uniqueItemCodes = new Set()
-      balances.forEach(balance => {
-        if (balance.item_code && (balance.available_qty || 0) > 0) {
-          uniqueItemCodes.add(balance.item_code)
-        }
-      })
-
-      const itemsWithStock = allItems.filter(item => uniqueItemCodes.has(item.item_code))
-      setStockItems(itemsWithStock)
+      const response = await api.get('/items?item_type=Raw Material&limit=1000')
+      const rawMaterials = response.data.data || response.data || []
+      setStockItems(rawMaterials.length > 0 ? rawMaterials : (itemsData || items))
     } catch (err) {
-      console.error('Failed to fetch stock items:', err)
+      console.error('Failed to fetch raw materials:', err)
       setStockItems(itemsData || items)
     }
   }

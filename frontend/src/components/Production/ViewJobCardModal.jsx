@@ -153,6 +153,52 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
           </div>
 
           {timeLogs.length > 0 && (
+            (() => {
+              const totalActualMinutes = timeLogs.reduce((sum, log) => {
+                if (log.from_time && log.to_time) {
+                  const [fh, fm] = log.from_time.split(':').map(Number)
+                  const [th, tm] = log.to_time.split(':').map(Number)
+                  return sum + Math.max(0, (th * 60 + tm) - (fh * 60 + fm))
+                }
+                return sum
+              }, 0)
+              const totalActualHours = (totalActualMinutes / 60).toFixed(2)
+              const totalRejectedQty = Array.isArray(rejections) ? rejections.reduce((sum, r) => sum + (Number(r.rejected_qty) || 0), 0) : 0
+              const totalDowntimeMinutes = Array.isArray(downtimes) ? downtimes.reduce((sum, dt) => sum + (Number(dt.duration_minutes) || 0), 0) : 0
+              
+              return (
+                <div className="mb-5 p-4 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-xs">
+                  <label className="block text-xs font-semibold text-gray-700 mb-3">⏱️ Performance Metrics</label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-white p-3 rounded border border-blue-100">
+                      <div className="text-gray-600 text-xs font-semibold mb-1">Actual Duration</div>
+                      <div className="text-lg font-bold text-blue-600">{totalActualHours}h</div>
+                      <div className="text-gray-500 text-xs mt-1">{totalActualMinutes} minutes</div>
+                    </div>
+                    <div className="bg-white p-3 rounded border border-green-100">
+                      <div className="text-gray-600 text-xs font-semibold mb-1">Downtime</div>
+                      <div className="text-lg font-bold text-orange-600">{totalDowntimeMinutes}m</div>
+                      <div className="text-gray-500 text-xs mt-1">Total inactive time</div>
+                    </div>
+                    <div className="bg-white p-3 rounded border border-red-100">
+                      <div className="text-gray-600 text-xs font-semibold mb-1">Rejections</div>
+                      <div className="text-lg font-bold text-red-600">{Number(totalRejectedQty).toFixed(2)}</div>
+                      <div className="text-gray-500 text-xs mt-1">Units rejected</div>
+                    </div>
+                    <div className={`bg-white p-3 rounded border ${jobCard?.status === 'completed' ? 'border-green-100' : 'border-amber-100'}`}>
+                      <div className="text-gray-600 text-xs font-semibold mb-1">Status</div>
+                      <div className={`text-lg font-bold ${jobCard?.status === 'completed' ? 'text-green-600' : jobCard?.status === 'in-progress' ? 'text-blue-600' : 'text-gray-600'}`}>
+                        {jobCard?.status?.replace('-', ' ').toUpperCase()}
+                      </div>
+                      <div className="text-gray-500 text-xs mt-1">Job card status</div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()
+          )}
+
+          {timeLogs.length > 0 && (
             <div className="mb-5">
               <label className="block text-xs font-semibold text-gray-600 mb-2">Time Logs ({timeLogs.length})</label>
               <div className="">
