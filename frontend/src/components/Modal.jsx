@@ -7,35 +7,38 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
   const sizes = {
     sm: 'max-w-sm',
     md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
-    '2xl': 'max-w-2xl',
-    '3xl': 'max-w-3xl',
+    lg: 'max-w-xl', // Increased for better layout
+    xl: 'max-w-2xl',
+    '2xl': 'max-w-4xl',
+    '3xl': 'max-w-4xl',
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[999] p-2" onClick={onClose}>
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center z-[999] p-4" onClick={onClose}>
       <div 
-        className={`bg-white rounded-xs shadow-lg ${sizes[size]} w-full flex flex-col max-h-[90vh]`}
+        className={`bg-white rounded shadow-2xl ${sizes[size]} w-full flex flex-col max-h-[30pc]   overflow-hidden animate-in fade-in zoom-in-95 duration-200`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex-shrink-0 flex items-center justify-between p-2 border-b border-neutral-200">
-          <h3 className="text-lg font-semibold">{title}</h3>
+        {/* Header */}
+        <div className="flex-shrink-0 flex items-center justify-between">
+          <h3 className="text-xs text-slate-900 text-xs">{title}</h3>
           <button
             onClick={onClose}
-            className="text-neutral-500 hover:text-neutral-700 text-2xl leading-none"
+            className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded transition-all"
             aria-label="Close modal"
           >
-            ×
+            <X size={18} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2">
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-3 scrollbar-hide">
           {children}
         </div>
 
+        {/* Optional Footer */}
         {footer && (
-          <div className="flex-shrink-0 p-2 border-t border-neutral-200 flex justify-end gap-3">
+          <div className="flex-shrink-0 p-2 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
             {footer}
           </div>
         )}

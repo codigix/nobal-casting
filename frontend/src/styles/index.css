@@ -10,7 +10,7 @@
   }
 
   h1 {
-    @apply text-xl font-bold text-[var(--text-primary)];
+    @apply text-xl  text-[var(--text-primary)];
   }
 
   h2 {
@@ -38,7 +38,7 @@
 /* Component layer customizations */
 @layer components {
   .btn {
-    @apply px-4 py-2.5 rounded-sm font-semibold transition-all duration-200 cursor-pointer text-xs inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply p-2.5 rounded-sm font-semibold transition-all duration-200 cursor-pointer text-xs inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-primary {
@@ -46,7 +46,7 @@
   }
 
   .btn-secondary {
-    @apply btn bg-[var(--neutral-300)] text-[var(--text-primary)] hover:bg-[var(--neutral-400)] shadow-sm;
+    @apply btn bg-[var(--neutral-300)] text-[var(--text-primary)] hover:bg-[var(--neutral-400)] ;
   }
 
   .btn-success {
@@ -70,15 +70,15 @@
   }
 
   .btn-lg {
-    @apply px-6 py-3 text-lg;
+    @apply p-6  py-2 text-lg;
   }
 
   .input-base {
-    @apply w-full px-4 py-2.5 border border-[var(--input-border)] rounded-xs text-base text-[var(--input-text)] bg-[var(--input-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-500)] focus:border-transparent;
+    @apply w-full p-2.5 border border-[var(--input-border)] rounded-xs text-base text-[var(--input-text)] bg-[var(--input-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--primary-500)] focus:border-[var(--primary-500)];
   }
 
   .card {
-    @apply bg-[var(--card-bg)] rounded-xl shadow-md p-6 border border-[var(--card-border)];
+    @apply bg-[var(--card-bg)] rounded-md shadow-md p-3   border border-[var(--card-border)];
   }
 
   .card-hover {
@@ -133,11 +133,11 @@
   }
 
   .form-row {
-    @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+    @apply grid grid-cols-1 md:grid-cols-2 gap-3;
   }
 
   .alert {
-    @apply px-5 py-4 rounded-xs text-xs font-medium border;
+    @apply p-2  rounded-xs text-xs font-medium border;
   }
 
   .alert-content {
@@ -206,7 +206,7 @@
   }
 
   .glass-effect {
-    @apply backdrop-blur-md bg-white/10 border border-white/20 rounded-xl;
+    @apply backdrop-blur-md bg-white/10 border border-white/20 rounded-md;
   }
 
   .gradient-primary {
@@ -234,7 +234,7 @@
   }
 
   .shadow-elevation-2 {
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--);
   }
 
   .shadow-elevation-3 {
@@ -252,4 +252,9 @@
   .border-subtle {
     @apply border-[var(--border-color)];
   }
+}
+
+
+input:focus, textarea:focus, select:focus {
+    outline: none;
 }

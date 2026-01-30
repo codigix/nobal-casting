@@ -1,5 +1,7 @@
 import GRNRequestModel from '../models/GRNRequestModel.js'
 import StockEntryModel from '../models/StockEntryModel.js'
+import { PurchaseOrderModel } from '../models/PurchaseOrderModel.js'
+import { MaterialRequestModel } from '../models/MaterialRequestModel.js'
 
 export const generateGRNNo = async (req, res) => {
   try {
@@ -49,7 +51,10 @@ export const qcApproveGRN = async (req, res) => {
 
 export const createGRNRequest = async (req, res) => {
   try {
-    const { grn_no, po_no, supplier_id, supplier_name, receipt_date, items, notes } = req.body
+    const { 
+      grn_no, po_no, supplier_id, supplier_name, receipt_date, items, notes,
+      material_request_id, department, purpose
+    } = req.body
     const userId = req.user?.id || 1
 
     if (!grn_no || !items || items.length === 0) {
@@ -64,7 +69,10 @@ export const createGRNRequest = async (req, res) => {
       receipt_date,
       created_by: userId,
       items,
-      notes
+      notes,
+      material_request_id,
+      department,
+      purpose
     })
 
     const approvedItems = grnRequest.items.map(item => ({
@@ -275,11 +283,37 @@ export const inventoryApproveGRN = async (req, res) => {
 
     const updatedGRN = await GRNRequestModel.inventoryApprove(grnId, userId)
 
+    // Update Purchase Order status and received quantities
+    if (updatedGRN.po_no) {
+      try {
+        const poModel = new PurchaseOrderModel(db)
+        await poModel.updateReceivedQty(updatedGRN.po_no, updatedGRN.items || [])
+      } catch (poErr) {
+        console.error(`Error updating PO status for ${updatedGRN.po_no}:`, poErr)
+        // Non-blocking error, we still approved the GRN
+      }
+    }
+
     if (updatedGRN.material_request_id) {
-      await db.query(
-        `UPDATE material_request SET status = 'approved' WHERE mr_id = ?`,
-        [updatedGRN.material_request_id]
-      )
+      // For purchase purpose, mark as completed
+      // For material_issue/transfer, leave as is (so user can manually authorize the issue)
+      if (updatedGRN.purpose === 'purchase') {
+        await db.query(
+          `UPDATE material_request SET status = 'completed' WHERE mr_id = ?`,
+          [updatedGRN.material_request_id]
+        )
+      }
+
+      // Notify requester that materials have arrived
+      try {
+        const mr = await MaterialRequestModel.getById(db, updatedGRN.material_request_id)
+        if (mr) {
+          await MaterialRequestModel.createNotifications(db, mr, 'MATERIAL_ARRIVED', mr.department)
+          console.log(`[Notification] Material arrival alert sent for MR ${mr.mr_id}`)
+        }
+      } catch (notifErr) {
+        console.error('Failed to send material arrival notification:', notifErr.message)
+      }
     }
 
     const stockEntryItems = []

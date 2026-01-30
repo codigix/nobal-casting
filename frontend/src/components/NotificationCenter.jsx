@@ -116,7 +116,8 @@ export default function NotificationCenter() {
       'LOW_STOCK': '#dc2626',
       'MATERIAL_REQUEST_NEW': '#0ea5e9',
       'MATERIAL_REQUEST_APPROVED': '#10b981',
-      'MATERIAL_REQUEST_REJECTED': '#dc2626'
+      'MATERIAL_REQUEST_REJECTED': '#dc2626',
+      'MATERIAL_ARRIVED': '#10b981'
     }
     return colorMap[type] || '#6b7280'
   }
@@ -130,7 +131,8 @@ export default function NotificationCenter() {
       'LOW_STOCK': '⚠️',
       'MATERIAL_REQUEST_NEW': '📋',
       'MATERIAL_REQUEST_APPROVED': '✔️',
-      'MATERIAL_REQUEST_REJECTED': '❌'
+      'MATERIAL_REQUEST_REJECTED': '❌',
+      'MATERIAL_ARRIVED': '📦'
     }
     return iconMap[type] || '🔔'
   }

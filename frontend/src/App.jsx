@@ -14,7 +14,10 @@ import {
   ItemForm,
   ItemGroups,
   GRNRequestDetail,
-  MaterialRequests
+  MaterialRequests,
+  PurchaseOrders,
+  PurchaseOrderForm,
+  PurchaseOrderDetail
 } from './pages/Buying'
 
 import {
@@ -42,7 +45,9 @@ import {
   BOMForm,
   Customers,
   Operations,
+  OperationsRedesign,
   OperationForm,
+  OperationFormRedesign,
   Workstations,
   WorkstationForm
 } from './pages/Production'
@@ -53,7 +58,7 @@ import {
 } from './pages/Selling'
 
 import './App.css'
-import { ProjectAnalysis, MachineAnalysis, CustomerStatistics, OEE, EmployeesDesignations, AdminPanel } from './pages/Admin'
+import { ProjectAnalysis, MachineAnalysis, CustomerStatistics, OEE, OEERedesign, EmployeesDesignations, AdminPanel } from './pages/Admin'
 
 function App() {
   return (
@@ -243,6 +248,61 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* Purchase Orders */}
+            <Route
+              path="/buying/purchase-orders"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['inventory', 'admin']}>
+                      <PurchaseOrders />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/buying/purchase-orders/new"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['inventory', 'admin']}>
+                      <PurchaseOrderForm />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/buying/purchase-orders/:po_no"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['inventory', 'admin']}>
+                      <PurchaseOrderDetail />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/buying/purchase-orders/:po_no/edit"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['inventory', 'admin']}>
+                      <PurchaseOrderForm />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+
 
             {/* ========================== */}
             {/* MANUFACTURING DEPARTMENT */}
@@ -579,7 +639,7 @@ function App() {
                 <ProtectedRoute>
                   <DepartmentLayout>
                     <DepartmentProtectedRoute departments={['manufacturing', 'admin']}>
-                      <Operations />
+                      <OperationsRedesign />
                     </DepartmentProtectedRoute>
                   </DepartmentLayout>
                 </ProtectedRoute>
@@ -592,7 +652,7 @@ function App() {
                 <ProtectedRoute>
                   <DepartmentLayout>
                     <DepartmentProtectedRoute departments={['manufacturing', 'admin']}>
-                      <OperationForm />
+                      <OperationFormRedesign />
                     </DepartmentProtectedRoute>
                   </DepartmentLayout>
                 </ProtectedRoute>
@@ -605,7 +665,7 @@ function App() {
                 <ProtectedRoute>
                   <DepartmentLayout>
                     <DepartmentProtectedRoute departments={['manufacturing', 'admin']}>
-                      <OperationForm />
+                      <OperationFormRedesign />
                     </DepartmentProtectedRoute>
                   </DepartmentLayout>
                 </ProtectedRoute>
@@ -680,6 +740,20 @@ function App() {
                   <DepartmentLayout>
                     <DepartmentProtectedRoute departments={['admin']}>
                       <OEE />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* OEE Redesign (Aliased) */}
+            <Route
+              path="/admin/oeeredesign"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['admin']}>
+                      <OEERedesign />
                     </DepartmentProtectedRoute>
                   </DepartmentLayout>
                 </ProtectedRoute>

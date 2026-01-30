@@ -117,7 +117,8 @@ export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editing
       
       const ops = (woData.operations || []).map(op => ({
         label: op.operation_name || op.operation || '',
-        value: op.operation_name || op.operation || ''
+        value: op.operation_name || op.operation || '',
+        sequence: op.sequence || op.operation_sequence || 0
       }))
       
       setOperations(ops)
@@ -152,6 +153,7 @@ export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editing
         machine_id: formData.machine_id,
         operator_id: formData.operator_id || null,
         operation: formData.operation || null,
+        operation_sequence: formData.operation_sequence,
         planned_quantity: parseFloat(formData.quantity),
         scheduled_start_date: formData.start_date,
         scheduled_end_date: formData.end_date,
@@ -171,6 +173,7 @@ export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editing
         machine_id: '',
         operator_id: '',
         operation: '',
+        operation_sequence: null,
         quantity: '100',
         start_date: new Date().toISOString().split('T')[0],
         end_date: '',
@@ -250,7 +253,14 @@ export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editing
             <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '0.9rem' }}>Operation</label>
             <SearchableSelect
               value={formData.operation}
-              onChange={(value) => setFormData(prev => ({ ...prev, operation: value }))}
+              onChange={(value) => {
+                const selectedOp = operations.find(op => op.value === value)
+                setFormData(prev => ({ 
+                  ...prev, 
+                  operation: value,
+                  operation_sequence: selectedOp?.sequence || null
+                }))
+              }}
               options={operations.length > 0 ? operations : [{ value: '', label: 'Select Work Order first' }]}
               placeholder="Select Operation from Work Order"
               isClearable={true}

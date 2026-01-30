@@ -99,6 +99,11 @@ export const updateBOM = async (bom_id, data) => {
   return response.data
 }
 
+export const syncBOMStatuses = async () => {
+  const response = await api.post('/production/boms/sync-statuses')
+  return response.data
+}
+
 export const deleteBOM = async (bom_id) => {
   const response = await api.delete(`/production/boms/${bom_id}`)
   return response.data
@@ -202,6 +207,11 @@ export const getUOMList = async () => {
 // Operations
 export const getOperationsList = async () => {
   const response = await api.get('/production/operations')
+  return response.data
+}
+
+export const deleteOperation = async (operation_id) => {
+  const response = await api.delete(`/production/operations/${operation_id}`)
   return response.data
 }
 
@@ -371,7 +381,26 @@ export const getInwardChallans = async (jobCardId) => {
   return response.data
 }
 
-export const updateInwardChallan = async (id, data) => {
-  const response = await api.put(`/production/inward-challans/${id}`, data)
+// OEE Analytics
+export const getOEEDashboardData = async (filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/oee/dashboard?${params}`)
+  return response.data
+}
+
+export const getMachineOEEMetrics = async (machineId, filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/oee/machine/${machineId}?${params}`)
+  return response.data
+}
+
+export const getMachineHistoricalMetrics = async (machineId, filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/oee/machine/${machineId}/historical-metrics?${params}`)
+  return response.data
+}
+
+export const getItemGroups = async () => {
+  const response = await api.get('/item-groups')
   return response.data
 }

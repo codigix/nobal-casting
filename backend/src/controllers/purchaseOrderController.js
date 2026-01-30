@@ -163,3 +163,28 @@ export async function updateReminderStatus(req, res) {
     res.status(400).json({ success: false, error: error.message })
   }
 }
+
+export async function createFromMaterialRequest(req, res) {
+  try {
+    const db = req.app.locals.db
+    const { mr_id, items, department, purpose } = req.body
+
+    if (!mr_id || !items || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Material Request ID and items are required'
+      })
+    }
+
+    const model = new PurchaseOrderModel(db)
+    const result = await model.createFromMaterialRequest(mr_id, items, department, purpose)
+
+    res.status(201).json({
+      success: true,
+      data: result,
+      message: `Purchase Order ${result.po_no} created from Material Request ${mr_id}`
+    })
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message })
+  }
+}

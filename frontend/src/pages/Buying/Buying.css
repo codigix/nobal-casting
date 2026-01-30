@@ -19,12 +19,6 @@
   gap: var(--spacing-4);
 }
 
-.page-header h2 {
-  margin: 0;
-  font-size: var(--text-3xl);
-  font-weight: var(--font-bold);
-  color: var(--text-primary);
-}
 
 /* Filters Section */
 .filters-section {
@@ -36,7 +30,7 @@
   padding: var(--spacing-6);
   border-radius: var(--radius-xl);
   border: 1px solid var(--card-border);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--);
 }
 
 .filter-group {
@@ -94,7 +88,7 @@
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
   color: var(--text-primary);
-  text-transform: uppercase;
+  text-transform: ;
   letter-spacing: var(--letter-spacing-wide);
 }
 
@@ -176,8 +170,8 @@
 
 .items-section h3,
 .suppliers-section h3 {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-bold);
+  font-size: var(--text-xl );
+  font-weight: var(--);
   margin-bottom: var(--spacing-6);
   color: var(--text-primary);
 }
@@ -430,7 +424,7 @@ button[title]:hover::before {
   border-radius: 4px;
   font-size: 10px;
   font-weight: var(--font-semibold);
-  text-transform: uppercase;
+  text-transform: ;
   letter-spacing: var(--letter-spacing-wide);
 }
 
@@ -465,9 +459,7 @@ button[title]:hover::before {
     align-items: flex-start;
   }
 
-  .page-header h2 {
-    font-size: var(--text-2xl);
-  }
+
 
   .filters-section {
     grid-template-columns: 1fr;
@@ -504,9 +496,7 @@ button[title]:hover::before {
     padding: var(--spacing-3);
   }
 
-  .page-header h2 {
-    font-size: var(--text-xl);
-  }
+ 
 
   .filters-section {
     padding: var(--spacing-3);
@@ -608,7 +598,7 @@ button[title]:hover::before {
   font-weight: var(--font-semibold);
   margin-bottom: var(--spacing-3);
   color: var(--text-primary);
-  text-transform: uppercase;
+  text-transform: ;
   letter-spacing: 0.3px;
 }
 
@@ -655,7 +645,7 @@ button[title]:hover::before {
   font-size: 13px;
   font-weight: var(--font-semibold);
   color: var(--text-primary);
-  text-transform: uppercase;
+  text-transform: ;
   margin-bottom: var(--spacing-3);
   padding-bottom: var(--spacing-2);
   border-bottom: 1px solid var(--border-light);
@@ -754,7 +744,7 @@ button[title]:hover::before {
 .modal-content {
   background: var(--card-bg);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--);
   max-width: 500px;
   width: 90%;
   animation: slideUp 0.3s ease-out;

@@ -23,7 +23,11 @@ export class ProductionPlanningModel {
   async getPlanById(plan_id) {
     try {
       const [plans] = await this.db.execute(
-        `SELECT * FROM production_plan WHERE plan_id = ?`,
+        `SELECT pp.*, i.name as bom_product_name, b.item_code as bom_item_code 
+         FROM production_plan pp
+         LEFT JOIN bom b ON pp.bom_id = b.bom_id
+         LEFT JOIN item i ON b.item_code = i.item_code
+         WHERE pp.plan_id = ?`,
         [plan_id]
       )
       
@@ -32,17 +36,26 @@ export class ProductionPlanningModel {
       const plan = plans[0]
 
       const [fgItems] = await this.db.execute(
-        `SELECT * FROM production_plan_fg WHERE plan_id = ?`,
+        `SELECT pg.*, i.name as item_name 
+         FROM production_plan_fg pg 
+         LEFT JOIN item i ON pg.item_code = i.item_code 
+         WHERE pg.plan_id = ?`,
         [plan_id]
       ).catch(() => [])
 
       const [subAssemblies] = await this.db.execute(
-        `SELECT * FROM production_plan_sub_assembly WHERE plan_id = ?`,
+        `SELECT psa.*, i.name as item_name 
+         FROM production_plan_sub_assembly psa 
+         LEFT JOIN item i ON psa.item_code = i.item_code 
+         WHERE psa.plan_id = ?`,
         [plan_id]
       ).catch(() => [])
 
       const [rawMaterials] = await this.db.execute(
-        `SELECT * FROM production_plan_raw_material WHERE plan_id = ?`,
+        `SELECT prm.*, i.name as item_name 
+         FROM production_plan_raw_material prm 
+         LEFT JOIN item i ON prm.item_code = i.item_code 
+         WHERE prm.plan_id = ?`,
         [plan_id]
       ).catch(() => [])
 
@@ -126,19 +139,29 @@ export class ProductionPlanningModel {
   async getAllPlans() {
     try {
       const [plans] = await this.db.execute(
-        `SELECT * FROM production_plan ORDER BY created_at DESC`
+        `SELECT pp.*, i.name as bom_product_name, b.item_code as bom_item_code 
+         FROM production_plan pp
+         LEFT JOIN bom b ON pp.bom_id = b.bom_id
+         LEFT JOIN item i ON b.item_code = i.item_code
+         ORDER BY pp.created_at DESC`
       )
       
       const plansWithItems = []
       for (const plan of plans) {
         try {
           const [fgItems] = await this.db.execute(
-            `SELECT * FROM production_plan_fg WHERE plan_id = ?`,
+            `SELECT pg.*, i.name as item_name 
+             FROM production_plan_fg pg 
+             LEFT JOIN item i ON pg.item_code = i.item_code 
+             WHERE pg.plan_id = ?`,
             [plan.plan_id]
           ).catch(() => [])
           
           const [rawMaterials] = await this.db.execute(
-            `SELECT * FROM production_plan_raw_material WHERE plan_id = ?`,
+            `SELECT prm.*, i.name as item_name 
+             FROM production_plan_raw_material prm 
+             LEFT JOIN item i ON prm.item_code = i.item_code 
+             WHERE prm.plan_id = ?`,
             [plan.plan_id]
           ).catch(() => [])
           
@@ -179,7 +202,10 @@ export class ProductionPlanningModel {
   async getPlanByItemCode(itemCode) {
     try {
       const [fgItems] = await this.db.execute(
-        `SELECT * FROM production_plan_fg WHERE item_code = ? LIMIT 1`,
+        `SELECT pg.*, i.name as item_name 
+         FROM production_plan_fg pg 
+         LEFT JOIN item i ON pg.item_code = i.item_code 
+         WHERE pg.item_code = ? LIMIT 1`,
         [itemCode]
       ).catch(() => [[], null])
 
@@ -517,7 +543,7 @@ export class ProductionPlanningModel {
          (mr_id, series_no, transition_date, requested_by_id, department, purpose, 
           request_date, required_by_date, target_warehouse, source_warehouse, items_notes, status) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [mr_id, `PLAN-${plan_id}`, null, 'system', 'Production', 'purchase', 
+        [mr_id, `PLAN-${plan_id}`, null, 'system', 'Production', 'material_issue', 
          request_date, null, null, null, `Auto-created from Production Plan: ${plan_id}`, 'draft']
       )
 

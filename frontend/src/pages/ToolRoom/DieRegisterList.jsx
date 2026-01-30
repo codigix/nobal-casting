@@ -106,17 +106,17 @@ const DieRegisterList = () => {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50p-3  ">
       <div className="w-full mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-3">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Die Register</h1>
+            <h1 className="text-xl  text-gray-900">Die Register</h1>
             <p className="text-gray-600 mt-1">Track die lifecycle and usage</p>
           </div>
           <button
             onClick={() => handleOpenModal()}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xs flex items-center gap-2"
+            className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-xs flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
             Add Die
@@ -131,7 +131,7 @@ const DieRegisterList = () => {
 
         {/* Search Bar */}
         <div className="bg-white p-2 rounded-sm shadow mb-6">
-          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded">
+          <div className="flex items-center gap-2 bg-gray-50 p-2 rounded">
             <Search className="w-5 h-5 text-gray-400" />
             <input
               type="text"
@@ -151,13 +151,13 @@ const DieRegisterList = () => {
             <table className="w-full">
               <thead className="bg-gray-100 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Die Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Die Code</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Assigned To</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Usage Count</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Prod Hours</th>
-                  <th className="px-6 py-3 text-center text-xs font-semibold  text-gray-900">Actions</th>
+                  <th className="p-6  py-2 text-left text-xs font-semibold  text-gray-900">Die Name</th>
+                  <th className="p-6  py-2 text-left text-xs font-semibold  text-gray-900">Die Code</th>
+                  <th className="p-6  py-2 text-left text-xs font-semibold  text-gray-900">Assigned To</th>
+                  <th className="p-6  py-2 text-left text-xs font-semibold  text-gray-900">Status</th>
+                  <th className="p-6  py-2 text-left text-xs font-semibold  text-gray-900">Usage Count</th>
+                  <th className="p-6  py-2 text-left text-xs font-semibold  text-gray-900">Prod Hours</th>
+                  <th className="p-6  py-2 text-center text-xs font-semibold  text-gray-900">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -168,7 +168,7 @@ const DieRegisterList = () => {
                       <td className="p-2 text-xs text-gray-600">{die.dieCode}</td>
                       <td className="p-2 text-xs text-gray-600">{die.assignedTo}</td>
                       <td className="p-2">
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                        <span className={`inline-block p-2  py-1 rounded-full text-xs font-medium ${
                           die.status === 'active' ? 'bg-green-100 text-green-800' :
                           die.status === 'rework' ? 'bg-orange-100 text-orange-800' :
                           'bg-gray-100 text-gray-800'
@@ -198,7 +198,7 @@ const DieRegisterList = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className="px-6 py-8 text-center text-gray-500">No dies found</td>
+                    <td colSpan="7" className="p-6  py-8 text-center text-gray-500">No dies found</td>
                   </tr>
                 )}
               </tbody>
@@ -210,16 +210,16 @@ const DieRegisterList = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xs shadow-xl max-w-md w-full mx-4">
-            <div className="flex justify-between items-center p-6 border-b">
-              <h2 className="text-xl font-bold text-gray-900">
+          <div className="bg-white rounded-xs  max-w-md w-full mx-4">
+            <div className="flex justify-between items-centerp-3   border-b">
+              <h2 className="text-xl  text-gray-900">
                 {editingId ? 'Edit Die' : 'Add New Die'}
               </h2>
               <button onClick={handleCloseModal}>
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-96 overflow-y-auto">
+            <form onSubmit={handleSubmit} className="p-3 space-y-4 max-h-96 overflow-y-auto">
               <div>
                 <label className="block text-xs  text-gray-700 mb-1">Die Name *</label>
                 <input
@@ -228,7 +228,7 @@ const DieRegisterList = () => {
                   value={formData.dieName}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-2  py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -239,7 +239,7 @@ const DieRegisterList = () => {
                   value={formData.dieCode}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-2  py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -249,7 +249,7 @@ const DieRegisterList = () => {
                   name="assignedTo"
                   value={formData.assignedTo}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-2  py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -259,7 +259,7 @@ const DieRegisterList = () => {
                   name="usageCount"
                   value={formData.usageCount}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-2  py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -269,7 +269,7 @@ const DieRegisterList = () => {
                   name="productionHours"
                   value={formData.productionHours}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-2  py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -278,7 +278,7 @@ const DieRegisterList = () => {
                   name="status"
                   value={formData.status}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-2  py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="active">Active</option>
                   <option value="rework">Rework</option>
@@ -300,13 +300,13 @@ const DieRegisterList = () => {
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-xs text-gray-700 hover:bg-gray-50"
+                  className="flex-1 p-2 border border-gray-300 rounded-xs text-gray-700 hover:bg-gray-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-xs hover:bg-green-700"
+                  className="flex-1 p-2 bg-green-600 text-white rounded-xs hover:bg-green-700"
                 >
                   {editingId ? 'Update' : 'Create'}
                 </button>

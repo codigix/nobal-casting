@@ -4,6 +4,7 @@ import * as controller from '../controllers/purchaseOrderController.js'
 const router = express.Router()
 
 // CRUD Operations
+router.post('/from-material-request', controller.createFromMaterialRequest)
 router.post('/', controller.createPurchaseOrder)
 router.get('/', controller.listPurchaseOrders)
 router.get('/:po_no', controller.getPurchaseOrder)

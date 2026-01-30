@@ -76,6 +76,9 @@ export class SupplierQuotationModel {
         rfq_id,
         items = [],
         total_value = 0,
+        payment_terms = '',
+        validity_date = null,
+        delivery_lead_time_days = 0,
         created_by = 'system'
       } = quotationData
 
@@ -84,8 +87,8 @@ export class SupplierQuotationModel {
 
       // Insert quotation
       await db.execute(
-        'INSERT INTO supplier_quotation (supplier_quotation_id, supplier_id, rfq_id, quote_date, total_value, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [supplier_quotation_id, supplier_id, rfq_id, quote_date, total_value, 'draft', created_by]
+        'INSERT INTO supplier_quotation (supplier_quotation_id, supplier_id, rfq_id, quote_date, total_value, payment_terms, validity_date, delivery_lead_time_days, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [supplier_quotation_id, supplier_id, rfq_id, quote_date, total_value, payment_terms, validity_date, delivery_lead_time_days, 'draft', created_by]
       )
 
       // Insert items
@@ -280,7 +283,7 @@ export class SupplierQuotationModel {
         `SELECT sq.*, s.name as supplier_name, s.rating 
          FROM supplier_quotation sq 
          LEFT JOIN supplier s ON sq.supplier_id = s.supplier_id 
-         WHERE sq.rfq_id = ? AND sq.status = 'received'
+         WHERE sq.rfq_id = ? AND sq.status IN ('received', 'accepted')
          ORDER BY sq.total_value ASC`,
         [rfqId]
       )
@@ -292,11 +295,20 @@ export class SupplierQuotationModel {
           'SELECT sqi.*, i.name as item_name FROM supplier_quotation_item sqi LEFT JOIN item i ON sqi.item_code = i.item_code WHERE sqi.supplier_quotation_id = ?',
           [q.supplier_quotation_id]
         )
+        
+        // Calculate a score (Lower is better)
+        // Score = Price (Normalized) + Lead Time (Normalized)
+        // This is a simplified version
+        q.score = Number(q.total_value) + (Number(q.delivery_lead_time_days || 0) * 100) 
+        
         quotations.push({
           ...q,
           items
         })
       }
+
+      // Re-sort by score
+      quotations.sort((a, b) => a.score - b.score)
 
       return quotations
     } catch (error) {

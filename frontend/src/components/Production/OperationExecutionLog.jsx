@@ -81,7 +81,7 @@ export default function OperationExecutionLog({ jobCardId }) {
   return (
     <div className="space-y-2">
       {logs.map((log, index) => (
-        <div key={log.id || index} className={`p-3 rounded-xs ${getEventColor(log.event_type)}`}>
+        <div key={log.id || index} className={`p-2 rounded-xs ${getEventColor(log.event_type)}`}>
           <div className="flex items-start gap-3">
             <div className="pt-0.5">
               {getEventIcon(log.event_type)}

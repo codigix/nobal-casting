@@ -155,36 +155,36 @@ export default function OperationForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-3  ">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xs flex items-center justify-center text-white text-xl">
+            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded flex items-center justify-center text-white text-xl">
               ⚙️
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">{id ? 'Edit Operation' : 'Create Operation'}</h1>
-              <p className="text-gray-600">{id ? 'Update operation details' : 'Define a new production operation'}</p>
+              <h1 className="text-xl  text-gray-900">{id ? 'Edit Operation' : 'Create Operation'}</h1>
+              <p className="text-gray-600 font-medium text-xs">{id ? 'Update operation details' : 'Define a new production operation'}</p>
             </div>
           </div>
         </div>
 
         {error && (
-          <div className="mb-6 p-2 bg-red-50 border border-red-200 rounded-xs flex gap-3">
-            <span className="text-2xl">✕</span>
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded flex gap-3">
+            <AlertCircle className="text-red-500" />
             <div className="flex-1">
-              <p className="text-red-800 font-medium">Error</p>
-              <p className="text-red-700 text-xs">{error}</p>
+              <p className="text-red-800 ">Error</p>
+              <p className="text-red-700 text-xs font-medium">{error}</p>
             </div>
           </div>
         )}
         
         {success && (
-          <div className="mb-6 p-2 bg-green-50 border border-green-200 rounded-xs flex gap-3">
-            <span className="text-2xl">✓</span>
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded flex gap-3">
+            <CheckCircle className="text-green-500" />
             <div className="flex-1">
-              <p className="text-green-800 font-medium">Success</p>
-              <p className="text-green-700 text-xs">{success}</p>
+              <p className="text-green-800 ">Success</p>
+              <p className="text-green-700 text-xs font-medium">{success}</p>
             </div>
           </div>
         )}
@@ -192,8 +192,8 @@ export default function OperationForm() {
         <form onSubmit={handleSubmit} className="space-y-6">
           
           {/* Basic Information Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+          <div className="bg-white rounded  border border-gray-200 p-3  ">
+            <h2 className="text-lg  text-gray-900 mb-6 flex items-center gap-2">
               <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center text-blue-600">📋</div>
               Basic Information
             </h2>
@@ -210,7 +210,7 @@ export default function OperationForm() {
                   onChange={handleInputChange}
                   placeholder="e.g., Assembly, Welding, Painting, Machining"
                   required
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  className="w-full p-2.5 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                 />
               </div>
 
@@ -219,7 +219,7 @@ export default function OperationForm() {
                   <label className="block text-xs font-medium text-gray-700 mb-2">Default Workstation</label>
                   <div className="flex gap-2">
                     {!workstationManualEntry ? (
-                      <div className="flex-1 relative">
+                      <div className="flex-1 relative bg-white">
                         <input 
                           type="text" 
                           value={workstationDropdownOpen ? workstationDropdownSearch : (workstations.find(ws => ws.name === formData.default_workstation)?.workstation_name || formData.default_workstation || '')}
@@ -230,7 +230,7 @@ export default function OperationForm() {
                           onFocus={() => setWorkstationDropdownOpen(true)}
                           placeholder="Select workstation"
                           onClick={(e) => {e.stopPropagation(); setWorkstationDropdownOpen(true)}}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                          className="w-full p-2.5 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                         />
                         {workstationDropdownOpen && (
                           <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-xs shadow-lg max-h-60 overflow-y-auto z-50">
@@ -245,7 +245,7 @@ export default function OperationForm() {
                                   setWorkstationDropdownOpen(false)
                                   setWorkstationDropdownSearch('')
                                 }}
-                                className="px-4 py-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition"
+                                className="p-2 border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition"
                               >
                                 <div className="font-medium text-gray-900 text-xs">{ws.name}</div>
                                 <div className="text-xs text-gray-500">{ws.workstation_name || ''}</div>
@@ -255,7 +255,7 @@ export default function OperationForm() {
                               ws.name.toLowerCase().includes(workstationDropdownSearch.toLowerCase()) ||
                               ws.workstation_name.toLowerCase().includes(workstationDropdownSearch.toLowerCase())
                             ).length === 0 && (
-                              <div className="px-4 py-3 text-center text-gray-500 text-xs">No workstations found</div>
+                              <div className="p-2 text-center text-gray-500 text-xs">No workstations found</div>
                             )}
                           </div>
                         )}
@@ -267,7 +267,7 @@ export default function OperationForm() {
                         value={formData.default_workstation} 
                         onChange={handleInputChange} 
                         placeholder="e.g., Lathe, Press" 
-                        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                        className="flex-1 p-2.5 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                       />
                     )}
                     <button 
@@ -277,7 +277,7 @@ export default function OperationForm() {
                         setWorkstationManualEntry(!workstationManualEntry)
                         setWorkstationDropdownOpen(false)
                       }}
-                      className="px-3 py-2.5 border border-gray-300 rounded-xs bg-gray-50 hover:bg-gray-100 transition font-medium text-xs"
+                      className="p-2  py-2.5 border border-gray-300 rounded-xs bg-gray-50 hover:bg-gray-100 transition font-medium text-xs"
                     >
                       {workstationManualEntry ? '📋' : '✏️'}
                     </button>
@@ -302,14 +302,14 @@ export default function OperationForm() {
           </div>
 
           {/* Job Card Settings Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+          <div className="bg-white rounded  border border-gray-200 p-3  ">
+            <h2 className="text-lg  text-gray-900 mb-6 flex items-center gap-2">
               <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center text-purple-600">📊</div>
               Job Card Settings
             </h2>
 
             <div className="space-y-4">
-              <label className="flex items-center gap-3 cursor-pointer group p-3 rounded-xs hover:bg-gray-50 transition">
+              <label className="flex items-center gap-3 cursor-pointer group p-2 rounded hover:bg-gray-50 transition">
                 <input
                   type="checkbox"
                   name="create_job_card_based_on_batch_size"
@@ -321,7 +321,7 @@ export default function OperationForm() {
               </label>
 
               {formData.create_job_card_based_on_batch_size && (
-                <div className="mt-4 p-2 bg-blue-50 rounded-xs border border-blue-100 space-y-4">
+                <div className="mt-4 p-4 bg-blue-50 rounded border border-blue-100 space-y-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-2">
                       Batch Size <span className="text-red-500">*</span>
@@ -333,7 +333,7 @@ export default function OperationForm() {
                       onChange={handleInputChange}
                       min="1"
                       step="1"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                      className="w-full p-2.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                     />
                   </div>
 
@@ -343,7 +343,7 @@ export default function OperationForm() {
                       name="quality_inspection_template"
                       value={formData.quality_inspection_template}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                      className="w-full p-2.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                     >
                       <option value="">Select Template (Optional)</option>
                       {qualityTemplates.map(tpl => (
@@ -357,16 +357,16 @@ export default function OperationForm() {
           </div>
 
           {/* Sub Operations Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded  border border-gray-200 p-3  ">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <h2 className="text-lg  text-gray-900 flex items-center gap-2">
                 <div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center text-green-600">⚡</div>
                 Sub Operations
               </h2>
               <button
                 type="button"
                 onClick={handleAddSubOperation}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xs flex items-center gap-2 font-medium transition"
+                className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xs flex items-center gap-2 font-medium transition"
               >
                 <Plus size={18} /> Add Step
               </button>
@@ -383,26 +383,26 @@ export default function OperationForm() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50">
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 w-12">No.</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Operation Step</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 w-32">Time (hrs)</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 w-16">Action</th>
+                      <th className="p-2 text-left text-xs font-semibold text-gray-700 w-12">No.</th>
+                      <th className="p-2 text-left text-xs font-semibold text-gray-700">Operation Step</th>
+                      <th className="p-2 text-center text-xs font-semibold text-gray-700 w-32">Time (hrs)</th>
+                      <th className="p-2 text-center text-xs font-semibold text-gray-700 w-16">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {subOperations.map((row, idx) => (
                       <tr key={row._key} className="hover:bg-gray-50 transition">
-                        <td className="px-4 py-3 text-center font-semibold text-gray-600">{row.no}</td>
-                        <td className="px-4 py-3">
+                        <td className="p-2 text-center font-semibold text-gray-600">{row.no}</td>
+                        <td className="p-2">
                           <input
                             type="text"
                             value={row.operation}
                             onChange={(e) => handleUpdateSubOperation(idx, 'operation', e.target.value)}
                             placeholder="e.g., Cut, Grind, Weld, Assemble"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-xs"
+                            className="w-full p-2  py-2 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-xs"
                           />
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="p-2">
                           <input
                             type="number"
                             value={row.operation_time}
@@ -410,10 +410,10 @@ export default function OperationForm() {
                             min="0"
                             step="0.1"
                             placeholder="0.0"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-center text-xs"
+                            className="w-full p-2  py-2 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-center text-xs"
                           />
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="p-2 text-center">
                           {subOperations.length > 1 && (
                             <button
                               type="button"
@@ -438,8 +438,8 @@ export default function OperationForm() {
           </div>
 
           {/* Description Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+          <div className="bg-white rounded  border border-gray-200 p-3  ">
+            <h2 className="text-lg  text-gray-900 mb-6 flex items-center gap-2">
               <div className="w-6 h-6 bg-yellow-100 rounded flex items-center justify-center text-yellow-600">📝</div>
               Description & Notes
             </h2>
@@ -451,7 +451,7 @@ export default function OperationForm() {
                 onChange={handleInputChange}
                 placeholder="Detailed description of the operation, process notes, safety guidelines, equipment requirements, etc."
                 rows={6}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none"
+                className="w-full p-2 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none"
               />
             </div>
           </div>
@@ -461,14 +461,14 @@ export default function OperationForm() {
             <button
               type="button"
               onClick={() => navigate('/manufacturing/operations')}
-              className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-xs hover:bg-gray-50 font-medium transition"
+              className="p-6  py-2.5 border border-gray-300 text-gray-700 rounded-xs hover:bg-gray-50 font-medium transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-xs flex items-center gap-2 font-medium transition"
+              className="p-6  py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-xs flex items-center gap-2 font-medium transition"
             >
               <Save size={18} /> {loading ? 'Saving...' : 'Save Operation'}
             </button>

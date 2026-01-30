@@ -88,7 +88,10 @@ export class ProductionPlanningService {
   async getBOMDetails(bomId) {
     try {
       const [boms] = await this.db.execute(
-        'SELECT * FROM bom WHERE bom_id = ?',
+        `SELECT b.*, i.name as product_name 
+         FROM bom b 
+         LEFT JOIN item i ON b.item_code = i.item_code 
+         WHERE b.bom_id = ?`,
         [bomId]
       )
 
@@ -140,7 +143,7 @@ export class ProductionPlanningService {
 
     plan.finished_goods.push({
       item_code: bomData.item_code,
-      item_name: bomData.item_name || bomData.description,
+      item_name: bomData.product_name || bomData.item_name || bomData.description || bomData.item_code,
       planned_qty: fgQuantity,
       status: 'pending'
     })
@@ -382,6 +385,144 @@ export class ProductionPlanningService {
 
       return planId
     } catch (error) {
+      throw error
+    }
+  }
+
+  async createWorkOrdersFromPlan(planId, productionModel, productionPlanningModel) {
+    try {
+      const plan = await productionPlanningModel.getPlanById(planId)
+      if (!plan) throw new Error('Plan not found')
+
+      const createdWorkOrders = []
+
+      // 1. Create Work Orders for Finished Goods
+      if (plan.fg_items && plan.fg_items.length > 0) {
+        for (const item of plan.fg_items) {
+          const wo_id = `WO-FG-${Date.now()}-${item.item_code}`
+          const woData = {
+            wo_id,
+            item_code: item.item_code,
+            quantity: item.planned_qty,
+            status: 'draft',
+            sales_order_id: plan.sales_order_id,
+            bom_no: item.bom_no,
+            planned_start_date: item.planned_start_date || plan.plan_date,
+            notes: `Created from Production Plan: ${planId}`
+          }
+
+          await productionModel.createWorkOrder(woData)
+          
+          // Add items and operations from BOM
+          if (item.bom_no) {
+            const bomDetails = await productionModel.getBOMDetails(item.bom_no)
+            
+            // Add items
+            if (bomDetails && bomDetails.rawMaterials && bomDetails.rawMaterials.length > 0) {
+              for (const rm of bomDetails.rawMaterials) {
+                await productionModel.addWorkOrderItem(wo_id, {
+                  item_code: rm.item_code,
+                  required_qty: rm.qty * item.planned_qty,
+                  source_warehouse: rm.source_warehouse,
+                  sequence: rm.sequence
+                })
+              }
+            } else if (bomDetails && bomDetails.lines && bomDetails.lines.length > 0) {
+              for (const line of bomDetails.lines) {
+                await productionModel.addWorkOrderItem(wo_id, {
+                  item_code: line.component_code,
+                  required_qty: line.quantity * item.planned_qty,
+                  sequence: line.sequence
+                })
+              }
+            }
+
+            // Add operations
+            if (bomDetails && bomDetails.operations && bomDetails.operations.length > 0) {
+              for (const op of bomDetails.operations) {
+                await productionModel.addWorkOrderOperation(wo_id, {
+                  operation_name: op.operation_name,
+                  workstation: op.workstation_type,
+                  operation_time: op.operation_time,
+                  sequence: op.sequence
+                })
+              }
+            }
+          }
+
+          // Generate Job Cards
+          await productionModel.generateJobCardsForWorkOrder(wo_id)
+          
+          createdWorkOrders.push(wo_id)
+        }
+      }
+
+      // 2. Create Work Orders for Sub-Assemblies
+      if (plan.sub_assemblies && plan.sub_assemblies.length > 0) {
+        for (const item of plan.sub_assemblies) {
+          const wo_id = `WO-SA-${Date.now()}-${item.item_code}`
+          const woData = {
+            wo_id,
+            item_code: item.item_code,
+            quantity: item.planned_qty,
+            status: 'draft',
+            bom_no: item.bom_no,
+            planned_start_date: item.schedule_date || plan.plan_date,
+            notes: `Created from Production Plan: ${planId} (Sub-Assembly)`
+          }
+
+          await productionModel.createWorkOrder(woData)
+          
+          // Add items and operations from BOM
+          if (item.bom_no) {
+            const bomDetails = await productionModel.getBOMDetails(item.bom_no)
+            
+            // Add items
+            if (bomDetails && bomDetails.rawMaterials && bomDetails.rawMaterials.length > 0) {
+              for (const rm of bomDetails.rawMaterials) {
+                await productionModel.addWorkOrderItem(wo_id, {
+                  item_code: rm.item_code,
+                  required_qty: rm.qty * item.planned_qty,
+                  source_warehouse: rm.source_warehouse,
+                  sequence: rm.sequence
+                })
+              }
+            } else if (bomDetails && bomDetails.lines && bomDetails.lines.length > 0) {
+              for (const line of bomDetails.lines) {
+                await productionModel.addWorkOrderItem(wo_id, {
+                  item_code: line.component_code,
+                  required_qty: line.quantity * item.planned_qty,
+                  sequence: line.sequence
+                })
+              }
+            }
+
+            // Add operations
+            if (bomDetails && bomDetails.operations && bomDetails.operations.length > 0) {
+              for (const op of bomDetails.operations) {
+                await productionModel.addWorkOrderOperation(wo_id, {
+                  operation_name: op.operation_name,
+                  workstation: op.workstation_type,
+                  operation_time: op.operation_time,
+                  sequence: op.sequence
+                })
+              }
+            }
+          }
+
+          // Generate Job Cards
+          await productionModel.generateJobCardsForWorkOrder(wo_id)
+          
+          createdWorkOrders.push(wo_id)
+        }
+      }
+
+      // 3. Update Plan Status
+      await productionPlanningModel.updatePlanStatus(planId, 'in_progress')
+
+      return createdWorkOrders
+    } catch (error) {
+      console.error('Error in createWorkOrdersFromPlan:', error)
       throw error
     }
   }

@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { Save, X, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react'
+import { 
+  Save, X, ChevronDown, ChevronUp, AlertCircle, 
+  Factory, ChevronRight, Info, Shield, CheckCircle2,
+  Settings, Activity, Calendar, MapPin, Gauge,
+  ArrowLeft, Monitor, ClipboardCheck
+} from 'lucide-react'
+import * as productionService from '../../services/productionService'
+import { useToast } from '../../components/ToastContainer'
 
 const fieldDescriptions = {
   name: 'Unique identifier for the workstation (e.g., WS-001, ASSEMBLY-A1)',
@@ -22,19 +29,12 @@ export default function WorkstationForm() {
   const navigate = useNavigate()
   const { id } = useParams()
   const location = useLocation()
+  const toast = useToast()
+  
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
+  const [initialLoading, setInitialLoading] = useState(!!id)
   const [fieldErrors, setFieldErrors] = useState({})
-  const [expandedSections, setExpandedSections] = useState({
-    basic: true,
-    capacity: true,
-    equipment: true,
-    maintenance: true,
-    operations: false,
-    details: false
-  })
-
+  
   const [formData, setFormData] = useState({
     name: '',
     workstation_name: '',
@@ -48,41 +48,32 @@ export default function WorkstationForm() {
     last_maintenance_date: '',
     assigned_operators: '',
     department: '',
-    is_active: true
+    is_active: true,
+    workstation_type: ''
   })
 
   const [departments, setDepartments] = useState([])
-  const [equipmentTypes] = useState([
-    'CNC Machine',
-    'Assembly Line',
-    'Welding Station',
-    'Drilling Machine',
-    'Lathe Machine',
-    'Grinding Machine',
-    'Inspection Station',
-    'Packing Station',
-    'Testing Equipment',
-    'Other'
-  ])
-  const [maintenanceFrequencies] = useState([
-    'Daily',
-    'Weekly',
-    'Bi-weekly',
-    'Monthly',
-    'Quarterly',
-    'Semi-annually',
-    'Annually',
-    'As needed'
-  ])
+  const equipmentTypes = [
+    'CNC Machine', 'Assembly Line', 'Welding Station', 'Drilling Machine',
+    'Lathe Machine', 'Grinding Machine', 'Inspection Station',
+    'Packing Station', 'Testing Equipment', 'Other'
+  ]
+  const maintenanceFrequencies = [
+    'Daily', 'Weekly', 'Bi-weekly', 'Monthly', 'Quarterly',
+    'Semi-annually', 'Annually', 'As needed'
+  ]
 
   useEffect(() => {
     fetchDepartments()
-    if (id && location.state?.workstation) {
-      setFormData(location.state.workstation)
-    } else if (id) {
-      fetchWorkstationDetails(id)
+    if (id) {
+      if (location.state?.workstation) {
+        setFormData(prev => ({ ...prev, ...location.state.workstation }))
+        setInitialLoading(false)
+      } else {
+        fetchWorkstationDetails(id)
+      }
     }
-  }, [id, location])
+  }, [id])
 
   const fetchDepartments = async () => {
     try {
@@ -101,43 +92,26 @@ export default function WorkstationForm() {
 
   const fetchWorkstationDetails = async (wsId) => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/production/workstations/${wsId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setFormData(prev => ({ ...prev, ...(data.data || data) }))
+      setInitialLoading(true)
+      const response = await productionService.getWorkstationDetails(wsId)
+      if (response.success) {
+        setFormData(prev => ({ ...prev, ...(response.data || response) }))
+      } else {
+        toast.addToast('Failed to load workstation details', 'error')
       }
     } catch (err) {
-      setError('Failed to load workstation details')
-      console.error(err)
+      toast.addToast('Error loading workstation', 'error')
+    } finally {
+      setInitialLoading(false)
     }
-  }
-
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
   }
 
   const validateForm = () => {
     const errors = {}
+    if (!formData.name?.trim()) errors.name = 'Required'
+    if (!formData.workstation_name?.trim()) errors.workstation_name = 'Required'
+    if (formData.capacity_utilization < 0 || formData.capacity_utilization > 100) errors.capacity_utilization = 'Range 0-100'
     
-    if (!formData.name?.trim()) {
-      errors.name = 'Workstation ID is required'
-    }
-    if (!formData.workstation_name?.trim()) {
-      errors.workstation_name = 'Workstation Name is required'
-    }
-    if (formData.capacity_per_hour < 0) {
-      errors.capacity_per_hour = 'Capacity cannot be negative'
-    }
-    if (formData.capacity_utilization < 0 || formData.capacity_utilization > 100) {
-      errors.capacity_utilization = 'Utilization must be between 0-100%'
-    }
-    if (formData.last_maintenance_date && new Date(formData.last_maintenance_date) > new Date()) {
-      errors.last_maintenance_date = 'Maintenance date cannot be in the future'
-    }
-
     setFieldErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -146,330 +120,327 @@ export default function WorkstationForm() {
     const { name, value, type, checked } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' 
-        ? checked 
-        : (name === 'capacity_per_hour' || name === 'capacity_utilization' 
-          ? Math.max(0, parseFloat(value) || 0) 
-          : value)
+      [name]: type === 'checkbox' ? checked : value
     }))
     if (fieldErrors[name]) {
       setFieldErrors(prev => ({ ...prev, [name]: null }))
-    }
-    setError(null)
-  }
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
     }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true)
-    setError(null)
-
     if (!validateForm()) {
-      setLoading(false)
-      setError('Please fix the errors above before submitting')
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      toast.addToast('Please fix the errors in the form', 'warning')
       return
     }
 
+    setLoading(true)
     try {
-      const token = localStorage.getItem('token')
-      
-      const cleanedData = {
-        ...formData,
-        name: formData.name?.trim() || '',
-        workstation_name: formData.workstation_name?.trim() || ''
-      }
+      const response = id 
+        ? await productionService.updateWorkstation(id, formData)
+        : await productionService.createWorkstation(formData)
 
-      console.log('Submitting workstation data:', cleanedData)
-
-      const response = await fetch(
-        id ? `${import.meta.env.VITE_API_URL}/production/workstations/${id}` : `${import.meta.env.VITE_API_URL}/production/workstations`,
-        {
-          method: id ? 'PUT' : 'POST',
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify(cleanedData)
-        }
-      )
-
-      const responseData = await response.json()
-      
-      if (response.ok) {
-        setSuccess('Workstation saved successfully! Redirecting...')
-        setTimeout(() => navigate('/manufacturing/workstations'), 1500)
+      if (response.success) {
+        toast.addToast(`Workstation ${id ? 'updated' : 'registered'} successfully`, 'success')
+        navigate('/manufacturing/workstations')
       } else {
-        throw new Error(responseData.message || `Failed to save workstation (${response.status})`)
+        toast.addToast(response.message || 'Failed to save workstation', 'error')
       }
     } catch (err) {
-      console.error('Submit error:', err)
-      setError(err.message)
+      toast.addToast('An error occurred during saving', 'error')
     } finally {
       setLoading(false)
     }
   }
 
-  const FormSection = ({ title, section, children, icon }) => (
-    <div className="bg-white rounded-xs border border-gray-200 mb-3">
-      <button
-        type="button"
-        onClick={() => toggleSection(section)}
-        className="w-full p-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 flex items-center justify-between hover:from-gray-100 hover:to-gray-150 transition"
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{icon}</span>
-          <h3 className="text-xs font-semibold  text-gray-900">{title}</h3>
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50/50 flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="w-6 h-6  border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+          <p className="text-slate-500 ">Loading workstation details...</p>
         </div>
-        {expandedSections[section] ? (
-          <ChevronUp size={18} className="text-gray-600" />
-        ) : (
-          <ChevronDown size={18} className="text-gray-600" />
-        )}
-      </button>
-      {expandedSections[section] && (
-        <div className="p-4 space-y-4">{children}</div>
-      )}
-    </div>
-  )
-
-  const FormField = ({ label, name, type = 'text', required, options, ...props }) => (
-    <div className={`form-group ${(name === 'name' || name === 'workstation_name') ? 'p-2 bg-blue-50 rounded border border-blue-100' : ''}`}>
-      <label className="block text-xs font-semibold text-gray-700 mb-1">
-        {label}
-        {(required || name === 'name' || name === 'workstation_name') && <span className="text-red-500 ml-1 font-bold">*</span>}
-      </label>
-      {fieldDescriptions[name] && (
-        <p className="text-xs text-gray-500 mb-1.5">{fieldDescriptions[name]}</p>
-      )}
-      {options ? (
-        <select
-          name={name}
-          value={formData[name] || ''}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          className={`w-full px-3 py-2 border rounded text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 ${
-            fieldErrors[name] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-          }`}
-          disabled={id && name === 'name'}
-          {...props}
-        >
-          <option value="">Select {label}</option>
-          {options.map(opt => (
-            <option key={opt} value={opt}>{opt}</option>
-          ))}
-        </select>
-      ) : type === 'checkbox' ? (
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            name={name}
-            checked={formData[name] || false}
-            onChange={handleInputChange}
-            className="w-4 h-4 text-cyan-600 rounded focus:ring-cyan-500"
-            {...props}
-          />
-          <span className="text-xs text-gray-700">Active</span>
-        </label>
-      ) : type === 'textarea' ? (
-        <textarea
-          name={name}
-          value={formData[name] || ''}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          rows={5}
-          className={`w-full px-3 py-2 border rounded text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-vertical ${
-            fieldErrors[name] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-          }`}
-          {...props}
-        />
-      ) : (
-        <input
-          type={type}
-          name={name}
-          value={formData[name] || ''}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          className={`w-full px-3 py-2 border rounded text-xs focus:outline-none focus:ring-2 focus:ring-cyan-500 font-medium ${
-            fieldErrors[name] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-          }`}
-          required={name === 'name' || name === 'workstation_name'}
-          disabled={id && name === 'name'}
-          {...props}
-        />
-      )}
-      {fieldErrors[name] && (
-        <p className="text-xs text-red-500 mt-1 flex items-center gap-1 font-semibold">
-          <AlertCircle size={12} /> {fieldErrors[name]}
-        </p>
-      )}
-    </div>
-  )
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100  px-6 py-6">
-      <div className="">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-10 h-10 rounded-xs bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-white text-xl font-bold shadow-sm">
-                🏭
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">
-                  {id ? 'Edit Workstation' : 'Create Workstation'}
-                </h1>
-                <p className="text-xs text-gray-600 mt-0.5">
-                  {id ? 'Update workstation details and settings' : 'Set up a new manufacturing workstation'}
-                </p>
-              </div>
+    <div className="min-h-screen bg-slate-50/50 p-4 md:p-4">
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate('/manufacturing/workstations')}
+              className="p-2 bg-white border border-slate-200 rounded text-slate-500 hover:text-indigo-600 hover:border-indigo-100 transition-all "
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h1 className="text-xl   text-slate-900 tracking-tight">
+                {id ? 'Edit Workstation' : 'New Workstation'}
+              </h1>
+              <p className="text-xs text-slate-500 font-medium text-xs">
+                {id ? `Configuring ${formData.workstation_name || id}` : 'Register a new manufacturing asset'}
+              </p>
             </div>
           </div>
-        </div>
-
-        {error && (
-          <div className="mb-3 p-3 pl-4 bg-red-50 border-l-4 border-red-400 rounded text-xs text-red-800 flex gap-2">
-            <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-3 p-3 pl-4 bg-green-50 border-l-4 border-green-400 rounded text-xs text-green-800 flex gap-2">
-            <span>✓</span>
-            <span>{success}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Basic Information */}
-          <FormSection title="Basic Information" section="basic" icon="📋">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Workstation ID"
-                name="name"
-                required
-                placeholder="e.g., WS-001"
-              />
-              <FormField
-                label="Workstation Name"
-                name="workstation_name"
-                required
-                placeholder="e.g., Assembly Line 1"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Location"
-                name="location"
-                placeholder="e.g., Building A, Floor 2"
-              />
-              <FormField
-                label="Department"
-                name="department"
-                options={departments.map(d => d.name || d)}
-              />
-            </div>
-          </FormSection>
-
-          {/* Capacity & Performance */}
-          <FormSection title="Capacity & Performance" section="capacity" icon="⚙️">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Capacity (units/hour)"
-                name="capacity_per_hour"
-                type="number"
-                min="0"
-                step="0.1"
-                placeholder="0"
-              />
-              <FormField
-                label="Target Utilization (%)"
-                name="capacity_utilization"
-                type="number"
-                min="0"
-                max="100"
-                step="1"
-                placeholder="80"
-              />
-            </div>
-          </FormSection>
-
-          {/* Equipment Information */}
-          <FormSection title="Equipment Information" section="equipment" icon="🔧">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Equipment Type"
-                name="equipment_type"
-                options={equipmentTypes}
-              />
-              <FormField
-                label="Equipment Code/Reference"
-                name="equipment_code"
-                placeholder="e.g., EQ-12345"
-              />
-            </div>
-          </FormSection>
-
-          {/* Maintenance Schedule */}
-          <FormSection title="Maintenance Schedule" section="maintenance" icon="🛠️">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                label="Maintenance Frequency"
-                name="maintenance_schedule"
-                options={maintenanceFrequencies}
-              />
-              <FormField
-                label="Last Maintenance Date"
-                name="last_maintenance_date"
-                type="date"
-              />
-            </div>
-          </FormSection>
-
-          {/* Operations & Assignment */}
-          <FormSection title="Operations & Assignment" section="operations" icon="👥">
-            <FormField
-              label="Assigned Operators"
-              name="assigned_operators"
-              placeholder="Comma-separated operator names or IDs (e.g., OP-001, OP-002)"
-            />
-          </FormSection>
-
-          {/* Details & Notes */}
-          <FormSection title="Details & Notes" section="details" icon="📝">
-            <FormField
-              label="Description"
-              name="description"
-              type="textarea"
-              placeholder="Detailed description of the workstation, equipment specifications, capabilities, safety procedures, etc."
-            />
-            <FormField
-              label="Active Status"
-              name="is_active"
-              type="checkbox"
-            />
-          </FormSection>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 bg-white rounded-xsp-2 -mx-3 -mb-3">
+          <div className="hidden md:flex items-center gap-3">
             <button
               type="button"
               onClick={() => navigate('/manufacturing/workstations')}
-              className="px-4 py-2 border border-gray-300 rounded-xs text-xs font-semibold text-gray-700 hover:bg-gray-50 transition flex items-center gap-2"
+              className="p-6  py-2.5 rounded text-xs  text-slate-600 hover:bg-slate-100 transition-all"
             >
-              <X size={16} /> Cancel
+              Cancel
             </button>
             <button
-              type="submit"
-              disabled={loading || !formData.name?.trim() || !formData.workstation_name?.trim()}
-              className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xs text-xs font-semibold hover:from-cyan-600 hover:to-cyan-700 transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
-              title={!formData.name?.trim() ? 'Workstation ID is required' : !formData.workstation_name?.trim() ? 'Workstation Name is required' : ''}
+              onClick={handleSubmit}
+              disabled={loading}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white p-2 .5 rounded  text-xs shadow-lg shadow-indigo-200 transition-all disabled:opacity-70"
             >
-              <Save size={16} /> {loading ? 'Saving...' : 'Save Workstation'}
+              {loading ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              ) : (
+                <Save size={18} />
+              )}
+              {id ? 'Update Asset' : 'Register Asset'}
             </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Info */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Identity Section */}
+            <div className="bg-white rounded border border-slate-200  overflow-hidden">
+              <div className="p-2  bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+                <Factory size={18} className="text-indigo-600" />
+                <h3 className="text-xs  text-slate-900 ">Identity & Localization</h3>
+              </div>
+              <div className="p-3 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center px-1">
+                      <label className="text-xs  text-slate-500 ">Workstation ID</label>
+                      {fieldErrors.name && <span className="text-xs  text-rose-500  ">Required</span>}
+                    </div>
+                    <input 
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      disabled={id}
+                      placeholder="e.g. WS-001"
+                      className={`w-full p-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs font-medium text-slate-700 ${id ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center px-1">
+                      <label className="text-xs  text-slate-500 ">Display Name</label>
+                      {fieldErrors.workstation_name && <span className="text-xs  text-rose-500  ">Required</span>}
+                    </div>
+                    <input 
+                      type="text"
+                      name="workstation_name"
+                      value={formData.workstation_name}
+                      onChange={handleInputChange}
+                      placeholder="e.g. Precision Assembly Line"
+                      className="w-full p-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs font-medium text-slate-700"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <label className="text-xs  text-slate-500  ml-1">Building / Area</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <input 
+                        type="text"
+                        name="location"
+                        value={formData.location}
+                        onChange={handleInputChange}
+                        placeholder="e.g. Shop Floor - Zone A"
+                        className="w-full pl-11 pr-4 py-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs font-medium text-slate-700"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs  text-slate-500  ml-1">Responsible Dept</label>
+                    <select
+                      name="department"
+                      value={formData.department}
+                      onChange={handleInputChange}
+                      className="w-full p-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs  text-slate-700 cursor-pointer"
+                    >
+                      <option value="">Select Department</option>
+                      {departments.map(d => (
+                        <option key={d.name || d} value={d.name || d}>{d.name || d}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Technical Specs Section */}
+            <div className="bg-white rounded border border-slate-200  overflow-hidden">
+              <div className="p-2  bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+                <Gauge size={18} className="text-indigo-600" />
+                <h3 className="text-xs  text-slate-900 ">Technical Specifications</h3>
+              </div>
+              <div className="p-3 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <label className="text-xs  text-slate-500  ml-1">Equipment Class</label>
+                    <select
+                      name="workstation_type"
+                      value={formData.workstation_type}
+                      onChange={handleInputChange}
+                      className="w-full p-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs  text-slate-700 cursor-pointer"
+                    >
+                      <option value="">Select Class</option>
+                      {equipmentTypes.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs  text-slate-500  ml-1">Equipment Code</label>
+                    <input 
+                      type="text"
+                      name="equipment_code"
+                      value={formData.equipment_code}
+                      onChange={handleInputChange}
+                      placeholder="Asset Tag / Serial No."
+                      className="w-full p-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs font-medium text-slate-700"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <label className="text-xs  text-slate-500  ml-1">Units / Hour</label>
+                    <input 
+                      type="number"
+                      name="capacity_per_hour"
+                      value={formData.capacity_per_hour}
+                      onChange={handleInputChange}
+                      min="0"
+                      step="0.1"
+                      className="w-full p-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs  text-slate-700"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs  text-slate-500  ml-1">Target Utilization %</label>
+                    <input 
+                      type="number"
+                      name="capacity_utilization"
+                      value={formData.capacity_utilization}
+                      onChange={handleInputChange}
+                      min="0"
+                      max="100"
+                      className="w-full p-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs  text-slate-700"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs  text-slate-500  ml-1">Technical Description</label>
+                  <textarea 
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    rows={4}
+                    placeholder="Provide technical specs, machine capabilities, or safety guidelines..."
+                    className="w-full p-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs font-medium text-slate-700 resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar Info */}
+          <div className="space-y-8">
+            {/* Status Card */}
+            <div className="bg-white rounded border border-slate-200  p-3 space-y-6">
+              <h3 className="text-xs  text-slate-900  border-b border-slate-50 pb-4">Operational Status</h3>
+              
+              <label className="flex items-start gap-4 p-4 rounded bg-slate-50/50 hover:bg-indigo-50/30 transition-colors cursor-pointer group">
+                <div className="mt-1">
+                  <input 
+                    type="checkbox"
+                    name="is_active"
+                    checked={formData.is_active}
+                    onChange={handleInputChange}
+                    className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <span className={`block text-xs   transition-colors ${formData.is_active ? 'text-emerald-600' : 'text-slate-500'}`}>
+                    {formData.is_active ? 'Active Node' : 'Inactive / Maintenance'}
+                  </span>
+                  <span className="text-xs  text-slate-400 font-medium text-xs leading-relaxed">
+                    Determines if work orders can be scheduled to this asset.
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            {/* Maintenance Schedule */}
+            <div className="bg-white rounded border border-slate-200  p-3 space-y-6">
+              <div className="flex items-center gap-2 border-b border-slate-50 pb-4">
+                <ClipboardCheck size={18} className="text-indigo-600" />
+                <h3 className="text-xs  text-slate-900 ">Maintenance</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <div className=".5">
+                  <label className="text-xs  text-slate-400  px-1">Schedule Frequency</label>
+                  <select
+                    name="maintenance_schedule"
+                    value={formData.maintenance_schedule}
+                    onChange={handleInputChange}
+                    className="w-full p-2.5 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 text-xs  text-slate-700 cursor-pointer"
+                  >
+                    {maintenanceFrequencies.map(f => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className=".5">
+                  <label className="text-xs  text-slate-400  px-1">Last Sync Date</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                    <input 
+                      type="date"
+                      name="last_maintenance_date"
+                      value={formData.last_maintenance_date}
+                      onChange={handleInputChange}
+                      className="w-full pl-11 pr-4 py-2.5 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 text-xs  text-slate-700"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile Actions */}
+            <div className="md:hidden flex flex-col gap-3">
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white p-2  rounded  text-xs shadow-lg shadow-indigo-200"
+              >
+                <Save size={18} /> {id ? 'Update' : 'Register'} Asset
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/manufacturing/workstations')}
+                className="w-full p-6  py-2 rounded text-xs  text-slate-600 bg-white border border-slate-200 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </form>
       </div>

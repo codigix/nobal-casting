@@ -50,7 +50,7 @@ async function addWorkstationType() {
       'ASSEMBLY': 'ASSEMBLY MACHINE',
       'BOLT': 'BOLT FITMENT ASSY',
       'KEEPER': 'KEEPER ASSY',
-      'BUFFING': 'BUFFING - MACHINE',
+      'BUFFING': 'Budding - Machin',
       'ENGRAVING': 'ENGRAVING - MACHINE',
       'WS': 'Sample Workstation',
       'ID': 'Inspection Table'

@@ -76,7 +76,7 @@ export default function BuyingAnalytics() {
     <div className="buying-container">
       {/* Header Section */}
       <div className="mb-8">
-        <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">Buying Analytics</h2>
+        <h2 className="text-xl  text-neutral-900 dark:text-neutral-100">Buying Analytics</h2>
         <p className="text-neutral-600 dark:text-neutral-400 mt-1">Real-time insights and performance metrics for procurement</p>
       </div>
 
@@ -91,7 +91,7 @@ export default function BuyingAnalytics() {
                 type="date"
                 value={dateRange.startDate}
                 onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-                className="flex-1 px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
+                className="flex-1 p-2  py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
               />
             </div>
           </div>
@@ -103,7 +103,7 @@ export default function BuyingAnalytics() {
                 type="date"
                 value={dateRange.endDate}
                 onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-                className="flex-1 px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
+                className="flex-1 p-2  py-2 border border-neutral-300 dark:border-neutral-600 rounded-xs text-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
               />
             </div>
           </div>
@@ -111,47 +111,47 @@ export default function BuyingAnalytics() {
       </Card>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white dark:bg-neutral-800 rounded-xs p-6 border-l-4 border-blue-500 shadow-sm hover:shadow-md transition-shadow">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+        <div className="bg-white dark:bg-neutral-800 rounded-xsp-3   border-l-4 border-blue-500  hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs  text-neutral-600 dark:text-neutral-400">Total POs</p>
-              <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">{summary?.purchase_orders?.total_pos || 0}</p>
+              <p className="text-xl  text-neutral-900 dark:text-neutral-100 mt-2">{summary?.purchase_orders?.total_pos || 0}</p>
             </div>
-            <Truck className="w-12 h-12 text-blue-500 opacity-20" />
+            <Truck className="w-6 h-6  text-blue-500 opacity-20" />
           </div>
           <p className="text-green-600 dark:text-green-400 text-xs mt-4 font-medium">✓ {summary?.purchase_orders?.completed_count || 0} Completed</p>
         </div>
 
-        <div className="bg-white dark:bg-neutral-800 rounded-xs p-6 border-l-4 border-green-500 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-white dark:bg-neutral-800 rounded-xsp-3   border-l-4 border-green-500  hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs  text-neutral-600 dark:text-neutral-400">Total PO Value</p>
-              <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">₹{summary?.purchase_orders?.total_value?.toLocaleString() || 0}</p>
+              <p className="text-xl  text-neutral-900 dark:text-neutral-100 mt-2">₹{summary?.purchase_orders?.total_value?.toLocaleString() || 0}</p>
             </div>
-            <DollarSign className="w-12 h-12 text-green-500 opacity-20" />
+            <DollarSign className="w-6 h-6  text-green-500 opacity-20" />
           </div>
           <p className="text-blue-600 dark:text-blue-400 text-xs mt-4 font-medium">Avg: ₹{summary?.purchase_orders?.avg_value?.toLocaleString()}</p>
         </div>
 
-        <div className="bg-white dark:bg-neutral-800 rounded-xs p-6 border-l-4 border-orange-500 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-white dark:bg-neutral-800 rounded-xsp-3   border-l-4 border-orange-500  hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs  text-neutral-600 dark:text-neutral-400">Total Invoices</p>
-              <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">{summary?.invoices?.total_invoices || 0}</p>
+              <p className="text-xl  text-neutral-900 dark:text-neutral-100 mt-2">{summary?.invoices?.total_invoices || 0}</p>
             </div>
-            <FileText className="w-12 h-12 text-orange-500 opacity-20" />
+            <FileText className="w-6 h-6  text-orange-500 opacity-20" />
           </div>
           <p className="text-red-600 dark:text-red-400 text-xs mt-4 font-medium">⚠ ₹{summary?.invoices?.pending_amount?.toLocaleString()} Pending</p>
         </div>
 
-        <div className="bg-white dark:bg-neutral-800 rounded-xs p-6 border-l-4 border-purple-500 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-white dark:bg-neutral-800 rounded-xsp-3   border-l-4 border-purple-500  hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs  text-neutral-600 dark:text-neutral-400">Paid Amount</p>
-              <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mt-2">₹{summary?.invoices?.paid_amount?.toLocaleString() || 0}</p>
+              <p className="text-xl  text-neutral-900 dark:text-neutral-100 mt-2">₹{summary?.invoices?.paid_amount?.toLocaleString() || 0}</p>
             </div>
-            <Package className="w-12 h-12 text-purple-500 opacity-20" />
+            <Package className="w-6 h-6  text-purple-500 opacity-20" />
           </div>
           <p className="text-neutral-600 dark:text-neutral-400 text-xs mt-4 font-medium">{summary?.invoices?.paid_count || 0} Invoices Paid</p>
         </div>
@@ -169,7 +169,7 @@ export default function BuyingAnalytics() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-xs font-medium transition-all whitespace-nowrap ${
+            className={`p-2 rounded-xs font-medium transition-all whitespace-nowrap ${
               activeTab === tab.id
                 ? 'bg-primary-600 text-white shadow-md'
                 : 'bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700'
@@ -184,9 +184,9 @@ export default function BuyingAnalytics() {
       <div className="space-y-6">
         {/* Overview Tab */}
         {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             <Card>
-              <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-6">PO Status Distribution</h3>
+              <h3 className="text-lg  text-neutral-900 dark:text-neutral-100 mb-6">PO Status Distribution</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
@@ -213,7 +213,7 @@ export default function BuyingAnalytics() {
             </Card>
 
             <Card>
-              <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-6">Invoice Status</h3>
+              <h3 className="text-lg  text-neutral-900 dark:text-neutral-100 mb-6">Invoice Status</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
@@ -244,16 +244,16 @@ export default function BuyingAnalytics() {
         {/* Suppliers Tab */}
         {activeTab === 'suppliers' && (
           <Card>
-            <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-6">Top 10 Suppliers by PO Value</h3>
+            <h3 className="text-lg  text-neutral-900 dark:text-neutral-100 mb-6">Top 10 Suppliers by PO Value</h3>
             <div className="">
               <table className="w-full">
                 <thead className="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">Supplier</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">POs</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">Total Value</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">Avg Value</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">Completion Rate</th>
+                    <th className="p-6  py-2 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">Supplier</th>
+                    <th className="p-6  py-2 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">POs</th>
+                    <th className="p-6  py-2 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">Total Value</th>
+                    <th className="p-6  py-2 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">Avg Value</th>
+                    <th className="p-6  py-2 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">Completion Rate</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
@@ -279,7 +279,7 @@ export default function BuyingAnalytics() {
         {/* Trends Tab */}
         {activeTab === 'trends' && (
           <Card>
-            <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-6">PO Trends (Last 30 Days)</h3>
+            <h3 className="text-lg  text-neutral-900 dark:text-neutral-100 mb-6">PO Trends (Last 30 Days)</h3>
             <ResponsiveContainer width="100%" height={400}>
               <LineChart data={poTrends}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -297,16 +297,16 @@ export default function BuyingAnalytics() {
 
         {/* Alerts Tab */}
         {activeTab === 'alerts' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             <Card className="bg-red-50 dark:bg-red-900/10 border-l-4 border-red-500">
               <div className="flex items-center gap-3 mb-6">
                 <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
-                <h3 className="text-lg font-bold text-red-900 dark:text-red-300">Overdue POs ({overduePOs.length})</h3>
+                <h3 className="text-lg  text-red-900 dark:text-red-300">Overdue POs ({overduePOs.length})</h3>
               </div>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {overduePOs.length > 0 ? (
                   overduePOs.map((po) => (
-                    <div key={po.po_id} className="text-xs text-red-800 dark:text-red-200 bg-white dark:bg-neutral-800 p-3 rounded border border-red-100 dark:border-red-800">
+                    <div key={po.po_id} className="text-xs text-red-800 dark:text-red-200 bg-white dark:bg-neutral-800 p-2 rounded border border-red-100 dark:border-red-800">
                       <p className="font-semibold">{po.po_number} - {po.supplier_name}</p>
                       <p>Overdue by {po.days_overdue} days</p>
                       <p className="text-xs">Value: ₹{po.po_value?.toLocaleString()}</p>
@@ -321,12 +321,12 @@ export default function BuyingAnalytics() {
             <Card className="bg-amber-50 dark:bg-amber-900/10 border-l-4 border-amber-500">
               <div className="flex items-center gap-3 mb-6">
                 <Package className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-                <h3 className="text-lg font-bold text-amber-900 dark:text-amber-300">Pending GRNs ({pendingGRNs.length})</h3>
+                <h3 className="text-lg  text-amber-900 dark:text-amber-300">Pending GRNs ({pendingGRNs.length})</h3>
               </div>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {pendingGRNs.length > 0 ? (
                   pendingGRNs.map((grn) => (
-                    <div key={grn.po_id} className="text-xs text-amber-800 dark:text-amber-200 bg-white dark:bg-neutral-800 p-3 rounded border border-amber-100 dark:border-amber-800">
+                    <div key={grn.po_id} className="text-xs text-amber-800 dark:text-amber-200 bg-white dark:bg-neutral-800 p-2 rounded border border-amber-100 dark:border-amber-800">
                       <p className="font-semibold">{grn.po_number} - {grn.supplier_name}</p>
                       <p>Pending Qty: {grn.pending_qty}</p>
                       <p className="text-xs">Value: ₹{grn.po_value?.toLocaleString()}</p>
@@ -343,7 +343,7 @@ export default function BuyingAnalytics() {
         {/* Aging Analysis Tab */}
         {activeTab === 'aging' && (
           <Card>
-            <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-6">Invoice Aging Analysis</h3>
+            <h3 className="text-lg  text-neutral-900 dark:text-neutral-100 mb-6">Invoice Aging Analysis</h3>
             <ResponsiveContainer width="100%" height={400}>
               <BarChart
                 data={[
@@ -363,19 +363,19 @@ export default function BuyingAnalytics() {
             <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">Current (0-30)</p>
-                <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.current?.toLocaleString() || 0}</p>
+                <p className="text-xl  text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.current?.toLocaleString() || 0}</p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">30-60 Days</p>
-                <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.thirty_to_sixty?.toLocaleString() || 0}</p>
+                <p className="text-xl  text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.thirty_to_sixty?.toLocaleString() || 0}</p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">60-90 Days</p>
-                <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.sixty_to_ninety?.toLocaleString() || 0}</p>
+                <p className="text-xl  text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.sixty_to_ninety?.toLocaleString() || 0}</p>
               </div>
               <div className="text-center">
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">90+ Days</p>
-                <p className="text-xl font-bold text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.above_ninety?.toLocaleString() || 0}</p>
+                <p className="text-xl  text-neutral-900 dark:text-neutral-100">₹{agingAnalysis?.above_ninety?.toLocaleString() || 0}</p>
               </div>
             </div>
           </Card>

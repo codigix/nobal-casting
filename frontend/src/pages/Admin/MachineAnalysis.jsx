@@ -1,6 +1,19 @@
-import React, { useState, useEffect } from 'react'
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts'
-import { AlertTriangle, Zap, Eye, X, Factory, BarChart3, TrendingUp, Clipboard, Rocket, Wrench, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
+import React, { useState, useEffect, useMemo } from 'react'
+import { 
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, 
+  CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
+  LineChart, Line, AreaChart, Area 
+} from 'recharts'
+import { 
+  AlertTriangle, Zap, Eye, X, Factory, BarChart3, 
+  TrendingUp, Clipboard, Rocket, Wrench, Calendar, 
+  ChevronLeft, ChevronRight, Activity, Clock, 
+  CheckCircle2, Monitor, RefreshCw, ArrowUpRight, ArrowDownRight,
+  PieChart as PieIcon
+} from 'lucide-react'
+import { getOEEDashboardData, getMachineHistoricalMetrics } from '../../services/productionService'
+
+const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4']
 
 const DetailModal = ({ isOpen, machine, onClose }) => {
   const [historyLoading, setHistoryLoading] = useState(false)
@@ -18,25 +31,12 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
   const fetchHistoricalMetrics = async () => {
     try {
       setHistoryLoading(true)
-      const url = `${import.meta.env.VITE_API_URL}/machines/${machine.id}/historical-metrics`
-      console.log('[DetailModal] Fetching from:', url)
-      const response = await fetch(url)
-      console.log('[DetailModal] Response status:', response.status)
-      
-      const data = await response.json()
-      console.log('[DetailModal] Response data:', data)
+      const data = await getMachineHistoricalMetrics(machine.id)
       
       if (data.success && data.data) {
-        console.log('[DetailModal] Data received:', {
-          daily: data.data.daily?.length || 0,
-          weekly: data.data.weekly?.length || 0,
-          monthly: data.data.monthly?.length || 0,
-          yearly: data.data.yearly?.length || 0
-        })
         setHistoryData(data.data || { daily: [], weekly: [], monthly: [], yearly: [] })
         setError(null)
       } else {
-        console.warn('[DetailModal] API response not successful:', data)
         setError('API returned unsuccessful response')
       }
     } catch (error) {
@@ -50,268 +50,137 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
   if (!isOpen || !machine) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]p-2">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-gradient-to-r from-slate-900 to-slate-800 p-6 flex items-center justify-between text-white z-10">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+      <div className="bg-white rounded shadow-2xl max-w-5xl w-full  overflow-hidden flex flex-col">
+        <div className="bg-slate-900 p-2 flex items-center justify-between text-white">
           <div>
-            <h2 className="text-xl font-bold m-0">{machine.name}</h2>
-            <p className="text-slate-300 text-xs mt-1 m-0">Machine ID: {machine.id}</p>
+            <h2 className="text-xl  m-0 flex items-center gap-2">
+              <Monitor size={20} className="text-blue-400" />
+              {machine.name}
+            </h2>
+            <p className="text-slate-400 text-xs mt-1 m-0">Machine ID: {machine.id} • {machine.workstationType}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-700 rounded-xs transition-colors"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded transition-colors">
             <X size={24} />
           </button>
         </div>
 
-        <div className="p-3">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-            <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-              <p className="text-xs font-semibold text-blue-900 uppercase mb-2 m-0">Efficiency</p>
-              <p className="text-xl font-bold text-blue-700 m-0">{machine.efficiencyPercentage}%</p>
-              <p className="text-xs text-slate-600 mt-2">Overall efficiency</p>
+        <div className="flex-1 overflow-y-auto p-3">
+          {/* Machine KPIs */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
+            {[
+              { label: 'Availability', value: machine.availability, color: 'indigo' },
+              { label: 'Performance', value: machine.performance, color: 'blue' },
+              { label: 'Quality', value: machine.quality, color: 'emerald' },
+              { label: 'OEE', value: machine.oee, color: 'orange' }
+            ].map((kpi) => (
+              <div key={kpi.label} className={`bg-${kpi.color}-50 rounded p-4 border border-${kpi.color}-100`}>
+                <p className="text-xs   text-slate-500  mb-1 m-0">{kpi.label}</p>
+                <p className={`text-xl   text-${kpi.color}-700 m-0`}>{kpi.value}%</p>
+                <div className="w-full h-1.5 bg-white rounded-full mt-3 overflow-hidden">
+                  <div 
+                    className={`h-full bg-${kpi.color}-500 rounded-full transition-all duration-1000`} 
+                    style={{ width: `${kpi.value}%` }} 
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+            <div className="bg-slate-50 rounded p-4 border border-slate-200">
+              <p className="text-xs   text-slate-500  mb-1 m-0">Uptime</p>
+              <p className="text-xl  text-slate-900 m-0">{machine.uptimeHours}h</p>
             </div>
-            <div className="bg-green-50 rounded-xl p-6 border border-green-200">
-              <p className="text-xs font-semibold text-green-900 uppercase mb-2 m-0">Uptime</p>
-              <p className="text-xl font-bold text-green-700 m-0">{machine.uptimeHours}h</p>
-              <p className="text-xs text-slate-600 mt-2">Total uptime hours</p>
+            <div className="bg-slate-50 rounded p-4 border border-slate-200">
+              <p className="text-xs   text-slate-500  mb-1 m-0">Allocation</p>
+              <p className="text-xl  text-slate-900 m-0">{machine.allocation}h</p>
             </div>
-            <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
-              <p className="text-xs font-semibold text-purple-900 uppercase mb-2 m-0">Allocation</p>
-              <p className="text-xl font-bold text-purple-700 m-0">{machine.allocation}h</p>
-              <p className="text-xs text-slate-600 mt-2">Allocation time (hrs)</p>
+            <div className="bg-amber-50 rounded p-4 border border-amber-200">
+              <p className="text-xs   text-amber-900  mb-1 m-0">Downtime</p>
+              <p className="text-xl  text-amber-700 m-0">{machine.downtime}h</p>
             </div>
-            <div className="bg-amber-50 rounded-xl p-6 border border-amber-200">
-              <p className="text-xs font-semibold text-amber-900 uppercase mb-2 m-0">Downtime</p>
-              <p className="text-xl font-bold text-amber-700 m-0">{machine.downtime}h</p>
-              <p className="text-xs text-slate-600 mt-2">Total downtime (hrs)</p>
-            </div>
-            <div className="bg-red-50 rounded-xl p-6 border border-red-200">
-              <p className="text-xs font-semibold text-red-900 uppercase mb-2 m-0">Rejection</p>
-              <p className="text-xl font-bold text-red-700 m-0">{machine.rejectionRate}%</p>
-              <p className="text-xs text-slate-600 mt-2">Rejection rate</p>
+            <div className="bg-rose-50 rounded p-4 border border-rose-200">
+              <p className="text-xs   text-rose-900  mb-1 m-0">Rejection</p>
+              <p className="text-xl  text-rose-700 m-0">{machine.rejectionRate}%</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 mb-8">
-            <div className="">
-              <div className="flex items-center gap-2 mb-4">
-                <Calendar size={20} className="text-slate-600" />
-                <h3 className="text-base font-bold text-slate-900 m-0">Historical Performance Metrics</h3>
+          <div className="bg-white rounded border border-slate-200 overflow-hidden ">
+            <div className="bg-slate-50 p-2 border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar size={18} className="text-slate-500" />
+                <h3 className="text-xs  text-slate-900 m-0">Historical Performance</h3>
               </div>
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  onClick={() => setActiveTab('daily')}
-                  className={`px-4 py-2 rounded-xs text-xs font-semibold  transition-colors ${
-                    activeTab === 'daily'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  Daily (30 Days)
-                </button>
-                <button
-                  onClick={() => setActiveTab('weekly')}
-                  className={`px-4 py-2 rounded-xs text-xs font-semibold  transition-colors ${
-                    activeTab === 'weekly'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  Weekly (12 Weeks)
-                </button>
-                <button
-                  onClick={() => setActiveTab('monthly')}
-                  className={`px-4 py-2 rounded-xs text-xs font-semibold  transition-colors ${
-                    activeTab === 'monthly'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  Monthly (12 Months)
-                </button>
-                <button
-                  onClick={() => setActiveTab('yearly')}
-                  className={`px-4 py-2 rounded-xs text-xs font-semibold  transition-colors ${
-                    activeTab === 'yearly'
-                      ? 'bg-amber-600 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  Yearly
-                </button>
+              <div className="flex bg-white rounded p-1 border border-slate-200 gap-1">
+                {['daily', 'weekly', 'monthly'].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`p-2  py-1.5 rounded-md text-xs    transition-all ${
+                      activeTab === tab
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="p-6">
-              {error && (
-                <div className="mb-4p-2 bg-red-50 border border-red-200 rounded-xs">
-                  <p className="text-red-800 text-xs">{error}</p>
+            <div className="p-3 h-[400px]">
+              {error ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <AlertTriangle size={32} className="text-amber-500 mb-2" />
+                  <p className="text-slate-600 text-xs">{error}</p>
                 </div>
-              )}
-              
-              {historyLoading ? (
-                <div className="flex items-center justify-center h-80">
-                  <div className="text-center">
-                    <div className="inline-block p-2 bg-slate-100 rounded-xs mb-2">
-                      <div className="animate-spin text-2xl">⏳</div>
-                    </div>
-                    <p className="text-slate-600 text-xs">Loading metrics...</p>
+              ) : historyLoading ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <div className="animate-spin mb-4">
+                    <RefreshCw size={32} className="text-blue-600" />
                   </div>
+                  <p className="text-slate-600 text-xs">Synchronizing historical metrics...</p>
                 </div>
               ) : (
-                <>
-                  {activeTab === 'daily' && historyData.daily && historyData.daily.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-semibold  text-slate-700 mb-4">Daily Performance (Last 30 Days)</h4>
-                      <ResponsiveContainer width="100%" height={350}>
-                        <LineChart data={historyData.daily}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                          <XAxis 
-                            dataKey="date" 
-                            stroke="#64748b" 
-                            tick={{ fontSize: 12 }}
-                            interval={Math.floor(historyData.daily.length / 6)}
-                          />
-                          <YAxis stroke="#64748b" domain={[0, 100]} />
-                          <Tooltip formatter={(value) => `${value}%`} />
-                          <Legend />
-                          <Line type="monotone" dataKey="performance_percentage" stroke="#f59e0b" name="Performance %" strokeWidth={2} />
-                          <Line type="monotone" dataKey="efficiency_percentage" stroke="#10b981" name="Efficiency %" strokeWidth={2} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
+                <ResponsiveContainer width="100%" height="100%">
+                  {activeTab === 'daily' ? (
+                    <AreaChart data={historyData.daily}>
+                      <defs>
+                        <linearGradient id="colorOEE" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="date" hide />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip />
+                      <Area type="monotone" dataKey="oee" stroke="#3b82f6" fillOpacity={1} fill="url(#colorOEE)" name="OEE %" />
+                      <Line type="monotone" dataKey="performance" stroke="#f59e0b" strokeWidth={2} dot={false} name="Performance %" />
+                    </AreaChart>
+                  ) : activeTab === 'weekly' ? (
+                    <BarChart data={historyData.weekly}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="week" />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="avg_performance" fill="#3b82f6" name="Avg Performance %" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="avg_efficiency" fill="#10b981" name="Avg Efficiency %" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  ) : (
+                    <LineChart data={historyData.monthly}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="month" />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="avg_performance_percentage" stroke="#8b5cf6" strokeWidth={3} dot={{r: 4, fill: '#8b5cf6'}} name="Avg Performance %" />
+                      <Line type="monotone" dataKey="avg_efficiency_percentage" stroke="#10b981" strokeWidth={3} dot={{r: 4, fill: '#10b981'}} name="Avg OEE %" />
+                    </LineChart>
                   )}
-
-                  {activeTab === 'weekly' && historyData.weekly && historyData.weekly.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-semibold  text-slate-700 mb-4">Weekly Performance Averages</h4>
-                      <ResponsiveContainer width="100%" height={350}>
-                        <BarChart data={historyData.weekly}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                          <XAxis dataKey="week" stroke="#64748b" />
-                          <YAxis stroke="#64748b" domain={[0, 100]} />
-                          <Tooltip formatter={(value) => `${value}%`} />
-                          <Legend />
-                          <Bar dataKey="avg_performance" fill="#3b82f6" name="Avg Performance %" radius={[8, 8, 0, 0]} />
-                          <Bar dataKey="avg_efficiency" fill="#06b6d4" name="Avg Efficiency %" radius={[8, 8, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-
-                  {activeTab === 'monthly' && historyData.monthly && historyData.monthly.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-semibold  text-slate-700 mb-4">Monthly Performance Trends</h4>
-                      <ResponsiveContainer width="100%" height={350}>
-                        <AreaChart data={historyData.monthly}>
-                          <defs>
-                            <linearGradient id="colorMonthly" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                              <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                          <XAxis dataKey="month" stroke="#64748b" />
-                          <YAxis stroke="#64748b" domain={[0, 100]} />
-                          <Tooltip formatter={(value) => `${value}%`} />
-                          <Legend />
-                          <Area type="monotone" dataKey="avg_performance_percentage" stroke="#8b5cf6" fill="url(#colorMonthly)" name="Avg Performance %" strokeWidth={2} />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-
-                  {activeTab === 'yearly' && historyData.yearly && historyData.yearly.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-semibold  text-slate-700 mb-4">Yearly Performance Comparison</h4>
-                      <ResponsiveContainer width="100%" height={350}>
-                        <BarChart data={historyData.yearly}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                          <XAxis dataKey="year" stroke="#64748b" />
-                          <YAxis stroke="#64748b" domain={[0, 100]} />
-                          <Tooltip formatter={(value) => `${value}%`} />
-                          <Legend />
-                          <Bar dataKey="performance" fill="#ef4444" name="Avg Performance %" radius={[8, 8, 0, 0]} />
-                          <Bar dataKey="efficiency" fill="#22c55e" name="Avg Efficiency %" radius={[8, 8, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-
-                  {(!historyData[activeTab] || historyData[activeTab].length === 0) && (
-                    <div className="flex items-center justify-center h-80">
-                      <div className="text-center">
-                        <p className="text-slate-500 text-xs">No data available for {activeTab}</p>
-                        <p className="text-slate-400 text-xs mt-1">Data: daily={historyData.daily?.length || 0}, weekly={historyData.weekly?.length || 0}, monthly={historyData.monthly?.length || 0}, yearly={historyData.yearly?.length || 0}</p>
-                      </div>
-                    </div>
-                  )}
-                </>
+                </ResponsiveContainer>
               )}
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl p-6 border border-slate-200 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Wrench size={20} className="text-slate-600" />
-              <h3 className="text-base font-bold text-slate-900 m-0">Operations & Details</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="py-2 border-b border-slate-300">
-                <span className="text-xs font-semibold text-slate-600 uppercase">Assigned Operations</span>
-                <p className="text-xs font-bold text-slate-900 mt-1">{machine.operations || 'N/A'}</p>
-              </div>
-              <div className="py-2 border-b border-slate-300">
-                <span className="text-xs font-semibold text-slate-600 uppercase">Location</span>
-                <p className="text-xs font-bold text-slate-900 mt-1">{machine.location || 'N/A'}</p>
-              </div>
-              <div className="py-2 border-b border-slate-300">
-                <span className="text-xs font-semibold text-slate-600 uppercase">Total Jobs</span>
-                <p className="text-xs font-bold text-slate-900 mt-1">{machine.totalJobs}</p>
-              </div>
-              <div className="py-2 border-b border-slate-300">
-                <span className="text-xs font-semibold text-slate-600 uppercase">Completed Jobs</span>
-                <p className="text-xs font-bold text-slate-900 mt-1">{machine.completedJobs}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl p-6 border border-slate-200">
-            <div className="flex items-center gap-2 mb-4">
-              <Clipboard size={20} className="text-slate-600" />
-              <h3 className="text-base font-bold text-slate-900 m-0">Maintenance & Status</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-xs text-slate-600">Status:</span>
-                <span className={`font-bold px-3 py-1 rounded text-xs ${
-                  machine.status === 'Operational' ? 'bg-green-100 text-green-800' :
-                  machine.status === 'Maintenance' ? 'bg-amber-100 text-amber-800' :
-                  'bg-red-100 text-red-800'
-                }`}>{machine.status}</span>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-xs text-slate-600">Performance:</span>
-                <span className="font-bold text-slate-900">{machine.performance}%</span>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-xs text-slate-600">Last Maintenance:</span>
-                <span className="font-bold text-slate-900">{machine.lastMaintenance}</span>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-xs text-slate-600">Next Maintenance:</span>
-                <span className="font-bold text-slate-900">{machine.nextMaintenance}</span>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-xs text-slate-600">Total Uptime Hours:</span>
-                <span className="font-bold text-slate-900">{machine.uptimeHours} hrs</span>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-slate-300">
-                <span className="text-xs text-slate-600">Rejection Rate:</span>
-                <span className="font-bold text-slate-900">{machine.rejectionRate}%</span>
-              </div>
             </div>
           </div>
         </div>
@@ -320,766 +189,501 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
   )
 }
 
-export default function MachineAnalysis() {
-  const [machineStatus, setMachineStatus] = useState([])
-  const [machineUtilization, setMachineUtilization] = useState([])
-  const [machineEfficiency, setMachineEfficiency] = useState([])
-  const [machineDetails, setMachineDetails] = useState([])
-  const [workstations, setWorkstations] = useState([])
+const StatCard = ({ label, value, icon: Icon, color, trend, trendValue, trendDirection }) => (
+  <div className={`bg-gradient-to-br ${color} p-5 rounded border border-white/20  transition-all duration-300 hover:shadow-md hover:-translate-y-1 relative overflow-hidden group`}>
+    <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-white/10 rounded-full group-hover:scale-110 transition-transform" />
+    <div className="flex items-start justify-between mb-2">
+      <span className="text-xs    text-slate-500 uppercase">{label}</span>
+      <div className="p-2 bg-white/60 rounded ">
+        <Icon size={18} className="text-slate-700" />
+      </div>
+    </div>
+    <p className="text-xl   text-slate-900 mb-2">{value}</p>
+    <div className="flex items-center justify-between">
+      <p className="text-xs  text-slate-500  tracking-tighter">{trend}</p>
+      {trendValue && (
+        <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs   ${trendDirection === 'up' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+          {trendDirection === 'up' ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
+          {trendValue}
+        </div>
+      )}
+    </div>
+  </div>
+)
+
+const MachineAnalysis = () => {
   const [loading, setLoading] = useState(true)
+  const [syncLoading, setSyncLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [selectedMachine, setSelectedMachine] = useState(null)
+  const [machineDetails, setMachineDetails] = useState([])
+  const [machineStatus, setMachineStatus] = useState([])
+  const [machineEfficiency, setMachineEfficiency] = useState([])
   const [averagePerformance, setAveragePerformance] = useState(0)
   const [averageUtilization, setAverageUtilization] = useState(0)
-  const [selectedWorkstationType, setSelectedWorkstationType] = useState('All')
-  const [currentMachineDetailsPage, setCurrentMachineDetailsPage] = useState(1)
-  const machineDetailsPerPage = 10
-  const [timeFilterUtilization, setTimeFilterUtilization] = useState('month')
-  const [timeFilterEfficiency, setTimeFilterEfficiency] = useState('monthly')
-  const [machineStatusChartType, setMachineStatusChartType] = useState('donut')
-  const [workstationTypeChartType, setWorkstationTypeChartType] = useState('donut')
+  const [averageQuality, setAverageQuality] = useState(0)
+  const [averageOEE, setAverageOEE] = useState(0)
+  const [workstations, setWorkstations] = useState([])
+  const [selectedMachine, setSelectedMachine] = useState(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState('overview')
+  const [refreshTime, setRefreshTime] = useState(new Date())
+  
+  // Filtering & Pagination
+  const [currentMachinePage, setCurrentMachinePage] = useState(1)
+  const itemsPerPage = 8
+  const [searchTerm, setSearchTerm] = useState('')
+  const [typeFilter, setTypeFilter] = useState('All')
 
   useEffect(() => {
-    fetchMachinesAnalysis().finally(() => setLoading(false))
+    fetchData()
   }, [])
 
-  useEffect(() => {
-    setCurrentMachineDetailsPage(1)
-  }, [machineDetails])
-
-  const fetchMachinesAnalysis = async () => {
+  const fetchData = async (isSync = false) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/machines/machines-analysis`)
-      const data = await response.json()
-      
-      if (data.success) {
-        const { statusCounts, machines, machineUtilization, machineEfficiency, averagePerformance, averageUtilization } = data.data
-        
-        const statusData = statusCounts && statusCounts.length > 0 ? statusCounts.map(item => {
-          let color = '#6b7280'
-          switch (item.status?.toLowerCase()) {
-            case 'operational':
-              color = '#10b981'
-              break
-            case 'maintenance':
-              color = '#f59e0b'
-              break
-            case 'down':
-              color = '#ef4444'
-              break
-          }
-          return {
-            name: item.status.charAt(0).toUpperCase() + item.status.slice(1),
-            value: item.count,
-            color: color
-          }
-        }) : []
-        
-        setMachineStatus(statusData)
-        setMachineUtilization(machineUtilization || [])
-        setMachineEfficiency(machineEfficiency || [])
-        setMachineDetails(machines || [])
-        setAveragePerformance(averagePerformance || 0)
-        setAverageUtilization(averageUtilization || 0)
+      if (isSync) {
+        setSyncLoading(true)
       } else {
-        setError(data.message || 'Failed to fetch machines analysis')
+        setLoading(true)
       }
+      const [oeeRes, workstationsRes] = await Promise.all([
+        getOEEDashboardData(),
+        fetch(`${import.meta.env.VITE_API_URL}/production/workstations`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        }).then(r => r.json())
+      ])
+
+      if (oeeRes.success) {
+        const { summary, trends, machineOEE } = oeeRes.data
+        
+        // Group by machine
+        const grouped = (machineOEE || []).reduce((acc, m) => {
+          const mId = m.machine_id;
+          if (!acc[mId]) {
+            acc[mId] = {
+              id: mId,
+              name: m.machine_name,
+              workstationType: m.workstation_type || 'General',
+              status: m.machine_status,
+              availability: [],
+              performance: [],
+              quality: [],
+              oee: [],
+              total_units: 0,
+              rejected_units: 0,
+              downtime_mins: 0,
+              operating_time_mins: 0,
+              entries: 0
+            };
+          }
+          
+          if (m.entry_date) {
+            acc[mId].availability.push(m.availability);
+            acc[mId].performance.push(m.performance);
+            acc[mId].quality.push(m.quality);
+            acc[mId].oee.push(m.oee);
+            acc[mId].total_units += m.total_units;
+            acc[mId].rejected_units += m.rejected_units;
+            acc[mId].downtime_mins += (m.downtime_mins || 0);
+            acc[mId].operating_time_mins += (m.operating_time_mins || 0);
+            acc[mId].entries += 1;
+          }
+          return acc;
+        }, {});
+
+        const processedMachines = Object.values(grouped).map(m => {
+          const avg = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+          const oeeVal = Number(avg(m.oee).toFixed(1));
+          return {
+            ...m,
+            availability: Number(avg(m.availability).toFixed(1)),
+            performance: Number(avg(m.performance).toFixed(1)),
+            quality: Number(avg(m.quality).toFixed(1)),
+            oee: oeeVal,
+            uptimeHours: Number((m.operating_time_mins / 60).toFixed(1)),
+            allocation: Number(((m.operating_time_mins + m.downtime_mins) / 60).toFixed(1)),
+            downtime: Number((m.downtime_mins / 60).toFixed(1)),
+            rejectionRate: m.total_units > 0 ? Number(((m.rejected_units / m.total_units) * 100).toFixed(1)) : 0,
+            jobs: m.entries,
+            utilization: (m.operating_time_mins + m.downtime_mins) > 0 
+              ? Number(((m.operating_time_mins / (m.operating_time_mins + m.downtime_mins)) * 100).toFixed(1))
+              : 0
+          };
+        });
+
+        setMachineDetails(processedMachines)
+        setAveragePerformance(summary.performance)
+        setAverageUtilization(summary.availability)
+        setAverageQuality(summary.quality)
+        setAverageOEE(summary.oee)
+
+        // Status Distribution
+        const statuses = processedMachines.reduce((acc, m) => {
+          const s = m.status || 'Offline'
+          acc[s] = (acc[s] || 0) + 1
+          return acc
+        }, {})
+        
+        setMachineStatus(Object.entries(statuses).map(([name, value], i) => ({
+          name, value, color: COLORS[i % COLORS.length]
+        })))
+
+        // Efficiency Trend
+        setMachineEfficiency((trends || []).map(t => ({
+          period: t.date,
+          efficiency: t.oee,
+          availability: t.availability,
+          performance: t.performance
+        })))
+      }
+
+      if (workstationsRes.success) {
+        setWorkstations(workstationsRes.data || [])
+      }
+
+      setRefreshTime(new Date())
+      setError(null)
     } catch (err) {
       console.error('Error fetching machines analysis:', err)
-      setError('Error fetching machines data')
-    }
-  }
-
-  const fetchWorkstations = async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/production/workstations`)
-      const data = await response.json()
-      
-      if (data.success) {
-        setWorkstations(data.data || [])
-      }
-    } catch (err) {
-      console.error('Error fetching workstations:', err)
+      setError('Failed to synchronize machine intelligence. Verify backend connectivity.')
     } finally {
       setLoading(false)
+      setSyncLoading(false)
     }
   }
 
-  const openModal = (machine) => {
-    setSelectedMachine(machine)
-    setModalOpen(true)
-  }
+  const filteredMachines = useMemo(() => {
+    return machineDetails.filter(m => {
+      const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           m.id.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesType = typeFilter === 'All' || m.workstationType === typeFilter;
+      return matchesSearch && matchesType;
+    });
+  }, [machineDetails, searchTerm, typeFilter]);
 
-  const closeModal = () => {
-    setModalOpen(false)
-    setSelectedMachine(null)
-  }
+  const workstationTypes = useMemo(() => {
+    const types = new Set(machineDetails.map(m => m.workstationType).filter(Boolean));
+    return ['All', ...Array.from(types).sort()];
+  }, [machineDetails]);
 
-  const getStatusBadgeColor = (status) => {
-    switch (status) {
-      case 'Operational':
-        return 'bg-green-100 text-green-800'
-      case 'Maintenance':
-        return 'bg-amber-100 text-amber-800'
-      case 'Down':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getCapacityColor = (capacity) => {
-    if (capacity >= 90) return 'text-green-600'
-    if (capacity >= 70) return 'text-amber-600'
-    return 'text-red-600'
-  }
-
-  const getWorkloadColor = (workload) => {
-    if (workload >= 80) return 'text-red-600'
-    if (workload >= 60) return 'text-amber-600'
-    return 'text-green-600'
-  }
-
-  const getWorkstationStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'active':
-        return 'bg-green-100 text-green-800'
-      case 'inactive':
-        return 'bg-gray-100 text-gray-800'
-      case 'maintenance':
-        return 'bg-amber-100 text-amber-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getWorkstationTypes = () => {
-    const types = new Set(machineDetails.map(m => m.workstationType).filter(Boolean))
-    return ['All', ...Array.from(types).sort()]
-  }
-
-  const getFilteredMachineStatus = () => {
-    if (selectedWorkstationType === 'All') {
-      return machineStatus
-    }
-    const filtered = machineDetails.filter(m => m.workstationType === selectedWorkstationType)
-    const statusCounts = {}
-    filtered.forEach(machine => {
-      const status = machine.status
-      statusCounts[status] = (statusCounts[status] || 0) + 1
-    })
-    return Object.entries(statusCounts).map(([status, count]) => {
-      let color = '#6b7280'
-      switch (status?.toLowerCase()) {
-        case 'operational':
-          color = '#10b981'
-          break
-        case 'maintenance':
-          color = '#f59e0b'
-          break
-        case 'down':
-          color = '#ef4444'
-          break
-      }
-      return {
-        name: status.charAt(0).toUpperCase() + status.slice(1),
-        value: count,
-        color: color
-      }
-    })
-  }
-
-  const getWorkstationTypeDistribution = () => {
-    const typeCounts = {}
-    const colors = [
-      '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4',
-      '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16', '#0ea5e9'
-    ]
-    const typeColorMap = {}
-    let colorIndex = 0
-
-    machineDetails.forEach(machine => {
-      const type = machine.workstationType || 'Unassigned'
-      typeCounts[type] = (typeCounts[type] || 0) + 1
-      if (!typeColorMap[type]) {
-        typeColorMap[type] = colors[colorIndex % colors.length]
-        colorIndex++
-      }
-    })
-
-    return Object.entries(typeCounts)
-      .map(([type, count]) => ({
-        name: type,
-        value: count,
-        color: typeColorMap[type]
-      }))
-      .sort((a, b) => b.value - a.value)
-  }
-
-  const totalMachineDetailsPages = Math.ceil(machineDetails.length / machineDetailsPerPage)
-  const machineDetailsStartIndex = (currentMachineDetailsPage - 1) * machineDetailsPerPage
-  const machineDetailsEndIndex = machineDetailsStartIndex + machineDetailsPerPage
-  const paginatedMachineDetails = machineDetails.slice(machineDetailsStartIndex, machineDetailsEndIndex)
-
-  const getMachineWorkTimeData = () => {
-    const multipliers = { day: 1, week: 7, month: 30, year: 365 }
-    const mult = multipliers[timeFilterUtilization] || 1
-    return machineDetails.map(machine => ({
-      machine: machine.name,
-      worktime: Math.round((machine.allocation || 0) * mult),
-      downtime: Math.round((machine.downtime || 0) * mult)
-    }))
-  }
-
-  const getEfficiencyTrendData = () => {
-    const timeData = {
-      daily: [
-        { period: 'Mon', efficiency: Math.floor(Math.random() * 20) + 75 },
-        { period: 'Tue', efficiency: Math.floor(Math.random() * 20) + 75 },
-        { period: 'Wed', efficiency: Math.floor(Math.random() * 20) + 75 },
-        { period: 'Thu', efficiency: Math.floor(Math.random() * 20) + 75 },
-        { period: 'Fri', efficiency: Math.floor(Math.random() * 20) + 75 },
-        { period: 'Sat', efficiency: Math.floor(Math.random() * 20) + 75 },
-        { period: 'Sun', efficiency: Math.floor(Math.random() * 20) + 75 }
-      ],
-      weekly: [
-        { period: 'Week 1', efficiency: Math.floor(Math.random() * 20) + 75 },
-        { period: 'Week 2', efficiency: Math.floor(Math.random() * 20) + 75 },
-        { period: 'Week 3', efficiency: Math.floor(Math.random() * 20) + 75 },
-        { period: 'Week 4', efficiency: Math.floor(Math.random() * 20) + 75 }
-      ],
-      monthly: [
-        { period: 'Jan', efficiency: Math.floor(Math.random() * 30) + 70 },
-        { period: 'Feb', efficiency: Math.floor(Math.random() * 30) + 70 },
-        { period: 'Mar', efficiency: Math.floor(Math.random() * 30) + 70 },
-        { period: 'Apr', efficiency: Math.floor(Math.random() * 30) + 70 },
-        { period: 'May', efficiency: Math.floor(Math.random() * 30) + 70 },
-        { period: 'Jun', efficiency: Math.floor(Math.random() * 30) + 70 }
-      ],
-      yearly: [
-        { period: '2020', efficiency: Math.floor(Math.random() * 30) + 70 },
-        { period: '2021', efficiency: Math.floor(Math.random() * 30) + 70 },
-        { period: '2022', efficiency: Math.floor(Math.random() * 30) + 70 },
-        { period: '2023', efficiency: Math.floor(Math.random() * 30) + 70 },
-        { period: '2024', efficiency: Math.floor(Math.random() * 30) + 70 }
-      ]
-    }
-    return timeData[timeFilterEfficiency] || timeData.monthly
-  }
+  const paginatedMachines = filteredMachines.slice(
+    (currentMachinePage - 1) * itemsPerPage,
+    currentMachinePage * itemsPerPage
+  );
 
   if (loading) {
     return (
-      <div className="p-3 bg-slate-50 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block p-2 bg-white rounded-xs shadow-sm mb-4">
-            <div className="animate-spin text-4xl">⏳</div>
-          </div>
-          <p className="text-slate-600">Loading machines analysis...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
+        <div className="animate-spin mb-4">
+          <RefreshCw size={40} className="text-blue-600" />
         </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="p-3 bg-slate-50 min-h-screen flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <div className="inline-block p-2 bg-red-50 rounded-xs mb-4">
-            <span className="text-4xl">⚠️</span>
-          </div>
-          <p className="text-red-600 font-semibold mb-2">Error Loading Data</p>
-          <p className="text-slate-600 text-xs">{error}</p>
-        </div>
+        <p className="text-slate-600  animate-pulse  text-xs">Calibrating Analytics...</p>
       </div>
     )
   }
 
   return (
-    <div className="p-0 bg-slate-50 min-h-screen">
-      <div className="bg-gradient-to-br from-white to-slate-100 px-2 py-2 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-        <div className=" mx-auto">
-          <div className="flex items-center gap-4 mb-2">
-            <div className="w-10 h-10 rounded-xs bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white">
-              <Factory size={24} />
-            </div>
-            <div>
-              <h1 className="text-xl font-extrabold text-slate-900 m-0">
-                Machine Analysis
-              </h1>
-              <p className="text-xs text-slate-500 mt-0 m-0">
-                Monitor machine health, utilization, capacity, and performance metrics
-              </p>
-            </div>
+    <div className="w-full bg-slate-50 min-h-screen p-4 md:p-3">
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
+          <div>
+            <h1 className="text-xl  text-slate-900 flex items-center gap-2">
+              <Monitor className="text-blue-600" /> Machine Analysis
+            </h1>
+            <p className="text-slate-500 text-xs   mt-1">
+              Live Factory Performance & Intelligence
+            </p>
           </div>
-        </div>
-      </div>
-
-      <div className="p-3  mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-slate-500  m-0">Total Machines</p>
-                <p className="text-xl font-bold text-slate-900 mt-2 m-0">{machineDetails.length}</p>
-              </div>
-              <div className="w-12 h-12 rounded-xs bg-blue-100 flex items-center justify-center">
-                <Factory size={24} className="text-blue-600" />
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:block text-right">
+              <p className="text-xs   text-slate-400 uppercase">Last Synchronized</p>
+              <p className="text-xs  text-slate-700">{refreshTime.toLocaleTimeString()}</p>
             </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-slate-500  m-0">Avg Performance</p>
-                <p className="text-xl font-bold text-slate-900 mt-2 m-0">{averagePerformance}%</p>
-              </div>
-              <div className="w-12 h-12 rounded-xs bg-green-100 flex items-center justify-center">
-                <TrendingUp size={24} className="text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-slate-500  m-0">Avg Utilization</p>
-                <p className="text-xl font-bold text-slate-900 mt-2 m-0">{averageUtilization}%</p>
-              </div>
-              <div className="w-12 h-12 rounded-xs bg-purple-100 flex items-center justify-center">
-                <BarChart3 size={24} className="text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-slate-500  m-0">Workstations</p>
-                <p className="text-xl font-bold text-slate-900 mt-2 m-0">{workstations.length}</p>
-              </div>
-              <div className="w-12 h-12 rounded-xs bg-indigo-100 flex items-center justify-center">
-                <Wrench size={24} className="text-indigo-600" />
-              </div>
-            </div>
+            <button
+              onClick={() => fetchData(true)}
+              disabled={syncLoading}
+              className={`flex items-center gap-2 p-2.5 bg-slate-900 text-white rounded hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 text-xs ${syncLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
+              <RefreshCw size={14} className={syncLoading ? 'animate-spin' : ''} /> 
+              {syncLoading ? 'Syncing...' : 'Refresh Data'}
+            </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8" style={{ animation: 'fadeIn 0.5s ease-in-out' }}>
-          <div className="bg-white rounded-xl p-6 md:p-3 border border-gray-200 shadow-sm hover:shadow-lg transition-shadow duration-300">
-            <div className="flex items-center justify-between gap-2 mb-6">
-              <div className="flex items-center gap-2">
-                <BarChart3 size={20} className="text-slate-600" />
-                <h3 className="text-base font-bold text-slate-900 m-0">Machine Status Distribution</h3>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setMachineStatusChartType('donut')}
-                  className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
-                    machineStatusChartType === 'donut'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  Donut
-                </button>
-                <button
-                  onClick={() => setMachineStatusChartType('bar')}
-                  className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
-                    machineStatusChartType === 'bar'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  Bar
-                </button>
-              </div>
-            </div>
-            {machineStatusChartType === 'donut' ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie 
-                    data={machineStatus} 
-                    cx="50%" 
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={95}
-                    paddingAngle={2}
-                    labelLine={false}
-                    label={({ name, value, percent }) => `${name}: ${value}`}
-                    fill="#8884d8" 
-                    dataKey="value"
-                    animationBegin={0}
-                    animationDuration={800}
-                    animationEasing="ease-out"
-                  >
-                    {machineStatus.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={entry.color}
-                        style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.1))' }}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value) => `${value} machines`}
-                    contentStyle={{
-                      backgroundColor: '#fff',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={machineStatus} margin={{ top: 20, right: 30, left: 0, bottom: 40 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="name" stroke="#64748b" fontSize={12} angle={-15} textAnchor="end" height={70} />
-                  <YAxis stroke="#64748b" />
-                  <Tooltip 
-                    formatter={(value) => `${value} machines`}
-                    contentStyle={{
-                      backgroundColor: '#fff',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                    }}
-                  />
-                  <Bar 
-                    dataKey="value" 
-                    fill="#3b82f6" 
-                    radius={[8, 8, 0, 0]}
-                    animationDuration={800}
-                  >
-                    {machineStatus.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-
-          <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm lg:col-span-2 hover:shadow-lg transition-shadow duration-300">
-            <div className="flex items-center justify-between gap-2 mb-6">
-              <div className="flex items-center gap-2">
-                <BarChart3 size={20} className="text-slate-600" />
-                <h3 className="text-base font-bold text-slate-900 m-0">Workstation Type Distribution</h3>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setWorkstationTypeChartType('donut')}
-                  className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
-                    workstationTypeChartType === 'donut'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  Donut
-                </button>
-                <button
-                  onClick={() => setWorkstationTypeChartType('bar')}
-                  className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
-                    workstationTypeChartType === 'bar'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  Bar
-                </button>
-              </div>
-            </div>
-
-            {workstationTypeChartType === 'donut' ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie 
-                    data={getWorkstationTypeDistribution()} 
-                    cx="50%" 
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={90}
-                    paddingAngle={2}
-                    labelLine={false}
-                    label={({ name, value }) => `${name}: ${value}`}
-                    fill="#8884d8"
-                    dataKey="value"
-                    animationBegin={0}
-                    animationDuration={800}
-                    animationEasing="ease-out"
-                  >
-                    {getWorkstationTypeDistribution().map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={entry.color}
-                        style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.1))' }}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value) => `${value} workstations`}
-                    contentStyle={{
-                      backgroundColor: '#fff',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={getWorkstationTypeDistribution()} margin={{ top: 20, right: 30, left: 0, bottom: 80 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="name" stroke="#64748b" fontSize={11} angle={-45} textAnchor="end" height={100} />
-                  <YAxis stroke="#64748b" />
-                  <Tooltip 
-                    formatter={(value) => `${value} workstations`}
-                    contentStyle={{
-                      backgroundColor: '#fff',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                    }}
-                  />
-                  <Bar 
-                    dataKey="value" 
-                    fill="#10b981" 
-                    radius={[8, 8, 0, 0]}
-                    animationDuration={800}
-                  >
-                    {getWorkstationTypeDistribution().map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
+        {/* KPI Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-3">
+          <StatCard 
+            label="Overall OEE" 
+            value={`${averageOEE}%`}
+            icon={Activity}
+            color="from-blue-50 to-blue-100"
+            trend="Efficiency Rating"
+          />
+          <StatCard 
+            label="Avg Performance" 
+            value={`${averagePerformance}%`}
+            icon={TrendingUp}
+            color="from-emerald-50 to-emerald-100"
+            trend="Production Output"
+          />
+          <StatCard 
+            label="Avg Availability" 
+            value={`${averageUtilization}%`}
+            icon={Clock}
+            color="from-amber-50 to-amber-100"
+            trend="Machine Uptime"
+          />
+          <StatCard 
+            label="Avg Quality" 
+            value={`${averageQuality}%`}
+            icon={CheckCircle2}
+            color="from-indigo-50 to-indigo-100"
+            trend="Good Units %"
+          />
+          <StatCard 
+            label="Active Units" 
+            value={machineDetails.filter(m => m.status === 'Operational').length}
+            icon={Zap}
+            color="from-purple-50 to-purple-100"
+            trend="Operational Status"
+          />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm lg:col-span-3">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <TrendingUp size={20} className="text-slate-600" />
-                <h3 className="text-base font-bold text-slate-900 m-0">Machine Work Time & Downtime</h3>
-              </div>
-              <div className="flex gap-2">
-                {['day', 'week', 'month', 'year'].map(period => (
-                  <button
-                    key={period}
-                    onClick={() => setTimeFilterUtilization(period)}
-                    className={`p-2 rounded-xs text-xs font-semibold transition-colors ${
-                      timeFilterUtilization === period
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    {period.charAt(0).toUpperCase() + period.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={getMachineWorkTimeData()} margin={{ left: 0, right: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="machine" stroke="#64748b" fontSize={11} angle={-45} textAnchor="end" height={100} />
-                <YAxis stroke="#64748b" fontSize={12} label={{ value: `Hours (${timeFilterUtilization.charAt(0).toUpperCase() + timeFilterUtilization.slice(1)})`, angle: -90, position: 'insideLeft' }} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', color: '#0f172a' }}
-                  formatter={(value) => `${value}h`}
-                  labelFormatter={(label) => `Machine: ${label}`}
-                />
-                <Legend />
-                <Bar dataKey="worktime" fill="#10b981" name="Work Time (h)" radius={[8, 8, 0, 0]} stackId="a" />
-                <Bar dataKey="downtime" fill="#ef4444" name="Downtime (h)" radius={[8, 8, 0, 0]} stackId="a" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        {/* Tabs */}
+        <div className="flex gap-1 mb-6 border-b border-slate-200">
+          {['overview', 'machines', 'efficiency'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`p-6  py-2 text-xs   border-b-2 transition-all ${
+                activeTab === tab
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
 
-        <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <BarChart3 size={20} className="text-slate-600" />
-              <h3 className="text-base font-bold text-slate-900 m-0">Overall Efficiency Trend</h3>
-            </div>
-            <div className="flex gap-2">
-              {['daily', 'weekly', 'monthly', 'yearly'].map(period => (
-                <button
-                  key={period}
-                  onClick={() => setTimeFilterEfficiency(period)}
-                  className={`p-2 rounded-xs text-xs font-semibold transition-colors ${
-                    timeFilterEfficiency === period
-                      ? 'bg-green-600 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  {period.charAt(0).toUpperCase() + period.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={getEfficiencyTrendData()}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="period" stroke="#64748b" />
-              <YAxis stroke="#64748b" domain={[0, 100]} />
-              <Tooltip formatter={(value) => `${value}%`} contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
-              <Legend />
-              <Line type="monotone" dataKey="efficiency" stroke="#10b981" strokeWidth={2} name="Efficiency %" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-8">
-          <div className="p-2 border-b border-gray-200 flex items-center gap-2">
-            <Rocket size={20} className="text-slate-600" />
-            <h3 className="text-base font-bold text-slate-900 m-0">Machine Details</h3>
-          </div>
-          <div className="">
-            <table className="w-full border-collapse border border-gray-200">
-              <thead>
-                <tr className="bg-slate-50 border-b-2 border-gray-200">
-                  <th className="text-left p-2 text-xs font-semibold text-slate-500 ">Code</th>
-                  <th className="text-left p-2 text-xs font-semibold text-slate-500 ">Machine Name</th>
-                  <th className="text-left p-2 text-xs font-semibold text-slate-500 ">Operations</th>
-                  <th className="text-left p-2 text-xs font-semibold text-slate-500 ">Status</th>
-                  <th className="text-left p-2 text-xs font-semibold text-slate-500 ">Allocation (h)</th>
-                  <th className="text-left p-2 text-xs font-semibold text-slate-500 ">Downtime (h)</th>
-                  <th className="text-left p-2 text-xs font-semibold text-slate-500 ">Performance %</th>
-                  <th className="text-left p-2 text-xs font-semibold text-slate-500 ">Efficiency %</th>
-                  <th className="text-left p-2 text-xs font-semibold text-slate-500 ">Jobs</th>
-                  <th className="text-left p-2 text-xs font-semibold text-slate-500 ">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedMachineDetails.map((machine, idx) => (
-                  <tr key={machine.id} className={`border-b border-gray-200 ${idx % 2 === 0 ? 'bg-slate-50' : 'bg-white'}`}>
-                    <td className="p-2 text-xs text-gray-700 font-semibold">{machine.id}</td>
-                    <td className="p-2 text-xs text-gray-700">{machine.name}</td>
-                    <td className="p-2 text-xs text-gray-700">{machine.operations || 'N/A'}</td>
-                    <td className="p-2">
-                      <span className={`p-2 rounded-xs text-xs font-semibold ${getStatusBadgeColor(machine.status)}`}>
-                        {machine.status}
-                      </span>
-                    </td>
-                    <td className="p-4 text-center">
-                      <span className="text-xs font-semibold text-slate-600">
-                        {machine.allocation}h
-                      </span>
-                    </td>
-                    <td className="p-4 text-center">
-                      <span className="text-xs font-semibold  text-amber-600">
-                        {machine.downtime}h
-                      </span>
-                    </td>
-                    <td className="p-4 text-center">
-                      <span className={`text-xs font-semibold  ${getCapacityColor(machine.performance)}`}>
-                        {machine.performance}%
-                      </span>
-                    </td>
-                    <td className="p-4 text-center">
-                      <span className={`text-xs font-semibold  ${getCapacityColor(machine.efficiencyPercentage)}`}>
-                        {machine.efficiencyPercentage}%
-                      </span>
-                    </td>
-                    <td className="p-4 text-center">
-                      <span className="text-xs font-semibold text-slate-600">
-                        {machine.completedJobs}/{machine.totalJobs}
-                      </span>
-                    </td>
-                    <td className="p-4 text-center">
-                      <button
-                        onClick={() => openModal(machine)}
-                        className="inline-flex items-center gap-2 p-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-xs text-xs font-semibold transition-colors"
+        {/* Overview Content */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              {/* Status Distribution */}
+              <div className="bg-white rounded border border-slate-200 p-3 ">
+                <h3 className="text-xs  text-slate-900 mb-6  flex items-center gap-2">
+                  <PieIcon size={18} className="text-slate-400" /> Status Distribution
+                </h3>
+                <div className="h-[250px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={machineStatus}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={5}
+                        dataKey="value"
                       >
-                        <Eye size={14} />
-                        Details
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="p-4 flex items-center justify-between border-t border-gray-200">
-            <div className="text-xs text-gray-600">
-              Showing {machineDetailsStartIndex + 1}-{Math.min(machineDetailsEndIndex, machineDetails.length)} of {machineDetails.length} machines
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentMachineDetailsPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentMachineDetailsPage === 1}
-                className="p-1 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
-              >
-                <ChevronLeft size={16} className="text-gray-600" />
-              </button>
-              <span className="text-xs text-gray-700 font-medium min-w-[80px] text-center">
-                Page {currentMachineDetailsPage} of {totalMachineDetailsPages || 1}
-              </span>
-              <button
-                onClick={() => setCurrentMachineDetailsPage(prev => Math.min(prev + 1, totalMachineDetailsPages))}
-                disabled={currentMachineDetailsPage === totalMachineDetailsPages}
-                className="p-1 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
-              >
-                <ChevronRight size={16} className="text-gray-600" />
-              </button>
-            </div>
-          </div>
-        </div>
+                        {machineStatus.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" height={36} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="p-2 border-b border-gray-200 flex items-center gap-2">
-            <Wrench size={20} className="text-slate-600" />
-            <h3 className="text-base font-bold text-slate-900 m-0">Workstations</h3>
+              {/* Work Time vs Downtime */}
+              <div className="lg:col-span-2 bg-white rounded border border-slate-200 p-3 ">
+                <h3 className="text-xs  text-slate-900 mb-6  flex items-center gap-2">
+                  <BarChart3 size={18} className="text-slate-400" /> Work Time vs Downtime (h)
+                </h3>
+                <div className="h-[250px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={machineDetails.slice(0, 10)}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="name" tick={{fontSize: 10}} />
+                      <YAxis tick={{fontSize: 10}} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="uptimeHours" name="Work Time" fill="#10b981" stackId="a" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="downtime" name="Downtime" fill="#ef4444" stackId="a" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* Overall Efficiency Area Chart */}
+            <div className="bg-white rounded border border-slate-200 p-3 ">
+              <h3 className="text-xs  text-slate-900 mb-6  flex items-center gap-2">
+                <TrendingUp size={18} className="text-slate-400" /> Factory Efficiency Trend
+              </h3>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={machineEfficiency}>
+                    <defs>
+                      <linearGradient id="colorEff" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="period" hide />
+                    <YAxis />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="efficiency" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorEff)" name="OEE %" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
-          <div className="">
-            <table className="w-full border-collapse border border-gray-200">
-              <thead>
-                <tr className="bg-slate-50 border-b-2 border-gray-200">
-                  <th className="text-left p-2 text-xs font-semibold text-slate-500 ">ID</th>
-                  <th className="text-left p-2 text-xs font-semibold text-slate-500 ">Name</th>
-                  <th className="text-left p-2 text-xs font-semibold text-slate-500 ">Description</th>
-                  <th className="text-left p-2 text-xs font-semibold text-slate-500 ">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {workstations.length > 0 ? (
-                  workstations.map((workstation, idx) => (
-                    <tr key={workstation.id} className={`border-b border-gray-200 ${idx % 2 === 0 ? 'bg-slate-50' : 'bg-white'}`}>
-                      <td className="p-2 text-xs text-gray-700 font-semibold">{workstation.id}</td>
-                      <td className="p-2 text-xs text-gray-700">{workstation.workstation_name || workstation.name}</td>
-                      <td className="p-2 text-xs text-gray-700">{workstation.description || '-'}</td>
-                      <td className="p-4 text-center">
-                        <span className={`p-2 rounded-xs text-xs font-semibold ${getWorkstationStatusColor(workstation.status)}`}>
-                          {workstation.status || 'active'}
+        )}
+
+        {/* Machines Tab */}
+        {activeTab === 'machines' && (
+          <div className="bg-white rounded border border-slate-200  overflow-hidden">
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex flex-1 max-w-md gap-2">
+                <Monitor className="text-slate-400 mt-2" size={20} />
+                <input 
+                  type="text" 
+                  placeholder="Search by Machine Code or Name..."
+                  className="w-full bg-white border border-slate-200 rounded-md p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <select 
+                className="bg-white border border-slate-200 rounded-md p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+              >
+                {workstationTypes.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+
+            <div className="">
+              <table className="w-full text-left bg-white border-collapse bg-white">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="p-2 text-xs   text-slate-500 ">Identification</th>
+                    <th className="p-2 text-xs   text-slate-500 ">Status</th>
+                    <th className="p-2 text-xs   text-slate-500 ">OEE %</th>
+                    <th className="p-2 text-xs   text-slate-500 ">Availability</th>
+                    <th className="p-2 text-xs   text-slate-500 ">Utilization</th>
+                    <th className="p-2 text-xs   text-slate-500 ">Performance</th>
+                    <th className="p-2 text-xs   text-slate-500  text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paginatedMachines.map((m) => (
+                    <tr key={m.id} className="hover:bg-slate-50 transition-colors group">
+                      <td className="p-2">
+                        <p className="text-xs  text-slate-900 m-0">{m.name}</p>
+                        <p className="text-xs   text-slate-400 m-0">{m.id} • {m.workstationType}</p>
+                      </td>
+                      <td className="p-2">
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs   tracking-tighter ${
+                          m.status === 'Operational' ? 'bg-emerald-100 text-emerald-700' : 
+                          m.status === 'Maintenance' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${
+                            m.status === 'Operational' ? 'bg-emerald-500' : 
+                            m.status === 'Maintenance' ? 'bg-amber-500' : 'bg-slate-400'
+                          }`} />
+                          {m.status}
                         </span>
                       </td>
+                      <td className="p-2">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs  text-slate-900 w-10">{m.oee}%</span>
+                          <div className="flex-1 h-1.5 bg-slate-100 rounded-full w-24 overflow-hidden hidden sm:block">
+                            <div 
+                              className={`h-full rounded-full ${m.oee > 85 ? 'bg-emerald-500' : m.oee > 70 ? 'bg-amber-500' : 'bg-rose-500'}`} 
+                              style={{ width: `${m.oee}%` }} 
+                            />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-2 text-xs  text-slate-600">{m.availability}%</td>
+                      <td className="p-2 text-xs  text-slate-600">{m.utilization}%</td>
+                      <td className="p-2 text-xs  text-slate-600">{m.performance}%</td>
+                      <td className="p-2 text-center">
+                        <button 
+                          onClick={() => { setSelectedMachine(m); setModalOpen(true); }}
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
+                        >
+                          <Eye size={18} />
+                        </button>
+                      </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="4" className="p-4 text-center text-xs text-gray-500">
-                      No workstations found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="p-2 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <p className="text-xs   text-slate-500 ">
+                Showing {(currentMachinePage-1)*itemsPerPage + 1} - {Math.min(currentMachinePage*itemsPerPage, filteredMachines.length)} of {filteredMachines.length}
+              </p>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setCurrentMachinePage(p => Math.max(1, p-1))}
+                  disabled={currentMachinePage === 1}
+                  className="p-2 border border-slate-200 rounded hover:bg-white disabled:opacity-50 transition-all"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button 
+                  onClick={() => setCurrentMachinePage(p => Math.min(Math.ceil(filteredMachines.length/itemsPerPage), p+1))}
+                  disabled={currentMachinePage >= Math.ceil(filteredMachines.length/itemsPerPage)}
+                  className="p-2 border border-slate-200 rounded hover:bg-white disabled:opacity-50 transition-all"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Efficiency Tab Content */}
+        {activeTab === 'efficiency' && (
+          <div className="bg-white rounded border border-slate-200 p-3 ">
+            <h3 className="text-xs  text-slate-900 mb-3  flex items-center gap-2">
+              <Activity size={18} className="text-slate-400" /> Multi-Metric Performance Analysis
+            </h3>
+            <div className="h-[450px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={machineEfficiency}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="period" tick={{fontSize: 10}} />
+                  <YAxis domain={[0, 100]} tick={{fontSize: 10}} />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="efficiency" stroke="#3b82f6" strokeWidth={3} name="OEE %" dot={{r: 4}} />
+                  <Line type="monotone" dataKey="availability" stroke="#10b981" strokeWidth={2} name="Availability %" strokeDasharray="5 5" dot={false} />
+                  <Line type="monotone" dataKey="performance" stroke="#f59e0b" strokeWidth={2} name="Performance %" strokeDasharray="5 5" dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
       </div>
 
-      <DetailModal
-        isOpen={modalOpen}
-        machine={selectedMachine}
-        onClose={closeModal}
+      <DetailModal 
+        isOpen={modalOpen} 
+        machine={selectedMachine} 
+        onClose={() => setModalOpen(false)} 
       />
     </div>
   )
 }
+
+export default MachineAnalysis

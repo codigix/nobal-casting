@@ -23,23 +23,28 @@ class ToolRoomModel {
 
   async getTools(filters = {}) {
     try {
-      let query = `SELECT * FROM tool_master WHERE 1=1`
+      let query = `
+        SELECT tm.*, i.name as item_name 
+        FROM tool_master tm
+        LEFT JOIN item i ON tm.item_code = i.item_code
+        WHERE 1=1
+      `
       const params = []
 
       if (filters.status) {
-        query += ' AND status = ?'
+        query += ' AND tm.status = ?'
         params.push(filters.status)
       }
       if (filters.search) {
-        query += ' AND (name LIKE ? OR tool_id LIKE ? OR item_code LIKE ?)'
+        query += ' AND (tm.name LIKE ? OR tm.tool_id LIKE ? OR tm.item_code LIKE ?)'
         params.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`)
       }
       if (filters.tool_type) {
-        query += ' AND tool_type = ?'
+        query += ' AND tm.tool_type = ?'
         params.push(filters.tool_type)
       }
 
-      query += ' ORDER BY created_at DESC'
+      query += ' ORDER BY tm.created_at DESC'
       const [results] = await this.db.query(query, params)
       return results
     } catch (error) {
@@ -50,7 +55,10 @@ class ToolRoomModel {
   async getTool(tool_id) {
     try {
       const [results] = await this.db.query(
-        `SELECT * FROM tool_master WHERE tool_id = ?`,
+        `SELECT tm.*, i.name as item_name 
+         FROM tool_master tm
+         LEFT JOIN item i ON tm.item_code = i.item_code
+         WHERE tm.tool_id = ?`,
         [tool_id]
       )
       return results.length > 0 ? results[0] : null

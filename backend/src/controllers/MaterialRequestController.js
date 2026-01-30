@@ -10,12 +10,13 @@ export class MaterialRequestController {
   static async getAll(req, res) {
     try {
       const { db } = req.app.locals
-      const { status, department, search } = req.query
+      const { status, department, search, production_plan_id } = req.query
 
       const filters = {}
       if (status) filters.status = status
       if (department) filters.department = department
       if (search) filters.search = search
+      if (production_plan_id) filters.production_plan_id = production_plan_id
 
       const requests = await MaterialRequestModel.getAll(db, filters)
       res.json({ success: true, data: requests })
@@ -71,7 +72,10 @@ export class MaterialRequestController {
         }
       }
 
-      const result = await MaterialRequestModel.create(db, req.body)
+      const result = await MaterialRequestModel.create(db, {
+        ...req.body,
+        created_by: req.user?.user_id || req.user?.id || null
+      })
       res.status(201).json({ success: true, data: result })
     } catch (error) {
       res.status(500).json({ success: false, error: error.message })
@@ -137,18 +141,11 @@ export class MaterialRequestController {
 
       const result = await MaterialRequestModel.approve(db, id, approvedBy, source_warehouse)
       
-      let grn = null
       let message = 'Material request approved successfully'
       let unavailableItems = []
 
       if (mrRequest.purpose === 'purchase') {
-        try {
-          grn = await MaterialRequestModel.createGRNFromRequest(db, id)
-          message = `Material request approved. GRN ${grn?.grn_no || ''} created for inspection.`
-        } catch (err) {
-          console.error('Warning: Failed to create GRN from MR:', err.message)
-          message = 'Material request approved. (GRN creation failed - please create manually)'
-        }
+        message = 'Material request approved. You can now create an RFQ for this request.'
       } else {
         const warehouse = source_warehouse || result.source_warehouse || 'warehouse'
         
@@ -180,7 +177,7 @@ export class MaterialRequestController {
         }
       }
 
-      res.json({ success: true, data: result, grn: grn, message: message, unavailableItems: unavailableItems })
+      res.json({ success: true, data: result, message: message, unavailableItems: unavailableItems })
     } catch (error) {
       res.status(400).json({ success: false, error: error.message })
     }
@@ -263,6 +260,22 @@ export class MaterialRequestController {
       res.json({ success: true, data: departments })
     } catch (error) {
       res.status(500).json({ success: false, error: error.message })
+    }
+  }
+
+  /**
+   * PATCH /material-requests/:id/submit
+   * Submit material request
+   */
+  static async submit(req, res) {
+    try {
+      const { db } = req.app.locals
+      const { id } = req.params
+
+      const result = await MaterialRequestModel.submit(db, id)
+      res.json({ success: true, data: result, message: 'Material request submitted for approval' })
+    } catch (error) {
+      res.status(400).json({ success: false, error: error.message })
     }
   }
 

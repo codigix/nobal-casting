@@ -152,6 +152,18 @@ class ProductionModel {
         query += ' AND wo.assigned_to_id = ?'
         params.push(filters.assigned_to_id)
       }
+      if (filters.day) {
+        query += ' AND DAY(wo.planned_start_date) = ?'
+        params.push(filters.day)
+      }
+      if (filters.month) {
+        query += ' AND MONTH(wo.planned_start_date) = ?'
+        params.push(filters.month)
+      }
+      if (filters.year) {
+        query += ' AND YEAR(wo.planned_start_date) = ?'
+        params.push(filters.year)
+      }
 
       const [workOrders] = await this.db.query(query, params)
       return workOrders
@@ -221,6 +233,14 @@ class ProductionModel {
       values.push(wo_id)
       const query = `UPDATE work_order SET ${fields.join(', ')} WHERE wo_id = ?`
       await this.db.query(query, values)
+
+      // Sync Sales Order status if status or sales_order_id changed
+      if (data.status || data.sales_order_id !== undefined) {
+        const workOrder = await this.getWorkOrderById(wo_id)
+        if (workOrder && workOrder.sales_order_id) {
+          await this.syncSalesOrderStatus(workOrder.sales_order_id)
+        }
+      }
 
       return true
     } catch (error) {
@@ -305,15 +325,23 @@ class ProductionModel {
 
   async getProductionPlans(filters = {}) {
     try {
-      let query = 'SELECT * FROM production_plan WHERE 1=1'
+      let query = `
+        SELECT 
+          pp.*, 
+          b.product_name as bom_product_name, 
+          b.item_code as bom_item_code 
+        FROM production_plan pp
+        LEFT JOIN bom b ON pp.bom_id = b.bom_id
+        WHERE 1=1
+      `
       const params = []
 
       if (filters.status) {
-        query += ' AND status = ?'
+        query += ' AND pp.status = ?'
         params.push(filters.status)
       }
       if (filters.week_number) {
-        query += ' AND week_number = ?'
+        query += ' AND pp.week_number = ?'
         params.push(filters.week_number)
       }
 
@@ -326,7 +354,15 @@ class ProductionModel {
 
   async getProductionPlanDetails(plan_id) {
     try {
-      const [plans] = await this.db.query('SELECT * FROM production_plan WHERE plan_id = ?', [plan_id])
+      const [plans] = await this.db.query(`
+        SELECT 
+          pp.*, 
+          b.product_name as bom_product_name, 
+          b.item_code as bom_item_code 
+        FROM production_plan pp
+        LEFT JOIN bom b ON pp.bom_id = b.bom_id
+        WHERE pp.plan_id = ?
+      `, [plan_id])
       return plans[0] || null
     } catch (error) {
       throw error
@@ -394,19 +430,32 @@ class ProductionModel {
 
   async getProductionEntries(filters = {}) {
     try {
-      let query = 'SELECT * FROM production_entry WHERE 1=1'
+      let query = `
+        SELECT 
+          pe.*, 
+          wo.item_code, 
+          i.name as item_name,
+          mm.name as machine_name,
+          om.name as operator_name
+        FROM production_entry pe
+        LEFT JOIN work_order wo ON pe.work_order_id = wo.wo_id
+        LEFT JOIN item i ON wo.item_code = i.item_code
+        LEFT JOIN machine_master mm ON pe.machine_id = mm.machine_id
+        LEFT JOIN operator_master om ON pe.operator_id = om.operator_id
+        WHERE 1=1
+      `
       const params = []
 
       if (filters.entry_date) {
-        query += ' AND DATE(entry_date) = ?'
+        query += ' AND DATE(pe.entry_date) = ?'
         params.push(filters.entry_date)
       }
       if (filters.machine_id) {
-        query += ' AND machine_id = ?'
+        query += ' AND pe.machine_id = ?'
         params.push(filters.machine_id)
       }
       if (filters.work_order_id) {
-        query += ' AND work_order_id = ?'
+        query += ' AND pe.work_order_id = ?'
         params.push(filters.work_order_id)
       }
 
@@ -527,7 +576,7 @@ class ProductionModel {
 
   async getBOMs(filters = {}) {
     try {
-      let query = 'SELECT b.*, i.name as product_name, i.item_group FROM bom b LEFT JOIN item i ON b.item_code = i.item_code WHERE 1=1'
+      let query = 'SELECT b.*, i.name as product_name, i.item_group, i.standard_selling_rate FROM bom b LEFT JOIN item i ON b.item_code = i.item_code WHERE 1=1'
       const params = []
 
       if (filters.status) {
@@ -554,9 +603,14 @@ class ProductionModel {
   }
 
   async getBOMDetails(bom_id) {
-  try {
-    const [bom] = await this.db.query('SELECT * FROM bom WHERE bom_id = ?', [bom_id])
-    if (!bom || bom.length === 0) return null
+    try {
+      const [bom] = await this.db.query(`
+        SELECT b.*, i.name as product_name, i.standard_selling_rate
+        FROM bom b
+        LEFT JOIN item i ON b.item_code = i.item_code
+        WHERE b.bom_id = ?
+      `, [bom_id])
+      if (!bom || bom.length === 0) return null
 
     const [lines] = await this.db.query(
       `SELECT bl.*, i.name as component_name, i.item_group, i.loss_percentage as item_loss_percentage
@@ -572,7 +626,7 @@ class ProductionModel {
     let rawMaterials = []
     try {
       const [rawMats] = await this.db.query(`
-        SELECT brm.*, i.item_group 
+        SELECT brm.*, i.name as item_name, i.item_group 
         FROM bom_raw_material brm 
         LEFT JOIN item i ON brm.item_code = i.item_code 
         WHERE brm.bom_id = ? 
@@ -597,7 +651,7 @@ class ProductionModel {
 async getBOMRawMaterials(bom_id) {
   try {
     const [materials] = await this.db.query(
-      `SELECT brm.*, i.item_group FROM bom_raw_material brm LEFT JOIN item i ON brm.item_code = i.item_code WHERE brm.bom_id = ? ORDER BY brm.sequence`,
+      `SELECT brm.*, i.name as item_name, i.item_group FROM bom_raw_material brm LEFT JOIN item i ON brm.item_code = i.item_code WHERE brm.bom_id = ? ORDER BY brm.sequence`,
       [bom_id]
     )
     return materials || []
@@ -631,12 +685,12 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async createBOM(data) {
     try {
-      const query = `INSERT INTO bom (bom_id, item_code, description, quantity, uom, status, revision, effective_date, created_by, total_cost)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      const query = `INSERT INTO bom (bom_id, item_code, description, quantity, uom, status, revision, effective_date, created_by, total_cost, selling_rate)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       await this.db.query(
         query,
         [data.bom_id, data.item_code, data.description, data.quantity || 1, 
-         data.uom, data.status, data.revision, data.effective_date, data.created_by, data.total_cost || 0]
+         data.uom, data.status, data.revision, data.effective_date, data.created_by, data.total_cost || 0, data.selling_rate || 0]
       )
       return data
     } catch (error) {
@@ -736,6 +790,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       if (data.revision) { fields.push('revision = ?'); values.push(data.revision) }
       if (data.effective_date) { fields.push('effective_date = ?'); values.push(data.effective_date) }
       if (data.total_cost !== undefined) { fields.push('total_cost = ?'); values.push(data.total_cost) }
+      if (data.selling_rate !== undefined) { fields.push('selling_rate = ?'); values.push(data.selling_rate) }
 
       fields.push('updated_at = NOW()')
       values.push(bom_id)
@@ -777,9 +832,9 @@ async deleteAllBOMRawMaterials(bom_id) {
   async addBOMOperation(bom_id, operation) {
     try {
       await this.db.query(
-        `INSERT INTO bom_operation (bom_id, operation_name, workstation_type, operation_time, hourly_rate, fixed_time, operating_cost, operation_type, sequence, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [bom_id, operation.operation_name, operation.workstation_type, operation.operation_time, 
+        `INSERT INTO bom_operation (bom_id, operation_name, workstation_type, operation_time, setup_time, hourly_rate, fixed_time, operating_cost, operation_type, sequence, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [bom_id, operation.operation_name, operation.workstation_type, operation.operation_time, operation.setup_time || 0,
          operation.hourly_rate || 0, operation.fixed_time, operation.operating_cost || 0, operation.operation_type || 'IN_HOUSE', operation.sequence, operation.notes]
       )
     } catch (error) {
@@ -845,25 +900,51 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   // ============= JOB CARDS =============
 
-  async getJobCards(status = '', search = '', work_order_id = '') {
+  async getJobCards(filters = {}) {
+    const { status, search, work_order_id, day, month, year } = filters
     try {
-      let query = 'SELECT * FROM job_card WHERE 1=1'
+      let query = `
+        SELECT 
+          jc.*, 
+          wo.item_code, 
+          i.name as item_name,
+          mm.name as machine_name,
+          om.name as operator_name
+        FROM job_card jc
+        LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id
+        LEFT JOIN item i ON wo.item_code = i.item_code
+        LEFT JOIN machine_master mm ON jc.machine_id = mm.machine_id
+        LEFT JOIN operator_master om ON jc.operator_id = om.operator_id
+        WHERE 1=1
+      `
       const params = []
 
       if (status) {
-        query += ' AND status = ?'
+        query += ' AND jc.status = ?'
         params.push(status)
       }
       if (search) {
-        query += ' AND (job_card_id LIKE ? OR work_order_id LIKE ?)'
-        params.push(`%${search}%`, `%${search}%`)
+        query += ' AND (jc.job_card_id LIKE ? OR jc.work_order_id LIKE ? OR i.name LIKE ?)'
+        params.push(`%${search}%`, `%${search}%`, `%${search}%`)
       }
       if (work_order_id) {
-        query += ' AND work_order_id = ?'
+        query += ' AND jc.work_order_id = ?'
         params.push(work_order_id)
       }
+      if (day) {
+        query += ' AND DAY(jc.scheduled_start_date) = ?'
+        params.push(day)
+      }
+      if (month) {
+        query += ' AND MONTH(jc.scheduled_start_date) = ?'
+        params.push(month)
+      }
+      if (year) {
+        query += ' AND YEAR(jc.scheduled_start_date) = ?'
+        params.push(year)
+      }
 
-      query += ' ORDER BY created_at DESC'
+      query += ' ORDER BY jc.created_at DESC'
       const [jobCards] = await this.db.query(query, params)
       return jobCards || []
     } catch (error) {
@@ -873,7 +954,20 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async getJobCardDetails(job_card_id) {
     try {
-      const [jobCards] = await this.db.query('SELECT * FROM job_card WHERE job_card_id = ?', [job_card_id])
+      const [jobCards] = await this.db.query(`
+        SELECT 
+          jc.*, 
+          wo.item_code, 
+          i.name as item_name,
+          mm.name as machine_name,
+          om.name as operator_name
+        FROM job_card jc
+        LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id
+        LEFT JOIN item i ON wo.item_code = i.item_code
+        LEFT JOIN machine_master mm ON jc.machine_id = mm.machine_id
+        LEFT JOIN operator_master om ON jc.operator_id = om.operator_id
+        WHERE jc.job_card_id = ?
+      `, [job_card_id])
       return jobCards && jobCards.length > 0 ? jobCards[0] : null
     } catch (error) {
       throw error
@@ -884,10 +978,11 @@ async deleteAllBOMRawMaterials(bom_id) {
     try {
       const statusNormalized = ((data.status || 'draft').toLowerCase().replace(/\s+/g, '-')).trim()
       await this.db.query(
-        `INSERT INTO job_card (job_card_id, work_order_id, machine_id, operator_id, operation, operation_sequence, planned_quantity, operation_time, scheduled_start_date, scheduled_end_date, status, created_by, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO job_card (job_card_id, work_order_id, machine_id, operator_id, operation, operation_sequence, planned_quantity, produced_quantity, rejected_quantity, accepted_quantity, scrap_quantity, operation_time, scheduled_start_date, scheduled_end_date, status, created_by, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [data.job_card_id, data.work_order_id, data.machine_id, data.operator_id, data.operation || null, data.operation_sequence || null,
-         data.planned_quantity, data.operation_time || 0, data.scheduled_start_date, data.scheduled_end_date, statusNormalized, data.created_by, data.notes]
+         data.planned_quantity, data.produced_quantity || 0, data.rejected_quantity || 0, data.accepted_quantity || 0, data.scrap_quantity || 0,
+         data.operation_time || 0, data.scheduled_start_date, data.scheduled_end_date, statusNormalized, data.created_by, data.notes]
       )
       return data
     } catch (error) {
@@ -915,6 +1010,8 @@ async deleteAllBOMRawMaterials(bom_id) {
       if (data.planned_quantity !== undefined && data.planned_quantity !== null) { fields.push('planned_quantity = ?'); values.push(data.planned_quantity) }
       if (data.produced_quantity !== undefined && data.produced_quantity !== null) { fields.push('produced_quantity = ?'); values.push(data.produced_quantity) }
       if (data.rejected_quantity !== undefined && data.rejected_quantity !== null) { fields.push('rejected_quantity = ?'); values.push(data.rejected_quantity) }
+      if (data.accepted_quantity !== undefined && data.accepted_quantity !== null) { fields.push('accepted_quantity = ?'); values.push(data.accepted_quantity) }
+      if (data.scrap_quantity !== undefined && data.scrap_quantity !== null) { fields.push('scrap_quantity = ?'); values.push(data.scrap_quantity) }
       if (data.scheduled_start_date) { fields.push('scheduled_start_date = ?'); values.push(data.scheduled_start_date) }
       if (data.scheduled_end_date) { fields.push('scheduled_end_date = ?'); values.push(data.scheduled_end_date) }
       if (data.actual_start_date) { fields.push('actual_start_date = ?'); values.push(data.actual_start_date) }
@@ -926,6 +1023,9 @@ async deleteAllBOMRawMaterials(bom_id) {
       values.push(job_card_id)
       const query = `UPDATE job_card SET ${fields.join(', ')} WHERE job_card_id = ?`
       await this.db.query(query, values)
+
+      // Sync quantities after update to ensure integrity
+      await this._syncJobCardQuantities(job_card_id)
 
       return true
     } catch (error) {
@@ -953,6 +1053,12 @@ async deleteAllBOMRawMaterials(bom_id) {
         
         if (workOrderStatus !== 'in-progress' && workOrderStatus !== 'in_progress' && workOrderStatus !== 'completed') {
           await this.updateWorkOrder(work_order_id, { status: 'in_progress' })
+          
+          // Sync Sales Order status
+          if (workOrder && workOrder.sales_order_id) {
+            await this.syncSalesOrderStatus(workOrder.sales_order_id)
+          }
+          
           return true
         }
       }
@@ -978,12 +1084,88 @@ async deleteAllBOMRawMaterials(bom_id) {
       
       if (allCompleted) {
         await this.updateWorkOrder(work_order_id, { status: 'completed' })
+        
+        // Sync Sales Order status
+        const workOrder = await this.getWorkOrderById(work_order_id)
+        if (workOrder && workOrder.sales_order_id) {
+          await this.syncSalesOrderStatus(workOrder.sales_order_id)
+        }
+        
         return true
       }
 
       return false
     } catch (error) {
       throw error
+    }
+  }
+
+  async syncSalesOrderStatus(sales_order_id) {
+    if (!sales_order_id) return false
+    try {
+      const [workOrders] = await this.db.query(
+        'SELECT status FROM work_order WHERE sales_order_id = ?',
+        [sales_order_id]
+      )
+
+      if (!workOrders || workOrders.length === 0) return false
+
+      const statuses = workOrders.map(wo => (wo.status || '').toLowerCase())
+      
+      let newSOStatus = 'confirmed'
+
+      const hasInProgress = statuses.some(s => s === 'in-progress' || s === 'in_progress')
+      const hasCompleted = statuses.some(s => s === 'completed')
+      const allCompleted = statuses.every(s => s === 'completed')
+
+      if (allCompleted) {
+        newSOStatus = 'complete'
+      } else if (hasInProgress || hasCompleted) {
+        newSOStatus = 'production'
+      }
+
+      const [currentSO] = await this.db.query(
+        'SELECT status, created_by FROM selling_sales_order WHERE sales_order_id = ?',
+        [sales_order_id]
+      )
+      
+      if (currentSO && currentSO.length > 0) {
+        const currentStatus = (currentSO[0].status || '').toLowerCase()
+        if (currentStatus !== newSOStatus) {
+            const advancedStatuses = ['dispatched', 'delivered', 'cancelled']
+            if (!advancedStatuses.includes(currentStatus)) {
+                await this.db.query(
+                    'UPDATE selling_sales_order SET status = ?, updated_at = NOW() WHERE sales_order_id = ?',
+                    [newSOStatus, sales_order_id]
+                )
+
+                // Create notification for status change
+                try {
+                  const NotificationModel = (await import('./NotificationModel.js')).default
+                  const creatorId = currentSO[0].created_by
+                  
+                  if (creatorId) {
+                    await NotificationModel.create({
+                      user_id: creatorId,
+                      notification_type: 'SALES_ORDER_STATUS_UPDATE',
+                      title: `Sales Order Status Updated: ${sales_order_id}`,
+                      message: `Sales Order ${sales_order_id} has automatically transitioned to '${newSOStatus}' status.`,
+                      reference_type: 'SALES_ORDER',
+                      reference_id: sales_order_id
+                    })
+                  }
+                } catch (notifyError) {
+                  console.error('Failed to create notification for sales order status update:', notifyError)
+                }
+
+                return true
+            }
+        }
+      }
+      return false
+    } catch (error) {
+      console.error('Error syncing sales order status:', error)
+      return false
     }
   }
 
@@ -1392,14 +1574,110 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
+  async _syncJobCardQuantities(jobCardId) {
+    try {
+      // 1. Get all time logs for this job card
+      const [timeLogs] = await this.db.query(
+        'SELECT completed_qty, rejected_qty, scrap_qty, shift, log_date FROM time_log WHERE job_card_id = ?',
+        [jobCardId]
+      );
+
+      // 2. Get all rejection entries for this job card
+      const [rejections] = await this.db.query(
+        'SELECT rejected_qty, scrap_qty, accepted_qty, shift, log_date FROM rejection_entry WHERE job_card_id = ?',
+        [jobCardId]
+      );
+
+      // Group by date and shift to handle the "inferred production" logic
+      const shifts = {};
+
+      timeLogs.forEach(log => {
+        const dateStr = log.log_date instanceof Date ? log.log_date.toISOString().split('T')[0] : log.log_date;
+        const key = `${dateStr}_${log.shift}`;
+        if (!shifts[key]) shifts[key] = { produced: 0, rejected: 0, scrap: 0 };
+        shifts[key].produced += parseFloat(log.completed_qty) || 0;
+        // Even if frontend doesn't send them yet, schema supports them
+        shifts[key].rejected += parseFloat(log.rejected_qty) || 0;
+        shifts[key].scrap += parseFloat(log.scrap_qty) || 0;
+      });
+
+      rejections.forEach(rej => {
+        const dateStr = rej.log_date instanceof Date ? rej.log_date.toISOString().split('T')[0] : rej.log_date;
+        const key = `${dateStr}_${rej.shift}`;
+        if (!shifts[key]) shifts[key] = { produced: 0, rejected: 0, scrap: 0 };
+        
+        const rQty = parseFloat(rej.rejected_qty) || 0;
+        const sQty = parseFloat(rej.scrap_qty) || 0;
+        const aQty = parseFloat(rej.accepted_qty) || 0;
+
+        shifts[key].rejected += rQty;
+        shifts[key].scrap += sQty;
+
+        // Inferred production logic: if no production recorded for this shift but rejection has accepted_qty
+        if (shifts[key].produced === 0 && aQty > 0) {
+          shifts[key].produced = aQty + rQty + sQty;
+        }
+      });
+
+      let totalProduced = 0;
+      let totalRejected = 0;
+      let totalScrap = 0;
+
+      Object.values(shifts).forEach(s => {
+        totalProduced += s.produced;
+        totalRejected += s.rejected;
+        totalScrap += s.scrap;
+      });
+
+      const totalAccepted = Math.max(0, totalProduced - totalRejected - totalScrap);
+
+      // 3. Update Job Card
+      await this.db.query(
+        `UPDATE job_card SET 
+          produced_quantity = ?, 
+          rejected_quantity = ?, 
+          accepted_quantity = ?, 
+          scrap_quantity = ?,
+          updated_at = NOW()
+         WHERE job_card_id = ?`,
+        [totalProduced, totalRejected, totalAccepted, totalScrap, jobCardId]
+      );
+
+      // 4. Update Work Order Operation
+      const [jcRows] = await this.db.query('SELECT work_order_id, operation, operation_sequence FROM job_card WHERE job_card_id = ?', [jobCardId]);
+      if (jcRows.length > 0) {
+        const jc = jcRows[0];
+        // Note: Using accepted_quantity for completed_qty in work_order_operation
+        await this.db.query(
+          `UPDATE work_order_operation SET 
+            completed_qty = ?, 
+            process_loss_qty = ?
+           WHERE wo_id = ? AND operation = ? AND sequence = ?`,
+          [totalAccepted, totalRejected + totalScrap, jc.work_order_id, jc.operation, jc.operation_sequence]
+        );
+
+        // Also update work order progress if needed
+        await this.checkAndUpdateWorkOrderProgress(jc.work_order_id);
+        await this.checkAndUpdateWorkOrderCompletion(jc.work_order_id);
+      }
+
+      return { totalProduced, totalRejected, totalAccepted, totalScrap };
+    } catch (error) {
+      console.error('Error in _syncJobCardQuantities:', error);
+      throw error;
+    }
+  }
+
   async createTimeLog(data) {
     try {
       const timeLogId = `TL-${Date.now()}`
-      const query = `INSERT INTO time_log (time_log_id, job_card_id, employee_id, operator_name, workstation_name, shift, from_time, to_time, time_in_minutes, completed_qty, accepted_qty, rejected_qty, scrap_qty, inhouse, outsource)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      const query = `INSERT INTO time_log (time_log_id, job_card_id, day_number, log_date, employee_id, operator_name, workstation_name, shift, from_time, to_time, time_in_minutes, completed_qty, accepted_qty, rejected_qty, scrap_qty, inhouse, outsource)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       await this.db.query(query, [
         timeLogId,
         data.job_card_id,
+        data.day_number || 1,
+        data.log_date || new Date().toISOString().split('T')[0],
         data.employee_id || null,
         data.operator_name || null,
         data.workstation_name || null,
@@ -1414,6 +1692,10 @@ async deleteAllBOMRawMaterials(bom_id) {
         data.inhouse ? 1 : 0,
         data.outsource ? 1 : 0
       ])
+
+      // Sync quantities
+      await this._syncJobCardQuantities(data.job_card_id);
+
       return { time_log_id: timeLogId, ...data }
     } catch (error) {
       throw error
@@ -1431,7 +1713,15 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async deleteTimeLog(timeLogId) {
     try {
+      // Get job_card_id before deleting
+      const [rows] = await this.db.query('SELECT job_card_id FROM time_log WHERE time_log_id = ?', [timeLogId]);
+      
       await this.db.query('DELETE FROM time_log WHERE time_log_id = ?', [timeLogId])
+      
+      if (rows.length > 0) {
+        await this._syncJobCardQuantities(rows[0].job_card_id);
+      }
+      
       return true
     } catch (error) {
       throw error
@@ -1441,15 +1731,24 @@ async deleteAllBOMRawMaterials(bom_id) {
   async createRejection(data) {
     try {
       const rejectionId = `REJ-${Date.now()}`
-      const query = `INSERT INTO rejection_entry (rejection_id, job_card_id, rejection_reason, rejected_qty, notes)
-                     VALUES (?, ?, ?, ?, ?)`
+      const query = `INSERT INTO rejection_entry (rejection_id, job_card_id, day_number, log_date, shift, accepted_qty, rejection_reason, rejected_qty, scrap_qty, notes)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       await this.db.query(query, [
         rejectionId,
         data.job_card_id,
+        data.day_number || 1,
+        data.log_date || new Date().toISOString().split('T')[0],
+        data.shift || 'A',
+        data.accepted_qty || 0,
         data.rejection_reason || null,
         data.rejected_qty || 0,
+        data.scrap_qty || 0,
         data.notes || null
       ])
+
+      // Sync quantities
+      await this._syncJobCardQuantities(data.job_card_id);
+
       return { id: rejectionId, ...data }
     } catch (error) {
       throw error
@@ -1467,7 +1766,15 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async deleteRejection(rejectionId) {
     try {
+      // Get job_card_id before deleting
+      const [rows] = await this.db.query('SELECT job_card_id FROM rejection_entry WHERE rejection_id = ?', [rejectionId]);
+      
       await this.db.query('DELETE FROM rejection_entry WHERE rejection_id = ?', [rejectionId])
+      
+      if (rows.length > 0) {
+        await this._syncJobCardQuantities(rows[0].job_card_id);
+      }
+      
       return true
     } catch (error) {
       throw error
@@ -1477,11 +1784,14 @@ async deleteAllBOMRawMaterials(bom_id) {
   async createDowntime(data) {
     try {
       const downtimeId = `DT-${Date.now()}`
-      const query = `INSERT INTO downtime_entry (downtime_id, job_card_id, downtime_type, downtime_reason, from_time, to_time, duration_minutes)
-                     VALUES (?, ?, ?, ?, ?, ?, ?)`
+      const query = `INSERT INTO downtime_entry (downtime_id, job_card_id, day_number, log_date, shift, downtime_type, downtime_reason, from_time, to_time, duration_minutes)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       await this.db.query(query, [
         downtimeId,
         data.job_card_id,
+        data.day_number || 1,
+        data.log_date || new Date().toISOString().split('T')[0],
+        data.shift || 'A',
         data.downtime_type || null,
         data.downtime_reason || null,
         data.from_time || null,
@@ -1529,6 +1839,12 @@ async deleteAllBOMRawMaterials(bom_id) {
         [eventTimestamp, workstation_id || null, employee_id || null, inhouse ? 1 : 0, outsource ? 1 : 0, jobCardId]
       )
 
+      // Sync Work Order and Sales Order status
+      const jobCard = await this.getJobCardDetails(jobCardId)
+      if (jobCard && jobCard.work_order_id) {
+        await this.checkAndUpdateWorkOrderProgress(jobCard.work_order_id)
+      }
+
       return { success: true, message: 'Operation started successfully' }
     } catch (error) {
       throw error
@@ -1551,6 +1867,12 @@ async deleteAllBOMRawMaterials(bom_id) {
         `UPDATE job_card SET actual_end_date = ?, status = 'completed', next_operation_id = ? WHERE job_card_id = ?`,
         [eventTimestamp, next_operation_id || null, jobCardId]
       )
+
+      // Sync Work Order and Sales Order status
+      const jobCard = await this.getJobCardDetails(jobCardId)
+      if (jobCard && jobCard.work_order_id) {
+        await this.checkAndUpdateWorkOrderCompletion(jobCard.work_order_id)
+      }
 
       return { success: true, message: 'Operation ended successfully' }
     } catch (error) {
@@ -1700,6 +2022,9 @@ async deleteAllBOMRawMaterials(bom_id) {
         [normalizedStatus, jobCardId]
       )
 
+      // Sync quantities after status update
+      await this._syncJobCardQuantities(jobCardId)
+
       const [jobCard] = await this.db.query(
         'SELECT work_order_id FROM job_card WHERE job_card_id = ?',
         [jobCardId]
@@ -1711,20 +2036,11 @@ async deleteAllBOMRawMaterials(bom_id) {
 
       const workOrderId = jobCard[0].work_order_id
 
-      const [jobCards] = await this.db.query(
-        'SELECT status FROM job_card WHERE work_order_id = ? ORDER BY updated_at DESC LIMIT 1',
-        [workOrderId]
-      )
-
-      let workOrderStatus = normalizedStatus
-      if (jobCards && jobCards.length > 0) {
-        workOrderStatus = (jobCards[0].status || '').toLowerCase().trim()
+      if (normalizedStatus === 'in-progress' || normalizedStatus === 'pending') {
+        await this.checkAndUpdateWorkOrderProgress(workOrderId)
+      } else if (normalizedStatus === 'completed') {
+        await this.checkAndUpdateWorkOrderCompletion(workOrderId)
       }
-
-      await this.db.query(
-        'UPDATE work_order SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE wo_id = ?',
-        [workOrderStatus, workOrderId]
-      )
 
       const [workOrder] = await this.db.query(
         'SELECT sales_order_id, bom_no FROM work_order WHERE wo_id = ?',
@@ -1736,10 +2052,7 @@ async deleteAllBOMRawMaterials(bom_id) {
         const bomNo = workOrder[0].bom_no
 
         if (salesOrderId) {
-          await this.db.query(
-            'UPDATE sales_order SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE so_id = ?',
-            [workOrderStatus, salesOrderId]
-          )
+          await this.syncSalesOrderStatus(salesOrderId)
         }
 
         const [productionPlans] = await this.db.query(
@@ -1751,20 +2064,43 @@ async deleteAllBOMRawMaterials(bom_id) {
           for (const plan of productionPlans) {
             await this.db.query(
               'UPDATE production_plan SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE plan_id = ?',
-              [workOrderStatus, plan.plan_id]
+              [normalizedStatus, plan.plan_id]
             )
           }
         }
 
-        if (bomNo) {
+        // Update BOM status based on Job Card activity
+        if (bomNo && (normalizedStatus === 'in-progress' || normalizedStatus === 'completed')) {
           await this.db.query(
-            'UPDATE bom SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE bom_id = ?',
-            [workOrderStatus, bomNo]
+            "UPDATE bom SET status = 'active', updated_at = CURRENT_TIMESTAMP WHERE bom_id = ? AND status != 'active'",
+            [bomNo]
           )
         }
       }
 
-      return { success: true, newStatus: workOrderStatus }
+      return { success: true, newStatus: normalizedStatus }
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async syncAllBOMStatuses() {
+    try {
+      // Find all BOMs that have at least one Job Card that is 'in-progress' or 'completed'
+      const query = `
+        UPDATE bom b
+        SET b.status = 'active', b.updated_at = CURRENT_TIMESTAMP
+        WHERE b.status != 'active'
+        AND EXISTS (
+          SELECT 1 
+          FROM work_order wo
+          JOIN job_card jc ON wo.wo_id = jc.work_order_id
+          WHERE wo.bom_no = b.bom_id
+          AND jc.status IN ('in-progress', 'completed')
+        )
+      `
+      const [result] = await this.db.query(query)
+      return { success: true, affectedRows: result.affectedRows }
     } catch (error) {
       throw error
     }

@@ -26,13 +26,14 @@ import materialRequestRoutes from './routes/materialRequests.js'
 import mastersRoutes from './routes/masters.js'
 import machinesRoutes from './routes/machines.js'
 import notificationRoutes from './routes/notifications.js'
+import { createOEERoutes } from './routes/oee.js'
 
 dotenv.config()
 
 const app = express()
 
 const corsOptions = {
-  origin: ['http://localhost:5174', 'http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:5174'],
+  origin: ['http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:5174', 'http://127.0.0.1:5175'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -788,6 +789,8 @@ function setupRoutes() {
   
   app.use('/api/machines', machinesRoutes)
   
+  app.use('/api/oee', createOEERoutes(db))
+  
   app.use('/api/notifications', notificationRoutes)
   
   app.use((err, req, res, next) => {
@@ -803,7 +806,7 @@ function setupRoutes() {
   })
 }
 
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 5001
 
 async function start() {
   await initializeDatabase()

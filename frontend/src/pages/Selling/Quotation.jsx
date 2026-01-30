@@ -287,7 +287,7 @@ export default function Quotation() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
                   <div>
-                    <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Quotations</div>
+                    <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: '', letterSpacing: '0.5px' }}>Total Quotations</div>
                     <div style={{ fontSize: '28px', fontWeight: '700', color: '#1a1a1a', marginTop: '4px' }}>{metrics.total}</div>
                   </div>
                   <div style={{ background: '#dbeafe', width: '44px', height: '44px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -316,7 +316,7 @@ export default function Quotation() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
                   <div>
-                    <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Draft</div>
+                    <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: '', letterSpacing: '0.5px' }}>Draft</div>
                     <div style={{ fontSize: '28px', fontWeight: '700', color: '#1a1a1a', marginTop: '4px' }}>{metrics.draft}</div>
                   </div>
                   <div style={{ background: '#fef3c7', width: '44px', height: '44px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -345,7 +345,7 @@ export default function Quotation() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
                   <div>
-                    <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sent</div>
+                    <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: '', letterSpacing: '0.5px' }}>Sent</div>
                     <div style={{ fontSize: '28px', fontWeight: '700', color: '#1a1a1a', marginTop: '4px' }}>{metrics.sent}</div>
                   </div>
                   <div style={{ background: '#f3e8ff', width: '44px', height: '44px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -374,7 +374,7 @@ export default function Quotation() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
                   <div>
-                    <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Accepted</div>
+                    <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: '', letterSpacing: '0.5px' }}>Accepted</div>
                     <div style={{ fontSize: '28px', fontWeight: '700', color: '#1a1a1a', marginTop: '4px' }}>{metrics.accepted}</div>
                   </div>
                   <div style={{ background: '#dcfce7', width: '44px', height: '44px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -403,7 +403,7 @@ export default function Quotation() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
                   <div>
-                    <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Converted</div>
+                    <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: '', letterSpacing: '0.5px' }}>Converted</div>
                     <div style={{ fontSize: '28px', fontWeight: '700', color: '#1a1a1a', marginTop: '4px' }}>{metrics.converted}</div>
                   </div>
                   <div style={{ background: '#dbeafe', width: '44px', height: '44px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -432,7 +432,7 @@ export default function Quotation() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
                   <div>
-                    <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Cancelled</div>
+                    <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: '', letterSpacing: '0.5px' }}>Cancelled</div>
                     <div style={{ fontSize: '28px', fontWeight: '700', color: '#1a1a1a', marginTop: '4px' }}>{metrics.cancelled}</div>
                   </div>
                   <div style={{ background: '#fee2e2', width: '44px', height: '44px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -457,7 +457,7 @@ export default function Quotation() {
                 borderRadius: '12px',
                 padding: '20px'
               }}>
-                <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Total Value</div>
+                <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: '', letterSpacing: '0.5px', marginBottom: '8px' }}>Total Value</div>
                 <div style={{ fontSize: '26px', fontWeight: '700', color: '#1a1a1a', marginBottom: '4px' }}>₹{(metrics.total_value / 100000).toFixed(1)}L</div>
                 <div style={{ fontSize: '12px', color: '#666' }}>quotation value</div>
               </div>
@@ -469,7 +469,7 @@ export default function Quotation() {
                 borderRadius: '12px',
                 padding: '20px'
               }}>
-                <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Average Value</div>
+                <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: '', letterSpacing: '0.5px', marginBottom: '8px' }}>Average Value</div>
                 <div style={{ fontSize: '26px', fontWeight: '700', color: '#1a1a1a', marginBottom: '4px' }}>₹{(metrics.average_value / 1000).toFixed(0)}K</div>
                 <div style={{ fontSize: '12px', color: '#666' }}>per quotation</div>
               </div>
@@ -481,7 +481,7 @@ export default function Quotation() {
                 borderRadius: '12px',
                 padding: '20px'
               }}>
-                <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Conversion Rate</div>
+                <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: '', letterSpacing: '0.5px', marginBottom: '8px' }}>Conversion Rate</div>
                 <div style={{ fontSize: '26px', fontWeight: '700', color: '#1a1a1a', marginBottom: '4px' }}>{metrics.conversion_rate}%</div>
                 <div style={{ fontSize: '12px', color: '#666' }}>quotes to orders</div>
               </div>
@@ -493,7 +493,7 @@ export default function Quotation() {
                 borderRadius: '12px',
                 padding: '20px'
               }}>
-                <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Sent Rate</div>
+                <div style={{ fontSize: '12px', color: '#666', fontWeight: '600', textTransform: '', letterSpacing: '0.5px', marginBottom: '8px' }}>Sent Rate</div>
                 <div style={{ fontSize: '26px', fontWeight: '700', color: '#1a1a1a', marginBottom: '4px' }}>{metrics.total > 0 ? Math.round(((metrics.sent + metrics.accepted + metrics.converted) / metrics.total) * 100) : 0}%</div>
                 <div style={{ fontSize: '12px', color: '#666' }}>quotes sent</div>
               </div>
@@ -516,11 +516,11 @@ export default function Quotation() {
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quote ID</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Customer</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Valid Till</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: '', letterSpacing: '0.5px' }}>Quote ID</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: '', letterSpacing: '0.5px' }}>Customer</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: '', letterSpacing: '0.5px' }}>Amount</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: '', letterSpacing: '0.5px' }}>Status</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: '', letterSpacing: '0.5px' }}>Valid Till</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -684,7 +684,7 @@ export default function Quotation() {
 
                 {/* Status Summary */}
                 <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #f0f0f0' }}>
-                  <h4 style={{ fontSize: '12px', fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 12px 0' }}>Status Summary</h4>
+                  <h4 style={{ fontSize: '12px', fontWeight: '600', color: '#666', textTransform: '', letterSpacing: '0.5px', margin: '0 0 12px 0' }}>Status Summary</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
                       <span style={{ color: '#666' }}>✏️ Draft</span>

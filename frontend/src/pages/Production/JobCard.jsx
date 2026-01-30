@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, Eye, CheckCircle, ChevronDown, ChevronRight, AlertCircle, Zap, Trash } from 'lucide-react'
+import {
+  Plus, Edit2, Trash2, Eye, CheckCircle, ChevronDown, ChevronRight, AlertCircle, Zap, Trash,
+  ClipboardList, Search, Filter, Calendar, Activity, CheckCircle2, Factory, Clock, Package, MoreVertical, X,
+  FileText, TrendingUp, BarChart3, Layers
+} from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as productionService from '../../services/productionService'
+import Card from '../../components/Card/Card'
 import CreateJobCardModal from '../../components/Production/CreateJobCardModal'
 import ViewJobCardModal from '../../components/Production/ViewJobCardModal'
 import SearchableSelect from '../../components/SearchableSelect'
@@ -15,12 +20,23 @@ export default function JobCard() {
   const [jobCardsByWO, setJobCardsByWO] = useState({})
   const [expandedWO, setExpandedWO] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [currentTime, setCurrentTime] = useState(new Date())
+  const [stats, setStats] = useState({
+    totalJobs: 0,
+    inProgress: 0,
+    completed: 0,
+    efficiency: 0
+  })
   const [filters, setFilters] = useState({
     status: '',
-    search: ''
+    search: '',
+    day: '',
+    month: '',
+    year: ''
   })
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [preSelectedWorkOrderId, setPreSelectedWorkOrderId] = useState(null)
   const [viewingJobCardId, setViewingJobCardId] = useState(null)
   const [showViewModal, setShowViewModal] = useState(false)
   const [inlineEditingId, setInlineEditingId] = useState(null)
@@ -28,6 +44,11 @@ export default function JobCard() {
   const [workstations, setWorkstations] = useState([])
   const [operators, setOperators] = useState([])
   const [operations, setOperations] = useState([])
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     fetchData()
@@ -59,11 +80,94 @@ export default function JobCard() {
     }
   }
 
+  const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
+    const colorMap = {
+      blue: 'text-blue-600 bg-blue-50 border-blue-100',
+      emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+      amber: 'text-amber-600 bg-amber-50 border-amber-100',
+      rose: 'text-rose-600 bg-rose-50 border-rose-100',
+      indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100',
+      violet: 'text-violet-600 bg-violet-50 border-violet-100'
+    }
+
+    return (
+      <div className="bg-white p-2 rounded border border-gray-100  hover:shadow-md transition-all group  relative">
+        <div className="absolute -right-4 -top-4 w-24 h-24 bg-gray-50 rounded-full opacity-50 group-hover:scale-110 transition-transform" />
+        <div className="relative flex justify-between items-start">
+          <div className="">
+            <p className="text-xs  text-gray-400 ">{label}</p>
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-xl  text-gray-900 ">{value}</h3>
+              {trend && (
+                <span className={`text-xs  ${trend > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                  {trend > 0 ? '+' : ''}{trend}%
+                </span>
+              )}
+            </div>
+            {subtitle && (
+              <p className="text-xs  text-gray-500 ">{subtitle}</p>
+            )}
+          </div>
+          <div className={`p-2 roundedl ${colorMap[color] || colorMap.blue}  group-hover:scale-110 transition-transform`}>
+            <Icon size={24} />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const StatusBadge = ({ status }) => {
+    const configs = {
+      draft: { color: 'text-slate-600 bg-slate-50 border-slate-100', icon: FileText },
+      planned: { color: 'text-blue-600 bg-blue-50 border-blue-100', icon: Calendar },
+      'in-progress': { color: 'text-amber-600 bg-amber-50 border-amber-100', icon: Activity },
+      completed: { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: CheckCircle2 },
+      cancelled: { color: 'text-rose-600 bg-rose-50 border-rose-100', icon: X }
+    }
+    const normalized = (status || 'draft').toLowerCase()
+    const config = configs[normalized] || configs.draft
+    const Icon = config.icon
+
+    return (
+      <span className={`inline-flex items-center gap-1.5 p-2  py-1 rounded-full text-xs   border ${config.color}`}>
+        <Icon size={12} />
+        {status}
+      </span>
+    )
+  }
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-'
+    try {
+      return new Date(dateString).toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    } catch {
+      return '-'
+    }
+  }
+
   const fetchWorkOrders = async () => {
     try {
       setLoading(true)
       const response = await productionService.getWorkOrders(filters)
-      setWorkOrders(response.data || [])
+      const orders = response.data || []
+      setWorkOrders(orders)
+
+      // Simple stat calculation based on WOs since job cards are nested
+      const inProgress = orders.filter(wo => wo.status === 'in-progress').length
+      const completed = orders.filter(wo => wo.status === 'completed').length
+      const total = orders.length
+
+      setStats({
+        totalJobs: total,
+        inProgress: inProgress,
+        completed: completed,
+        efficiency: total > 0 ? Math.round((completed / total) * 100) : 0
+      })
+
       setJobCardsByWO({})
       setExpandedWO(null)
     } catch (err) {
@@ -84,10 +188,10 @@ export default function JobCard() {
         }
         return
       }
-      
+
       const response = await productionService.getJobCards({ work_order_id: wo_id })
       const jobCards = response.data || []
-      
+
       setJobCardsByWO(prev => ({
         ...prev,
         [wo_id]: jobCards
@@ -191,7 +295,7 @@ export default function JobCard() {
     if (!workOrder) return { valid: true }
 
     const plannedTotal = parseFloat(workOrder.quantity || workOrder.qty_to_manufacture || 0)
-    
+
     const alreadyProduced = jobCards.reduce((sum, card) => {
       if (card.job_card_id === jobCardId) {
         return sum
@@ -214,10 +318,10 @@ export default function JobCard() {
 
   const handleInlineSave = async (jobCardId) => {
     try {
-      const currentWO = Array.from(Object.entries(jobCardsByWO)).find(([woId, cards]) => 
+      const currentWO = Array.from(Object.entries(jobCardsByWO)).find(([woId, cards]) =>
         cards.some(c => c.job_card_id === jobCardId)
       )
-      
+
       if (currentWO) {
         const plannedValidation = validatePlannedQuantity(jobCardId, currentWO[0], inlineEditData.planned_quantity)
         if (!plannedValidation.valid) {
@@ -241,11 +345,11 @@ export default function JobCard() {
       }
 
       await productionService.updateJobCard(jobCardId, updateData)
-      
+
       if (statusChanged) {
         await productionService.updateJobCardStatus(jobCardId, inlineEditData.status)
       }
-      
+
       toast.addToast('Job card updated successfully', 'success')
       setInlineEditingId(null)
       setInlineEditData({})
@@ -278,24 +382,24 @@ export default function JobCard() {
   const canStartJobCard = (jobCardId, woId) => {
     const jobCards = jobCardsByWO[woId] || []
     const currentCard = jobCards.find(c => c.job_card_id === jobCardId)
-    
+
     if (!currentCard || (currentCard.status || '').toLowerCase() !== 'draft') {
       return { canStart: false, reason: 'Only draft job cards can be started' }
     }
 
     const currentCardIndex = jobCards.findIndex(c => c.job_card_id === jobCardId)
-    
+
     if (currentCardIndex === 0) {
       return { canStart: true }
     }
 
     const previousCard = jobCards[currentCardIndex - 1]
     const prevStatus = (previousCard.status || '').toLowerCase()
-    
+
     if (prevStatus !== 'completed') {
-      return { 
-        canStart: false, 
-        reason: `Previous operation must be completed first. Current status: ${prevStatus.toUpperCase()}` 
+      return {
+        canStart: false,
+        reason: `Previous operation must be completed first. Current status: ${prevStatus.toUpperCase()}`
       }
     }
 
@@ -305,18 +409,18 @@ export default function JobCard() {
   const handleStartJobCard = async (jobCardId, woId) => {
     try {
       const { canStart, reason } = canStartJobCard(jobCardId, woId)
-      
+
       if (!canStart) {
         toast.addToast(reason, 'error')
         return
       }
 
       setLoading(true)
-      
+
       await productionService.updateJobCard(jobCardId, { status: 'in-progress' })
-      
+
       await new Promise(resolve => setTimeout(resolve, 300))
-      
+
       try {
         const jobCardsResponse = await productionService.getJobCards({ work_order_id: woId })
         setJobCardsByWO(prev => ({
@@ -326,11 +430,11 @@ export default function JobCard() {
       } catch (err) {
         console.error('Failed to refresh job cards:', err)
       }
-      
+
       await fetchWorkOrders()
-      
+
       toast.addToast('Job card started. Redirecting to production entry...', 'success')
-      
+
       await new Promise(resolve => setTimeout(resolve, 500))
       navigate(`/manufacturing/job-cards/${jobCardId}/production-entry`)
     } catch (err) {
@@ -420,356 +524,531 @@ export default function JobCard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100  px-6 py-6">
-      <div className=" mx-auto">
-        <div className="flex justify-between items-start mb-3">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-9 h-9 rounded-xs bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
-                🎫
+    <div className="min-h-screen bg-[#fbfcfd] p-3">
+      {/* Sticky Modern Header */}
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100">
+        <div className="">
+          <div className="flex items-center justify-between h-24">
+            <div className="flex items-center gap-6">
+              <div className=" bg-gray-900 p-2 rounded shadow-lg shadow-gray-200 group transition-all hover:scale-105">
+                <ClipboardList className="w-4 h-4 text-white group-hover:rotate-12 transition-transform" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Job Cards</h1>
-                <p className="text-xs text-gray-600 mt-0">View and manage job cards</p>
+                <div className="flex items-center gap-3 mb-1">
+                  <h1 className="text-xl  text-gray-900 ">Job Cards</h1>
+                  <span className=" bg-indigo-50 text-indigo-600 rounded text-xs p-1  border border-indigo-100">
+                    Live Operations
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs  text-gray-400 ">Manufacturing Intelligence</span>
+                  <ChevronRight size={14} className="text-gray-300" />
+                  <span className="text-xs text-indigo-500 ">Operational Controls</span>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => {
-                setEditingId(null)
-                setShowModal(true)
-              }}
-              className="btn-primary flex items-center gap-2 bg-gradient-to-br from-purple-400 to-purple-600"
-            >
-              <Plus size={16} /> New Job Card
-            </button>
-            <button 
-              onClick={handleTruncate}
-              className="btn-primary flex items-center gap-2 bg-gradient-to-br from-red-400 to-red-600"
-              title="Delete all job cards"
-            >
-              <Trash size={16} /> Truncate All
-            </button>
+
+            <div className="flex items-center gap-4">
+              <div className="hidden lg:flex flex-col items-end mr-6 border-r border-gray-100 pr-6">
+                <p className="text-xs  text-gray-400  mb-1">System Status</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  <span className="text-sm  text-gray-900 ">
+                    {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={handleTruncate}
+                className="group flex items-center gap-2 p-2  py-3 text-rose-600 hover:bg-rose-50 rounded  transition-all duration-300"
+              >
+                <Trash size={18} className="group-hover:rotate-12 transition-transform" />
+                <span className="text-xs  ">Reset Queue</span>
+              </button>
+              <button
+                onClick={() => { setEditingId(null); setPreSelectedWorkOrderId(null); setShowModal(true) }}
+                className="flex items-center gap-1 p-2 bg-gray-900 text-white rounded hover:bg-gray-800 transition-all duration-300  shadow-gray-200 active:scale-95"
+              >
+                <Plus size={10} className="stroke-[3]" />
+                <span className="text-xs  ">Create Job Card</span>
+              </button>
+            </div>
           </div>
         </div>
+      </div>
 
-        <CreateJobCardModal 
-          isOpen={showModal}
-          onClose={() => {
-            setShowModal(false)
-            setEditingId(null)
-          }}
-          onSuccess={fetchWorkOrders}
-          editingId={editingId}
-        />
+      <div className=" ">
+        {/* Intelligence Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6   mb-3">
+          <StatCard
+            label="Total Operations"
+            value={stats.totalJobs}
+            icon={Layers}
+            color="indigo"
+            subtitle="Active Work Orders"
+          />
+          <StatCard
+            label="In Production"
+            value={stats.inProgress}
+            icon={Activity}
+            color="amber"
+            subtitle="Current Throughput"
+            trend={12}
+          />
+          <StatCard
+            label="Completed"
+            value={stats.completed}
+            icon={CheckCircle2}
+            color="emerald"
+            subtitle="Finalized Today"
+            trend={5}
+          />
+          <StatCard
+            label="Efficiency"
+            value={`${stats.efficiency}%`}
+            icon={TrendingUp}
+            color="violet"
+            subtitle="Completion Rate"
+          />
+        </div>
 
-        <ViewJobCardModal
-          isOpen={showViewModal}
-          onClose={() => {
-            setShowViewModal(false)
-            setViewingJobCardId(null)
-          }}
-          onSuccess={fetchWorkOrders}
-          jobCardId={viewingJobCardId}
-        />
-
-        <div className="bg-white rounded-xs shadow-sm p-3 mb-3">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-xs font-semibold text-gray-700 block mb-1">Status</label>
-              <select 
-                name="status" 
-                value={filters.status} 
+        {/* Search & Intelligence Filters */}
+        <div className="  mb-3 flex flex-col md:flex-row items-center gap-6">
+          <div className="flex-1 relative w-full group">
+            <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
+              <Search className="text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
+            </div>
+            <input
+              type="text"
+              name="search"
+              placeholder="Search by Work Order ID or Item name..."
+              value={filters.search}
+              onChange={handleFilterChange}
+              className="w-full pl-16 pr-8 p-2 bg-white border border-gray-100 rounded text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all "
+            />
+          </div>
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            <div className="relative min-w-[240px] group">
+              <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
+                <Filter className="text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+              </div>
+              <select
+                name="status"
+                value={filters.status}
                 onChange={handleFilterChange}
-                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full pl-14 pr-12 py-2 bg-white border border-gray-100 rounded text-xs   text-gray-900 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all  appearance-none cursor-pointer"
               >
-                <option value="">All Status</option>
+                <option value="">All Operational States</option>
                 <option value="draft">Draft</option>
                 <option value="pending">Pending</option>
-                <option value="in-progress">In Progress</option>
+                <option value="in-progress">In Production</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-700 block mb-1">Search</label>
-              <input 
-                type="text" 
-                name="search" 
-                placeholder="Work order ID..." 
-                value={filters.search} 
-                onChange={handleFilterChange}
-                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
+              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
             </div>
           </div>
         </div>
 
         {loading ? (
-          <div className="bg-white rounded-xs p-3 text-center shadow-sm">
-            <div className="text-3xl mb-2">⏳</div>
-            <div className="text-xs text-gray-600">Loading work orders...</div>
+          <div className="flex flex-col items-center justify-center py-32 bg-white rounded-[3rem] border border-gray-100 ">
+            <div className="relative">
+              <div className="w-20 h-20 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Activity className="w-8 h-8 text-indigo-600 animate-pulse" />
+              </div>
+            </div>
+            <h3 className="mt-8 text-xl  text-gray-900 ">Syncing Production Queue</h3>
+            <p className="mt-2 text-sm  text-gray-400 ">Retrieving live operational data...</p>
           </div>
         ) : workOrders.length > 0 ? (
-          <div className="space-y-2">
-            {workOrders.map(wo => (
-              <div key={wo.wo_id} className="bg-white rounded-xs shadow-sm">
+          <div className="space-y-6">
+            {workOrders.map(wo => {
+              const isExpanded = expandedWO === wo.wo_id
+              return (
                 <div 
-                  className="border-l-4 border-purple-400 bg-gray-50 hover:bg-gray-100 transition p-3 flex items-center gap-2"
+                  key={wo.wo_id} 
+                  className={`group bg-white rounded border transition-all duration-500  ${
+                    isExpanded 
+                      ? 'border-indigo-200 shadow-2xl shadow-indigo-100 -translate-y-2' 
+                      : 'border-gray-100 hover:border-indigo-100 hover:shadow-xl hover:shadow-gray-100'
+                  }`}
                 >
-                  <div 
-                    className="w-5 flex items-center justify-center text-gray-600 cursor-pointer"
+                  <div
+                    className={`p-2 cursor-pointer transition-colors ${isExpanded ? 'bg-indigo-50/20' : ''}`}
                     onClick={() => fetchJobCardsForWO(wo.wo_id)}
                   >
-                    {expandedWO === wo.wo_id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-6">
+                        <div className={`w-8 h-8 rounded flex items-center justify-center transition-all duration-500 ${
+                          isExpanded ? 'bg-indigo-600 text-white rotate-6 shadow-lg shadow-indigo-200' : 'bg-gray-50 text-gray-400'
+                        }`}>
+                          <Package size={14} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-3 mb-1">
+                            <span className="text-sm  text-gray-900 ">{wo.wo_id}</span>
+                            <StatusBadge status={wo.status} />
+                          </div>
+                          <p className="text-base  text-gray-500  max-w-[400px] truncate">
+                            {wo.item_name || wo.item_code || 'Generic Work Order'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="hidden xl:grid grid-cols-3 gap-12 items-center flex-1 mx-12">
+                        <div>
+                          <p className="text-xs  text-gray-400  mb-1.5">Priority Level</p>
+                          <span className={`inline-flex items-center p-2  py-1 rounded-full text-xs   border ${
+                            wo.priority === 'high' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                            wo.priority === 'medium' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                            'bg-emerald-50 text-emerald-600 border-emerald-100'
+                          }`}>
+                            {wo.priority}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-xs  text-gray-400  mb-1.5">Total Quantity</p>
+                          <p className="text-sm  text-gray-900 ">
+                            {wo.quantity || wo.qty_to_manufacture || 0} <span className="text-xs  text-gray-400">Units</span>
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs  text-gray-400  mb-1.5">Scheduled End</p>
+                          <div className="flex items-center gap-2 text-gray-900  ">
+                            <Calendar size={14} className="text-indigo-500" />
+                            <span>{formatDate(wo.planned_end_date)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <div className={`p-2 rounded transition-all duration-500 ${
+                          isExpanded ? 'rotate-180 bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-gray-400 bg-gray-50'
+                        }`}>
+                          <ChevronDown size={12} />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1 grid grid-cols-6 gap-3 items-center text-xs cursor-pointer" onClick={() => fetchJobCardsForWO(wo.wo_id)}>
-                    <div>
-                      <div className="text-gray-500 text-xs">WO ID</div>
-                      <div className="font-semibold text-gray-900">{wo.wo_id}</div>
-                    </div>
-                    <div>
-                      <div className="text-gray-500 text-xs">Item</div>
-                      <div className="text-gray-700">{wo.item_name || wo.item_code || 'N/A'}</div>
-                    </div>
-                    <div>
-                      <div className="text-gray-500 text-xs">Qty</div>
-                      <div className="font-semibold text-gray-900">{wo.quantity || wo.qty_to_manufacture || 0}</div>
-                    </div>
-                    <div>
-                      <div className="text-gray-500 text-xs">Priority</div>
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
-                        wo.priority === 'high' ? 'bg-red-100 text-red-800' : 
-                        wo.priority === 'medium' ? 'bg-amber-100 text-amber-800' : 
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {wo.priority || 'N/A'}
-                      </span>
-                    </div>
-                    <div>
-                      <div className="text-gray-500 text-xs">Status</div>
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold border ${
-                        wo.status === 'draft' ? 'bg-gray-100 text-gray-800 border-gray-300' :
-                        wo.status === 'planned' ? 'bg-blue-100 text-blue-800 border-blue-300' :
-                        wo.status === 'in-progress' ? 'bg-amber-100 text-amber-800 border-amber-300' :
-                        wo.status === 'completed' ? 'bg-green-100 text-green-800 border-green-300' :
-                        'bg-red-100 text-red-800 border-red-300'
-                      }`}>{wo.status}</span>
-                    </div>
-                    <div>
-                      <div className="text-gray-500 text-xs">Due Date</div>
-                      <div className="text-gray-700">{wo.planned_end_date ? new Date(wo.planned_end_date).toLocaleDateString() : 'N/A'}</div>
-                    </div>
-                  </div>
-                </div>
-                {expandedWO === wo.wo_id && (
-                  <>
-                    {jobCardsByWO[wo.wo_id] && jobCardsByWO[wo.wo_id].length > 0 ? (
-                      <div className="">
-                        <table className="w-full text-xs border-collapse">
-                      <thead>
-                        <tr className="bg-gray-100 border border-gray-200">
-                          <th className="px-3 py-2 text-left font-semibold text-gray-700">Operation</th>
-                          <th className="px-3 py-2 text-left font-semibold text-gray-700">Status</th>
-                          <th className="px-3 py-2 text-right font-semibold text-gray-700">Qty To Manuf</th>
-                          <th className="px-3 py-2 text-left font-semibold text-gray-700">Work Order</th>
-                          <th className="px-3 py-2 text-left font-semibold text-gray-700">Workstation</th>
-                          <th className="px-3 py-2 text-left font-semibold text-gray-700">ID</th>
-                          <th className="px-3 py-2 text-center font-semibold text-gray-700">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {jobCardsByWO[wo.wo_id].map((card, idx) => (
-                          inlineEditingId === card.job_card_id ? (
-                            <tr key={card.job_card_id} className="bg-yellow-50 border border-yellow-200">
-                              <td colSpan="7" className="px-3 py-3">
-                                <div className="text-xs font-semibold text-gray-700 mb-2">Editing: {card.job_card_id}</div>
-                                <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                                  <div>
-                                    <label className="text-xs text-gray-600 block mb-1">Operation</label>
-                                    <SearchableSelect
-                                      value={inlineEditData.operation}
-                                      onChange={(val) => handleInlineInputChange('operation', val)}
-                                      options={getOperationOptions()}
-                                      placeholder="Select Operation"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="text-xs text-gray-600 block mb-1">Workstation</label>
-                                    <SearchableSelect
-                                      value={inlineEditData.machine_id}
-                                      onChange={(val) => handleInlineInputChange('machine_id', val)}
-                                      options={getWorkstationOptions()}
-                                      placeholder="Select Workstation"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="text-xs text-gray-600 block mb-1">Status</label>
-                                    <select value={inlineEditData.status} onChange={(e) => handleInlineInputChange('status', e.target.value)} className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500">
-                                      {(() => {
-                                        const currentStatus = (inlineEditData.status || 'draft').toLowerCase()
-                                        const allowedStatuses = getAllowedStatuses(currentStatus)
-                                        const statusLabels = {
-                                          'draft': 'Draft',
-                                          'pending': 'Pending',
-                                          'in-progress': 'In Progress',
-                                          'hold': 'Hold',
-                                          'completed': 'Completed',
-                                          'cancelled': 'Cancelled',
-                                          'open': 'Open'
-                                        }
-                                        const optionsToShow = [currentStatus, ...allowedStatuses].filter((status, idx, arr) => arr.indexOf(status) === idx)
-                                        return optionsToShow.map(status => (
-                                          <option key={status} value={status}>{statusLabels[status] || status}</option>
-                                        ))
-                                      })()}
-                                    </select>
-                                  </div>
-                                  <div>
-                                    <label className="text-xs text-gray-600 block mb-1">Operator</label>
-                                    <SearchableSelect
-                                      value={inlineEditData.operator_id}
-                                      onChange={(val) => handleInlineInputChange('operator_id', val)}
-                                      options={getOperatorOptions()}
-                                      placeholder="Select Operator"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="text-xs text-gray-600 block mb-1">Planned Qty</label>
-                                    {(() => {
-                                      const maxPlannableQty = getMaxPlannableQty(card.job_card_id, wo.wo_id)
-                                      const isFirstTask = maxPlannableQty === Infinity
-                                      const isValidPlannableNumber = typeof maxPlannableQty === 'number' && isFinite(maxPlannableQty)
-                                      return (
-                                        <div>
-                                          <input 
-                                            type="number" 
-                                            value={inlineEditData.planned_quantity} 
-                                            onChange={(e) => handleInlineInputChange('planned_quantity', e.target.value)} 
-                                            step="0.01" 
-                                            max={isFirstTask ? undefined : maxPlannableQty}
-                                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500" 
-                                          />
-                                          {isValidPlannableNumber && (
-                                            <div className="text-xs text-gray-500 mt-0.5">Max: {maxPlannableQty.toFixed(2)}</div>
-                                          )}
+
+                  {isExpanded && (
+                    <div className="p-2 animate-in fade-in slide-in-from-top-4 duration-500">
+                      {jobCardsByWO[wo.wo_id] && jobCardsByWO[wo.wo_id].length > 0 ? (
+                        <div className="rounded border border-gray-100  bg-gray-50/30">
+                          <table className="w-full text-left">
+                            <thead>
+                              <tr className="bg-gray-100/50">
+                                <th className="p-2 text-xs  text-gray-500 ">Operational Phase</th>
+                                <th className="p-2 text-xs  text-gray-500 ">Assignment</th>
+                                <th className="p-2 text-xs  text-gray-500  text-center">Status</th>
+                                <th className="p-2 text-xs  text-gray-500  text-right">Metrics</th>
+                                <th className="p-2 text-xs  text-gray-500  text-right">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {jobCardsByWO[wo.wo_id].map((card, idx) => (
+                                inlineEditingId === card.job_card_id ? (
+                                  <tr key={card.job_card_id} className="bg-indigo-50/50 border-y-2 border-indigo-200">
+                                    <td colSpan="5" className="px-8 py-8">
+                                      <div className="flex items-center gap-4 mb-6">
+                                        <div className="bg-indigo-600 p-2 rounded  text-white">
+                                          <Edit2 size={16} />
                                         </div>
-                                      )
-                                    })()}
-                                  </div>
-                                  <div>
-                                    <label className="text-xs text-gray-600 block mb-1">Produced Qty</label>
-                                    {(() => {
-                                      const maxProducibleQty = getMaxProducibleQty(card.job_card_id, wo.wo_id)
-                                      const isValidProducibleNumber = typeof maxProducibleQty === 'number' && isFinite(maxProducibleQty)
-                                      return (
                                         <div>
-                                          <input 
-                                            type="number" 
-                                            value={inlineEditData.produced_quantity} 
-                                            onChange={(e) => handleInlineInputChange('produced_quantity', e.target.value)} 
-                                            step="0.01" 
-                                            max={isValidProducibleNumber ? maxProducibleQty : undefined}
-                                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                          />
-                                          {isValidProducibleNumber && (
-                                            <div className="text-xs text-gray-500 mt-0.5">Max: {maxProducibleQty.toFixed(2)}</div>
-                                          )}
+                                          <h4 className="text-sm  text-gray-900 ">Modify Operational Step</h4>
+                                          <p className="text-xs  text-gray-500 ">{card.job_card_id}</p>
                                         </div>
-                                      )
-                                    })()}
-                                  </div>
-                                  <div>
-                                    <label className="text-xs text-gray-600 block mb-1">Start Date</label>
-                                    <input type="date" value={inlineEditData.scheduled_start_date} onChange={(e) => handleInlineInputChange('scheduled_start_date', e.target.value)} className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500" />
-                                  </div>
-                                  <div>
-                                    <label className="text-xs text-gray-600 block mb-1">End Date</label>
-                                    <input type="date" value={inlineEditData.scheduled_end_date} onChange={(e) => handleInlineInputChange('scheduled_end_date', e.target.value)} className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500" />
-                                  </div>
-                                </div>
-                                <div className="flex gap-2 justify-end pt-3 mt-3 border-t border-yellow-200">
-                                  <button className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition" title="Save" onClick={() => handleInlineSave(card.job_card_id)}>Save</button>
-                                  <button className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition" title="Cancel" onClick={handleInlineCancel}>Cancel</button>
-                                </div>
-                              </td>
-                            </tr>
-                          ) : (
-                            <tr key={card.job_card_id} className={`border border-gray-200 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
-                              <td className="px-3 py-2 text-gray-900 font-medium">{card.operation || 'N/A'}</td>
-                              <td className="px-3 py-2">
-                                <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                                  card.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                  card.status === 'in-progress' ? 'bg-orange-100 text-orange-800' :
-                                  card.status === 'pending' ? 'bg-blue-100 text-blue-800' :
-                                  card.status === 'draft' ? 'bg-gray-100 text-gray-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {card.status || 'Draft'}
-                                </span>
-                              </td>
-                              <td className="px-3 py-2 text-right text-gray-900 font-medium">{formatQuantity(card.planned_quantity)}</td>
-                              <td className="px-3 py-2 text-gray-900">{wo.wo_id}</td>
-                              <td className="px-3 py-2 text-gray-900">{getWorkstationName(card.machine_id)}</td>
-                              <td className="px-3 py-2 text-gray-900 font-medium">{card.job_card_id}</td>
-                              
-                              <td className="px-3 py-2 text-center">
-                                <div className="flex items-center justify-center gap-1">
-                                  {(card.status || '').toLowerCase() === 'draft' ? (
-                                    <button 
-                                      className="px-2 py-1 text-xs bg-emerald-500 hover:bg-emerald-600 text-white rounded transition font-medium"
-                                      title="Start this job card"
-                                      onClick={() => handleStartJobCard(card.job_card_id, wo.wo_id)}
-                                      disabled={loading}
-                                    >
-                                      Start
-                                    </button>
-                                  ) : (
-                                    <>
-                                      <button className="p-1 hover:bg-blue-50 rounded transition" title="View" onClick={() => handleViewJobCard(card.job_card_id)}>
-                                        <Eye size={14} className="text-blue-600" />
-                                      </button>
-                                      {(card.status || '').toLowerCase() === 'in-progress' && (
-                                        <button className="p-1 hover:bg-green-50 rounded transition" title="Production Entry" onClick={() => {
-                                          navigate(`/manufacturing/job-cards/${card.job_card_id}/production-entry`)
-                                        }}>
-                                          <Zap size={14} className="text-green-600" />
+                                      </div>
+                                      
+                                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                        <div className="space-y-2">
+                                          <label className="text-xs  text-gray-400  ml-1">Operation</label>
+                                          <SearchableSelect
+                                            value={inlineEditData.operation}
+                                            onChange={(val) => handleInlineInputChange('operation', val)}
+                                            options={getOperationOptions()}
+                                            placeholder="Select Operation"
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <label className="text-xs  text-gray-400  ml-1">Workstation</label>
+                                          <SearchableSelect
+                                            value={inlineEditData.machine_id}
+                                            onChange={(val) => handleInlineInputChange('machine_id', val)}
+                                            options={getWorkstationOptions()}
+                                            placeholder="Select Workstation"
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <label className="text-xs  text-gray-400  ml-1">Status</label>
+                                          <select 
+                                            value={inlineEditData.status} 
+                                            onChange={(e) => handleInlineInputChange('status', e.target.value)} 
+                                            className="w-full px-4 py-3 bg-white border border-gray-100 rounded  text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all "
+                                          >
+                                            {(() => {
+                                              const currentStatus = (inlineEditData.status || 'draft').toLowerCase()
+                                              const allowedStatuses = getAllowedStatuses(currentStatus)
+                                              const statusLabels = {
+                                                'draft': 'Draft',
+                                                'pending': 'Pending',
+                                                'in-progress': 'In Progress',
+                                                'hold': 'Hold',
+                                                'completed': 'Completed',
+                                                'cancelled': 'Cancelled',
+                                                'open': 'Open'
+                                              }
+                                              const optionsToShow = [currentStatus, ...allowedStatuses].filter((status, idx, arr) => arr.indexOf(status) === idx)
+                                              return optionsToShow.map(status => (
+                                                <option key={status} value={status}>{statusLabels[status] || status}</option>
+                                              ))
+                                            })()}
+                                          </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                          <label className="text-xs  text-gray-400  ml-1">Operator</label>
+                                          <SearchableSelect
+                                            value={inlineEditData.operator_id}
+                                            onChange={(val) => handleInlineInputChange('operator_id', val)}
+                                            options={getOperatorOptions()}
+                                            placeholder="Select Operator"
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <label className="text-xs  text-gray-400  ml-1">Planned Qty</label>
+                                          {(() => {
+                                            const maxPlannableQty = getMaxPlannableQty(card.job_card_id, wo.wo_id)
+                                            const isFirstTask = maxPlannableQty === Infinity
+                                            return (
+                                              <div>
+                                                <input
+                                                  type="number"
+                                                  value={inlineEditData.planned_quantity}
+                                                  onChange={(e) => handleInlineInputChange('planned_quantity', e.target.value)}
+                                                  step="0.01"
+                                                  max={isFirstTask ? undefined : maxPlannableQty}
+                                                  className="w-full px-4 py-3 bg-white border border-gray-100 rounded  text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all "
+                                                />
+                                                {!isFirstTask && isFinite(maxPlannableQty) && (
+                                                  <p className="text-xs  text-amber-600 mt-1 ml-1 uppercase er">Cap: {maxPlannableQty.toFixed(2)}</p>
+                                                )}
+                                              </div>
+                                            )
+                                          })()}
+                                        </div>
+                                        <div className="space-y-2">
+                                          <label className="text-xs  text-gray-400  ml-1">Produced Qty</label>
+                                          {(() => {
+                                            const maxProducibleQty = getMaxProducibleQty(card.job_card_id, wo.wo_id)
+                                            const isValidProducibleNumber = typeof maxProducibleQty === 'number' && isFinite(maxProducibleQty)
+                                            return (
+                                              <div>
+                                                <input
+                                                  type="number"
+                                                  value={inlineEditData.produced_quantity}
+                                                  onChange={(e) => handleInlineInputChange('produced_quantity', e.target.value)}
+                                                  step="0.01"
+                                                  max={isValidProducibleNumber ? maxProducibleQty : undefined}
+                                                  className="w-full px-4 py-3 bg-white border border-gray-100 rounded  text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all "
+                                                />
+                                                {isValidProducibleNumber && (
+                                                  <p className="text-xs  text-emerald-600 mt-1 ml-1 uppercase er">Limit: {maxProducibleQty.toFixed(2)}</p>
+                                                )}
+                                              </div>
+                                            )
+                                          })()}
+                                        </div>
+                                        <div className="space-y-2">
+                                          <label className="text-xs  text-gray-400  ml-1">Start Date</label>
+                                          <input 
+                                            type="date" 
+                                            value={inlineEditData.scheduled_start_date} 
+                                            onChange={(e) => handleInlineInputChange('scheduled_start_date', e.target.value)} 
+                                            className="w-full px-4 py-3 bg-white border border-gray-100 rounded  text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all "
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <label className="text-xs  text-gray-400  ml-1">End Date</label>
+                                          <input 
+                                            type="date" 
+                                            value={inlineEditData.scheduled_end_date} 
+                                            onChange={(e) => handleInlineInputChange('scheduled_end_date', e.target.value)} 
+                                            className="w-full px-4 py-3 bg-white border border-gray-100 rounded  text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all "
+                                          />
+                                        </div>
+                                      </div>
+                                      <div className="flex gap-4 justify-end mt-8 pt-6 border-t border-indigo-100">
+                                        <button 
+                                          className="p-2  text-xs   bg-gray-50 text-gray-500 hover:bg-gray-100 rounded  transition-all"
+                                          onClick={handleInlineCancel}
+                                        >
+                                          Discard
                                         </button>
-                                      )}
-                                    </>
-                                  )}
-                                  <button className="p-1 hover:bg-gray-50 rounded transition" title="Edit" onClick={() => handleInlineEdit(card)}>
-                                    <Edit2 size={14} className="text-gray-600" />
-                                  </button>
-                                  <button className="p-1 hover:bg-red-50 rounded transition" title="Delete" onClick={() => handleDelete(card.job_card_id)}>
-                                    <Trash2 size={14} className="text-red-600" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          )
-                        ))}
-                      </tbody>
-                    </table>
-                      </div>
-                    ) : (
-                      <div className="bg-blue-50 border-t border-blue-200 px-3 py-3 text-xs text-blue-700">
-                        <p>No job cards found. Job cards are created automatically when the work order is saved.</p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            ))}
+                                        <button 
+                                          className="p-2  text-xs   bg-indigo-600 text-white hover:bg-indigo-700 rounded  transition-all shadow-lg shadow-indigo-100"
+                                          onClick={() => handleInlineSave(card.job_card_id)}
+                                        >
+                                          Commit Changes
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  <tr key={card.job_card_id} className="group hover:bg-indigo-50/30 transition-colors">
+                                    <td className="p-2 ">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded  bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-indigo-600 transition-all">
+                                          <Activity size={16} />
+                                        </div>
+                                        <div>
+                                          <p className="text-sm  text-gray-900 ">{card.operation || 'N/A'}</p>
+                                          <p className="text-xs  text-gray-400 ">{card.job_card_id}</p>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="p-2 ">
+                                      <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-1.5 text-xs  text-gray-700">
+                                          <Factory size={12} className="text-gray-400" />
+                                          {getWorkstationName(card.machine_id)}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-xs  text-gray-500">
+                                          <Activity size={10} className="text-gray-400" />
+                                          {getOperatorName(card.operator_id)}
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="p-2  text-center">
+                                      <StatusBadge status={card.status} />
+                                    </td>
+                                    <td className="p-2  text-right">
+                                      <div className="flex flex-col items-end gap-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-xs  text-gray-400 ">Efficiency</span>
+                                          <span className="text-xs  text-gray-900">
+                                            {card.planned_quantity > 0 
+                                              ? `${Math.round((card.produced_quantity / card.planned_quantity) * 100)}%` 
+                                              : '0%'}
+                                          </span>
+                                        </div>
+                                        <div className="w-24 h-1.5 bg-gray-100 rounded-full ">
+                                          <div 
+                                            className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                                            style={{ width: `${Math.min(100, (card.produced_quantity / (card.planned_quantity || 1)) * 100)}%` }}
+                                          />
+                                        </div>
+                                        <p className="text-xs  text-gray-500">
+                                          {formatQuantity(card.produced_quantity)} / {formatQuantity(card.planned_quantity)}
+                                        </p>
+                                      </div>
+                                    </td>
+                                    <td className="p-2  text-right">
+                                      <div className="flex items-center justify-end gap-2">
+                                        {(card.status || '').toLowerCase() === 'draft' ? (
+                                          <button
+                                            className="flex items-center gap-2 p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded  text-xs   transition-all  active:scale-95"
+                                            onClick={() => handleStartJobCard(card.job_card_id, wo.wo_id)}
+                                            disabled={loading}
+                                          >
+                                            <Zap size={14} className="fill-current" />
+                                            Start
+                                          </button>
+                                        ) : (
+                                          <>
+                                            <button 
+                                              className="p-2 bg-gray-50 text-gray-400 hover:bg-indigo-50 hover:text-indigo-600 rounded  transition-all group/btn" 
+                                              title="View Intelligence" 
+                                              onClick={() => handleViewJobCard(card.job_card_id)}
+                                            >
+                                              <Eye size={18} className="group-hover/btn:scale-110 transition-transform" />
+                                            </button>
+                                            {(card.status || '').toLowerCase() === 'in-progress' && (
+                                              <button 
+                                                className="p-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded  transition-all shadow-lg shadow-indigo-100 group/btn" 
+                                                title="Production Entry" 
+                                                onClick={() => navigate(`/manufacturing/job-cards/${card.job_card_id}/production-entry`)}
+                                              >
+                                                <Zap size={18} className="fill-current group-hover/btn:scale-110 transition-transform" />
+                                              </button>
+                                            )}
+                                          </>
+                                        )}
+                                        <button 
+                                          className="p-2 bg-gray-50 text-gray-400 hover:bg-amber-50 hover:text-amber-600 rounded  transition-all" 
+                                          title="Quick Edit" 
+                                          onClick={() => handleInlineEdit(card)}
+                                        >
+                                          <Edit2 size={18} />
+                                        </button>
+                                        <button 
+                                          className="p-2 bg-gray-50 text-gray-400 hover:bg-rose-50 hover:text-rose-600 rounded  transition-all" 
+                                          title="Remove Entry" 
+                                          onClick={() => handleDelete(card.job_card_id)}
+                                        >
+                                          <Trash2 size={18} />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="bg-indigo-50/50 rounded p-12 text-center border border-indigo-100">
+                          <div className="w-8 h-8 bg-white rounded  flex items-center justify-center mx-auto mb-4 ">
+                            <Layers className="text-indigo-400" size={32} />
+                          </div>
+                          <h4 className="text-sm  text-gray-900  mb-1">Queue Empty</h4>
+                          <p className="text-xs  text-gray-500 mb-4">Job cards will appear once operations are defined.</p>
+                          <button
+                            onClick={() => {
+                              setEditingId(null);
+                              setPreSelectedWorkOrderId(wo.wo_id);
+                              setShowModal(true);
+                            }}
+                            className="p-6  py-2 bg-indigo-600 text-white rounded  text-xs   hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                          >
+                            Initialize Job Card
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                  )}
+                </div>
+              )
+            })}
           </div>
         ) : (
-          <div className="bg-white rounded-xs p-3 text-center shadow-sm">
-            <div className="text-3xl mb-2">📋</div>
-            <div className="text-xs text-gray-600">No work orders found. Job cards will be auto-created when you expand a work order.</div>
+          <div className="bg-white rounded-[3rem] p-24 text-center border border-gray-100 ">
+            <div className="w-24 h-24 bg-gray-50 rounded flex items-center justify-center mx-auto mb-8">
+              <ClipboardList className="text-gray-300" size={48} />
+            </div>
+            <h3 className="text-xl   text-gray-900  mb-2">Operational Pipeline Empty</h3>
+            <p className="text-sm  text-gray-400  max-w-md mx-auto">No work orders were found matching your filters. Create a new work order to begin production tracking.</p>
           </div>
         )}
       </div>
+
+      <CreateJobCardModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onSuccess={() => {
+          fetchWorkOrders()
+          setShowModal(false)
+        }}
+        editingId={editingId}
+        preSelectedWorkOrderId={preSelectedWorkOrderId}
+      />
+
+      <ViewJobCardModal
+        isOpen={showViewModal}
+        onClose={() => setShowViewModal(false)}
+        jobCardId={viewingJobCardId}
+      />
     </div>
   )
 }

@@ -103,14 +103,15 @@ export default function DepartmentDashboard() {
           lowStockItems: lowStock
         })
       } else if (userDept === 'manufacturing') {
-        const [woRes, bomRes, ppRes, jcRes, opRes, wsRes, peRes] = await Promise.all([
+        const [woRes, bomRes, ppRes, jcRes, opRes, wsRes, peRes, soRes] = await Promise.all([
           productionService.getWorkOrders().catch(() => []),
           productionService.getBOMs().catch(() => []),
           productionService.getProductionPlans().catch(() => []),
           productionService.getJobCards().catch(() => []),
           productionService.getOperationsList().catch(() => []),
           productionService.getWorkstationsList().catch(() => []),
-          productionService.getProductionEntries().catch(() => [])
+          productionService.getProductionEntries().catch(() => []),
+          productionService.getSalesOrders().catch(() => [])
         ])
 
         const wo = Array.isArray(woRes) ? woRes : woRes.data || []
@@ -120,6 +121,7 @@ export default function DepartmentDashboard() {
         const op = Array.isArray(opRes) ? opRes : opRes.data || []
         const ws = Array.isArray(wsRes) ? wsRes : wsRes.data || []
         const pe = Array.isArray(peRes) ? peRes : peRes.data || []
+        const so = Array.isArray(soRes) ? soRes : soRes.data || []
 
         const normalizeStatus = (status) => {
           if (!status) return 'draft'
@@ -130,6 +132,16 @@ export default function DepartmentDashboard() {
         const inProgressCount = jc.filter(j => normalizeStatus(j.status) === 'in-progress').length
         const pendingCount = jc.filter(j => ['pending', 'draft'].includes(normalizeStatus(j.status))).length
 
+        const overdueCount = so.filter(order => {
+          if (!order.delivery_date) return false
+          const status = (order.status || '').toLowerCase()
+          if (['complete', 'dispatched', 'delivered', 'cancelled'].includes(status)) return false
+          const deliveryDate = new Date(order.delivery_date)
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          return deliveryDate < today
+        }).length
+
         setStats({
           workOrders: wo.length,
           boms: bom.length,
@@ -139,7 +151,9 @@ export default function DepartmentDashboard() {
           inProgress: inProgressCount,
           pending: pendingCount,
           workstations: ws.length,
-          operations: op.length
+          operations: op.length,
+          overdueSalesOrders: overdueCount,
+          salesOrders: so.length
         })
       } else if (userDept === 'admin') {
         setStats({
@@ -213,10 +227,10 @@ export default function DepartmentDashboard() {
   const renderInventoryDashboard = () => {
     return (
       <div className="w-full p-0 bg-gray-50 min-h-screen">
-        <div className="p-6">
+        <div className="p-3">
           <div className=" mx-auto">
             <div className="mb-7">
-              <h1 className="text-xl font-bold text-gray-900 -tracking-tight">
+              <h1 className="text-xl  text-gray-900 -tracking-tight">
                 Stock Overview
               </h1>
               <p className="text-xs text-gray-500 font-medium">
@@ -233,29 +247,29 @@ export default function DepartmentDashboard() {
               ].map((stat, idx) => (
                 <div 
                   key={idx} 
-                  className={`bg-gradient-to-br ${stat.color} p-5 rounded-xl border-2 transition-all duration-300 hover:shadow-lg hover:scale-105 hover:border-opacity-100`}
+                  className={`bg-gradient-to-br ${stat.color} p-5 rounded-md border-2 transition-all duration-300 hover:shadow-lg hover:scale-105 hover:border-opacity-100`}
                   style={{ borderColor: stat.borderColor }}
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 mb-2">
+                      <p className="text-xs font-semibold  tracking-wide text-gray-600 mb-2">
                         {stat.label}
                       </p>
-                      <p className={`text-xl font-bold ${stat.textColor}`}>
+                      <p className={`text-xl  ${stat.textColor}`}>
                         {stat.value}
                       </p>
                     </div>
-                    <span className="text-3xl">{stat.icon}</span>
+                    <span className="text-xl ">{stat.icon}</span>
                   </div>
                 </div>
               ))}
             </div>
 
             <div className="mb-7">
-              <h2 className="text-lg font-bold mb-3 text-gray-900">
+              <h2 className="text-lg  mb-3 text-gray-900">
                 Stock Movement Analysis
               </h2>
-              <div className="bg-white rounded-xs border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-300">
+              <div className="bg-white rounded border border-gray-200 p-3   hover:shadow-lg transition-shadow duration-300">
                 <div className="flex gap-5 border-b border-gray-200 mb-6 pb-0 ">
                   {['Overview', 'Inbound', 'Outbound'].map((tab) => (
                     <button
@@ -363,10 +377,10 @@ export default function DepartmentDashboard() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-7">
               <div>
-                <h2 className="text-lg font-bold mb-3 text-gray-900">
+                <h2 className="text-lg  mb-3 text-gray-900">
                   Warehouse Analysis
                 </h2>
-                <div className="bg-white rounded-xs border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-300">
+                <div className="bg-white rounded border border-gray-200 p-3   hover:shadow-lg transition-shadow duration-300">
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex gap-5 border-b border-gray-200 pb-0">
                       {['Distribution', 'Stock Value'].map((tab) => (
@@ -387,7 +401,7 @@ export default function DepartmentDashboard() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => setWarehouseChartType('donut')}
-                          className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
+                          className={`p-2  py-1 rounded text-xs font-semibold transition-colors ${
                             warehouseChartType === 'donut'
                               ? 'bg-blue-600 text-white'
                               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -397,7 +411,7 @@ export default function DepartmentDashboard() {
                         </button>
                         <button
                           onClick={() => setWarehouseChartType('bar')}
-                          className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
+                          className={`p-2  py-1 rounded text-xs font-semibold transition-colors ${
                             warehouseChartType === 'bar'
                               ? 'bg-blue-600 text-white'
                               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -478,10 +492,10 @@ export default function DepartmentDashboard() {
               </div>
 
               <div>
-                <h2 className="text-lg font-bold mb-3 text-gray-900">
+                <h2 className="text-lg  mb-3 text-gray-900">
                   Low Stock Alerts
                 </h2>
-                <div className="bg-white rounded-xs border border-gray-200 p-6 max-h-96 overflow-auto hover:shadow-lg transition-shadow duration-300">
+                <div className="bg-white rounded border border-gray-200 p-3   max-h-96 overflow-auto hover:shadow-lg transition-shadow duration-300">
                   {chartData.lowStockItems && chartData.lowStockItems.length > 0 ? (
                     <div className="space-y-3">
                       {chartData.lowStockItems.map((item, idx) => (
@@ -491,7 +505,7 @@ export default function DepartmentDashboard() {
                           style={{ borderLeftColor: '#dc2626' }}
                         >
                           <div>
-                            <p className="text-xs font-bold text-red-700 mb-1 uppercase tracking-wider">
+                            <p className="text-xs  text-red-700 mb-1  ">
                               {item.item_code}
                             </p>
                             <p className="text-xs text-red-600 font-medium">
@@ -499,7 +513,7 @@ export default function DepartmentDashboard() {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs font-bold text-red-700 mb-1">
+                            <p className="text-xs  text-red-700 mb-1">
                               {Number(item.current_qty).toFixed(2)} units
                             </p>
                             <p className="text-xs text-red-500 font-semibold">
@@ -512,7 +526,7 @@ export default function DepartmentDashboard() {
                   ) : (
                     <div className="py-12 px-5 text-center">
                       <div className="text-6xl mb-4 animate-pulse">✓</div>
-                      <p className="text-base font-bold text-green-700 mb-1">All Stock Levels Healthy</p>
+                      <p className="text-base  text-green-700 mb-1">All Stock Levels Healthy</p>
                       <p className="text-xs text-gray-500">No low stock alerts at the moment</p>
                     </div>
                   )}
@@ -529,95 +543,21 @@ export default function DepartmentDashboard() {
 
   const renderAdminDashboard = () => {
     const StatCardWithBorder = ({ label, value, icon: Icon, statusText, borderColor, bgColor }) => (
-      <div className={`bg-white rounded-xsp-2 border-l-4 border border-gray-200 shadow-sm`} style={{ borderLeftColor: borderColor }}>
+      <div className={`bg-white rounded-xsp-2 border-l-4 border border-gray-200 `} style={{ borderLeftColor: borderColor }}>
         <div className="flex justify-between items-start gap-3 mb-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">{label}</span>
+          <span className="text-xs text-gray-500">{label}</span>
           <div className="flex items-center justify-center w-8 h-8 rounded" style={{ backgroundColor: bgColor }}>
             {typeof Icon === 'string' ? <span className="text-lg">{Icon}</span> : <Icon size={16} color={borderColor} />}
           </div>
         </div>
-        <div className="text-xl font-bold text-gray-900 mb-1">{value}</div>
+        <div className="text-xl  text-gray-900 mb-1">{value}</div>
         <div className="text-xs font-medium flex items-center gap-1" style={{ color: borderColor }}>
           <TrendingUp size={12} /> {statusText}
         </div>
       </div>
     )
 
-    return (
-      <div className="w-full p-3">
-        <div className="bg-white rounded-xs shadow-sm border border-gray-200 p-5">
-          <div className="mb-6 pb-4 border-b-2 border-gray-200 flex justify-between items-center">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 mb-1">
-                Admin Dashboard 📊
-              </h1>
-              <p className="text-xs text-gray-500">
-                View analytics for projects, machines, and clients
-              </p>
-            </div>
-            <p className="text-xs text-gray-500">
-              {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            <StatCardWithBorder 
-              label="Total Projects" 
-              value={stats.totalProjects || 0} 
-              icon="📋"
-              statusText="Active"
-              borderColor="#dc2626"
-              bgColor="#fef2f2"
-            />
-
-            <StatCardWithBorder 
-              label="Projects In Progress" 
-              value={stats.projectsInProgress || 0} 
-              icon="⚙️"
-              statusText="Running"
-              borderColor="#f59e0b"
-              bgColor="#fffbeb"
-            />
-
-            <StatCardWithBorder 
-              label="Active Machines" 
-              value={stats.activeMachines || 0} 
-              icon="🏭"
-              statusText="Operating"
-              borderColor="#06b6d4"
-              bgColor="#ecfdf5"
-            />
-
-            <StatCardWithBorder 
-              label="Machine Downtime" 
-              value={stats.machineDowntime || 0} 
-              icon="⚠️"
-              statusText="Alert"
-              borderColor="#ef4444"
-              bgColor="#fee2e2"
-            />
-
-            <StatCardWithBorder 
-              label="Total Clients" 
-              value={stats.totalClients || 0} 
-              icon="👥"
-              statusText="Registered"
-              borderColor="#10b981"
-              bgColor="#f0fdf4"
-            />
-
-            <StatCardWithBorder 
-              label="Client Satisfaction" 
-              value={`${stats.clientSatisfaction || 0}%`}
-              icon="😊"
-              statusText="Score"
-              borderColor="#3b82f6"
-              bgColor="#eff6ff"
-            />
-          </div>
-        </div>
-      </div>
-    )
+   
   }
 
   if (userDept === 'inventory') return renderInventoryDashboard()

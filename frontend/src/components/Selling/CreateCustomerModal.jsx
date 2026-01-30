@@ -142,7 +142,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               value={formData.name}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
@@ -155,7 +155,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               readOnly
               value={customerId}
               placeholder="Will auto-generate..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
@@ -170,7 +170,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               value={formData.email}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
@@ -185,7 +185,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               value={formData.phone}
               onChange={handleInputChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
@@ -199,7 +199,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               placeholder="22ABCDE1234F1Z5"
               value={formData.gst_no}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
@@ -211,7 +211,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               name="customer_type"
               value={formData.customer_type}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
               required
             >
               <option value="tata">TATA</option>
@@ -231,7 +231,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               onChange={handleInputChange}
               step="0.01"
               min="0"
-              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
@@ -243,7 +243,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               name="status"
               value={formData.status}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
             >
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
@@ -260,7 +260,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               value={formData.billing_address}
               onChange={handleInputChange}
               rows="2"
-              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs resize-vertical focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs resize-vertical focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
@@ -274,7 +274,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
               value={formData.shipping_address}
               onChange={handleInputChange}
               rows="2"
-              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs resize-vertical focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs resize-vertical focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
         </div>
@@ -283,14 +283,14 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2 bg-gray-100 border border-gray-300 rounded-xs text-gray-700 cursor-pointer text-xs font-medium hover:bg-gray-200 transition"
+            className="p-6  py-2 bg-gray-100 border border-gray-300 rounded-xs text-gray-700 cursor-pointer text-xs font-medium hover:bg-gray-200 transition"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white border-none rounded-xs cursor-pointer text-xs font-semibold  hover:from-green-600 hover:to-green-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+            className="p-6  py-2 bg-gradient-to-r from-green-500 to-green-600 text-white border-none rounded-xs cursor-pointer text-xs font-semibold  hover:from-green-600 hover:to-green-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? 'Creating...' : '✓ Create Customer'}
           </button>

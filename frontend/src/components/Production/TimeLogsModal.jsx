@@ -427,7 +427,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full  bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Adding...' : 'Add Time Log'}
           </button>
@@ -438,31 +438,31 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
           <div className="grid grid-cols-5 gap-4 text-xs">
             <div>
               <p className="text-gray-600 text-xs font-semibold">Total Produced</p>
-              <p className="text-xs font-bold text-gray-900">
+              <p className="text-xs  text-gray-900">
                 {timeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0).toFixed(2)}
               </p>
             </div>
             <div>
               <p className="text-gray-600 text-xs font-semibold">Total Accepted</p>
-              <p className="text-lg font-bold text-green-600">
+              <p className="text-lg  text-green-600">
                 {timeLogs.reduce((sum, log) => sum + (parseFloat(log.accepted_qty) || 0), 0).toFixed(2)}
               </p>
             </div>
             <div>
               <p className="text-gray-600 text-xs font-semibold">Total Rejected</p>
-              <p className="text-lg font-bold text-red-600">
+              <p className="text-lg  text-red-600">
                 {timeLogs.reduce((sum, log) => sum + (parseFloat(log.rejected_qty) || 0), 0).toFixed(2)}
               </p>
             </div>
             <div>
               <p className="text-gray-600 text-xs font-semibold">Total Scrap</p>
-              <p className="text-lg font-bold text-orange-600">
+              <p className="text-lg  text-orange-600">
                 {timeLogs.reduce((sum, log) => sum + (parseFloat(log.scrap_qty) || 0), 0).toFixed(2)}
               </p>
             </div>
             <div>
               <p className="text-gray-600 text-xs font-semibold">Remaining</p>
-              <p className="text-lg font-bold text-blue-600">
+              <p className="text-lg  text-blue-600">
                 {(parseFloat(jobCardData?.planned_quantity || 0) - timeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0)).toFixed(2)}
               </p>
             </div>
@@ -479,40 +479,40 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
               <table className="w-full text-xs">
                 <thead className="bg-gray-100 border-b border-gray-200">
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Operator</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Workstation</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">Shift</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">Time</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">Completed</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">Accepted</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">Rejected</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">Scrap</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">Type</th>
-                    <th className="px-4 py-3 text-center font-semibold text-gray-700">Action</th>
+                    <th className="p-2 text-left font-semibold text-gray-700">Operator</th>
+                    <th className="p-2 text-left font-semibold text-gray-700">Workstation</th>
+                    <th className="p-2 text-center font-semibold text-gray-700">Shift</th>
+                    <th className="p-2 text-center font-semibold text-gray-700">Time</th>
+                    <th className="p-2 text-center font-semibold text-gray-700">Completed</th>
+                    <th className="p-2 text-center font-semibold text-gray-700">Accepted</th>
+                    <th className="p-2 text-center font-semibold text-gray-700">Rejected</th>
+                    <th className="p-2 text-center font-semibold text-gray-700">Scrap</th>
+                    <th className="p-2 text-center font-semibold text-gray-700">Type</th>
+                    <th className="p-2 text-center font-semibold text-gray-700">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {timeLogs.map(log => (
                     <tr key={log.id} className="hover:bg-gray-50 transition">
-                      <td className="px-4 py-3 text-gray-900">{log.operator_name}</td>
-                      <td className="px-4 py-3 text-gray-900">{log.workstation_name || 'N/A'}</td>
-                      <td className="px-4 py-3 text-center text-gray-900">{log.shift}</td>
-                      <td className="px-4 py-3 text-center text-gray-600 text-xs">
+                      <td className="p-2 text-gray-900">{log.operator_name}</td>
+                      <td className="p-2 text-gray-900">{log.workstation_name || 'N/A'}</td>
+                      <td className="p-2 text-center text-gray-900">{log.shift}</td>
+                      <td className="p-2 text-center text-gray-600 text-xs">
                         {log.from_time} - {log.to_time}
                         <br />
                         <span className="text-gray-500">({log.time_in_minutes || 0} min)</span>
                       </td>
-                      <td className="px-4 py-3 text-center text-gray-900 font-medium">{log.completed_qty}</td>
-                      <td className="px-4 py-3 text-center text-green-600 font-medium">{log.accepted_qty}</td>
-                      <td className="px-4 py-3 text-center text-red-600 font-medium">{log.rejected_qty}</td>
-                      <td className="px-4 py-3 text-center text-orange-600 font-medium">{log.scrap_qty}</td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="p-2 text-center text-gray-900 font-medium">{log.completed_qty}</td>
+                      <td className="p-2 text-center text-green-600 font-medium">{log.accepted_qty}</td>
+                      <td className="p-2 text-center text-red-600 font-medium">{log.rejected_qty}</td>
+                      <td className="p-2 text-center text-orange-600 font-medium">{log.scrap_qty}</td>
+                      <td className="p-2 text-center">
                         <div className="flex justify-center gap-1">
                           {log.inhouse && <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">In</span>}
                           {log.outsource && <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium">Out</span>}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="p-2 text-center">
                         <button
                           onClick={() => handleDeleteTimeLog(log.id)}
                           className="text-red-600 hover:text-red-900 transition"
@@ -527,7 +527,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
               </table>
             </div>
           ) : (
-            <div className="p-8 text-center bg-gray-50 border border-gray-200 rounded-xs text-gray-500">
+            <div className="p-3 text-center bg-gray-50 border border-gray-200 rounded-xs text-gray-500">
               <Clock size={32} className="mx-auto mb-2 opacity-50" />
               <p>No time logs recorded yet</p>
             </div>

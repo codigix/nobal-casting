@@ -199,7 +199,7 @@ export default function SupplierList() {
       <div>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Suppliers</h1>
+            <h1 className="text-xl  text-gray-900">Suppliers</h1>
             <p className="text-gray-600 mt-1">Manage your supplier network and relationships</p>
           </div>
           <Button
@@ -257,9 +257,9 @@ export default function SupplierList() {
       </div>
 
       {showAddForm && (
-        <div className="bg-gray-50 rounded-xs p-6 border-l-4 border-blue-500">
+        <div className="bg-gray-50 rounded-xsp-3   border-l-4 border-blue-500">
           <div className="flex justify-between items-center mb-5">
-            <h3 className="text-lg font-semibold text-gray-800">Add New Supplier</h3>
+            <h3 className="text-lg  text-gray-800">Add New Supplier</h3>
             <button
               onClick={handleCancel}
               className="bg-transparent border-none cursor-pointer p-1 flex items-center justify-center"
@@ -490,14 +490,14 @@ export default function SupplierList() {
                           <button
                             type="button"
                             onClick={handleCancel}
-                            className="px-4 py-2 bg-red-500 text-white rounded-sm text-xs font-semibold flex items-center gap-1.5 hover:bg-red-600"
+                            className="p-2 bg-red-500 text-white rounded-sm text-xs font-semibold flex items-center gap-1.5 hover:bg-red-600"
                           >
                             <X size={14} />
                             Cancel
                           </button>
                           <button
                             type="submit"
-                            className="px-4 py-2 bg-green-500 text-white rounded-sm text-xs font-semibold flex items-center gap-1.5 hover:bg-green-600"
+                            className="p-2 bg-green-500 text-white rounded-sm text-xs font-semibold flex items-center gap-1.5 hover:bg-green-600"
                           >
                             <Check size={14} />
                             Save Changes

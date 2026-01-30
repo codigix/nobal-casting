@@ -106,7 +106,7 @@ export default function ItemGroups() {
   }
 
   return (
-    <div className="bg-gradient-to-br from-gray-50 to-gray-100 px-6 py-6 min-h-screen">
+    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6  py-6 min-h-screen">
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -114,7 +114,7 @@ export default function ItemGroups() {
             <FolderOpen size={20} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Item Groups</h1>
+            <h1 className="text-xl  text-gray-900">Item Groups</h1>
             <p className="text-xs text-gray-600">Manage product categories and groups</p>
           </div>
         </div>
@@ -142,8 +142,8 @@ export default function ItemGroups() {
       {/* Modal Form */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xs shadow-lg w-full max-w-md p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">
+          <div className="bg-white rounded-xs shadow-lg w-full max-w-mdp-3  ">
+            <h2 className="text-lg  text-gray-900 mb-4">
               {editingGroup ? 'Edit Item Group' : 'Add Item Group'}
             </h2>
             
@@ -158,7 +158,7 @@ export default function ItemGroups() {
                   value={formData.name}
                   onChange={handleInputChange}
                   placeholder="e.g., Raw Materials, Finished Goods..."
-                  className="w-full rounded-xs border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                  className="w-full rounded-xs border border-gray-300 bg-white p-2  py-2 text-xs text-gray-900 placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
                   required
                 />
               </div>
@@ -173,7 +173,7 @@ export default function ItemGroups() {
                   onChange={handleInputChange}
                   placeholder="Optional description..."
                   rows="3"
-                  className="w-full rounded-xs border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                  className="w-full rounded-xs border border-gray-300 bg-white p-2  py-2 text-xs text-gray-900 placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
                 />
               </div>
 
@@ -181,14 +181,14 @@ export default function ItemGroups() {
                 <button
                   type="button"
                   onClick={handleCloseForm}
-                  className="px-4 py-2 rounded-xs border border-gray-300 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 transition-all"
+                  className="p-2 rounded-xs border border-gray-300 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-4 py-2 rounded-xs bg-gradient-to-br from-purple-400 to-purple-600 text-xs font-medium text-white hover:from-purple-500 hover:to-purple-700 disabled:opacity-50 transition-all"
+                  className="p-2 rounded-xs bg-gradient-to-br from-purple-400 to-purple-600 text-xs font-medium text-white hover:from-purple-500 hover:to-purple-700 disabled:opacity-50 transition-all"
                 >
                   {loading ? 'Saving...' : 'Save'}
                 </button>
@@ -210,7 +210,7 @@ export default function ItemGroups() {
             <div className="text-xs">No item groups found</div>
             <button
               onClick={() => handleOpenForm()}
-              className="mt-4 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs font-semibold rounded-xs hover:from-purple-600 hover:to-purple-700 transition-all"
+              className="mt-4 p-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs font-semibold rounded-xs hover:from-purple-600 hover:to-purple-700 transition-all"
             >
               Create First Item Group
             </button>
@@ -220,9 +220,9 @@ export default function ItemGroups() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Name</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Description</th>
-                  <th className="px-4 py-3 text-center font-semibold text-gray-700">Actions</th>
+                  <th className="p-2 text-left font-semibold text-gray-700">Name</th>
+                  <th className="p-2 text-left font-semibold text-gray-700">Description</th>
+                  <th className="p-2 text-center font-semibold text-gray-700">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -233,9 +233,9 @@ export default function ItemGroups() {
                       idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                     } hover:bg-purple-50 transition-colors`}
                   >
-                    <td className="px-4 py-3 font-semibold text-gray-900">{group.name}</td>
-                    <td className="px-4 py-3 text-gray-700">{group.description || '—'}</td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="p-2 font-semibold text-gray-900">{group.name}</td>
+                    <td className="p-2 text-gray-700">{group.description || '—'}</td>
+                    <td className="p-2 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => handleOpenForm(group)}

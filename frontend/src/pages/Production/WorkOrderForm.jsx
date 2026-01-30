@@ -1,9 +1,62 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Save, X, Plus, Trash2, AlertCircle, CheckCircle, Package, Factory, Boxes, Edit2, BarChart3, ChevronRight } from 'lucide-react'
+import {
+  Save, X, AlertCircle, CheckCircle, Factory,
+  Boxes, Edit2, Settings, Calendar,
+  Database, Layers, Clock,
+  ArrowRight, ShieldCheck, Zap, Activity, Filter, Info,
+  BarChart3, TrendingUp
+} from 'lucide-react'
 import SearchableSelect from '../../components/SearchableSelect'
 import * as productionService from '../../services/productionService'
 import api from '../../services/api'
+import Card from '../../components/Card/Card'
+
+// Helper Components for the Redesign
+const SectionTitle = ({ title, icon: Icon, badge }) => (
+  <div className="flex items-center justify-between mb-6">
+    <div className="flex items-center gap-3">
+      <div className="p-2 bg-indigo-50 text-indigo-600 rounded">
+        <Icon size={18} />
+      </div>
+      <h3 className="text-xs text-slate-900 text-xs">{title}</h3>
+    </div>
+    {badge && (
+      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs   rounded-full border border-slate-200 text-xstracking-widest">
+        {badge}
+      </span>
+    )}
+  </div>
+)
+
+const FieldWrapper = ({ label, children, error, required }) => (
+  <div className=".5">
+    <div className="flex items-center justify-between">
+      <label className="text-xs   text-slate-400 text-xstracking-widest flex items-center gap-1">
+        {label}
+        {required && <span className="text-rose-500">*</span>}
+      </label>
+      {error && <span className="text-xs   text-rose-500 animate-pulse">{error}</span>}
+    </div>
+    {children}
+  </div>
+)
+
+const NavItem = ({ label, icon: Icon, section, isActive, onClick }) => (
+  <button
+    type="button"
+    onClick={() => onClick(section)}
+    className={`flex items-center gap-3 p-2 rounded transition-all duration-300 ${isActive
+      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 translate-y-[-2px]'
+      : 'text-slate-500 hover:bg-white hover:text-indigo-600 border border-transparent hover:border-slate-100'
+      }`}
+  >
+    <div className={`transition-transform duration-300 ${isActive ? 'scale-110' : ''}`}>
+      <Icon size={14} strokeWidth={isActive ? 2.5 : 2} />
+    </div>
+    <span className={`text-xs  ${isActive ? '' : 'text-slate-400'}`}>{label}</span>
+  </button>
+)
 
 export default function WorkOrderForm() {
   const navigate = useNavigate()
@@ -11,45 +64,38 @@ export default function WorkOrderForm() {
   const searchParams = new URLSearchParams(window.location.search)
   const isReadOnly = searchParams.get('readonly') === 'true'
   const prefillItem = searchParams.get('item_to_manufacture')
-  const prefillItemName = searchParams.get('item_name')
   const prefillQty = searchParams.get('qty_to_manufacture')
   const prefillBom = searchParams.get('bom_no') || searchParams.get('bom_id')
   const prefillStartDate = searchParams.get('planned_start_date')
   const productionPlanId = searchParams.get('production_plan_id')
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
-
   const [items, setItems] = useState([])
   const [bomOperations, setBomOperations] = useState([])
   const [bomMaterials, setBomMaterials] = useState([])
   const [availableBoms, setAvailableBoms] = useState([])
   const [jobCards, setJobCards] = useState([])
   const [bomQuantity, setBomQuantity] = useState(1)
-  const [editingMaterialId, setEditingMaterialId] = useState(null)
-  const [editingOperationId, setEditingOperationId] = useState(null)
   const [workstations, setWorkstations] = useState([])
-
   const [productionStages, setProductionStages] = useState([])
-  const [isEditMode, setIsEditMode] = useState(false)
+  const [isEditMode, setIsEditMode] = useState(!id)
   const [editingJobCardId, setEditingJobCardId] = useState(null)
-  const [modifiedJobCards, setModifiedJobCards] = useState({})
+  const [activeSection, setActiveSection] = useState('foundation')
+
   const [completionMetrics, setCompletionMetrics] = useState({
     totalPlanned: 0,
     totalCompleted: 0,
     allCompleted: false,
-    firstTimeLogDate: null,
-    lastTimeLogDate: null,
-    totalActualTime: 0,
-    expectedTime: 0,
     efficiency: 0,
+    totalActualTime: 0,
     qualityScore: 0
   })
-  
+
   const [formData, setFormData] = useState({
     work_order_id: '',
     naming_series: 'MFG-WO-.YYYY.-',
-    company: '',
     item_to_manufacture: prefillItem || '',
     qty_to_manufacture: prefillQty ? parseInt(prefillQty) : 1,
     sales_order_id: '',
@@ -65,6 +111,7 @@ export default function WorkOrderForm() {
     production_stage_id: null
   })
 
+  // Data Fetching Logic (Same as before)
   useEffect(() => {
     fetchItems()
     fetchProductionStages()
@@ -90,64 +137,32 @@ export default function WorkOrderForm() {
     }
   }, [jobCards.length, bomOperations.length])
 
-  useEffect(() => {
-    if (formData.sales_order_id && formData.bom_id && jobCards.length > 0 && bomOperations.length > 0) {
-      console.log('Auto-populating workstations from Sales Order and BOM')
-      populateWorkstationsForJobCards(jobCards, bomOperations)
-    }
-  }, [formData.sales_order_id, formData.bom_id])
-
   const fetchProductionStages = async () => {
     try {
       const response = await api.get(`${import.meta.env.VITE_API_URL}/production-stages/active`)
-      if (response.data.success) {
-        setProductionStages(response.data.data || [])
-      }
-    } catch (err) {
-      console.error('Failed to fetch production stages:', err)
-    }
+      if (response.data.success) setProductionStages(response.data.data || [])
+    } catch (err) { console.error('Failed to fetch production stages:', err) }
   }
 
   const fetchWorkstations = async () => {
     try {
       const response = await productionService.getWorkstationsList()
-      const allWorkstations = response.data || []
-      setWorkstations(allWorkstations)
-    } catch (err) {
-      console.error('Failed to fetch workstations:', err)
-    }
+      setWorkstations(response.data || [])
+    } catch (err) { console.error('Failed to fetch workstations:', err) }
   }
 
   const fetchProductionPlanData = async (planId) => {
     try {
       const response = await api.get(`/production-planning/${planId}`)
       const planData = response.data?.data || response.data
-      
-      console.log('Production plan data fetched:', planData)
-      
       if (planData) {
-        let bomId = planData.bom_id || ''
-        
-        if (!bomId && planData.raw_materials && planData.raw_materials.length > 0) {
-          bomId = planData.raw_materials[0].bom_no || ''
-        }
-        
-        if (!bomId && planData.fg_items && planData.fg_items.length > 0) {
-          bomId = planData.fg_items[0].bom_no || ''
-        }
-        
+        let bomId = planData.bom_id || planData.raw_materials?.[0]?.bom_no || planData.fg_items?.[0]?.bom_no || ''
         if (bomId) {
-          setFormData(prev => ({
-            ...prev,
-            bom_id: bomId
-          }))
-          console.log('BOM ID set from production plan:', bomId)
+          setFormData(prev => ({ ...prev, bom_id: bomId }))
           await fetchBOMDetails(bomId)
         }
       }
-    } catch (err) {
-      console.error('Failed to fetch production plan data:', err)
-    }
+    } catch (err) { console.error('Failed to fetch production plan data:', err) }
   }
 
   const fetchJobCards = async (workOrderId) => {
@@ -155,9 +170,7 @@ export default function WorkOrderForm() {
       const response = await productionService.getJobCards({ work_order_id: workOrderId })
       setJobCards(response.data || [])
       await calculateCompletionMetrics(response.data || [])
-    } catch (err) {
-      console.error('Failed to fetch job cards:', err)
-    }
+    } catch (err) { console.error('Failed to fetch job cards:', err) }
   }
 
   const calculateCompletionMetrics = async (cards) => {
@@ -165,92 +178,39 @@ export default function WorkOrderForm() {
       const totalPlanned = cards.reduce((sum, jc) => sum + (parseFloat(jc.planned_quantity) || 0), 0)
       const totalCompleted = cards.reduce((sum, jc) => sum + (parseFloat(jc.completed_quantity) || jc.actual_qty || 0), 0)
       const allCompleted = cards.length > 0 && cards.every(jc => (jc.status || '').toLowerCase() === 'completed')
-      
-      let firstTimeLogDate = null
-      let lastTimeLogDate = null
+
       let totalActualTime = 0
       let totalAccepted = 0
-      
+
       for (const jc of cards) {
         try {
           const timeLogs = await productionService.getTimeLogs({ job_card_id: jc.job_card_id || jc.id })
           const logs = timeLogs.data || []
-          
-          if (logs.length > 0) {
-            const dates = logs.map(log => new Date(log.created_at || log.date)).filter(d => !isNaN(d))
-            if (dates.length > 0) {
-              const minDate = new Date(Math.min(...dates))
-              const maxDate = new Date(Math.max(...dates))
-              
-              if (!firstTimeLogDate || minDate < firstTimeLogDate) {
-                firstTimeLogDate = minDate
-              }
-              if (!lastTimeLogDate || maxDate > lastTimeLogDate) {
-                lastTimeLogDate = maxDate
-              }
-            }
-            
-            logs.forEach(log => {
-              if (log.from_time && log.to_time) {
-                totalActualTime += log.time_in_minutes || 0
-              }
-              totalAccepted += parseFloat(log.accepted_qty) || 0
-            })
-          }
-        } catch (err) {
-          console.error('Failed to fetch time logs for job card:', jc.job_card_id || jc.id)
-        }
+          logs.forEach(log => {
+            if (log.from_time && log.to_time) totalActualTime += log.time_in_minutes || 0
+            totalAccepted += parseFloat(log.accepted_qty) || 0
+          })
+        } catch (err) { console.error('Failed to fetch time logs for job card:', jc.job_card_id || jc.id) }
       }
-      
+
       const expectedTime = (bomOperations || []).reduce((sum, op) => sum + (parseFloat(op.operation_time) || 0), 0) * 60
-      const efficiency = expectedTime > 0 ? ((expectedTime / totalActualTime) * 100).toFixed(0) : 0
+      const efficiency = expectedTime > 0 && totalActualTime > 0 ? ((expectedTime / totalActualTime) * 100).toFixed(0) : 0
       const qualityScore = totalCompleted > 0 ? ((totalAccepted / totalCompleted) * 100).toFixed(1) : 0
-      
-      setCompletionMetrics({
-        totalPlanned,
-        totalCompleted,
-        allCompleted,
-        firstTimeLogDate,
-        lastTimeLogDate,
-        totalActualTime,
-        expectedTime,
-        efficiency,
-        qualityScore
-      })
-      
-      if (allCompleted && firstTimeLogDate && lastTimeLogDate) {
-        setFormData(prev => ({
-          ...prev,
-          actual_start_date: firstTimeLogDate.toISOString().split('T')[0],
-          actual_end_date: lastTimeLogDate.toISOString().split('T')[0],
-          status: 'completed'
-        }))
-      }
-    } catch (err) {
-      console.error('Failed to calculate completion metrics:', err)
-    }
+
+      setCompletionMetrics({ totalPlanned, totalCompleted, allCompleted, efficiency, totalActualTime, qualityScore })
+    } catch (err) { console.error('Failed to calculate metrics:', err) }
   }
 
   const fetchItems = async () => {
     try {
       const response = await productionService.getItems()
       const allItems = response.data || []
-      
-      const finishedGoodItems = allItems.filter(item => 
-        item.item_group === 'Finished Good' || 
-        item.item_group === 'Finished Goods' ||
-        item.fg_sub_assembly === 'FG' ||
-        item.item_group === 'Sub Assembly' ||
-        item.item_group === 'Sub Assemblies' ||
-        item.fg_sub_assembly === 'SA'
+      const fgItems = allItems.filter(item =>
+        ['Finished Good', 'Finished Goods', 'Sub Assembly', 'Sub Assemblies'].includes(item.item_group) ||
+        ['FG', 'SA'].includes(item.fg_sub_assembly)
       )
-      
-      console.log(`Filtered ${finishedGoodItems.length} Finished Good items from ${allItems.length} total items`)
-      setItems(finishedGoodItems)
-    } catch (err) {
-      console.error('Failed to fetch items:', err)
-      setError('Failed to load items')
-    }
+      setItems(fgItems)
+    } catch (err) { console.error('Failed to fetch items:', err); setError('Failed to load items') }
   }
 
   const fetchWorkOrderDetails = async (workOrderId) => {
@@ -258,9 +218,6 @@ export default function WorkOrderForm() {
       setLoading(true)
       const response = await productionService.getWorkOrder(workOrderId)
       const woData = response.data || response
-      
-      console.log('Fetched Work Order Data:', woData)
-      
       setFormData(prev => ({
         ...prev,
         work_order_id: woData.wo_id || woData.work_order_id || '',
@@ -277,35 +234,18 @@ export default function WorkOrderForm() {
         status: woData.status || 'draft',
         notes: woData.notes || ''
       }))
-      
-      if (woData.bom_id || woData.bom_no) {
-        await fetchBOMDetails(woData.bom_id || woData.bom_no)
-      }
-      
-      setError(null)
-    } catch (err) {
-      console.error('Failed to fetch work order:', err)
-      setError(`Failed to load work order: ${err.message}`)
-    } finally {
-      setLoading(false)
-    }
+      if (woData.bom_id || woData.bom_no) await fetchBOMDetails(woData.bom_id || woData.bom_no)
+    } catch (err) { console.error('Failed to fetch work order:', err); setError(`Failed to load work order: ${err.message}`) }
+    finally { setLoading(false) }
   }
 
   const fetchBOMDetails = async (bomId) => {
-    if (!bomId || bomId.trim() === '') {
-      setBomOperations([])
-      setBomMaterials([])
-      return
-    }
-
+    if (!bomId) return
     try {
       setLoading(true)
       const response = await productionService.getBOMDetails(bomId)
       const bomData = response.data || response
-
-      console.log('BOM Data fetched:', bomData)
       setBomQuantity(bomData.quantity || 1)
-
       const workOrderQty = parseFloat(formData.qty_to_manufacture) || 1
 
       const operations = (bomData.operations || []).map((op, idx) => ({
@@ -327,240 +267,52 @@ export default function WorkOrderForm() {
           uom: rm.uom || '',
           required_qty: multipliedQty,
           source_warehouse: rm.source_warehouse || '',
-          issued_qty: 0,
-          consumed_qty: 0
+          transferred_qty: rm.transferred_qty || 0,
+          consumed_qty: rm.consumed_qty || 0,
+          returned_qty: rm.returned_qty || 0
         }
       })
 
       setBomOperations(operations)
       setBomMaterials(rawMaterials)
-      setError(null)
-
-      if (jobCards.length > 0 && operations.length > 0) {
-        setTimeout(() => {
-          populateWorkstationsForJobCards(jobCards, operations)
-        }, 100)
-      }
-    } catch (err) {
-      console.error('Failed to fetch BOM details:', err)
-      setError(`Failed to fetch BOM ${bomId}: ${err.message}`)
-      setBomOperations([])
-      setBomMaterials([])
-    } finally {
-      setLoading(false)
-    }
+      if (jobCards.length > 0 && operations.length > 0) populateWorkstationsForJobCards(jobCards, operations)
+    } catch (err) { console.error('Failed to fetch BOM details:', err) }
+    finally { setLoading(false) }
   }
 
-  const handleInputChange = async (e) => {
+  const handleInputChange = (e) => {
     if (isReadOnly) return
     const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-    setError(null)
-
-    if (name === 'bom_id' && value) {
-      fetchBOMDetails(value)
-    }
-
-    if (name === 'sales_order_id' && value) {
-      await fetchBOMFromSalesOrder(value)
-    }
-  }
-
-  const fetchBOMFromSalesOrder = async (salesOrderId) => {
-    if (!salesOrderId || salesOrderId.trim() === '') {
-      setFormData(prev => ({
-        ...prev,
-        bom_id: ''
-      }))
-      setBomOperations([])
-      setBomMaterials([])
-      return
-    }
-
-    setLoading(true)
-    try {
-      console.log('Fetching BOM for Sales Order:', salesOrderId)
-      
-      const response = await api.get(`/selling/sales-orders/${salesOrderId}`)
-      const soData = response.data?.data || response.data
-      
-      console.log('Sales Order data:', soData)
-
-      const bomId = soData.bom_id || ''
-      
-      console.log('BOM ID from Sales Order:', bomId)
-
-      if (bomId) {
-        setFormData(prev => ({
-          ...prev,
-          bom_id: bomId
-        }))
-        await fetchBOMDetails(bomId)
-        
-        if (jobCards.length > 0) {
-          setTimeout(() => {
-            setSuccess(`BOM ${bomId} auto-fetched from Sales Order ${salesOrderId} - Workstations updated for job cards`)
-          }, 200)
-        } else {
-          setSuccess(`BOM ${bomId} auto-fetched from Sales Order ${salesOrderId}`)
-        }
-        setTimeout(() => setSuccess(null), 3000)
-      } else {
-        console.log('No BOM ID found in Sales Order')
-        setError(`Sales Order ${salesOrderId} has no BOM ID. Please enter BOM ID manually.`)
-        setFormData(prev => ({
-          ...prev,
-          bom_id: ''
-        }))
-      }
-    } catch (err) {
-      console.error('Error fetching Sales Order:', err)
-      setError(`Failed to fetch Sales Order ${salesOrderId}`)
-      setFormData(prev => ({
-        ...prev,
-        bom_id: ''
-      }))
-    } finally {
-      setLoading(false)
-    }
+    setFormData(prev => ({ ...prev, [name]: value }))
+    if (name === 'bom_id' && value) fetchBOMDetails(value)
   }
 
   const handleItemSelect = async (itemCode) => {
-    setFormData(prev => ({
-      ...prev,
-      item_to_manufacture: itemCode
-    }))
-    setError(null)
-    setAvailableBoms([])
+    if (isReadOnly) return
+    setLoading(true)
+    try {
+      const bomResponse = await productionService.getBOMs({ item_code: itemCode })
+      const boms = bomResponse.data || []
+      setAvailableBoms(boms)
 
-    if (!itemCode) {
+      const response = await api.get(`/production-planning/item/${itemCode}`)
+      const plan = response.data?.data || response.data
+
+      let bomNo = plan?.fg_items?.[0]?.bom_no || plan?.bom_id || (boms.length > 0 ? (boms[0].bom_id || boms[0].name) : '')
+
       setFormData(prev => ({
         ...prev,
-        sales_order_id: '',
-        bom_id: ''
+        item_to_manufacture: itemCode,
+        sales_order_id: plan?.sales_order_id || '',
+        bom_id: bomNo
       }))
-      setBomOperations([])
-      setBomMaterials([])
-      return
-    }
-
-    setLoading(true)
-    let fetchedSalesOrderId = ''
-
-    try {
-      // Fetch sales order by item code
-      try {
-        const soResponse = await api.get(`${import.meta.env.VITE_API_URL}/selling/sales-orders/item/${itemCode}`)
-        const soData = soResponse.data?.data || soResponse.data
-        if (soData && soData.sales_order_id) {
-          fetchedSalesOrderId = soData.sales_order_id
-          console.log('Sales Order found for item:', fetchedSalesOrderId)
-        }
-      } catch (err) {
-        console.error('Error fetching sales order by item:', err)
-      }
-      
-      // Fetch all BOMs for the item
-      let boms = []
-      try {
-        const bomResponse = await productionService.getBOMs({ item_code: itemCode })
-        boms = bomResponse.data || []
-        setAvailableBoms(boms)
-      } catch (err) {
-        console.error('Error fetching BOMs:', err)
-      }
-      
-      console.log('Fetching data for item:', itemCode)
-      
-      const response = await api.get(`/production-planning/item/${itemCode}`)
-      const data = response.data?.data || response.data
-      
-      console.log('Production plan data fetched:', data)
-
-      if (data) {
-        const plan = data
-        const fgItem = plan.fg_items?.[0] || {}
-        
-        console.log('Plan full data:', plan)
-        console.log('FG item data:', fgItem)
-        
-        let bomNo = fgItem.bom_no || plan.bom_id || ''
-        
-        if (!bomNo && boms.length > 0) {
-          bomNo = boms[0].bom_id || boms[0].name || ''
-          console.log('BOM fetched by item code:', bomNo)
-        }
-        
-        console.log('Final resolved:', {
-          sales_order_id: plan.sales_order_id,
-          production_plan_id: plan.plan_id,
-          bom_id: bomNo
-        })
-
-        const soId = fetchedSalesOrderId || plan.sales_order_id || ''
-        setFormData(prev => ({
-          ...prev,
-          item_to_manufacture: itemCode,
-          sales_order_id: soId,
-          bom_id: bomNo
-        }))
-
-        if (bomNo) {
-          await fetchBOMDetails(bomNo)
-        }
-
-        setSuccess(`Auto-filled: SO ${soId || 'N/A'} | BOM ${bomNo || 'N/A'}`)
-        setTimeout(() => setSuccess(null), 4000)
-      } else {
-        console.log('No production plan found for item')
-        
-        let bomNo = ''
-        if (boms.length > 0) {
-          bomNo = boms[0].bom_id || boms[0].name || ''
-        }
-
-        const successMsg = `Item selected: ${itemCode}${fetchedSalesOrderId ? ` (SO: ${fetchedSalesOrderId})` : ''}. ${!fetchedSalesOrderId ? 'No sales order found. ' : ''}${bomNo ? 'BOM auto-selected' : 'Enter BOM ID manually'}`
-        setSuccess(successMsg)
-        setTimeout(() => setSuccess(null), 4000)
-        setFormData(prev => ({
-          ...prev,
-          sales_order_id: fetchedSalesOrderId,
-          bom_id: bomNo
-        }))
-
-        if (bomNo) {
-          await fetchBOMDetails(bomNo)
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching production plan data:', err)
-      const successMsg = `Item selected: ${itemCode}${fetchedSalesOrderId ? ` (SO: ${fetchedSalesOrderId})` : ''}. Could not auto-fetch data - enter BOM ID manually`
-      setSuccess(successMsg)
-      setTimeout(() => setSuccess(null), 4000)
-      if (fetchedSalesOrderId) {
-        setFormData(prev => ({
-          ...prev,
-          sales_order_id: fetchedSalesOrderId
-        }))
-      }
-    } finally {
-      setLoading(false)
-    }
+      if (bomNo) await fetchBOMDetails(bomNo)
+    } catch (err) { console.error('Error selecting item:', err) }
+    finally { setLoading(false) }
   }
 
   const updateMaterial = (id, field, value) => {
-    setBomMaterials(prev => prev.map(mat => 
-      mat.id === id ? { ...mat, [field]: value } : mat
-    ))
-  }
-
-  const updateOperation = (id, field, value) => {
-    setBomOperations(prev => prev.map(op => 
-      op.id === id ? { ...op, [field]: value } : op
-    ))
+    setBomMaterials(prev => prev.map(mat => mat.id === id ? { ...mat, [field]: value } : mat))
   }
 
   const updateJobCard = (jcIdentifier, field, value) => {
@@ -568,186 +320,72 @@ export default function WorkOrderForm() {
       const uniqueId = jc.jc_id || jc.id || `${jc.operation_name || jc.operation}-${idx}`
       return uniqueId === jcIdentifier ? { ...jc, [field]: value } : jc
     }))
-    setModifiedJobCards(prev => ({
-      ...prev,
-      [jcIdentifier]: true
-    }))
   }
 
   const saveJobCard = async (jcIdentifier) => {
-    const jobCard = jobCards.find((jc, idx) => {
-      const uniqueId = jc.jc_id || jc.id || `${jc.operation_name || jc.operation}-${idx}`
-      return uniqueId === jcIdentifier
-    })
+    const jobCard = jobCards.find((jc, idx) => (jc.jc_id || jc.id || `${jc.operation_name || jc.operation}-${idx}`) === jcIdentifier)
     if (!jobCard) return
-
     try {
       setLoading(true)
-      const updateData = {
+      await productionService.updateJobCard(jobCard.jc_id || jobCard.id, {
         completed_quantity: jobCard.completed_quantity || jobCard.actual_qty || 0,
         workstation_type: jobCard.workstation_type || jobCard.workstation || '',
         status: jobCard.status || 'pending'
-      }
-      const apiId = jobCard.jc_id || jobCard.id
-      await productionService.updateJobCard(apiId, updateData)
-      setModifiedJobCards(prev => {
-        const updated = { ...prev }
-        delete updated[jcIdentifier]
-        return updated
       })
-      setSuccess('Job card saved successfully')
+      setSuccess('Job card saved')
       setTimeout(() => setSuccess(null), 3000)
-    } catch (err) {
-      console.error('Failed to save job card:', err)
-      setError('Failed to save job card changes')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const getWorkstationName = (workstationId) => {
-    if (!workstationId) return '-'
-    const ws = workstations.find(w => 
-      (w.workstation_id || w.id) === workstationId || 
-      w.workstation_name === workstationId ||
-      w.name === workstationId ||
-      w.machine_id === workstationId
-    )
-    return ws ? (ws.workstation_name || ws.name || ws.machine_id || ws.workstation_id || ws.id || '-') : workstationId
-  }
-
-  const moveToNextWorkstation = (jcIdentifier) => {
-    const currentJc = jobCards.find((jc, idx) => {
-      const uniqueId = jc.jc_id || jc.id || `${jc.operation_name || jc.operation}-${idx}`
-      return uniqueId === jcIdentifier
-    })
-    if (!currentJc || workstations.length === 0) return
-
-    const currentWsId = currentJc.workstation_type || currentJc.workstation
-    const currentIndex = workstations.findIndex(ws => 
-      (ws.workstation_id || ws.id) === currentWsId
-    )
-
-    if (currentIndex === -1) {
-      if (workstations.length > 0) {
-        updateJobCard(jcIdentifier, 'workstation_type', workstations[0].workstation_id || workstations[0].id)
-      }
-    } else if (currentIndex < workstations.length - 1) {
-      const nextWs = workstations[currentIndex + 1]
-      updateJobCard(jcIdentifier, 'workstation_type', nextWs.workstation_id || nextWs.id)
-    }
+    } catch (err) { console.error('Failed to save job card:', err) }
+    finally { setLoading(false) }
   }
 
   const populateWorkstationsForJobCards = async (cardsToUpdate, opsToUse) => {
-    if (!cardsToUpdate || cardsToUpdate.length === 0 || !opsToUse || opsToUse.length === 0) {
-      console.log('Cannot populate: cardsToUpdate=', cardsToUpdate?.length, 'opsToUse=', opsToUse?.length)
-      return
-    }
-
+    if (!cardsToUpdate?.length || !opsToUse?.length) return
     try {
-      console.log('Populating workstations for', cardsToUpdate.length, 'job cards from', opsToUse.length, 'operations')
-      
-      const updatedCards = cardsToUpdate.map((jc, idx) => {
-        const jobOp = jc.operation_name || jc.operation
-        const operation = opsToUse.find(op => op.operation_name === jobOp)
-        
-        if (operation && operation.workstation) {
-          if (!jc.workstation_type && !jc.workstation) {
-            console.log(`  ✓ Assigning workstation ${operation.workstation} to job card: ${jobOp}`)
-            return {
-              ...jc,
-              workstation_type: operation.workstation,
-              workstation: operation.workstation
-            }
-          }
-        } else if (operation) {
-          console.log(`  ⚠ No workstation found for operation: ${jobOp}`)
+      const updatedCards = cardsToUpdate.map(jc => {
+        const op = opsToUse.find(o => o.operation_name === (jc.operation_name || jc.operation))
+        if (op?.workstation && !jc.workstation_type && !jc.workstation) {
+          return { ...jc, workstation_type: op.workstation, workstation: op.workstation }
         }
         return jc
       })
-
-      const hasChanges = updatedCards.some((card, idx) => 
-        card.workstation_type !== cardsToUpdate[idx].workstation_type || 
-        card.workstation !== cardsToUpdate[idx].workstation
-      )
-
+      const hasChanges = updatedCards.some((card, idx) => card.workstation_type !== cardsToUpdate[idx].workstation_type)
       if (hasChanges) {
-        console.log('Found workstation changes, saving to database...')
         setJobCards(updatedCards)
-
         for (const card of updatedCards) {
-          if (card.workstation_type || card.workstation) {
-            const apiId = card.jc_id || card.id
-            if (apiId) {
-              await productionService.updateJobCard(apiId, {
-                workstation_type: card.workstation_type || card.workstation
-              }).catch(err => console.error('Failed to update workstation:', err))
-            }
+          if ((card.workstation_type || card.workstation) && (card.jc_id || card.id)) {
+            await productionService.updateJobCard(card.jc_id || card.id, { workstation_type: card.workstation_type || card.workstation })
           }
         }
-      } else {
-        console.log('No workstation changes needed')
       }
-    } catch (err) {
-      console.error('Failed to populate workstations:', err)
-    }
+    } catch (err) { console.error('Failed to populate workstations:', err) }
   }
 
   const createJobCardsFromOperations = async () => {
     if (!id) {
-      setError('Please save the work order first before creating job cards')
+      setError('Please save the work order first before generating job cards')
       return
     }
-
-    if (bomOperations.length === 0) {
-      setError('No operations found in BOM')
-      return
-    }
-
     setLoading(true)
     try {
-      const jobCardsToCreate = bomOperations.map((op, idx) => ({
-        work_order_id: id,
-        operation_name: op.operation_name,
-        workstation_type: op.workstation,
-        planned_quantity: formData.qty_to_manufacture,
-        sequence: idx + 1
-      }))
-
-      const createdCards = []
-      for (const jc of jobCardsToCreate) {
-        const response = await productionService.createJobCard(jc)
-        if (response.success || response.data) {
-          createdCards.push(response.data || response)
-        }
+      const response = await productionService.generateJobCardsForWorkOrder(id)
+      if (response.success) {
+        setSuccess('Job cards generated successfully')
+        await fetchJobCards(id)
+      } else {
+        setError(response.message || 'Failed to generate job cards')
       }
-
-      setSuccess(`Created ${createdCards.length} job cards successfully`)
-      setTimeout(() => setSuccess(null), 3000)
-      
-      await fetchJobCards(id)
     } catch (err) {
-      console.error('Error creating job cards:', err)
-      setError(`Failed to create job cards: ${err.message}`)
+      setError(`Error generating job cards: ${err.message}`)
     } finally {
       setLoading(false)
     }
   }
 
   const handleSubmit = async () => {
-    if (!formData.item_to_manufacture) {
-      setError('Please select an item to manufacture')
+    if (!formData.item_to_manufacture || !formData.bom_id) {
+      setError('Please fill required fields (Item & BOM)')
       return
     }
-    if (!formData.qty_to_manufacture || formData.qty_to_manufacture <= 0) {
-      setError('Please enter a valid quantity')
-      return
-    }
-    if (!formData.bom_id) {
-      setError('Please enter a BOM ID')
-      return
-    }
-
     setLoading(true)
     try {
       const payload = {
@@ -756,940 +394,678 @@ export default function WorkOrderForm() {
         quantity: parseFloat(formData.qty_to_manufacture),
         priority: formData.priority,
         notes: formData.notes,
-        planned_start_date: formData.planned_start_date ? new Date(formData.planned_start_date).toISOString().slice(0, 19).replace('T', ' ') : null,
-        planned_end_date: formData.planned_end_date ? new Date(formData.planned_end_date).toISOString().slice(0, 19).replace('T', ' ') : null,
-        actual_start_date: formData.actual_start_date ? new Date(formData.actual_start_date).toISOString().slice(0, 19).replace('T', ' ') : null,
-        actual_end_date: formData.actual_end_date ? new Date(formData.actual_end_date).toISOString().slice(0, 19).replace('T', ' ') : null,
-        expected_delivery_date: formData.expected_delivery_date ? new Date(formData.expected_delivery_date).toISOString().slice(0, 19).replace('T', ' ') : null,
+        planned_start_date: formData.planned_start_date,
+        planned_end_date: formData.planned_end_date,
         sales_order_id: formData.sales_order_id,
-        operations: bomOperations.map(op => ({
-          operation: op.operation_name,
-          workstation: op.workstation,
-          time: op.operation_time
-        })),
         required_items: bomMaterials.map(mat => ({
           item_code: mat.item_code,
           source_warehouse: mat.source_warehouse || 'Stores - NC',
-          required_qty: (mat.required_qty / bomQuantity) * parseFloat(formData.qty_to_manufacture)
+          required_qty: mat.required_qty
         }))
       }
-
-      let response
-      if (id) {
-        response = await productionService.updateWorkOrder(id, payload)
-      } else {
-        response = await productionService.createWorkOrder(payload)
-      }
-
+      const response = id ? await productionService.updateWorkOrder(id, payload) : await productionService.createWorkOrder(payload)
       if (response.success) {
-        const jobCardMsg = !id && response.jobCardsCreated ? ` + ${response.jobCardsCreated} job card(s) created` : ''
-        setSuccess(`Work order ${id ? 'updated' : 'created'} successfully${jobCardMsg}`)
-        setTimeout(() => {
-          navigate('/manufacturing/work-orders')
-        }, 2000)
-      } else {
-        setError(response.message || 'Failed to save work order')
-      }
-    } catch (err) {
-      console.error('Error saving work order:', err)
-      setError(`Failed to save work order: ${err.message}`)
-    } finally {
-      setLoading(false)
-    }
+        setSuccess(`Work order ${id ? 'updated' : 'created'}`)
+        setTimeout(() => navigate('/manufacturing/work-orders'), 1500)
+      } else { setError(response.message || 'Save failed') }
+    } catch (err) { setError(`Failed: ${err.message}`) }
+    finally { setLoading(false) }
+  }
+
+  const getWorkstationName = (id) => {
+    const ws = workstations.find(w => w.workstation_id === id || w.id === id || w.name === id)
+    return ws ? (ws.workstation_name || ws.name) : (id || '-')
+  }
+
+  const getPriorityColor = (p) => {
+    if (p === 'high') return 'bg-rose-50 text-rose-600 border-rose-100'
+    if (p === 'medium') return 'bg-amber-50 text-amber-600 border-amber-100'
+    return 'bg-emerald-50 text-emerald-600 border-emerald-100'
+  }
+
+  const getStatusColor = (s) => {
+    const status = (s || 'draft').toLowerCase()
+    if (status === 'completed') return 'bg-emerald-50 text-emerald-700 border-emerald-100'
+    if (status === 'in-progress') return 'bg-indigo-50 text-indigo-700 border-indigo-100'
+    if (status === 'planned') return 'bg-blue-50 text-blue-700 border-blue-100'
+    return 'bg-slate-50 text-slate-600 border-slate-200'
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-3">
-      <div className="w-full mx-auto">
-        <div className="bg-white rounded-xs shadow">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
-            <div className="flex items-center gap-2">
-              <Factory className="w-6 h-6 text-blue-600" />
-              <h1 className="text-lg font-bold text-gray-900">
-                {isReadOnly ? 'View Work Order' : (id ? 'Edit Work Order' : 'Create Work Order')}
-              </h1>
-              {id && <span className="text-xs text-gray-500 ml-2">{id}</span>}
+    <div className="min-h-screen bg-[#f8fafc] pb-20">
+      
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <div className=" p-6  h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-2 bg-indigo-600 rounded shadow-lg shadow-indigo-200">
+              <Factory className="w-5 h-5 text-white" />
             </div>
-            <button
-              onClick={() => navigate('/manufacturing/work-orders')}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <X size={20} />
-            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg  text-slate-900 tracking-tight">
+                  {id ? (isReadOnly ? 'WORK ORDER RECORD' : 'EDIT WORK ORDER') : 'CREATE MANUFACTURING ORDER'}
+                </h1>
+                <span className={`px-2.5 py-0.5 rounded-full text-xs   text-xstracking-widest border ${getStatusColor(formData.status)}`}>
+                  {formData.status}
+                </span>
+              </div>
+              <p className="text-xs   text-slate-400 text-xstracking-widest">
+                {id || 'DRAFT-NEW'} • {new Date().toLocaleDateString('en-GB')}
+              </p>
+            </div>
           </div>
 
-          <div className="px-5 py-4 space-y-4">
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                <p className="text-xs font-medium text-red-900">{error}</p>
-              </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/manufacturing/work-orders')}
+              className="p-2 text-xs  text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition-all"
+            >
+              Close
+            </button>
+            {!isReadOnly && (
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="flex items-center gap-2 p-2  py-2 bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50  hover:shadow-lg hover:-translate-y-0.5 transition-all text-xs "
+              >
+                {loading ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={14} />}
+                {id ? 'UPDATE ORDER' : 'RELEASE TO PRODUCTION'}
+              </button>
             )}
+          </div>
+        </div>
+      </div>
 
-            {success && (
-              <div className="p-3 bg-green-50 border border-green-200 rounded flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                <p className="text-xs font-medium text-green-900">{success}</p>
-              </div>
-            )}
+      <div className="sticky top-16 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 p-6  py-3">
+        <div className="max-w-[1600px] mx-auto flex flex-wrap items-center gap-2">
+          <NavItem
+            label="01 Foundation"
+            icon={Settings}
+            section="foundation"
+            isActive={activeSection === 'foundation'}
+            onClick={setActiveSection}
+          />
+          <NavItem
+            label="02 Timeline"
+            icon={Calendar}
+            section="timeline"
+            isActive={activeSection === 'timeline'}
+            onClick={setActiveSection}
+          />
+          <NavItem
+            label="03 Operations"
+            icon={Layers}
+            section="operations"
+            isActive={activeSection === 'operations'}
+            onClick={setActiveSection}
+          />
+          <NavItem
+            label="04 Inventory"
+            icon={Boxes}
+            section="inventory"
+            isActive={activeSection === 'inventory'}
+            onClick={setActiveSection}
+          />
 
-            {/* Key Metrics Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                <p className="text-xs text-gray-600 font-semibold">Item Code</p>
-                <p className="text-xs font-bold text-blue-900 mt-1">{formData.item_to_manufacture || 'N/A'}</p>
+          <div className="ml-auto flex items-center gap-4 bg-slate-900 p-2 rounded text-white shadow-lg shadow-slate-200 min-w-[220px]">
+            <div className="flex-1">
+              <div className="flex items-center justify-between text-[9px]  mb-1 tracking-widest">
+                <span className="opacity-60 uppercase">Execution Pulse</span>
+                <span className="text-indigo-400">{((completionMetrics.totalCompleted / (formData.qty_to_manufacture || 1)) * 100).toFixed(0)}%</span>
               </div>
-              <div className="bg-green-50 border border-green-200 rounded p-3">
-                <p className="text-xs text-gray-600 font-semibold">Quantity to Produce</p>
-                <p className="text-xs font-bold text-green-900 mt-1">{formData.qty_to_manufacture || 1}</p>
-              </div>
-              <div className="bg-purple-50 border border-purple-200 rounded p-3">
-                <p className="text-xs text-gray-600 font-semibold">Priority</p>
-                <p className="text-xs font-bold text-purple-900 mt-1 capitalize">{formData.priority || 'N/A'}</p>
-              </div>
-              <div className="bg-amber-50 border border-amber-200 rounded p-3">
-                <p className="text-xs text-gray-600 font-semibold">Status</p>
-                <p className="text-xs font-bold text-amber-900 mt-1 capitalize">{formData.status || 'N/A'}</p>
+              <div className="w-full bg-white/10 rounded-full h-1 overflow-hidden">
+                <div
+                  className="bg-indigo-500 h-full transition-all duration-1000 shadow-[0_0_8px_rgba(99,102,241,0.6)]"
+                  style={{ width: `${Math.min(100, (completionMetrics.totalCompleted / (formData.qty_to_manufacture || 1)) * 100)}%` }}
+                />
               </div>
             </div>
+            <TrendingUp size={14} className="text-indigo-400" />
+          </div>
+        </div>
+      </div>
 
-            {/* Completion Summary - Shows when work order is completed */}
-            {completionMetrics.allCompleted && (
-              <div className="border-2 border-green-300 rounded-xs p-4 bg-gradient-to-r from-green-50 to-emerald-50">
-                <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <CheckCircle size={18} className="text-green-600" />
-                  Production Completion Summary
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="bg-white p-3 rounded border border-blue-200">
-                    <p className="text-xs text-gray-600 font-semibold mb-1">Total Planned</p>
-                    <p className="text-lg font-bold text-blue-600">{completionMetrics.totalPlanned.toFixed(0)}</p>
-                    <p className="text-xs text-gray-500 mt-1">units</p>
-                  </div>
-                  <div className="bg-white p-3 rounded border border-green-200">
-                    <p className="text-xs text-gray-600 font-semibold mb-1">Total Completed</p>
-                    <p className="text-lg font-bold text-green-600">{completionMetrics.totalCompleted.toFixed(2)}</p>
-                    <p className="text-xs text-gray-500 mt-1">units</p>
-                  </div>
-                  <div className={`bg-white p-3 rounded border ${completionMetrics.efficiency >= 100 ? 'border-green-200' : completionMetrics.efficiency >= 80 ? 'border-yellow-200' : 'border-red-200'}`}>
-                    <p className="text-xs text-gray-600 font-semibold mb-1">⚡ Efficiency</p>
-                    <p className={`text-lg font-bold ${completionMetrics.efficiency >= 100 ? 'text-green-600' : completionMetrics.efficiency >= 80 ? 'text-yellow-600' : 'text-red-600'}`}>{completionMetrics.efficiency}%</p>
-                    <p className="text-xs text-gray-500 mt-1">vs expected</p>
-                  </div>
-                  <div className="bg-white p-3 rounded border border-blue-200">
-                    <p className="text-xs text-gray-600 font-semibold mb-1">✓ Quality Score</p>
-                    <p className="text-lg font-bold text-blue-600">{completionMetrics.qualityScore}%</p>
-                    <p className="text-xs text-gray-500 mt-1">acceptance rate</p>
-                  </div>
-                  <div className="bg-white p-3 rounded border border-orange-200">
-                    <p className="text-xs text-gray-600 font-semibold mb-1">Actual Duration</p>
-                    <p className="text-lg font-bold text-orange-600">{(completionMetrics.totalActualTime / 60).toFixed(1)}h</p>
-                    <p className="text-xs text-gray-500 mt-1">{completionMetrics.totalActualTime}m</p>
-                  </div>
-                  <div className="bg-white p-3 rounded border border-purple-200">
-                    <p className="text-xs text-gray-600 font-semibold mb-1">Expected Duration</p>
-                    <p className="text-lg font-bold text-purple-600">{(completionMetrics.expectedTime / 60).toFixed(1)}h</p>
-                    <p className="text-xs text-gray-500 mt-1">{completionMetrics.expectedTime}m</p>
-                  </div>
-                  <div className="bg-white p-3 rounded border border-indigo-200">
-                    <p className="text-xs text-gray-600 font-semibold mb-1">Start Date</p>
-                    <p className="text-sm font-bold text-indigo-600">{completionMetrics.firstTimeLogDate ? new Date(completionMetrics.firstTimeLogDate).toLocaleDateString() : '-'}</p>
-                  </div>
-                  <div className="bg-white p-3 rounded border border-indigo-200">
-                    <p className="text-xs text-gray-600 font-semibold mb-1">End Date</p>
-                    <p className="text-sm font-bold text-indigo-600">{completionMetrics.lastTimeLogDate ? new Date(completionMetrics.lastTimeLogDate).toLocaleDateString() : '-'}</p>
-                  </div>
-                </div>
-              </div>
-            )}
+      <div className=" p-2">
 
-            {/* Details Table */}
-            <div className="border rounded-xs overflow-hidden">
-              <div className="flex items-center justify-between bg-gray-50 px-3 py-2 border-b border-gray-200">
-                <h3 className="text-xs font-bold text-gray-900">Work Order Details</h3>
-                {!isReadOnly && (
-                  <button
-                    onClick={() => setIsEditMode(!isEditMode)}
-                    className={`text-xs px-2 py-1 rounded flex items-center gap-1 transition ${
-                      isEditMode
-                        ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    <Edit2 size={12} />
-                    {isEditMode ? 'Done Editing' : 'Edit Details'}
-                  </button>
-                )}
-              </div>
-              <table className="w-full text-xs border-collapse">
-                <tbody>
-                  {/* Item */}
-                  <tr className="border-b border-gray-200 bg-white hover:bg-gray-50">
-                    <td className="px-3 py-2 font-semibold text-gray-700 w-40 bg-gray-50">Item *</td>
-                    <td className="px-3 py-2 text-gray-900">
-                      {isEditMode && !isReadOnly ? (
-                        <SearchableSelect
-                          value={formData.item_to_manufacture}
-                          onChange={handleItemSelect}
-                          options={items.map(item => ({
-                            value: item.item_code,
-                            label: item.item_code
-                          }))}
-                          placeholder="Select item..."
-                          isClearable={true}
-                        />
-                      ) : (
-                        formData.item_to_manufacture || '-'
-                      )}
-                    </td>
-                  </tr>
+        <div className="grid grid-cols-1 gap-4 mb-6">
+          {error && (
+            <div className="p-4 bg-rose-50 border border-rose-100 rounded flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+              <AlertCircle className="w-5 h-5 text-rose-500" />
+              <p className="text-xs  text-rose-800">{error}</p>
+            </div>
+          )}
+          {success && (
+            <div className="p-4 bg-emerald-50 border border-emerald-100 rounded flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+              <CheckCircle className="w-5 h-5 text-emerald-500" />
+              <p className="text-xs  text-emerald-800">{success}</p>
+            </div>
+          )}
+        </div>
 
-                  {/* Quantity */}
-                  <tr className="border-b border-gray-200 bg-gray-50 hover:bg-gray-100">
-                    <td className="px-3 py-2 font-semibold text-gray-700 w-40 bg-gray-50">Quantity *</td>
-                    <td className="px-3 py-2 text-gray-900">
-                      {isEditMode && !isReadOnly ? (
-                        <input
-                          type="number"
-                          name="qty_to_manufacture"
-                          value={formData.qty_to_manufacture}
+        <div className="space-y-8 min-w-0">
+          {/* 01 Foundation Section */}
+          <div id="foundation" className={activeSection === 'foundation' ? 'block' : 'hidden'}>
+            <div className="grid grid-cols-12 gap-8">
+              <div className="col-span-12 lg:col-span-8">
+                <Card className="p-6 border-none overflow-visible">
+                  <SectionTitle title="01 Foundation Setup" icon={Settings} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FieldWrapper label="Target Item to Manufacture" required>
+                      <SearchableSelect
+                        value={formData.item_to_manufacture}
+                        onChange={handleItemSelect}
+                        options={items.map(item => ({ value: item.item_code, label: `${item.item_code} - ${item.item_name || ''}` }))}
+                        placeholder="Search Products..."
+                        isDisabled={isReadOnly || (id && !isEditMode)}
+                      />
+                    </FieldWrapper>
+
+                    <FieldWrapper label="Bill of Materials (BOM)" required>
+                      <SearchableSelect
+                        value={formData.bom_id}
+                        onChange={(val) => handleInputChange({ target: { name: 'bom_id', value: val } })}
+                        options={availableBoms.map(bom => ({ value: bom.bom_id || bom.name, label: bom.bom_id || bom.name }))}
+                        placeholder="Select BOM..."
+                        isDisabled={isReadOnly || (id && !isEditMode)}
+                      />
+                    </FieldWrapper>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <FieldWrapper label="Quantity to Produce" required>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            name="qty_to_manufacture"
+                            value={formData.qty_to_manufacture}
+                            onChange={handleInputChange}
+                            disabled={isReadOnly || (id && !isEditMode)}
+                            className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all "
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px]  text-slate-400">UNIT</span>
+                        </div>
+                      </FieldWrapper>
+
+                      <FieldWrapper label="Priority Level">
+                        <select
+                          name="priority"
+                          value={formData.priority}
                           onChange={handleInputChange}
-                          className="w-32 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                      ) : (
-                        formData.qty_to_manufacture || '-'
-                      )}
-                    </td>
-                  </tr>
+                          disabled={isReadOnly || (id && !isEditMode)}
+                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium"
+                        >
+                          <option value="low">Low Priority</option>
+                          <option value="medium">Medium Priority</option>
+                          <option value="high">High Priority</option>
+                        </select>
+                      </FieldWrapper>
+                    </div>
 
-                  {/* Sales Order ID */}
-                  <tr className="border-b border-gray-200 bg-white hover:bg-gray-50">
-                    <td className="px-3 py-2 font-semibold text-gray-700 w-40 bg-gray-50">Sales Order ID</td>
-                    <td className="px-3 py-2 text-gray-900">
-                      {isEditMode && !isReadOnly ? (
+                    <FieldWrapper label="Sales Order Reference">
+                      <div className="relative">
                         <input
                           type="text"
                           name="sales_order_id"
                           value={formData.sales_order_id}
                           onChange={handleInputChange}
-                          className="w-40 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          disabled={isReadOnly || (id && !isEditMode)}
+                          placeholder="SO-REFERENCE"
+                          className="w-full pl-4 pr-10 py-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none font-mono"
                         />
-                      ) : (
-                        formData.sales_order_id || '-'
-                      )}
-                    </td>
-                  </tr>
+                        <Database size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      </div>
+                    </FieldWrapper>
+                  </div>
+                </Card>
+              </div>
 
-                  {/* BOM ID */}
-                  <tr className="border-b border-gray-200 bg-gray-50 hover:bg-gray-100">
-                    <td className="px-3 py-2 font-semibold text-gray-700 w-40 bg-gray-50">BOM ID *</td>
-                    <td className="px-3 py-2 text-gray-900">
-                      {isEditMode && !isReadOnly ? (
-                        availableBoms.length > 0 ? (
-                          <SearchableSelect
-                            value={formData.bom_id}
-                            onChange={(value) => {
-                              handleInputChange({ target: { name: 'bom_id', value } })
-                            }}
-                            options={availableBoms.map(bom => ({
-                              value: bom.bom_id,
-                              label: bom.bom_id
-                            }))}
-                            placeholder="Select BOM..."
-                          />
-                        ) : (
-                          <input
-                            type="text"
-                            name="bom_id"
-                            value={formData.bom_id}
-                            onChange={handleInputChange}
-                            className="w-40 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                        )
-                      ) : (
-                        formData.bom_id || '-'
-                      )}
-                    </td>
-                  </tr>
+              <div className="col-span-12 lg:col-span-4">
+                <div className="p-6 rounded  bg-indigo-600 text-white shadow-xl shadow-indigo-100 relative overflow-hidden group h-full">
+                  <div className="absolute -right-8 -bottom-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                    <Factory size={180} />
+                  </div>
+                  <div className="relative z-10 flex flex-col h-full">
+                    <div className="flex items-center gap-2 mb-6 text-indigo-100">
+                      <ShieldCheck size={20} />
+                      <h4 className="text-xs  uppercase">Configuration Guard</h4>
+                    </div>
+                    <p className="text-sm text-indigo-50 font-medium leading-relaxed mb-8">
+                      Locking the configuration prevents accidental changes to BOM and quantities once production has been initiated.
+                    </p>
 
-                  {/* Priority */}
-                  <tr className="border-b border-gray-200 bg-white hover:bg-gray-50">
-                    <td className="px-3 py-2 font-semibold text-gray-700 w-40 bg-gray-50">Priority</td>
-                    <td className="px-3 py-2 text-gray-900">
-                      {isEditMode && !isReadOnly ? (
-                        <select
-                          name="priority"
-                          value={formData.priority}
-                          onChange={handleInputChange}
-                          className="w-32 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    <div className="mt-auto">
+                      {!isReadOnly && id && (
+                        <button
+                          onClick={() => setIsEditMode(!isEditMode)}
+                          className={`w-full py-3 rounded text-xs  transition-all shadow-lg ${isEditMode ? 'bg-white text-indigo-600' : 'bg-indigo-500 text-white hover:bg-indigo-400'}`}
                         >
-                          <option value="low">Low</option>
-                          <option value="medium">Medium</option>
-                          <option value="high">High</option>
-                          <option value="urgent">Urgent</option>
-                        </select>
-                      ) : (
-                        <span className="capitalize">{formData.priority || '-'}</span>
+                          {isEditMode ? 'COMMIT & LOCK CONFIG' : 'UNLOCK FOR REVISION'}
+                        </button>
                       )}
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-                  {/* Planned Start Date */}
-                  <tr className="border-b border-gray-200 bg-gray-50 hover:bg-gray-100">
-                    <td className="px-3 py-2 font-semibold text-gray-700 w-40 bg-gray-50">Planned Start Date</td>
-                    <td className="px-3 py-2 text-gray-900">
-                      {isEditMode && !isReadOnly ? (
+          {/* 02 Timeline Section */}
+          <div id="timeline" className={activeSection === 'timeline' ? 'block' : 'hidden'}>
+            <div className="grid grid-cols-12 gap-8">
+              <div className="col-span-12 lg:col-span-4">
+                <Card className="p-6 border-none">
+                  <SectionTitle title="02 Production Timeline" icon={Calendar} />
+                  <div className="space-y-6">
+                    <FieldWrapper label="Planned Start Date" required>
+                      <div className="relative">
                         <input
                           type="date"
                           name="planned_start_date"
                           value={formData.planned_start_date}
                           onChange={handleInputChange}
-                          className="w-40 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          disabled={isReadOnly || (id && !isEditMode)}
+                          className="w-full pl-4 pr-10 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-medium"
                         />
-                      ) : (
-                        formData.planned_start_date || '-'
-                      )}
-                    </td>
-                  </tr>
+                        <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      </div>
+                    </FieldWrapper>
 
-                  {/* Planned End Date */}
-                  <tr className="border-b border-gray-200 bg-white hover:bg-gray-50">
-                    <td className="px-3 py-2 font-semibold text-gray-700 w-40 bg-gray-50">Planned End Date</td>
-                    <td className="px-3 py-2 text-gray-900">
-                      {isEditMode && !isReadOnly ? (
+                    <FieldWrapper label="Planned Completion Date" required>
+                      <div className="relative">
                         <input
                           type="date"
                           name="planned_end_date"
                           value={formData.planned_end_date}
                           onChange={handleInputChange}
-                          className="w-40 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          disabled={isReadOnly || (id && !isEditMode)}
+                          className="w-full pl-4 pr-10 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-medium"
                         />
-                      ) : (
-                        formData.planned_end_date || '-'
-                      )}
-                    </td>
-                  </tr>
+                        <Clock size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      </div>
+                    </FieldWrapper>
 
-                  {/* Actual Start Date */}
-                  <tr className="border-b border-gray-200 bg-gray-50 hover:bg-gray-100">
-                    <td className="px-3 py-2 font-semibold text-gray-700 w-40 bg-gray-50">Actual Start Date</td>
-                    <td className="px-3 py-2 text-gray-900">
-                      {isEditMode && !isReadOnly ? (
-                        <input
-                          type="date"
-                          name="actual_start_date"
-                          value={formData.actual_start_date}
-                          onChange={handleInputChange}
-                          className="w-40 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                      ) : (
-                        formData.actual_start_date || '-'
-                      )}
-                    </td>
-                  </tr>
-
-                  {/* Actual End Date */}
-                  <tr className="border-b border-gray-200 bg-white hover:bg-gray-50">
-                    <td className="px-3 py-2 font-semibold text-gray-700 w-40 bg-gray-50">Actual End Date</td>
-                    <td className="px-3 py-2 text-gray-900">
-                      {isEditMode && !isReadOnly ? (
-                        <input
-                          type="date"
-                          name="actual_end_date"
-                          value={formData.actual_end_date}
-                          onChange={handleInputChange}
-                          className="w-40 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                      ) : (
-                        formData.actual_end_date || '-'
-                      )}
-                    </td>
-                  </tr>
-
-                  {/* Expected Delivery Date */}
-                  <tr className="border-b border-gray-200 bg-gray-50 hover:bg-gray-100">
-                    <td className="px-3 py-2 font-semibold text-gray-700 w-40 bg-gray-50">Expected Delivery Date</td>
-                    <td className="px-3 py-2 text-gray-900">
-                      {isEditMode && !isReadOnly ? (
-                        <input
-                          type="date"
-                          name="expected_delivery_date"
-                          value={formData.expected_delivery_date}
-                          onChange={handleInputChange}
-                          className="w-40 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                      ) : (
-                        formData.expected_delivery_date || '-'
-                      )}
-                    </td>
-                  </tr>
-
-                  {/* Production Stage */}
-                  <tr className="border-b border-gray-200 bg-gray-50 hover:bg-gray-100">
-                    <td className="px-3 py-2 font-semibold text-gray-700 w-40 bg-gray-50">Production Stage</td>
-                    <td className="px-3 py-2 text-gray-900">
-                      {isEditMode && !isReadOnly ? (
-                        <select
-                          name="production_stage_id"
-                          value={formData.production_stage_id || ''}
-                          onChange={handleInputChange}
-                          className="w-40 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                          <option value="">Select stage</option>
-                          {productionStages.map(stage => (
-                            <option key={stage.id} value={stage.id}>
-                              {stage.stage_sequence}. {stage.stage_name}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        formData.production_stage_id
-                          ? productionStages.find(s => s.id === formData.production_stage_id)?.stage_name || '-'
-                          : '-'
-                      )}
-                    </td>
-                  </tr>
-
-                  {/* Status */}
-                  <tr className="border-b border-gray-200 bg-gray-50 hover:bg-gray-100">
-                    <td className="px-3 py-2 font-semibold text-gray-700 w-40 bg-gray-50">Status</td>
-                    <td className="px-3 py-2 text-gray-900">
-                      {isEditMode && !isReadOnly ? (
-                        <select
-                          name="status"
-                          value={formData.status}
-                          onChange={handleInputChange}
-                          className="w-40 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        >
-                          <option value="draft">Draft</option>
-                          <option value="planned">Planned</option>
-                          <option value="in-progress">In Progress</option>
-                          <option value="completed">Completed</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
-                      ) : (
-                        <span className="capitalize">{formData.status || '-'}</span>
-                      )}
-                    </td>
-                  </tr>
-
-                  {/* Notes */}
-                  <tr className="bg-white hover:bg-gray-50">
-                    <td className="px-3 py-2 font-semibold text-gray-700 w-40 bg-gray-50 align-top">Notes</td>
-                    <td className="px-3 py-2 text-gray-900">
-                      {isEditMode && !isReadOnly ? (
-                        <textarea
-                          name="notes"
-                          value={formData.notes}
-                          onChange={handleInputChange}
-                          className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
-                          rows="2"
-                        />
-                      ) : (
-                        <div className="whitespace-pre-wrap break-words">{formData.notes || '-'}</div>
-                      )}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* Operations Section */}
-            {bomOperations.length > 0 && (
-              <div className="border-t pt-3 mt-3">
-                <h3 className="text-xs font-bold text-gray-900 mb-2 flex items-center gap-1">
-                  <Factory size={16} className="text-blue-600" />
-                  Operations ({bomOperations.length})
-                </h3>
-                <div className=" border rounded">
-                  <table className="w-full text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-gray-100 border-b border-gray-200">
-                        <th className="px-2 py-1.5 text-left font-semibold text-gray-700">No</th>
-                        <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Operation</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Completed</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Loss</th>
-                        <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Workstation</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Time (hrs)</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Cost/Unit</th>
-                        {!isReadOnly && <th className="px-2 py-1.5 text-center font-semibold text-gray-700 w-8">Act</th>}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bomOperations.map((op, idx) => (
-                        <tr key={op.id} className={`border-b border-gray-200 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                          <td className="px-2 py-1 text-gray-900 font-medium">{idx + 1}</td>
-                          <td className="px-2 py-1 text-gray-900 text-xs">{op.operation_name || '-'}</td>
-                          <td className="px-2 py-1 text-right">
-                            <input
-                              type="number"
-                              value={op.completed_qty || 0}
-                              onChange={(e) => updateOperation(op.id, 'completed_qty', parseFloat(e.target.value) || 0)}
-                              disabled={isReadOnly}
-                              className="w-16 px-1 py-0.5 border border-gray-300 rounded text-right text-xs"
-                            />
-                          </td>
-                          <td className="px-2 py-1 text-right">
-                            <input
-                              type="number"
-                              value={op.process_loss_qty || 0}
-                              onChange={(e) => updateOperation(op.id, 'process_loss_qty', parseFloat(e.target.value) || 0)}
-                              disabled={isReadOnly}
-                              className="w-14 px-1 py-0.5 border border-gray-300 rounded text-right text-xs"
-                            />
-                          </td>
-                          <td className="px-2 py-1">
-                            <SearchableSelect
-                              value={op.workstation || ''}
-                              onChange={(value) => updateOperation(op.id, 'workstation', value)}
-                              options={workstations.map(ws => ({
-                                value: ws.workstation_id || ws.id,
-                                label: ws.machine_id || ws.name
-                              }))}
-                              placeholder="Select WS"
-                              isDisabled={isReadOnly}
-                            />
-                          </td>
-                          <td className="px-2 py-1 text-right">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={op.operation_time || 0}
-                              onChange={(e) => updateOperation(op.id, 'operation_time', parseFloat(e.target.value) || 0)}
-                              disabled={isReadOnly}
-                              className="w-14 px-1 py-0.5 border border-gray-300 rounded text-right text-xs"
-                            />
-                          </td>
-                          <td className="px-2 py-1 text-right">
-                            {isReadOnly ? (
-                              <span className="text-gray-700">₹{(parseFloat(op.operating_cost) || 0).toFixed(2)}</span>
-                            ) : (
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={op.operating_cost || 0}
-                                onChange={(e) => updateOperation(op.id, 'operating_cost', parseFloat(e.target.value) || 0)}
-                                className="w-20 px-1 py-0.5 border border-gray-300 rounded text-right text-xs"
-                              />
-                            )}
-                          </td>
-                          {!isReadOnly && (
-                            <td className="px-2 py-1 text-center">
-                              <button
-                                onClick={() => setEditingOperationId(editingOperationId === op.id ? null : op.id)}
-                                className="p-0.5 hover:bg-blue-100 rounded transition"
-                              >
-                                <Edit2 size={12} className="text-blue-600" />
-                              </button>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Materials/Required Items Section */}
-            {bomMaterials.length > 0 && (
-              <div className="border-t pt-3 mt-3">
-                <h3 className="text-xs font-bold text-gray-900 mb-2 flex items-center gap-1">
-                  <Boxes size={16} className="text-purple-600" />
-                  Required Items ({bomMaterials.length})
-                </h3>
-                <div className="bg-blue-50 border border-blue-200 rounded p-2 mb-2 text-xs">
-                  <p className="text-gray-700 font-semibold">Material Tracking Logic:</p>
-                  <ul className="text-gray-600 mt-1 space-y-1 ml-4 list-disc">
-                    <li><strong>Req Qty</strong>: Required quantity from BOM</li>
-                    <li><strong>Trans Qty</strong>: Transferred from warehouse to production (usually = Req Qty or more)</li>
-                    <li><strong>Cons Qty</strong>: Actually consumed in production (≤ Trans Qty)</li>
-                    <li><strong>Ret Qty</strong>: Returned to warehouse unused (≤ Trans Qty)</li>
-                    <li><strong>Wastage</strong>: Trans Qty - Cons Qty - Ret Qty (process loss)</li>
-                  </ul>
-                </div>
-                <div className=" border rounded overflow-x-auto">
-                  <table className="w-full text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-gray-100 border-b border-gray-200">
-                        <th className="px-2 py-1.5 text-center font-semibold text-gray-700 w-8">No</th>
-                        <th className="px-2 py-1.5 text-left font-semibold text-gray-700 min-w-20">Item Code</th>
-                        <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Item Name</th>
-                        <th className="px-2 py-1.5 text-left font-semibold text-gray-700">WH</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Req Qty</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700 w-12">UOM</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700 bg-blue-100" title="Transferred to production">Trans Qty</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700 bg-green-100" title="Used in production">Cons Qty</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700 bg-amber-100" title="Returned unused">Ret Qty</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700 bg-red-100" title="Process loss">Wastage</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700 bg-red-100" title="Wastage %">Waste %</th>
-                        {!isReadOnly && <th className="px-2 py-1.5 text-center font-semibold text-gray-700 w-8">Act</th>}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bomMaterials.map((mat, idx) => {
-                        const transQty = parseFloat(mat.transferred_qty) || 0
-                        const consQty = parseFloat(mat.consumed_qty) || 0
-                        const retQty = parseFloat(mat.returned_qty) || 0
-                        const wastage = Math.max(0, transQty - consQty - retQty)
-                        const wastePercent = transQty > 0 ? ((wastage / transQty) * 100).toFixed(1) : '0.0'
-                        const isValidated = transQty >= (consQty + retQty)
-                        
-                        return (
-                          <tr key={mat.id} className={`border-b border-gray-200 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${!isValidated ? 'border-l-4 border-l-red-500' : ''}`}>
-                            <td className="px-2 py-1 text-center text-gray-900 font-medium">{idx + 1}</td>
-                            <td className="px-2 py-1 text-gray-900 font-medium text-xs">{mat.item_code || '-'}</td>
-                            <td className="px-2 py-1 text-gray-700 text-xs">{mat.item_name || mat.description || '-'}</td>
-                            <td className="px-2 py-1">
-                              <input
-                                type="text"
-                                value={mat.source_warehouse || ''}
-                                onChange={(e) => updateMaterial(mat.id, 'source_warehouse', e.target.value)}
-                                disabled={isReadOnly}
-                                placeholder="WH"
-                                className="w-16 px-1 py-0.5 border border-gray-300 rounded text-xs"
-                              />
-                            </td>
-                            <td className="px-2 py-1 text-right font-medium text-gray-900">
-                              <input
-                                type="number"
-                                step="0.001"
-                                value={mat.required_qty || 0}
-                                onChange={(e) => updateMaterial(mat.id, 'required_qty', parseFloat(e.target.value) || 0)}
-                                disabled={isReadOnly}
-                                className="w-16 px-1 py-0.5 border border-gray-300 rounded text-right text-xs"
-                              />
-                            </td>
-                            <td className="px-2 py-1 text-right text-xs text-gray-700">
-                              {mat.uom || '-'}
-                            </td>
-                            <td className="px-2 py-1 text-right bg-blue-50">
-                              <input
-                                type="number"
-                                step="0.001"
-                                value={mat.transferred_qty || 0}
-                                onChange={(e) => updateMaterial(mat.id, 'transferred_qty', parseFloat(e.target.value) || 0)}
-                                disabled={isReadOnly}
-                                className="w-16 px-1 py-0.5 border border-gray-300 rounded text-right text-xs"
-                                title="Material issued to production"
-                              />
-                            </td>
-                            <td className="px-2 py-1 text-right bg-green-50">
-                              <input
-                                type="number"
-                                step="0.001"
-                                value={mat.consumed_qty || 0}
-                                onChange={(e) => updateMaterial(mat.id, 'consumed_qty', parseFloat(e.target.value) || 0)}
-                                disabled={isReadOnly}
-                                className={`w-16 px-1 py-0.5 border rounded text-right text-xs ${consQty > transQty ? 'border-red-500 bg-red-100' : 'border-gray-300'}`}
-                                title="Material used in production"
-                              />
-                            </td>
-                            <td className="px-2 py-1 text-right bg-amber-50">
-                              <input
-                                type="number"
-                                step="0.001"
-                                value={mat.returned_qty || 0}
-                                onChange={(e) => updateMaterial(mat.id, 'returned_qty', parseFloat(e.target.value) || 0)}
-                                disabled={isReadOnly}
-                                className={`w-16 px-1 py-0.5 border rounded text-right text-xs ${retQty > transQty ? 'border-red-500 bg-red-100' : 'border-gray-300'}`}
-                                title="Material returned unused"
-                              />
-                            </td>
-                            <td className="px-2 py-1 text-right bg-red-50 font-medium text-gray-900">
-                              {wastage.toFixed(3)}
-                            </td>
-                            <td className={`px-2 py-1 text-right font-bold w-12 ${parseFloat(wastePercent) > 5 ? 'bg-red-100 text-red-700' : 'bg-red-50 text-gray-900'}`}>
-                              {wastePercent}%
-                            </td>
-                            {!isReadOnly && (
-                              <td className="px-2 py-1 text-center">
-                                <button
-                                  onClick={() => setEditingMaterialId(editingMaterialId === mat.id ? null : mat.id)}
-                                  className="p-0.5 hover:bg-blue-100 rounded transition"
-                                  title="Edit material"
-                                >
-                                  <Edit2 size={12} className="text-blue-600" />
-                                </button>
-                              </td>
-                            )}
-                          </tr>
-                        )
-                      })}
-                      <tr className="bg-gray-100 border-t-2 border-gray-300 font-bold">
-                        <td colSpan="4" className="px-2 py-1.5 text-right">TOTAL:</td>
-                        <td className="px-2 py-1.5 text-right text-gray-900">
-                          {bomMaterials.reduce((sum, m) => sum + (parseFloat(m.required_qty) || 0), 0).toFixed(3)}
-                        </td>
-                        <td></td>
-                        <td className="px-2 py-1.5 text-right text-gray-900 bg-blue-100">
-                          {bomMaterials.reduce((sum, m) => sum + (parseFloat(m.transferred_qty) || 0), 0).toFixed(3)}
-                        </td>
-                        <td className="px-2 py-1.5 text-right text-gray-900 bg-green-100">
-                          {bomMaterials.reduce((sum, m) => sum + (parseFloat(m.consumed_qty) || 0), 0).toFixed(3)}
-                        </td>
-                        <td className="px-2 py-1.5 text-right text-gray-900 bg-amber-100">
-                          {bomMaterials.reduce((sum, m) => sum + (parseFloat(m.returned_qty) || 0), 0).toFixed(3)}
-                        </td>
-                        <td className="px-2 py-1.5 text-right text-gray-900 bg-red-100">
-                          {bomMaterials.reduce((sum, m) => {
-                            const t = parseFloat(m.transferred_qty) || 0
-                            const c = parseFloat(m.consumed_qty) || 0
-                            const r = parseFloat(m.returned_qty) || 0
-                            return sum + Math.max(0, t - c - r)
-                          }, 0).toFixed(3)}
-                        </td>
-                        <td className="px-2 py-1.5 text-right text-gray-900 bg-red-100">
-                          {(() => {
-                            const totalTrans = bomMaterials.reduce((sum, m) => sum + (parseFloat(m.transferred_qty) || 0), 0)
-                            const totalWaste = bomMaterials.reduce((sum, m) => {
-                              const t = parseFloat(m.transferred_qty) || 0
-                              const c = parseFloat(m.consumed_qty) || 0
-                              const r = parseFloat(m.returned_qty) || 0
-                              return sum + Math.max(0, t - c - r)
-                            }, 0)
-                            return totalTrans > 0 ? ((totalWaste / totalTrans) * 100).toFixed(1) : '0.0'
-                          })()}%
-                        </td>
-                        <td></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Job Cards Section */}
-            {jobCards.length > 0 && (
-              <div className="border rounded-xs overflow-hidden">
-                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
-                  <h3 className="text-xs font-bold text-gray-900 flex items-center gap-1">
-                    <BarChart3 size={16} className="text-indigo-600" />
-                    Job Cards ({jobCards.length})
-                  </h3>
-                </div>
-                <div className=" border-t border-gray-200">
-                  <table className="w-full text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-gray-100 border-b border-gray-200">
-                        <th className="px-2 py-1.5 text-left font-semibold text-gray-700">JC ID</th>
-                        <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Operation</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Qty Planned</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Qty Completed</th>
-                        <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Workstation</th>
-                        <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Status</th>
-                        <th className="px-2 py-1.5 text-center font-semibold text-gray-700">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {jobCards.map((jc, idx) => {
-                        const jcId = jc.jc_id || jc.id || `${jc.operation_name || jc.operation}-${idx}`
-                        const isEditing = editingJobCardId === jcId && !isReadOnly
-                        return (
-                          <tr key={jcId} className={`border-b border-gray-200 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                            <td className="px-2 py-1 text-gray-900 font-medium text-xs">{jc.job_card_id || jc.id || '-'}</td>
-                            <td className="px-2 py-1 text-gray-700 text-xs">{jc.operation_name || jc.operation || '-'}</td>
-                            <td className="px-2 py-1 text-right text-gray-700">{jc.planned_quantity || '-'}</td>
-                            <td className="px-2 py-1 text-right">
-                              {isEditing ? (
-                                <input
-                                  type="number"
-                                  step="0.001"
-                                  value={jc.completed_quantity || jc.actual_qty || 0}
-                                  onChange={(e) => updateJobCard(jcId, 'completed_quantity', parseFloat(e.target.value) || 0)}
-                                  className="w-16 px-1 py-0.5 border border-gray-300 rounded text-right text-xs"
-                                />
-                              ) : (
-                                <span className="text-gray-700">{jc.completed_quantity || jc.actual_qty || 0}</span>
-                              )}
-                            </td>
-                            <td className="px-2 py-1">
-                              {isEditing ? (
-                                <SearchableSelect
-                                  value={jc.workstation_type || jc.workstation || ''}
-                                  onChange={(value) => updateJobCard(jcId, 'workstation_type', value)}
-                                  options={workstations.map(ws => ({
-                                    value: ws.workstation_id || ws.id,
-                                    label: ws.workstation_name || ws.name || ws.machine_id || ws.id
-                                  }))}
-                                  placeholder="Select WS"
-                                  isClearable={false}
-                                />
-                              ) : (
-                                <span className="text-gray-700 text-xs font-medium">{getWorkstationName(jc.workstation_type || jc.workstation)}</span>
-                              )}
-                            </td>
-                            <td className="px-2 py-1">
-                              {isEditing ? (
-                                <select
-                                  value={jc.status || 'pending'}
-                                  onChange={(e) => updateJobCard(jcId, 'status', e.target.value)}
-                                  className="w-20 px-1 py-0.5 border border-gray-300 rounded text-xs"
-                                >
-                                  <option value="pending">Pending</option>
-                                  <option value="open">Open</option>
-                                  <option value="in-progress">In Progress</option>
-                                  <option value="completed">Completed</option>
-                                </select>
-                              ) : (
-                                <span className={`px-2 py-0.5 rounded text-xs font-medium inline-block ${
-                                  jc.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                  jc.status === 'in-progress' ? 'bg-amber-100 text-amber-800' :
-                                  jc.status === 'open' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {jc.status || 'pending'}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-2 py-1 text-center">
-                              {!isReadOnly && (
-                                <div className="flex items-center gap-1 justify-center">
-                                  {isEditing ? (
-                                    <>
-                                      <button
-                                        onClick={() => {
-                                          saveJobCard(jcId)
-                                          setEditingJobCardId(null)
-                                        }}
-                                        disabled={loading}
-                                        className="inline-flex items-center justify-center px-2 py-1 bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50 rounded transition text-xs font-medium"
-                                        title="Save changes"
-                                      >
-                                        <Save size={14} />
-                                      </button>
-                                      <button
-                                        onClick={() => setEditingJobCardId(null)}
-                                        className="inline-flex items-center justify-center px-2 py-1 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded transition text-xs"
-                                        title="Cancel"
-                                      >
-                                        <X size={14} />
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <button
-                                        onClick={() => setEditingJobCardId(jcId)}
-                                        className="inline-flex items-center justify-center px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded transition text-xs font-medium"
-                                        title="Edit row"
-                                      >
-                                        <Edit2 size={14} />
-                                      </button>
-                                      <button
-                                        onClick={() => moveToNextWorkstation(jcId)}
-                                        className="inline-flex items-center justify-center px-2 py-1 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded transition text-xs"
-                                        title="Move to next workstation"
-                                      >
-                                        <ChevronRight size={14} />
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Sub-Assemblies Section (separate from raw materials) */}
-            {bomMaterials.length > 0 && bomMaterials.some(mat => mat.item_code?.startsWith('SA-')) && (
-              <div className="border-t pt-3 mt-3">
-                <h3 className="text-xs font-bold text-gray-900 mb-2 flex items-center gap-1">
-                  <Package size={16} className="text-orange-600" />
-                  Sub-Assemblies
-                </h3>
-                <div className=" border rounded">
-                  <table className="w-full text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-gray-100 border-b border-gray-200">
-                        <th className="px-2 py-1.5 text-center font-semibold text-gray-700 w-8">No</th>
-                        <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Sub-Assembly Code</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Required Qty</th>
-                        <th className="px-2 py-1.5 text-right font-semibold text-gray-700">UOM</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bomMaterials.filter(mat => mat.item_code?.startsWith('SA-')).map((mat, idx) => (
-                        <tr key={mat.id} className={`border-b border-gray-200 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                          <td className="px-2 py-1 text-center text-gray-900 font-medium">{idx + 1}</td>
-                          <td className="px-2 py-1 text-gray-900 font-medium text-xs">{mat.item_code || '-'}</td>
-                          <td className="px-2 py-1 text-right text-gray-700">{mat.required_qty || mat.quantity || 0}</td>
-                          <td className="px-2 py-1 text-right text-gray-700 text-xs">{mat.uom || '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Cost Summary Section */}
-            {(bomOperations.length > 0 || bomMaterials.length > 0) && (
-              <div className="border-t pt-3 mt-3">
-                <h3 className="text-xs font-bold text-gray-900 mb-2 flex items-center gap-1">
-                  <BarChart3 size={16} className="text-green-600" />
-                  Cost Summary
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {bomMaterials.length > 0 && (
-                    <div className="bg-blue-50 rounded p-2 border border-blue-200">
-                      <p className="text-xs text-gray-600">Raw Materials (Qty)</p>
-                      <p className="text-xs font-bold text-blue-900">{bomMaterials.length}</p>
+                    <div className="pt-6 mt-6 border-t border-slate-100">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs  text-slate-400 ">Delivery Commitment</span>
+                        <div className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded text-[9px]  border border-amber-100">TARGET</div>
+                      </div>
+                      <p className="text-sm  text-slate-900">{formData.expected_delivery_date || 'PENDING SCHEDULE'}</p>
                     </div>
-                  )}
-                  {bomOperations.length > 0 && (
-                    <div className="bg-purple-50 rounded p-2 border border-purple-200">
-                      <p className="text-xs text-gray-600">Operations (Qty)</p>
-                      <p className="text-xs font-bold text-purple-900">{bomOperations.length}</p>
+                  </div>
+                </Card>
+              </div>
+
+              <div className="col-span-12 lg:col-span-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+                  <div className="p-6 rounded  bg-white border border-slate-200 shadow-sm flex flex-col">
+                    <div className="flex items-center gap-3 mb-4 text-emerald-600">
+                      <div className="p-2 bg-emerald-50 rounded">
+                        <Activity size={18} />
+                      </div>
+                      <h4 className="text-xs  uppercase">Efficiency Projection</h4>
                     </div>
-                  )}
-                  {bomOperations.length > 0 && (
-                    <div className="bg-orange-50 rounded p-2 border border-orange-200">
-                      <p className="text-xs text-gray-600">Total Operation Hours</p>
-                      <p className="text-xs font-bold text-orange-900">
-                        {bomOperations.reduce((sum, op) => sum + (parseFloat(op.operation_time) || 0), 0).toFixed(2)} hrs
-                      </p>
+                    <div className="flex-1 flex flex-col justify-center">
+                      <div className="text-xl  text-slate-900 mb-1">{completionMetrics.efficiency}%</div>
+                      <p className="text-xs text-slate-500 font-medium">Predicted production efficiency based on workstation load.</p>
                     </div>
-                  )}
-                  {bomOperations.length > 0 && (
-                    <div className="bg-green-50 rounded p-2 border border-green-200">
-                      <p className="text-xs text-gray-600">Total Operation Cost</p>
-                      <p className="text-xs font-bold text-green-900">
-                        ₹{bomOperations.reduce((sum, op) => sum + (parseFloat(op.operating_cost) || 0) * (formData.qty_to_manufacture || 1), 0).toFixed(2)}
-                      </p>
+                  </div>
+
+                  <div className="p-6 rounded  bg-slate-900 text-white shadow-xl flex flex-col">
+                    <div className="flex items-center gap-3 mb-4 text-amber-400">
+                      <div className="p-2 bg-white/5 rounded border border-white/10">
+                        <Clock size={18} />
+                      </div>
+                      <h4 className="text-xs  uppercase">Time Expenditure</h4>
                     </div>
-                  )}
+                    <div className="flex-1 flex flex-col justify-center">
+                      <div className="text-3xl  text-white mb-1">{(completionMetrics.totalActualTime / 60).toFixed(1)}h</div>
+                      <p className="text-xs text-slate-400 font-medium text-xs">Cumulative machine hours logged against this order.</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 mt-4">
-              <button
-                onClick={() => navigate('/manufacturing/work-orders')}
-                className="px-4 py-1.5 border border-gray-300 text-gray-700 text-xs font-medium rounded hover:bg-gray-50 transition"
-              >
-                {isReadOnly ? 'Close' : 'Cancel'}
-              </button>
-              {!isReadOnly && (
-                <button
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="px-4 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 disabled:bg-gray-400 transition flex items-center gap-1"
-                >
-                  <Save size={16} />
-                  {loading ? 'Saving...' : 'Save'}
-                </button>
-              )}
             </div>
           </div>
+
+          {/* 03 Operations Section */}
+          <div id="operations" className={activeSection === 'operations' ? 'block' : 'hidden'}>
+            <div className="grid grid-cols-12 gap-8">
+              <div className="col-span-12 lg:col-span-9">
+                <Card className="border-none overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                  <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-white text-indigo-600 rounded border border-slate-100 shadow-sm">
+                        <Layers size={16} />
+                      </div>
+                      <h3 className="text-xs  text-slate-900 tracking-widest uppercase">03 Operation Sequence</h3>
+                    </div>
+                    {jobCards.length > 0 && (
+                      <div className="flex items-center gap-2 p-2  py-1 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-100">
+                        <Activity size={12} className="animate-pulse" />
+                        <span className="text-xs  tracking-tighter">{jobCards.length} Tasks active</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {jobCards.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left bg-white">
+                        <thead>
+                          <tr className="bg-slate-50/30">
+                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase">Phase</th>
+                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase">Workstation</th>
+                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase text-center">Status</th>
+                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase text-right">Progress</th>
+                            {!isReadOnly && <th className="p-2  w-10"></th>}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {jobCards.map((jc, idx) => {
+                            const jcId = jc.jc_id || jc.id || `${jc.operation_name || jc.operation}-${idx}`
+                            const isEditing = editingJobCardId === jcId
+                            return (
+                              <tr key={jcId} className="group hover:bg-slate-50/50 transition-colors">
+                                <td className="p-2 ">
+                                  <div className="flex items-center gap-4">
+                                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 text-xs ">
+                                      0{idx + 1}
+                                    </span>
+                                    <div>
+                                      <p className="text-xs  text-slate-900">{jc.operation_name || jc.operation}</p>
+                                      <p className="text-xs text-slate-400 font-medium text-xs er">Sequence Point</p>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="p-2 ">
+                                  {isEditing ? (
+                                    <SearchableSelect
+                                      value={jc.workstation_type || jc.workstation || ''}
+                                      onChange={(v) => updateJobCard(jcId, 'workstation_type', v)}
+                                      options={workstations.map(ws => ({ value: ws.workstation_id || ws.id, label: ws.workstation_name || ws.name }))}
+                                      placeholder="Select Workstation..."
+                                    />
+                                  ) : (
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)]" />
+                                      <span className="text-xs font-medium text-slate-600">{getWorkstationName(jc.workstation_type || jc.workstation)}</span>
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="p-2 ">
+                                  <div className="flex justify-center">
+                                    <span className={`p-2  py-1 rounded-full text-xs  border shadow-sm ${getStatusColor(jc.status)}`}>
+                                      {(jc.status || 'pending').toUpperCase()}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="p-2  text-right">
+                                  <div className="flex flex-col items-end gap-1">
+                                    <span className="text-xs  text-slate-900">
+                                      {jc.completed_quantity || 0} <span className="text-slate-400 font-medium text-xs">/ {jc.planned_quantity}</span>
+                                    </span>
+                                    <div className="w-24 bg-slate-100 h-1 rounded-full overflow-hidden">
+                                      <div 
+                                        className="bg-indigo-500 h-full transition-all duration-500"
+                                        style={{ width: `${Math.min(100, ((jc.completed_quantity || 0) / jc.planned_quantity) * 100)}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                </td>
+                                {!isReadOnly && (
+                                  <td className="p-2 ">
+                                    {isEditing ? (
+                                      <button onClick={() => { saveJobCard(jcId); setEditingJobCardId(null) }} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded transition-colors">
+                                        <Save size={14} />
+                                      </button>
+                                    ) : (
+                                      <button onClick={() => setEditingJobCardId(jcId)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all">
+                                        <Edit2 size={14} />
+                                      </button>
+                                    )}
+                                  </td>
+                                )}
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="p-20 text-center">
+                      <div className="w-16 h-16 bg-slate-50 text-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-100">
+                        <Activity size={32} />
+                      </div>
+                      <h4 className="text-sm  text-slate-900 mb-2 tracking-tight">Production Logic Not Found</h4>
+                      <p className="text-xs text-slate-500 font-medium max-w-[280px] mx-auto leading-relaxed">
+                        Release job cards or link a BOM to define the manufacturing operations for this order.
+                      </p>
+                    </div>
+                  )}
+                </Card>
+              </div>
+
+              <div className="col-span-12 lg:col-span-3 space-y-6">
+                <Card className="bg-slate-900 border-none shadow-xl overflow-hidden relative group">
+                  <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <BarChart3 size={100} className="text-white" />
+                  </div>
+                  <div className="p-6 relative z-10">
+                    <div className="flex items-center gap-2 mb-6">
+                      <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded border border-indigo-500/30">
+                        <TrendingUp size={18} />
+                      </div>
+                      <h3 className="text-xs  text-white tracking-[0.2em] uppercase">Execution Health</h3>
+                    </div>
+                    <div className="space-y-8">
+                      <div>
+                        <div className="flex justify-between items-end mb-3">
+                          <span className="text-xs  text-slate-400 tracking-widest uppercase">Completion Rate</span>
+                          <span className="text-xl   text-white">
+                            {((completionMetrics.totalCompleted / (formData.qty_to_manufacture || 1)) * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="h-3 bg-white/10 rounded-full overflow-hidden border border-white/5 p-0.5">
+                          <div
+                            className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 rounded-full transition-all duration-1000 shadow-[0_0_12px_rgba(99,102,241,0.4)]"
+                            style={{ width: `${Math.min(100, (completionMetrics.totalCompleted / (formData.qty_to_manufacture || 1)) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-white/5 p-4 rounded  border border-white/10 hover:bg-white/[0.08] transition-colors group/card">
+                          <p className="text-[9px]  text-slate-500 mb-2 tracking-widest uppercase group-hover/card:text-indigo-400 transition-colors">Yield</p>
+                          <p className="text-xl  text-white">{completionMetrics.qualityScore}%</p>
+                        </div>
+                        <div className="bg-white/5 p-4 rounded  border border-white/10 hover:bg-white/[0.08] transition-colors group/card">
+                          <p className="text-[9px]  text-slate-500 mb-2 tracking-widest uppercase group-hover/card:text-amber-400 transition-colors">Actual Hrs</p>
+                          <p className="text-xl  text-white">{(completionMetrics.totalActualTime / 60).toFixed(1)}h</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="p-4 border-none shadow-sm">
+                  <SectionTitle title="Operational Panel" icon={Zap} />
+                  <div className="space-y-3">
+                    <button
+                      onClick={handleSubmit}
+                      disabled={loading}
+                      className="w-full flex items-center justify-between px-4 py-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded  border border-indigo-100 transition-all group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Save size={16} />
+                        <span className="text-xs  uppercase">Commit Progress</span>
+                      </div>
+                      <ArrowRight size={14} className=" group-hover:translate-x-1 transition-all" />
+                    </button>
+
+                    <button
+                      onClick={createJobCardsFromOperations}
+                      disabled={loading || jobCards.length > 0}
+                      className="w-full flex items-center justify-between px-4 py-3 bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30 rounded  transition-all group shadow-lg shadow-slate-200"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Layers size={16} />
+                        <span className="text-xs  uppercase">Release job cards</span>
+                      </div>
+                      <Zap size={14} className="text-amber-400" />
+                    </button>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          </div>
+
+          {/* 04 Inventory Section */}
+          <div id="inventory" className={activeSection === 'inventory' ? 'block' : 'hidden'}>
+            <div className="grid grid-cols-12 gap-8">
+              <div className="col-span-12 lg:col-span-9">
+                <Card className="border-none overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                  <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-white text-emerald-600 rounded border border-slate-100 shadow-sm">
+                        <Boxes size={16} />
+                      </div>
+                      <h3 className="text-xs  text-slate-900 tracking-widest uppercase">04 Required Inventory</h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button className="p-2 text-slate-400 hover:text-indigo-600 transition-all bg-white rounded border border-slate-100 shadow-sm">
+                        <Filter size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {bomMaterials.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left bg-white">
+                        <thead>
+                          <tr className="bg-slate-50/30">
+                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase">Raw Material</th>
+                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase text-right">Required</th>
+                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase text-right">Transferred</th>
+                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase text-right">Consumed</th>
+                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase text-right">Yield Loss</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {bomMaterials.map((mat) => {
+                            const loss = Math.max(0, (parseFloat(mat.transferred_qty) || 0) - (parseFloat(mat.consumed_qty) || 0) - (parseFloat(mat.returned_qty) || 0))
+                            const isShortage = (parseFloat(mat.transferred_qty) || 0) < (parseFloat(mat.required_qty) || 0)
+                            
+                            return (
+                              <tr key={mat.id} className="hover:bg-slate-50/50 transition-colors group">
+                                <td className="p-2 ">
+                                  <div className="flex flex-col">
+                                    <span className="text-xs  text-slate-900">{mat.item_code}</span>
+                                    <span className="text-xs text-slate-400 font-medium text-xs truncate max-w-[240px]">{mat.item_name || mat.description}</span>
+                                  </div>
+                                </td>
+                                <td className="p-2  text-right">
+                                  <div className="flex flex-col items-end">
+                                    <span className="text-xs  text-slate-900">{mat.required_qty}</span>
+                                    <span className="text-[9px]  text-slate-400 uppercase">{mat.uom}</span>
+                                  </div>
+                                </td>
+                                <td className="p-2  text-right">
+                                  <div className="relative inline-block">
+                                    <input
+                                      type="number"
+                                      value={mat.transferred_qty || 0}
+                                      onChange={(e) => updateMaterial(mat.id, 'transferred_qty', parseFloat(e.target.value) || 0)}
+                                      disabled={isReadOnly}
+                                      className={`w-24 p-2  py-1.5 rounded text-right text-xs  outline-none border transition-all ${
+                                        isShortage ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-slate-50 border-slate-200 focus:border-indigo-500'
+                                      }`}
+                                    />
+                                    {isShortage && (
+                                      <div className="absolute -top-2 -right-2">
+                                        <AlertCircle size={12} className="text-amber-500 fill-white" />
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="p-2  text-right">
+                                  <input
+                                    type="number"
+                                    value={mat.consumed_qty || 0}
+                                    onChange={(e) => updateMaterial(mat.id, 'consumed_qty', parseFloat(e.target.value) || 0)}
+                                    disabled={isReadOnly}
+                                    className="w-24 p-2  py-1.5 bg-emerald-50 border border-emerald-100 rounded text-right text-xs  text-emerald-700 outline-none focus:ring-2 focus:ring-emerald-500/20"
+                                  />
+                                </td>
+                                <td className="p-2  text-right">
+                                  <span className={`text-xs  ${loss > 0 ? 'text-rose-500' : 'text-slate-400'}`}>
+                                    {loss > 0 ? `-${loss.toFixed(2)}` : '0.00'}
+                                  </span>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="p-20 text-center bg-slate-50/10">
+                      <div className="w-16 h-16 bg-white border border-slate-100 text-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+                        <Boxes size={32} />
+                      </div>
+                      <h4 className="text-sm  text-slate-900 mb-2">Stock Requirements Empty</h4>
+                      <p className="text-xs text-slate-500 font-medium max-w-[280px] mx-auto leading-relaxed">
+                        Associate a Bill of Materials (BOM) to generate the required material consumption list.
+                      </p>
+                    </div>
+                  )}
+                </Card>
+              </div>
+
+              <div className="col-span-12 lg:col-span-3 space-y-6">
+                <div className="p-6 rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-100 relative overflow-hidden group">
+                  <div className="absolute -right-8 -bottom-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                    <Database size={160} />
+                  </div>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-6 text-indigo-100">
+                      <ShieldCheck size={20} />
+                      <h4 className="text-xs  tracking-[0.2em] uppercase">Inventory Advisory</h4>
+                    </div>
+                    <p className="text-xs text-indigo-50 font-medium leading-relaxed mb-8">
+                      System tracks real-time material transfers. Ensure all raw materials are transferred from "Stores" to "Production" before consumption.
+                    </p>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between text-xs   text-indigo-200">
+                        <span>Transfer Status</span>
+                        <span>{((bomMaterials.filter(m => (m.transferred_qty || 0) >= (m.required_qty || 0)).length / (bomMaterials.length || 1)) * 100).toFixed(0)}%</span>
+                      </div>
+                      <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-white transition-all duration-1000"
+                          style={{ width: `${(bomMaterials.filter(m => (m.transferred_qty || 0) >= (m.required_qty || 0)).length / (bomMaterials.length || 1)) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm relative overflow-hidden group">
+                   <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform">
+                    <Info size={80} className="text-slate-900" />
+                  </div>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-3 text-slate-900">
+                      <Info size={16} />
+                      <h4 className="text-xs  uppercase">Yield Note</h4>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                      Yield loss is automatically calculated as the delta between transferred and consumed quantities.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
-    </div>
-  )
+      </div>
+      )
 }

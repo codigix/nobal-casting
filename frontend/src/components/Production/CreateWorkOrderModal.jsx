@@ -69,7 +69,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="📦 Create New Work Order" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title="📦 Create New Work Order" size="2xl">
       <form onSubmit={handleSubmit}>
         {error && (
           <div style={{

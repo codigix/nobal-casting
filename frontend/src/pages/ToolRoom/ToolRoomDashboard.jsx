@@ -32,11 +32,11 @@ const ToolRoomDashboard = () => {
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50p-3  ">
       <div className=" mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+          <h1 className="text-xl  text-gray-900 flex items-center gap-3">
             <Wrench className="w-10 h-10 text-blue-600" />
             Tool Room Dashboard
           </h1>
@@ -44,7 +44,7 @@ const ToolRoomDashboard = () => {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
           <KPICard
             title="Total Tools"
             value={analytics?.totalTools || 0}
@@ -72,10 +72,10 @@ const ToolRoomDashboard = () => {
         </div>
 
         {/* Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
           {/* Maintenance Cost Trend */}
-          <div className="bg-white p-6 rounded-xs shadow-lg">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Maintenance Cost Trend</h3>
+          <div className="bg-whitep-3   rounded-xs shadow-lg">
+            <h3 className="text-lg  text-gray-900 mb-4">Maintenance Cost Trend</h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={analytics?.maintenanceCostTrend || []}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -89,8 +89,8 @@ const ToolRoomDashboard = () => {
           </div>
 
           {/* Tool Status Distribution */}
-          <div className="bg-white p-6 rounded-xs shadow-lg">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Tool Status Distribution</h3>
+          <div className="bg-whitep-3   rounded-xs shadow-lg">
+            <h3 className="text-lg  text-gray-900 mb-4">Tool Status Distribution</h3>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -113,8 +113,8 @@ const ToolRoomDashboard = () => {
           </div>
 
           {/* Die Utilization by Tool Type */}
-          <div className="bg-white p-6 rounded-xs shadow-lg">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Die Utilization by Tool Type</h3>
+          <div className="bg-whitep-3   rounded-xs shadow-lg">
+            <h3 className="text-lg  text-gray-900 mb-4">Die Utilization by Tool Type</h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={analytics?.dieUtilizationByType || []}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -128,8 +128,8 @@ const ToolRoomDashboard = () => {
           </div>
 
           {/* Downtime Analysis */}
-          <div className="bg-white p-6 rounded-xs shadow-lg">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Downtime Analysis (Hours)</h3>
+          <div className="bg-whitep-3   rounded-xs shadow-lg">
+            <h3 className="text-lg  text-gray-900 mb-4">Downtime Analysis (Hours)</h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={analytics?.downtimeAnalysis || []}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -144,7 +144,7 @@ const ToolRoomDashboard = () => {
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <SummaryCard
             title="Recent Maintenance"
             items={analytics?.recentMaintenance || []}
@@ -172,20 +172,20 @@ const KPICard = ({ title, value, icon, color }) => {
   }[color]
 
   return (
-    <div className="bg-white p-6 rounded-xs shadow-md hover:shadow-lg transition">
-      <div className={`${colorClass} w-12 h-12 rounded-xs flex items-center justify-center mb-4`}>
+    <div className="bg-whitep-3   rounded-xs shadow-md hover:shadow-lg transition">
+      <div className={`${colorClass} w-6 h-6  rounded-xs flex items-center justify-center mb-4`}>
         {icon}
       </div>
       <h3 className="text-gray-600 text-xs font-medium">{title}</h3>
-      <p className="text-xl font-bold text-gray-900 mt-1">{value}</p>
+      <p className="text-xl  text-gray-900 mt-1">{value}</p>
     </div>
   )
 }
 
 const SummaryCard = ({ title, items }) => {
   return (
-    <div className="bg-white p-6 rounded-xs shadow-lg">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
+    <div className="bg-whitep-3   rounded-xs shadow-lg">
+      <h3 className="text-lg  text-gray-900 mb-4">{title}</h3>
       <ul className="space-y-3">
         {items.slice(0, 5).map((item, idx) => (
           <li key={idx} className="flex justify-between text-xs text-gray-600 border-b pb-2">

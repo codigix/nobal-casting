@@ -157,8 +157,8 @@ export default function MaterialRequestForm() {
     setNewItem({ item_code: '', qty: 1, uom: 'pcs' })
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = async (e, status = 'draft') => {
+    if (e) e.preventDefault()
 
     if (isFormDisabled) {
       setError('Cannot edit an approved material request. Only draft requests can be edited.')
@@ -174,6 +174,7 @@ export default function MaterialRequestForm() {
       setLoading(true)
       const submitData = {
         ...formData,
+        status,
         items: formData.items.map(({ id, ...item }) => item)
       }
 
@@ -494,13 +495,22 @@ export default function MaterialRequestForm() {
             )}
           </div>
 
-          <div className="form-actions">
+          <div className="form-actions" style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
             <Button 
-              type="submit"
-              variant="primary"
-              disabled={loading || isFormDisabled}
+              type="button"
+              variant="secondary"
+              onClick={(e) => handleSubmit(e, 'draft')}
+              disabled={loading || isFormDisabled || formData.items.length === 0}
             >
-              {loading ? 'Saving...' : 'Save Material Request'}
+              {loading ? 'Processing...' : 'Save as Draft'}
+            </Button>
+            <Button 
+              type="button"
+              variant="primary"
+              onClick={(e) => handleSubmit(e, 'pending')}
+              disabled={loading || isFormDisabled || formData.items.length === 0}
+            >
+              {loading ? 'Submitting...' : 'Send for Approval'}
             </Button>
             <Button 
               type="button"

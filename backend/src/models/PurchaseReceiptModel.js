@@ -1,9 +1,31 @@
+import { PeriodClosingModel } from './PeriodClosingModel.js'
+import StockBalanceModel from './StockBalanceModel.js'
+import StockLedgerModel from './StockLedgerModel.js'
+
 export class PurchaseReceiptModel {
   generateId() {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   }
   constructor(db) {
     this.db = db
+  }
+
+  /**
+   * Resolve warehouse code to warehouse ID
+   */
+  async getWarehouseId(warehouseIdentifier) {
+    if (!warehouseIdentifier) return null
+    
+    if (Number.isInteger(Number(warehouseIdentifier))) {
+      return Number(warehouseIdentifier)
+    }
+    
+    const [rows] = await this.db.execute(
+      'SELECT id FROM warehouses WHERE warehouse_code = ? OR warehouse_name = ?',
+      [warehouseIdentifier, warehouseIdentifier]
+    )
+    
+    return rows.length ? rows[0].id : warehouseIdentifier
   }
 
   async create(data) {
@@ -148,15 +170,43 @@ export class PurchaseReceiptModel {
 
   async accept(grn_no) {
     try {
-      // Get all items
+      // Get the GRN details to check for MR link
+      const grn = await this.getById(grn_no)
+      if (!grn) throw new Error('GRN not found')
+
+      // Get all items with their purchase rates from PO and receipt date
       const [items] = await this.db.execute(
-        `SELECT grn_item_id, item_code, accepted_qty, warehouse_code FROM purchase_receipt_item WHERE grn_no = ?`,
+        `SELECT pri.*, poi.rate as purchase_rate, pr.receipt_date 
+         FROM purchase_receipt_item pri
+         JOIN purchase_receipt pr ON pri.grn_no = pr.grn_no
+         LEFT JOIN purchase_order_item poi ON pr.po_no = poi.po_no AND pri.item_code = poi.item_code
+         WHERE pri.grn_no = ?`,
         [grn_no]
       )
 
       // Update stock for each item
       for (const item of items) {
-        await this.updateStock(item.item_code, item.warehouse_code, item.accepted_qty, 'GRN', grn_no)
+        const received = Number(item.received_qty || 0)
+        const accepted = Number(item.accepted_qty || 0)
+        const rejected = Number(item.rejected_qty || 0)
+        const hold = received - accepted - rejected
+        const rate = Number(item.purchase_rate || 0)
+        const receipt_date = item.receipt_date || new Date()
+
+        // 1. Move accepted quantity to ACCEPTED warehouse
+        if (accepted > 0) {
+          await this.updateStock(item.item_code, 'ACCEPTED', accepted, 'GRN-Accepted', grn_no, rate, receipt_date)
+        }
+
+        // 2. Move rejected quantity to REJECTED warehouse
+        if (rejected > 0) {
+          await this.updateStock(item.item_code, 'REJECTED', rejected, 'GRN-Rejected', grn_no, rate, receipt_date)
+        }
+
+        // 3. Move remaining to HOLD warehouse
+        if (hold > 0) {
+          await this.updateStock(item.item_code, 'HOLD', hold, 'GRN-Hold', grn_no, rate, receipt_date)
+        }
       }
 
       // Update GRN status
@@ -165,41 +215,58 @@ export class PurchaseReceiptModel {
         [grn_no]
       )
 
+      // Update linked Material Request if exists
+      if (grn.mr_id) {
+        // Fetch MR purpose
+        const [mrRows] = await this.db.execute(
+          'SELECT purpose FROM material_request WHERE mr_id = ?',
+          [grn.mr_id]
+        )
+        
+        if (mrRows.length > 0 && mrRows[0].purpose === 'purchase') {
+          await this.db.execute(
+            `UPDATE material_request SET status = 'completed' WHERE mr_id = ?`,
+            [grn.mr_id]
+          )
+        }
+      }
+
       return { success: true, items_processed: items.length }
     } catch (error) {
       throw new Error(`Failed to accept GRN: ${error.message}`)
     }
   }
 
-  async updateStock(item_code, warehouse_code, qty, voucher_type, voucher_no) {
+  async updateStock(item_code, warehouse_code, qty, voucher_type, voucher_no, purchase_rate = 0, transaction_date = new Date()) {
     try {
-      // Check if stock record exists
-      const [existing] = await this.db.execute(
-        `SELECT stock_id FROM stock WHERE item_code = ? AND warehouse_code = ?`,
-        [item_code, warehouse_code]
-      )
+      // Check for period closing lock
+      await PeriodClosingModel.checkLock(this.db, transaction_date)
 
-      if (existing.length > 0) {
-        // Update existing stock
-        await this.db.execute(
-          `UPDATE stock SET qty_on_hand = qty_on_hand + ? WHERE item_code = ? AND warehouse_code = ?`,
-          [qty, item_code, warehouse_code]
-        )
-      } else {
-        // Create new stock record
-        await this.db.execute(
-          `INSERT INTO stock (stock_id, item_code, warehouse_code, qty_on_hand, qty_available)
-           VALUES (?, ?, ?, ?, ?)`,
-          [this.generateId(), item_code, warehouse_code, qty, qty]
-        )
-      }
+      // Resolve warehouse code to ID
+      const warehouse_id = await this.getWarehouseId(warehouse_code)
 
-      // Add to stock ledger
-      await this.db.execute(
-        `INSERT INTO stock_ledger (ledger_id, item_code, warehouse_code, voucher_type, voucher_no, qty_change)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [this.generateId(), item_code, warehouse_code, voucher_type, voucher_no, qty]
-      )
+      // Update Stock Balance using the new unified upsert logic with Moving Average
+      await StockBalanceModel.upsert(item_code, warehouse_id, {
+        current_qty: qty,
+        is_increment: true,
+        incoming_rate: purchase_rate,
+        last_receipt_date: transaction_date
+      }, this.db)
+
+      // Add to unified Stock Ledger
+      await StockLedgerModel.create({
+        item_code: item_code,
+        warehouse_id: warehouse_id,
+        transaction_date: transaction_date,
+        transaction_type: voucher_type === 'GRN-Accepted' ? 'Purchase Receipt' : 'Other',
+        qty_in: qty,
+        qty_out: 0,
+        valuation_rate: purchase_rate, // This is the incoming rate; ledger will calculate balance
+        reference_doctype: 'Purchase Receipt',
+        reference_name: voucher_no,
+        remarks: `${voucher_type} for GRN ${voucher_no}`,
+        created_by: 'system' // Should be passed if available
+      }, this.db)
 
       return { success: true }
     } catch (error) {

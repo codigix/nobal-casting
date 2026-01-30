@@ -1,3 +1,7 @@
+import StockBalanceModel from './StockBalanceModel.js'
+import StockLedgerModel from './StockLedgerModel.js'
+import { PeriodClosingModel } from './PeriodClosingModel.js'
+
 class StockEntryModel {
   static getDb() {
     return global.db
@@ -295,48 +299,27 @@ class StockEntryModel {
       await connection.beginTransaction()
 
       try {
+        // Get entry details
+        const entry = await this.getById(id)
+        if (!entry) throw new Error('Stock entry not found')
+
+        // Check for period closing lock
+        await PeriodClosingModel.checkLock(connection, entry.entry_date)
+
         // Update status
         await connection.query(
           `UPDATE stock_entries SET status = 'Submitted', submitted_at = NOW(), approved_by = ? WHERE id = ?`,
           [userId, id]
         )
 
-        // Get entry details
-        const entry = await this.getById(id)
-
-        // Create stock ledger entries and update stock balance for each item
+        // Process each item
         for (const item of entry.items) {
-          const transactionDate = entry.entry_date
-          const itemQty = Number(item.qty) || 0
-          const qtyIn = ['Material Receipt', 'Manufacturing Return', 'Repack'].includes(entry.entry_type) ? itemQty : 0
-          const qtyOut = ['Material Issue', 'Material Transfer', 'Scrap Entry'].includes(entry.entry_type) ? itemQty : 0
-          
-          let warehouseId = entry.from_warehouse_id
-          if (['Material Receipt', 'Manufacturing Return', 'Repack'].includes(entry.entry_type)) {
-            warehouseId = entry.to_warehouse_id
-          }
-          if (entry.entry_type === 'Material Transfer') {
-            warehouseId = entry.to_warehouse_id
-          }
-
-          // Get item_code from stock_entry_items
           const itemCode = item.item_code
-          if (!itemCode) {
-            throw new Error('Item code is required in stock entry items')
-          }
-          
-          const [itemRows] = await connection.query(
-            'SELECT item_code FROM item WHERE item_code = ?',
-            [itemCode]
-          )
-          if (!itemRows[0]) {
-            throw new Error(`Item not found with code: ${itemCode}`)
-          }
-          
+          const itemQty = Number(item.qty) || 0
           const valuationRate = Number(item.valuation_rate) || 0
-          
+
           const transactionTypeMap = {
-            'Material Receipt': 'Purchase Receipt',
+            'Material Receipt': 'Receipt',
             'Material Issue': 'Issue',
             'Material Transfer': 'Transfer',
             'Manufacturing Return': 'Manufacturing Return',
@@ -344,44 +327,66 @@ class StockEntryModel {
             'Scrap Entry': 'Scrap Entry'
           }
           const transactionType = transactionTypeMap[entry.entry_type] || entry.entry_type
-          
-          await connection.query(
-            `INSERT INTO stock_ledger (
-              item_code, warehouse_id, transaction_date, transaction_type,
-              qty_in, qty_out, valuation_rate, reference_doctype, reference_name,
-              created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              itemCode, warehouseId, transactionDate, transactionType,
-              qtyIn, qtyOut, valuationRate, 'Stock Entry', entry.entry_no, userId
-            ]
-          )
 
-          if (qtyIn > 0) {
-            const [existingBalanceRows] = await connection.query(
-              `SELECT current_qty, reserved_qty FROM stock_balance WHERE item_code = ? AND warehouse_id = ?`,
-              [itemCode, warehouseId]
-            )
-            
-            const currentQty = existingBalanceRows[0]?.current_qty || 0
-            const reservedQty = existingBalanceRows[0]?.reserved_qty || 0
-            const newCurrentQty = currentQty + qtyIn
-            const availableQty = newCurrentQty - reservedQty
-            const totalValue = newCurrentQty * valuationRate
-            
-            await connection.query(
-              `INSERT INTO stock_balance (item_code, warehouse_id, current_qty, reserved_qty, available_qty, valuation_rate, total_value)
-               VALUES (?, ?, ?, ?, ?, ?, ?)
-               ON DUPLICATE KEY UPDATE
-               current_qty = ?,
-               available_qty = ?,
-               valuation_rate = ?,
-               total_value = ?`,
-              [
-                itemCode, warehouseId, newCurrentQty, reservedQty, availableQty, valuationRate, totalValue,
-                newCurrentQty, availableQty, valuationRate, totalValue
-              ]
-            )
+          // 1. Handle Outward movement (Issue, Transfer, Scrap, Repack)
+          if (['Material Issue', 'Material Transfer', 'Scrap Entry', 'Repack'].includes(entry.entry_type)) {
+            const fromWarehouseId = entry.from_warehouse_id
+            if (!fromWarehouseId) throw new Error(`Source warehouse is required for ${entry.entry_type}`)
+
+            // Get current stock at source for valuation
+            const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(itemCode, fromWarehouseId)
+            const currentValuation = sourceBalance ? Number(sourceBalance.valuation_rate) : valuationRate
+
+            // Deduct from Source
+            await StockBalanceModel.upsert(itemCode, fromWarehouseId, {
+              current_qty: -itemQty,
+              is_increment: true,
+              last_issue_date: entry.entry_date
+            }, connection)
+
+            // Add Ledger Entry (OUT)
+            await StockLedgerModel.create({
+              item_code: itemCode,
+              warehouse_id: fromWarehouseId,
+              transaction_date: entry.entry_date,
+              transaction_type: transactionType,
+              qty_in: 0,
+              qty_out: itemQty,
+              valuation_rate: currentValuation,
+              reference_doctype: 'Stock Entry',
+              reference_name: entry.entry_no,
+              remarks: entry.remarks,
+              created_by: userId
+            }, connection)
+          }
+
+          // 2. Handle Inward movement (Receipt, Transfer, Manufacturing Return, Repack)
+          if (['Material Receipt', 'Material Transfer', 'Manufacturing Return', 'Repack'].includes(entry.entry_type)) {
+            const toWarehouseId = entry.to_warehouse_id
+            if (!toWarehouseId) throw new Error(`Target warehouse is required for ${entry.entry_type}`)
+
+            // Add to Target
+            await StockBalanceModel.upsert(itemCode, toWarehouseId, {
+              current_qty: itemQty,
+              is_increment: true,
+              incoming_rate: valuationRate,
+              last_receipt_date: entry.entry_date
+            }, connection)
+
+            // Add Ledger Entry (IN)
+            await StockLedgerModel.create({
+              item_code: itemCode,
+              warehouse_id: toWarehouseId,
+              transaction_date: entry.entry_date,
+              transaction_type: transactionType,
+              qty_in: itemQty,
+              qty_out: 0,
+              valuation_rate: valuationRate,
+              reference_doctype: 'Stock Entry',
+              reference_name: entry.entry_no,
+              remarks: entry.remarks,
+              created_by: userId
+            }, connection)
           }
         }
 

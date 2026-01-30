@@ -1,7 +1,170 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ChevronDown, Save, X, Plus, Trash2, AlertCircle, Package, Boxes, Archive, Check, Factory, Zap } from 'lucide-react'
+import {
+  ChevronDown, Save, X, Plus, Trash2, AlertCircle, Package, Boxes, Archive,
+  Check, Factory, Zap, Layout, Info, ArrowLeft, ArrowRight, Activity, Calendar,
+  ShieldCheck, AlertTriangle, Layers, TrendingUp, Settings, ClipboardCheck
+} from 'lucide-react'
 import SearchableSelect from '../../components/SearchableSelect'
+import Card from '../../components/Card/Card'
+
+const SectionTitle = ({ title, icon: Icon, badge }) => (
+  <div className="flex items-center justify-between mb-6">
+    <div className="flex items-center gap-3">
+      <div className="p-2 bg-indigo-50 text-indigo-600 rounded">
+        <Icon size={18} />
+      </div>
+      <h3 className="text-xs text-slate-900 ">{title}</h3>
+    </div>
+    {badge && (
+      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs   rounded  border border-slate-200  ">
+        {badge}
+      </span>
+    )}
+  </div>
+)
+
+const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, themeColor = 'indigo', id, badge, actions }) => {
+  const themes = {
+    blue: {
+      text: 'text-blue-600',
+      bg: 'bg-blue-50',
+      border: 'border-blue-100',
+      icon: 'bg-blue-600 text-white'
+    },
+    emerald: {
+      text: 'text-emerald-600',
+      bg: 'bg-emerald-50',
+      border: 'border-emerald-100',
+      icon: 'bg-emerald-600 text-white'
+    },
+    amber: {
+      text: 'text-amber-600',
+      bg: 'bg-amber-50',
+      border: 'border-amber-100',
+      icon: 'bg-amber-600 text-white'
+    },
+    rose: {
+      text: 'text-rose-600',
+      bg: 'bg-rose-50',
+      border: 'border-rose-100',
+      icon: 'bg-rose-600 text-white'
+    },
+    indigo: {
+      text: 'text-indigo-600',
+      bg: 'bg-indigo-50',
+      border: 'border-indigo-100',
+      icon: 'bg-indigo-600 text-white'
+    },
+    slate: {
+      text: 'text-slate-600',
+      bg: 'bg-slate-50',
+      border: 'border-slate-100',
+      icon: 'bg-slate-600 text-white'
+    },
+    cyan: {
+      text: 'text-cyan-600',
+      bg: 'bg-cyan-50',
+      border: 'border-cyan-100',
+      icon: 'bg-cyan-600 text-white'
+    }
+  }
+
+  const theme = themes[themeColor] || themes.indigo
+
+  return (
+    <div
+      id={id}
+      className={`flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50/50 transition-all border-b border-slate-100 ${isExpanded ? 'bg-slate-50/30' : ''}`}
+      onClick={onToggle}
+    >
+      <div className="flex items-center gap-2">
+        <div className={`p-2 rounded   transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
+          <Icon size={18} strokeWidth={2.5} />
+        </div>
+        <div>
+          <h2 className="text-xs  flex items-center gap-3">
+            <span className={`${theme.text} tracking-wider`}>{title.split(' ')[0]}</span>
+            <span className="text-slate-800">{title.split(' ').slice(1).join(' ')}</span>
+          </h2>
+          {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
+        </div>
+        {badge && (
+          <span className={`px-2 py-0.5 ${theme.bg} ${theme.text} text-xs   rounded-full border ${theme.border} `}>
+            {badge}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-3">
+        {actions && <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>{actions}</div>}
+        <div className={`p-1.5 rounded-full transition-all duration-300 ${isExpanded ? `${theme.bg} ${theme.text}` : 'text-slate-300'}`}>
+          <ChevronDown size={18} className={`transform transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = 'indigo' }) => {
+  const themes = {
+    blue: 'bg-blue-600 shadow-blue-100 hover:text-blue-600',
+    emerald: 'bg-emerald-600 shadow-emerald-100 hover:text-emerald-600',
+    amber: 'bg-amber-600 shadow-amber-100 hover:text-amber-600',
+    rose: 'bg-rose-600 shadow-rose-100 hover:text-rose-600',
+    indigo: 'bg-indigo-600 shadow-indigo-100 hover:text-indigo-600',
+    slate: 'bg-slate-600 shadow-slate-100 hover:text-slate-600',
+    cyan: 'bg-cyan-600 shadow-cyan-100 hover:text-cyan-600'
+  }
+
+  const themeClass = themes[themeColor] || themes.indigo
+  const activeBg = themeClass.split(' ')[0]
+  const activeShadow = themeClass.split(' ')[1]
+  const hoverText = themeClass.split(' ')[2]
+
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(section)}
+      className={`flex items-center gap-3 p-2 rounded transition-all border border-slate-100 duration-300 ${isActive
+        ? `${activeBg} text-white shadow-lg ${activeShadow} translate-y-[-2px]`
+        : `text-slate-500 hover:bg-white ${hoverText} border border-transparent hover:border-slate-100`
+        }`}
+    >
+      <div className={`transition-transform duration-300 ${isActive ? 'scale-110' : ''}`}>
+        <Icon size={14} strokeWidth={isActive ? 2.5 : 2} />
+      </div>
+      <span className={` text-xs ${isActive ? '' : 'text-slate-400'}`}>{label.split(' ').slice(1).join(' ')}</span>
+    </button>
+  )
+}
+
+const FieldWrapper = ({ label, children, error, required }) => (
+  <div className=".5">
+    <div className="flex items-center justify-between">
+      <label className="text-xs   text-slate-400  text-xs  flex items-center gap-1">
+        {label}
+        {required && <span className="text-rose-500">*</span>}
+      </label>
+      {error && <span className="text-xs   text-rose-500 animate-pulse">{error}</span>}
+    </div>
+    {children}
+  </div>
+)
+
+const StatusBadge = ({ status }) => {
+  const styles = {
+    draft: 'bg-slate-100 text-slate-600 border-slate-200',
+    planned: 'bg-blue-50 text-blue-600 border-blue-100',
+    'in-progress': 'bg-amber-50 text-amber-600 border-amber-100 animate-pulse',
+    completed: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    cancelled: 'bg-rose-50 text-rose-600 border-rose-100'
+  }
+  return (
+    <span className={`px-2 py-0.5  rounded  text-xs  border  text-xs   ${styles[status?.toLowerCase()] || styles.draft}`}>
+      {status || 'DRAFT'}
+    </span>
+  )
+}
 
 const isSubAssemblyGroup = (itemGroup) => {
   if (!itemGroup) return false
@@ -12,7 +175,15 @@ const isSubAssemblyGroup = (itemGroup) => {
 export default function ProductionPlanningForm() {
   const navigate = useNavigate()
   const { plan_id } = useParams()
-  const [expandedSections, setExpandedSections] = useState({ 0: true, 1: true, 1.5: true, 2: true, 3: true, 3.5: true, 4: true, 5: true })
+  const [activeSection, setActiveSection] = useState('parameters')
+  const [expandedSections, setExpandedSections] = useState({
+    parameters: true,
+    scope: true,
+    requirements: true,
+    subassembly: true,
+    rawmaterials: true,
+    operations: true
+  })
   const [expandedItemGroups, setExpandedItemGroups] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -32,6 +203,50 @@ export default function ProductionPlanningForm() {
       [groupKey]: !prev[groupKey]
     }))
   }
+
+  const scrollToSection = (sectionId) => {
+    setActiveSection(sectionId)
+    
+    // Ensure the section is expanded so we can scroll to its content
+    setExpandedSections(prev => ({
+      ...prev,
+      [sectionId]: true
+    }))
+
+    const element = document.getElementById(sectionId)
+    if (element) {
+      const offset = 120 // Space for the sticky header
+      const elementPosition = element.getBoundingClientRect().top
+      const offsetPosition = elementPosition + window.pageYOffset - offset
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      })
+    }
+  }
+
+  // Scroll spy to update active section on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = ['parameters', 'scope', 'requirements', 'subassembly', 'operations']
+      const scrollPosition = window.scrollY + 150 // Adjust offset for detection
+
+      for (const sectionId of sections) {
+        const element = document.getElementById(sectionId)
+        if (element) {
+          const { offsetTop, offsetHeight } = element
+          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
+            setActiveSection(sectionId)
+            break
+          }
+        }
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const groupItemsByItemGroup = (items) => {
     const grouped = {}
@@ -104,17 +319,17 @@ export default function ProductionPlanningForm() {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/production-planning/${planId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         const plan = data.success ? data.data : null
-        
+
         if (plan) {
           console.log('Loaded production plan data:', plan)
           console.log('Sales Order ID from plan:', plan.sales_order_id)
           console.log('Plan sales_order_id type:', typeof plan.sales_order_id)
           console.log('Plan sales_order_id value (JSON):', JSON.stringify(plan.sales_order_id))
-          
+
           setPlanHeader({
             plan_id: plan.plan_id || '',
             naming_series: plan.naming_series || 'PP',
@@ -128,7 +343,7 @@ export default function ProductionPlanningForm() {
           setRawMaterialItems(plan.raw_materials || [])
           setFGOperations(plan.fg_operations || [])
           setOperationItems(plan.operations || [])
-          
+
           const planQty = plan.fg_items?.[0]?.planned_qty || plan.fg_items?.[0]?.quantity || 1
           setSalesOrderQuantity(planQty)
 
@@ -211,14 +426,14 @@ export default function ProductionPlanningForm() {
       })
       const data = await response.json()
       const bomData = data.data || data
-      
+
       if (bomData) {
         setBomFinishedGoods(bomData.lines || bomData.finished_goods || bomData.bom_finished_goods || [])
         setBomRawMaterials(bomData.rawMaterials || bomData.bom_raw_materials || [])
         setBomOperations(bomData.operations || bomData.bom_operations || [])
         setOperationItems(bomData.operations || bomData.bom_operations || [])
       }
-      
+
       return bomData
     } catch (err) {
       console.error('Error fetching BOM details:', err)
@@ -258,184 +473,142 @@ export default function ProductionPlanningForm() {
     }
   }
 
-  const fetchSubAssemblyBomMaterials = async (subAssemblyItems) => {
-    if (!subAssemblyItems || subAssemblyItems.length === 0) {
-      console.warn('No sub-assembly items to fetch materials for')
-      return
+  const fetchSubAssemblyBomMaterials = async (itemsToProcess, level = 0, allSubAsmMaterials = [], allDiscoveredSubAsms = []) => {
+    if (!itemsToProcess || itemsToProcess.length === 0 || level > 5) {
+      if (level === 0) console.warn('No items to process for BOM explosion');
+      return { materials: allSubAsmMaterials, subAsms: allDiscoveredSubAsms };
     }
 
     try {
-      console.log('=== STARTING SUB-ASSEMBLY BOM MATERIALS FETCH ===')
-      console.log('Total sub-assemblies to process:', subAssemblyItems.length)
-      console.log('Input items structure:', subAssemblyItems)
-      
-      const token = localStorage.getItem('token')
-      const allSubAsmMaterials = []
+      if (level === 0) {
+        console.log('=== STARTING RECURSIVE SUB-ASSEMBLY BOM EXPLOSION ===');
+        setFetchingSubAssemblyBoms(true);
+      }
 
-      for (let idx = 0; idx < subAssemblyItems.length; idx++) {
-        const subAsm = subAssemblyItems[idx]
-        const subAsmCode = subAsm.item_code || subAsm.component_code
-        const subAsmName = subAsm.item_name || subAsm.component_description || subAsmCode
-        const subAsmQty = subAsm.quantity || subAsm.qty || 1
+      console.log(`\n--- Processing Level ${level} (${itemsToProcess.length} items) ---`);
+      const token = localStorage.getItem('token');
+      const nextLevelItems = [];
 
-        console.log(`\n--- Processing Sub-Assembly ${idx + 1}/${subAssemblyItems.length} ---`)
-        console.log('Sub-Assembly Code:', subAsmCode)
-        console.log('Sub-Assembly Name:', subAsmName)
-        console.log('Sub-Assembly Quantity:', subAsmQty)
-        console.log('Sub-Assembly Item Details:', JSON.stringify(subAsm, null, 2))
-        console.log('Checking for BOM ID in item:')
-        console.log('  bom_id:', subAsm.bom_id)
-        console.log('  bom_no:', subAsm.bom_no)
-        console.log('  bom:', subAsm.bom)
-        console.log('  All fields:', Object.keys(subAsm).join(', '))
+      for (let idx = 0; idx < itemsToProcess.length; idx++) {
+        const item = itemsToProcess[idx];
+        const itemCode = item.item_code || item.component_code;
+        const itemName = item.item_name || item.component_description || itemCode;
+        const itemQty = item.quantity || item.qty || 1;
+
+        console.log(`Exploding item ${idx + 1}/${itemsToProcess.length}: ${itemCode} (Qty: ${itemQty})`);
 
         try {
-          let bomId = null
-          let bomData = null
-          
-          console.log(`Fetching BOMs for sub-assembly item_code: ${subAsmCode}`)
-          console.log(`Note: Ignoring any BOM ID from raw materials (${subAsm.bom_id || subAsm.bom_no}) as it's likely the finished goods BOM`)
-          
-          const subAsmBomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms?item_code=${subAsmCode}`, {
+          const bomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms?item_code=${itemCode}`, {
             headers: { 'Authorization': `Bearer ${token}` }
-          })
-          
-          if (!subAsmBomRes.ok) {
-            console.warn(`Failed to fetch BOMs. Status: ${subAsmBomRes.status}`)
-            continue
-          }
-          
-          const subAsmBomData = await subAsmBomRes.json()
-          const bomList = subAsmBomData.data || []
-          console.log(`API Response structure:`, JSON.stringify(subAsmBomData, null, 2).substring(0, 500))
-          console.log(`BOMs found: ${bomList.length}`)
-          bomList.forEach((bom, i) => {
-            console.log(`  BOM ${i + 1}: ${bom.bom_id || bom.id} | item: ${bom.item || bom.item_code || 'N/A'} | name: ${bom.bom_name || 'N/A'}`)
-          })
-          
-          if (bomList.length === 0) {
-            console.warn(`No BOM found for sub-assembly: ${subAsmCode}`)
-            continue
-          }
-          
-          let selectedBom = null
-          
-          for (const bom of bomList) {
-            const testBomId = bom.bom_id || bom.id
-            try {
-              const testBomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${testBomId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-              })
-              
-              if (testBomRes.ok) {
-                const testBomData = await testBomRes.json()
-                const bomDetail = testBomData.data || testBomData
-                const bomItemCode = bomDetail.item_code || bomDetail.item || ''
-                const bomName = bomDetail.bom_name || bomDetail.name || ''
-                
-                console.log(`Testing BOM ${testBomId}:`)
-                console.log(`  Detail item_code: "${bomItemCode}"`)
-                console.log(`  Detail name: "${bomName}"`)
-                console.log(`  Looking for: "${subAsmCode}"`)
-                console.log(`  Full detail:`, JSON.stringify(bomDetail, null, 2).substring(0, 300))
-                
-                if (bomItemCode.toLowerCase() === subAsmCode.toLowerCase()) {
-                  console.log(`✓✓ MATCHED! Found correct sub-assembly BOM: ${testBomId}`)
-                  selectedBom = bom
-                  bomData = bomDetail
-                  break
-                } else {
-                  console.log(`✗ No match (expected "${subAsmCode}", got "${bomItemCode}")`)
-                }
-              }
-            } catch (e) {
-              console.warn(`Failed to check BOM ${testBomId}`)
+          });
+
+          if (!bomRes.ok) continue;
+
+          const bomListData = await bomRes.json();
+          const bomList = bomListData.data || [];
+
+          if (bomList.length === 0) continue;
+
+          let selectedBom = bomList.find(b => (b.item_code || b.item || '').toLowerCase() === itemCode.toLowerCase());
+          if (!selectedBom) selectedBom = bomList[0];
+
+          const bomId = selectedBom.bom_id || selectedBom.id;
+          const bomDetailsRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${bomId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+
+          if (!bomDetailsRes.ok) continue;
+
+          const bomDetailsData = await bomDetailsRes.json();
+          const bomData = bomDetailsData.data || bomDetailsData;
+
+          const rawMaterials = bomData.rawMaterials || bomData.bom_raw_materials || [];
+          const operations = bomData.operations || bomData.bom_operations || [];
+
+          rawMaterials.forEach(mat => {
+            const matQty = (mat.qty || mat.quantity || 0) * itemQty;
+
+            if (isSubAssemblyGroup(mat.item_group)) {
+              const subAsmEntry = {
+                item_code: mat.item_code || mat.component_code,
+                item_name: mat.item_name || mat.component_description,
+                quantity: matQty,
+                qty: matQty,
+                planned_qty: matQty,
+                bom_no: mat.bom_no || mat.bom_id,
+                bom_id: mat.bom_no || mat.bom_id,
+                explosion_level: level + 1,
+                parent_code: itemCode
+              };
+              nextLevelItems.push(subAsmEntry);
+              allDiscoveredSubAsms.push(subAsmEntry);
+            } else {
+              allSubAsmMaterials.push({
+                ...mat,
+                sub_assembly_code: itemCode,
+                sub_assembly_name: itemName,
+                bom_id: bomId,
+                quantity: matQty,
+                qty: matQty,
+                explosion_level: level
+              });
             }
-          }
-          
-          if (!selectedBom) {
-            selectedBom = bomList[0]
-            console.log(`Using first available BOM as fallback`)
-            const bomDetailsRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${selectedBom.bom_id || selectedBom.id}`, {
-              headers: { 'Authorization': `Bearer ${token}` }
-            })
-            
-            if (bomDetailsRes.ok) {
-              const bomDetails = await bomDetailsRes.json()
-              bomData = bomDetails.data || bomDetails
-            }
-          }
-          
-          bomId = selectedBom.bom_id || selectedBom.id
-          console.log(`BOM ID extracted from API: ${bomId}`)
-          
-          if (!bomId || !bomData) {
-            console.warn(`Could not determine BOM ID or fetch BOM data for sub-assembly: ${subAsmCode}`)
-            continue
-          }
-          
-          console.log(`Using BOM ID: ${bomId}`)
-          
-          const rawMaterials = bomData.rawMaterials || bomData.bom_raw_materials || []
-          const operations = bomData.operations || bomData.bom_operations || []
-          
-          console.log(`Raw Materials in BOM: ${rawMaterials.length}`)
-          rawMaterials.forEach((mat, i) => {
-            console.log(`  Material ${i + 1}: ${mat.item_code || mat.component_code} - Qty: ${mat.quantity || mat.qty}`)
-          })
-          
-          console.log(`Operations in BOM: ${operations.length}`)
-          operations.forEach((op, i) => {
-            console.log(`  Operation ${i + 1}: ${op.operation_name || op.name} - Time: ${op.operation_time}`)
-          })
-          
-          const filteredMaterials = rawMaterials.filter(m => !isSubAssemblyGroup(m.item_group))
-          console.log(`Filtered Materials (after removing sub-assemblies): ${filteredMaterials.length}`)
-          
-          filteredMaterials.forEach(mat => {
-            const matQty = (mat.qty || mat.quantity || 0) * subAsmQty
-            const matEntry = {
-              ...mat,
-              sub_assembly_code: subAsmCode,
-              sub_assembly_name: subAsmName,
-              bom_id: bomId,
-              quantity: matQty,
-              qty: matQty
-            }
-            allSubAsmMaterials.push(matEntry)
-            console.log(`  Added material: ${mat.item_code || mat.component_code} - Qty: ${matQty}`)
-          })
-          
+          });
+
           operations.forEach(op => {
-            const opTime = (op.operation_time || op.time || 0) * subAsmQty
-            const opEntry = {
+            const opTime = (op.operation_time || op.time || 0) * itemQty;
+            allSubAsmMaterials.push({
               ...op,
-              sub_assembly_code: subAsmCode,
-              sub_assembly_name: subAsmName,
+              sub_assembly_code: itemCode,
+              sub_assembly_name: itemName,
               bom_id: bomId,
               is_operation: true,
               operation_qty: opTime,
-              operation_time: opTime
-            }
-            allSubAsmMaterials.push(opEntry)
-            console.log(`  Added operation: ${op.operation_name || op.name} - Time: ${opTime}`)
-          })
-          
-          console.log(`✓ Sub-assembly ${subAsmCode} processed successfully`)
+              operation_time: opTime,
+              explosion_level: level
+            });
+          });
         } catch (err) {
-          console.error(`✗ Error processing sub-assembly ${subAsmCode}:`, err)
+          console.error(`Error exploding ${itemCode}:`, err);
         }
       }
-      
-      console.log('\n=== FETCH COMPLETE ===')
-      console.log('Total items fetched (materials + operations):', allSubAsmMaterials.length)
-      
-      setSubAssemblyBomMaterials(allSubAsmMaterials)
-      console.log('Sub-Assembly BOM Materials state updated')
+
+      if (nextLevelItems.length > 0) {
+        await fetchSubAssemblyBomMaterials(nextLevelItems, level + 1, allSubAsmMaterials, allDiscoveredSubAsms);
+      }
+
+      if (level === 0) {
+        console.log('=== RECURSIVE EXPLOSION COMPLETE ===');
+        setSubAssemblyBomMaterials([...allSubAsmMaterials]);
+
+        if (allDiscoveredSubAsms.length > 0) {
+          setSubAssemblyItems(prev => {
+            const existingCodes = new Set(prev.map(i => i.item_code));
+            const newSubAsms = allDiscoveredSubAsms.filter(i => !existingCodes.has(i.item_code));
+
+            // For those that already exist, we should probably add to their quantity
+            const updated = prev.map(item => {
+              const discovered = allDiscoveredSubAsms.find(d => d.item_code === item.item_code);
+              if (discovered) {
+                const newQty = (item.quantity || 0) + (discovered.quantity || 0);
+                return { ...item, quantity: newQty, qty: newQty, planned_qty: newQty };
+              }
+              return item;
+            });
+
+            return [...updated, ...newSubAsms];
+          });
+        }
+      }
+
+      return { materials: allSubAsmMaterials, subAsms: allDiscoveredSubAsms };
     } catch (err) {
-      console.error('Error fetching sub-assembly BOM materials:', err)
+      console.error('Error in recursive explosion:', err);
+      return { materials: allSubAsmMaterials, subAsms: allDiscoveredSubAsms };
+    } finally {
+      if (level === 0) setFetchingSubAssemblyBoms(false);
     }
-  }
+  };
 
   const loadSubAssemblyMaterials = async (subAssemblySku) => {
     if (subAssemblyMaterials[subAssemblySku]) {
@@ -453,7 +626,7 @@ export default function ProductionPlanningForm() {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${bomId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
-      
+
       if (!response.ok) return []
 
       const data = await response.json()
@@ -508,14 +681,14 @@ export default function ProductionPlanningForm() {
 
     let itemCode = ''
     let itemName = ''
-    
+
     const items = soDetails.items || []
     if (Array.isArray(items) && items.length > 0) {
       const firstItem = items[0]
       itemCode = firstItem.item_code || firstItem.item || firstItem.sku || ''
       itemName = firstItem.item_name || firstItem.name || firstItem.description || ''
     }
-    
+
     if (!itemCode || !itemName) {
       const bomFGList = soDetails.bom_finished_goods || []
       if (Array.isArray(bomFGList) && bomFGList.length > 0) {
@@ -537,7 +710,7 @@ export default function ProductionPlanningForm() {
     }
 
     setSalesOrderQuantity(quantity)
-    
+
     const enrichedDetails = {
       ...soDetails,
       item_code: itemCode,
@@ -569,7 +742,7 @@ export default function ProductionPlanningForm() {
 
       // For a Finished Good BOM, the lines ARE sub-assemblies
       const bomLines = bomData?.lines || bomData?.items || []
-      
+
       console.log('=== PRODUCTION PLANNING: FETCHING SUB-ASSEMBLIES ===')
       console.log('BOM ID:', bomId)
       console.log('BOM Lines (these are Sub-Assemblies for FG):', bomLines.length)
@@ -577,7 +750,7 @@ export default function ProductionPlanningForm() {
         const scrapPct = item.loss_percentage || item.item_loss_percentage || 0
         console.log(`Line ${idx + 1}: Code=${item.component_code || item.item_code}, Name=${item.component_description || item.item_name}, Qty=${item.quantity || item.qty}, Scrap%=${scrapPct}`)
       })
-      
+
       // Set Finished Good from BOM metadata
       const fgFromBOM = {
         item_code: bomData?.item_code || itemCode,
@@ -598,10 +771,12 @@ export default function ProductionPlanningForm() {
           const totalQtyBeforeScrap = baseQty * quantity
           const scrapPercentage = parseFloat(subAsmItem.loss_percentage || subAsmItem.item_loss_percentage || 0)
           const qtyAfterScrap = totalQtyBeforeScrap + (totalQtyBeforeScrap * scrapPercentage / 100)
-          
+
           return {
             item_code: subAsmItem.component_code || subAsmItem.item_code,
             item_name: subAsmItem.component_description || subAsmItem.item_name,
+            bom_no: subAsmItem.bom_no || subAsmItem.bom_id,
+            bom_id: subAsmItem.bom_no || subAsmItem.bom_id,
             quantity: qtyAfterScrap,
             qty_before_scrap: totalQtyBeforeScrap,
             scrap_percentage: scrapPercentage,
@@ -621,7 +796,7 @@ export default function ProductionPlanningForm() {
         })
         console.log('Sub-Assemblies:', subAsmItemsFromBOM)
         setSubAssemblyItems(subAsmItemsFromBOM)
-        
+
         await fetchSubAssemblyBomMaterials(subAsmItemsFromBOM)
       } else {
         console.warn('⚠️ No sub-assemblies found in BOM lines')
@@ -643,10 +818,10 @@ export default function ProductionPlanningForm() {
       setRawMaterialItems(proportionalMaterials)
 
       const allOperations = bomOperationsFromSO.length > 0 ? bomOperationsFromSO : (bomData?.operations || bomData?.bom_operations || [])
-      
+
       const fgOpsData = bomData?.bom_operations_fg || bomData?.fg_operations || allOperations.filter(op => op.for_finished_goods === true) || []
       const fgOpsToDisplay = fgOpsData.length > 0 ? fgOpsData : allOperations
-      
+
       const proportionalFGOperations = fgOpsToDisplay.map(op => ({
         ...op,
         proportional_time: (op.time || op.operation_time || 0) * quantity
@@ -666,7 +841,7 @@ export default function ProductionPlanningForm() {
 
   const fetchNestedMaterialDetails = async (subAsmCode, bomId) => {
     const detailKey = `${subAsmCode}-${bomId}`
-    
+
     if (nestedMaterialsData[detailKey]) {
       setExpandedMaterialDetails(prev => ({
         ...prev,
@@ -710,26 +885,26 @@ export default function ProductionPlanningForm() {
 
       if (!bomDetailsResponse.ok) {
         console.warn(`BOM ${bomId} not found, skipping nested material details`)
-        setNestedMaterialsData(prev => ({...prev, [detailKey]: []}))
-        setExpandedMaterialDetails(prev => ({...prev, [detailKey]: false}))
+        setNestedMaterialsData(prev => ({ ...prev, [detailKey]: [] }))
+        setExpandedMaterialDetails(prev => ({ ...prev, [detailKey]: false }))
         return
       }
 
       const bomDetails = await bomDetailsResponse.json()
       let bom = bomDetails.data || bomDetails
-      
+
       if (!bom) {
         console.warn(`No BOM data returned for ${bomId}`)
-        setNestedMaterialsData(prev => ({...prev, [detailKey]: []}))
-        setExpandedMaterialDetails(prev => ({...prev, [detailKey]: false}))
+        setNestedMaterialsData(prev => ({ ...prev, [detailKey]: [] }))
+        setExpandedMaterialDetails(prev => ({ ...prev, [detailKey]: false }))
         return
       }
-      
+
       if (Array.isArray(bom)) {
         bom = bom[0]
       }
       console.log('BOM data fetched:', bom)
-      
+
       const bomLines = bom.rawMaterials || bom.lines || bom.bom_raw_materials || []
       console.log('BOM raw materials:', bomLines)
 
@@ -750,7 +925,7 @@ export default function ProductionPlanningForm() {
       for (const material of bomLines) {
         const itemCode = (material.item_code || material.component_code || '').trim()
         const itemName = material.item_name || material.component_description || ''
-        
+
         if (!itemCode) continue
 
         const matchingBom = bomList.find(b => {
@@ -760,7 +935,7 @@ export default function ProductionPlanningForm() {
 
         if (matchingBom) {
           console.log(`Found matching BOM for ${itemCode}:`, matchingBom)
-          
+
           const subBomDetailsResponse = await fetch(
             `${import.meta.env.VITE_API_URL}/production/boms/${matchingBom.bom_id}`,
             { headers: { 'Authorization': `Bearer ${token}` } }
@@ -774,13 +949,13 @@ export default function ProductionPlanningForm() {
           const subBomDetails = await subBomDetailsResponse.json()
           const subBom = subBomDetails.data || subBomDetails
           console.log(`Sub-BOM details for ${itemCode}:`, subBom)
-          
+
           const subMaterials = subBom.rawMaterials || subBom.bom_raw_materials || []
           const operations = subBom.operations || subBom.bom_operations || []
 
           subMaterials.forEach(subMat => {
             if (subMat.item_group === 'Consumable') return
-            
+
             const subBomQty = subMat.qty || subMat.quantity || 1
             const parentBomQty = material.qty || material.quantity || 1
             const actualQty = subBomQty * parentBomQty * salesOrderQuantity
@@ -816,14 +991,14 @@ export default function ProductionPlanningForm() {
       }))
     } catch (err) {
       console.error('Error fetching nested material details:', err)
-      setNestedMaterialsData(prev => ({...prev, [detailKey]: []}))
-      setExpandedMaterialDetails(prev => ({...prev, [detailKey]: false}))
+      setNestedMaterialsData(prev => ({ ...prev, [detailKey]: [] }))
+      setExpandedMaterialDetails(prev => ({ ...prev, [detailKey]: false }))
     }
   }
 
   const fetchMaterialOperations = async (materialItemCode, subAsmCode, bomId) => {
     const opKey = `${subAsmCode}-${bomId}-${materialItemCode}-mat-ops`
-    
+
     if (materialOperationsData[opKey]) {
       setExpandedMaterialOps(prev => ({
         ...prev,
@@ -834,7 +1009,7 @@ export default function ProductionPlanningForm() {
 
     try {
       const token = localStorage.getItem('token')
-      
+
       let bomList = boms && boms.length > 0 ? boms : []
       if (bomList.length === 0) {
         const bomListResponse = await fetch(`${import.meta.env.VITE_API_URL}/production/boms?limit=1000`, {
@@ -899,7 +1074,7 @@ export default function ProductionPlanningForm() {
 
     try {
       const token = localStorage.getItem('token')
-      
+
       const bomDetailsResponse = await fetch(
         `${import.meta.env.VITE_API_URL}/production/boms/${bomId}`,
         { headers: { 'Authorization': `Bearer ${token}` } }
@@ -934,7 +1109,7 @@ export default function ProductionPlanningForm() {
     try {
       setCreatingWorkOrders(true)
       const token = localStorage.getItem('token')
-      
+
       if (subAssemblyBomMaterials.length === 0 && fgItems.length === 0) {
         alert('Please fetch sub-assembly materials and add finished goods first')
         return
@@ -943,31 +1118,47 @@ export default function ProductionPlanningForm() {
       const createdWorkOrders = []
 
       console.log('=== STEP 1: Creating work orders for sub-assemblies ===')
-      
-      const uniqueSubAssemblies = Array.from(new Set(subAssemblyBomMaterials.map(m => m.sub_assembly_code)))
-        .map(code => {
-          const info = subAssemblyBomMaterials.find(m => m.sub_assembly_code === code)
-          return {
-            item_code: code,
-            item_name: info.sub_assembly_name,
-            bom_id: info.bom_id,
-            operations: bomOperationsData[info.bom_id] || []
-          }
-        })
-      
-      console.log(`Creating ${uniqueSubAssemblies.length} sub-assembly work orders...`)
 
-      for (const subAsm of uniqueSubAssemblies) {
+      const subAsmToProcess = subAssemblyItems.map(item => ({
+        item_code: item.item_code,
+        item_name: item.item_name,
+        quantity: item.planned_qty || item.quantity,
+        bom_id: item.bom_id || item.bom_no || (subAssemblyBomMaterials.find(m => m.sub_assembly_code === item.item_code)?.bom_id),
+        operations: bomOperationsData[item.bom_id || item.bom_no] || []
+      }))
+
+      console.log(`Creating ${subAsmToProcess.length} sub-assembly work orders...`)
+
+      for (const subAsm of subAsmToProcess) {
         try {
-          console.log(`Creating work order for sub-assembly: ${subAsm.item_code}`)
-          
+          console.log(`Creating work order for sub-assembly: ${subAsm.item_code} with quantity ${subAsm.quantity}`)
+
           let operations = subAsm.operations || []
-          
-          if (operations.length === 0 && subAsm.bom_id) {
-            console.log(`No operations found for BOM ${subAsm.bom_id}, fetching from API...`)
+          let finalBomId = subAsm.bom_id
+
+          if (!finalBomId) {
+            console.log(`No BOM ID found for sub-assembly ${subAsm.item_code}, fetching...`)
+            try {
+              const bomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms?item_code=${subAsm.item_code}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              })
+              if (bomRes.ok) {
+                const bomData = await bomRes.json()
+                const boms = bomData.data || []
+                if (boms.length > 0) {
+                  finalBomId = boms[0].bom_id || boms[0].id
+                }
+              }
+            } catch (err) {
+              console.warn(`Could not fetch BOM for sub-assembly ${subAsm.item_code}:`, err)
+            }
+          }
+
+          if (operations.length === 0 && finalBomId) {
+            console.log(`No operations found for BOM ${finalBomId}, fetching from API...`)
             try {
               const bomDetailsResponse = await fetch(
-                `${import.meta.env.VITE_API_URL}/production/boms/${subAsm.bom_id}`,
+                `${import.meta.env.VITE_API_URL}/production/boms/${finalBomId}`,
                 { headers: { 'Authorization': `Bearer ${token}` } }
               )
               if (bomDetailsResponse.ok) {
@@ -976,14 +1167,14 @@ export default function ProductionPlanningForm() {
                 operations = bom.bom_operations || bom.operations || []
               }
             } catch (err) {
-              console.warn(`Could not fetch operations for BOM ${subAsm.bom_id}:`, err)
+              console.warn(`Could not fetch operations for BOM ${finalBomId}:`, err)
             }
           }
-          
+
           const woPayload = {
             item_code: subAsm.item_code,
-            quantity: salesOrderQuantity,
-            bom_no: subAsm.bom_id,
+            quantity: subAsm.quantity,
+            bom_no: finalBomId,
             priority: 'medium',
             notes: `Sub-assembly for production plan ${planHeader.plan_id}`,
             sales_order_id: selectedSalesOrders[0] || null,
@@ -1034,10 +1225,10 @@ export default function ProductionPlanningForm() {
       for (const fgItem of fgItems) {
         try {
           console.log(`Creating work order for finished good: ${fgItem.item_code}`)
-          
+
           let bomIdForFG = fgItem.bom_id || selectedBomId
           let fgOpsToSend = fgOperations.length > 0 ? fgOperations : operationItems
-          
+
           if (!bomIdForFG) {
             console.log(`No BOM ID found for ${fgItem.item_code}, attempting to fetch BOM...`)
             try {
@@ -1050,7 +1241,7 @@ export default function ProductionPlanningForm() {
                 if (boms.length > 0) {
                   bomIdForFG = boms[0].bom_id || boms[0].id
                   console.log(`Found BOM for ${fgItem.item_code}: ${bomIdForFG}`)
-                  
+
                   const bomDetailsResponse = await fetch(
                     `${import.meta.env.VITE_API_URL}/production/boms/${bomIdForFG}`,
                     { headers: { 'Authorization': `Bearer ${token}` } }
@@ -1067,18 +1258,18 @@ export default function ProductionPlanningForm() {
               console.warn(`Could not fetch BOM for ${fgItem.item_code}:`, err)
             }
           }
-          
+
           const fgWoPayload = {
             item_code: fgItem.item_code,
-            quantity: salesOrderQuantity,
+            quantity: fgItem.planned_qty || fgItem.quantity || salesOrderQuantity,
             bom_no: bomIdForFG || null,
             priority: 'high',
             notes: `Finished good for production plan ${planHeader.plan_id}`,
             sales_order_id: selectedSalesOrders[0] || null,
-            planned_start_date: new Date().toISOString().split('T')[0],
+            planned_start_date: fgItem.planned_start_date || new Date().toISOString().split('T')[0],
             operations: fgOpsToSend.map(op => ({
               operation_name: op.operation_name || op.operation || '',
-              workstation_type: op.workstation || op.machine_id || '',
+              workstation_type: op.workstation || op.machine_id || op.workstation_type || '',
               operation_time: op.time || op.operation_time || op.proportional_time || 0,
               notes: op.notes || ''
             }))
@@ -1119,15 +1310,15 @@ export default function ProductionPlanningForm() {
       const subAsmCount = createdWorkOrders.filter(wo => wo.type === 'sub-assembly').length
       const fgCount = createdWorkOrders.filter(wo => wo.type === 'finished-good').length
       const totalJobCards = createdWorkOrders.reduce((sum, wo) => sum + (wo.jobCardsCreated || 0), 0)
-      
+
       console.log('=== WORK ORDER CREATION COMPLETE ===')
       console.log(`✓ Sub-assembly work orders: ${subAsmCount}`)
       console.log(`✓ Finished goods work orders: ${fgCount}`)
       console.log(`✓ Total work orders: ${createdWorkOrders.length}`)
       console.log(`✓ Total job cards created: ${totalJobCards}`)
-      
+
       setSuccess(`Created ${subAsmCount} sub-assembly + ${fgCount} finished goods = ${createdWorkOrders.length} work orders with ${totalJobCards} job cards`)
-      
+
       setTimeout(() => {
         navigate('/manufacturing/work-orders')
       }, 2500)
@@ -1147,7 +1338,7 @@ export default function ProductionPlanningForm() {
       setFetchingSubAssemblyBoms(true)
       const token = localStorage.getItem('token')
       console.log('Token retrieved:', !!token)
-      
+
       if (rawMaterialItems.length === 0) {
         console.warn('No raw material items found, returning early')
         alert('No raw material items found')
@@ -1156,17 +1347,17 @@ export default function ProductionPlanningForm() {
 
       const allMaterials = []
       console.log('Processing raw materials with their BOMs...')
-      
+
       for (const rawMat of rawMaterialItems) {
         const itemCode = rawMat.item_code
         const bomId = rawMat.bom_id
         console.log(`Processing raw material: ${itemCode}, BOM ID: ${bomId}`)
-        
+
         if (!bomId) {
           console.warn(`No BOM ID found for ${itemCode}`)
           continue
         }
-        
+
         try {
           console.log(`Fetching BOM details for ${bomId}...`)
           let bomDetailsResponse = await fetch(
@@ -1174,7 +1365,7 @@ export default function ProductionPlanningForm() {
             { headers: { 'Authorization': `Bearer ${token}` } }
           )
           console.log(`BOM details response status: ${bomDetailsResponse.status}`)
-          
+
           if (!bomDetailsResponse.ok && bomDetailsResponse.status === 404) {
             console.warn(`BOM ID ${bomId} not found, trying to fetch BOM by item code ${itemCode}...`)
             try {
@@ -1199,29 +1390,29 @@ export default function ProductionPlanningForm() {
               console.error('Error in BOM fallback lookup:', fallbackErr)
             }
           }
-          
+
           if (bomDetailsResponse.ok) {
             let bomDetails = await bomDetailsResponse.json()
             let bom = bomDetails.data || bomDetails
-            
+
             if (Array.isArray(bom)) {
               bom = bom[0]
             }
-            
+
             console.log(`BOM details for ${itemCode}:`, bom)
-            
+
             const materials = bom.bom_raw_materials || bom.rawMaterials || bom.lines || []
             const operations = bom.bom_operations || bom.operations || []
             console.log(`Materials found: ${materials.length}, Operations found: ${operations.length}`)
-            
+
             const actualBomId = bom.bom_id || bomId
-            
+
             materials.forEach(material => {
               if (material.item_group === 'Consumable') {
                 console.log(`Skipping consumable: ${material.item_code}`)
                 return
               }
-              
+
               const bomQty = material.qty || material.quantity || 1
               const actualQty = bomQty * salesOrderQuantity
               console.log(`Adding material: ${material.item_code}, BOM qty: ${bomQty}, Actual qty: ${actualQty}`)
@@ -1246,21 +1437,21 @@ export default function ProductionPlanningForm() {
           console.error(`Error fetching BOM for ${itemCode}:`, err)
         }
       }
-      
+
       console.log('All materials collected:', allMaterials.length)
       console.log('All materials data:', allMaterials)
       setSubAssemblyBomMaterials(allMaterials)
       console.log('State updated with sub-assembly materials')
-      
+
       if (allMaterials.length > 0) {
         console.log('Expanding section 3.5 and fetching operations...')
         setExpandedSections(prev => ({ ...prev, 3.5: true }))
-        
+
         const uniqueBomIds = new Set(allMaterials.map(m => m.bom_id))
         console.log('Unique BOM IDs to fetch operations for:', Array.from(uniqueBomIds))
         const bomOpsData = {}
         const expandedOpsState = {}
-        
+
         for (const bomId of uniqueBomIds) {
           console.log(`Processing operations for BOM ${bomId}...`)
           try {
@@ -1273,7 +1464,7 @@ export default function ProductionPlanningForm() {
               const bomDetails = await bomDetailsResponse.json()
               const bom = bomDetails.data || bomDetails
               const operations = bom.bom_operations || bom.operations || []
-              
+
               bomOpsData[bomId] = operations
               expandedOpsState[bomId] = true
             }
@@ -1281,7 +1472,7 @@ export default function ProductionPlanningForm() {
             console.error(`Error fetching operations for BOM ${bomId}:`, err)
           }
         }
-        
+
         setBomOperationsData(prev => ({ ...prev, ...bomOpsData }))
         setExpandedBomOps(prev => ({ ...prev, ...expandedOpsState }))
       }
@@ -1439,7 +1630,7 @@ export default function ProductionPlanningForm() {
 
       setSuccess(`Production Plan ${savedPlanId} saved successfully!`)
       setTimeout(() => setSuccess(null), 3000)
-      
+
       if (!plan_id) {
         setTimeout(() => {
           navigate(`/manufacturing/production-planning/${savedPlanId}`)
@@ -1546,7 +1737,7 @@ export default function ProductionPlanningForm() {
         setSuccess('Work Order created successfully!')
         setShowWorkOrderModal(false)
         setWorkOrderData(null)
-        
+
         setTimeout(() => {
           navigate('/manufacturing/work-orders')
         }, 2000)
@@ -1564,630 +1755,803 @@ export default function ProductionPlanningForm() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-center">
-          <div className="text-4xl mb-4">📋</div>
-          <p className="text-gray-600">Loading production plan...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-4">
+        <div className="relative">
+          <div className="w-6 h-6  border-4 border-indigo-100 border-t-indigo-600  rounded  animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <ClipboardCheck size={16} className="text-indigo-600" />
+          </div>
+        </div>
+        <div className="flex flex-col items-center">
+          <p className="text-xs  text-slate-900  text-xs  ">Loading Plan</p>
+          <p className="text-xs   text-slate-400  text-xs  ">Fetching strategic data...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-3">
-      <div className="w-full mx-auto">
-        {/* Header */}
-        <div className="mb-3">
-          <button 
-            onClick={() => navigate('/manufacturing/production-planning')}
-            className="text-blue-600 hover:text-blue-800 text-xs font-medium mb-2 flex items-center gap-1"
-          >
-            ← Back
-          </button>
-          
-        </div>
+    <div className="min-h-screen bg-slate-50/50 pb-20">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <div className=" px-4 sm:p-6  lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate('/manufacturing/production-planning')}
+                className="p-2 hover:bg-slate-100 rounded transition-colors text-slate-500"
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <div className="h-8 w-px bg-slate-200"></div>
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-xs   text-indigo-600  text-xs   bg-indigo-50 px-2 py-0.5 rounded">
+                    {planHeader.naming_series || 'PP'}
+                  </span>
+                  <span className="text-xs   text-slate-400">/</span>
+                  <h1 className="text-xs  text-slate-900 text-xstracking-tight">
+                    {plan_id ? plan_id : 'NEW PRODUCTION PLAN'}
+                  </h1>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <StatusBadge status={planHeader.status} />
+                  </div>
+                  {planHeader.company && (
+                    <>
+                      <div className="w-1 h-1  rounded  bg-slate-300"></div>
+                      <span className="text-xs   text-slate-400  text-xs   flex items-center gap-1">
+                        <Factory size={10} />
+                        {planHeader.company}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
 
-        {/* Messages */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/manufacturing/production-planning')}
+                className="p-2 text-xs   text-slate-500  text-xs   hover:bg-slate-100 rounded transition-all"
+              >
+                Discard Changes
+              </button>
+              <button
+                onClick={saveProductionPlan}
+                disabled={savingPlan || !selectedSalesOrders.length}
+                className="flex items-center gap-2 p-2  py-2 bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all "
+              >
+                <Save size={16} />
+                <span className="text-xs    text-xs  ">
+                  {savingPlan ? 'Saving Plan...' : 'Save Strategic Plan'}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className=" p-2">
+        {/* Alerts */}
         {error && (
-          <div className="mb-3 p-2 bg-red-50 border-l-4 border-red-500 rounded text-red-800 text-xs">
-            {error}
+          <div className="mb-6 p-2 bg-rose-50 border border-rose-100 rounded flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+            <AlertCircle size={18} className="text-rose-600 mt-0.5" />
+            <div>
+              <p className="text-xs   text-rose-600  text-xs   mb-1">Error Encountered</p>
+              <p className="text-xs  text-rose-500">{error}</p>
+            </div>
+            <button onClick={() => setError(null)} className="ml-auto text-rose-400 hover:text-rose-600">
+              <X size={16} />
+            </button>
           </div>
         )}
         {success && (
-          <div className="mb-3 p-2 bg-green-50 border-l-4 border-green-500 rounded text-green-800 text-xs">
-            {success}
+          <div className="mb-6 p-2 bg-emerald-50 border border-emerald-100 rounded flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+            <Check size={18} className="text-emerald-600 mt-0.5" />
+            <div>
+              <p className="text-xs   text-emerald-600  text-xs   mb-1">Success</p>
+              <p className="text-xs  text-emerald-500">{success}</p>
+            </div>
+            <button onClick={() => setSuccess(null)} className="ml-auto text-emerald-400 hover:text-emerald-600">
+              <X size={16} />
+            </button>
           </div>
         )}
 
-        {/* Section 0: Plan Header */}
-        <div className="bg-white rounded shadow mb-3">
-          <button
-            onClick={() => toggleSection(0)}
-            className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-600">0</span>
-              <h2 className="text-xs font-semibold text-gray-900">Plan Header</h2>
-            </div>
-            <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[0] ? 'rotate-180' : ''}`} />
-          </button>
+        <div className="space-y-6">
+          {/* Horizontal Top Navigation */}
+          <div className="sticky top-20 z-40 bg-white/80 backdrop-blur-md p-2 border-b border-slate-200 ">
+            <div className="max-w-[1600px] mx-auto flex flex-wrap items-center gap-2">
+              <NavItem
+                label="01 STRATEGIC PARAMETERS"
+                icon={Settings}
+                section="parameters"
+                isActive={activeSection === 'parameters'}
+                onClick={scrollToSection}
+                themeColor="indigo"
+              />
+              <NavItem
+                label="02 PRODUCTION SCOPE"
+                icon={Layout}
+                section="scope"
+                isActive={activeSection === 'scope'}
+                onClick={scrollToSection}
+                themeColor="blue"
+              />
+              <NavItem
+                label="03 MATERIAL REQUIREMENTS"
+                icon={Boxes}
+                section="requirements"
+                isActive={activeSection === 'requirements'}
+                onClick={scrollToSection}
+                themeColor="amber"
+              />
+              {subAssemblyItems.length > 0 && (
+                <NavItem
+                  label="04 SUB-ASSEMBLY MAPPING"
+                  icon={Activity}
+                  section="subassembly"
+                  isActive={activeSection === 'subassembly'}
+                  onClick={scrollToSection}
+                  themeColor="rose"
+                />
+              )}
+              {operationItems.length > 0 && (
+                <NavItem
+                  label="05 PRODUCTION OPERATIONS"
+                  icon={Zap}
+                  section="operations"
+                  isActive={activeSection === 'operations'}
+                  onClick={scrollToSection}
+                  themeColor="emerald"
+                />
+              )}
 
-          {expandedSections[0] && (
-            <div className="px-4 py-3 border-t border-gray-200">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Plan ID</label>
-                  <input
-                    type="text"
-                    disabled
-                    value={planHeader.plan_id || 'Auto-generated'}
-                    className="w-full px-2 py-1.5 border border-gray-300 rounded bg-gray-50 text-gray-600 text-xs cursor-not-allowed"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Series</label>
-                  <input
-                    type="text"
-                    value={planHeader.naming_series}
-                    onChange={(e) => setPlanHeader(prev => ({ ...prev, naming_series: e.target.value }))}
-                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-orange-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Status</label>
-                  <select
-                    value={planHeader.status}
-                    onChange={(e) => setPlanHeader(prev => ({ ...prev, status: e.target.value }))}
-                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-orange-500"
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="planned">Planned</option>
-                    <option value="in-progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+              {/* Compact Planning Insight (moved to top bar) */}
+              {(() => {
+                const sectionThemes = {
+                  parameters: 'bg-indigo-600 shadow-indigo-100 text-indigo-200',
+                  scope: 'bg-blue-600 shadow-blue-100 text-blue-200',
+                  requirements: 'bg-amber-600 shadow-amber-100 text-amber-200',
+                  subassembly: 'bg-rose-600 shadow-rose-100 text-rose-200',
+                  operations: 'bg-emerald-600 shadow-emerald-100 text-emerald-200'
+                }
+                const currentTheme = sectionThemes[activeSection] || sectionThemes.parameters
+                const bgClass = currentTheme.split(' ')[0]
+                const shadowClass = currentTheme.split(' ')[1]
+                const iconClass = currentTheme.split(' ')[2]
 
-        {/* Section 1: Sales Order Selection */}
-        <div className="bg-white rounded shadow mb-3">
-          <button
-            onClick={() => toggleSection(1)}
-            className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-orange-600">1</span>
-              <h2 className="text-xs font-semibold text-gray-900">Sales Order Selection</h2>
-            </div>
-            <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[1] ? 'rotate-180' : ''}`} />
-          </button>
-
-          {expandedSections[1] && (
-            <div className="px-4 py-3 border-t border-gray-200">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Select Sales Order</label>
-                  <SearchableSelect
-                    options={salesOrders.map(so => ({
-                      value: so.sales_order_id || so.name,
-                      label: `${so.sales_order_id || so.name} - ${so.customer_name || 'N/A'}`
-                    }))}
-                    value={selectedSalesOrders[0] || ''}
-                    onChange={(value) => {
-                      setSelectedSalesOrders([value])
-                      handleSalesOrderSelect(value)
-                      processSalesOrderData(value)
-                    }}
-                    placeholder="Search and select sales order..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Sales Order Quantity</label>
-                  <input
-                    type="number"
-                    value={salesOrderQuantity}
-                    onChange={(e) => {
-                      const qty = parseInt(e.target.value) || 1
-                      setSalesOrderQuantity(qty)
-                      if (selectedSalesOrders[0]) {
-                        processSalesOrderData(selectedSalesOrders[0], qty)
-                      }
-                    }}
-                    min="1"
-                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-orange-500"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Section 2: Finished Goods */}
-        {fgItems.length > 0 && (
-          <div className="bg-white rounded shadow mb-3">
-            <button
-              onClick={() => toggleSection(2)}
-              className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-green-600">2</span>
-                <h2 className="text-xs font-semibold text-gray-900">Finished Goods ({fgItems.length})</h2>
-              </div>
-              <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[2] ? 'rotate-180' : ''}`} />
-            </button>
-
-            {expandedSections[2] && (
-              <div className="px-4 py-3 border-t border-gray-200">
-                <div className="space-y-2">
-                  {fgItems.map((item, idx) => (
-                    <div key={idx} className="bg-gradient-to-r from-green-50 to-green-100 rounded p-2 border border-green-200">
-                      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 text-xs">
-                        <div>
-                          <p className="text-xs text-gray-600 font-semibold">Item Code</p>
-                          <p className="font-bold text-gray-900">{item.item_code || selectedSalesOrderDetails?.item_code || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 font-semibold">Item Name</p>
-                          <p className="font-bold text-gray-900">{item.item_name || selectedSalesOrderDetails?.item_name || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 font-semibold">BOM No</p>
-                          <p className="font-bold text-gray-900">{selectedBomId || item.bom_id || item.bom_no || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 font-semibold">Qty</p>
-                          <p className="font-bold text-gray-900">{item.planned_qty || item.quantity || item.qty}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 font-semibold">Start Date</p>
-                          <p className="font-bold text-gray-900">{item.planned_start_date}</p>
-                        </div>
+                return (
+                  <div className={`ml-auto flex items-center gap-4 ${bgClass} p-2 rounded text-white shadow-lg ${shadowClass} min-w-[200px] transition-all duration-500`}>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between text-xs   mb-1">
+                        <span className="opacity-80 ">PLANNING PULSE</span>
+                        <span>0%</span>
+                      </div>
+                      <div className="w-full bg-white/20 rounded-full h-1">
+                        <div className="bg-white rounded-full h-full w-0 transition-all duration-1000"></div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                    <TrendingUp size={16} className={iconClass} />
+                  </div>
+                )
+              })()}
+            </div>
           </div>
-        )}
 
-        {/* Section 3: Raw Materials */}
-        {rawMaterialItems.length > 0 && (
-          <div className="bg-white rounded shadow mb-3">
-            <button
-              onClick={() => toggleSection(3)}
-              className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-purple-600">3</span>
-                <h2 className="text-xs font-semibold text-gray-900">Raw Materials ({rawMaterialItems.length})</h2>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    console.log('Get Sub-Asm Materials button clicked!')
-                    e.stopPropagation()
-                    console.log('Raw Material Items count:', rawMaterialItems.length)
-                    console.log('Raw Material Items:', rawMaterialItems)
-                    
-                    const subAsmFromRawMaterials = rawMaterialItems.filter(item => 
-                      (item.item_code || '').startsWith('SA-') || 
-                      (item.fg_sub_assembly || item.component_type || '').toLowerCase().includes('sub')
-                    )
-                    
-                    console.log('Extracted sub-assemblies from raw materials:', subAsmFromRawMaterials.length)
-                    subAsmFromRawMaterials.forEach((item, idx) => {
-                      console.log(`Sub-Assembly ${idx + 1}: ${item.item_code} - BOM ID: ${item.bom_id || item.bom_no || 'NOT FOUND'}`)
-                      console.log(`  Full Item Data:`, JSON.stringify(item, null, 2))
-                    })
-                    
-                    if (subAsmFromRawMaterials.length === 0) {
-                      console.warn('No sub-assemblies found in raw materials')
-                      alert('No sub-assemblies found in raw materials')
-                      return
-                    }
-                    
-                    console.log('About to call fetchSubAssemblyBomMaterials with extracted items...')
-                    setFetchingSubAssemblyBoms(true)
-                    fetchSubAssemblyBomMaterials(subAsmFromRawMaterials).finally(() => {
-                      setFetchingSubAssemblyBoms(false)
-                    })
-                  }}
-                  disabled={fetchingSubAssemblyBoms}
-                  className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white text-xs font-semibold rounded transition"
-                  title="Fetch materials from sub-assembly BOMs"
-                >
-                  {fetchingSubAssemblyBoms ? 'Loading...' : 'Get Sub-Asm Materials'}
-                </button>
-                <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[3] ? 'rotate-180' : ''}`} />
-              </div>
-            </button>
+          {/* Main Content Area */}
+          <div className="space-y-4 min-w-0">
+            {/* Strategic Parameters Section */}
+            <div id="parameters" className={activeSection === 'parameters' ? 'block' : 'hidden lg:block'}>
+              <Card>
+                <SectionHeader
+                  title="01 STRATEGIC PARAMETERS"
+                  icon={Settings}
+                  subtitle="Core planning identities and source selection"
+                  isExpanded={expandedSections.parameters}
+                  onToggle={() => toggleSection('parameters')}
+                  themeColor="indigo"
+                />
 
-            {expandedSections[3] && (
-              <div className="px-4 py-3 border-t border-gray-200 ">
-                <table className="w-full text-xs">
-                  <thead className="bg-gray-100 border-b border-gray-300">
-                    <tr>
-                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Item Code</th>
-                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Item Name</th>
-                      <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Qty</th>
-                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Warehouse</th>
-                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">BOM ID</th>
-                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">MR ID</th>
-                      <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Material Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rawMaterialItems.map((item, idx) => {
-                      const getStatusBadgeColor = (status) => {
-                        switch(status) {
-                          case 'approved': return 'bg-green-100 text-green-800'
-                          case 'requested': return 'bg-blue-100 text-blue-800'
-                          case 'pending': return 'bg-gray-100 text-gray-800'
-                          case 'completed': return 'bg-emerald-100 text-emerald-800'
-                          default: return 'bg-gray-100 text-gray-800'
-                        }
-                      }
-                      return (
-                        <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          <td className="px-2 py-1 font-medium text-gray-900">{item.item_code}</td>
-                          <td className="px-2 py-1 text-gray-700">{item.item_name}</td>
-                          <td className="px-2 py-1 text-right font-bold text-gray-900">{item.quantity || item.qty_as_per_bom}</td>
-                          <td className="px-2 py-1 text-gray-700">{item.for_warehouse || '-'}</td>
-                          <td className="px-2 py-1 text-gray-700 font-mono text-xs">{item.bom_id || item.bom_no || '-'}</td>
-                          <td className="px-2 py-1 font-mono text-xs text-blue-600">{item.mr_id || '-'}</td>
-                          <td className="px-2 py-1">
-                            {item.material_status ? (
-                              <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getStatusBadgeColor(item.material_status)}`}>
-                                {item.material_status.charAt(0).toUpperCase() + item.material_status.slice(1)}
-                              </span>
-                            ) : (
-                              <span className="text-gray-500">-</span>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
+                {expandedSections.parameters && (
+                  <div className="p-2 space-y-2 animate-in fade-in duration-300">
 
-        {/* Section 3.5: Sub-Assembly BOM Materials */}
-        {subAssemblyBomMaterials.length > 0 && (
-          <div className="bg-white rounded shadow mb-3">
-            <button
-              onClick={() => toggleSection(3.5)}
-              className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-cyan-600">3.5</span>
-                <h2 className="text-xs font-semibold text-gray-900">Sub-Assembly BOM Materials ({subAssemblyBomMaterials.length})</h2>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    const uniqueBomIds = new Set(subAssemblyBomMaterials.map(m => `${m.sub_assembly_code}-${m.bom_id}`))
-                    uniqueBomIds.forEach(key => {
-                      const [code, bomId] = key.split('-')
-                      fetchNestedMaterialDetails(code, bomId)
-                    })
-                  }}
-                  className="px-3 py-1.5 bg-purple-500 hover:bg-purple-600 text-white text-xs font-semibold rounded transition"
-                  title="Fetch all sub-assembly nested materials details"
-                >
-                  📥 Fetch All Details
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    createWorkOrders()
-                  }}
-                  disabled={creatingWorkOrders}
-                  className="px-3 py-1.5 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white text-xs font-semibold rounded transition"
-                  title="Create work orders for sub-assemblies and finished goods"
-                >
-                  {creatingWorkOrders ? 'Creating...' : 'Create Work Orders'}
-                </button>
-                <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[3.5] ? 'rotate-180' : ''}`} />
-              </div>
-            </button>
 
-            {expandedSections[3.5] && (
-              <div className="px-4 py-3 border-t border-gray-200 space-y-4">
-                {Array.from(new Set(subAssemblyBomMaterials.map(m => m.sub_assembly_code))).map((subAsmCode) => {
-                  const subAsmMaterials = subAssemblyBomMaterials.filter(m => m.sub_assembly_code === subAsmCode)
-                  const subAsmInfo = subAsmMaterials[0]
-                  const materialsOnly = subAsmMaterials.filter(m => !m.is_operation)
-                  const operationsOnly = subAsmMaterials.filter(m => m.is_operation)
-                  
-                  return (
-                    <div key={subAsmCode} className="border border-cyan-200 rounded bg-cyan-50 p-3">
-                      <div className="mb-2 pb-2 border-b border-cyan-200">
-                        <h4 className="font-semibold text-xs text-cyan-900">
-                          {subAsmCode} - {subAsmInfo.sub_assembly_name}
-                        </h4>
-                        <p className="text-xs text-cyan-700 mt-1">
-                          BOM ID: <span className="font-semibold">{subAsmInfo.bom_id}</span>
-                          <span className="ml-3">| Materials: {materialsOnly.length}</span>
-                        </p>
+                    <div className="grid grid-cols-3 gap-4">
+                      <FieldWrapper label="Plan Identity" required>
+                        <input
+                          type="text"
+                          disabled
+                          value={planHeader.plan_id || 'Auto Generated'}
+                          className="w-full p-2  bg-slate-50 border border-slate-200 rounded text-xs text-slate-500 cursor-not-allowed  font-medium"
+                        />
+                      </FieldWrapper>
+                      <FieldWrapper label="Naming Series">
+                        <input
+                          type="text"
+                          value={planHeader.naming_series}
+                          onChange={(e) => setPlanHeader(prev => ({ ...prev, naming_series: e.target.value }))}
+                          className="w-full p-2  border border-slate-200 rounded text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all  font-medium"
+                        />
+                      </FieldWrapper>
+                      <FieldWrapper label="OPERATIONAL STATUS">
+                        <div className="relative">
+                          <select
+                            value={planHeader.status}
+                            onChange={(e) => setPlanHeader(prev => ({ ...prev, status: e.target.value }))}
+                            className="w-full p-2  border border-slate-200 rounded text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all  appearance-none font-medium bg-white"
+                          >
+                            <option value="draft">Draft</option>
+                            <option value="planned">Planned</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                          <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        </div>
+                      </FieldWrapper>
+                       <FieldWrapper label="Source Sales Order" required>
+                      <SearchableSelect
+                        options={salesOrders.map(so => ({
+                          value: so.sales_order_id || so.name,
+                          label: `${so.sales_order_id || so.name} - ${so.customer_name || 'N/A'}`
+                        }))}
+                        value={selectedSalesOrders[0] || ''}
+                        onChange={(value) => {
+                          setSelectedSalesOrders([value])
+                          handleSalesOrderSelect(value)
+                          processSalesOrderData(value)
+                        }}
+                        placeholder="Select Sales Order..."
+                      />
+                    </FieldWrapper>
+
+                    <FieldWrapper label="Target Quantity" required>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={salesOrderQuantity}
+                          onChange={(e) => {
+                            const qty = parseInt(e.target.value) || 1
+                            setSalesOrderQuantity(qty)
+                            if (selectedSalesOrders[0]) {
+                              processSalesOrderData(selectedSalesOrders[0], qty)
+                            }
+                          }}
+                          min="1"
+                          className="w-full pl-4 pr-12 py-2.5 border border-slate-200 rounded text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-medium"
+                        />
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs    text-slate-400 tracking-widest">UNIT</div>
                       </div>
-                      
-                      {materialsOnly.length > 0 && (
-                        <div className="mb-4">
-                          <h5 className="text-xs font-semibold text-cyan-900 mb-2">📦 Raw Materials ({materialsOnly.length})</h5>
-                          <table className="w-full text-xs">
-                            <thead className="bg-green-100 border-b border-green-300">
-                              <tr>
-                                <th className="px-2 py-1 text-left font-semibold text-gray-700">Item Code</th>
-                                <th className="px-2 py-1 text-left font-semibold text-gray-700">Item Name</th>
-                                <th className="px-2 py-1 text-left font-semibold text-gray-700">Item Group</th>
-                                <th className="px-2 py-1 text-right font-semibold text-gray-700">Quantity</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {materialsOnly.map((item, idx) => {
-                                const itemCode = item.item_code || item.component_code || '-'
-                                const itemName = item.item_name || item.component_description || '-'
-                                const itemGroup = item.item_group || item.group || '-'
-                                const itemQty = item.qty || item.quantity || '0'
-                                
-                                return (
-                                  <tr 
-                                    key={idx}
-                                    className={`${idx % 2 === 0 ? 'bg-white' : 'bg-green-25'} hover:bg-green-100 transition`}
-                                  >
-                                    <td className="px-2 py-1 font-medium text-gray-900">{itemCode}</td>
-                                    <td className="px-2 py-1 text-gray-700">{itemName}</td>
-                                    <td className="px-2 py-1 text-gray-700 text-xs"><span className="bg-gray-100 px-2 py-1 rounded">{itemGroup}</span></td>
-                                    <td className="px-2 py-1 text-right font-bold text-gray-900">{Number(itemQty).toFixed(2)}</td>
+                    </FieldWrapper>
+                    </div>
+
+                    <div className="h-px bg-slate-100 my-2"></div>
+
+                   
+                  </div>
+                )}
+              </Card>
+            </div>
+
+            {/* Production Scope Section */}
+            <div id="scope" className={activeSection === 'scope' ? 'block' : 'hidden lg:block'}>
+              <Card>
+                <SectionHeader
+                  title="02 PRODUCTION SCOPE"
+                  icon={Layout}
+                  subtitle="Finished goods and target fulfillment"
+                  badge={`${fgItems.length} ITEMS`}
+                  isExpanded={expandedSections.scope}
+                  onToggle={() => toggleSection('scope')}
+                  themeColor="blue"
+                />
+
+                {expandedSections.scope && (
+                  <div className="p-2 animate-in fade-in duration-300">
+                    {fgItems.length > 0 ? (
+                      <div className="space-y-4">
+                        {fgItems.map((item, idx) => (
+                          <div key={idx} className="group p-2 bg-slate-50 hover:bg-white border border-slate-100 hover:border-blue-200 rounded transition-all duration-300 hover:shadow-lg">
+                            <div className="grid grid-cols-12 gap-6">
+                              <div className="col-span-12 md:col-span-5">
+                                <p className="text-xs   text-blue-400  mb-1.5">FINISHED GOOD</p>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-100">
+                                    <Package size={20} strokeWidth={2.5} />
+                                  </div>
+                                  <div>
+                                    <p className="text-xs   text-slate-900 break-words leading-none mb-1">
+                                      {item.item_code || selectedSalesOrderDetails?.item_code || 'N/A'}
+                                    </p>
+                                    <p className="text-xs font-medium text-slate-500 ">
+                                      {item.item_name || selectedSalesOrderDetails?.item_name || 'N/A'}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="col-span-6 md:col-span-3">
+                                <p className="text-xs   text-blue-400  mb-1.5">BILL OF MATERIALS</p>
+                                <div className="flex items-center gap-2 p-2  py-1.5 bg-white border border-blue-100 rounded text-xs   text-blue-700  ">
+                                  <Layers size={14} className="text-blue-600" />
+                                  <p className="font-mono truncate">
+                                    {selectedBomId || item.bom_id || item.bom_no || 'N/A'}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="col-span-6 md:col-span-2">
+                                <p className="text-xs   text-blue-400  mb-1.5">TARGET QTY</p>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg   text-blue-600">
+                                    {item.planned_qty || item.quantity || item.qty}
+                                  </span>
+                                  <span className="text-xs   text-slate-400 uppercase">PCS</span>
+                                </div>
+                              </div>
+                              <div className="col-span-12 md:col-span-2">
+                                <p className="text-xs    text-slate-400   mb-1.5">START DATE</p>
+                                <div className="flex items-center gap-2 text-slate-700">
+                                  <Calendar size={14} className="text-slate-400" />
+                                  <p className="text-xs  ">
+                                    {item.planned_start_date || 'TBD'}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed border-slate-100 rounded  bg-slate-50/50">
+                        <div className=" p-2 bg-white    rounded  text-slate-300 mb-4 animate-bounce">
+                          <Package size={40} />
+                        </div>
+                        <p className="text-xs   text-slate-400  ">No items selected</p>
+                        <p className="text-xs text-slate-400 mt-2">Select a sales order to begin production planning</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Card>
+            </div>
+
+            {/* Material Requirements Section */}
+            <div id="requirements" className={activeSection === 'requirements' ? 'block' : 'hidden lg:block'}>
+              {(rawMaterialItems.length > 0 || subAssemblyBomMaterials.length > 0) && (
+                <Card>
+                  <SectionHeader
+                    title="03 MATERIAL REQUIREMENTS"
+                    icon={Boxes}
+                    subtitle="Consolidated material explosion across all levels"
+                    badge={`${rawMaterialItems.length + subAssemblyBomMaterials.length} TOTAL`}
+                    isExpanded={expandedSections.requirements}
+                    onToggle={() => toggleSection('requirements')}
+                    themeColor="amber"
+                    actions={
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const subAsmFromRawMaterials = rawMaterialItems.filter(item =>
+                              (item.item_code || '').startsWith('SA-') ||
+                              (item.fg_sub_assembly || item.component_type || '').toLowerCase().includes('sub')
+                            )
+                            if (subAsmFromRawMaterials.length === 0) {
+                              alert('No sub-assemblies found in raw materials')
+                              return
+                            }
+                            setFetchingSubAssemblyBoms(true)
+                            fetchSubAssemblyBomMaterials(subAsmFromRawMaterials).finally(() => {
+                              setFetchingSubAssemblyBoms(false)
+                            })
+                          }}
+                          disabled={fetchingSubAssemblyBoms}
+                          className="flex items-center gap-2 p-2 bg-indigo-50 text-indigo-600 rounded hover:bg-indigo-100 transition-all disabled:opacity-50 text-xs    "
+                        >
+                          <Zap size={14} />
+                          {fetchingSubAssemblyBoms ? 'Exploding...' : 'Explode BOMs'}
+                        </button>
+                        {subAssemblyBomMaterials.length > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              createWorkOrders()
+                            }}
+                            disabled={creatingWorkOrders}
+                            className="flex items-center gap-2 p-2 bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-all disabled:opacity-50 text-xs    "
+                          >
+                            <Plus size={14} />
+                            {creatingWorkOrders ? 'Executing...' : 'Generate Orders'}
+                          </button>
+                        )}
+                      </div>
+                    }
+                  />
+
+                  {expandedSections.requirements && (
+                    <div className="p-3 space-y-4 animate-in fade-in duration-300">
+                      {/* Primary Raw Materials */}
+                      {rawMaterialItems.length > 0 && (
+                        <div className="space-y-4">
+                          <h4 className="text-xs   text-amber-600 flex items-center gap-2 px-1">
+                            <div className="w-1.5 h-1.5  rounded  bg-amber-500"></div>
+                            CORE MATERIALS
+                          </h4>
+                          <div className="rounded  border border-amber-100 overflow-hidden bg-white  ">
+                            <table className="w-full">
+                              <thead>
+                                <tr className="bg-amber-50/50 border-b border-amber-100">
+                                  <th className="p-2 text-left text-xs   text-amber-700  ">Item Specification</th>
+                                  <th className="p-2 text-right text-xs   text-amber-700  ">Required Qty</th>
+                                  <th className="p-2 text-left text-xs   text-amber-700  ">Warehouse</th>
+                                  <th className="p-2 text-left text-xs   text-amber-700  ">BOM Ref</th>
+                                  <th className="p-2 text-center text-xs   text-amber-700  ">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-amber-50">
+                                {rawMaterialItems.map((item, idx) => (
+                                  <tr key={idx} className="hover:bg-amber-50/20 transition-colors group">
+                                    <td className="p-2">
+                                      <p className="text-xs   text-slate-900 group-hover:text-amber-600 transition-colors">{item.item_code}</p>
+                                      <p className="text-xs  text-slate-400 mt-0.5 truncate max-w-[200px]">{item.item_name}</p>
+                                    </td>
+                                    <td className="p-2 text-right">
+                                      <span className="text-xs   text-amber-600">
+                                        {item.quantity || item.qty_as_per_bom}
+                                      </span>
+                                    </td>
+                                    <td className="p-2">
+                                      <span className="text-xs text-slate-400 tracking-tighter">
+                                        {item.for_warehouse || '-'}
+                                      </span>
+                                    </td>
+                                    <td className="p-2">
+                                      <span className="font-mono text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
+                                        {item.bom_id || item.bom_no || '-'}
+                                      </span>
+                                    </td>
+                                    <td className="p-2">
+                                      <div className="flex justify-center">
+                                        {item.material_status ? (
+                                          <span className={`p-2  rounded  text-xs   border  
+                                            ${item.material_status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                              item.material_status === 'requested' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                                'bg-slate-50 text-slate-400 border-slate-100'}`}>
+                                            {item.material_status}
+                                          </span>
+                                        ) : (
+                                          <span className="text-xs text-slate-200">--</span>
+                                        )}
+                                      </div>
+                                    </td>
                                   </tr>
-                                )
-                              })}
-                            </tbody>
-                          </table>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
                       )}
 
-                      {/* Operations fetched but not displayed */}
-                      {/* operationsOnly data is available in state but hidden from UI */}
+                      {/* Sub-Assembly Materials */}
+                      {subAssemblyBomMaterials.length > 0 && (
+                        <div className="space-y-3 ">
+                          <h4 className="text-xs    text-slate-400   flex items-center gap-2 px-1">
+                            <div className="w-1.5 h-1.5  rounded  bg-blue-500"></div>
+                            SUB-ASSEMBLY EXPLODED COMPONENTS
+                          </h4>
+
+                          {Object.entries(
+                            subAssemblyBomMaterials
+                              .filter(m => !m.is_operation)
+                              .reduce((groups, item) => {
+                                const parent = item.sub_assembly_code || 'Other'
+                                if (!groups[parent]) groups[parent] = {
+                                  name: item.sub_assembly_name || parent,
+                                  items: []
+                                }
+                                groups[parent].items.push(item)
+                                return groups
+                              }, {})
+                          ).map(([parentCode, group], groupIdx) => {
+                            const colors = [
+                              { bg: 'bg-indigo-50/50', border: 'border-indigo-100', text: 'text-indigo-600', dot: 'bg-indigo-500' },
+                              { bg: 'bg-emerald-50/50', border: 'border-emerald-100', text: 'text-emerald-600', dot: 'bg-emerald-500' },
+                              { bg: 'bg-rose-50/50', border: 'border-rose-100', text: 'text-rose-600', dot: 'bg-rose-500' },
+                              { bg: 'bg-amber-50/50', border: 'border-amber-100', text: 'text-amber-600', dot: 'bg-amber-500' }
+                            ]
+                            const color = colors[groupIdx % colors.length]
+
+                            return (
+                              <div key={parentCode} className={`p-2 rounded border-1 ${color.border} ${color.bg} transition-all duration-300 hover:shadow-lg hover:shadow-slate-200/50`}>
+                                <div className="flex items-center justify-between mb-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-2 h-2 rounded-full ${color.dot} animate-pulse`}></div>
+                                    <span className={`text-xs   tracking-widest uppercase ${color.text}`}>
+                                      PARENT: {parentCode}
+                                    </span>
+                                    <span className="text-xs text-slate-400 font-medium text-xs italic">({group.name})</span>
+                                  </div>
+                                  <div className={`px-2 py-0.5 rounded-full text-[9px]   ${color.bg} ${color.text} border ${color.border} er`}>
+                                    {group.items.length} Components
+                                  </div>
+                                </div>
+
+                                <div className="rounded border border-slate-200/60 overflow-hidden bg-white/80 backdrop-blur-sm ">
+                                  <table className="w-full text-xs">
+                                    <thead>
+                                      <tr className="bg-slate-50/80 border-b border-slate-100">
+                                        <th className="p-3 text-left text-xs   text-slate-400 ">Component</th>
+                                        <th className="p-3 text-right text-xs   text-slate-400 ">Required Qty</th>
+                                        <th className="p-3 text-left text-xs   text-slate-400 ">Warehouse</th>
+                                        <th className="p-3 text-center text-xs   text-slate-400 ">Status</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                      {group.items.map((item, idx) => (
+                                        <tr key={idx} className="hover:bg-indigo-50/30 transition-colors group">
+                                          <td className="p-3">
+                                            <p className="  text-slate-900 group-hover:text-indigo-600 transition-colors">{item.item_code || item.component_code}</p>
+                                            <p className="text-xs text-slate-500 mt-0.5 truncate max-w-[250px] italic">{item.item_name || item.component_description || item.description}</p>
+                                          </td>
+                                          <td className="p-3 text-right">
+                                            <span className="font-mono   text-slate-900">{item.quantity || item.qty}</span>
+                                          </td>
+                                          <td className="p-3">
+                                            <div className="flex items-center gap-1.5">
+                                              <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                                              <span className="text-xs   text-slate-500 ">
+                                                {item.warehouse || item.for_warehouse || 'Main WH'}
+                                              </span>
+                                            </div>
+                                          </td>
+                                          <td className="p-3">
+                                            <div className="flex justify-center">
+                                              <span className="flex items-center gap-1.5 p-2  py-1 rounded-full text-xs   bg-emerald-50 text-emerald-600 border border-emerald-100   shadow-emerald-50">
+                                                <div className="w-1 h-1 rounded-full bg-emerald-500"></div>
+                                                EXPLODED
+                                              </span>
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
                     </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )}
+                  )}
+                </Card>
+              )}
+            </div>
 
-        {/* Section 4: Sub-assembly Items */}
-        {subAssemblyItems.length > 0 && (
-          <div className="bg-white rounded shadow mb-3">
-            <button
-              onClick={() => toggleSection(4)}
-              className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-blue-600">4</span>
-                <h2 className="text-xs font-semibold text-gray-900">Sub-Assembly ({subAssemblyItems.length})</h2>
-              </div>
-              <ChevronDown size={16} className={`text-gray-400 transition ${expandedSections[4] ? 'rotate-180' : ''}`} />
-            </button>
+            {/* Sub-Assembly Items Section */}
+            <div id="subassembly" className={activeSection === 'subassembly' ? 'block' : 'hidden lg:block'}>
+              {subAssemblyItems.length > 0 && (
+                <Card>
+                  <SectionHeader
+                    title="04 SUB-ASSEMBLY MAPPING"
+                    icon={Activity}
+                    subtitle="Manufacturing breakdown of intermediate components"
+                    badge={`${subAssemblyItems.length} ELEMENTS`}
+                    isExpanded={expandedSections.subassembly}
+                    onToggle={() => toggleSection('subassembly')}
+                    themeColor="rose"
+                  />
 
-            {expandedSections[4] && (
-              <div className="px-4 py-3 border-t border-gray-200">
-                <div className="space-y-2">
-                  {subAssemblyItems.map((item, idx) => (
-                    <div key={idx} className="bg-blue-50 rounded p-2 border border-blue-200">
-                      <div className="grid grid-cols-2 lg:grid-cols-6 gap-2 text-xs">
-                        <div>
-                          <p className="text-xs text-gray-600 font-semibold">Item Code</p>
-                          <p className="font-bold text-gray-900">{item.item_code}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 font-semibold">Item Name</p>
-                          <p className="font-bold text-gray-900">{item.item_name}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 font-semibold">Qty Before Scrap</p>
-                          <p className="font-bold text-gray-900">{item.planned_qty_before_scrap || item.required_qty || item.qty || '-'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 font-semibold">Scrap %</p>
-                          <p className="font-bold text-red-600">{item.scrap_percentage || 0}%</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 font-semibold">Final Qty</p>
-                          <p className="font-bold text-green-600">{item.planned_qty || item.required_qty || item.qty || '-'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 font-semibold">Warehouse</p>
-                          <p className="font-bold text-gray-900">{item.target_warehouse || '-'}</p>
-                        </div>
+                  {expandedSections.subassembly && (
+                    <div className="p-3 animate-in fade-in duration-300">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {subAssemblyItems.map((item, idx) => (
+                          <div key={idx} className=" p-2 bg-slate-50 rounded  border border-slate-100 group hover:border-indigo-200 hover:shadow-md transition-all duration-300">
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded bg-white border border-slate-100 flex items-center justify-center text-indigo-500  ">
+                                  <Layers size={16} />
+                                </div>
+                                <div>
+                                  <p className="text-xs    text-slate-400   mb-0.5">SPECIFICATION</p>
+                                  <p className="text-xs   text-slate-900 leading-none">{item.item_code}</p>
+                                  <p className="text-xs  text-slate-500 mt-1 ">{item.item_name}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs    text-slate-400   mb-0.5">SCRAP %</p>
+                                <div className="inline-flex items-center gap-1 text-xs   text-rose-500 bg-rose-50 px-2 py-0.5  rounded  border border-rose-100">
+                                  <TrendingUp size={10} />
+                                  {item.scrap_percentage || 0}%
+                                </div>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200/50">
+                              <div className="bg-white p-2 rounded border border-slate-100  ">
+                                <p className="text-xs   text-slate-400  mb-1 tracking-wider">NET QTY</p>
+                                <p className="text-sm   text-slate-700">{item.planned_qty_before_scrap || item.qty || '-'}</p>
+                              </div>
+                              <div className="bg-rose-50/50 p-2 rounded border border-rose-100  ">
+                                <p className="text-xs   text-rose-400  mb-1 tracking-wider">FINAL QTY</p>
+                                <p className="text-sm   text-rose-600">{item.planned_qty || item.qty || '-'}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+                  )}
+                </Card>
+              )}
+            </div>
 
-        {/* Section 5: Operations - Fetched but not displayed */}
-        {/* Operations are fetched and stored in operationItems state but not shown in UI */}
+            {/* Operational Routing Section */}
+            <div id="operations" className={activeSection === 'operations' ? 'block' : 'hidden lg:block'}>
+              {(fgOperations.length > 0 || operationItems.length > 0) && (
+                <Card>
+                  <SectionHeader
+                    title="05 PRODUCTION OPERATIONS"
+                    icon={Zap}
+                    subtitle="Sequence of production stages and workcenters"
+                    badge={`${fgOperations.length || operationItems.length} STEPS`}
+                    isExpanded={expandedSections.operations}
+                    onToggle={() => toggleSection('operations')}
+                    themeColor="emerald"
+                  />
 
-        {/* Action Buttons */}
-        <div className="flex gap-2 justify-between pt-3 mb-3">
-          <button
-            onClick={() => navigate('/manufacturing/production-planning')}
-            className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-50 transition"
-          >
-            ← Back to Plans
-          </button>
-          <div className="flex gap-2">
-            {selectedSalesOrders.length > 0 && (
-              <>
-                <button
-                  onClick={saveProductionPlan}
-                  disabled={savingPlan || !selectedSalesOrders.length}
-                  className="px-3 py-1.5 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed transition flex items-center gap-2"
-                >
-                  <Save size={16} /> {savingPlan ? 'Saving...' : 'Save Plan'}
-                </button>
-                
-              </>
-            )}
+                  {expandedSections.operations && (
+                    <div className="p-6 animate-in fade-in duration-300">
+                      <div className="rounded  border border-slate-100 overflow-hidden bg-white  ">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="bg-slate-50/80 border-b border-slate-100">
+                              <th className="p-2 text-left text-xs    text-slate-500   w-16 text-center">Seq</th>
+                              <th className="p-2 text-left text-xs    text-slate-500  ">Operation Details</th>
+                              <th className="p-2 text-left text-xs    text-slate-500  ">Workstation</th>
+                              <th className="p-2 text-right text-xs    text-slate-500  ">Time (Hrs)</th>
+                              <th className="p-2 text-right text-xs    text-slate-500  ">Batch</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {(fgOperations.length > 0 ? fgOperations : operationItems).map((op, idx) => (
+                              <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
+                                <td className="p-2 text-center">
+                                  <span className="inline-flex items-center justify-center w-6 h-6  rounded  bg-emerald-600 text-xs    text-white shadow-md shadow-emerald-100  ">
+                                    {idx + 1}
+                                  </span>
+                                </td>
+                                <td className="p-2">
+                                  <p className="text-xs   text-slate-900 group-hover:text-emerald-600 transition-colors">{op.operation || op.operation_name}</p>
+                                  {op.description && <p className="text-xs  text-slate-400 mt-1  leading-tight">{op.description}</p>}
+                                </td>
+                                <td className="p-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded">
+                                      <Factory size={12} />
+                                    </div>
+                                    <span className="text-xs  text-slate-600  tracking-tighter">{op.workstation || op.workstation_type || '-'}</span>
+                                  </div>
+                                </td>
+                                <td className="p-2 text-right">
+                                  <span className="text-xs   text-emerald-600">{op.time || op.operation_time || 0}</span>
+                                </td>
+                                <td className="p-2 text-right">
+                                  <span className="text-xs font-medium text-slate-500">{op.batch_size || 1}</span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              )}
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Work Order Modal */}
-        {showWorkOrderModal && workOrderData && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99] p-2">
-            <div className="bg-white rounded shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-gradient-to-r from-orange-600 via-orange-600 to-orange-700 p-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="bg-white bg-opacity-20 rounded p-1.5">
-                    <Boxes size={16} className="text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-white font-bold text-xs">Create Work Order</h2>
-                    <p className="text-orange-100 text-xs">Review details and confirm</p>
+      {/* Modals */}
+      {showWorkOrderModal && workOrderData && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[100] p-2">
+          <div className="bg-white rounded shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="bg-slate-900 p-2 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/10 rounded">
+                  <Boxes size={18} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xs  text-white  text-xs  ">CREATE WORK ORDER</h2>
+                  <p className="text-xs   text-slate-400 ">Review execution details</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowWorkOrderModal(false)
+                  setWorkOrderData(null)
+                }}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-3 space-y-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-3 bg-slate-50 rounded border border-slate-100">
+                  <p className="text-xs  text-slate-400  mb-1">ITEM CODE</p>
+                  <p className="text-[11px]  text-slate-900 truncate">{workOrderData.item_code}</p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded border border-slate-100">
+                  <p className="text-xs  text-slate-400  mb-1">BOM REF</p>
+                  <p className="text-[11px]  text-slate-900 truncate">{workOrderData.bom_no}</p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded border border-slate-100">
+                  <p className="text-xs  text-slate-400  mb-1">QUANTITY</p>
+                  <p className="text-[11px]  text-indigo-600">{workOrderData.quantity}</p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded border border-slate-100">
+                  <p className="text-xs  text-slate-400  mb-1">PRIORITY</p>
+                  <p className="text-[11px]  text-amber-600 ">{workOrderData.priority}</p>
+                </div>
+              </div>
+
+              {workOrderData.operations && workOrderData.operations.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-xs   text-slate-900  text-xs   flex items-center gap-2">
+                    <Factory size={14} className="text-slate-400" />
+                    OPERATIONAL ROUTING
+                  </h3>
+                  <div className="rounded border border-slate-100 overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                          <th className="p-2 text-left text-xs  text-slate-500 ">OPERATION</th>
+                          <th className="p-2 text-left text-xs  text-slate-500 ">WORKSTATION</th>
+                          <th className="p-2 text-right text-xs  text-slate-500 ">TIME (HRS)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs ">
+                        {workOrderData.operations.map((op, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/50">
+                            <td className="p-2  text-slate-700">{op.operation}</td>
+                            <td className="p-2 text-slate-500  ">{op.workstation || '-'}</td>
+                            <td className="p-2 text-right  text-slate-900">{op.time || 0}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
+              )}
+
+              <div className="flex gap-3 justify-end pt-4 ">
                 <button
                   onClick={() => {
                     setShowWorkOrderModal(false)
                     setWorkOrderData(null)
                   }}
-                  className="text-white hover:bg-orange-500 p-1 rounded transition"
+                  className="p-6  py-2 text-xs   text-slate-500  hover:bg-slate-50 rounded transition-colors"
                 >
-                  <X size={16} />
+                  Cancel
                 </button>
-              </div>
-
-              <div className="p-4 space-y-3">
-                {/* Main Info Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded p-2 border border-blue-200">
-                    <p className="text-xs text-blue-600 font-semibold mb-1">Item Code</p>
-                    <p className="text-xs font-bold text-gray-900 break-words">{workOrderData.item_code}</p>
-                  </div>
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded p-2 border border-purple-200">
-                    <p className="text-xs text-purple-600 font-semibold mb-1">BOM No</p>
-                    <p className="text-xs font-bold text-gray-900 break-words">{workOrderData.bom_no}</p>
-                  </div>
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded p-2 border border-green-200">
-                    <p className="text-xs text-green-600 font-semibold mb-1">Quantity</p>
-                    <p className="text-xs font-bold text-gray-900">{workOrderData.quantity}</p>
-                  </div>
-                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded p-2 border border-orange-200">
-                    <p className="text-xs text-orange-600 font-semibold mb-1">Priority</p>
-                    <p className="text-xs font-bold text-gray-900">{workOrderData.priority}</p>
-                  </div>
-                </div>
-
-                {/* Operations Section */}
-                {workOrderData.operations && workOrderData.operations.length > 0 && (
-                  <div className="rounded overflow-hidden border border-gray-200 shadow-sm">
-                    <div className="bg-gradient-to-r from-green-50 to-green-100 px-3 py-2 border-b border-green-200">
-                      <h3 className="font-semibold text-xs text-green-900 flex items-center gap-2">
-                        <Factory size={14} className="text-green-600" />
-                        Operations ({workOrderData.operations.length})
-                      </h3>
-                    </div>
-                    <div className=" max-h-40">
-                      <table className="w-full text-xs">
-                        <thead className="bg-gray-50 sticky top-0 border-b border-gray-200">
-                          <tr>
-                            <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Operation</th>
-                            <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Workstation</th>
-                            <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Time (hrs)</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {workOrderData.operations.map((op, idx) => (
-                            <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-green-50 transition`}>
-                              <td className="px-2 py-1 font-medium text-gray-900">{op.operation}</td>
-                              <td className="px-2 py-1 text-gray-700">{op.workstation || '-'}</td>
-                              <td className="px-2 py-1 text-right font-medium text-gray-900">{op.time || 0}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* Raw Materials Section */}
-                {workOrderData.required_items && workOrderData.required_items.length > 0 && (
-                  <div className="rounded overflow-hidden border border-gray-200 shadow-sm">
-                    <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-3 py-2 border-b border-purple-200">
-                      <h3 className="font-semibold text-xs text-purple-900 flex items-center gap-2">
-                        <Boxes size={14} className="text-purple-600" />
-                        Raw Materials ({workOrderData.required_items.length})
-                      </h3>
-                    </div>
-                    <div className=" max-h-40">
-                      <table className="w-full text-xs">
-                        <thead className="bg-gray-50 sticky top-0 border-b border-gray-200">
-                          <tr>
-                            <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Item Code</th>
-                            <th className="px-2 py-1.5 text-right font-semibold text-gray-700">Qty</th>
-                            <th className="px-2 py-1.5 text-left font-semibold text-gray-700">Warehouse</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {workOrderData.required_items.map((item, idx) => (
-                            <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-purple-50 transition`}>
-                              <td className="px-2 py-1 font-medium text-gray-900">{item.item_code}</td>
-                              <td className="px-2 py-1 text-right font-medium text-gray-900">{item.required_qty}</td>
-                              <td className="px-2 py-1 text-gray-700">{item.source_warehouse || '-'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* Notes Section */}
-                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded p-3 border border-gray-200">
-                  <p className="text-xs font-semibold text-gray-600 mb-1">Notes</p>
-                  <p className="text-xs text-gray-700 leading-relaxed">{workOrderData.notes}</p>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-2 justify-end pt-3 border-t border-gray-200">
-                  <button
-                    onClick={() => {
-                      setShowWorkOrderModal(false)
-                      setWorkOrderData(null)
-                    }}
-                    className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-50 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCreateWorkOrder}
-                    disabled={creatingWorkOrder}
-                    className="px-3 py-1.5 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded text-xs font-medium hover:from-orange-700 hover:to-orange-800 disabled:opacity-60 disabled:cursor-not-allowed transition flex items-center gap-1"
-                  >
-                    <Check size={14} /> {creatingWorkOrder ? 'Creating...' : 'Confirm & Create'}
-                  </button>
-                </div>
+                <button
+                  onClick={handleCreateWorkOrder}
+                  disabled={creatingWorkOrder}
+                  className="p-2  bg-indigo-600 text-white text-xs    rounded hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-lg shadow-indigo-100 flex items-center gap-2"
+                >
+                  <Check size={16} />
+                  {creatingWorkOrder ? 'Processing...' : 'Confirm & Create Order'}
+                </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

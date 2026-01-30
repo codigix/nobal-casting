@@ -26,7 +26,7 @@ export default function DraftsList({ formName, onLoadDraft, onDeleteDraft, onClo
 
   return (
     <div className="space-y-2">
-      <h3 className="text-xs font-bold text-gray-900 mb-3">Saved Drafts</h3>
+      <h3 className="text-xs  text-gray-900 mb-3">Saved Drafts</h3>
       {drafts.map((draft) => (
         <div
           key={draft.id}

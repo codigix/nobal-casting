@@ -84,16 +84,16 @@ export default function Operations() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100  px-6 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100  p-6  py-6">
       <div className=" mx-auto">
         <div className="flex justify-between items-start mb-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-9 h-9 rounded-xs bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
+              <div className="w-9 h-9 rounded-xs bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-lg  ">
                 ⚙️
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Operations</h1>
+                <h1 className="text-xl  text-gray-900">Operations</h1>
                 <p className="text-xs text-gray-600 mt-0">Manage manufacturing operations</p>
               </div>
             </div>
@@ -120,7 +120,7 @@ export default function Operations() {
           </div>
         )}
 
-        <div className="bg-white rounded-xs shadow-sm p-3 mb-3">
+        <div className="bg-white rounded-xs  p-3 mb-3">
           <label className="text-xs font-semibold text-gray-700 block mb-1">Search</label>
           <input 
             type="text" 
@@ -132,32 +132,32 @@ export default function Operations() {
         </div>
 
         {loading ? (
-          <div className="bg-white rounded-xs p-3 text-center shadow-sm">
-            <div className="text-3xl mb-2">⏳</div>
+          <div className="bg-white rounded-xs p-3 text-center ">
+            <div className="text-xl  mb-2">⏳</div>
             <div className="text-xs text-gray-600">Loading operations...</div>
           </div>
         ) : filteredOperations.length > 0 ? (
           <>
-            <div className="bg-white rounded-xs shadow-sm">
+            <div className="bg-white rounded-xs ">
               <div className="">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="px-3 py-2 text-left text-gray-700 font-semibold">ID</th>
-                      <th className="px-3 py-2 text-left text-gray-700 font-semibold">Operation Name</th>
-                      <th className="px-3 py-2 text-left text-gray-700 font-semibold">Default Workstation</th>
-                      <th className="px-3 py-2 text-left text-gray-700 font-semibold">Last Updated</th>
-                      <th className="px-3 py-2 text-center text-gray-700 font-semibold">Actions</th>
+                      <th className="p-2  py-2 text-left text-gray-700 font-semibold">ID</th>
+                      <th className="p-2  py-2 text-left text-gray-700 font-semibold">Operation Name</th>
+                      <th className="p-2  py-2 text-left text-gray-700 font-semibold">Default Workstation</th>
+                      <th className="p-2  py-2 text-left text-gray-700 font-semibold">Last Updated</th>
+                      <th className="p-2  py-2 text-center text-gray-700 font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredOperations.map((op, idx) => (
                       <tr key={op.name} className={`border-b border-gray-200 hover:bg-gray-50 transition ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                        <td className="px-3 py-2 font-semibold text-gray-900">{op.name}</td>
-                        <td className="px-3 py-2 text-gray-700">{op.operation_name || op.name}</td>
-                        <td className="px-3 py-2 text-gray-700">{op.default_workstation || '-'}</td>
-                        <td className="px-3 py-2 text-gray-700">{formatDate(op.modified)}</td>
-                        <td className="px-3 py-2">
+                        <td className="p-2  py-2 font-semibold text-gray-900">{op.name}</td>
+                        <td className="p-2  py-2 text-gray-700">{op.operation_name || op.name}</td>
+                        <td className="p-2  py-2 text-gray-700">{op.default_workstation || '-'}</td>
+                        <td className="p-2  py-2 text-gray-700">{formatDate(op.modified)}</td>
+                        <td className="p-2  py-2">
                           <div className="flex gap-1 justify-center">
                             <button 
                               onClick={() => handleEdit(op)}
@@ -181,13 +181,13 @@ export default function Operations() {
                 </table>
               </div>
             </div>
-            <div className="mt-2 px-3 py-2 text-right text-xs text-gray-600">
+            <div className="mt-2 p-2  py-2 text-right text-xs text-gray-600">
               Showing {filteredOperations.length} of {operations.length} operations
             </div>
           </>
         ) : (
-          <div className="bg-white rounded-xs p-3 text-center shadow-sm">
-            <div className="text-3xl mb-2">📭</div>
+          <div className="bg-white rounded-xs p-3 text-center ">
+            <div className="text-xl  mb-2">📭</div>
             <div className="text-xs font-semibold  text-gray-900">
               {search ? 'No operations found' : 'No operations created yet'}
             </div>

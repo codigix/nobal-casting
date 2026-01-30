@@ -1,10 +1,127 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { AlertCircle, Plus, Trash2, X, ChevronRight, Save, RotateCcw, ChevronDown, ChevronUp, Check, FileText } from 'lucide-react'
+import { AlertCircle, Plus, Trash2, X, ChevronRight, Save, RotateCcw, ChevronDown, ChevronUp, Check, FileText, Settings, Database, Layers, TrendingDown, Package, Users, DollarSign, AlertTriangle, Activity, ArrowLeft } from 'lucide-react'
 import * as productionService from '../../services/productionService'
 import SearchableSelect from '../../components/SearchableSelect'
 import DraftsList from '../../components/DraftsList'
+import Card from '../../components/Card/Card'
 import { useDraftSave } from '../../hooks/useDraftSave'
+
+const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, themeColor = 'blue', id, badge, actions }) => {
+  const themes = {
+    blue: { text: 'text-blue-600', bg: 'bg-blue-50/50', border: 'border-blue-100/50', icon: 'bg-blue-600 text-white shadow-lg shadow-blue-100' },
+    emerald: { text: 'text-emerald-600', bg: 'bg-emerald-50/50', border: 'border-emerald-100/50', icon: 'bg-emerald-600 text-white shadow-lg shadow-emerald-100' },
+    amber: { text: 'text-amber-600', bg: 'bg-amber-50/50', border: 'border-amber-100/50', icon: 'bg-amber-600 text-white shadow-lg shadow-amber-100' },
+    rose: { text: 'text-rose-600', bg: 'bg-rose-50/50', border: 'border-rose-100/50', icon: 'bg-rose-600 text-white shadow-lg shadow-rose-100' },
+    indigo: { text: 'text-indigo-600', bg: 'bg-indigo-50/50', border: 'border-indigo-100/50', icon: 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' },
+    slate: { text: 'text-slate-600', bg: 'bg-slate-50/50', border: 'border-slate-100/50', icon: 'bg-slate-900 text-white shadow-lg shadow-slate-200' },
+    cyan: { text: 'text-cyan-600', bg: 'bg-cyan-50/50', border: 'border-cyan-100/50', icon: 'bg-cyan-600 text-white shadow-lg shadow-cyan-100' },
+    gray: { text: 'text-slate-600', bg: 'bg-slate-50/50', border: 'border-slate-100/50', icon: 'bg-slate-600 text-white shadow-lg shadow-slate-100' }
+  }
+
+  const theme = themes[themeColor] || themes.blue
+
+  return (
+    <div
+      id={id}
+      className={`flex items-center justify-between  p-2 cursor-pointer hover:bg-white/40 transition-all border-b border-slate-100/50 backdrop-blur-sm ${isExpanded ? 'bg-white/20' : ''}`}
+      onClick={onToggle}
+    >
+      <div className="flex items-center gap-2">
+        <div className={` p-2 rounded transition-all duration-500 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3 ' : 'scale-100 shadow-md'}`}>
+          <Icon size={10} strokeWidth={2.2} />
+        </div>
+        <div>
+          <h2 className="text-base font-semibold flex items-center gap-2">
+            <span className={`${theme.text}  text-xs`}>{title.split(' ')[0]}</span>
+            <span className="text-slate-900 tracking-tight  ">{title.split(' ').slice(1).join(' ')}</span>
+          </h2>
+          {subtitle && <p className=" text-xs  font-medium text-slate-400  mt-1 opacity-80">{subtitle}</p>}
+        </div>
+        {badge && (
+          <span className={`ml-2 px-3 py-1 ${theme.bg} ${theme.text}  text-xs    rounded-full border ${theme.border}  tracking-wider`}>
+            {badge}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-4">
+        {actions && <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>{actions}</div>}
+        <div className={`p-2 rounded  transition-all duration-300 ${isExpanded ? `${theme.bg} ${theme.text}` : 'text-slate-300 bg-slate-50'}`}>
+          <ChevronDown size={18} className={`transform transition-transform duration-500 ${isExpanded ? 'rotate-180' : ''}`} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = 'blue' }) => {
+  const themes = {
+    blue: 'text-blue-600 bg-blue-50/50 border-blue-100',
+    emerald: 'text-emerald-600 bg-emerald-50/50 border-emerald-100',
+    amber: 'text-amber-600 bg-amber-50/50 border-amber-100',
+    rose: 'text-rose-600 bg-rose-50/50 border-rose-100',
+    indigo: 'text-indigo-600 bg-indigo-50/50 border-indigo-100',
+    slate: 'text-slate-600 bg-slate-50/50 border-slate-100',
+    cyan: 'text-cyan-600 bg-cyan-50/50 border-cyan-100'
+  }
+
+  const activeTheme = themes[themeColor] || themes.blue
+
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(section)}
+      className={`w-full flex items-center justify-between  p-2 rounded transition-all duration-500 group relative  ${isActive
+          ? `${activeTheme} shadow-md border translate-x-1`
+          : 'text-slate-500 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-100'
+        }`}
+    >
+      {isActive && (
+        <div className={`absolute left-0 top-0 w-1 h-full ${activeTheme.split(' ')[0].replace('text', 'bg')}`} />
+      )}
+      <div className="flex items-center gap-4">
+        <div className={`p-2 rounded  transition-all duration-500 ${isActive ? 'bg-white shadow-lg scale-110 rotate-3' : 'bg-slate-50 group-hover:bg-white'}`}>
+          <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
+        </div>
+        <span className="text-[11px]     ">{label}</span>
+      </div>
+      {isActive && (
+        <div className="flex items-center gap-1">
+          <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+          <div className="w-1 h-1 rounded-full bg-current opacity-40" />
+        </div>
+      )}
+    </button>
+  )
+}
+
+const FieldWrapper = ({ label, children, error, required }) => (
+  <div className="">
+    <div className="flex items-center justify-between">
+      <label className="text-[8px] text-slate-600  text-xs  flex items-center gap-1">
+        {label}
+        {required && <span className="text-rose-500">*</span>}
+      </label>
+      {error && <span className="text-xs   text-rose-500 animate-pulse">{error}</span>}
+    </div>
+    {children}
+  </div>
+)
+
+const StatusBadge = ({ status }) => {
+  const styles = {
+    draft: 'bg-slate-100 text-slate-600 border-slate-200',
+    planned: 'bg-blue-50 text-blue-600 border-blue-100',
+    'in-progress': 'bg-amber-50 text-amber-600 border-amber-100 animate-pulse',
+    completed: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    cancelled: 'bg-rose-50 text-rose-600 border-rose-100'
+  }
+  return (
+    <span className={`px-2 py-0.5  rounded  text-xs  border  text-xs   ${styles[status?.toLowerCase()] || styles.draft}`}>
+      {status || 'DRAFT'}
+    </span>
+  )
+}
 
 export default function BOMForm() {
   const { id } = useParams()
@@ -21,7 +138,6 @@ export default function BOMForm() {
     uom: 'Kg',
     status: 'draft',
     revision: '1',
-    description: '',
     is_active: true,
     is_default: false,
     allow_alternative_item: false,
@@ -29,6 +145,7 @@ export default function BOMForm() {
     project: '',
     cost_rate_based_on: 'Valuation Rate',
     valuation_rate_value: '',
+    selling_rate: '0',
     currency: 'INR',
     with_operations: false,
     process_loss_percentage: '0',
@@ -46,16 +163,13 @@ export default function BOMForm() {
     uom: 'Kg',
     item_group: '',
     rate: '0',
+    selling_price: '0',
     notes: '',
     loss_percentage: '0',
     scrap_qty: '0'
   })
-  const [editingLineId, setEditingLineId] = useState(null)
   const [editingRowId, setEditingRowId] = useState(null)
   const [editingRowData, setEditingRowData] = useState({})
-  const [inlineManualEntry, setInlineManualEntry] = useState(false)
-  const [dropdownOpen, setDropdownOpen] = useState(null)
-  const [dropdownSearch, setDropdownSearch] = useState('')
   const [operationsList, setOperationsList] = useState([])
   const [workstationsList, setWorkstationsList] = useState([])
   const [warehousesList, setWarehousesList] = useState([])
@@ -66,6 +180,7 @@ export default function BOMForm() {
     qty: '1',
     uom: 'Kg',
     rate: '0',
+    selling_price: '0',
     source_warehouse: '',
     operation: ''
   })
@@ -73,6 +188,7 @@ export default function BOMForm() {
     operation_name: '',
     workstation_type: '',
     operation_time: '0',
+    setup_time: '0',
     fixed_time: '0',
     hourly_rate: '0',
     operating_cost: '0',
@@ -88,11 +204,6 @@ export default function BOMForm() {
     scrap_qty: '0',
     rate: '0'
   })
-  const [manualEntry, setManualEntry] = useState({
-    itemCode: false,
-    componentCode: false,
-    scrapItemCode: false
-  })
   const [uomList, setUomList] = useState([])
   const [itemGroups, setItemGroups] = useState([])
   const [expandedSections, setExpandedSections] = useState({
@@ -101,11 +212,30 @@ export default function BOMForm() {
     raw_materials: true,
     operations: true,
     scrap: false,
-    costing: true
+    settings: true
   })
   const [expandedItemGroups, setExpandedItemGroups] = useState({})
   const [showDrafts, setShowDrafts] = useState(false)
-  
+  const [activeSection, setActiveSection] = useState('product')
+
+  const scrollToSection = (sectionId) => {
+    setActiveSection(sectionId)
+    setExpandedSections(prev => ({ ...prev, [sectionId]: true }))
+    setTimeout(() => {
+      const element = document.getElementById(sectionId)
+      if (element) {
+        const headerOffset = 100
+        const elementPosition = element.getBoundingClientRect().top
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        })
+      }
+    }, 100)
+  }
+
   const { loadDraft, deleteDraft, clearCurrentDraft } = useDraftSave('BOM', {
     formData,
     bomLines,
@@ -127,22 +257,14 @@ export default function BOMForm() {
   }, [id])
 
   useEffect(() => {
-    const handleClickOutside = () => {
-      setDropdownOpen(null)
-    }
-    document.addEventListener('click', handleClickOutside)
-    return () => document.removeEventListener('click', handleClickOutside)
-  }, [])
-
-  useEffect(() => {
     const updateSubAssemblyRates = async () => {
       const updatedMaterials = [...rawMaterials]
       let hasChanges = false
-      
+
       for (let i = 0; i < updatedMaterials.length; i++) {
         const material = updatedMaterials[i]
         const item = items.find(it => it.item_code === material.item_code)
-        
+
         if (item && (item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')) {
           try {
             const bomsResponse = await productionService.getBOMs({ item_code: material.item_code })
@@ -150,7 +272,7 @@ export default function BOMForm() {
               const bom = bomsResponse.data[0]
               let totalCost = parseFloat(bom.total_cost || 0)
               const bomQuantity = parseFloat(bom.quantity || 1)
-              
+
               if ((totalCost === 0 || !totalCost) && bom.bom_id) {
                 try {
                   const bomDetailsResponse = await productionService.getBOMDetails(bom.bom_id)
@@ -175,12 +297,12 @@ export default function BOMForm() {
                   totalCost = parseFloat(item.valuation_rate || 0)
                 }
               }
-              
+
               const costPerUnit = totalCost > 0 ? totalCost / bomQuantity : 0
               const newRate = costPerUnit.toFixed(2)
-              
+
               if (newRate !== updatedMaterials[i].rate) {
-                updatedMaterials[i] = {...updatedMaterials[i], rate: newRate, amount: (parseFloat(updatedMaterials[i].qty || 0) * newRate).toFixed(2)}
+                updatedMaterials[i] = { ...updatedMaterials[i], rate: newRate, amount: (parseFloat(updatedMaterials[i].qty || 0) * newRate).toFixed(2) }
                 hasChanges = true
               }
             }
@@ -189,19 +311,40 @@ export default function BOMForm() {
           }
         }
       }
-      
+
       if (hasChanges) {
         setRawMaterials(updatedMaterials)
       }
     }
-    
+
     if (rawMaterials.length > 0 && items.length > 0) {
       updateSubAssemblyRates()
     }
   }, [id])
 
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = ['product', 'settings', 'components', 'raw_materials', 'operations', 'scrap', 'costing']
+      const scrollPosition = window.scrollY + 150
+
+      for (const section of sections) {
+        const element = document.getElementById(section)
+        if (element) {
+          const { offsetTop, offsetHeight } = element
+          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
+            setActiveSection(section)
+            break
+          }
+        }
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   const toggleSection = (section) => {
-    setExpandedSections(prev => ({...prev, [section]: !prev[section]}))
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
   }
 
   const handleKeyDown = (e) => {
@@ -269,13 +412,9 @@ export default function BOMForm() {
 
   const fetchItemGroups = async () => {
     try {
-      const token = localStorage.getItem('token')
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/item-groups`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      const data = await res.json()
-      if (data.data) {
-        setItemGroups(data.data || [])
+      const response = await productionService.getItemGroups()
+      if (response.data) {
+        setItemGroups(response.data || [])
       }
     } catch (err) {
       console.error('Failed to fetch item groups:', err)
@@ -286,10 +425,10 @@ export default function BOMForm() {
     try {
       const response = await productionService.getBOMDetails(bomId)
       const bom = response.data
-      
+
       let itemGroupValue = bom.item_group || bom.items_group || ''
       let productNameValue = bom.product_name || ''
-      
+
       if (bom.item_code) {
         try {
           const itemResponse = await productionService.getItemDetails(bom.item_code)
@@ -302,7 +441,7 @@ export default function BOMForm() {
           console.warn('Failed to fetch item details:', itemErr)
         }
       }
-      
+
       setFormData({
         bom_id: bom.bom_id,
         item_code: bom.item_code,
@@ -312,7 +451,6 @@ export default function BOMForm() {
         uom: bom.uom || 'Kg',
         status: bom.status || 'draft',
         revision: bom.revision || 1,
-        description: bom.description || '',
         is_active: bom.is_active !== false,
         is_default: bom.is_default === true,
         allow_alternative_item: bom.allow_alternative_item === true,
@@ -325,13 +463,24 @@ export default function BOMForm() {
         process_loss_percentage: bom.process_loss_percentage || 0
       })
       const linesWithIds = (bom.lines || []).map((l, idx) => ({
-        ...l, 
+        ...l,
         id: l.id || `line-${Date.now()}-${idx}`,
         qty: l.qty || l.quantity || 0,
         component_name: l.component_name || l.component_description || ''
       }))
       setBomLines(linesWithIds)
-      const materialsWithIds = (bom.rawMaterials || []).map((m, idx) => ({...m, id: m.id || `mat-${Date.now()}-${idx}`}))
+      const materialsWithIds = (bom.rawMaterials || []).map((m, idx) => {
+        const qty = parseFloat(m.qty || m.quantity || 0)
+        const rate = parseFloat(m.rate || 0)
+        const sellingPrice = parseFloat(m.selling_price || 0)
+        return {
+          ...m,
+          id: m.id || `mat-${Date.now()}-${idx}`,
+          qty,
+          amount: m.amount || (qty * rate),
+          selling_amount: m.selling_amount || (qty * sellingPrice)
+        }
+      })
       setRawMaterials(materialsWithIds)
       setOperations(bom.operations || [])
       setScrapItems(bom.scrapItems || [])
@@ -348,7 +497,7 @@ export default function BOMForm() {
     }))
     setError(null)
 
-    if (name === 'item_code' && !manualEntry.itemCode && value) {
+    if (name === 'item_code' && value) {
       try {
         const response = await productionService.getItemDetails(value)
         if (response.success && response.data) {
@@ -358,6 +507,7 @@ export default function BOMForm() {
             product_name: itemData.name || itemData.item_name || prev.product_name,
             item_group: itemData.item_group || prev.item_group,
             uom: itemData.uom || prev.uom,
+            selling_rate: itemData.selling_rate || '0',
             weight_per_unit: itemData.weight_per_unit || prev.weight_per_unit,
             weight_uom: itemData.weight_uom || prev.weight_uom
           }))
@@ -376,8 +526,8 @@ export default function BOMForm() {
     setError(null)
 
     if (value && !formData.item_code) {
-      const selectedItem = items.find(item => 
-        (item.name === value || item.item_name === value) && 
+      const selectedItem = items.find(item =>
+        (item.name === value || item.item_name === value) &&
         (item.item_group === 'Finished Goods' || item.item_group === 'Finished Good' || item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')
       )
       if (selectedItem) {
@@ -386,7 +536,8 @@ export default function BOMForm() {
           item_code: selectedItem.item_code,
           product_name: value,
           item_group: selectedItem.item_group || prev.item_group,
-          uom: selectedItem.uom || prev.uom
+          uom: selectedItem.uom || prev.uom,
+          selling_rate: selectedItem.selling_rate || '0'
         }))
       }
     }
@@ -400,7 +551,7 @@ export default function BOMForm() {
       item_group: selectedItem?.item_group || prev.item_group
     }))
     if (selectedItem) {
-      handleInputChange({target: {name: 'item_code', value: value}})
+      handleInputChange({ target: { name: 'item_code', value: value } })
     }
   }
 
@@ -411,13 +562,14 @@ export default function BOMForm() {
       [name]: value
     }))
 
-    if (name === 'component_code' && !manualEntry.componentCode && value) {
+    if (name === 'component_code' && value) {
       try {
         const response = await productionService.getItemDetails(value)
         if (response.success && response.data) {
           const itemData = response.data
           let rate = itemData.valuation_rate || '0'
-          
+          let sellingPrice = itemData.selling_rate || '0'
+
           if (itemData.item_group === 'Sub Assemblies' || itemData.item_group === 'Sub-assembly') {
             try {
               const bomsResponse = await productionService.getBOMs({ item_code: value })
@@ -425,7 +577,7 @@ export default function BOMForm() {
                 const bom = bomsResponse.data[0]
                 let totalCost = parseFloat(bom.total_cost || 0)
                 const bomQuantity = parseFloat(bom.quantity || 1)
-                
+
                 if ((totalCost === 0 || !totalCost) && bom.bom_id) {
                   try {
                     const bomDetailsResponse = await productionService.getBOMDetails(bom.bom_id)
@@ -450,21 +602,27 @@ export default function BOMForm() {
                     totalCost = parseFloat(itemData.valuation_rate || 0)
                   }
                 }
-                
+
                 const costPerUnit = totalCost / bomQuantity
                 rate = costPerUnit.toFixed(2)
+
+                if (bom.selling_rate && parseFloat(bom.selling_rate) > 0) {
+                  sellingPrice = (parseFloat(bom.selling_rate) / bomQuantity).toFixed(2)
+                }
               }
             } catch (bomErr) {
               console.warn('Failed to fetch BOM for sub-assembly:', bomErr)
               rate = itemData.valuation_rate || '0'
             }
           }
-          
+
           setNewLine(prev => ({
             ...prev,
             component_name: itemData.name || itemData.item_name || prev.component_name,
             uom: itemData.uom || prev.uom,
-            rate: rate
+            rate: rate,
+            selling_price: sellingPrice,
+            loss_percentage: itemData.loss_percentage || '0'
           }))
         }
       } catch (err) {
@@ -473,14 +631,13 @@ export default function BOMForm() {
     }
   }
 
-  const handleScrapItemChange = async (e) => {
-    const { name, value } = e.target
+  const handleScrapItemChange = async (value) => {
     setNewScrapItem(prev => ({
       ...prev,
-      [name]: value
+      item_code: value
     }))
 
-    if (name === 'item_code' && !manualEntry.scrapItemCode && value) {
+    if (value) {
       try {
         const response = await productionService.getItemDetails(value)
         if (response.success && response.data) {
@@ -488,7 +645,7 @@ export default function BOMForm() {
           setNewScrapItem(prev => ({
             ...prev,
             item_name: itemData.name || itemData.item_name || prev.item_name,
-            rate: itemData.valuation_rate || prev.rate || '0'
+            rate: itemData.selling_rate || itemData.valuation_rate || prev.rate || '0'
           }))
         }
       } catch (err) {
@@ -497,15 +654,219 @@ export default function BOMForm() {
     }
   }
 
+  const handleComponentChange = async (value) => {
+    let item = items.find(i => i.item_code === value)
+    let rate = item?.valuation_rate || '0'
+    let sellingPrice = item?.selling_rate || '0'
+    let componentName = item?.name || ''
+
+    if (!componentName) {
+      try {
+        const itemResp = await productionService.getItemDetails(value)
+        if (itemResp && itemResp.data) {
+          componentName = itemResp.data.name || itemResp.data.item_name || ''
+          rate = itemResp.data.valuation_rate || rate
+          sellingPrice = itemResp.data.selling_rate || sellingPrice
+          item = itemResp.data
+        }
+      } catch (e) {
+        console.warn(`Failed to fetch item details for ${value}:`, e)
+      }
+    }
+
+    const isFinishedGoods = item?.item_group === 'Finished Goods' || item?.item_group === 'Finished good'
+    const isSubAssembly = item?.item_group === 'Sub Assemblies' || item?.item_group === 'Sub-assembly'
+
+    if (isFinishedGoods || isSubAssembly) {
+      try {
+        const bomsResponse = await productionService.getBOMs({ item_code: value })
+        if (bomsResponse && bomsResponse.data && bomsResponse.data.length > 0) {
+          const bom = bomsResponse.data[0]
+          let totalCost = parseFloat(bom.total_cost || 0)
+          const bomQuantity = parseFloat(bom.quantity || 1)
+
+          if ((totalCost === 0 || !totalCost) && bom.bom_id) {
+            try {
+              const bomDetailsResponse = await productionService.getBOMDetails(bom.bom_id)
+              const bomDetails = bomDetailsResponse && bomDetailsResponse.data ? bomDetailsResponse.data : bomDetailsResponse
+              if (bomDetails && bomDetails.lines && bomDetails.lines.length > 0) {
+                totalCost = 0
+
+                if (isFinishedGoods) {
+                  const newBomLines = []
+                  for (const line of bomDetails.lines) {
+                    try {
+                      const itemResp = await productionService.getItemDetails(line.component_code)
+                      const itemRate = itemResp?.data?.valuation_rate || 0
+                      const qty = parseFloat(line.quantity || 0)
+                      const lossPercentage = itemResp?.data?.loss_percentage || line.item_loss_percentage || '0'
+                      const amount = (itemRate * qty).toFixed(2)
+                      const scrapQty = (qty * (parseFloat(lossPercentage) / 100)).toFixed(2)
+
+                      totalCost += parseFloat(amount)
+
+                      newBomLines.push({
+                        id: Date.now() + Math.random(),
+                        component_code: line.component_code,
+                        component_name: line.component_name || itemResp?.data?.name || '',
+                        qty: qty.toString(),
+                        uom: line.uom || 'Kg',
+                        item_group: line.item_group,
+                        rate: itemRate.toString(),
+                        amount: amount,
+                        loss_percentage: lossPercentage,
+                        scrap_qty: scrapQty,
+                        notes: line.notes || ''
+                      })
+                    } catch (e) {
+                      console.warn(`Failed to fetch details for ${line.component_code}:`, e)
+                    }
+                  }
+
+                  if (newBomLines.length > 0) {
+                    setBomLines([...bomLines, ...newBomLines])
+                    alert(`✓ Added ${newBomLines.length} sub-assemblies from ${componentName}`)
+                    setNewLine({ component_code: '', component_name: '', qty: '1', uom: 'Kg', item_group: '', rate: '0', selling_price: '0', notes: '', loss_percentage: '0', scrap_qty: '0' })
+                    return
+                  }
+                } else {
+                  for (const line of bomDetails.lines) {
+                    try {
+                      const itemResp = await productionService.getItemDetails(line.component_code)
+                      if (itemResp && itemResp.data) {
+                        const itemRate = parseFloat(itemResp.data.valuation_rate || 0)
+                        const qty = parseFloat(line.quantity || 0)
+                        totalCost += (itemRate * qty)
+                      }
+                    } catch (e) {
+                      console.warn(`Failed to fetch cost for ${line.component_code}:`, e)
+                    }
+                  }
+                }
+              }
+            } catch (detailErr) {
+              console.warn('Failed to fetch BOM details for', value, ':', detailErr.message)
+              totalCost = parseFloat(item.valuation_rate || 0)
+            }
+          }
+
+          const costPerUnit = totalCost / bomQuantity
+          rate = costPerUnit.toFixed(2)
+
+          if (bom.selling_rate && parseFloat(bom.selling_rate) > 0) {
+            sellingPrice = (parseFloat(bom.selling_rate) / bomQuantity).toFixed(2)
+          }
+        }
+      } catch (bomErr) {
+        console.warn('Failed to fetch BOM for component:', bomErr)
+      }
+    }
+
+    const selectedItem = items.find(i => i.item_code === value)
+    const lossPercentage = selectedItem?.loss_percentage || '0'
+    setNewLine({ 
+      ...newLine, 
+      component_code: value, 
+      component_name: componentName, 
+      rate, 
+      selling_price: sellingPrice,
+      loss_percentage: lossPercentage 
+    })
+  }
+
+  const handleRawMaterialItemChange = async (value) => {
+    let item = items.find(i => i.item_code === value)
+    let rate = item?.valuation_rate || '0'
+    let sellingPrice = item?.selling_rate || '0'
+
+    if (!item) {
+      try {
+        const itemResp = await productionService.getItemDetails(value)
+        if (itemResp && itemResp.data) {
+          item = itemResp.data
+          rate = item.valuation_rate || rate
+          sellingPrice = item.selling_rate || sellingPrice
+        }
+      } catch (e) {
+        console.warn(`Failed to fetch item details for ${value}:`, e)
+      }
+    }
+
+    if (item?.item_group === 'Sub Assemblies' || item?.item_group === 'Sub-assembly') {
+      try {
+        const bomsResponse = await productionService.getBOMs({ item_code: value })
+        if (bomsResponse && bomsResponse.data && bomsResponse.data.length > 0) {
+          const bom = bomsResponse.data[0]
+          let totalCost = parseFloat(bom.total_cost || 0)
+          const bomQuantity = parseFloat(bom.quantity || 1)
+
+          if ((totalCost === 0 || !totalCost) && bom.bom_id) {
+            try {
+              const bomDetailsResponse = await productionService.getBOMDetails(bom.bom_id)
+              const bomDetails = bomDetailsResponse && bomDetailsResponse.data ? bomDetailsResponse.data : bomDetailsResponse
+              if (bomDetails && bomDetails.lines && bomDetails.lines.length > 0) {
+                totalCost = 0
+                for (const line of bomDetails.lines) {
+                  try {
+                    const itemResp = await productionService.getItemDetails(line.component_code)
+                    if (itemResp && itemResp.data) {
+                      const itemRate = parseFloat(itemResp.data.valuation_rate || 0)
+                      const qty = parseFloat(line.quantity || 0)
+                      totalCost += (itemRate * qty)
+                    }
+                  } catch (e) {
+                    console.warn(`Failed to fetch cost for ${line.component_code}:`, e)
+                  }
+                }
+              }
+            } catch (detailErr) {
+              console.warn('Failed to fetch BOM details for', value, ':', detailErr.message)
+              totalCost = parseFloat(item.valuation_rate || 0)
+            }
+          }
+
+          const costPerUnit = totalCost / bomQuantity
+          rate = costPerUnit.toFixed(2)
+
+          if (bom.selling_rate && parseFloat(bom.selling_rate) > 0) {
+            sellingPrice = (parseFloat(bom.selling_rate) / bomQuantity).toFixed(2)
+          }
+        }
+      } catch (bomErr) {
+        console.warn('Failed to fetch BOM for sub-assembly:', bomErr)
+      }
+    }
+
+    setNewRawMaterial({
+      ...newRawMaterial,
+      item_code: value,
+      item_name: item?.name || item?.item_name || '',
+      item_group: item?.item_group || '',
+      rate,
+      selling_price: sellingPrice
+    })
+  }
+
   const addBomLine = () => {
     if (!newLine.component_code || !newLine.qty) {
       setError('Please fill component code and quantity')
       return
     }
-    const amount = (parseFloat(newLine.qty) || 0) * (parseFloat(newLine.rate) || 0)
+    const qty = parseFloat(newLine.qty) || 0
+    const rate = parseFloat(newLine.rate) || 0
+    const sellingPrice = parseFloat(newLine.selling_price) || 0
+    const amount = qty * rate
+    const selling_amount = qty * sellingPrice
     const lossPercentage = parseFloat(newLine.loss_percentage) || 0
-    const scrapQty = (parseFloat(newLine.qty) * lossPercentage) / 100
-    setBomLines([...bomLines, { ...newLine, id: Date.now(), amount, loss_percentage: lossPercentage, scrap_qty: scrapQty }])
+    const scrapQty = (qty * lossPercentage) / 100
+    setBomLines([...bomLines, { 
+      ...newLine, 
+      id: Date.now(), 
+      amount, 
+      selling_amount,
+      loss_percentage: lossPercentage, 
+      scrap_qty: scrapQty 
+    }])
     setNewLine({
       component_code: '',
       component_name: '',
@@ -513,6 +874,7 @@ export default function BOMForm() {
       uom: 'Kg',
       item_group: '',
       rate: '0',
+      selling_price: '0',
       notes: '',
       loss_percentage: '0',
       scrap_qty: '0'
@@ -527,8 +889,15 @@ export default function BOMForm() {
     setBomLines(bomLines.map(line => {
       if (line.id === lineId) {
         const updated = { ...line, [field]: value }
-        if (field === 'qty' || field === 'rate') {
-          updated.amount = (parseFloat(updated.qty) || 0) * (parseFloat(updated.rate) || 0)
+        if (field === 'qty' || field === 'rate' || field === 'selling_price' || field === 'loss_percentage') {
+          const qty = parseFloat(updated.qty) || 0
+          const rate = parseFloat(updated.rate) || 0
+          const sellingPrice = parseFloat(updated.selling_price) || 0
+          const lossPercentage = parseFloat(updated.loss_percentage) || 0
+          
+          updated.amount = (qty * rate).toFixed(2)
+          updated.selling_amount = (qty * sellingPrice).toFixed(2)
+          updated.scrap_qty = ((qty * lossPercentage) / 100).toFixed(2)
         }
         return updated
       }
@@ -544,8 +913,12 @@ export default function BOMForm() {
     setRawMaterials(rawMaterials.map(material => {
       if (material.id === materialId) {
         const updated = { ...material, [field]: value }
-        if (field === 'qty' || field === 'rate') {
-          updated.amount = (parseFloat(updated.qty) || 0) * (parseFloat(updated.rate) || 0)
+        if (field === 'qty' || field === 'rate' || field === 'selling_price') {
+          const qty = parseFloat(updated.qty) || 0
+          const rate = parseFloat(updated.rate) || 0
+          const sellingPrice = parseFloat(updated.selling_price) || 0
+          updated.amount = (qty * rate).toFixed(2)
+          updated.selling_amount = (qty * sellingPrice).toFixed(2)
         }
         return updated
       }
@@ -558,8 +931,13 @@ export default function BOMForm() {
       setError('Please enter item code and quantity')
       return
     }
-    const amount = (parseFloat(newRawMaterial.qty) || 0) * (parseFloat(newRawMaterial.rate) || 0)
-    setRawMaterials([...rawMaterials, { ...newRawMaterial, id: Date.now(), amount }])
+    const qty = parseFloat(newRawMaterial.qty) || 0
+    const rate = parseFloat(newRawMaterial.rate) || 0
+    const sellingPrice = parseFloat(newRawMaterial.selling_price) || 0
+    const amount = qty * rate
+    const selling_amount = qty * sellingPrice
+    
+    setRawMaterials([...rawMaterials, { ...newRawMaterial, id: Date.now(), amount, selling_amount }])
     setNewRawMaterial({
       item_code: '',
       item_name: '',
@@ -567,6 +945,7 @@ export default function BOMForm() {
       qty: '1',
       uom: 'Kg',
       rate: '0',
+      selling_price: '0',
       source_warehouse: '',
       operation: ''
     })
@@ -586,12 +965,13 @@ export default function BOMForm() {
       setError('Please enter operation name')
       return
     }
-    const calculatedCost = calculateOperationCost(newOperation.operation_time, newOperation.fixed_time, newOperation.hourly_rate)
+    const calculatedCost = calculateOperationCost(newOperation.operation_time, newOperation.setup_time, newOperation.hourly_rate)
     setOperations([...operations, { ...newOperation, operating_cost: calculatedCost.toFixed(2), id: Date.now() }])
     setNewOperation({
       operation_name: '',
       workstation_type: '',
       operation_time: '0',
+      setup_time: '0',
       fixed_time: '0',
       hourly_rate: '0',
       operating_cost: '0',
@@ -622,7 +1002,7 @@ export default function BOMForm() {
   }
 
   const updateScrapItemLoss = (itemId, lossPercent) => {
-    setScrapItems(scrapItems.map(item => 
+    setScrapItems(scrapItems.map(item =>
       item.id === itemId ? { ...item, loss_percentage: lossPercent } : item
     ))
   }
@@ -639,7 +1019,7 @@ export default function BOMForm() {
       uom: rm.uom,
       source_warehouse: rm.source_warehouse,
       operation: rm.operation,
-      cost: (parseFloat(rm.amount) || 0) * (parseFloat(quantity) || 0)
+      cost: (parseFloat(rm.selling_amount || rm.amount) || 0) * (parseFloat(quantity) || 0)
     }))
   }
 
@@ -653,17 +1033,17 @@ export default function BOMForm() {
         throw new Error('Please fill all required fields')
       }
 
-    const payload = {
-  ...formData,
-  lines: bomLines.filter(line => line.component_code && line.component_code.trim()),
-  rawMaterials: rawMaterials.filter(rm => rm.item_code && rm.item_code.trim()),
-  operations: operations,
-  scrapItems: scrapItems,
-  quantity: parseFloat(formData.quantity),
-  revision: parseInt(formData.revision),
-  process_loss_percentage: parseFloat(formData.process_loss_percentage),
-  total_cost: totalBOMCost
-}
+      const payload = {
+        ...formData,
+        lines: bomLines.filter(line => line.component_code && line.component_code.trim()),
+        rawMaterials: rawMaterials.filter(rm => rm.item_code && rm.item_code.trim()),
+        operations: operations,
+        scrapItems: scrapItems,
+        quantity: parseFloat(formData.quantity),
+        revision: parseInt(formData.revision),
+        process_loss_percentage: parseFloat(formData.process_loss_percentage),
+        total_cost: totalBOMCost
+      }
 
 
 
@@ -682,18 +1062,17 @@ export default function BOMForm() {
     }
   }
 
-  const totalComponentCost = bomLines.reduce((sum, line) => sum + (parseFloat(line.amount) || 0), 0)
-  const totalRawMaterialCost = rawMaterials.reduce((sum, rm) => sum + (parseFloat(rm.amount) || 0), 0)
+  const totalComponentCost = bomLines.reduce((sum, line) => sum + (parseFloat(line.selling_amount || line.amount) || 0), 0)
+  const totalRawMaterialCost = rawMaterials.reduce((sum, rm) => sum + (parseFloat(rm.selling_amount || rm.amount) || 0), 0)
   const totalOperationCost = operations.reduce((sum, op) => sum + (parseFloat(op.operating_cost) || 0), 0)
-  const totalScrapQty = bomLines.reduce((sum, line) => sum + (parseFloat(line.scrap_qty) || 0), 0)
+  const totalScrapQty = bomLines.reduce((sum, line) => sum + (parseFloat(line.scrap_qty) || 0), 0) +
+    scrapItems.reduce((sum, item) => sum + (parseFloat(item.input_quantity) || 0), 0)
   const totalScrapLossCost = scrapItems.reduce((sum, item) => {
-    const inputQty = parseFloat(item.input_quantity) || 0
-    const lossPercent = parseFloat(item.loss_percentage) || 0
-    const scrapQty = (inputQty * lossPercent) / 100
+    const qty = parseFloat(item.input_quantity) || 0
     const rate = parseFloat(item.rate) || 0
-    return sum + (scrapQty * rate)
+    return sum + (qty * rate)
   }, 0)
-  
+
   const materialCost = (totalComponentCost + totalRawMaterialCost) - totalScrapLossCost
   const labourCost = totalOperationCost
   const totalBOMCost = materialCost + labourCost
@@ -721,1094 +1100,1474 @@ export default function BOMForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100  px-6 py-6">
-      <div className="w-full mx-auto">
-        <div className="flex justify-between items-start mb-3">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-9 h-9 rounded-xs bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
-                {id ? '✏️' : '📋'}
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">{id ? 'Edit BOM' : 'Create BOM'}</h1>
-                <p className="text-xs text-gray-600 mt-0">{id ? 'Modify BOM details' : 'Create BOM'}</p>
+    <div className="min-h-screen bg-slate-50/50 p-2">
+      <div className="max-w-5xl mx-auto">
+        {/* Header Section */}
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className=" p-2bg-slate-900 rounded   shadow-slate-200">
+              <Layers className="text-white" size={24} />
+            </div>
+            <div>
+              <h1 className="text-xl  text-slate-900 leading-tight ">
+                {id ? 'Strategic BOM' : 'New Formulation'}
+              </h1>
+              <div className="flex items-center gap-2 text-xs font-medium text-slate-400 mt-1">
+                <Activity size={12} className="text-indigo-500" />
+                <span>Manufacturing Intelligence</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                <span className="text-indigo-600 ">{formData.status?.toUpperCase() || 'DRAFT'}</span>
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
-            <button 
-              type="button" 
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
               onClick={() => setShowDrafts(true)}
-              className="px-4 py-1.5 bg-blue-50 text-blue-700 rounded-xs font-semibold text-xs hover:bg-blue-100 transition shadow-sm border border-blue-200 hover:border-blue-300 flex items-center gap-2"
+              className="inline-flex items-center gap-2 rounded bg-white p-2.5 text-xs  text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all active:scale-95  "
             >
-              <FileText size={14} />
-              Drafts
+              <FileText size={18} className="text-indigo-600" />
+              Intelligence Drafts
             </button>
-            <button 
-              type="button" 
-              onClick={() => navigate('/manufacturing/bom')} 
-              className="px-4 py-1.5 bg-white text-gray-700 rounded-xs font-semibold text-xs hover:bg-gray-100 transition shadow-sm border border-gray-200 hover:border-gray-300"
+            <button
+              type="button"
+              onClick={() => navigate('/manufacturing/bom')}
+              className="inline-flex items-center gap-2 rounded bg-white p-2.5 text-xs  text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all active:scale-95  "
             >
-              ← Back
+              <ArrowLeft size={18} />
+              Return
             </button>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-2">
-          {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 rounded-xs p-2 flex items-start gap-2">
-              <AlertCircle size={16} className="text-red-500 mt-0 flex-shrink-0" />
-              <div>
-                <p className="font-semibold text-red-800 text-xs">Error</p>
-                <p className="text-red-700 text-xs mt-0">{error}</p>
-              </div>
-            </div>
-          )}
+        <form id="bom-form" onSubmit={handleSubmit} className="relative">
+          <div className="grid grid-cols-4 gap-6 items-start">
+            {/* Sidebar Navigation */}
+            <div className="col-span-1 sticky top-8 ">
+              <div className="space-y-6">
+                {/* BOM Intelligence Widget */}
+                <div className="bg-slate-900 rounded  relative  group">
+                  <div className="absolute -right-10 -to p-2 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all duration-1000" />
+                  <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-all duration-1000" />
 
-          <div className=" rounded-xs shadow-sm border border-gray-200">
-            {/* PRODUCT INFORMATION SECTION */}
-            <div className={`border-b border-gray-200 p-2 ${expandedSections.product ? 'bg-blue-50 border-blue-200' : ''}`}>
-              <button
-                type="button"
-                onClick={() => toggleSection('product')}
-                className="w-full flex items-center justify-between group"
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">📦</div>
-                  <div className="text-left">
-                    <h2 className="text-xs font-bold text-blue-900 group-hover:text-blue-700 transition">Product Information</h2>
-                    <p className="text-xs text-gray-500 mt-0">Basics</p>
-                  </div>
-                </div>
-                <div className="text-blue-600 group-hover:text-blue-700 transition flex-shrink-0">
-                  {expandedSections.product ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                </div>
-              </button>
-
-              {expandedSections.product && (
-                <div className="space-y-3 pt-3 border-t border-blue-100">
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="flex flex-col">
-                      <label className="text-xs font-bold text-gray-600 mb-1">Product Name *</label>
-                      <SearchableSelect
-                        value={formData.product_name}
-                        onChange={handleProductNameChange}
-                        options={items
-                          .filter(item => item.item_group === 'Finished Goods' || item.item_group === 'Finished Good' || item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')
-                          .map(item => ({
-                            label: item.name || item.item_name,
-                            value: item.name || item.item_name
-                          }))}
-                        placeholder="Search products..."
-                        required
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-xs font-bold text-gray-600 mb-1">Item Code *</label>
-                      <SearchableSelect
-                        value={formData.item_code}
-                        onChange={handleItemCodeChange}
-                        options={items
-                          .filter(item => item.item_group === 'Finished Goods' || item.item_group === 'Finished Good' || item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')
-                          .map(item => ({
-                            label: item.name,
-                            value: item.item_code
-                          }))}
-                        placeholder="Search items..."
-                        required
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-xs font-bold text-gray-600 mb-1">Item Group</label>
-                      <SearchableSelect
-                        value={formData.item_group}
-                        onChange={(value) => setFormData(prev => ({...prev, item_group: value}))}
-                        options={itemGroups.map(group => ({
-                          label: group.name || group.item_group_name,
-                          value: group.name || group.item_group_name
-                        }))}
-                        placeholder="Select item group..."
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="flex flex-col">
-                      <label className="text-xs font-bold text-gray-600 mb-1">Quantity *</label>
-                      <input type="number" name="quantity" value={formData.quantity} onChange={handleInputChange} onKeyDown={handleKeyDown} step="0.01" required className="p-2 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-xs font-bold text-gray-600 mb-1">UOM</label>
-                      <SearchableSelect
-                        value={formData.uom}
-                        onChange={(value) => setFormData({...formData, uom: value})}
-                        options={uomList.map(uom => ({
-                          label: uom,
-                          value: uom
-                        }))}
-                        placeholder="Select UOM..."
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-xs font-bold text-gray-600 mb-1">Revision</label>
-                      <input type="number" name="revision" value={formData.revision} onChange={handleInputChange} onKeyDown={handleKeyDown} step="1" className="p-2 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-xs font-bold text-gray-600 mb-1">Description</label>
-                    <textarea name="description" value={formData.description} onChange={handleInputChange} onKeyDown={handleKeyDown} placeholder="Notes..." className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit min-h-12 transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
-                    <label className="flex items-center gap-2 cursor-pointer p-2 border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-300 transition">
-                      <input
-                        type="checkbox"
-                        name="is_active"
-                        checked={formData.is_active}
-                        onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
-                        className="w-3 h-3 text-blue-600 border-gray-300 rounded cursor-pointer"
-                      />
-                      <span className="text-xs font-medium text-gray-700">Active</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer p-2 border border-gray-200 rounded hover:bg-blue-50 hover:border-blue-300 transition">
-                      <input
-                        type="checkbox"
-                        name="is_default"
-                        checked={formData.is_default}
-                        onChange={(e) => setFormData({...formData, is_default: e.target.checked})}
-                        className="w-3 h-3 text-blue-600 border-gray-300 rounded cursor-pointer"
-                      />
-                      <span className="text-xs font-medium text-gray-700">Default</span>
-                    </label>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* COMPONENTS/SUB-ASSEMBLIES SECTION */}
-            <div className={`border-b border-gray-200 p-2 ${expandedSections.components ? 'bg-blue-50 border-blue-200' : ''}`}>
-              <button
-                type="button"
-                onClick={() => toggleSection('components')}
-                className="w-full flex items-center justify-between group"
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">📦</div>
-                  <div className="text-left">
-                    <h2 className="text-xs font-bold text-blue-900 group-hover:text-blue-700 transition">Components/Sub-Assemblies</h2>
-                    <p className="text-xs text-gray-500 mt-0">{bomLines.length} items • ₹{bomLines.reduce((sum, line) => sum + (parseFloat(line.amount) || 0), 0).toFixed(2)}</p>
-                  </div>
-                </div>
-                <div className="text-blue-600 group-hover:text-blue-700 transition flex-shrink-0">
-                  {expandedSections.components ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                </div>
-              </button>
-
-              {expandedSections.components && (
-                <div className="space-y-3 pt-3 border-t border-blue-100">
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded p-3">
-                    <h3 className="font-bold text-blue-900 mb-3 text-xs flex items-center gap-1">
-                      <Plus size={14} /> Add Component
-                    </h3>
-                    <div className="grid auto-fit gap-2 items-end" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))'}}>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Component/ Sub assemblies *</label>
-                        <SearchableSelect
-                          value={newLine.component_code}
-                          onChange={async (value) => {
-                            let item = items.find(i => i.item_code === value)
-                            let rate = item?.valuation_rate || '0'
-                            let componentName = item?.name || ''
-                            
-                            if (!componentName) {
-                              try {
-                                const itemResp = await productionService.getItemDetails(value)
-                                if (itemResp && itemResp.data) {
-                                  componentName = itemResp.data.name || itemResp.data.item_name || ''
-                                  rate = itemResp.data.valuation_rate || rate
-                                  item = itemResp.data
-                                }
-                              } catch (e) {
-                                console.warn(`Failed to fetch item details for ${value}:`, e)
-                              }
-                            }
-                            
-                            const isFinishedGoods = item?.item_group === 'Finished Goods' || item?.item_group === 'Finished good'
-                            const isSubAssembly = item?.item_group === 'Sub Assemblies' || item?.item_group === 'Sub-assembly'
-                            
-                            if (isFinishedGoods || isSubAssembly) {
-                              try {
-                                const bomsResponse = await productionService.getBOMs({ item_code: value })
-                                if (bomsResponse && bomsResponse.data && bomsResponse.data.length > 0) {
-                                  const bom = bomsResponse.data[0]
-                                  let totalCost = parseFloat(bom.total_cost || 0)
-                                  const bomQuantity = parseFloat(bom.quantity || 1)
-                                  
-                                  if ((totalCost === 0 || !totalCost) && bom.bom_id) {
-                                    try {
-                                      const bomDetailsResponse = await productionService.getBOMDetails(bom.bom_id)
-                                      const bomDetails = bomDetailsResponse && bomDetailsResponse.data ? bomDetailsResponse.data : bomDetailsResponse
-                                      if (bomDetails && bomDetails.lines && bomDetails.lines.length > 0) {
-                                        totalCost = 0
-                                        
-                                        if (isFinishedGoods) {
-                                          const newBomLines = []
-                                          for (const line of bomDetails.lines) {
-                                            try {
-                                              const itemResp = await productionService.getItemDetails(line.component_code)
-                                              const itemRate = itemResp?.data?.valuation_rate || 0
-                                              const qty = parseFloat(line.quantity || 0)
-                                              const lossPercentage = itemResp?.data?.loss_percentage || line.item_loss_percentage || '0'
-                                              const amount = (itemRate * qty).toFixed(2)
-                                              const scrapQty = (qty * (parseFloat(lossPercentage) / 100)).toFixed(2)
-                                              
-                                              totalCost += parseFloat(amount)
-                                              
-                                              newBomLines.push({
-                                                id: Date.now() + Math.random(),
-                                                component_code: line.component_code,
-                                                component_name: line.component_name || itemResp?.data?.name || '',
-                                                qty: qty.toString(),
-                                                uom: line.uom || 'Kg',
-                                                item_group: line.item_group,
-                                                rate: itemRate.toString(),
-                                                amount: amount,
-                                                loss_percentage: lossPercentage,
-                                                scrap_qty: scrapQty,
-                                                notes: line.notes || ''
-                                              })
-                                            } catch (e) {
-                                              console.warn(`Failed to fetch details for ${line.component_code}:`, e)
-                                            }
-                                          }
-                                          
-                                          if (newBomLines.length > 0) {
-                                            setBomLines([...bomLines, ...newBomLines])
-                                            alert(`✓ Added ${newBomLines.length} sub-assemblies from ${componentName}`)
-                                            setNewLine({component_code: '', component_name: '', qty: '1', uom: 'Kg', item_group: '', rate: '0', notes: '', loss_percentage: '0', scrap_qty: '0'})
-                                            return
-                                          }
-                                        } else {
-                                          for (const line of bomDetails.lines) {
-                                            try {
-                                              const itemResp = await productionService.getItemDetails(line.component_code)
-                                              if (itemResp && itemResp.data) {
-                                                const itemRate = parseFloat(itemResp.data.valuation_rate || 0)
-                                                const qty = parseFloat(line.quantity || 0)
-                                                totalCost += (itemRate * qty)
-                                              }
-                                            } catch (e) {
-                                              console.warn(`Failed to fetch cost for ${line.component_code}:`, e)
-                                            }
-                                          }
-                                        }
-                                      }
-                                    } catch (detailErr) {
-                                      console.warn('Failed to fetch BOM details for', value, ':', detailErr.message)
-                                      totalCost = parseFloat(item.valuation_rate || 0)
-                                    }
-                                  }
-                                  
-                                  const costPerUnit = totalCost / bomQuantity
-                                  rate = costPerUnit.toFixed(2)
-                                }
-                              } catch (bomErr) {
-                                console.warn('Failed to fetch BOM for component:', bomErr)
-                              }
-                            }
-                            
-                            const selectedItem = items.find(i => i.item_code === value)
-                            const lossPercentage = selectedItem?.loss_percentage || '0'
-                            setNewLine({...newLine, component_code: value, component_name: componentName, rate, loss_percentage: lossPercentage})
-                          }}
-                          options={items.filter(item => item && item.item_code && item.name).map(item => ({
-                            label: item.name,
-                            value: item.item_code
-                          }))}
-                          placeholder="Search component..."
-                        />
+                  <div className="relative z-10 p-2">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="relative">  
+                          <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping absolute inset-0" />
+                          <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 relative z-10" />
+                        </div>
+                        <span className="text-white  text-xs        opacity-90">Neural Core</span>
                       </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Qty *</label>
-                        <input type="number" value={newLine.qty} onChange={(e) => setNewLine({...newLine, qty: e.target.value})} onKeyDown={handleKeyDown} step="0.01" placeholder="1" className="p-2 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
+                      <div className="flex -space-x-2">
+                        {[1, 2, 3].map(i => (
+                          <div key={i} className="w-5 h-5 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center">
+                            <div className="w-1 h-1 rounded-full bg-indigo-400 opacity-40" />
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">UOM</label>
-                        <select value={newLine.uom} onChange={(e) => setNewLine({...newLine, uom: e.target.value})} className="px-2 py-1.5 border border-gray-200 rounded text-xs bg-white font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100">
-                          <option value="Kg">Kg</option>
-                          <option value="Nos">Nos</option>
-                          <option value="Ltr">Ltr</option>
-                          <option value="Meter">Meter</option>
-                          <option value="Box">Box</option>
-                        </select>
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Rate (₹)</label>
-                        <input type="number" value={newLine.rate} onChange={(e) => setNewLine({...newLine, rate: e.target.value})} onKeyDown={handleKeyDown} step="0.01" placeholder="0" className="p-2 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Loss % (Scrap)</label>
-                        <input type="number" value={newLine.loss_percentage} onChange={(e) => setNewLine({...newLine, loss_percentage: e.target.value})} onKeyDown={handleKeyDown} step="0.01" placeholder="0" min="0" max="100" className="p-2 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Notes</label>
-                        <input type="text" value={newLine.notes} onChange={(e) => setNewLine({...newLine, notes: e.target.value})} onKeyDown={handleKeyDown} placeholder="Notes" className="p-2 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-100" />
-                      </div>
-                      <button type="button" onClick={addBomLine} className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded font-semibold text-xs flex items-center justify-center gap-1 hover:from-blue-600 hover:to-blue-700 transition shadow-sm h-9">
-                        <Plus size={14} /> Add
-                      </button>
                     </div>
-                  </div>
 
-                  {bomLines.length > 0 && (
-                    <div className="border border-blue-200 rounded overflow-hidden">
-                      <div className="bg-blue-50 px-3 py-2 border-b border-blue-200">
-                        <div className="font-bold text-blue-700 text-xs flex items-center gap-1">
-                          <Check size={14} className="text-blue-600" />
-                          Components Added ({bomLines.length})
+                    <div className="flex items-stretch gap-2">
+                      <div className="flex-[1.4] bg-white/5 rounded p-2 border border-white/5 backdrop-blur-md min-w-0">
+                        <p className="text-slate-500 text-[8px]      mb-2 px-1">Protocol</p>
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-indigo-500/20 rounded-lg shrink-0">
+                            <Activity size={12} className="text-indigo-400" />
+                          </div>
+                          <p className="text-white    text-xs  tracking-tight truncate">
+                            {activeSection.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                          </p>
                         </div>
                       </div>
-                      <div className="">
-                        <table className="w-full text-xs border-collapse">
-                          <thead>
-                            <tr className="bg-gray-50 border-b border-blue-200">
-                              <th className="px-2 py-1.5 text-center text-xs font-bold text-gray-600 w-8">#</th>
-                              <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Component Code</th>
-                              <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Component Name</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Qty</th>
-                              <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">UOM</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Rate</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Amount</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Loss %</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Scrap Qty</th>
-                              <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Notes</th>
-                              <th className="px-2 py-1.5 text-center text-xs font-bold text-gray-600 w-8">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {bomLines.map((line, index) => (
-                              <tr key={line.id} className={`border-b border-blue-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}>
-                                <td className="px-2 py-1.5 text-center text-xs font-medium text-gray-600">{index + 1}</td>
-                                <td className="px-2 py-1.5 text-xs font-medium text-gray-900">{line.component_code}</td>
-                                <td className="px-2 py-1.5 text-xs text-gray-700">{line.component_name}</td>
-                                <td className="px-2 py-1.5 text-xs text-right text-gray-700">{parseFloat(line.qty || 0).toFixed(2)}</td>
-                                <td className="px-2 py-1.5 text-xs text-gray-700">{line.uom}</td>
-                                <td className="px-2 py-1.5 text-xs text-right text-gray-700">₹{parseFloat(line.rate || 0).toFixed(2)}</td>
-                                <td className="px-2 py-1.5 text-xs text-right font-semibold text-gray-900">₹{parseFloat(line.amount || 0).toFixed(2)}</td>
-                                <td className="px-2 py-1.5 text-xs text-right text-gray-700">{parseFloat(line.loss_percentage || 0).toFixed(2)}%</td>
-                                <td className="px-2 py-1.5 text-xs text-right text-amber-700 font-semibold">{parseFloat(line.scrap_qty || 0).toFixed(2)}</td>
-                                <td className="px-2 py-1.5 text-xs text-gray-600">{line.notes || '-'}</td>
-                                <td className="px-2 py-1.5 text-center">
-                                  <button type="button" onClick={() => removeBomLine(line.id)} className="p-1 text-red-600 hover:bg-red-100 rounded transition">
-                                    <Trash2 size={12} />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                          <tfoot>
-                            <tr className="bg-amber-50 border-t-2 border-amber-200 font-semibold">
-                              <td colSpan="7" className="px-2 py-2 text-right text-xs text-amber-900">Total Scrap Qty:</td>
-                              <td className="px-2 py-2 text-right text-xs font-bold text-amber-700">{totalScrapQty.toFixed(2)}</td>
-                              <td colSpan="3"></td>
-                            </tr>
-                          </tfoot>
-                        </table>
+
+
+                    </div>
+                    <div className='flex gap-2 mt-2'>
+                      <div className="flex-1 bg-white/5 rounded p-2 border border-white/5 backdrop-blur-sm hover:border-indigo-500/30 transition-all group/stat min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-slate-500 text-[8px]     ">Materials</p>
+                          <Database size={10} className="text-slate-600 group-hover/stat:text-indigo-400 transition-colors" />
+                        </div>
+                        <p className="text-white   text-lg tracking-tighter">
+                          {rawMaterials.length + bomLines.length}
+                        </p>
+                      </div>
+
+                      <div className="flex-1 bg-white/5 rounded p-2 border border-white/5 backdrop-blur-sm hover:border-emerald-500/30 transition-all group/stat min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-slate-500 text-[8px]     ">Ops</p>
+                          <Settings size={10} className="text-slate-600 group-hover/stat:text-emerald-400 transition-colors" />
+                        </div>
+                        <p className="text-white   text-lg tracking-tighter">
+                          {operations.length}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Navigation Links */}
+                <div className="bg-white/60 backdrop-blur-xl rounded border border-slate-200/50  shadow-slate-200/40 flex flex-col gap-1.5">
+                  <NavItem
+                    label="Product Info"
+                    icon={Database}
+                    section="product"
+                    isActive={activeSection === 'product'}
+                    onClick={scrollToSection}
+                    themeColor="blue"
+                  />
+                  <NavItem
+                    label="BOM Settings"
+                    icon={Settings}
+                    section="settings"
+                    isActive={activeSection === 'settings'}
+                    onClick={scrollToSection}
+                    themeColor="slate"
+                  />
+                  <NavItem
+                    label="Components"
+                    icon={Layers}
+                    section="components"
+                    isActive={activeSection === 'components'}
+                    onClick={scrollToSection}
+                    themeColor="indigo"
+                  />
+                  <NavItem
+                    label="Raw Materials"
+                    icon={Database}
+                    section="raw_materials"
+                    isActive={activeSection === 'raw_materials'}
+                    onClick={scrollToSection}
+                    themeColor="amber"
+                  />
+                  <NavItem
+                    label="Operations"
+                    icon={Settings}
+                    section="operations"
+                    isActive={activeSection === 'operations'}
+                    onClick={scrollToSection}
+                    themeColor="emerald"
+                  />
+                  <NavItem
+                    label="Scrap Items"
+                    icon={Trash2}
+                    section="scrap"
+                    isActive={activeSection === 'scrap'}
+                    onClick={scrollToSection}
+                    themeColor="rose"
+                  />
+                  <NavItem
+                    label="Costing"
+                    icon={TrendingDown}
+                    section="costing"
+                    isActive={activeSection === 'costing'}
+                    onClick={scrollToSection}
+                    themeColor="cyan"
+                  />
+                </div>
+
+                {/* Primary Action Buttons */}
+                <div className="flex flex-col gap-3">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white rounded py-4  text-xs     shadow-indigo-100 hover:bg-indigo-700 transition-all hover:-translate-y-1 active:scale-95 disabled:opacity-50"
+                  >
+                    {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={18} />}
+                    Initialize
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="col-span-3">
+              {error && (
+                <div className="flex items-center gap-4 rounded border border-rose-100 bg-rose-50/50  p-2 text-rose-800 animate-in fade-in slide-in-from-top-2 backdrop-blur-sm">
+                  <div className="p-2 bg-rose-100 rounded-lg">
+                    <AlertCircle className="h-5 w-5 text-rose-600" />
+                  </div>
+                  <p className="text-xs   tracking-wide">{error}</p>
+                </div>
+              )}
+
+              {/* Formulation Cards */}
+              <div className="  space-y-4">
+                <Card className=" border border-slate-200/50 p-2   shadow-slate-200/40 bg-white/90 backdrop-blur-xl rounded">
+                  <SectionHeader
+                    id="product"
+                    title="Formulation Target"
+                    icon={Database}
+                    subtitle="Primary Specification Details"
+                    isExpanded={expandedSections.product}
+                    onToggle={() => toggleSection('product')}
+                    themeColor="blue"
+                  />
+                  {expandedSections.product && (
+                    <div className=" p-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <FieldWrapper label="Strategic Product Name" required>
+                          <SearchableSelect
+                            value={formData.product_name}
+                            onChange={handleProductNameChange}
+                            options={items
+                              .filter(item => item.item_group === 'Finished Goods' || item.item_group === 'Finished Good' || item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')
+                              .map(item => ({
+                                label: item.name || item.item_name,
+                                value: item.name || item.item_name
+                              }))}
+                            placeholder="Identify formulation target..."
+                            className="glass-input"
+                          />
+                        </FieldWrapper>
+
+                        <FieldWrapper label="Strategic Item Code" required>
+                          <SearchableSelect
+                            value={formData.item_code}
+                            onChange={handleItemCodeChange}
+                            options={items
+                              .filter(item => item.item_group === 'Finished Goods' || item.item_group === 'Finished Good' || item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')
+                              .map(item => ({
+                                label: item.name,
+                                value: item.item_code
+                              }))}
+                            placeholder="Item code identification..."
+                            className="glass-input"
+                          />
+                        </FieldWrapper>
+
+                        <FieldWrapper label="Classification Group">
+                          <SearchableSelect
+                            value={formData.item_group}
+                            onChange={(value) => setFormData({ ...formData, item_group: value })}
+                            options={itemGroups.map(ig => ({
+                              label: ig.name || ig.item_group,
+                              value: ig.name || ig.item_group
+                            }))}
+                            placeholder="Strategic classification..."
+                            className="glass-input"
+                          />
+                        </FieldWrapper>
+
+                        <FieldWrapper label="Batch Quantity Specification" required>
+                          <div className="rounded  border border-slate-200 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all bg-white">
+                            <input
+                              type="number"
+                              name="quantity"
+                              value={formData.quantity}
+                              onChange={handleInputChange}
+                              step="0.01"
+                              className="w-full bg-transparent  p-2 text-xs    focus:outline-none border-none"
+                            />
+
+                          </div>
+                        </FieldWrapper>
+                        <FieldWrapper label="UOM">
+                          <div className=" border-l border-slate-100 bg-slate-50/50">
+                            <SearchableSelect
+                              value={formData.uom}
+                              onChange={(value) => setFormData({ ...formData, uom: value })}
+                              options={uomList.map(uom => ({
+                                label: uom,
+                                value: uom
+                              }))}
+                              placeholder="UOM"
+                              className="border-none"
+                            />
+                          </div>
+
+                        </FieldWrapper>
+
+                        <FieldWrapper label="Revision Protocol">
+                          <div className="relative group/input">
+                            <input
+                              type="number"
+                              name="revision"
+                              value={formData.revision}
+                              onChange={handleInputChange}
+                              step="1"
+                              className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all focus:outline-none  "
+                            />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2  text-xs    text-slate-300    group-focus-within/input:text-blue-500 transition-colors">VER</div>
+                          </div>
+                        </FieldWrapper>
+
+                        <FieldWrapper label="Selling Rate (₹)">
+                          <div className="relative group/input">
+                            <input
+                              type="number"
+                              name="selling_rate"
+                              value={formData.selling_rate}
+                              onChange={handleInputChange}
+                              step="0.01"
+                              className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
+                            />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2  text-xs    text-slate-300    group-focus-within/input:text-emerald-500 transition-colors">INR</div>
+                          </div>
+                        </FieldWrapper>
+
+                        <FieldWrapper label="Total Target Value (₹)">
+                          <div className="relative group/input">
+                            <input
+                              type="text"
+                              readOnly
+                              value={(parseFloat(formData.quantity || 0) * parseFloat(formData.selling_rate || 0)).toLocaleString()}
+                              className="w-full rounded border border-slate-100 bg-slate-50  p-2 text-xs    text-slate-500 cursor-not-allowed outline-none font-medium"
+                            />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2  text-xs    text-slate-300">AUTO</div>
+                          </div>
+                        </FieldWrapper>
+
+                        <div className="flex items-center gap-2 pt-4">
+                          <label className="flex items-center gap-4 cursor-pointer group">
+                            <div className={`w-12 h-7 rounded-full transition-all duration-500 relative ${formData.is_active ? 'bg-emerald-500 shadow-lg shadow-emerald-100' : 'bg-slate-200'}`}>
+                              <input
+                                type="checkbox"
+                                checked={formData.is_active}
+                                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                                className="hidden"
+                              />
+                              <div className={`absolute top-1 w-5 h-5 rounded-full bg-white   transition-all duration-500 ${formData.is_active ? 'left-6' : 'left-1'}`} />
+                            </div>
+                            <span className=" text-xs    text-slate-500    group-hover:text-slate-900 transition-colors">Active</span>
+                          </label>
+
+                          <label className="flex items-center gap-4 cursor-pointer group">
+                            <div className={`w-12 h-7 rounded-full transition-all duration-500 relative ${formData.is_default ? 'bg-blue-600 shadow-lg shadow-blue-100' : 'bg-slate-200'}`}>
+                              <input
+                                type="checkbox"
+                                checked={formData.is_default}
+                                onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
+                                className="hidden"
+                              />
+                              <div className={`absolute top-1 w-5 h-5 rounded-full bg-white   transition-all duration-500 ${formData.is_default ? 'left-6' : 'left-1'}`} />
+                            </div>
+                            <span className=" text-xs    text-slate-500    group-hover:text-slate-900 transition-colors">Default</span>
+                          </label>
+                        </div>
                       </div>
                     </div>
                   )}
-                </div>
-              )}
-            </div>
+                </Card>
 
-            {/* MATERIALS SECTION */}
-            <div className={`border-b border-gray-200 p-2 ${expandedSections.raw_materials ? 'bg-emerald-50 border-emerald-200' : ''}`}>
-              <button
-                type="button"
-                onClick={() => toggleSection('raw_materials')}
-                className="w-full flex items-center justify-between group"
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">🏭</div>
-                  <div className="text-left">
-                    <h2 className="text-xs font-bold text-emerald-900 group-hover:text-emerald-700 transition">Materials</h2>
-                    <p className="text-xs text-gray-500 mt-0">{rawMaterials.length} • ₹{rawMaterials.reduce((sum, rm) => sum + (parseFloat(rm.amount) || 0), 0).toFixed(2)}</p>
-                  </div>
-                </div>
-                <div className="text-emerald-600 group-hover:text-emerald-700 transition flex-shrink-0">
-                  {expandedSections.raw_materials ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                </div>
-              </button>
+                {/* Settings Card */}
+                <Card className=" border border-slate-200/50 p-2  shadow-slate-200/40 bg-white/90 backdrop-blur-xl rounded">
+                  <SectionHeader
+                    id="settings"
+                    title="BOM Settings"
+                    icon={Settings}
+                    subtitle="Configuration & Rules"
+                    isExpanded={expandedSections.settings}
+                    onToggle={() => toggleSection('settings')}
+                    themeColor="slate"
+                  />
+                  {expandedSections.settings && (
+                    <div className=" p-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <FieldWrapper label="Cost Rate Based On">
+                          <SearchableSelect
+                            value={formData.cost_rate_based_on}
+                            onChange={(value) => setFormData({ ...formData, cost_rate_based_on: value })}
+                            options={[
+                              { label: 'Valuation Rate', value: 'Valuation Rate' },
+                              { label: 'Last Purchase Rate', value: 'Last Purchase Rate' },
+                              { label: 'Price List', value: 'Price List' }
+                            ]}
+                            className="glass-input"
+                          />
+                        </FieldWrapper>
 
-              {expandedSections.raw_materials && rawMaterials.length > 0 && (
-              <div className="mt-3 border border-emerald-100 rounded p-3 bg-emerald-50">
-                <h4 className="text-xs font-bold text-emerald-900 mb-2">RM Consumption Preview (for {formData.quantity} {formData.uom})</h4>
-                <div className="space-y-1">
-                  {calculateRMConsumption(formData.quantity).map((consumption, idx) => (
-                    <div key={idx} className="flex justify-between text-xs text-emerald-800">
-                      <span>{consumption.item_code} - {consumption.qty_required.toFixed(2)} {consumption.uom}</span>
-                      <span className="font-semibold">₹{consumption.cost.toFixed(2)}</span>
+                        <FieldWrapper label="Process Loss %">
+                          <div className="relative group/input">
+                            <input
+                              type="number"
+                              name="process_loss_percentage"
+                              value={formData.process_loss_percentage}
+                              onChange={handleInputChange}
+                              step="0.01"
+                              className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-slate-500 focus:ring-4 focus:ring-slate-500/10 transition-all focus:outline-none  "
+                            />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs   text-slate-300 group-focus-within/input:text-slate-500 transition-colors">%</div>
+                          </div>
+                        </FieldWrapper>
+
+                        <div className="flex items-center col-span-2 gap-2 pt-4">
+                          <label className="flex items-center gap-4 cursor-pointer group">
+                            <div className={`w-12 h-7 rounded-full transition-all duration-500 relative ${formData.with_operations ? 'bg-indigo-600 shadow-lg shadow-indigo-100' : 'bg-slate-200'}`}>
+                              <input
+                                type="checkbox"
+                                checked={formData.with_operations}
+                                onChange={(e) => setFormData({ ...formData, with_operations: e.target.checked })}
+                                className="hidden"
+                              />
+                              <div className={`absolute top-1 w-5 h-5 rounded-full bg-white   transition-all duration-500 ${formData.with_operations ? 'left-6' : 'left-1'}`} />
+                            </div>
+                            <span className=" text-xs    text-slate-500    group-hover:text-slate-900 transition-colors">With Operations</span>
+                          </label>
+
+                          <label className="flex items-center gap-4 cursor-pointer group">
+                            <div className={`w-12 h-7 rounded-full transition-all duration-500 relative ${formData.allow_alternative_item ? 'bg-indigo-600 shadow-lg shadow-indigo-100' : 'bg-slate-200'}`}>
+                              <input
+                                type="checkbox"
+                                checked={formData.allow_alternative_item}
+                                onChange={(e) => setFormData({ ...formData, allow_alternative_item: e.target.checked })}
+                                className="hidden"
+                              />
+                              <div className={`absolute top-1 w-5 h-5 rounded-full bg-white   transition-all duration-500 ${formData.allow_alternative_item ? 'left-6' : 'left-1'}`} />
+                            </div>
+                            <span className=" text-xs    text-slate-500    group-hover:text-slate-900 transition-colors">Allow Alternatives</span>
+                          </label>
+                        </div>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  )}
+                </Card>
 
-            {expandedSections.raw_materials && (
-                <div className="space-y-3 pt-3 border-t border-emerald-100">
-                  <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded p-3">
-                    <h3 className="font-bold text-emerald-900 mb-3 text-xs flex items-center gap-1">
-                      <Plus size={14} /> Add Raw Material
-                    </h3>
-                    <div className="grid auto-fit gap-2 items-end" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))'}}>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Item Name *</label>
-                        <SearchableSelect
-                          value={newRawMaterial.item_code}
-                          onChange={async (value) => {
-                            const item = items.find(i => i.item_code === value)
-                            let rate = item?.valuation_rate || '0'
-                            
-                            if (item?.item_group === 'Sub Assemblies' || item?.item_group === 'Sub-assembly') {
-                              try {
-                                const bomsResponse = await productionService.getBOMs({ item_code: value })
-                                if (bomsResponse && bomsResponse.data && bomsResponse.data.length > 0) {
-                                  const bom = bomsResponse.data[0]
-                                  let totalCost = parseFloat(bom.total_cost || 0)
-                                  const bomQuantity = parseFloat(bom.quantity || 1)
-                                  
-                                  if ((totalCost === 0 || !totalCost) && bom.bom_id) {
-                                    try {
-                                      const bomDetailsResponse = await productionService.getBOMDetails(bom.bom_id)
-                                      const bomDetails = bomDetailsResponse && bomDetailsResponse.data ? bomDetailsResponse.data : bomDetailsResponse
-                                      if (bomDetails && bomDetails.lines && bomDetails.lines.length > 0) {
-                                        totalCost = 0
-                                        for (const line of bomDetails.lines) {
-                                          try {
-                                            const itemResp = await productionService.getItemDetails(line.component_code)
-                                            if (itemResp && itemResp.data) {
-                                              const itemRate = parseFloat(itemResp.data.valuation_rate || 0)
-                                              const qty = parseFloat(line.quantity || 0)
-                                              totalCost += (itemRate * qty)
-                                            }
-                                          } catch (e) {
-                                            console.warn(`Failed to fetch cost for ${line.component_code}:`, e)
-                                          }
-                                        }
-                                      }
-                                    } catch (detailErr) {
-                                      console.warn('Failed to fetch BOM details for', value, ':', detailErr.message)
-                                      totalCost = parseFloat(itemData.valuation_rate || 0)
-                                    }
-                                  }
-                                  
-                                  const costPerUnit = totalCost / bomQuantity
-                                  rate = costPerUnit.toFixed(2)
-                                }
-                              } catch (bomErr) {
-                                console.warn('Failed to fetch BOM for sub-assembly:', bomErr)
-                              }
-                            }
-                            
-                            setNewRawMaterial({...newRawMaterial, item_code: value, item_name: item?.name || '', item_group: item?.item_group || '', rate})
-                          }}
-                          options={items.filter(item => item && item.item_code && item.name && item.item_group !== 'Finished Goods').map(item => ({
-                            label: item.name,
-                            value: item.item_code
-                          }))}
-                          placeholder="Search by name..."
-                        />
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Qty *</label>
-                        <input type="number" value={newRawMaterial.qty} onChange={(e) => setNewRawMaterial({...newRawMaterial, qty: e.target.value})} onKeyDown={handleKeyDown} step="0.01" placeholder="1" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-red-400 focus:ring-1 focus:ring-red-100" />
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">UOM</label>
-                        <select value={newRawMaterial.uom} onChange={(e) => setNewRawMaterial({...newRawMaterial, uom: e.target.value})} className="px-2 py-1.5 border border-gray-200 rounded text-xs bg-white font-inherit transition-all hover:border-gray-300 focus:border-red-400 focus:ring-1 focus:ring-red-100">
-                          <option value="Kg">Kg</option>
-                          <option value="Nos">Nos</option>
-                          <option value="Ltr">Ltr</option>
-                          <option value="Meter">Meter</option>
-                          <option value="Box">Box</option>
-                        </select>
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Item Group</label>
-                        <SearchableSelect value={newRawMaterial.item_group} onChange={(value) => setNewRawMaterial({...newRawMaterial, item_group: value})} options={itemGroups.filter(ig => ig && (ig.name || ig.item_group)).map(ig => ({label: ig.name || ig.item_group, value: ig.name || ig.item_group}))} placeholder="Select" />
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Rate (₹)</label>
-                        <input type="number" value={newRawMaterial.rate} onChange={(e) => setNewRawMaterial({...newRawMaterial, rate: e.target.value})} onKeyDown={handleKeyDown} step="0.01" placeholder="0" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-red-400 focus:ring-1 focus:ring-red-100" />
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Warehouse</label>
-                        <SearchableSelect
-                          value={newRawMaterial.source_warehouse}
-                          onChange={(value) => setNewRawMaterial({...newRawMaterial, source_warehouse: value})}
-                          options={warehousesList.filter(wh => wh && (wh.warehouse_name || wh.name)).map(wh => ({
-                            label: wh.warehouse_name || wh.name,
-                            value: wh.id
-                          }))}
-                          placeholder="Select"
-                        />
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Operation</label>
-                        <SearchableSelect
-                          value={newRawMaterial.operation}
-                          onChange={(value) => setNewRawMaterial({...newRawMaterial, operation: value})}
-                          options={operationsList.filter(op => op && op.name).map(op => ({
-                            label: op.name,
-                            value: op.name
-                          }))}
-                          placeholder="Select"
-                        />
-                      </div>
-                      <button type="button" onClick={addNewRawMaterial} className="p-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded font-semibold text-xs flex items-center justify-center gap-1 hover:from-red-600 hover:to-red-700 transition shadow-sm h-9">
-                        <Plus size={14} /> Add
-                      </button>
-                    </div>
-                  </div>
+                {/* Components Section */}
+                <Card className=" border border-slate-200/50 p-2  shadow-slate-200/40 bg-white/90 backdrop-blur-xl rounded">
+                  <SectionHeader
+                    id="components"
+                    title="Components & Sub-Assemblies"
+                    icon={Layers}
+                    subtitle={`${bomLines.length} Strategic Items • Total: ₹${totalComponentCost.toLocaleString()}`}
+                    isExpanded={expandedSections.components}
+                    onToggle={() => toggleSection('components')}
+                    themeColor="indigo"
+                  />
+                  {expandedSections.components && (
+                    <div className=" p-2   space-y-4">
+                      <div className="p-2 bg-slate-50/50 rounded border border-slate-200/50 relative  group/add">
+                        <div className="absolute -right-6 -top-6 p-2 opacity-[0.03] group-hover/add:opacity-[0.08] transition-all duration-700 rotate-12">
+                          <Plus size={120} className="text-indigo-600" />
+                        </div>
 
-                  {rawMaterials.length > 0 && (
-                    <div className="space-y-2 mt-3">
-                      <div className="font-bold text-red-700 text-xs flex items-center gap-1 px-3 py-2">
-                        <Check size={14} className="text-red-600" />
-                        Materials Added by Item Group
-                      </div>
-                      {itemGroupsInOrder.map((groupName) => {
-                        const groupItems = groupedRawMaterials[groupName]
-                        const isExpanded = expandedItemGroups[groupName]
-                        const groupCost = groupItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
-                        
-                        return (
-                          <div key={groupName} className="border border-red-200 rounded overflow-hidden">
+                        <h4 className=" text-xs    text-indigo-600     mb-3 flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-lg bg-indigo-100 flex items-center justify-center">
+                            <Plus size={12} strokeWidth={3} />
+                          </div>
+                          Add Component Specification
+                        </h4>
+
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 relative z-10">
+                          <div className="md:col-span-4">
+                            <FieldWrapper label="Component / Sub-Assembly" required>
+                              <SearchableSelect
+                                value={newLine.component_code}
+                                onChange={handleComponentChange}
+                                options={items.filter(item => item && item.item_code && item.name).map(item => ({
+                                  label: item.name,
+                                  value: item.item_code
+                                }))}
+                                placeholder="Search protocol components..."
+                                className="glass-input"
+                              />
+                            </FieldWrapper>
+                          </div>
+                          <div className="md:col-span-1">
+                            <FieldWrapper label="Quantity" required>
+                              <div className="relative group/input">
+                                <input
+                                  type="number"
+                                  value={newLine.qty}
+                                  onChange={(e) => setNewLine({ ...newLine, qty: e.target.value })}
+                                  onKeyDown={handleKeyDown}
+                                  step="0.01"
+                                  className="w-full bg-white border border-slate-200 rounded  p-2 text-xs    focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
+                                />
+                                <span className="absolute right-4 top-1/2 -translate-y-1/2  text-xs    text-slate-400 ">{newLine.uom || 'Kg'}</span>
+                              </div>
+                            </FieldWrapper>
+                          </div>
+                          <div className="md:col-span-2">
+                            <FieldWrapper label="Valuation (₹)">
+                              <input
+                                type="number"
+                                value={newLine.selling_price}
+                                onChange={(e) => setNewLine({ ...newLine, selling_price: e.target.value })}
+                                onKeyDown={handleKeyDown}
+                                step="0.01"
+                                className="w-full bg-white border border-slate-200 rounded  p-2 text-xs    focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
+                              />
+                            </FieldWrapper>
+                          </div>
+                          <div className="md:col-span-2">
+                            <FieldWrapper label="Selling Price (₹)">
+                              
+                              <input
+                                type="number"
+                                value={newLine.rate}
+                                onChange={(e) => setNewLine({ ...newLine, rate: e.target.value })}
+                                onKeyDown={handleKeyDown}
+                                step="0.01"
+                                className="w-full bg-white border border-slate-200 rounded  p-2 text-xs    focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
+                              />
+                            </FieldWrapper>
+                          </div>
+                          <div className="md:col-span-2">
+                            <FieldWrapper label="Loss %">
+                              <input
+                                type="number"
+                                value={newLine.loss_percentage}
+                                onChange={(e) => setNewLine({ ...newLine, loss_percentage: e.target.value })}
+                                onKeyDown={handleKeyDown}
+                                step="0.01"
+                                className="w-full bg-white border border-slate-200 rounded  p-2 text-xs    focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none text-center"
+                              />
+                            </FieldWrapper>
+                          </div>
+                          <div className="md:col-span-2 flex items-end">
                             <button
                               type="button"
-                              onClick={() => toggleItemGroup(groupName)}
-                              className="w-full flex items-center justify-between bg-red-50 hover:bg-red-100 transition p-3 group"
+                              onClick={addBomLine}
+                              className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white rounded p-2  text-xs        shadow-indigo-100 hover:bg-indigo-700 transition-all hover:-translate-y-1 active:scale-95"
                             >
-                              <div className="flex items-center gap-3 flex-1">
-                                <div className="text-left">
-                                  <h3 className="text-xs font-bold text-red-900 group-hover:text-red-700">{groupName}</h3>
-                                  <p className="text-xs text-red-700 mt-0">{groupItems.length} items • ₹{groupCost.toFixed(2)}</p>
-                                </div>
-                              </div>
-                              <div className="text-red-600 flex-shrink-0">
-                                {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                              </div>
+                              <Plus size={16} strokeWidth={3} />
+                              ADD ITEM
                             </button>
-
-                            {isExpanded && (
-                              <div className="">
-                                <table className="w-full text-xs border-collapse">
-                                  <thead>
-                                    <tr className="bg-gray-50 border-b border-red-200">
-                                      <th className="px-2 py-1.5 text-center text-xs font-bold text-gray-600 w-8">#</th>
-                                      <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Item Code</th>
-                                      <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Item Name</th>
-                                      <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Qty</th>
-                                      <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">UOM</th>
-                                      <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Rate</th>
-                                      <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Amount</th>
-                                      <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Warehouse</th>
-                                      <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Operation</th>
-                                      <th className="px-2 py-1.5 text-center text-xs font-bold text-gray-600 w-8">Actions</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {groupItems.map((material, index) => {
-                                      const isEditing = editingRowId === material.id
-                                      const data = isEditing ? editingRowData : material
-                                      return (
-                                        <tr key={material.id} className={`border-b border-red-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}>
-                                          <td className="px-2 py-1.5 text-center text-xs font-medium text-gray-600">{index + 1}</td>
-                                          <td className="px-2 py-1.5 text-xs font-medium text-gray-900">{material.item_code}</td>
-                                          <td className="px-2 py-1.5 text-xs text-gray-700">{material.item_name}</td>
-                                          <td className="px-2 py-1.5 text-xs text-right text-gray-700">
-                                            {isEditing ? (
-                                              <input type="number" value={data.qty || ''} onChange={(e) => setEditingRowData({...data, qty: e.target.value})} step="0.01" className="px-2 py-1 border border-gray-300 rounded text-xs w-full" />
-                                            ) : (
-                                              material.qty
-                                            )}
-                                          </td>
-                                          <td className="px-2 py-1.5 text-xs text-gray-700">
-                                            {isEditing ? (
-                                              <select value={data.uom || ''} onChange={(e) => setEditingRowData({...data, uom: e.target.value})} className="px-2 py-1 border border-gray-300 rounded text-xs w-full">
-                                                {['Kg', 'Nos', 'Ltr', 'Meter', 'Box'].map(u => <option key={u} value={u}>{u}</option>)}
-                                              </select>
-                                            ) : (
-                                              material.uom
-                                            )}
-                                          </td>
-                                          <td className="px-2 py-1.5 text-xs text-right text-gray-700">
-                                            {isEditing ? (
-                                              <input type="number" value={data.rate || ''} onChange={(e) => setEditingRowData({...data, rate: e.target.value})} step="0.01" className="px-2 py-1 border border-gray-300 rounded text-xs w-full" />
-                                            ) : (
-                                              `₹${parseFloat(material.rate).toFixed(2)}`
-                                            )}
-                                          </td>
-                                          <td className="px-2 py-1.5 text-xs text-right font-semibold text-gray-900">₹{parseFloat(isEditing ? (parseFloat(data.qty || 0) * parseFloat(data.rate || 0)) : (material.amount || 0)).toFixed(2)}</td>
-                                          <td className="px-2 py-1.5 text-xs text-gray-700">
-                                            {isEditing ? (
-                                              <select value={data.source_warehouse || ''} onChange={(e) => setEditingRowData({...data, source_warehouse: e.target.value})} className="px-2 py-1 border border-gray-300 rounded text-xs w-full">
-                                                <option value="">-</option>
-                                                {warehousesList.filter(wh => wh && (wh.warehouse_name || wh.name)).map(wh => (
-                                                  <option key={wh.id} value={wh.id}>{wh.warehouse_name || wh.name}</option>
-                                                ))}
-                                              </select>
-                                            ) : (
-                                              material.source_warehouse || '-'
-                                            )}
-                                          </td>
-                                          <td className="px-2 py-1.5 text-xs text-gray-700">
-                                            {isEditing ? (
-                                              <select value={data.operation || ''} onChange={(e) => setEditingRowData({...data, operation: e.target.value})} className="px-2 py-1 border border-gray-300 rounded text-xs w-full">
-                                                <option value="">-</option>
-                                                {operationsList.filter(op => op && op.name).map(op => (
-                                                  <option key={op.id} value={op.name}>{op.name}</option>
-                                                ))}
-                                              </select>
-                                            ) : (
-                                              material.operation || '-'
-                                            )}
-                                          </td>
-                                          <td className="px-2 py-1.5 text-center flex gap-1 justify-center">
-                                            {isEditing ? (
-                                              <>
-                                                <button type="button" onClick={async () => {const updatedData = {...editingRowData, amount: (parseFloat(editingRowData.qty || 0) * parseFloat(editingRowData.rate || 0))}; const updated = rawMaterials.map(m => m.id === material.id ? updatedData : m); setRawMaterials(updated); if(id) {try {setLoading(true); const payload = {...formData, lines: bomLines, rawMaterials: updated, operations, scrapItems, quantity: parseFloat(formData.quantity), revision: parseInt(formData.revision), process_loss_percentage: parseFloat(formData.process_loss_percentage)}; await productionService.updateBOM(id, payload); setError(null);} catch(err) {setError('Failed to save: ' + err.message);} finally {setLoading(false);}} setEditingRowId(null)}} className="p-1 text-green-600 hover:bg-green-100 rounded" title="Save">
-                                                  <Check size={12} />
-                                                </button>
-                                                <button type="button" onClick={() => setEditingRowId(null)} className="p-1 text-gray-600 hover:bg-gray-200 rounded" title="Cancel">
-                                                  <X size={12} />
-                                                </button>
-                                              </>
-                                            ) : (
-                                              <>
-                                                <button type="button" onClick={() => {setEditingRowId(material.id); setEditingRowData({...material})}} className="p-1 text-blue-600 hover:bg-blue-100 rounded transition" title="Edit">
-                                                  ✏️
-                                                </button>
-                                                <button type="button" onClick={() => removeRawMaterial(material.id)} className="p-1 text-red-600 hover:bg-red-100 rounded transition" title="Delete">
-                                                  <Trash2 size={12} />
-                                                </button>
-                                              </>
-                                            )}
-                                          </td>
-                                        </tr>
-                                      )
-                                    })}
-                                  </tbody>
-                                </table>
-                              </div>
-                            )}
                           </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* OPERATIONS SECTION */}
-            <div className={`border-b border-gray-200 p-2 ${expandedSections.operations ? 'bg-purple-50 border-purple-200' : ''}`}>
-              <button
-                type="button"
-                onClick={() => toggleSection('operations')}
-                className="w-full flex items-center justify-between group"
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">⚙️</div>
-                  <div className="text-left">
-                    <h2 className="text-xs font-bold text-purple-900 group-hover:text-purple-700 transition">Operations</h2>
-                    <p className="text-xs text-gray-500 mt-0">{operations.length} • ₹{totalOperationCost.toFixed(0)}</p>
-                  </div>
-                </div>
-                <div className="text-purple-600 group-hover:text-purple-700 transition flex-shrink-0">
-                  {expandedSections.operations ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                </div>
-              </button>
-
-              {expandedSections.operations && (
-                <div className="space-y-3 pt-3 border-t border-purple-100">
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded p-3">
-                    <h3 className="font-bold text-purple-900 mb-3 text-xs flex items-center gap-1">
-                      <Plus size={14} /> Add Operation
-                    </h3>
-                    <div className="grid auto-fit gap-2 items-end" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))'}}>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Operation *</label>
-                        <SearchableSelect
-                          value={newOperation.operation_name}
-                          onChange={(value) => setNewOperation({...newOperation, operation_name: value})}
-                          options={operationsList.filter(op => op && op.name).map(op => ({
-                            label: op.name,
-                            value: op.name
-                          }))}
-                          placeholder="Search operations..."
-                        />
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Workstation</label>
-                        <SearchableSelect
-                          value={newOperation.workstation_type}
-                          onChange={(value) => setNewOperation({...newOperation, workstation_type: value})}
-                          options={workstationsList.filter(ws => ws && ws.name).map(ws => ({
-                            label: ws.name,
-                            value: ws.name
-                          }))}
-                          placeholder="Select"
-                        />
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Cycle Time (min)</label>
-                        <input type="number" name="operation_time" value={newOperation.operation_time} onChange={(e) => setNewOperation({...newOperation, operation_time: e.target.value})} onKeyDown={handleKeyDown} step="0.01" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-purple-400 focus:ring-1 focus:ring-purple-100" />
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Setup Time (min)</label>
-                        <input type="number" name="fixed_time" value={newOperation.fixed_time} onChange={(e) => setNewOperation({...newOperation, fixed_time: e.target.value})} onKeyDown={handleKeyDown} step="0.01" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-purple-400 focus:ring-1 focus:ring-purple-100" />
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Hourly Rate (₹)</label>
-                        <input type="number" name="hourly_rate" value={newOperation.hourly_rate} onChange={(e) => setNewOperation({...newOperation, hourly_rate: e.target.value})} onKeyDown={handleKeyDown} step="0.01" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-purple-400 focus:ring-1 focus:ring-purple-100" />
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Cost (₹)</label>
-                        <div className="px-2 py-1.5 border border-gray-300 rounded text-xs font-semibold bg-gray-100 text-gray-700">
-                          {calculateOperationCost(newOperation.operation_time, newOperation.fixed_time, newOperation.hourly_rate).toFixed(2)}
                         </div>
                       </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Type</label>
-                        <select value={newOperation.operation_type} onChange={(e) => setNewOperation({...newOperation, operation_type: e.target.value})} className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-purple-400 focus:ring-1 focus:ring-purple-100">
-                          <option value="IN_HOUSE">In-House</option>
-                          <option value="OUTSOURCED">Outsourced</option>
-                        </select>
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Target Warehouse</label>
-                        <SearchableSelect
-                          value={newOperation.target_warehouse}
-                          onChange={(value) => setNewOperation({...newOperation, target_warehouse: value})}
-                          options={warehousesList.filter(wh => wh && (wh.warehouse_name || wh.name)).map(wh => ({
-                            label: wh.warehouse_name || wh.name,
-                            value: wh.warehouse_name || wh.name
-                          }))}
-                          placeholder="Select"
-                        />
-                      </div>
-                      <button type="button" onClick={addOperation} className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded font-semibold text-xs flex items-center justify-center gap-1 hover:from-purple-600 hover:to-purple-700 transition shadow-sm h-9">
-                        <Plus size={14} /> Add
-                      </button>
-                    </div>
-                  </div>
 
-                  {operations.length > 0 && (
-                    <div className="border border-purple-200 rounded overflow-hidden">
-                      <div className="bg-purple-50 px-3 py-2 border-b border-purple-200">
-                        <div className="font-bold text-purple-700 text-xs flex items-center gap-1">
-                          <Check size={14} className="text-purple-600" />
-                          Operations
-                        </div>
-                      </div>
-                      <div className="">
-                        <table className="w-full text-xs border-collapse">
-                          <thead>
-                            <tr className="bg-gray-50 border-b border-gray-200">
-                              <th className="px-2 py-1.5 text-center text-xs font-bold text-gray-600 w-8">#</th>
-                              <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Operation</th>
-                              <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Workstation</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Cycle (min)</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Setup (min)</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Hourly Rate (₹)</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Cost (₹)</th>
-                              <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Type</th>
-                              <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Target Warehouse</th>
-                              <th className="px-2 py-1.5 text-center text-xs font-bold text-gray-600 w-8">Del</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {operations.map((op, index) => (
-                              <tr key={op.id} className={`border-b border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}>
-                                <td className="px-2 py-1.5 text-center text-xs font-medium text-gray-600">{index + 1}</td>
-                                <td className="px-2 py-1.5 text-xs font-medium text-gray-900">{op.operation_name}</td>
-                                <td className="px-2 py-1.5 text-xs text-gray-700">{op.workstation_type || '-'}</td>
-                                <td className="px-2 py-1.5 text-xs text-right text-gray-700">{op.operation_time}</td>
-                                <td className="px-2 py-1.5 text-xs text-right text-gray-700">{op.fixed_time}</td>
-                                <td className="px-2 py-1.5 text-xs text-right text-gray-700">₹{parseFloat(op.hourly_rate || 0).toFixed(2)}</td>
-                                <td className="px-2 py-1.5 text-xs text-right font-semibold text-gray-900">₹{parseFloat(op.operating_cost).toFixed(2)}</td>
-                                <td className="px-2 py-1.5 text-xs">
-                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${op.operation_type === 'OUTSOURCED' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`}>
-                                    {op.operation_type === 'OUTSOURCED' ? 'Outsourced' : 'In-House'}
+                      {bomLines.length > 0 ? (
+                        <div className="rounded border border-slate-100    shadow-slate-200/20 bg-white">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="bg-slate-50/80 border-b border-slate-100/50">
+                                <th className="p-2   text-xs    text-slate-400  w-16 text-center">#</th>
+                                <th className="p-2   text-xs    text-slate-400 ">Component Specification</th>
+                                <th className="p-2   text-xs    text-slate-400  text-right">Qty</th>
+                                <th className="p-2   text-xs    text-slate-400  text-right">Valuation</th>
+                                <th className="p-2   text-xs    text-slate-400  text-right">Selling Price</th>
+                                <th className="p-2   text-xs    text-slate-400  text-right">Value</th>
+                                <th className="p-2   text-xs    text-slate-400  text-center w-32">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                              {bomLines.map((line, index) => {
+                                const isEditing = editingRowId === line.id
+                                const data = isEditing ? editingRowData : line
+                                return (
+                                  <tr key={line.id} className="hover:bg-slate-50/50 transition-colors group">
+                                    <td className="p-2  text-center">
+                                      <span className=" text-xs    text-slate-200 group-hover:text-indigo-300 transition-colors">{String(index + 1).padStart(2, '0')}</span>
+                                    </td>
+                                    <td className="p-2 ">
+                                      <div className="  text-slate-900 text-xs  tracking-tight">{line.component_name}</div>
+                                      <div className="flex items-center gap-2 mt-1.5">
+                                        <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[9px]   rounded   ">{line.component_code}</span>
+                                        {parseFloat(line.loss_percentage) > 0 && (
+                                          <span className="flex items-center gap-1 text-[9px]   text-rose-500">
+                                            <TrendingDown size={10} />
+                                            {line.loss_percentage}% LOSS
+                                          </span>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className="p-2  text-right">
+                                      {isEditing ? (
+                                        <input type="number" value={data.qty || ''} onChange={(e) => setEditingRowData({ ...data, qty: e.target.value })} className="w-20 bg-white border border-indigo-200 rounded  p-2 text-xs   text-right focus:ring-4 focus:ring-indigo-500/10 outline-none  " />
+                                      ) : (
+                                        <div className="text-xs   text-slate-700">{parseFloat(line.qty || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className=" text-xs    text-slate-400 ml-1.5   ">{line.uom}</span></div>
+                                      )}
+                                    </td>
+                                    <td className="p-2  text-right">
+                                      {isEditing ? (
+                                        <input type="number" value={data.rate || ''} onChange={(e) => setEditingRowData({ ...data, rate: e.target.value })} className="w-24 bg-white border border-indigo-200 rounded  p-2 text-xs   text-right focus:ring-4 focus:ring-indigo-500/10 outline-none  " />
+                                      ) : (
+                                                                                <div className="text-xs   text-slate-500 italic">₹{parseFloat(line.selling_price || 0).toLocaleString()}</div>
+
+                                      )}
+                                    </td>
+                                    <td className="p-2  text-right">
+                                      {isEditing ? (
+                                        <input type="number" value={data.selling_price || ''} onChange={(e) => setEditingRowData({ ...data, selling_price: e.target.value })} className="w-24 bg-white border border-indigo-200 rounded  p-2 text-xs   text-right focus:ring-4 focus:ring-indigo-500/10 outline-none  " />
+                                      ) : (
+                                        <div className="text-xs   text-slate-500 italic">₹{parseFloat(line.rate || 0).toLocaleString()}</div>
+                                      )}
+                                    </td>
+                                    <td className="p-2  text-right">
+                                      <span className="  text-indigo-600 text-xs ">₹{parseFloat(isEditing ? (parseFloat(data.qty || 0) * parseFloat(data.selling_price || 0)) : (line.selling_amount || line.amount || 0)).toLocaleString()}</span>
+                                    </td>
+                                    <td className="p-2 ">
+                                      <div className="flex items-center justify-center gap-2">
+                                        {isEditing ? (
+                                          <>
+                                            <button type="button" onClick={async () => {
+                                              const qty = parseFloat(editingRowData.qty) || 0
+                                              const rate = parseFloat(editingRowData.rate) || 0
+                                              const sellingPrice = parseFloat(editingRowData.selling_price) || 0
+                                              const lossPercentage = parseFloat(editingRowData.loss_percentage) || 0
+                                              
+                                              const updatedData = {
+                                                ...editingRowData,
+                                                amount: (qty * rate).toFixed(2),
+                                                selling_amount: (qty * sellingPrice).toFixed(2),
+                                                scrap_qty: ((qty * lossPercentage) / 100).toFixed(2)
+                                              }
+                                              const updated = bomLines.map(l => l.id === line.id ? updatedData : l)
+                                              setBomLines(updated)
+                                              setEditingRowId(null)
+                                            }} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded  transition-all"><Check size={16} strokeWidth={3} /></button>
+                                            <button type="button" onClick={() => setEditingRowId(null)} className="p-2 text-slate-400 hover:bg-slate-50 rounded  transition-all"><X size={16} strokeWidth={3} /></button>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <button type="button" onClick={() => { setEditingRowId(line.id); setEditingRowData({ ...line }); }} className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all "><Settings size={16} /></button>
+                                            <button type="button" onClick={() => removeBomLine(line.id)} className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded  transition-all duration-300 hover:scale-110"><Trash2 size={16} strokeWidth={2.5} /></button>
+                                          </>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                            <tfoot>
+                              <tr className="bg-indigo-50/30 border-t border-indigo-100/30">
+                                <td colSpan="5" className="p-2 text-right  text-xs    text-indigo-900/50  ">Aggregate Component Value</td>
+                                <td className="p-2 text-right">
+                                  <span className="p-2 bg-indigo-600 text-white rounded    text-xs  shadow-lg shadow-indigo-100">
+                                    ₹{totalComponentCost.toLocaleString()}
                                   </span>
                                 </td>
-                                <td className="px-2 py-1.5 text-xs text-gray-700">{op.target_warehouse || '-'}</td>
-                                <td className="px-2 py-1.5 text-center">
-                                  <button type="button" onClick={() => removeOperation(op.id)} className="p-1 text-red-600 hover:bg-red-100 rounded transition">
-                                    <Trash2 size={12} />
-                                  </button>
-                                </td>
+                                <td></td>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </tfoot>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="text-center p-2 border-2 border-dashed border-slate-100 rounded bg-slate-50/30 group/empty">
+                          <div className="w-10 h-10 rounded bg-white  shadow-slate-200/50 flex items-center justify-center mx-auto mb-6 group-hover/empty:scale-110 group-hover/empty:rotate-6 transition-all duration-700">
+                            <Layers size={16} className="text-indigo-400" />
+                          </div>
+                          <p className="    ">No components identified</p>
+                          <p className="text-xs text-slate-400 mt-3 font-medium    opacity-60">Initialize specifications to build intelligence</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </Card>
+
+                {/* Raw Materials Section */}
+                <Card className=" border border-slate-200/50  p-2 shadow-slate-200/40 bg-white/90 backdrop-blur-xl rounded">
+                  <SectionHeader
+                    id="raw_materials"
+                    title="Strategic Consumption"
+                    icon={Database}
+                    subtitle={`${rawMaterials.length} Neural Assets • Total Valuation: ₹${rawMaterials.reduce((sum, rm) => sum + (parseFloat(rm.amount) || 0), 0).toLocaleString()}`}
+                    isExpanded={expandedSections.raw_materials}
+                    onToggle={() => toggleSection('raw_materials')}
+                    themeColor="amber"
+                  />
+                  {expandedSections.raw_materials && (
+                    <div className=" p-2">
+                      <div className="  space-y-4">
+                        {/* RM Consumption Preview */}
+                        {rawMaterials.length > 0 && (
+                          <div className="bg-amber-500/5 rounded border border-amber-200/30 p-2 relative  group">
+                            <div className="absolute -right-10 -to p-2 w-40 h-40 bg-amber-500/5 rounded-full blur-3xl group-hover:bg-amber-500/10 transition-all duration-1000" />
+                            <h4 className=" text-xs    text-amber-600     mb-6 flex items-center gap-3">
+                              <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              Intelligence Forecast (for {formData.quantity} {formData.uom})
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+                              {calculateRMConsumption(formData.quantity).map((consumption, idx) => (
+                                <div key={idx} className="flex items-center justify-between  p-2 bg-white/80 backdrop-blur-md rounded border border-amber-100   hover: hover:shadow-amber-100/30 hover:-translate-y-1 transition-all group/item">
+                                  <div className=".5">
+                                    <div className=" text-xs    text-slate-400 group-hover/item:text-amber-600 transition-colors   ">{consumption.item_code}</div>
+                                    <div className="text-sm   text-slate-900">{consumption.qty_required.toFixed(2)} <span className=" text-xs    text-slate-400   ">{consumption.uom}</span></div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-sm   text-amber-600">₹{consumption.cost.toLocaleString()}</div>
+                                    <div className="text-[9px]   text-slate-400  mt-1">Est. Value</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Add Raw Material Interface */}
+                        <div className="p-2 bg-slate-50/50 rounded border border-slate-200/50 relative ">
+                          <h4 className=" text-xs    text-slate-500     mb-6 flex items-center gap-3">
+                            <Plus size={14} className="text-amber-500" strokeWidth={3} />
+                            Register Strategic Material
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 relative z-10">
+                            <div className="md:col-span-4">
+                              <FieldWrapper label="Material Specification" required>
+                                <SearchableSelect
+                                  value={newRawMaterial.item_code}
+                                  onChange={handleRawMaterialItemChange}
+                                  options={items.filter(item => item && item.item_code && item.name && item.item_group !== 'Finished Goods').map(item => ({
+                                    label: item.name,
+                                    value: item.item_code
+                                  }))}
+                                  placeholder="Identify asset..."
+                                  className="glass-input"
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-2">
+                              <FieldWrapper label="Quantity" required>
+                                <input
+                                  type="number"
+                                  value={newRawMaterial.qty}
+                                  onChange={(e) => setNewRawMaterial({ ...newRawMaterial, qty: e.target.value })}
+                                  onKeyDown={handleKeyDown}
+                                  step="0.01"
+                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all focus:outline-none  "
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-2">
+                              <FieldWrapper label="Valuation (₹)">
+                                <input
+                                  type="number"
+                                  value={newRawMaterial.rate}
+                                  onChange={(e) => setNewRawMaterial({ ...newRawMaterial, rate: e.target.value })}
+                                  onKeyDown={handleKeyDown}
+                                  step="0.01"
+                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all focus:outline-none  "
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-2">
+                              <FieldWrapper label="Selling Price (₹)">
+                                <input
+                                  type="number"
+                                  value={newRawMaterial.selling_price}
+                                  onChange={(e) => setNewRawMaterial({ ...newRawMaterial, selling_price: e.target.value })}
+                                  onKeyDown={handleKeyDown}
+                                  step="0.01"
+                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all focus:outline-none  "
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-2 flex items-end">
+                              <button
+                                type="button"
+                                onClick={addNewRawMaterial}
+                                className="w-full flex items-center justify-center gap-1 bg-amber-600 text-white rounded p-2  text-xs        shadow-amber-100 hover:bg-amber-700 transition-all hover:-translate-y-1 active:scale-95"
+                              >
+                                <Plus size={8} strokeWidth={2.5} />
+                                Add 
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {rawMaterials.length > 0 ? (
+                          <div className="space-y-6">
+                            <div className="flex items-center justify-between px-2">
+                              <div className="flex items-center gap-3">
+                                <div className="w-1.5 h-6 bg-amber-500 rounded-full" />
+                                <span className="">Material Intelligence Matrix</span>
+                              </div>
+                              <span className=" text-xs    text-slate-400   ">{rawMaterials.length} Total Nodes</span>
+                            </div>
+
+                            <div className="space-y-4">
+                              {itemGroupsInOrder.map((groupName) => {
+                                const groupItems = groupedRawMaterials[groupName]
+                                const isExpanded = expandedItemGroups[groupName]
+                                const groupCost = groupItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0)
+                                const groupMarketValue = groupItems.reduce((sum, item) => sum + (parseFloat(item.selling_amount || 0)), 0)
+
+                                return (
+                                  <div key={groupName} className="rounded border border-slate-200/60  bg-white   hover:border-amber-200 transition-all duration-500">
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleItemGroup(groupName)}
+                                      className={`w-full flex items-center justify-between p-2 transition-all duration-500 ${isExpanded ? 'bg-amber-50/40' : 'hover:bg-slate-50'}`}
+                                    >
+                                      <div className="flex items-center gap-6">
+                                        <div className={`w-6 h-6 rounded flex items-center justify-center text-lg   transition-all duration-700 ${isExpanded ? 'bg-amber-600 text-white   shadow-amber-200 scale-110 rotate-3' : 'bg-slate-100 text-slate-400'}`}>
+                                          {groupName.charAt(0)}
+                                        </div>
+                                        <div className="text-left">
+                                          <h3 className="text-sm   text-slate-900 tracking-tight">{groupName}</h3>
+                                          <div className="flex items-center gap-2 mt-1">
+                                            <p className="text-[9px]   text-slate-400   ">{groupItems.length} Strategic Nodes</p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-8">
+                                        <div className="text-right hidden sm:block">
+                                          <div className="text-sm   text-amber-600">₹{groupMarketValue.toLocaleString()}</div>
+                                          <div className="text-[8px]   text-slate-400  mt-1">Sub-Market Value</div>
+                                        </div>
+                                        <div className={`w-10 h-10 rounded  flex items-center justify-center transition-all duration-500 ${isExpanded ? 'bg-amber-600 text-white rotate-180 shadow-lg' : 'bg-slate-100 text-slate-300'}`}>
+                                          <ChevronDown size={20} />
+                                        </div>
+                                      </div>
+                                    </button>
+
+                                    {isExpanded && (
+                                      <div className="p-2 border-t border-slate-100/50">
+                                        <div className="overflow-x-auto">
+                                          <table className="w-full text-left border-collapse">
+                                            <thead>
+                                              <tr>
+                                                <th className="p-2 text-xs   text-slate-400 ">Asset Index</th>
+                                                <th className="p-2 text-xs   text-slate-400 ">Neural Node</th>
+                                                <th className="p-2 text-xs   text-slate-400  text-right">Quantity</th>
+                                                <th className="p-2 text-xs   text-slate-400  text-right">Valuation</th>
+                                                <th className="p-2 text-xs   text-slate-400  text-right">Selling Price</th>
+                                                <th className="p-2 text-xs   text-slate-400  text-right">Sub-Total</th>
+                                                <th className="p-2 text-xs   text-slate-400  text-center w-32">Control</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                              {groupItems.map((material, index) => {
+                                                const isEditing = editingRowId === material.id
+                                                const data = isEditing ? editingRowData : material
+                                                return (
+                                                  <tr key={material.id} className="hover:bg-slate-50/50 transition-colors group">
+                                                    <td className="p-2 ">
+                                                      <span className=" text-xs    text-slate-300">{(index + 1).toString().padStart(2, '0')}</span>
+                                                    </td>
+                                                    <td className="p-2 ">
+                                                      <div className="text-xs   text-slate-900 tracking-tight">{material.item_name}</div>
+                                                      <div className="text-[9px]   text-amber-600    mt-1">{material.item_code}</div>
+                                                    </td>
+                                                    <td className="p-2  text-right">
+                                                      {isEditing ? (
+                                                        <input type="number" value={data.qty || ''} onChange={(e) => setEditingRowData({ ...data, qty: e.target.value })} className="w-24 bg-white border border-amber-200 rounded  p-2 text-xs   text-right focus:ring-4 focus:ring-amber-500/10 outline-none  " />
+                                                      ) : (
+                                                        <div className="text-xs   text-slate-900">{material.qty} <span className="text-[9px]   text-slate-400  ml-1  ">{material.uom}</span></div>
+                                                      )}
+                                                    </td>
+                                                    <td className="p-2  text-right">
+                                                      {isEditing ? (
+                                                        <input type="number" value={data.rate || ''} onChange={(e) => setEditingRowData({ ...data, rate: e.target.value })} className="w-28 bg-white border border-amber-200 rounded  p-2 text-xs   text-right focus:ring-4 focus:ring-amber-500/10 outline-none  " />
+                                                      ) : (
+                                                        <div className="text-xs   text-slate-700">₹{parseFloat(material.rate).toLocaleString()}</div>
+                                                      )}
+                                                    </td>
+                                                    <td className="p-2  text-right">
+                                                      {isEditing ? (
+                                                        <input type="number" value={data.selling_price || ''} onChange={(e) => setEditingRowData({ ...data, selling_price: e.target.value })} className="w-28 bg-white border border-amber-200 rounded  p-2 text-xs   text-right focus:ring-4 focus:ring-amber-500/10 outline-none  " />
+                                                      ) : (
+                                                        <div className="text-xs   text-slate-700">₹{parseFloat(material.selling_price || 0).toLocaleString()}</div>
+                                                      )}
+                                                    </td>
+                                                    <td className="p-2  text-right">
+                                                      <div className="text-xs   text-amber-600">₹{parseFloat(isEditing ? (parseFloat(data.qty || 0) * parseFloat(data.selling_price || 0)) : (material.selling_amount || 0)).toLocaleString()}</div>
+                                                    </td>
+                                                    <td className="p-2 ">
+                                                      <div className="flex items-center justify-center gap-2">
+                                                        {isEditing ? (
+                                                          <>
+                                                            <button type="button" onClick={async () => { 
+                                                              const qty = parseFloat(editingRowData.qty || 0);
+                                                              const rate = parseFloat(editingRowData.rate || 0);
+                                                              const sellingPrice = parseFloat(editingRowData.selling_price || 0);
+                                                              const updatedData = { 
+                                                                ...editingRowData, 
+                                                                amount: (qty * rate),
+                                                                selling_amount: (qty * sellingPrice)
+                                                              }; 
+                                                              const updated = rawMaterials.map(m => m.id === material.id ? updatedData : m); 
+                                                              setRawMaterials(updated); 
+                                                              if (id) { 
+                                                                try { 
+                                                                  setLoading(true); 
+                                                                  const payload = { ...formData, lines: bomLines, rawMaterials: updated, operations, scrapItems, quantity: parseFloat(formData.quantity), revision: parseInt(formData.revision), process_loss_percentage: parseFloat(formData.process_loss_percentage) }; 
+                                                                  await productionService.updateBOM(id, payload); 
+                                                                  setEditingRowId(null); 
+                                                                } catch (err) { 
+                                                                  setError('Failed to update material node'); 
+                                                                } finally { 
+                                                                  setLoading(false); 
+                                                                } 
+                                                              } else { 
+                                                                setEditingRowId(null); 
+                                                              } 
+                                                            }} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded  transition-all"><Check size={16} strokeWidth={3} /></button>
+                                                            <button type="button" onClick={() => setEditingRowId(null)} className="p-2 text-slate-400 hover:bg-slate-50 rounded  transition-all"><X size={16} strokeWidth={3} /></button>
+                                                          </>
+                                                        ) : (
+                                                          <>
+                                                            <button type="button" onClick={() => { setEditingRowId(material.id); setEditingRowData({ ...material }); }} className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all "><Settings size={16} /></button>
+                                                            <button type="button" onClick={() => removeRawMaterial(material.id)} className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded  transition-all "><Trash2 size={16} /></button>
+                                                          </>
+                                                        )}
+                                                      </div>
+                                                    </td>
+                                                  </tr>
+                                                )
+                                              })}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center  py-2 border-2 border-dashed border-slate-200 rounded bg-slate-50/50 group/empty">
+                            <div className="w-10 h-10 rounded bg-white border border-slate-100  flex items-center justify-center mx-auto mb-6 group-hover/empty:scale-110 group-hover/empty:rotate-6 transition-all duration-700">
+                              <Database size={10} className="text-slate-300 group-hover/empty:text-amber-400 transition-colors" />
+                            </div>
+                            <p className="    ">Awaiting Asset Integration</p>
+                            <p className=" text-xs  text-slate-400 mt-3     ">Define strategic materials to initialize neural consumption matrix</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
-                </div>
-              )}
-            </div>
+                </Card>
 
-            {/* SCRAP & PROCESS LOSS SECTION */}
-            <div className={`p-2 border-b border-gray-200 ${expandedSections.scrap ? 'bg-cyan-50 border-cyan-200' : ''}`}>
+                {/* Operations Section */}
+                <Card className=" border border-slate-200/50 p-2  shadow-slate-200/40 bg-white/90 backdrop-blur-xl rounded">
+                  <SectionHeader
+                    id="operations"
+                    title="Process Intelligence"
+                    icon={Settings}
+                    subtitle={`${operations.length} Strategic Protocols • Total Valuation: ₹${operations.reduce((sum, op) => sum + (parseFloat(op.operating_cost) || 0), 0).toLocaleString()}`}
+                    isExpanded={expandedSections.operations}
+                    onToggle={() => toggleSection('operations')}
+                    themeColor="emerald"
+                  />
+                  {expandedSections.operations && (
+                    <div className=" p-2">
+                      <div className="  space-y-4">
+                        {/* Add Operation Interface */}
+                        <div className="p-2 bg-slate-50/50 rounded border border-slate-200/50 relative ">
+                          <h4 className=" text-xs    text-slate-500     mb-6 flex items-center gap-3">
+                            <Plus size={14} className="text-emerald-500" strokeWidth={3} />
+                            Register Production Protocol
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 relative z-10">
+                            <div className="md:col-span-4">
+                              <FieldWrapper label="Protocol Specification" required>
+                                <SearchableSelect
+                                  value={newOperation.operation_name}
+                                  onChange={(value) => {
+                                    const op = operationsList.find(o => o.name === value)
+                                    setNewOperation({
+                                      ...newOperation,
+                                      operation_name: value,
+                                      workstation_type: op?.workstation_type || '',
+                                      hourly_rate: op?.hourly_rate || '0'
+                                    })
+                                  }}
+                                  options={operationsList.filter(op => op && op.name).map(op => ({
+                                    label: op.name,
+                                    value: op.name
+                                  }))}
+                                  placeholder="Identify process..."
+                                  className="glass-input"
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-4">
+                              <FieldWrapper label="Neural Workstation">
+                                <SearchableSelect
+                                  value={newOperation.workstation_type}
+                                  onChange={(value) => setNewOperation({ ...newOperation, workstation_type: value })}
+                                  options={workstationsList.filter(ws => ws && ws.name).map(ws => ({
+                                    label: ws.name,
+                                    value: ws.name
+                                  }))}
+                                  placeholder="Workstation link..."
+                                  className="glass-input"
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-4">
+                              <FieldWrapper label="Target Node">
+                                <SearchableSelect
+                                  value={newOperation.target_warehouse}
+                                  onChange={(value) => setNewOperation({ ...newOperation, target_warehouse: value })}
+                                  options={warehousesList.filter(wh => wh && (wh.warehouse_name || wh.name)).map(wh => ({
+                                    label: wh.warehouse_name || wh.name,
+                                    value: wh.warehouse_name || wh.name
+                                  }))}
+                                  placeholder="Select warehouse..."
+                                  className="glass-input"
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-3">
+                              <FieldWrapper label="Execution Time (m)">
+                                <input
+                                  type="number"
+                                  value={newOperation.operation_time}
+                                  onChange={(e) => setNewOperation({ ...newOperation, operation_time: e.target.value })}
+                                  onKeyDown={handleKeyDown}
+                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-3">
+                              <FieldWrapper label="Setup Time (m)">
+                                <input
+                                  type="number"
+                                  value={newOperation.setup_time}
+                                  onChange={(e) => setNewOperation({ ...newOperation, setup_time: e.target.value })}
+                                  onKeyDown={handleKeyDown}
+                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-3">
+                              <FieldWrapper label="Hourly Valuation (₹)">
+                                <input
+                                  type="number"
+                                  value={newOperation.hourly_rate}
+                                  onChange={(e) => setNewOperation({ ...newOperation, hourly_rate: e.target.value })}
+                                  onKeyDown={handleKeyDown}
+                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-3">
+                              <FieldWrapper label="Protocol Type">
+                                <select
+                                  value={newOperation.operation_type}
+                                  onChange={(e) => setNewOperation({ ...newOperation, operation_type: e.target.value })}
+                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none   appearance-none"
+                                >
+                                  <option value="IN_HOUSE">In-House</option>
+                                  <option value="OUTSOURCED">Outsourced</option>
+                                </select>
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-3 flex items-end">
+                              <button
+                                type="button"
+                                onClick={addOperation}
+                                className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white rounded p-2  text-xs        shadow-emerald-100 hover:bg-emerald-700 transition-all hover:-translate-y-1 active:scale-95"
+                              >
+                                <Plus size={18} strokeWidth={2.5} />
+                                Integrate Protocol
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {operations.length > 0 ? (
+                          <div className="rounded border border-slate-200/60  bg-white  ">
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr>
+                                    <th className="p-2 text-xs   text-slate-400  w-20">Index</th>
+                                    <th className="p-2 text-xs   text-slate-400 ">Protocol Detail</th>
+                                    <th className="p-2 text-xs   text-slate-400 ">Workstation</th>
+                                    <th className="p-2 text-xs   text-slate-400  text-right">Timing</th>
+                                    <th className="p-2 text-xs   text-slate-400  text-right">Valuation</th>
+                                    <th className="p-2 text-xs   text-slate-400  text-center">Protocol</th>
+                                    <th className="p-2 text-xs   text-slate-400  text-center w-32">Control</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                  {operations.map((op, index) => (
+                                    <tr key={op.id} className="hover:bg-slate-50/50 transition-colors group">
+                                      <td className="p-2 ">
+                                        <span className=" text-xs    text-slate-300">{(index + 1).toString().padStart(2, '0')}</span>
+                                      </td>
+                                      <td className="p-2 ">
+                                        <div className="text-xs   text-slate-900 tracking-tight">{op.operation_name}</div>
+                                        <div className="text-[9px]   text-emerald-600    mt-1 flex items-center gap-2">
+                                          <Database size={10} />
+                                          {op.target_warehouse || 'Standard Node'}
+                                        </div>
+                                      </td>
+                                      <td className="p-2 ">
+                                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[9px]      border border-slate-200">
+                                          <Settings size={10} className="text-slate-400" />
+                                          {op.workstation_type || 'General'}
+                                        </span>
+                                      </td>
+                                      <td className="p-2  text-right">
+                                        <div className="text-xs   text-slate-900">{parseFloat(op.operation_time || 0).toFixed(1)}m</div>
+                                        <div className="text-[9px]   text-slate-400 mt-1  tracking-tighter">+{op.setup_time || op.fixed_time}m Setup</div>
+                                      </td>
+                                      <td className="p-2  text-right">
+                                        <div className="text-xs   text-emerald-600">₹{parseFloat(op.operating_cost || 0).toLocaleString()}</div>
+                                        <div className="text-[9px]   text-slate-400 mt-1  tracking-tighter">₹{parseFloat(op.hourly_rate || 0).toLocaleString()}/hr</div>
+                                      </td>
+                                      <td className="p-2  text-center">
+                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-[9px]      ${op.operation_type === 'OUTSOURCED' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                                          {op.operation_type === 'OUTSOURCED' ? 'Out' : 'In'}
+                                        </span>
+                                      </td>
+                                      <td className="p-2  text-center">
+                                        <button
+                                          type="button"
+                                          onClick={() => removeOperation(op.id)}
+                                          className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded  transition-all "
+                                        >
+                                          <Trash2 size={16} />
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center  py-2 border-2 border-dashed border-slate-200 rounded bg-slate-50/50 group/empty">
+                            <div className="w-10 h-10 rounded bg-white border border-slate-100  flex items-center justify-center mx-auto mb-6 group-hover/empty:scale-110 group-hover/empty:rotate-6 transition-all duration-700">
+                              <Settings size={10} className="text-slate-300 group-hover/empty:text-emerald-400 transition-colors" />
+                            </div>
+                            <p className="    ">Awaiting Process Definition</p>
+                            <p className=" text-xs  text-slate-400 mt-3     ">Define production protocols to initialize neural costing engine</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </Card>
+                {/* Scrap Section */}
+                <Card className=" border border-slate-200/50  p-2 shadow-slate-200/40 bg-white/90 backdrop-blur-xl rounded">
+                  <SectionHeader
+                    id="scrap"
+                    title="Loss Mitigation"
+                    icon={Trash2}
+                    subtitle={`${scrapItems.length} Strategic Nodes • Recovery Valuation: ₹${totalScrapLossCost.toLocaleString()}`}
+                    isExpanded={expandedSections.scrap}
+                    onToggle={() => toggleSection('scrap')}
+                    themeColor="rose"
+                  />
+                  {expandedSections.scrap && (
+                    <div className=" p-2">
+                      <div className="  space-y-4">
+                        {/* Add Scrap Interface */}
+                        <div className="p-2 bg-slate-50/50 rounded border border-slate-200/50 relative ">
+                          <h4 className=" text-xs    text-slate-500     mb-6 flex items-center gap-3">
+                            <Plus size={14} className="text-rose-500" strokeWidth={3} />
+                            Register Material Loss Node
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 relative z-10">
+                            <div className="md:col-span-5">
+                              <FieldWrapper label="Scrap Specification" required>
+                                <SearchableSelect
+                                  value={newScrapItem.item_code}
+                                  onChange={handleScrapItemChange}
+                                  options={items.filter(item => item && item.item_code && item.name).map(item => ({
+                                    label: item.name,
+                                    value: item.item_code
+                                  }))}
+                                  placeholder="Identify loss item..."
+                                  className="glass-input"
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-2">
+                              <FieldWrapper label="Quantity">
+                                <input
+                                  type="number"
+                                  name="input_quantity"
+                                  value={newScrapItem.input_quantity}
+                                  onChange={(e) => setNewScrapItem({ ...newScrapItem, input_quantity: e.target.value })}
+                                  onKeyDown={handleKeyDown}
+                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all focus:outline-none  "
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-2">
+                              <FieldWrapper label="Recovery (₹)">
+                                <input
+                                  type="number"
+                                  name="rate"
+                                  value={newScrapItem.rate}
+                                  onChange={(e) => setNewScrapItem({ ...newScrapItem, rate: e.target.value })}
+                                  onKeyDown={handleKeyDown}
+                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all focus:outline-none  "
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-3 flex items-end">
+                              <button
+                                type="button"
+                                onClick={addScrapItem}
+                                className="w-full flex items-center justify-center gap-2 bg-rose-600 text-white rounded p-2  text-xs        shadow-rose-100 hover:bg-rose-700 transition-all hover:-translate-y-1 active:scale-95"
+                              >
+                                <Plus size={18} strokeWidth={2.5} />
+                                Record Loss
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {scrapItems.length > 0 ? (
+                          <div className="rounded border border-slate-200/60  bg-white  ">
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr>
+                                    <th className="p-2 text-xs   text-slate-400  w-20">Index</th>
+                                    <th className="p-2 text-xs   text-slate-400 ">Loss Item</th>
+                                    <th className="p-2 text-xs   text-slate-400  text-right">Quantity</th>
+                                    <th className="p-2 text-xs   text-slate-400  text-right">Recovery Rate</th>
+                                    <th className="p-2 text-xs   text-slate-400  text-right">Credit Value</th>
+                                    <th className="p-2 text-xs   text-slate-400  text-center w-32">Control</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                  {scrapItems.map((item, index) => (
+                                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
+                                      <td className="p-2 ">
+                                        <span className=" text-xs    text-slate-300">{(index + 1).toString().padStart(2, '0')}</span>
+                                      </td>
+                                      <td className="p-2 ">
+                                        <div className="text-xs   text-slate-900 tracking-tight">{item.item_name}</div>
+                                        <div className="text-[9px]   text-rose-600    mt-1">{item.item_code}</div>
+                                      </td>
+                                      <td className="p-2  text-right">
+                                        <span className="text-xs   text-slate-900">{parseFloat(item.input_quantity || 0).toFixed(2)}</span>
+                                      </td>
+                                      <td className="p-2  text-right">
+                                        <div className="text-xs   text-slate-700">₹{parseFloat(item.rate || 0).toLocaleString()}</div>
+                                      </td>
+                                      <td className="p-2  text-right">
+                                        <div className="text-xs   text-rose-600">₹{(parseFloat(item.input_quantity || 0) * parseFloat(item.rate || 0)).toLocaleString()}</div>
+                                      </td>
+                                      <td className="p-2  text-center">
+                                        <button
+                                          type="button"
+                                          onClick={() => removeScrapItem(item.id)}
+                                          className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded  transition-all "
+                                        >
+                                          <Trash2 size={16} />
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center  py-2 border-2 border-dashed border-slate-200 rounded bg-slate-50/50 group/empty">
+                            <div className="w-10 h-10 rounded bg-white border border-slate-100  flex items-center justify-center mx-auto mb-6 group-hover/empty:scale-110 group-hover/empty:rotate-6 transition-all duration-700">
+                              <Trash2 size={10} className="text-slate-300 group-hover/empty:text-rose-400 transition-colors" />
+                            </div>
+                            <p className="    ">No Loss Recorded</p>
+                            <p className=" text-xs  text-slate-400 mt-3     ">Record material loss or by-products for accurate production intelligence</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </Card>
+                 <Card className="bg-white border-slate-200 rounded  mb-4   shadow-slate-200/50 mt-3">
+            <SectionHeader
+              id="costing"
+              title="Manufacturing Costing Intelligence"
+              icon={TrendingDown}
+              subtitle={`Strategic Valuation • Total Production Cost: ₹${totalBOMCost.toLocaleString()}`}
+              isExpanded={true}
+              onToggle={() => { }}
+              themeColor="cyan"
+            />
+            <div className="p-6">
+              {/* Primary Metrics High-Fidelity Row */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div className="relative group bg-blue-50/40 rounded p-2 border border-blue-100/50 transition-all hover: hover:shadow-blue-100/20">
+                  <div className="flex items-center gap-2 relative z-10">
+                    <div className="p-2 bg-white shadow-lg shadow-blue-100/50 text-blue-600 rounded  group-hover:scale-110 transition-transform duration-500">
+                      <Package size={14} />
+                    </div>
+                    <div>
+                      <p className="text-xs  text-blue-400    mb-1">Material Valuation</p>
+                      <h4 className="text-xl  text-slate-800 tracking-tight">₹{materialCost.toLocaleString()}</h4>
+                      <p className="text-xs  text-blue-600/60 mt-1 ">Net Raw Consumption</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative group bg-emerald-50/40 rounded p-2 border border-emerald-100/50 transition-all hover: hover:shadow-emerald-100/20">
+                  <div className="flex items-center gap-2 relative z-10">
+                    <div className="p-2 bg-white shadow-lg shadow-emerald-100/50 text-emerald-600 rounded  group-hover:scale-110 transition-transform duration-500">
+                      <Users size={14} />
+                    </div>
+                    <div>
+                      <p className="text-xs  text-emerald-400    mb-1">Labour & Ops</p>
+                      <h4 className="text-xl  text-slate-800 tracking-tight">₹{labourCost.toLocaleString()}</h4>
+                      <p className="text-xs  text-emerald-600/60 mt-1 ">Process Intelligence</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative group bg-cyan-50/40 rounded p-2 border border-cyan-100/50 transition-all hover: hover:shadow-cyan-100/20">
+                  <div className="flex items-center gap-2 relative z-10">
+                    <div className="p-2 bg-white shadow-lg shadow-cyan-100/50 text-cyan-600 rounded  group-hover:scale-110 transition-transform duration-500">
+                      <TrendingDown size={14} />
+                    </div>
+                    <div>
+                      <p className="text-xs  text-cyan-400    mb-1">Strategic Total</p>
+                      <h4 className="text-xl  text-slate-800 tracking-tight">₹{totalBOMCost.toLocaleString()}</h4>
+                      <p className="text-xs  text-cyan-600/60 mt-1 ">Per {formData.quantity} {formData.uom} Batch</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Detailed Breakdown Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 px-2">
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-4 bg-blue-500 rounded-full" />
+                    <h5 className="text-xs  text-slate-400 ">Material Resource Breakdown</h5>
+                  </div>
+                  <div className="space-y-3 bg-slate-50/50 rounded p-2 border border-slate-100">
+                    <div className="flex items-center justify-between  p-2 rounded  hover:bg-white hover:  transition-all group">
+                      <span className="text-xs  text-slate-500 group-hover:text-slate-800">Primary Components Cost</span>
+                      <span className="text-sm  text-slate-900">₹{totalComponentCost.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between  p-2 rounded  hover:bg-white hover:  transition-all group">
+                      <span className="text-xs  text-slate-500 group-hover:text-slate-800">Raw Materials Valuation</span>
+                      <span className="text-sm  text-slate-900">₹{totalRawMaterialCost.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between  p-2 rounded  bg-rose-50/50 border border-rose-100/50 group">
+                      <span className="text-xs  text-rose-600">Scrap Recovery (Deduction)</span>
+                      <span className="text-sm  text-rose-600">-₹{totalScrapLossCost.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-4 bg-emerald-500 rounded-full" />
+                    <h5 className="text-xs  text-slate-400 ">Operational Efficiency</h5>
+                  </div>
+                  <div className="space-y-3 bg-slate-50/50 rounded p-2 border border-slate-100">
+                    <div className="flex items-center justify-between  p-2 rounded  hover:bg-white hover:  transition-all group">
+                      <span className="text-xs  text-slate-500 group-hover:text-slate-800">Production Process Cost</span>
+                      <span className="text-sm  text-slate-900">₹{totalOperationCost.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between  p-2 rounded  bg-amber-50/50 border border-amber-100/50 group">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs  text-amber-700">Total Material Loss</span>
+                        <AlertTriangle size={12} className="text-amber-500" />
+                      </div>
+                      <span className="text-sm  text-amber-700">{totalScrapQty.toFixed(2)} {formData.uom}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Prominent Unit Cost Strategic Footer */}
+              <div className="mt-5 flex flex-col md:flex-row items-center justify-between bg-slate-900 rounded p-2   shadow-slate-300 text-white gap-2 relative">
+                <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <Layers size={80} className="text-indigo-400" />
+                </div>
+                <div className="flex items-center gap-6 relative z-10">
+                  <div className="w-10 h-10 bg-indigo-500/20 backdrop-blur-xl rounded flex items-center justify-center border border-white/10 shadow-inner group-hover:scale-110 transition-transform duration-700">
+                    <Layers size={36} className="text-indigo-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs  text-indigo-400 mb-2">Net Formulation Cost</p>
+                    <p className="text-sm font-medium text-slate-400 leading-relaxed">Intelligence based on batch size of <span className="text-white ">{formData.quantity} {formData.uom}</span></p>
+                  </div>
+                </div>
+                <div className="text-center md:text-right relative z-10">
+                  <h3 className="text-xl  text-white tracking-tighter mb-2">
+                    <span className="text-xl  text-indigo-500 mr-2">₹</span>
+                    {(formData.quantity && formData.quantity !== '0' ? (totalBOMCost / parseFloat(formData.quantity)) : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </h3>
+                  <p className="text-xs  text-slate-500 ">Estimated Strategic Cost / {formData.uom}</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between bg-slate-50 rounded p-2 border border-slate-200/50 mb-6">
+            <div className="flex items-center gap-3">
+              <div className=" p-2bg-white rounded  text-slate-400 border border-slate-100">
+                <AlertCircle size={20} />
+              </div>
+              <div>
+                <p className="text-xs  text-slate-700">Final Verification</p>
+                <p className="text-xs text-slate-400 font-medium text-xs">Ensure all specifications meet manufacturing standards</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
               <button
                 type="button"
-                onClick={() => toggleSection('scrap')}
-                className="w-full flex items-center justify-between group"
+                onClick={() => navigate('/manufacturing/bom')}
+                className="inline-flex items-center gap-2 rounded bg-white p-2 text-xs  text-slate-600 border border-slate-200 hover:bg-slate-50 transition-all active:scale-95  "
               >
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="w-7 h-7 rounded-full bg-cyan-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">♻️</div>
-                  <div className="text-left">
-                    <h2 className="text-xs font-bold text-cyan-900 group-hover:text-cyan-700 transition">Scrap & Loss</h2>
-                    <p className="text-xs text-gray-500 mt-0">{scrapItems.length} item{scrapItems.length !== 1 ? 's' : ''}</p>
-                  </div>
-                </div>
-                <div className="text-cyan-600 group-hover:text-cyan-700 transition flex-shrink-0">
-                  {expandedSections.scrap ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                </div>
+                <RotateCcw size={18} />
+                Discard
               </button>
-
-              {expandedSections.scrap && (
-                <div className="space-y-3 pt-3 border-t border-cyan-100">
-                  <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 border border-cyan-200 rounded p-3">
-                    <h3 className="font-bold text-cyan-900 mb-3 text-xs flex items-center gap-1">
-                      <Plus size={14} /> Add Scrap
-                    </h3>
-                    <div className="grid auto-fit gap-2 items-end" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))'}}>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Item Code *</label>
-                        <SearchableSelect
-                          value={newScrapItem.item_code}
-                          onChange={(value) => {
-                            setNewScrapItem({...newScrapItem, item_code: value})
-                            handleScrapItemChange({target: {name: 'item_code', value: value}})
-                          }}
-                          options={items.filter(item => item && item.item_code && item.name).map(item => ({
-                            label: item.name,
-                            value: item.item_code
-                          }))}
-                          placeholder="Search items..."
-                        />
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Name</label>
-                        <input type="text" name="item_name" value={newScrapItem.item_name} onChange={handleScrapItemChange} onKeyDown={handleKeyDown} placeholder="Name" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-orange-400 focus:ring-1 focus:ring-orange-100" />
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Input Qty *</label>
-                        <input type="number" name="input_quantity" value={newScrapItem.input_quantity} onChange={handleScrapItemChange} onKeyDown={handleKeyDown} step="0.01" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-orange-400 focus:ring-1 focus:ring-orange-100" placeholder="Material qty" />
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Loss %</label>
-                        <input type="number" name="loss_percentage" value={newScrapItem.loss_percentage} onChange={handleScrapItemChange} onKeyDown={handleKeyDown} step="0.01" min="0" max="100" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-orange-400 focus:ring-1 focus:ring-orange-100" placeholder="0-100" />
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-bold text-gray-700 mb-1">Rate (₹)</label>
-                        <input type="number" name="rate" value={newScrapItem.rate} onChange={handleScrapItemChange} onKeyDown={handleKeyDown} step="0.01" className="px-2 py-1.5 border border-gray-200 rounded text-xs font-inherit transition-all hover:border-gray-300 focus:border-orange-400 focus:ring-1 focus:ring-orange-100" />
-                      </div>
-                      <button type="button" onClick={addScrapItem} className="p-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded font-semibold text-xs flex items-center justify-center gap-1 hover:from-orange-600 hover:to-orange-700 transition shadow-sm h-9">
-                        <Plus size={14} /> Add
-                      </button>
-                    </div>
-                  </div>
-
-                  {scrapItems.length > 0 && (
-                    <div className="border border-orange-200 rounded overflow-hidden mb-3">
-                      <div className="bg-orange-50 px-3 py-2 border-b border-orange-200">
-                        <div className="font-bold text-orange-700 text-xs flex items-center gap-1">
-                          <Check size={14} className="text-orange-600" />
-                          Scrap Items
-                        </div>
-                      </div>
-                      <div className="">
-                        <table className="w-full text-xs border-collapse">
-                          <thead>
-                            <tr className="bg-gray-50 border-b border-gray-200">
-                              <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Item</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Input Qty</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Loss %</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-bold text-orange-700 bg-orange-50">Scrap Qty</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600">Rate (₹)</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-bold text-orange-700 bg-orange-50">Total (₹)</th>
-                              <th className="px-2 py-1.5 text-center text-xs font-bold text-gray-600 w-8">Del</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {scrapItems.map((item, index) => {
-                              const inputQty = parseFloat(item.input_quantity) || 0
-                              const lossPercent = parseFloat(item.loss_percentage) || 0
-                              const scrapQty = (inputQty * lossPercent) / 100
-                              const rate = parseFloat(item.rate) || 0
-                              const totalValue = scrapQty * rate
-                              return (
-                                <tr key={item.id} className={`border-b border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition`}>
-                                  <td className="px-2 py-1.5 text-xs font-medium text-gray-900">{item.item_code}</td>
-                                  <td className="px-2 py-1.5 text-xs text-right text-gray-700">{inputQty.toFixed(2)}</td>
-                                  <td className="px-2 py-1.5 text-xs text-right">
-                                    <input 
-                                      type="number" 
-                                      value={item.loss_percentage || '0'}
-                                      onChange={(e) => updateScrapItemLoss(item.id, e.target.value)}
-                                      min="0"
-                                      max="100"
-                                      step="0.01"
-                                      className="w-full px-1 py-0.5 border border-gray-200 rounded text-xs text-right hover:border-orange-300 focus:border-orange-400 focus:ring-1 focus:ring-orange-100"
-                                    />
-                                  </td>
-                                  <td className="px-2 py-1.5 text-xs text-right font-semibold text-orange-700 bg-orange-50">{scrapQty.toFixed(4)}</td>
-                                  <td className="px-2 py-1.5 text-xs text-right text-gray-700">₹{rate.toFixed(2)}</td>
-                                  <td className="px-2 py-1.5 text-xs text-right font-bold text-orange-700 bg-orange-50">₹{totalValue.toFixed(2)}</td>
-                                  <td className="px-2 py-1.5 text-center">
-                                    <button type="button" onClick={() => removeScrapItem(item.id)} className="p-1 text-red-600 hover:bg-red-100 rounded transition">
-                                      <Trash2 size={12} />
-                                    </button>
-                                  </td>
-                                </tr>
-                              )
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-
-
-                </div>
-              )}
+              <button
+                type="submit"
+                form="bom-form"
+                disabled={loading}
+                className="inline-flex items-center gap-2 rounded bg-indigo-600 p-2 text-xs  text-white  shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Save size={18} />
+                    {id ? 'Commit Changes' : 'Initialize Formulation'}
+                  </>
+                )}
+              </button>
             </div>
           </div>
+          </Card>
+              </div> {/* END OF space-y-6 */}
 
-          {/* COSTING SUMMARY SECTION */}
-          <div className={`border-b border-gray-200 p-2 ${expandedSections.costing ? 'bg-indigo-50 border-indigo-200' : ''}`}>
-            <button
-              type="button"
-              onClick={() => toggleSection('costing')}
-              className="w-full flex items-center justify-between group"
-            >
-              <div className="flex items-center gap-3 flex-1">
-                <div className="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">💰</div>
-                <div className="text-left">
-                  <h2 className="text-xs font-bold text-indigo-900 group-hover:text-indigo-700 transition">BOM Costing</h2>
-                  <p className="text-xs text-gray-500 mt-0">₹{totalBOMCost.toFixed(2)} Total Cost</p>
-                </div>
-              </div>
-              <div className="text-indigo-600 group-hover:text-indigo-700 transition flex-shrink-0">
-                {expandedSections.costing ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-              </div>
-            </button>
+            </div>
+            {/* BOM Costing Intelligence - Strategic Summary */}
 
-            {expandedSections.costing && (
-              <div className="pt-3 border-t border-indigo-100">
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                  <div className="rounded-xs border border-blue-200 bg-blue-50 p-3">
-                    <div className="text-xs font-semibold text-blue-700 mb-1">Material Cost</div>
-                    <div className="text-lg font-bold text-blue-900">₹{materialCost.toFixed(2)}</div>
-                    <p className="text-xs text-blue-600 mt-1">(Components − Scrap)</p>
-                  </div>
-                  <div className="rounded-xs border border-purple-200 bg-purple-50 p-3">
-                    <div className="text-xs font-semibold text-purple-700 mb-1">Labour Cost</div>
-                    <div className="text-lg font-bold text-purple-900">₹{labourCost.toFixed(2)}</div>
-                    <p className="text-xs text-purple-600 mt-1">Operations</p>
-                  </div>
 
-                  <div className="rounded-xs border border-green-200 bg-green-50 p-3">
-                    <div className="text-xs font-semibold text-green-700 mb-1">Total BOM Cost</div>
-                    <div className="text-lg font-bold text-green-900">₹{totalBOMCost.toFixed(2)}</div>
-                    <p className="text-xs text-green-600 mt-1">Per {formData.quantity} {formData.uom}</p>
-                  </div>
-                </div>
+            {/* Form Footer Actions - Strategic Placement */}
 
-                <div className="mt-4 grid gap-3 bg-gradient-to-br from-gray-50 to-gray-100 p-2 rounded-sm">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-600">Components Cost:</span>
-                      <span className="font-semibold text-gray-900">₹{totalComponentCost.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-600">Raw Materials Cost:</span>
-                      <span className="font-semibold text-gray-900">₹{totalRawMaterialCost.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-xs text-red-600">
-                      <span className="text-gray-600">Scrap Loss (Deduction):</span>
-                      <span className="font-semibold">−₹{totalScrapLossCost.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-xs bg-blue-50 px-2 py-1.5 rounded border border-blue-200">
-                      <span className="text-blue-800 font-semibold">Material Cost (after Scrap):</span>
-                      <span className="font-bold text-blue-700">₹{materialCost.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-600">Operations Cost:</span>
-                      <span className="font-semibold text-gray-900">₹{totalOperationCost.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-xs bg-amber-50 px-2 py-1.5 rounded border border-amber-200">
-                      <span className="text-amber-800 font-semibold">Total Scrap Qty:</span>
-                      <span className="font-bold text-amber-700">{totalScrapQty.toFixed(2)} {formData.uom}</span>
-                    </div>
-                    <div className="flex justify-between text-xs border-t border-gray-300 pt-2 mt-2">
-                      <span className="text-gray-700 font-semibold">Cost Per Unit:</span>
-                      <span className="font-bold text-gray-900">₹{formData.quantity && formData.quantity !== '0' ? (totalBOMCost / parseFloat(formData.quantity)).toFixed(2) : '0.00'}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
-
-          {/* ACTION BUTTONS */}
-          <div className="flex gap-2 justify-end pt-2">
-            <button 
-              type="button" 
-              onClick={() => navigate('/manufacturing/bom')} 
-              className="px-4 py-1.5 bg-white text-gray-700 rounded font-semibold text-xs hover:bg-gray-100 transition border border-gray-200 hover:border-gray-300 flex items-center gap-1"
-            >
-              <RotateCcw size={12} />
-              Cancel
-            </button>
-            <button 
-              type="submit" 
-              disabled={loading} 
-              className="px-4 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded font-semibold text-xs hover:from-amber-600 hover:to-amber-700 transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1 shadow-sm"
-            >
-              <Save size={12} />
-              {loading ? 'Saving...' : id ? 'Update' : 'Create'}
-            </button>
-          </div>
+         
+          
         </form>
 
-        {showDrafts && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-xs shadow-xl w-96 max-h-96 overflow-y-auto p-2">
-              <div className="flex justify-between items-center mb-4 sticky top-0 bg-white">
-                <h2 className="text-xs font-bold text-gray-900">Load Draft</h2>
-                <button
-                  onClick={() => setShowDrafts(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X size={20} />
-                </button>
+
+        {
+          showDrafts && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-2">
+              <div className="bg-white rounded w-full max-w-md shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] border border-slate-100  animate-in zoom-in-95 fade-in duration-300">
+                <div className="flex justify-between items-center p-2 border-b border-slate-50 sticky top-0 bg-white/80 backdrop-blur-md z-10">
+                  <div className="flex items-center gap-4">
+                    <div className=" p-2bg-indigo-50 rounded text-indigo-600   shadow-indigo-100/50 border border-indigo-100">
+                      <FileText size={24} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <h2 className="text-lg  text-slate-800 tracking-tight">Formulation Drafts</h2>
+                      <p className="text-xs text-slate-400     mt-0.5">Recover Strategic Specifications</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowDrafts(false)}
+                    className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded  transition-all active:scale-90"
+                  >
+                    <X size={20} strokeWidth={3} />
+                  </button>
+                </div>
+                <div className="p-2 max-h-[60vh] overflow-y-auto">
+                  <DraftsList
+                    formName="BOM"
+                    onLoadDraft={handleLoadDraft}
+                    onDeleteDraft={deleteDraft}
+                    onClose={() => setShowDrafts(false)}
+                  />
+                </div>
+                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-center">
+                  <p className="text-[9px]  text-slate-400   ">Select a draft to initialize formulation</p>
+                </div>
               </div>
-              <DraftsList
-                formName="BOM"
-                onLoadDraft={handleLoadDraft}
-                onDeleteDraft={deleteDraft}
-                onClose={() => setShowDrafts(false)}
-              />
             </div>
-          </div>
-        )}
-      </div>
-    </div>
+          )
+        }
+      </div >
+    </div >
   )
 }

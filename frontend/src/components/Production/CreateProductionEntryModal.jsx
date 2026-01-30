@@ -83,7 +83,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="📊 Record Daily Production Entry" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title="📊 Record Daily Production Entry" size="2xl">
       <form onSubmit={handleSubmit}>
         {error && (
           <div style={{

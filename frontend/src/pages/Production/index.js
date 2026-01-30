@@ -4,7 +4,9 @@ import Customers from './Customers'
 import JobCard from './JobCard'
 import ProductionEntry from './ProductionEntry'
 import Operations from './Operations'
+import OperationsRedesign from './OperationsRedesign'
 import OperationForm from './OperationForm'
+import OperationFormRedesign from './OperationFormRedesign'
 import ProductionDashboard from './ProductionDashboard'
 import ProductionPlan from './ProductionPlan'
 import ProductionPlanning from './ProductionPlanning'
@@ -22,7 +24,9 @@ export {
   JobCard,
   ProductionEntry,
   Operations,
+  OperationsRedesign,
   OperationForm,
+  OperationFormRedesign,
   ProductionDashboard,
   ProductionPlan,
   ProductionPlanning,
@@ -41,7 +45,9 @@ export default {
   JobCard,
   ProductionEntry,
   Operations,
+  OperationsRedesign,
   OperationForm,
+  OperationFormRedesign,
   ProductionDashboard,
   ProductionPlan,
   ProductionPlanning,

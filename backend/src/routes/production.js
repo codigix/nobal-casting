@@ -109,18 +109,6 @@ router.delete(
     productionController.getProductionEntries.bind(productionController)
   )
 
-  // ============= REJECTIONS =============
-  router.post(
-    '/rejections',
-    authMiddleware,
-    productionController.recordRejection.bind(productionController)
-  )
-  router.get(
-    '/rejections/analysis',
-    authMiddleware,
-    productionController.getRejectionAnalysis.bind(productionController)
-  )
-
   // ============= MACHINES =============
   router.post(
     '/machines',
@@ -150,6 +138,11 @@ router.delete(
     '/boms',
     authMiddleware,
     productionController.getBOMs.bind(productionController)
+  )
+  router.post(
+    '/boms/sync-statuses',
+    authMiddleware,
+    productionController.syncBOMStatuses.bind(productionController)
   )
   router.get(
     '/boms/:bom_id',

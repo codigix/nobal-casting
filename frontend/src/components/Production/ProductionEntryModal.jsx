@@ -512,23 +512,23 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
           <div className="grid grid-cols-5 gap-3 text-xs">
             <div>
               <p className="text-gray-600 font-semibold">Produced</p>
-              <p className="text-xs font-bold text-gray-900">{totalProducedQty.toFixed(2)}</p>
+              <p className="text-xs  text-gray-900">{totalProducedQty.toFixed(2)}</p>
             </div>
             <div>
               <p className="text-gray-600 font-semibold">Accepted</p>
-              <p className="text-lg font-bold text-green-600">{totalAcceptedQty.toFixed(2)}</p>
+              <p className="text-lg  text-green-600">{totalAcceptedQty.toFixed(2)}</p>
             </div>
             <div>
               <p className="text-gray-600 font-semibold">Rejected</p>
-              <p className="text-lg font-bold text-red-600">{totalRejectedQty.toFixed(2)}</p>
+              <p className="text-lg  text-red-600">{totalRejectedQty.toFixed(2)}</p>
             </div>
             <div>
               <p className="text-gray-600 font-semibold">Downtime</p>
-              <p className="text-lg font-bold text-orange-600">{Math.round(totalDowntimeMinutes)} min</p>
+              <p className="text-lg  text-orange-600">{Math.round(totalDowntimeMinutes)} min</p>
             </div>
             <div>
               <p className="text-gray-600 font-semibold">Remaining</p>
-              <p className="text-lg font-bold text-blue-600">
+              <p className="text-lg  text-blue-600">
                 {(parseFloat(jobCardData?.planned_quantity || 0) - totalProducedQty).toFixed(2)}
               </p>
             </div>
@@ -550,34 +550,34 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
           const isBottleneck = actualMinutes > expectedMinutes * 1.3
           
           return (
-            <div className="mb-4 p-3 rounded-xs border-2 border-purple-300 bg-gradient-to-r from-purple-50 to-pink-50">
+            <div className="mb-4 p-2 rounded-xs border-2 border-purple-300 bg-gradient-to-r from-purple-50 to-pink-50">
               <div className="grid grid-cols-2 gap-2 text-xs mb-3">
                 <div className="p-2 bg-white border border-orange-200 rounded">
                   <p className="text-gray-600 font-semibold mb-1">Expected Duration</p>
-                  <p className="font-bold text-orange-700">{expectedMinutes.toFixed(0)} min</p>
+                  <p className=" text-orange-700">{expectedMinutes.toFixed(0)} min</p>
                 </div>
                 <div className="p-2 bg-white border border-blue-200 rounded">
                   <p className="text-gray-600 font-semibold mb-1">Actual Duration</p>
-                  <p className="font-bold text-blue-700">{actualMinutes.toFixed(0)} min</p>
+                  <p className=" text-blue-700">{actualMinutes.toFixed(0)} min</p>
                 </div>
               </div>
               
               <div className="grid grid-cols-3 gap-2 text-xs">
                 <div className={`p-2 rounded border ${efficiency >= 100 ? 'bg-green-50 border-green-200' : efficiency >= 80 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'}`}>
                   <p className="text-gray-600 font-semibold mb-1">⚡ Efficiency</p>
-                  <p className={`font-bold text-lg ${efficiency >= 100 ? 'text-green-600' : efficiency >= 80 ? 'text-yellow-600' : 'text-red-600'}`}>
+                  <p className={` text-lg ${efficiency >= 100 ? 'text-green-600' : efficiency >= 80 ? 'text-yellow-600' : 'text-red-600'}`}>
                     {efficiency}%
                   </p>
                   {isBottleneck && <p className="text-red-600 text-xs mt-1">🚨 Bottleneck Detected</p>}
                 </div>
                 <div className="p-2 rounded bg-blue-50 border border-blue-200">
                   <p className="text-gray-600 font-semibold mb-1">✓ Quality</p>
-                  <p className="font-bold text-lg text-blue-600">{qualityScore}%</p>
+                  <p className=" text-lg text-blue-600">{qualityScore}%</p>
                   <p className="text-gray-500 text-xs mt-1">Acceptance rate</p>
                 </div>
                 <div className="p-2 rounded bg-green-50 border border-green-200">
                   <p className="text-gray-600 font-semibold mb-1">📦 Productivity</p>
-                  <p className="font-bold text-lg text-green-600">
+                  <p className=" text-lg text-green-600">
                     {actualMinutes > 0 ? ((totalAcceptedQty / (actualMinutes / 60)).toFixed(1)) : '0'} units/hr
                   </p>
                 </div>
@@ -589,7 +589,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
         <div className="max-h-[70vh] overflow-y-auto space-y-6">
           {/* Operation Execution Section */}
           <div className="p-4 bg-gradient-to-br from-green-50 to-blue-50 border border-green-200 rounded-xs">
-            <h3 className="text-xs font-bold text-gray-900 mb-4">Operation Execution</h3>
+            <h3 className="text-xs  text-gray-900 mb-4">Operation Execution</h3>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div>
                 <label className="text-xs text-gray-600 font-semibold block mb-1">Start Date</label>
@@ -604,7 +604,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
 
           {/* Time Logs Section */}
           <div className="p-4 bg-gray-50 border border-gray-200 rounded-xs">
-            <h3 className="text-xs font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <h3 className="text-xs  text-gray-900 mb-4 flex items-center gap-2">
               Time Logs ({timeLogs.length})
             </h3>
             <div>
@@ -840,7 +840,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white font-medium text-xs rounded-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full  bg-blue-500 hover:bg-blue-600 text-white font-medium text-xs rounded-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Adding...' : 'Add Time Log'}
                 </button>
@@ -851,34 +851,34 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   <table className="w-full text-xs">
                     <thead className="bg-gray-100 border-b border-gray-200">
                       <tr>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Operator</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Workstation</th>
-                        <th className="px-3 py-2 text-center font-semibold text-gray-700">Shift</th>
-                        <th className="px-3 py-2 text-center font-semibold text-gray-700">Time</th>
-                        <th className="px-3 py-2 text-center font-semibold text-gray-700">Completed</th>
-                        <th className="px-3 py-2 text-center font-semibold text-gray-700">Accepted</th>
-                        <th className="px-3 py-2 text-center font-semibold text-gray-700">Type</th>
-                        <th className="px-3 py-2 text-center font-semibold text-gray-700">Action</th>
+                        <th className="p-2  py-2 text-left font-semibold text-gray-700">Operator</th>
+                        <th className="p-2  py-2 text-left font-semibold text-gray-700">Workstation</th>
+                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Shift</th>
+                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Time</th>
+                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Completed</th>
+                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Accepted</th>
+                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Type</th>
+                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {timeLogs.map(log => (
                         <tr key={log.id} className="hover:bg-gray-50 transition">
-                          <td className="px-3 py-2 text-gray-900">{log.operator_name}</td>
-                          <td className="px-3 py-2 text-gray-900">{log.machine_id || 'N/A'}</td>
-                          <td className="px-3 py-2 text-center text-gray-900">{log.shift}</td>
-                          <td className="px-3 py-2 text-center text-gray-600">
+                          <td className="p-2  py-2 text-gray-900">{log.operator_name}</td>
+                          <td className="p-2  py-2 text-gray-900">{log.machine_id || 'N/A'}</td>
+                          <td className="p-2  py-2 text-center text-gray-900">{log.shift}</td>
+                          <td className="p-2  py-2 text-center text-gray-600">
                             {log.from_time} - {log.to_time}
                           </td>
-                          <td className="px-3 py-2 text-center text-gray-900 font-medium">{log.completed_qty}</td>
-                          <td className="px-3 py-2 text-center text-green-600 font-medium">{log.accepted_qty}</td>
-                          <td className="px-3 py-2 text-center">
+                          <td className="p-2  py-2 text-center text-gray-900 font-medium">{log.completed_qty}</td>
+                          <td className="p-2  py-2 text-center text-green-600 font-medium">{log.accepted_qty}</td>
+                          <td className="p-2  py-2 text-center">
                             <div className="flex justify-center gap-1">
                               {log.inhouse && <span className="px-1 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">In</span>}
                               {log.outsource && <span className="px-1 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">Out</span>}
                             </div>
                           </td>
-                          <td className="px-3 py-2 text-center">
+                          <td className="p-2  py-2 text-center">
                             <button
                               onClick={() => handleDeleteTimeLog(log.id)}
                               className="text-red-600 hover:text-red-900 transition"
@@ -892,7 +892,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   </table>
                 </div>
               ) : (
-                <div className="p-8 text-center bg-gray-50 border border-gray-200 rounded-xs text-gray-500">
+                <div className="p-3 text-center bg-gray-50 border border-gray-200 rounded-xs text-gray-500">
                   <Clock size={28} className="mx-auto mb-2 opacity-50" />
                   <p className="text-xs">No time logs recorded yet</p>
                 </div>
@@ -902,7 +902,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
 
           {/* Rejections Section */}
           <div className="p-4 bg-gray-50 border border-gray-200 rounded-xs">
-            <h3 className="text-xs font-bold text-gray-900 mb-4">Rejections ({rejections.length})</h3>
+            <h3 className="text-xs  text-gray-900 mb-4">Rejections ({rejections.length})</h3>
             {true && (
             <div>
               <form onSubmit={handleAddRejection} className="mb-6 p-3 bg-gray-50 border border-gray-200 rounded-xs">
@@ -953,7 +953,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2 px-4 bg-red-500 hover:bg-red-600 text-white font-medium text-xs rounded-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full  bg-red-500 hover:bg-red-600 text-white font-medium text-xs rounded-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Adding...' : 'Add Rejection'}
                 </button>
@@ -964,21 +964,21 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   <table className="w-full text-xs">
                     <thead className="bg-gray-100 border-b border-gray-200">
                       <tr>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Reason</th>
-                        <th className="px-3 py-2 text-center font-semibold text-gray-700">Qty</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Notes</th>
-                        <th className="px-3 py-2 text-center font-semibold text-gray-700">Date</th>
-                        <th className="px-3 py-2 text-center font-semibold text-gray-700">Action</th>
+                        <th className="p-2  py-2 text-left font-semibold text-gray-700">Reason</th>
+                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Qty</th>
+                        <th className="p-2  py-2 text-left font-semibold text-gray-700">Notes</th>
+                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Date</th>
+                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {rejections.map(r => (
                         <tr key={r.id} className="hover:bg-gray-50 transition">
-                          <td className="px-3 py-2 text-gray-900">{r.rejection_reason}</td>
-                          <td className="px-3 py-2 text-center font-medium text-red-600">{r.rejected_qty}</td>
-                          <td className="px-3 py-2 text-gray-600 text-xs">{r.notes || '-'}</td>
-                          <td className="px-3 py-2 text-center text-gray-500 text-xs">{r.created_at ? new Date(r.created_at).toLocaleDateString() : '-'}</td>
-                          <td className="px-3 py-2 text-center">
+                          <td className="p-2  py-2 text-gray-900">{r.rejection_reason}</td>
+                          <td className="p-2  py-2 text-center font-medium text-red-600">{r.rejected_qty}</td>
+                          <td className="p-2  py-2 text-gray-600 text-xs">{r.notes || '-'}</td>
+                          <td className="p-2  py-2 text-center text-gray-500 text-xs">{r.created_at ? new Date(r.created_at).toLocaleDateString() : '-'}</td>
+                          <td className="p-2  py-2 text-center">
                             <button
                               onClick={() => handleDeleteRejection(r.id)}
                               className="text-red-600 hover:text-red-900 transition"
@@ -992,7 +992,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   </table>
                 </div>
               ) : (
-                <div className="p-8 text-center bg-gray-50 border border-gray-200 rounded-xs text-gray-500">
+                <div className="p-3 text-center bg-gray-50 border border-gray-200 rounded-xs text-gray-500">
                   <AlertCircle size={28} className="mx-auto mb-2 opacity-50" />
                   <p className="text-xs">No rejection entries recorded</p>
                 </div>
@@ -1003,7 +1003,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
 
           {/* Downtimes Section */}
           <div className="p-4 bg-gray-50 border border-gray-200 rounded-xs">
-            <h3 className="text-xs font-bold text-gray-900 mb-4">Downtimes ({downtimes.length})</h3>
+            <h3 className="text-xs  text-gray-900 mb-4">Downtimes ({downtimes.length})</h3>
             {true && (
             <div>
               <form onSubmit={handleAddDowntime} className="mb-6 p-3 bg-gray-50 border border-gray-200 rounded-xs">
@@ -1076,7 +1076,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2 px-4 bg-orange-500 hover:bg-orange-600 text-white font-medium text-xs rounded-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full  bg-orange-500 hover:bg-orange-600 text-white font-medium text-xs rounded-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Adding...' : 'Add Downtime'}
                 </button>
@@ -1087,25 +1087,25 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   <table className="w-full text-xs">
                     <thead className="bg-gray-100 border-b border-gray-200">
                       <tr>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Type</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Reason</th>
-                        <th className="px-3 py-2 text-center font-semibold text-gray-700">Time</th>
-                        <th className="px-3 py-2 text-center font-semibold text-gray-700">Duration</th>
-                        <th className="px-3 py-2 text-center font-semibold text-gray-700">Date</th>
-                        <th className="px-3 py-2 text-center font-semibold text-gray-700">Action</th>
+                        <th className="p-2  py-2 text-left font-semibold text-gray-700">Type</th>
+                        <th className="p-2  py-2 text-left font-semibold text-gray-700">Reason</th>
+                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Time</th>
+                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Duration</th>
+                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Date</th>
+                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {downtimes.map(d => (
                         <tr key={d.id} className="hover:bg-gray-50 transition">
-                          <td className="px-3 py-2 text-gray-900">{d.downtime_type}</td>
-                          <td className="px-3 py-2 text-gray-600 text-xs">{d.downtime_reason || '-'}</td>
-                          <td className="px-3 py-2 text-center text-gray-600 text-xs">
+                          <td className="p-2  py-2 text-gray-900">{d.downtime_type}</td>
+                          <td className="p-2  py-2 text-gray-600 text-xs">{d.downtime_reason || '-'}</td>
+                          <td className="p-2  py-2 text-center text-gray-600 text-xs">
                             {d.from_time} - {d.to_time}
                           </td>
-                          <td className="px-3 py-2 text-center font-medium text-orange-600">{d.duration_minutes || 0} min</td>
-                          <td className="px-3 py-2 text-center text-gray-500 text-xs">{d.created_at ? new Date(d.created_at).toLocaleDateString() : '-'}</td>
-                          <td className="px-3 py-2 text-center">
+                          <td className="p-2  py-2 text-center font-medium text-orange-600">{d.duration_minutes || 0} min</td>
+                          <td className="p-2  py-2 text-center text-gray-500 text-xs">{d.created_at ? new Date(d.created_at).toLocaleDateString() : '-'}</td>
+                          <td className="p-2  py-2 text-center">
                             <button
                               onClick={() => handleDeleteDowntime(d.id)}
                               className="text-red-600 hover:text-red-900 transition"
@@ -1119,7 +1119,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   </table>
                 </div>
               ) : (
-                <div className="p-8 text-center bg-gray-50 border border-gray-200 rounded-xs text-gray-500">
+                <div className="p-3 text-center bg-gray-50 border border-gray-200 rounded-xs text-gray-500">
                   <Clock size={28} className="mx-auto mb-2 opacity-50" />
                   <p className="text-xs">No downtime entries recorded</p>
                 </div>
@@ -1132,7 +1132,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
           <div className="p-4 bg-purple-50 border border-purple-200 rounded-xs">
             {true && (
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Assign Next Operation</h3>
+              <h3 className="text-lg  text-gray-900 mb-4">Assign Next Operation</h3>
 
               {totalAcceptedQty > 0 && (
                 <div className="mb-4 p-3 bg-blue-50 border border-blue-300 rounded-xs">
@@ -1230,7 +1230,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
               <button
                 onClick={handleSubmitProduction}
                 disabled={isSubmitting || !nextOperationForm.next_operator_id || !nextOperationForm.next_warehouse_id || !nextOperationForm.next_operation_id}
-                className="w-full py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full  bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Assigning...' : 'Submit & Complete Production'}
               </button>

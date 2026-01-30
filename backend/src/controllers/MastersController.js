@@ -409,10 +409,21 @@ class MastersController {
          LIMIT 6`
       )
       
+      const [[{ totalRevenue }]] = await database.query(
+        `SELECT COALESCE(SUM(order_amount), 0) as totalRevenue FROM selling_sales_order WHERE deleted_at IS NULL`
+      )
+      
+      const [[{ completionRate }]] = await database.query(
+        `SELECT COALESCE(ROUND(SUM(CASE WHEN status IN ('delivered', 'complete') THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), 0) as completionRate 
+         FROM selling_sales_order WHERE deleted_at IS NULL`
+      )
+
       res.json({
         success: true,
         data: {
           total: parseInt(total) || 0,
+          totalRevenue: parseFloat(totalRevenue) || 0,
+          completionRate: parseFloat(completionRate) || 0,
           statusCounts: statusCounts || [],
           projects: allProjects || [],
           monthlyTimeline: monthlyTimeline || []
@@ -424,6 +435,141 @@ class MastersController {
         success: true,
         data: { total: 0, statusCounts: [], projects: [], monthlyTimeline: [] },
         message: 'Project analysis not available'
+      })
+    }
+  }
+
+  static async getDetailedProjectAnalysis(req, res) {
+    try {
+      const { id } = req.params
+      const database = MastersController.getDb()
+      
+      // 1. Fetch Sales Order Details
+      const [orderRows] = await database.query(
+        `SELECT sso.*, c.name as customer_name, c.email as customer_email, c.phone as customer_phone
+         FROM selling_sales_order sso
+         LEFT JOIN selling_customer c ON sso.customer_id = c.customer_id
+         WHERE sso.sales_order_id = ? AND sso.deleted_at IS NULL`,
+        [id]
+      )
+      
+      if (!orderRows.length) {
+        return res.status(404).json({ success: false, message: 'Project not found' })
+      }
+      
+      const project = orderRows[0]
+      
+      // 2. Fetch Work Orders
+      const [workOrders] = await database.query(
+        `SELECT * FROM work_order WHERE sales_order_id = ?`,
+        [id]
+      )
+      
+      const woIds = workOrders.map(wo => wo.wo_id)
+      let stages = []
+      let entries = []
+      
+      if (woIds.length > 0) {
+        // 3. Fetch Job Cards (Stages)
+        const [jobCards] = await database.query(
+          `SELECT jc.*, wo.sales_order_id
+           FROM job_card jc
+           JOIN work_order wo ON jc.work_order_id = wo.wo_id
+           WHERE wo.sales_order_id = ?`,
+          [id]
+        )
+        
+        // Group by operation to get stages
+        const groupedStages = jobCards.reduce((acc, jc) => {
+          const stageName = jc.operation || 'Unknown'
+          if (!acc[stageName]) {
+            acc[stageName] = {
+              stage_name: stageName,
+              planned_qty: 0,
+              produced_qty: 0,
+              accepted_qty: 0,
+              rejected_qty: 0,
+              status: 'pending',
+              job_cards_count: 0,
+              planned_time: 0,
+              actual_time: 0,
+              sequence: jc.operation_sequence || (Object.keys(acc).length + 1)
+            }
+          }
+          const stage = acc[stageName]
+          stage.planned_qty += parseFloat(jc.planned_quantity || 0)
+          stage.produced_qty += parseFloat(jc.produced_quantity || 0)
+          stage.accepted_qty += parseFloat(jc.accepted_quantity || 0)
+          stage.rejected_qty += parseFloat(jc.rejected_quantity || 0)
+          stage.job_cards_count += 1
+          
+          stage.planned_time = (stage.planned_time || 0) + parseFloat(jc.operation_time || 0)
+          if (jc.actual_start_date && jc.actual_end_date) {
+            const start = new Date(jc.actual_start_date)
+            const end = new Date(jc.actual_end_date)
+            stage.actual_time = (stage.actual_time || 0) + (end - start) / (1000 * 60 * 60)
+          }
+          
+          if (jc.status === 'in_progress') stage.status = 'in_progress'
+          if (jc.status === 'completed' && stage.status !== 'in_progress') stage.status = 'completed'
+          
+          return acc
+        }, {})
+        
+        stages = Object.values(groupedStages).sort((a, b) => a.sequence - b.sequence)
+        
+        // 4. Fetch Production Entries
+        const [productionEntries] = await database.query(
+          `SELECT pe.*, wo.item_code 
+           FROM production_entry pe
+           JOIN work_order wo ON pe.work_order_id = wo.wo_id
+           WHERE wo.sales_order_id = ?`,
+          [id]
+        )
+        entries = productionEntries
+      }
+      
+      // 5. Fetch Material Readiness (from material_allocation)
+      const [materials] = await database.query(
+        `SELECT ma.item_code, ma.item_name, ma.allocated_qty as required_qty, 
+                ma.consumed_qty, ma.status, i.uom,
+                COALESCE(sb.current_qty, 0) as stock_qty
+         FROM material_allocation ma
+         JOIN work_order wo ON ma.work_order_id = wo.wo_id
+         LEFT JOIN item i ON ma.item_code = i.item_code
+         LEFT JOIN stock_balance sb ON ma.item_code = sb.item_code AND ma.warehouse_id = sb.warehouse_id
+         WHERE wo.sales_order_id = ?`,
+        [id]
+      )
+      
+      // 6. Calculate Global Metrics
+      const totalPlannedTime = stages.reduce((acc, s) => acc + (parseFloat(s.planned_time) || 0), 0);
+      const totalActualTime = stages.reduce((acc, s) => acc + (parseFloat(s.actual_time) || 0), 0);
+      const efficiency = totalActualTime > 0 ? Math.round((totalPlannedTime / totalActualTime) * 100) : 100;
+
+      // 7. For now, return what we have
+      res.json({
+        success: true,
+        data: {
+          project: {
+            ...project,
+            progress: project.status === 'delivered' ? 100 : 
+                     project.status === 'dispatched' ? 75 :
+                     project.status === 'complete' ? 75 :
+                     project.status === 'production' ? 50 : 25,
+            efficiency: Math.min(100, Math.max(0, efficiency))
+          },
+          stages,
+          entries,
+          materials: materials || []
+        },
+        message: 'Detailed project analysis fetched successfully'
+      })
+    } catch (error) {
+      console.error('[getDetailedProjectAnalysis] ERROR:', error)
+      res.status(500).json({
+        success: false,
+        error: error.message
       })
     }
   }
@@ -490,6 +636,42 @@ class MastersController {
         `SELECT COALESCE(ROUND(SUM(CASE WHEN status IN ('delivered', 'complete') THEN 1 ELSE 0 END) / COUNT(*) * 100, 2), 0) as completionRate 
          FROM selling_sales_order WHERE deleted_at IS NULL`
       )
+
+      // Calculate Trends (Current Month vs Last Month)
+      const currentMonth = monthlyTimeline[0] || { total_projects: 0, revenue: 0, completed: 0 };
+      const lastMonth = monthlyTimeline[1] || { total_projects: 0, revenue: 0, completed: 0 };
+      
+      const currCompletionRate = currentMonth.total_projects > 0 ? (currentMonth.completed / currentMonth.total_projects * 100) : 0;
+      const lastCompletionRate = lastMonth.total_projects > 0 ? (lastMonth.completed / lastMonth.total_projects * 100) : 0;
+
+      const currAtRisk = allProjects.filter(p => p.daysLeft < 3 && p.status !== 'delivered').length;
+      // For prevAtRisk, it's hard to calculate without historical daysLeft, so we'll use a heuristic or just 0 for now
+      // but let's try to be better: maybe count projects that were due within a month but not delivered
+      const prevAtRisk = allProjects.filter(p => {
+        const dueDate = new Date(p.dueDate);
+        const lastMonthDate = new Date();
+        lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
+        return dueDate < lastMonthDate && !['delivered', 'complete'].includes(p.status);
+      }).length;
+
+      const trends = {
+        projects: {
+          trend: currentMonth.total_projects >= lastMonth.total_projects ? 'up' : 'down',
+          percent: lastMonth.total_projects > 0 ? Math.round(Math.abs(currentMonth.total_projects - lastMonth.total_projects) / lastMonth.total_projects * 100) : (currentMonth.total_projects > 0 ? 100 : 0)
+        },
+        revenue: {
+          trend: currentMonth.revenue >= lastMonth.revenue ? 'up' : 'down',
+          percent: lastMonth.revenue > 0 ? Math.round(Math.abs(currentMonth.revenue - lastMonth.revenue) / lastMonth.revenue * 100) : (currentMonth.revenue > 0 ? 100 : 0)
+        },
+        completion: {
+          trend: currCompletionRate >= lastCompletionRate ? 'up' : 'down',
+          percent: lastCompletionRate > 0 ? Math.round(Math.abs(currCompletionRate - lastCompletionRate) / lastCompletionRate * 100) : (currCompletionRate > 0 ? 100 : 0)
+        },
+        atRisk: {
+          trend: currAtRisk <= prevAtRisk ? 'down' : 'up',
+          percent: prevAtRisk > 0 ? Math.round(Math.abs(currAtRisk - prevAtRisk) / prevAtRisk * 100) : (currAtRisk > 0 ? 100 : 0)
+        }
+      }
       
       res.json({
         success: true,
@@ -499,7 +681,8 @@ class MastersController {
           completionRate: parseFloat(completionRate) || 0,
           statusCounts: statusCounts || [],
           projects: allProjects || [],
-          monthlyTimeline: monthlyTimeline || []
+          monthlyTimeline: monthlyTimeline || [],
+          trends
         },
         message: 'Sales orders as projects fetched successfully'
       })
@@ -509,6 +692,216 @@ class MastersController {
         success: true,
         data: { total: 0, totalRevenue: 0, completionRate: 0, statusCounts: [], projects: [], monthlyTimeline: [] },
         message: 'Sales orders analysis not available'
+      })
+    }
+  }
+
+  static async getCustomerStatistics(req, res) {
+    try {
+      const database = MastersController.getDb()
+      
+      // 1. Overall Metrics
+      const [[{ totalCustomers }]] = await database.query(
+        `SELECT COUNT(*) as totalCustomers FROM selling_customer WHERE status = 'active'`
+      )
+      
+      const [[{ totalRevenue }]] = await database.query(
+        `SELECT COALESCE(SUM(order_amount), 0) as totalRevenue FROM selling_sales_order WHERE status != 'draft' AND deleted_at IS NULL`
+      )
+
+      // 2. Customer Segmentation (Premium vs Regular based on revenue threshold)
+      const revenueThreshold = 100000; // 1 Lakh threshold for premium
+      
+      const [customers] = await database.query(
+        `SELECT c.customer_id as id, c.name, c.created_at,
+                COALESCE(SUM(sso.order_amount), 0) as revenue,
+                COUNT(sso.sales_order_id) as orders,
+                CASE WHEN SUM(sso.order_amount) >= ? THEN 'Premium' ELSE 'Regular' END as segment
+         FROM selling_customer c
+         LEFT JOIN selling_sales_order sso ON c.customer_id = sso.customer_id AND sso.status != 'draft' AND sso.deleted_at IS NULL
+         WHERE c.status = 'active'
+         GROUP BY c.customer_id, c.name, c.created_at
+         ORDER BY revenue DESC`,
+        [revenueThreshold]
+      )
+
+      const premiumCustomers = customers.filter(c => c.segment === 'Premium')
+      const regularClients = customers.filter(c => c.segment === 'Regular')
+
+      // 3. Monthly Revenue Trend for both segments
+      const [monthlyTrend] = await database.query(
+        `SELECT DATE_FORMAT(sso.created_at, '%b') as month,
+                DATE_FORMAT(sso.created_at, '%Y-%m') as month_key,
+                SUM(CASE WHEN c_rev.total_rev >= ? THEN sso.order_amount ELSE 0 END) as premium,
+                SUM(CASE WHEN c_rev.total_rev < ? THEN sso.order_amount ELSE 0 END) as regular
+         FROM selling_sales_order sso
+         JOIN (
+           SELECT customer_id, SUM(order_amount) as total_rev 
+           FROM selling_sales_order 
+           WHERE status != 'draft' AND deleted_at IS NULL
+           GROUP BY customer_id
+         ) c_rev ON sso.customer_id = c_rev.customer_id
+         WHERE sso.created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+           AND sso.status != 'draft' AND sso.deleted_at IS NULL
+         GROUP BY month_key, month
+         ORDER BY month_key ASC`,
+        [revenueThreshold, revenueThreshold]
+      )
+
+      // 4. Performance Metrics (Comparison)
+      const comparison = [
+        { 
+          name: 'Premium', 
+          orders: premiumCustomers.reduce((acc, c) => acc + c.orders, 0),
+          avgValue: premiumCustomers.length > 0 ? (premiumCustomers.reduce((acc, c) => acc + (parseFloat(c.revenue) || 0), 0) / (premiumCustomers.reduce((acc, c) => acc + (parseInt(c.orders) || 0), 0) || 1)) : 0,
+          color: '#fbbf24'
+        },
+        { 
+          name: 'Regular', 
+          orders: regularClients.reduce((acc, c) => acc + c.orders, 0),
+          avgValue: regularClients.length > 0 ? (regularClients.reduce((acc, c) => acc + (parseFloat(c.revenue) || 0), 0) / (regularClients.reduce((acc, c) => acc + (parseInt(c.orders) || 0), 0) || 1)) : 0,
+          color: '#3b82f6'
+        }
+      ]
+
+      // 5. Radar Chart Data (Segment Capabilities Normalized 0-100)
+      const avgRevPremium = premiumCustomers.length > 0 ? (premiumCustomers.reduce((acc, c) => acc + (parseFloat(c.revenue) || 0), 0) / premiumCustomers.length) : 1;
+      const avgRevRegular = regularClients.length > 0 ? (regularClients.reduce((acc, c) => acc + (parseFloat(c.revenue) || 0), 0) / regularClients.length) : 0;
+      
+      const avgOrdersPremium = premiumCustomers.length > 0 ? (premiumCustomers.reduce((acc, c) => acc + (parseInt(c.orders) || 0), 0) / premiumCustomers.length) : 1;
+      const avgOrdersRegular = regularClients.length > 0 ? (regularClients.reduce((acc, c) => acc + (parseInt(c.orders) || 0), 0) / regularClients.length) : 0;
+
+      const retentionPremium = premiumCustomers.length > 0 ? (premiumCustomers.filter(c => c.orders > 1).length / premiumCustomers.length * 100) : 0;
+      const retentionRegular = regularClients.length > 0 ? (regularClients.filter(c => c.orders > 1).length / regularClients.length * 100) : 0;
+
+      // Calculate Growth (Last 3 months vs previous 3 months)
+      const midPoint = Math.floor(monthlyTrend.length / 2);
+      const prevQuarterPremium = monthlyTrend.slice(0, midPoint).reduce((acc, m) => acc + parseFloat(m.premium || 0), 0);
+      const currQuarterPremium = monthlyTrend.slice(midPoint).reduce((acc, m) => acc + parseFloat(m.premium || 0), 0);
+      const growthPremium = prevQuarterPremium > 0 ? Math.round(((currQuarterPremium - prevQuarterPremium) / prevQuarterPremium) * 100) : (currQuarterPremium > 0 ? 100 : 0);
+
+      const prevQuarterRegular = monthlyTrend.slice(0, midPoint).reduce((acc, m) => acc + parseFloat(m.regular || 0), 0);
+      const currQuarterRegular = monthlyTrend.slice(midPoint).reduce((acc, m) => acc + parseFloat(m.regular || 0), 0);
+      const growthRegular = prevQuarterRegular > 0 ? Math.round(((currQuarterRegular - prevQuarterRegular) / prevQuarterRegular) * 100) : (currQuarterRegular > 0 ? 100 : 0);
+
+      const capabilities = [
+        { subject: 'Revenue', A: 100, B: Math.round((avgRevRegular / avgRevPremium) * 100) },
+        { subject: 'Volume', A: 100, B: Math.round((avgOrdersRegular / avgOrdersPremium) * 100) },
+        { subject: 'Retention', A: Math.round(retentionPremium), B: Math.round(retentionRegular) },
+        { subject: 'Growth', A: Math.min(100, Math.max(0, growthPremium)), B: Math.min(100, Math.max(0, growthRegular)) },
+        { subject: 'LTV', A: 100, B: Math.round((avgRevRegular / avgRevPremium) * 100) }
+      ]
+
+      // 6. Calculate Trends for KPIs
+      const currentMonthData = monthlyTrend[monthlyTrend.length - 1] || { premium: 0, regular: 0, month_key: '' };
+      const lastMonthData = monthlyTrend[monthlyTrend.length - 2] || { premium: 0, regular: 0, month_key: '' };
+      
+      const totalCurr = (parseFloat(currentMonthData.premium) || 0) + (parseFloat(currentMonthData.regular) || 0);
+      const totalLast = (parseFloat(lastMonthData.premium) || 0) + (parseFloat(lastMonthData.regular) || 0);
+      
+      // Calculate customer growth
+      const [[{ prevTotalCustomers }]] = await database.query(
+        `SELECT COUNT(*) as prevTotalCustomers FROM selling_customer WHERE status = 'active' AND created_at < DATE_SUB(NOW(), INTERVAL 1 MONTH)`
+      );
+
+      // Calculate Premium Share Trends
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+      const currentPremiumShare = totalCustomers > 0 ? (premiumCustomers.length / totalCustomers * 100) : 0;
+      const prevPremiumShare = parseInt(prevTotalCustomers) > 0 ? (premiumCustomers.filter(c => new Date(c.created_at) < oneMonthAgo).length / parseInt(prevTotalCustomers) * 100) : 0;
+
+      // Calculate LTV (Average Revenue per Customer)
+      const currentLTV = totalCustomers > 0 ? (totalRevenue / totalCustomers) : 0;
+      // For prev LTV, we'd need prev total revenue, which we can get from monthlyTrend excluding last month
+      const prevTotalRevenue = monthlyTrend.slice(0, -1).reduce((acc, m) => acc + (parseFloat(m.premium) || 0) + (parseFloat(m.regular) || 0), 0);
+      const prevLTV = parseInt(prevTotalCustomers) > 0 ? (prevTotalRevenue / parseInt(prevTotalCustomers)) : 0;
+
+      const kpiTrends = {
+        revenue: {
+          trend: totalCurr >= totalLast ? 'up' : 'down',
+          percent: totalLast > 0 ? Math.round(Math.abs(totalCurr - totalLast) / totalLast * 100) : (totalCurr > 0 ? 100 : 0)
+        },
+        customers: {
+          trend: totalCustomers >= parseInt(prevTotalCustomers) ? 'up' : 'down',
+          percent: parseInt(prevTotalCustomers) > 0 ? Math.round(Math.abs(totalCustomers - parseInt(prevTotalCustomers)) / parseInt(prevTotalCustomers) * 100) : (totalCustomers > 0 ? 100 : 0)
+        },
+        premiumShare: {
+          trend: currentPremiumShare >= prevPremiumShare ? 'up' : 'down',
+          percent: prevPremiumShare > 0 ? Math.round(Math.abs(currentPremiumShare - prevPremiumShare) / prevPremiumShare * 100) : (currentPremiumShare > 0 ? 100 : 0)
+        },
+        ltv: {
+          trend: currentLTV >= prevLTV ? 'up' : 'down',
+          percent: prevLTV > 0 ? Math.round(Math.abs(currentLTV - prevLTV) / prevLTV * 100) : (currentLTV > 0 ? 100 : 0)
+        }
+      }
+
+      res.json({
+        success: true,
+        data: {
+          totalCustomers: parseInt(totalCustomers) || 0,
+          totalRevenue: parseFloat(totalRevenue) || 0,
+          customers: {
+            premium: premiumCustomers,
+            regular: regularClients
+          },
+          trends: monthlyTrend || [],
+          comparison: comparison,
+          capabilities: capabilities,
+          kpiTrends: kpiTrends
+        }
+      })
+    } catch (error) {
+      console.error('[getCustomerStatistics] ERROR:', error)
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  }
+
+  static async getCustomerDetailedStats(req, res) {
+    try {
+      const { id } = req.params
+      const database = MastersController.getDb()
+      
+      // 1. Customer Monthly Revenue and Order Trend
+      const [monthlyTrend] = await database.query(
+        `SELECT DATE_FORMAT(created_at, '%b') as month,
+                SUM(order_amount) as revenue,
+                COUNT(sales_order_id) as orders
+         FROM selling_sales_order
+         WHERE customer_id = ? 
+           AND status != 'draft' 
+           AND deleted_at IS NULL
+           AND created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+         GROUP BY DATE_FORMAT(created_at, '%m'), DATE_FORMAT(created_at, '%b')
+         ORDER BY DATE_FORMAT(created_at, '%m') ASC`,
+        [id]
+      )
+
+      // 2. Recent Sales Orders for this customer
+      const [recentOrders] = await database.query(
+        `SELECT sales_order_id as id, name, order_amount as amount, status, created_at as date
+         FROM selling_sales_order
+         WHERE customer_id = ? AND deleted_at IS NULL
+         ORDER BY created_at DESC
+         LIMIT 5`,
+        [id]
+      )
+
+      res.json({
+        success: true,
+        data: {
+          trends: monthlyTrend || [],
+          recentOrders: recentOrders || []
+        }
+      })
+    } catch (error) {
+      console.error('[getCustomerDetailedStats] ERROR:', error)
+      res.status(500).json({
+        success: false,
+        error: error.message
       })
     }
   }

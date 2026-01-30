@@ -1,11 +1,13 @@
 import { ProductionPlanningModel } from '../models/ProductionPlanningModel.js'
 import { ProductionPlanningService } from '../services/ProductionPlanningService.js'
+import ProductionModel from '../models/ProductionModel.js'
 
 export class ProductionPlanningController {
   constructor(model, db) {
     this.model = model
     this.db = db
     this.service = new ProductionPlanningService(db)
+    this.productionModel = new ProductionModel(db)
   }
 
   async createPlan(req, res) {
@@ -301,6 +303,31 @@ export class ProductionPlanningController {
       })
     } catch (error) {
       console.error('Error generating production plan from sales order:', error)
+      res.status(500).json({ success: false, error: error.message })
+    }
+  }
+
+  async createWorkOrders(req, res) {
+    try {
+      const { plan_id } = req.params
+
+      if (!plan_id) {
+        return res.status(400).json({ success: false, error: 'Plan ID is required' })
+      }
+
+      const result = await this.service.createWorkOrdersFromPlan(
+        plan_id, 
+        this.productionModel, 
+        this.model
+      )
+
+      res.json({ 
+        success: true, 
+        message: 'Work orders and job cards generated successfully',
+        data: { work_orders: result }
+      })
+    } catch (error) {
+      console.error('Error creating work orders from plan:', error)
       res.status(500).json({ success: false, error: error.message })
     }
   }

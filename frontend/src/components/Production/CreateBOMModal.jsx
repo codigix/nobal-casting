@@ -256,7 +256,7 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
   ]
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editingId ? '✏️ Edit BOM' : '📋 Create New BOM'} size="xl">
+    <Modal isOpen={isOpen} onClose={onClose} title={editingId ? '✏️ Edit BOM' : '📋 Create New BOM'} size="5xl">
       <form onSubmit={handleSubmit}>
         {error && (
           <div style={{

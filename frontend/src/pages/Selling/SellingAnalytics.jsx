@@ -138,7 +138,7 @@ export default function SellingAnalytics() {
             <Users size={20} style={{ color: 'var(--primary-600)' }} />
           </div>
           <div style={{ padding: '16px 0' }}>
-            <p style={{ margin: 0, fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', marginBottom: '8px' }}>
+            <p style={{ margin: 0, fontSize: 'var(--text-xl )', fontWeight: 'var(--)', marginBottom: '8px' }}>
               {analyticsData.topCustomer?.name || 'N/A'}
             </p>
             <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
@@ -154,7 +154,7 @@ export default function SellingAnalytics() {
             <Package size={20} style={{ color: 'var(--success-600)' }} />
           </div>
           <div style={{ padding: '16px 0' }}>
-            <p style={{ margin: 0, fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', marginBottom: '8px' }}>
+            <p style={{ margin: 0, fontSize: 'var(--text-xl )', fontWeight: 'var(--)', marginBottom: '8px' }}>
               {analyticsData.topProduct?.name || 'N/A'}
             </p>
             <p style={{ margin: 0, color: 'var(--text-secondary)' }}>

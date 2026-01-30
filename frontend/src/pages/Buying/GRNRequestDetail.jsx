@@ -186,7 +186,7 @@ export default function GRNRequestDetail() {
 
   if (error && !grn) {
     return (
-      <Card className="p-6 bg-red-50 dark:bg-red-900/20">
+      <Card className="p-3 bg-red-50 dark:bg-red-900/20">
         <p className="text-red-700 dark:text-red-400">{error}</p>
         <Button variant="primary" size="sm" onClick={() => navigate(-1)} className="mt-4">
           Go Back
@@ -198,14 +198,14 @@ export default function GRNRequestDetail() {
   if (!grn) return null
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-3">
       <div className="mx-auto space-y-6">
         {/* Header Section */}
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-4 mb-3">
           <Button
             variant="icon"
             onClick={() => navigate(-1)}
-            className="p-2.5 bg-white border border-gray-200 rounded-xs hover:bg-gray-50 transition-all"
+            className="p-2 bg-white border border-gray-200 rounded-xs hover:bg-gray-50 transition-all"
             title="Go back"
           >
             <ArrowLeft size={20} className="text-gray-600" />
@@ -220,7 +220,7 @@ export default function GRNRequestDetail() {
             </div>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h1 className="text-xl font-bold text-gray-900">GRN {grn.grn_no}</h1>
+                <h1 className="text-xl  text-gray-900">GRN {grn.grn_no}</h1>
                 <div className="flex items-center gap-4 mt-2 text-xs text-gray-600">
                   <span><span className="font-semibold">PO:</span> {grn.po_no}</span>
                   <span className="text-gray-300">•</span>
@@ -239,13 +239,13 @@ export default function GRNRequestDetail() {
         {success && <Alert type="success">{success}</Alert>}
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           {/* Left Column - Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Workflow Progress - Timeline */}
-            <div className="bg-white rounded-xs border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xs border border-gray-200  overflow-hidden">
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 p-2">
-                <h3 className="text-xs font-bold text-gray-900 flex items-center gap-2">
+                <h3 className="text-xs  text-gray-900 flex items-center gap-2">
                   <Truck size={18} className="text-blue-600" /> Workflow Progress
                 </h3>
               </div>
@@ -273,7 +273,7 @@ export default function GRNRequestDetail() {
                     return (
                       <div key={step.status} className="flex items-center flex-1">
                         <div className="flex flex-col items-center flex-1">
-                          <div className={`w-5 h-5 rounded-full flex items-center justify-center font-semibold text-xs shadow-sm transition-all ${
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center font-semibold text-xs  transition-all ${
                             isCompleted ? 'bg-green-500 text-white' :
                             isActive ? 'bg-blue-600 text-white scale-110 shadow-lg' :
                             'bg-gray-200 text-gray-600'
@@ -301,8 +301,8 @@ export default function GRNRequestDetail() {
               <div className="bg-white border border-gray-200 rounded-xs p-2  hover:shadow-md transition-all">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Total Items</p>
-                    <p className="text-xl font-bold text-gray-900">{grn.items?.length || 0}</p>
+                    <p className="text-xs font-semibold text-gray-500  tracking-wide mb-2">Total Items</p>
+                    <p className="text-xl  text-gray-900">{grn.items?.length || 0}</p>
                   </div>
                   <Package size={32} className="text-blue-500 opacity-15" />
                 </div>
@@ -311,8 +311,8 @@ export default function GRNRequestDetail() {
               <div className="bg-white border border-gray-200 rounded-xs p-2  hover:shadow-md transition-all">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Receipt Date</p>
-                    <p className="text-lg font-bold text-gray-900">
+                    <p className="text-xs font-semibold text-gray-500  tracking-wide mb-2">Receipt Date</p>
+                    <p className="text-lg  text-gray-900">
                       {new Date(grn.receipt_date).toLocaleDateString()}
                     </p>
                   </div>
@@ -323,8 +323,8 @@ export default function GRNRequestDetail() {
               <div className="bg-white border border-gray-200 rounded-xs p-2  hover:shadow-md transition-all">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Assigned To</p>
-                    <p className="text-lg font-bold text-gray-900">
+                    <p className="text-xs font-semibold text-gray-500  tracking-wide mb-2">Assigned To</p>
+                    <p className="text-lg  text-gray-900">
                       {grn.assigned_user || '—'}
                     </p>
                   </div>
@@ -335,8 +335,8 @@ export default function GRNRequestDetail() {
               <div className="bg-white border border-gray-200 rounded-xs p-2  hover:shadow-md transition-all">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Created By</p>
-                    <p className="text-lg font-bold text-gray-900">
+                    <p className="text-xs font-semibold text-gray-500  tracking-wide mb-2">Created By</p>
+                    <p className="text-lg  text-gray-900">
                       {grn.created_by_user || 'System'}
                     </p>
                   </div>
@@ -346,9 +346,9 @@ export default function GRNRequestDetail() {
             </div>
 
             {/* Receipt Items Section */}
-            <div className="bg-white rounded-xs border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xs border border-gray-200  overflow-hidden">
               <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 flex justify-between items-center">
-                <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                <h2 className="text-base  text-gray-900 flex items-center gap-2">
                   <Package size={18} className="text-blue-600" /> Receipt Items
                 </h2>
                 {grn.status === 'pending' && (
@@ -380,22 +380,22 @@ export default function GRNRequestDetail() {
                             className={`text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
                           />
                           <div className="flex-1 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600 text-xs flex-shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center  text-blue-600 text-xs flex-shrink-0">
                               {idx + 1}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-bold text-gray-900 text-xs">{item.item_code}</p>
+                              <p className=" text-gray-900 text-xs">{item.item_code}</p>
                               <p className="text-xs text-gray-600 truncate">{item.item_name}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
                             <div className="text-center">
                               <p className="text-xs text-gray-600 font-medium">PO Qty</p>
-                              <p className="font-bold text-gray-900">{item.po_qty}</p>
+                              <p className=" text-gray-900">{item.po_qty}</p>
                             </div>
                             <div className="text-center">
                               <p className="text-xs text-gray-600 font-medium">Received</p>
-                              <p className="font-bold text-amber-600">{item.received_qty}</p>
+                              <p className=" text-amber-600">{item.received_qty}</p>
                             </div>
                             <Badge
                               color={item.item_status === 'accepted' ? 'success' : item.item_status === 'rejected' ? 'danger' : 'warning'}
@@ -411,16 +411,16 @@ export default function GRNRequestDetail() {
                           <div className="bg-gray-50 border-t border-gray-200 p-4 space-y-3">
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                               <div className="p-1 bg-white rounded-xs border border-gray-200">
-                                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Warehouse</p>
-                                <p className="font-bold text-gray-900 text-xs">{item.warehouse_name}</p>
+                                <p className="text-xs font-medium text-gray-500  mb-1">Warehouse</p>
+                                <p className=" text-gray-900 text-xs">{item.warehouse_name}</p>
                               </div>
                               <div className="p-1 bg-white rounded-xs border border-gray-200">
-                                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Accepted</p>
-                                <p className="font-bold text-green-600 text-xs">{item.accepted_qty || 0}</p>
+                                <p className="text-xs font-medium text-gray-500  mb-1">Accepted</p>
+                                <p className=" text-green-600 text-xs">{item.accepted_qty || 0}</p>
                               </div>
                               <div className="p-1 bg-white rounded-xs border border-gray-200">
-                                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Rejected</p>
-                                <p className="font-bold text-red-600 text-xs">{item.rejected_qty || 0}</p>
+                                <p className="text-xs font-medium text-gray-500  mb-1">Rejected</p>
+                                <p className=" text-red-600 text-xs">{item.rejected_qty || 0}</p>
                               </div>
                             </div>
 
@@ -451,8 +451,8 @@ export default function GRNRequestDetail() {
 
             {/* Action Buttons */}
             {(grn.status === 'inspecting' || grn.status === 'awaiting_inventory_approval') && (
-              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xs border border-blue-200 shadow-sm p-5">
-                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-4 flex items-center gap-2">
+              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xs border border-blue-200  p-5">
+                <h3 className="text-xs  text-gray-900  tracking-wide mb-4 flex items-center gap-2">
                   <AlertCircle size={18} className="text-blue-600" />
                   Required Actions
                 </h3>
@@ -462,7 +462,7 @@ export default function GRNRequestDetail() {
                       <Button
                         variant="success"
                         onClick={handleQCApproval}
-                        className="flex items-center justify-center gap-2 py-3 text-xs font-semibold h-auto shadow-lg hover:shadow-xl transition-all"
+                        className="flex items-center justify-center gap-2 py-2 text-xs font-semibold h-auto shadow-lg hover: transition-all"
                       >
                         <CheckCircle size={18} />
                         QC Approval
@@ -470,7 +470,7 @@ export default function GRNRequestDetail() {
                       <Button
                         variant="danger"
                         onClick={() => setShowApprovalModal(true)}
-                        className="flex items-center justify-center gap-2 py-3 text-xs font-semibold h-auto shadow-lg hover:shadow-xl transition-all"
+                        className="flex items-center justify-center gap-2 py-2 text-xs font-semibold h-auto shadow-lg hover: transition-all"
                       >
                         <XCircle size={18} />
                         Send Back
@@ -482,7 +482,7 @@ export default function GRNRequestDetail() {
                       <Button
                         variant="success"
                         onClick={() => setShowInventoryApprovalModal(true)}
-                        className="flex items-center justify-center gap-2 py-3 text-xs font-semibold h-auto shadow-lg hover:shadow-xl transition-all"
+                        className="flex items-center justify-center gap-2 py-2 text-xs font-semibold h-auto shadow-lg hover: transition-all"
                       >
                         <Home size={18} />
                         Approve & Store
@@ -490,7 +490,7 @@ export default function GRNRequestDetail() {
                       <Button
                         variant="warning"
                         onClick={() => setShowApprovalModal(true)}
-                        className="flex items-center justify-center gap-2 py-3 text-xs font-semibold h-auto shadow-lg hover:shadow-xl transition-all"
+                        className="flex items-center justify-center gap-2 py-2 text-xs font-semibold h-auto shadow-lg hover: transition-all"
                       >
                         <ArrowLeft size={18} />
                         Send Back to QC
@@ -503,9 +503,9 @@ export default function GRNRequestDetail() {
 
             {/* Activity Timeline */}
             {grn.logs && grn.logs.length > 0 && (
-              <div className="bg-white rounded-xs border border-gray-200 shadow-sm overflow-hidden">
+              <div className="bg-white rounded-xs border border-gray-200  overflow-hidden">
                 <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200 p-4">
-                  <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <h2 className="text-base  text-gray-900 flex items-center gap-2">
                     <Clock size={18} className="text-amber-600" />
                     Activity History
                   </h2>
@@ -521,7 +521,7 @@ export default function GRNRequestDetail() {
                           )}
                         </div>
                         <div className="pb-3 flex-1">
-                          <p className="font-bold text-gray-900 text-xs">{log.action}</p>
+                          <p className=" text-gray-900 text-xs">{log.action}</p>
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
                             <Badge color="info" variant="solid" className="text-xs">
                               {log.status_from}
@@ -550,23 +550,23 @@ export default function GRNRequestDetail() {
           <div className="space-y-6">
             {/* GRN Details Card */}
             {(grn.approved_by_user || grn.notes) && (
-              <div className="bg-white rounded-xs border border-gray-200 shadow-sm overflow-hidden">
+              <div className="bg-white rounded-xs border border-gray-200  overflow-hidden">
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200 p-4">
-                  <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <h3 className="text-base  text-gray-900 flex items-center gap-2">
                     <AlertCircle size={18} className="text-green-600" />
                     Details
                   </h3>
                 </div>
                 <div className="p-2 space-y-3">
                   {grn.approved_by_user && (
-                    <div className="p-3 rounded-xs bg-green-50 border border-green-200">
-                      <p className="text-xs font-medium text-gray-600 uppercase mb-1">Approved By</p>
+                    <div className="p-2 rounded-xs bg-green-50 border border-green-200">
+                      <p className="text-xs font-medium text-gray-600  mb-1">Approved By</p>
                       <p className="font-semibold text-green-900">{grn.approved_by_user}</p>
                     </div>
                   )}
                   {grn.notes && (
-                    <div className="p-3 rounded-xs bg-blue-50 border border-blue-200">
-                      <p className="text-xs font-medium text-gray-600 uppercase mb-1">Notes</p>
+                    <div className="p-2 rounded-xs bg-blue-50 border border-blue-200">
+                      <p className="text-xs font-medium text-gray-600  mb-1">Notes</p>
                       <p className="text-xs text-gray-900">{grn.notes}</p>
                     </div>
                   )}
@@ -575,9 +575,9 @@ export default function GRNRequestDetail() {
             )}
 
             {/* Comments Section */}
-            <div className="bg-white rounded-xs border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xs border border-gray-200  overflow-hidden">
               <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-gray-200 p-4">
-                <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                <h3 className="text-base  text-gray-900 flex items-center gap-2">
                   <MessageSquare size={18} className="text-purple-600" />
                   Comments
                 </h3>
@@ -608,13 +608,13 @@ export default function GRNRequestDetail() {
                   onChange={(e) => setNewComment(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleAddComment()}
                   placeholder="Add a comment..."
-                  className="flex-1 px-3 py-2 text-xs rounded-xs border border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                  className="flex-1 p-2  py-2 text-xs rounded-xs border border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
                 />
                 <Button
                   variant="primary"
                   onClick={handleAddComment}
                   size="sm"
-                  className="px-3"
+                  className="p-2 "
                 >
                   <Send size={16} />
                 </Button>

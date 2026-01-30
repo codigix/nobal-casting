@@ -124,22 +124,54 @@ class StockBalanceModel {
     }
   }
 
-  // Create or update stock balance
+  // Create or update stock balance with optional valuation update
   static async upsert(itemCode, warehouseId, data, dbConnection = null) {
     try {
       const db = dbConnection || this.getDb()
       const {
         current_qty = 0,
         reserved_qty = 0,
-        valuation_rate = 0,
+        valuation_rate = null, // If null, we'll try to calculate or keep existing
         last_receipt_date = null,
-        last_issue_date = null
+        last_issue_date = null,
+        is_increment = false, // If true, current_qty will be added to existing
+        incoming_rate = null  // Used for Moving Average Calculation if is_increment is true
       } = data
 
-      const available_qty = current_qty - reserved_qty
-      const total_value = current_qty * valuation_rate
+      // Get existing record for valuation calculation
+      const [existing] = await db.query(
+        'SELECT current_qty, valuation_rate FROM stock_balance WHERE item_code = ? AND warehouse_id = ?',
+        [itemCode, warehouseId]
+      )
 
-      const [result] = await db.query(
+      let final_qty = current_qty
+      let final_valuation = valuation_rate
+      let final_reserved = reserved_qty
+
+      if (existing && existing.length > 0) {
+        const old_qty = Number(existing[0].current_qty || 0)
+        const old_rate = Number(existing[0].valuation_rate || 0)
+        
+        if (is_increment) {
+          final_qty = old_qty + current_qty
+          // Moving Average Valuation: ((old_qty * old_rate) + (incoming_qty * incoming_rate)) / (old_qty + incoming_qty)
+          if (incoming_rate !== null && final_qty > 0) {
+            final_valuation = ((old_qty * old_rate) + (current_qty * incoming_rate)) / final_qty
+          } else {
+            final_valuation = old_rate
+          }
+        } else if (valuation_rate === null) {
+          final_valuation = old_rate
+        }
+      } else {
+        // New record
+        if (valuation_rate === null) final_valuation = incoming_rate || 0
+      }
+
+      const available_qty = final_qty - final_reserved
+      const total_value = final_qty * (final_valuation || 0)
+
+      await db.query(
         `INSERT INTO stock_balance 
           (item_code, warehouse_id, current_qty, reserved_qty, available_qty, valuation_rate, total_value, last_receipt_date, last_issue_date)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -153,9 +185,9 @@ class StockBalanceModel {
           last_issue_date = IF(? IS NOT NULL, ?, last_issue_date),
           updated_at = CURRENT_TIMESTAMP`,
         [
-          itemCode, warehouseId, current_qty, reserved_qty, available_qty, 
-          valuation_rate, total_value, last_receipt_date, last_issue_date,
-          current_qty, reserved_qty, available_qty, valuation_rate, total_value,
+          itemCode, warehouseId, final_qty, final_reserved, available_qty, 
+          final_valuation, total_value, last_receipt_date, last_issue_date,
+          final_qty, final_reserved, available_qty, final_valuation, total_value,
           last_receipt_date, last_receipt_date, last_issue_date, last_issue_date
         ]
       )

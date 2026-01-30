@@ -242,13 +242,7 @@ class ProductionController {
   // Get work orders
   async getWorkOrders(req, res) {
     try {
-      const { status, search, assigned_to_id } = req.query
-
-      const workOrders = await this.productionModel.getWorkOrders({
-        status,
-        search,
-        assigned_to_id
-      })
+      const workOrders = await this.productionModel.getWorkOrders(req.query)
 
       res.status(200).json({
         success: true,
@@ -885,6 +879,23 @@ class ProductionController {
     }
   }
 
+  async syncBOMStatuses(req, res) {
+    try {
+      const result = await this.productionModel.syncAllBOMStatuses()
+      res.status(200).json({
+        success: true,
+        message: 'BOM statuses synchronized with Job Card activity',
+        data: result
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error synchronizing BOM statuses',
+        error: error.message
+      })
+    }
+  }
+
   async getBOMDetails(req, res) {
     try {
       const { bom_id } = req.params
@@ -910,7 +921,7 @@ class ProductionController {
 
   async createBOM(req, res) {
     try {
-      const { item_code, product_name, description, quantity, uom, status, revision, effective_date, lines, operations, scrapItems, rawMaterials, total_cost, item_group, items_group } = req.body
+      const { item_code, product_name, description, quantity, uom, status, revision, effective_date, lines, operations, scrapItems, rawMaterials, total_cost, selling_rate, item_group, items_group } = req.body
 
       if (!item_code) {
         return res.status(400).json({
@@ -930,7 +941,8 @@ class ProductionController {
         revision: revision || 1,
         effective_date,
         created_by: req.user?.username || 'system',
-        total_cost: total_cost || 0
+        total_cost: total_cost || 0,
+        selling_rate: selling_rate || 0
       })
 
       if (lines && lines.length > 0) {
@@ -975,7 +987,7 @@ class ProductionController {
     const db = req.app.locals.db
     try {
       const { bom_id } = req.params
-      const { item_code, description, quantity, uom, status, revision, effective_date, lines, operations, scrapItems, rawMaterials, total_cost } = req.body
+      const { item_code, description, quantity, uom, status, revision, effective_date, lines, operations, scrapItems, rawMaterials, total_cost, selling_rate } = req.body
 
       const bom = await this.productionModel.updateBOM(bom_id, {
         item_code,
@@ -985,7 +997,8 @@ class ProductionController {
         status,
         revision,
         effective_date,
-        total_cost: total_cost || 0
+        total_cost: total_cost || 0,
+        selling_rate: selling_rate || 0
       })
 
       if (lines && Array.isArray(lines) && lines.length > 0) {
@@ -1118,8 +1131,7 @@ class ProductionController {
 
   async getJobCards(req, res) {
     try {
-      const { status = '', search = '', work_order_id = '' } = req.query
-      const jobCards = await this.productionModel.getJobCards(status, search, work_order_id)
+      const jobCards = await this.productionModel.getJobCards(req.query)
       res.status(200).json({
         success: true,
         data: jobCards
@@ -1584,7 +1596,24 @@ class ProductionController {
 
   async createTimeLog(req, res) {
     try {
-      const { job_card_id, employee_id, operator_name, shift, from_time, to_time, completed_qty, accepted_qty, rejected_qty, scrap_qty, time_in_minutes } = req.body
+      const { 
+        job_card_id, 
+        day_number, 
+        log_date, 
+        employee_id, 
+        operator_name, 
+        workstation_name, 
+        shift, 
+        from_time, 
+        to_time, 
+        completed_qty, 
+        accepted_qty, 
+        rejected_qty, 
+        scrap_qty, 
+        time_in_minutes,
+        inhouse,
+        outsource
+      } = req.body
 
       if (!job_card_id) {
         return res.status(400).json({
@@ -1595,8 +1624,11 @@ class ProductionController {
 
       const timeLog = await this.productionModel.createTimeLog({
         job_card_id,
+        day_number,
+        log_date,
         employee_id,
         operator_name,
+        workstation_name,
         shift,
         from_time,
         to_time,
@@ -1604,7 +1636,9 @@ class ProductionController {
         accepted_qty,
         rejected_qty,
         scrap_qty,
-        time_in_minutes
+        time_in_minutes,
+        inhouse,
+        outsource
       })
 
       res.status(201).json({
@@ -1661,19 +1695,23 @@ class ProductionController {
 
   async createRejection(req, res) {
     try {
-      const { job_card_id, rejection_reason, rejected_qty, notes } = req.body
+      const { job_card_id, day_number, log_date, accepted_qty, rejection_reason, rejected_qty, scrap_qty, notes } = req.body
 
-      if (!job_card_id || !rejection_reason || rejected_qty === undefined) {
+      if (!job_card_id) {
         return res.status(400).json({
           success: false,
-          message: 'Missing required fields: job_card_id, rejection_reason, quantity'
+          message: 'Missing required field: job_card_id'
         })
       }
 
       const rejection = await this.productionModel.createRejection({
         job_card_id,
+        day_number,
+        log_date,
+        accepted_qty,
         rejection_reason,
         rejected_qty,
+        scrap_qty,
         notes
       })
 
@@ -1731,7 +1769,7 @@ class ProductionController {
 
   async createDowntime(req, res) {
     try {
-      const { job_card_id, downtime_type, downtime_reason, from_time, to_time, duration_minutes } = req.body
+      const { job_card_id, day_number, log_date, downtime_type, downtime_reason, from_time, to_time, duration_minutes } = req.body
 
       if (!job_card_id || !downtime_type || !from_time || !to_time) {
         return res.status(400).json({
@@ -1742,6 +1780,8 @@ class ProductionController {
 
       const downtime = await this.productionModel.createDowntime({
         job_card_id,
+        day_number,
+        log_date,
         downtime_type,
         downtime_reason,
         from_time,

@@ -12,18 +12,20 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
     '3xl': 'max-w-3xl',
     '4xl': 'max-w-4xl',
     '5xl': 'max-w-5xl',
-    'full': 'max-w-6xl'
+    '6xl': 'max-w-4xl',
+    '7xl': 'max-w-5xl',
+    'full': ''
   }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-2">
-      <div className={`bg-white rounded-xs shadow-lg  max-w-xl ${sizes[size]} w-full flex flex-col max-h-[90vh]`}>
+      <div className={`bg-white rounded-xs shadow-lg max-h-[30pc] overflow-hidden ${sizes[size] || sizes.md} w-full flex flex-col `}>
         {/* Header */}
         <div className="flex-shrink-0 flex items-center justify-between p-2 border-b border-neutral-200">
-          <h3 className="text-lg font-semibold">{title}</h3>
+          <h3 className="text-lg ">{title}</h3>
           <button
             onClick={onClose}
-            className="text-neutral-500 hover:text-neutral-700 text-2xl leading-none"
+            className="text-neutral-500 hover:text-neutral-700 text-xl  leading-none"
           >
             ×
           </button>

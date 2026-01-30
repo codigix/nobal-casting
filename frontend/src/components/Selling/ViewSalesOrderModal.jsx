@@ -51,7 +51,7 @@ export default function ViewSalesOrderModal({ isOpen, orderId, onClose }) {
 
   if (!order && loading) {
     return (
-      <Modal isOpen={isOpen} onClose={onClose} title="📦 View Sales Order" size="lg">
+      <Modal isOpen={isOpen} onClose={onClose} title="📦 View Sales Order" size="4xl">
         <div style={{ textAlign: 'center', padding: '40px 20px' }}>
           <p>Loading order details...</p>
         </div>
@@ -64,7 +64,7 @@ export default function ViewSalesOrderModal({ isOpen, orderId, onClose }) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="📦 View Sales Order" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title="📦 View Sales Order" size="4xl">
       {error && (
         <div style={{
           background: '#fee2e2',

@@ -12,7 +12,8 @@ export default function SearchableSelect({
   required = false,
   onSearch = null,
   isClearable = true,
-  isDisabled = false
+  isDisabled = false,
+  containerClassName = ""
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -132,10 +133,10 @@ export default function SearchableSelect({
   }
 
   return (
-    <div className="form-group" ref={containerRef}>
-      {label && <label>{label}{required && ' *'}</label>}
+    <div className={`w-full relative ${isOpen ? 'z-50' : 'z-0'}`} ref={containerRef}>
+      {label && <label className="block text-xs  text-slate-400 tracking-widest uppercase mb-1">{label}{required && ' *'}</label>}
       <div className="relative">
-        <div className="flex p-2 items-center border border-gray-300 rounded bg-white">
+        <div className={`flex  items-center border transition-all  rounded ${containerClassName || ' bg-white border-gray-300'} ${isOpen ? 'ring-2 ring-blue-500/20 border-blue-500' : 'focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500'}`}>
           <input
             type="text"
             value={searchTerm}
@@ -148,8 +149,8 @@ export default function SearchableSelect({
             }}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className={`flex-1 p-0 border-none outline-none text-xs ${
-              isDisabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white cursor-text'
+            className={`flex-1 h-full border-none p-2 outline-none text-xs bg-transparent ${
+              isDisabled ? 'cursor-not-allowed' : 'cursor-text'
             }`}
             disabled={isLoading || isDisabled}
           />
@@ -175,12 +176,12 @@ export default function SearchableSelect({
             ref={dropdownRef}
             className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded shadow-md z-10 max-h-48 overflow-y-auto">
             {isLoading && (
-              <div className="p-2.5 text-gray-400 text-center text-xs">
+              <div className="p-2 text-gray-400 text-center text-xs">
                 Loading...
               </div>
             )}
             {!isLoading && filteredOptions.length === 0 && options.length === 0 && (
-              <div className="p-2.5 text-gray-400 text-center text-xs">
+              <div className="p-2 text-gray-400 text-center text-xs">
                 No options found
               </div>
             )}

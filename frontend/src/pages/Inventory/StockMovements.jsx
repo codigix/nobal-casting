@@ -109,11 +109,11 @@ export default function StockMovements() {
   })
 
   return (
-    <div className="p-4 sm:p-6 space-y-6">
+    <div className="p-4 sm:p-3 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">Stock Movements</h1>
+          <h1 className="text-xl  text-neutral-900 dark:text-neutral-100">Stock Movements</h1>
           <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Track material IN/OUT transactions with approval workflow</p>
         </div>
         <div className="flex gap-2">
@@ -143,12 +143,12 @@ export default function StockMovements() {
           placeholder="Search by transaction #, item code, or item name..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 px-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">All Status</option>
           <option value="Pending">Pending</option>
@@ -159,7 +159,7 @@ export default function StockMovements() {
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">All Types</option>
           <option value="IN">IN</option>
@@ -185,28 +185,28 @@ export default function StockMovements() {
           <table className="w-full text-xs">
             <thead className="bg-neutral-100 dark:bg-neutral-800">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-neutral-900 dark:text-neutral-100">Transaction #</th>
-                <th className="px-4 py-3 text-left font-semibold text-neutral-900 dark:text-neutral-100">Item</th>
-                <th className="px-4 py-3 text-left font-semibold text-neutral-900 dark:text-neutral-100">Type</th>
-                <th className="px-4 py-3 text-right font-semibold text-neutral-900 dark:text-neutral-100">Quantity</th>
-                <th className="px-4 py-3 text-left font-semibold text-neutral-900 dark:text-neutral-100">Warehouse</th>
-                <th className="px-4 py-3 text-left font-semibold text-neutral-900 dark:text-neutral-100">Reference</th>
-                <th className="px-4 py-3 text-left font-semibold text-neutral-900 dark:text-neutral-100">Status</th>
-                <th className="px-4 py-3 text-left font-semibold text-neutral-900 dark:text-neutral-100">Date</th>
-                <th className="px-4 py-3 text-center font-semibold text-neutral-900 dark:text-neutral-100">Actions</th>
+                <th className="p-2 text-left font-semibold text-neutral-900 dark:text-neutral-100">Transaction #</th>
+                <th className="p-2 text-left font-semibold text-neutral-900 dark:text-neutral-100">Item</th>
+                <th className="p-2 text-left font-semibold text-neutral-900 dark:text-neutral-100">Type</th>
+                <th className="p-2 text-right font-semibold text-neutral-900 dark:text-neutral-100">Quantity</th>
+                <th className="p-2 text-left font-semibold text-neutral-900 dark:text-neutral-100">Warehouse</th>
+                <th className="p-2 text-left font-semibold text-neutral-900 dark:text-neutral-100">Reference</th>
+                <th className="p-2 text-left font-semibold text-neutral-900 dark:text-neutral-100">Status</th>
+                <th className="p-2 text-left font-semibold text-neutral-900 dark:text-neutral-100">Date</th>
+                <th className="p-2 text-center font-semibold text-neutral-900 dark:text-neutral-100">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
               {filteredMovements.map((movement) => (
                 <tr key={movement.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
-                  <td className="px-4 py-3 font-mono text-blue-600 dark:text-blue-400">{movement.transaction_no}</td>
-                  <td className="px-4 py-3">
+                  <td className="p-2 font-mono text-blue-600 dark:text-blue-400">{movement.transaction_no}</td>
+                  <td className="p-2">
                     <div>
                       <p className="font-medium text-neutral-900 dark:text-neutral-100">{movement.item_code}</p>
                       <p className="text-xs text-neutral-600 dark:text-neutral-400">{movement.item_name}</p>
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="p-2">
                     <div className="flex items-center gap-2">
                       {movement.movement_type === 'IN' ? (
                         <>
@@ -221,9 +221,9 @@ export default function StockMovements() {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold">{parseFloat(movement.quantity).toFixed(2)}</td>
-                  <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">{movement.warehouse_name}</td>
-                  <td className="px-4 py-3 text-xs">
+                  <td className="p-2 text-right font-semibold">{parseFloat(movement.quantity).toFixed(2)}</td>
+                  <td className="p-2 text-neutral-600 dark:text-neutral-400">{movement.warehouse_name}</td>
+                  <td className="p-2 text-xs">
                     <div>
                       <p className="font-medium text-neutral-900 dark:text-neutral-100">{movement.reference_type}</p>
                       {movement.reference_name && (
@@ -231,7 +231,7 @@ export default function StockMovements() {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="p-2">
                     <div className="flex items-center gap-2">
                       {getStatusIcon(movement.status)}
                       <Badge className={getStatusColor(movement.status)}>
@@ -239,10 +239,10 @@ export default function StockMovements() {
                       </Badge>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-xs text-neutral-600 dark:text-neutral-400">
+                  <td className="p-2 text-xs text-neutral-600 dark:text-neutral-400">
                     {new Date(movement.created_at).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="p-2 text-center">
                     {movement.status === 'Pending' && (
                       <div className="flex gap-2 justify-center">
                         <Button

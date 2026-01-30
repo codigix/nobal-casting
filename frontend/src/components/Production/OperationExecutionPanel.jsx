@@ -332,7 +332,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
                 type="date"
                 value={executionData.end_date}
                 onChange={(e) => setExecutionData({ ...executionData, end_date: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs"
+                className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs"
                 disabled={loading}
               />
             </div>
@@ -343,7 +343,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
                 type="time"
                 value={executionData.end_time}
                 onChange={(e) => setExecutionData({ ...executionData, end_time: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs"
+                className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs"
                 disabled={loading}
               />
             </div>
@@ -353,7 +353,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
             <button
               onClick={handleEndOperation}
               disabled={loading}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-500 text-white rounded-xs hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="flex-1 flex items-center justify-center gap-2 p-2 bg-green-500 text-white rounded-xs hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               <StopCircle size={16} /> End Operation
             </button>
@@ -478,7 +478,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
               placeholder="Enter quantity"
               step="0.01"
               min="0"
-              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs"
+              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs"
               disabled={loading}
             />
           </div>
@@ -489,7 +489,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
               type="date"
               value={executionData.start_date}
               onChange={(e) => setExecutionData({ ...executionData, start_date: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs"
+              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs"
               disabled={loading}
             />
           </div>
@@ -502,7 +502,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
               type="time"
               value={executionData.start_time}
               onChange={(e) => setExecutionData({ ...executionData, start_time: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs"
+              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs"
               disabled={loading}
             />
           </div>
@@ -543,7 +543,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
                   value={challanData.vendor_name}
                   onChange={(e) => setChallanData({ ...challanData, vendor_name: e.target.value })}
                   placeholder="Enter vendor name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs"
+                  className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs"
                 />
               </div>
               <div>
@@ -552,7 +552,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
                   type="date"
                   value={challanData.expected_return_date}
                   onChange={(e) => setChallanData({ ...challanData, expected_return_date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs"
+                  className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs"
                 />
               </div>
               <div>
@@ -561,14 +561,14 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
                   value={challanData.challan_notes}
                   onChange={(e) => setChallanData({ ...challanData, challan_notes: e.target.value })}
                   placeholder="Add challan notes..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs resize-none"
+                  className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs resize-none"
                   rows="2"
                 />
               </div>
               <button
                 onClick={handleCreateOutwardChallan}
                 disabled={loading || !challanData.vendor_name || !challanData.expected_return_date}
-                className="w-full px-3 py-2 bg-amber-600 text-white rounded-xs text-xs font-medium hover:bg-amber-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full p-2  py-2 bg-amber-600 text-white rounded-xs text-xs font-medium hover:bg-amber-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Create Outward Challan
               </button>
@@ -593,7 +593,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
           <button
             onClick={handleStartOperation}
             disabled={loading || !executionData.employee_id || !executionData.workstation_id || !executionData.start_date || !executionData.start_time || executionData.quantity <= 0}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xs hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="flex-1 flex items-center justify-center gap-2 p-2 bg-blue-500 text-white rounded-xs hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             <Play size={16} /> Start Operation
           </button>

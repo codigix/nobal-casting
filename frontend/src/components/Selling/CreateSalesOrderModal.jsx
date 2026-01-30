@@ -98,7 +98,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="📦 Create New Sales Order" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title="📦 Create New Sales Order" size="2xl">
       <form onSubmit={handleSubmit}>
         {error && (
           <div style={{

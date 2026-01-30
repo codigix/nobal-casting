@@ -1,7 +1,7 @@
 ✓ workstation_type column already exists
 
 Updating 74 workstations...
-  ✓ BUFFING → BUFFING - MACHINE
+  ✓ BUFFING → Budding - Machin
   ✓ CNC-01 → CNC - Machine
   ✓ CNC-02 → CNC - Machine
   ✓ CNC-03 → CNC - Machine
@@ -78,7 +78,7 @@ Updating 74 workstations...
 
 Summary by type:
   BOLT FITMENT ASSY: 1
-  BUFFING - MACHINE: 1
+  Budding - Machin: 1
   CNC - Machine: 35
   Core preparation m/c: 9
   HT - Furnace: 1

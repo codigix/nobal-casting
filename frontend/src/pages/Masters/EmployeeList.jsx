@@ -371,7 +371,7 @@ export default function EmployeeList() {
 
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-xl font-bold text-[var(--text-primary)]">Employees</h2>
+          <h2 className="text-xl  text-[var(--text-primary)]">Employees</h2>
           <Button variant="primary" onClick={handleAddClick}>
             + Add New Employee
           </Button>
@@ -487,7 +487,7 @@ function EmployeeForm({ formData, setFormData, formError }) {
       )}
 
       <div className="border-b pb-4">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Personal Information</h3>
+        <h3 className="text-lg  text-[var(--text-primary)] mb-4">Personal Information</h3>
         <div className="grid grid-cols-2 gap-4">
           <Input
             label="First Name *"
@@ -549,7 +549,7 @@ function EmployeeForm({ formData, setFormData, formError }) {
       </div>
 
       <div className="border-b pb-4">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Company Details</h3>
+        <h3 className="text-lg  text-[var(--text-primary)] mb-4">Company Details</h3>
         <div className="grid grid-cols-2 gap-4">
           <div className="form-group">
             <label className="block mb-2 text-xs font-medium text-[var(--text-primary)]">Department *</label>
@@ -599,7 +599,7 @@ function EmployeeForm({ formData, setFormData, formError }) {
       </div>
 
       <div className="border-b pb-4">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Joining Details</h3>
+        <h3 className="text-lg  text-[var(--text-primary)] mb-4">Joining Details</h3>
         <div className="grid grid-cols-2 gap-4">
           <Input
             label="Date of Joining *"

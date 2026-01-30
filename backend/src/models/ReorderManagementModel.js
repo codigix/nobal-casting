@@ -59,12 +59,12 @@
         `SELECT 
           ri.*,
           i.item_code,
-          i.item_name,
+          i.name as item_name,
           i.uom,
           i.reorder_level,
           i.reorder_qty
         FROM reorder_items ri
-        JOIN items i ON ri.item_id = i.id
+        JOIN item i ON ri.item_code = i.item_code
         WHERE ri.reorder_id = ?`,
         [id]
       )
@@ -86,18 +86,18 @@
         // Get low stock items
         const [lowStockItems] = await connection.query(
           `SELECT 
-            sb.item_id,
+            sb.item_code,
             sb.warehouse_id,
-            i.reorder_level,
-            i.reorder_qty,
+            i.safety_stock as reorder_level,
+            i.minimum_order_qty as reorder_qty,
             sb.current_qty,
-            (i.reorder_level - sb.current_qty) as qty_to_order,
+            (i.safety_stock - sb.current_qty) as qty_to_order,
             i.item_code,
-            i.item_name
+            i.name as item_name
           FROM stock_balance sb
-          JOIN items i ON sb.item_id = i.id
-          WHERE sb.current_qty < i.reorder_level
-          AND i.is_purchasable = TRUE`,
+          JOIN item i ON sb.item_code = i.item_code
+          WHERE sb.current_qty < i.safety_stock
+          AND i.maintain_stock = TRUE`,
           []
         )
 
@@ -133,11 +133,11 @@
         for (const item of lowStockItems) {
           await connection.query(
             `INSERT INTO reorder_items (
-              reorder_id, item_id, warehouse_id, current_qty, reorder_level,
+              reorder_id, item_code, warehouse_id, current_qty, reorder_level,
               reorder_qty, qty_to_order, estimated_cost
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-              reorderId, item.item_id, item.warehouse_id, item.current_qty,
+              reorderId, item.item_code, item.warehouse_id, item.current_qty,
               item.reorder_level, item.reorder_qty, item.qty_to_order,
               item.qty_to_order * 100 // Placeholder cost
             ]
@@ -183,21 +183,27 @@
 
         // Create material request
         const [mrInsert] = await connection.query(
-          `INSERT INTO material_requests (
-            mr_no, request_date, requested_by, department, status
-          ) VALUES (?, NOW(), ?, 'stock', 'Draft')`,
+          `INSERT INTO material_request (
+            mr_id, request_date, requested_by_id, department, purpose, status
+          ) VALUES (?, NOW(), ?, 'stock', 'purchase', 'draft')`,
           [mrNo, userId]
         )
 
-        const mrId = mrInsert.insertId
+        const mrId = mrNo // Use the generated mrNo as ID if that's the pattern
 
         // Add items to MR
         for (const item of reorder.items) {
           await connection.query(
-            `INSERT INTO material_request_items (
-              material_request_id, item_id, qty_requested, warehouse_id
-            ) VALUES (?, ?, ?, ?)`,
-            [mrId, item.item_id, item.qty_to_order, item.warehouse_id]
+            `INSERT INTO material_request_item (
+              mr_item_id, mr_id, item_code, qty, uom
+            ) VALUES (?, ?, ?, ?, ?)`,
+            [
+              'MRI-' + Date.now() + '-' + Math.random(),
+              mrId, 
+              item.item_code, 
+              item.qty_to_order,
+              item.uom
+            ]
           )
         }
 
@@ -252,23 +258,23 @@
       let query = `
         SELECT 
           i.item_code,
-          i.item_name,
-          i.reorder_level,
-          i.reorder_qty,
+          i.name as item_name,
+          i.safety_stock as reorder_level,
+          i.minimum_order_qty as reorder_qty,
           w.warehouse_name,
           sb.current_qty,
-          (i.reorder_level - sb.current_qty) as qty_shortage,
+          (i.safety_stock - sb.current_qty) as qty_shortage,
           sb.total_value as valuation,
           CASE 
             WHEN sb.current_qty = 0 THEN 'Critical'
-            WHEN sb.current_qty < i.reorder_level * 0.5 THEN 'Urgent'
+            WHEN sb.current_qty < i.safety_stock * 0.5 THEN 'Urgent'
             ELSE 'Soon'
           END as priority
         FROM stock_balance sb
-        JOIN items i ON sb.item_id = i.id
+        JOIN item i ON sb.item_code = i.item_code
         JOIN warehouses w ON sb.warehouse_id = w.id
-        WHERE sb.current_qty < i.reorder_level
-        AND i.is_purchasable = TRUE
+        WHERE sb.current_qty < i.safety_stock
+        AND i.maintain_stock = TRUE
       `
       const params = []
 

@@ -275,16 +275,16 @@ export default function EmployeesDesignations() {
   )
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 px-6 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6  py-6">
       <div className=" mx-auto">
         <div className="flex justify-between items-start mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-9 h-9 rounded-xs bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
+              <div className="w-9 h-9 rounded-xs bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg  ">
                 👥
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Employees & Designations</h1>
+                <h1 className="text-xl  text-gray-900">Employees & Designations</h1>
                 <p className="text-xs text-gray-600 mt-0">Manage employees and job designations</p>
               </div>
             </div>
@@ -298,10 +298,10 @@ export default function EmployeesDesignations() {
           </div>
         )}
 
-        <div className="mb-4 bg-white rounded-xs shadow-sm flex border-b border-gray-200">
+        <div className="mb-4 bg-white rounded-xs  flex border-b border-gray-200">
           <button
             onClick={() => setActiveTab('employees')}
-            className={`flex-1 px-4 py-3 font-medium flex items-center gap-2 justify-center transition ${
+            className={`flex-1 p-2 font-medium flex items-center gap-2 justify-center transition ${
               activeTab === 'employees'
                 ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                 : 'text-gray-600 hover:text-gray-900'
@@ -312,7 +312,7 @@ export default function EmployeesDesignations() {
           </button>
           <button
             onClick={() => setActiveTab('designations')}
-            className={`flex-1 px-4 py-3 font-medium flex items-center gap-2 justify-center transition ${
+            className={`flex-1 p-2 font-medium flex items-center gap-2 justify-center transition ${
               activeTab === 'designations'
                 ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                 : 'text-gray-600 hover:text-gray-900'
@@ -332,21 +332,21 @@ export default function EmployeesDesignations() {
                   placeholder="Search by name, email or designation..."
                   value={searchEmployee}
                   onChange={(e) => setSearchEmployee(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <button
                 onClick={handleAddEmployee}
-                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-xs hover:bg-blue-700 flex items-center gap-2 transition text-xs"
+                className="p-2 bg-blue-600 text-white font-medium rounded-xs hover:bg-blue-700 flex items-center gap-2 transition text-xs"
               >
                 <Plus size={16} /> Add Employee
               </button>
             </div>
 
             {showEmployeeForm && (
-              <div className="mb-4 bg-white rounded-xs shadow-sm p-2 border border-gray-200">
+              <div className="mb-4 bg-white rounded-xs  p-2 border border-gray-200">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-lg  text-gray-900">
                     {editingEmployee ? 'Edit Employee' : 'Add New Employee'}
                   </h3>
                   <button
@@ -365,7 +365,7 @@ export default function EmployeesDesignations() {
                         type="text"
                         value={employeeFormData.first_name}
                         onChange={(e) => setEmployeeFormData(prev => ({ ...prev, first_name: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       />
                     </div>
@@ -375,7 +375,7 @@ export default function EmployeesDesignations() {
                         type="text"
                         value={employeeFormData.last_name}
                         onChange={(e) => setEmployeeFormData(prev => ({ ...prev, last_name: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                     <div>
@@ -384,7 +384,7 @@ export default function EmployeesDesignations() {
                         type="email"
                         value={employeeFormData.email}
                         onChange={(e) => setEmployeeFormData(prev => ({ ...prev, email: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       />
                     </div>
@@ -394,7 +394,7 @@ export default function EmployeesDesignations() {
                         type="tel"
                         value={employeeFormData.phone}
                         onChange={(e) => setEmployeeFormData(prev => ({ ...prev, phone: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                     <div>
@@ -402,7 +402,7 @@ export default function EmployeesDesignations() {
                       <select
                         value={employeeFormData.designation}
                         onChange={(e) => setEmployeeFormData(prev => ({ ...prev, designation: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Select Designation</option>
                         {designations.map(des => (
@@ -417,7 +417,7 @@ export default function EmployeesDesignations() {
                       <select
                         value={employeeFormData.department}
                         onChange={(e) => setEmployeeFormData(prev => ({ ...prev, department: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Select Department</option>
                         <option value="Manufacturing">Manufacturing</option>
@@ -433,7 +433,7 @@ export default function EmployeesDesignations() {
                         type="date"
                         value={employeeFormData.joining_date}
                         onChange={(e) => setEmployeeFormData(prev => ({ ...prev, joining_date: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                     <div className="col-span-2">
@@ -453,14 +453,14 @@ export default function EmployeesDesignations() {
                     <button
                       type="button"
                       onClick={() => setShowEmployeeForm(false)}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-xs hover:bg-gray-50 transition"
+                      className="p-2 border border-gray-300 text-gray-700 font-medium rounded-xs hover:bg-gray-50 transition"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={loading}
-                      className="px-4 py-2 bg-blue-600 text-white font-medium rounded-xs hover:bg-blue-700 disabled:bg-gray-400 transition flex items-center gap-2"
+                      className="p-2 bg-blue-600 text-white font-medium rounded-xs hover:bg-blue-700 disabled:bg-gray-400 transition flex items-center gap-2"
                     >
                       <Save size={16} />
                       {loading ? 'Saving...' : 'Save'}
@@ -471,43 +471,43 @@ export default function EmployeesDesignations() {
             )}
 
             {loading ? (
-              <div className="bg-white rounded-xs p-3 text-center shadow-sm">
-                <div className="text-3xl mb-2">⏳</div>
+              <div className="bg-white rounded-xs p-3 text-center ">
+                <div className="text-xl  mb-2">⏳</div>
                 <div className="text-xs text-gray-600">Loading employees...</div>
               </div>
             ) : filteredEmployees.length > 0 ? (
-              <div className="bg-white rounded-xs shadow-sm">
+              <div className="bg-white rounded-xs ">
                 <div className="">
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-200">
-                        <th className="px-4 py-3 text-left text-gray-700 font-semibold">Name</th>
-                        <th className="px-4 py-3 text-left text-gray-700 font-semibold">Email</th>
-                        <th className="px-4 py-3 text-left text-gray-700 font-semibold">Phone</th>
-                        <th className="px-4 py-3 text-left text-gray-700 font-semibold">Designation</th>
-                        <th className="px-4 py-3 text-left text-gray-700 font-semibold">Department</th>
-                        <th className="px-4 py-3 text-center text-gray-700 font-semibold">Status</th>
-                        <th className="px-4 py-3 text-center text-gray-700 font-semibold">Actions</th>
+                        <th className="p-2 text-left text-gray-700 font-semibold">Name</th>
+                        <th className="p-2 text-left text-gray-700 font-semibold">Email</th>
+                        <th className="p-2 text-left text-gray-700 font-semibold">Phone</th>
+                        <th className="p-2 text-left text-gray-700 font-semibold">Designation</th>
+                        <th className="p-2 text-left text-gray-700 font-semibold">Department</th>
+                        <th className="p-2 text-center text-gray-700 font-semibold">Status</th>
+                        <th className="p-2 text-center text-gray-700 font-semibold">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredEmployees.map((emp, idx) => (
                         <tr key={emp.employee_id || emp.id} className={`border-b border-gray-200 hover:bg-gray-50 transition ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                          <td className="px-4 py-3 font-medium text-gray-900">
+                          <td className="p-2 font-medium text-gray-900">
                             {emp.first_name} {emp.last_name}
                           </td>
-                          <td className="px-4 py-3 text-gray-700">{emp.email || '-'}</td>
-                          <td className="px-4 py-3 text-gray-700">{emp.phone || '-'}</td>
-                          <td className="px-4 py-3 text-gray-700">{emp.designation || '-'}</td>
-                          <td className="px-4 py-3 text-gray-700">{emp.department || '-'}</td>
-                          <td className="px-4 py-3 text-center">
+                          <td className="p-2 text-gray-700">{emp.email || '-'}</td>
+                          <td className="p-2 text-gray-700">{emp.phone || '-'}</td>
+                          <td className="p-2 text-gray-700">{emp.designation || '-'}</td>
+                          <td className="p-2 text-gray-700">{emp.department || '-'}</td>
+                          <td className="p-2 text-center">
                             <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
                               emp.is_active !== false ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                             }`}>
                               {emp.is_active !== false ? 'Active' : 'Inactive'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          <td className="p-2 text-center">
                             <div className="flex gap-1 justify-center">
                               <button
                                 onClick={() => handleEditEmployee(emp)}
@@ -532,8 +532,8 @@ export default function EmployeesDesignations() {
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-xs p-3 text-center shadow-sm">
-                <div className="text-3xl mb-2">📭</div>
+              <div className="bg-white rounded-xs p-3 text-center ">
+                <div className="text-xl  mb-2">📭</div>
                 <div className="text-xs font-semibold  text-gray-900">
                   {searchEmployee ? 'No employees found' : 'No employees created yet'}
                 </div>
@@ -549,21 +549,21 @@ export default function EmployeesDesignations() {
                   placeholder="Search designations..."
                   value={searchDesignation}
                   onChange={(e) => setSearchDesignation(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <button
                 onClick={handleAddDesignation}
-                className="px-4 py-2 bg-blue-600 text-white font-medium rounded-xs hover:bg-blue-700 flex items-center gap-2 transition text-xs"
+                className="p-2 bg-blue-600 text-white font-medium rounded-xs hover:bg-blue-700 flex items-center gap-2 transition text-xs"
               >
                 <Plus size={16} /> Add Designation
               </button>
             </div>
 
             {showDesignationForm && (
-              <div className="mb-4 bg-white rounded-xs shadow-smp-2 border border-gray-200">
+              <div className="mb-4 bg-white rounded-xs p-2 border border-gray-200">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-lg  text-gray-900">
                     {editingDesignation ? 'Edit Designation' : 'Add New Designation'}
                   </h3>
                   <button
@@ -582,7 +582,7 @@ export default function EmployeesDesignations() {
                         type="text"
                         value={designationFormData.name}
                         onChange={(e) => setDesignationFormData(prev => ({ ...prev, name: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       />
                     </div>
@@ -592,7 +592,7 @@ export default function EmployeesDesignations() {
                         value={designationFormData.description}
                         onChange={(e) => setDesignationFormData(prev => ({ ...prev, description: e.target.value }))}
                         rows="3"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
@@ -601,14 +601,14 @@ export default function EmployeesDesignations() {
                     <button
                       type="button"
                       onClick={() => setShowDesignationForm(false)}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-xs hover:bg-gray-50 transition"
+                      className="p-2 border border-gray-300 text-gray-700 font-medium rounded-xs hover:bg-gray-50 transition"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={loading}
-                      className="px-4 py-2 bg-blue-600 text-white font-medium rounded-xs hover:bg-blue-700 disabled:bg-gray-400 transition flex items-center gap-2"
+                      className="p-2 bg-blue-600 text-white font-medium rounded-xs hover:bg-blue-700 disabled:bg-gray-400 transition flex items-center gap-2"
                     >
                       <Save size={16} />
                       {loading ? 'Saving...' : 'Save'}
@@ -619,27 +619,27 @@ export default function EmployeesDesignations() {
             )}
 
             {loading ? (
-              <div className="bg-white rounded-xs p-3 text-center shadow-sm">
-                <div className="text-3xl mb-2">⏳</div>
+              <div className="bg-white rounded-xs p-3 text-center ">
+                <div className="text-xl  mb-2">⏳</div>
                 <div className="text-xs text-gray-600">Loading designations...</div>
               </div>
             ) : filteredDesignations.length > 0 ? (
-              <div className="bg-white rounded-xs shadow-sm">
+              <div className="bg-white rounded-xs ">
                 <div className="">
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-200">
-                        <th className="px-4 py-3 text-left text-gray-700 font-semibold">Name</th>
-                        <th className="px-4 py-3 text-left text-gray-700 font-semibold">Description</th>
-                        <th className="px-4 py-3 text-center text-gray-700 font-semibold">Actions</th>
+                        <th className="p-2 text-left text-gray-700 font-semibold">Name</th>
+                        <th className="p-2 text-left text-gray-700 font-semibold">Description</th>
+                        <th className="p-2 text-center text-gray-700 font-semibold">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredDesignations.map((des, idx) => (
                         <tr key={des.id || des.name} className={`border-b border-gray-200 hover:bg-gray-50 transition ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                          <td className="px-4 py-3 font-medium text-gray-900">{des.name}</td>
-                          <td className="px-4 py-3 text-gray-700">{des.description || '-'}</td>
-                          <td className="px-4 py-3 text-center">
+                          <td className="p-2 font-medium text-gray-900">{des.name}</td>
+                          <td className="p-2 text-gray-700">{des.description || '-'}</td>
+                          <td className="p-2 text-center">
                             <div className="flex gap-1 justify-center">
                               <button
                                 onClick={() => handleEditDesignation(des)}
@@ -664,8 +664,8 @@ export default function EmployeesDesignations() {
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-xs p-3 text-center shadow-sm">
-                <div className="text-3xl mb-2">📭</div>
+              <div className="bg-white rounded-xs p-3 text-center ">
+                <div className="text-xl  mb-2">📭</div>
                 <div className="text-xs font-semibold  text-gray-900">
                   {searchDesignation ? 'No designations found' : 'No designations created yet'}
                 </div>

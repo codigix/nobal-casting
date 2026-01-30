@@ -45,9 +45,9 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xs shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xs  max-w-4xl w-full mx-4  overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 p-2 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Generate Production Plan</h2>
+          <h2 className="text-xl  text-gray-900">Generate Production Plan</h2>
           <button
             onClick={onClose}
             className="p-1 hover:bg-gray-100 rounded transition"
@@ -56,7 +56,7 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-3">
           {!plan && !success ? (
             <>
               {error && (
@@ -72,23 +72,23 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                 </p>
                 <ul className="space-y-2 text-xs text-gray-600">
                   <li className="flex items-start gap-2">
-                    <span className="text-blue-600 font-bold">•</span>
+                    <span className="text-blue-600 ">•</span>
                     <span>Extracts FG quantity from the Sales Order</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-blue-600 font-bold">•</span>
+                    <span className="text-blue-600 ">•</span>
                     <span>Explodes the BOM recursively to identify all sub-assemblies and raw materials</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-blue-600 font-bold">•</span>
+                    <span className="text-blue-600 ">•</span>
                     <span>Calculates scrap-adjusted quantities for each sub-assembly</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-blue-600 font-bold">•</span>
+                    <span className="text-blue-600 ">•</span>
                     <span>Aggregates raw materials from all sub-assembly BOMs</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="text-blue-600 font-bold">•</span>
+                    <span className="text-blue-600 ">•</span>
                     <span>Multiplies operation times by planned quantities (total hours, not per-unit)</span>
                   </li>
                 </ul>
@@ -132,7 +132,7 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
               <div className="space-y-6">
                 {plan.finished_goods && plan.finished_goods.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Finished Goods</h3>
+                    <h3 className="text-lg  text-gray-900 mb-3">Finished Goods</h3>
                     <div className="bg-blue-50 border border-blue-200 rounded-xs p-2">
                       <table className="w-full text-xs">
                         <thead>
@@ -158,8 +158,8 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
 
                 {plan.sub_assemblies && plan.sub_assemblies.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Sub-Assemblies (with Scrap)</h3>
-                    <div className="bg-orange-50 border border-orange-200 rounded-xs p-2 overflow-x-auto">
+                    <h3 className="text-lg  text-gray-900 mb-3">Sub-Assemblies (with Scrap)</h3>
+                    <div className="bg-orange-50 border border-orange-200 rounded-xs p-2 ">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-orange-200">
@@ -179,7 +179,7 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                               <td className="py-2 text-right font-medium text-gray-900">
                                 {item.planned_qty_before_scrap ? item.planned_qty_before_scrap.toFixed(3) : '-'}
                               </td>
-                              <td className="py-2 text-right font-bold text-orange-700">{item.planned_qty.toFixed(3)}</td>
+                              <td className="py-2 text-right  text-orange-700">{item.planned_qty.toFixed(3)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -190,8 +190,8 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
 
                 {plan.raw_materials && plan.raw_materials.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Raw Materials (Aggregated)</h3>
-                    <div className="bg-green-50 border border-green-200 rounded-xs p-2 overflow-x-auto">
+                    <h3 className="text-lg  text-gray-900 mb-3">Raw Materials (Aggregated)</h3>
+                    <div className="bg-green-50 border border-green-200 rounded-xs p-2 ">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-green-200">
@@ -222,8 +222,8 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
 
                 {plan.operations && plan.operations.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Operations (Total Hours)</h3>
-                    <div className="bg-purple-50 border border-purple-200 rounded-xs p-2 overflow-x-auto">
+                    <h3 className="text-lg  text-gray-900 mb-3">Operations (Total Hours)</h3>
+                    <div className="bg-purple-50 border border-purple-200 rounded-xs p-2 ">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-purple-200">
@@ -241,7 +241,7 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                               <td className="py-2 text-gray-700">{item.operation_name}</td>
                               <td className="py-2 text-gray-700">{item.workstation_type || '-'}</td>
                               <td className="py-2 text-right font-medium text-gray-900">{item.total_time.toFixed(1)}</td>
-                              <td className="py-2 text-right font-bold text-purple-700">{item.total_hours.toFixed(2)}</td>
+                              <td className="py-2 text-right  text-purple-700">{item.total_hours.toFixed(2)}</td>
                               <td className="py-2 text-right text-gray-700">₹{item.hourly_rate.toFixed(2)}</td>
                               <td className="py-2 text-right font-semibold text-purple-700">₹{item.total_cost.toFixed(2)}</td>
                             </tr>
@@ -254,8 +254,8 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
 
                 {plan.fg_operations && plan.fg_operations.length > 0 && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Finished Goods Operations</h3>
-                    <div className="bg-indigo-50 border border-indigo-200 rounded-xs p-2 overflow-x-auto">
+                    <h3 className="text-lg  text-gray-900 mb-3">Finished Goods Operations</h3>
+                    <div className="bg-indigo-50 border border-indigo-200 rounded-xs p-2 ">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-indigo-200">
@@ -274,7 +274,7 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                               <td className="py-2 text-gray-700">{item.workstation_type || '-'}</td>
                               <td className="py-2 text-right text-gray-700">{item.operation_time_per_unit.toFixed(1)}</td>
                               <td className="py-2 text-right font-medium text-gray-900">{item.total_time.toFixed(1)}</td>
-                              <td className="py-2 text-right font-bold text-indigo-700">{(item.total_time / 60).toFixed(2)}</td>
+                              <td className="py-2 text-right  text-indigo-700">{(item.total_time / 60).toFixed(2)}</td>
                               <td className="py-2 text-right font-semibold text-indigo-700">₹{item.total_cost.toFixed(2)}</td>
                             </tr>
                           ))}

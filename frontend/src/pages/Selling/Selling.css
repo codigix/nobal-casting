@@ -3,11 +3,7 @@
    Modern Professional Design
    =========================== */
 
-.selling-container {
-  padding: var(--spacing-8);
-  background: var(--bg-secondary);
-  min-height: 100vh;
-}
+
 
 /* Page Header */
 .page-header {
@@ -19,12 +15,7 @@
   gap: var(--spacing-4);
 }
 
-.page-header h2 {
-  margin: 0;
-  font-size: var(--text-3xl);
-  font-weight: var(--font-bold);
-  color: var(--text-primary);
-}
+
 
 /* Filters Section */
 .filters-section {
@@ -36,7 +27,7 @@
   padding: var(--spacing-6);
   border-radius: var(--radius-xl);
   border: 1px solid var(--card-border);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--);
 }
 
 .filter-group {
@@ -99,22 +90,9 @@
   flex: 1;
 }
 
-.stat-info h3 {
-  margin: 0;
-  font-size: 11px;
-  color: var(--text-secondary);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-}
 
-.stat-info p {
-  margin: var(--spacing-3) 0 0 0;
-  font-size: 32px;
-  font-weight: 900;
-  color: var(--text-primary);
-  line-height: 1;
-}
+
+
 
 .stat-icon {
   width: 60px;
@@ -154,7 +132,7 @@
   background: var(--card-bg);
   border-radius: var(--radius-xl);
   border: 1px solid var(--card-border);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--);
   overflow: hidden;
 }
 
@@ -178,18 +156,14 @@
 
 /* Responsive */
 @media (max-width: 768px) {
-  .selling-container {
-    padding: var(--spacing-4);
-  }
+ 
 
   .page-header {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .page-header h2 {
-    font-size: var(--text-2xl);
-  }
+
 
   .stats-grid {
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -215,11 +189,10 @@
 
 .glass-card {
   background-color: rgba(255, 255, 255, 0.6);
-  border-radius: 20px;
+  border-radius: 10px;
   padding: 16px;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 8px 32px rgba(31, 41, 55, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.6);
   border-left: 3px solid;
   transition: all 0.3s ease;
@@ -264,13 +237,12 @@
 
 .glass-filters {
   background-color: rgba(255, 255, 255, 0.5);
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: 10px;
+  padding: 10px;
   margin-bottom: 20px;
   border: 1px solid rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
-  box-shadow: 0 4px 20px rgba(31, 41, 55, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.7);
   display: flex;
   gap: 16px;
   align-items: flex-end;
@@ -320,4 +292,29 @@
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
   box-shadow: 0 4px 20px rgba(31, 41, 55, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.7);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInFromTop {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in {
+  animation-duration: 0.2s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+
+.fade-in {
+  animation-name: fadeIn;
+}
+
+.slide-in-from-top-2 {
+  animation-name: slideInFromTop;
 }

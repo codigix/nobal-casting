@@ -27,7 +27,9 @@ import {
   Eye,
   Wrench,
   Grid3x3,
-  Award
+  Award,
+  Zap,
+  ArrowRightLeft
 } from 'lucide-react'
 
 /**
@@ -87,7 +89,7 @@ export default function DepartmentLayout({ children }) {
     const dashboardPaths = {
       'inventory': '/inventory/dashboard',
       'manufacturing': '/manufacturing/dashboard',
-      'admin': '/admin/dashboard'
+      'admin': '/admin/project-analysis'
     }
     
     const dashboardItem = {
@@ -109,15 +111,20 @@ export default function DepartmentLayout({ children }) {
           section: 'APPS',
           submenu: [
             { label: 'Material Requests', path: '/inventory/material-requests', icon: FileText },
+                        { label: 'Purchase Orders', path: '/buying/purchase-orders', icon: Package },
+
+             { label: 'Purchase Receipt', path: '/inventory/purchase-receipts', icon: Receipt },
             { label: 'GRN Management', path: '/inventory/grn-management', icon: Package },
-            { label: 'Purchase Receipt', path: '/inventory/purchase-receipts', icon: Receipt },
-            { label: 'Warehouses', path: '/inventory/warehouses', icon: Warehouse },
+          
             { label: 'Stock Entries', path: '/inventory/stock-entries', icon: FileText },
             { label: 'Stock Balance', path: '/inventory/stock-balance', icon: Package },
             { label: 'Stock Ledger', path: '/inventory/stock-ledger', icon: BarChart3 },
-            { label: 'Suppliers', path: '/inventory/suppliers', icon: Users }
-          ]
-        }
+            { label: 'Warehouses', path: '/inventory/warehouses', icon: Warehouse },
+            { label: 'Stock Movements', path: '/inventory/stock-movements', icon: ArrowRightLeft },
+            { label: 'Suppliers', path: '/inventory/suppliers', icon: Users },
+           ]
+        },
+       
       ]
     }
 
@@ -139,7 +146,17 @@ export default function DepartmentLayout({ children }) {
             { label: 'Work Orders', path: '/manufacturing/work-orders', icon: Clipboard },
             { label: 'Job Cards', path: '/manufacturing/job-cards', icon: FileText },
             { label: 'Workstations', path: '/manufacturing/workstations', icon: Grid3x3 },
-            { label: 'Operations', path: '/manufacturing/operations', icon: Wrench }
+            { label: 'Operations', path: '/manufacturing/operations', icon: Zap }
+          ]
+        },
+        {
+          id: 'buying',
+          label: 'Procurement',
+          icon: ShoppingCart,
+          section: 'APPS',
+          submenu: [
+            { label: 'Material Requests', path: '/inventory/material-requests', icon: FileText },
+            { label: 'Purchase Orders', path: '/buying/purchase-orders', icon: Package }
           ]
         },
         {

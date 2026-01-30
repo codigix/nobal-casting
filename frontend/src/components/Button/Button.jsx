@@ -29,8 +29,8 @@
 
   const sizes = {
     sm: 'px-2 text-xs',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
+    md: 'p-2 text-base',
+    lg: 'p-6  py-2 text-lg',
   }
 
   return (

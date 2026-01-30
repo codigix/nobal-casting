@@ -205,7 +205,7 @@ export default function SupplierList() {
       <div>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Suppliers</h1>
+            <h1 className="text-xl  text-gray-900">Suppliers</h1>
             <p className="text-gray-600 mt-1">Manage your supplier network and relationships</p>
           </div>
           <Button

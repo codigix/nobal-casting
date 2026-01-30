@@ -18,15 +18,23 @@ class GRNRequestModel {
           receipt_date,
           created_by,
           items = [],
-          notes = ''
+          notes = '',
+          material_request_id = null,
+          department = null,
+          purpose = null
         } = data
 
         const [result] = await connection.query(
           `INSERT INTO grn_requests (
             grn_no, po_no, supplier_id, supplier_name, receipt_date, 
-            created_by, status, total_items, notes
-          ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
-          [grn_no, po_no, supplier_id, supplier_name, receipt_date, created_by, items.length, notes]
+            created_by, status, total_items, notes, 
+            material_request_id, department, purpose
+          ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)`,
+          [
+            grn_no, po_no, supplier_id, supplier_name, receipt_date, 
+            created_by, items.length, notes,
+            material_request_id, department, purpose
+          ]
         )
 
         const grnRequestId = result.insertId
@@ -35,8 +43,8 @@ class GRNRequestModel {
           await connection.query(
             `INSERT INTO grn_request_items (
               grn_request_id, item_code, item_name, po_qty, received_qty, 
-              batch_no, warehouse_name
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              batch_no, warehouse_name, valuation_rate
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               grnRequestId,
               item.item_code,
@@ -44,7 +52,8 @@ class GRNRequestModel {
               item.po_qty,
               item.received_qty,
               item.batch_no,
-              item.warehouse_name
+              item.warehouse_name,
+              item.valuation_rate || item.rate || 0
             ]
           )
         }

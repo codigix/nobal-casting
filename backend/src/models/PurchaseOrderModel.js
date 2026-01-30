@@ -11,49 +11,73 @@ export class PurchaseOrderModel {
     const po_no = `PO-${Date.now()}`
 
     try {
-      let query, params
+      const query = `INSERT INTO purchase_order 
+               (po_no, mr_id, supplier_id, order_date, expected_date, currency, tax_template_id, 
+                total_value, status, shipping_address_line1, shipping_address_line2, 
+                shipping_city, shipping_state, shipping_pincode, shipping_country,
+                payment_terms_description, due_date, invoice_portion, payment_amount,
+                advance_paid, tax_category, tax_rate, subtotal, tax_amount, final_amount,
+                incoterm, shipping_rule)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       
-      if (data.tax_template_id) {
-        query = `INSERT INTO purchase_order 
-                 (po_no, supplier_id, order_date, expected_date, currency, tax_template_id, total_value, status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-        params = [
-          po_no,
-          data.supplier_id || null,
-          data.order_date || new Date().toISOString().split('T')[0],
-          data.expected_date || null,
-          data.currency || 'INR',
-          data.tax_template_id,
-          parseFloat(data.total_value) || parseFloat(data.subtotal) || 0,
-          'draft'
-        ]
-      } else {
-        query = `INSERT INTO purchase_order 
-                 (po_no, supplier_id, order_date, expected_date, currency, total_value, status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`
-        params = [
-          po_no,
-          data.supplier_id || null,
-          data.order_date || new Date().toISOString().split('T')[0],
-          data.expected_date || null,
-          data.currency || 'INR',
-          parseFloat(data.total_value) || parseFloat(data.subtotal) || 0,
-          'draft'
-        ]
-      }
+      const params = [
+        po_no,
+        data.mr_id || null,
+        data.supplier_id || null,
+        data.order_date || new Date().toISOString().split('T')[0],
+        data.expected_date || null,
+        data.currency || 'INR',
+        data.tax_template_id || null,
+        parseFloat(data.total_value) || parseFloat(data.final_amount) || 0,
+        'draft',
+        data.shipping_address_line1 || null,
+        data.shipping_address_line2 || null,
+        data.shipping_city || null,
+        data.shipping_state || null,
+        data.shipping_pincode || null,
+        data.shipping_country || 'India',
+        data.payment_terms_description || null,
+        data.due_date || null,
+        parseFloat(data.invoice_portion) || 100,
+        parseFloat(data.payment_amount) || 0,
+        parseFloat(data.advance_paid) || 0,
+        data.tax_category || 'GST',
+        parseFloat(data.tax_rate) || 0,
+        parseFloat(data.subtotal) || 0,
+        parseFloat(data.tax_amount) || 0,
+        parseFloat(data.final_amount) || 0,
+        data.incoterm || 'EXW',
+        data.shipping_rule || null
+      ]
 
       await this.db.execute(query, params)
 
       if (data.items && Array.isArray(data.items)) {
         for (const item of data.items) {
+          const po_item_id = this.generateId()
           try {
-            const po_item_id = this.generateId()
             await this.db.execute(
               `INSERT INTO purchase_order_item 
-               (po_item_id, po_no, item_code, qty, uom, rate, schedule_date)
-               VALUES (?, ?, ?, ?, ?, ?, ?)`,
+               (po_item_id, po_no, item_code, qty, uom, rate, schedule_date, tax_rate)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
               [
                 po_item_id,
+                po_no,
+                item.item_code || null,
+                parseFloat(item.qty) || null,
+                item.uom || null,
+                parseFloat(item.rate) || null,
+                item.schedule_date || null,
+                parseFloat(item.tax_rate) || 0
+              ]
+            )
+          } catch (itemError) {
+            // Fallback if po_item_id or tax_rate column doesn't exist
+            await this.db.execute(
+              `INSERT INTO purchase_order_item 
+               (po_no, item_code, qty, uom, rate, schedule_date)
+               VALUES (?, ?, ?, ?, ?, ?)`,
+              [
                 po_no,
                 item.item_code || null,
                 parseFloat(item.qty) || null,
@@ -62,25 +86,6 @@ export class PurchaseOrderModel {
                 item.schedule_date || null
               ]
             )
-          } catch (itemError) {
-            // If po_item_id column doesn't exist, try without it
-            if (itemError.message.includes('po_item_id')) {
-              await this.db.execute(
-                `INSERT INTO purchase_order_item 
-                 (po_no, item_code, qty, uom, rate, schedule_date)
-                 VALUES (?, ?, ?, ?, ?, ?)`,
-                [
-                  po_no,
-                  item.item_code || null,
-                  parseFloat(item.qty) || null,
-                  item.uom || null,
-                  parseFloat(item.rate) || null,
-                  item.schedule_date || null
-                ]
-              )
-            } else {
-              throw itemError
-            }
           }
         }
       }
@@ -94,9 +99,10 @@ export class PurchaseOrderModel {
   async getById(po_no) {
     try {
       const [pos] = await this.db.execute(
-        `SELECT po.*, s.name as supplier_name, s.gstin
+        `SELECT po.*, s.name as supplier_name, s.gstin, mr.department, mr.purpose
          FROM purchase_order po
-         JOIN supplier s ON po.supplier_id = s.supplier_id
+         LEFT JOIN supplier s ON po.supplier_id = s.supplier_id
+         LEFT JOIN material_request mr ON po.mr_id = mr.mr_id
          WHERE po.po_no = ?`,
         [po_no]
       )
@@ -119,9 +125,18 @@ export class PurchaseOrderModel {
 
   async getAll(filters = {}) {
     try {
-      let query = `SELECT po.*, s.name as supplier_name, s.gstin
+      let query = `SELECT 
+                      po.*, 
+                      s.name as supplier_name, 
+                      s.gstin, 
+                      mr.department, 
+                      mr.purpose,
+                      COALESCE(SUM(poi.received_qty), 0) as total_received_qty,
+                      COALESCE(SUM(poi.qty), 0) as total_ordered_qty
                    FROM purchase_order po
-                   JOIN supplier s ON po.supplier_id = s.supplier_id
+                   LEFT JOIN supplier s ON po.supplier_id = s.supplier_id
+                   LEFT JOIN material_request mr ON po.mr_id = mr.mr_id
+                   LEFT JOIN purchase_order_item poi ON po.po_no = poi.po_no
                    WHERE 1=1`
       const params = []
 
@@ -145,6 +160,8 @@ export class PurchaseOrderModel {
         params.push(filters.order_date_to)
       }
 
+      query += ` GROUP BY po.po_no`
+
       const limit = filters.limit || 50
       const offset = filters.offset || 0
       query += ` ORDER BY po.created_at DESC LIMIT ${limit} OFFSET ${offset}`
@@ -162,7 +179,12 @@ export class PurchaseOrderModel {
       const params = []
 
       const allowedFields = [
-        'expected_date', 'status', 'currency', 'tax_template_id', 'total_value', 'taxes_amount'
+        'expected_date', 'status', 'currency', 'tax_template_id', 'total_value', 'taxes_amount',
+        'supplier_id', 'order_date', 'shipping_address_line1', 'shipping_address_line2',
+        'shipping_city', 'shipping_state', 'shipping_pincode', 'shipping_country',
+        'payment_terms_description', 'due_date', 'invoice_portion', 'payment_amount',
+        'advance_paid', 'tax_category', 'tax_rate', 'subtotal', 'tax_amount', 'final_amount',
+        'incoterm', 'shipping_rule'
       ]
       const updateFields = []
 
@@ -173,13 +195,55 @@ export class PurchaseOrderModel {
         }
       }
 
-      if (updateFields.length === 0) return { success: true }
+      if (updateFields.length > 0) {
+        updateQuery += updateFields.join(', ') + ` WHERE po_no = ?`
+        params.push(po_no)
+        await this.db.execute(updateQuery, params)
+      }
 
-      updateQuery += updateFields.join(', ') + ` WHERE po_no = ?`
-      params.push(po_no)
+      // Handle items update
+      if (data.items && Array.isArray(data.items)) {
+        // Delete existing items
+        await this.db.execute(`DELETE FROM purchase_order_item WHERE po_no = ?`, [po_no])
 
-      const [result] = await this.db.execute(updateQuery, params)
-      return { affectedRows: result.affectedRows }
+        // Insert new items
+        for (const item of data.items) {
+          const po_item_id = this.generateId()
+          try {
+            await this.db.execute(
+              `INSERT INTO purchase_order_item 
+               (po_item_id, po_no, item_code, qty, uom, rate, schedule_date, tax_rate)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                po_item_id,
+                po_no,
+                item.item_code || null,
+                parseFloat(item.qty) || null,
+                item.uom || null,
+                parseFloat(item.rate) || null,
+                item.schedule_date || null,
+                parseFloat(item.tax_rate) || 0
+              ]
+            )
+          } catch (itemError) {
+            await this.db.execute(
+              `INSERT INTO purchase_order_item 
+               (po_no, item_code, qty, uom, rate, schedule_date)
+               VALUES (?, ?, ?, ?, ?, ?)`,
+              [
+                po_no,
+                item.item_code || null,
+                parseFloat(item.qty) || null,
+                item.uom || null,
+                parseFloat(item.rate) || null,
+                item.schedule_date || null
+              ]
+            )
+          }
+        }
+      }
+
+      return { success: true }
     } catch (error) {
       throw new Error(`Failed to update purchase order: ${error.message}`)
     }
@@ -272,6 +336,121 @@ export class PurchaseOrderModel {
       return { success: true }
     } catch (error) {
       throw new Error(`Failed to delete purchase order: ${error.message}`)
+    }
+  }
+
+  async createFromMaterialRequest(mrId, items, department, purpose) {
+    try {
+      console.log(`[PO Creation] Creating PO from MR: ${mrId}`)
+      
+      const po_no = `PO-MR-${Date.now()}`
+      const order_date = new Date().toISOString().split('T')[0]
+      
+      // Create the PO record with all fields
+      await this.db.execute(
+        `INSERT INTO purchase_order 
+         (po_no, mr_id, supplier_id, order_date, currency, status, 
+          tax_category, tax_rate, subtotal, tax_amount, final_amount, incoterm)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          po_no,
+          mrId,
+          null, // Supplier pending
+          order_date,
+          'INR',
+          'draft',
+          'GST',
+          18,   // Default tax rate
+          0,    // Subtotal will be updated if needed or calculated on edit
+          0,    // Tax amount
+          0,    // Final amount
+          'EXW' // Default incoterm
+        ]
+      )
+
+      // Create items
+      for (const item of items) {
+        try {
+          const po_item_id = this.generateId()
+          await this.db.execute(
+            `INSERT INTO purchase_order_item 
+             (po_item_id, po_no, item_code, qty, uom, rate, tax_rate)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+              po_item_id,
+              po_no,
+              item.item_code,
+              item.qty,
+              item.uom || 'Kg',
+              item.rate || 0,
+              18 // Default tax rate
+            ]
+          )
+        } catch (itemError) {
+          // Fallback if po_item_id or tax_rate column doesn't exist
+          await this.db.execute(
+            `INSERT INTO purchase_order_item 
+             (po_no, item_code, qty, uom, rate)
+             VALUES (?, ?, ?, ?, ?)`,
+            [
+              po_no,
+              item.item_code,
+              item.qty,
+              item.uom || 'Kg',
+              item.rate || 0
+            ]
+          )
+        }
+      }
+
+      return { po_no, mr_id: mrId }
+    } catch (error) {
+      throw new Error(`Failed to create PO from Material Request: ${error.message}`)
+    }
+  }
+
+  async updateReceivedQty(po_no, items) {
+    try {
+      console.log(`[PO Update] Updating received quantities for PO: ${po_no}`)
+      
+      for (const item of items) {
+        await this.db.execute(
+          `UPDATE purchase_order_item 
+           SET received_qty = received_qty + ? 
+           WHERE po_no = ? AND item_code = ?`,
+          [parseFloat(item.accepted_qty) || 0, po_no, item.item_code]
+        )
+      }
+
+      // Check if PO is completed
+      const [poiRows] = await this.db.execute(
+        `SELECT qty, received_qty FROM purchase_order_item WHERE po_no = ?`,
+        [po_no]
+      )
+
+      let allReceived = true
+      let partiallyReceived = false
+
+      for (const row of poiRows) {
+        if (row.received_qty < row.qty) {
+          allReceived = false
+        }
+        if (row.received_qty > 0) {
+          partiallyReceived = true
+        }
+      }
+
+      const newStatus = allReceived ? 'completed' : (partiallyReceived ? 'partially_received' : 'to_receive')
+      
+      await this.db.execute(
+        `UPDATE purchase_order SET status = ? WHERE po_no = ?`,
+        [newStatus, po_no]
+      )
+
+      return { success: true, status: newStatus }
+    } catch (error) {
+      console.error(`Error updating PO received qty:`, error)
+      throw error
     }
   }
 }

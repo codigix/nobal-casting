@@ -6,6 +6,7 @@ export default function DataTable({
   columns, 
   data, 
   renderActions,
+  actions,
   filterable = true,
   sortable = true,
   pageSize = 10,
@@ -13,6 +14,8 @@ export default function DataTable({
   hideColumnToggle = false,
   defaultHiddenColumns = []
 }) {
+  const actualRenderActions = renderActions || actions;
+
   const [filters, setFilters] = useState({})
   const [sortConfig, setSortConfig] = useState({
     key: null,
@@ -164,13 +167,13 @@ export default function DataTable({
                   </div>
                 </th>
               ))}
-              {renderActions && <th className="actions-col">Actions</th>}
+              {actualRenderActions && <th className="actions-col">Actions</th>}
             </tr>
           </thead>
           <tbody>
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={filteredColumns.length + (renderActions ? 1 : 0)} className="no-data">
+                <td colSpan={filteredColumns.length + (actualRenderActions ? 1 : 0)} className="no-data">
                   No data available
                 </td>
               </tr>
@@ -178,13 +181,13 @@ export default function DataTable({
               paginatedData.map((row, idx) => (
                 <tr key={idx} className="data-row bg-white">
                   {filteredColumns.map(col => (
-                    <td key={col.key} className={col.key === 'status' || col.dropdown ? 'dropdown-col' : ''}>
+                    <td key={col.key} className=" p-2 {col.key === 'status' || col.dropdown ? 'dropdown-col ' : ''}">
                       {col.render ? col.render(row[col.key], row) : row[col.key]}
                     </td>
                   ))}
-                  {renderActions && (
+                  {actualRenderActions && (
                     <td className="actions-col">
-                      {renderActions(row)}
+                      {actualRenderActions(row)}
                     </td>
                   )}
                 </tr>

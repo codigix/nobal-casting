@@ -231,11 +231,11 @@ export default function StockLedger() {
   ]
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-2 sm:p-5 lg:p-6">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-2 sm:p-5 lg:p-3">
       <div className=" mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
-            <h1 className="text-xl font-black text-neutral-900 dark:text-white flex items-center gap-3">
+            <h1 className="text-xl OEE Intelligence text-neutral-900 dark:text-white flex items-center gap-3">
               <BookOpen size={28} className="text-blue-500" />
               Stock Ledger
             </h1>
@@ -354,7 +354,7 @@ export default function StockLedger() {
             <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-2 mb-4">
               <BookOpen size={40} className="text-neutral-400 dark:text-neutral-600" />
             </div>
-            <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">{ledgers.length === 0 ? 'No Ledger Entries Found' : 'No Entries Match Your Search'}</h3>
+            <h3 className="text-lg  text-neutral-900 dark:text-white mb-2">{ledgers.length === 0 ? 'No Ledger Entries Found' : 'No Entries Match Your Search'}</h3>
             <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center max-w-md">{ledgers.length === 0 ? 'Ledger entries will appear once stock movements are recorded.' : 'Try adjusting your search filters.'}</p>
           </div>
         ) : viewMode === 'table' ? (
@@ -367,7 +367,7 @@ export default function StockLedger() {
               {paginatedData.map((entry, idx) => (
                 <div key={idx} className="bg-white dark:bg-neutral-800 rounded-xs border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow">
                   <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-950/30 p-3 border-b border-neutral-200 dark:border-neutral-700">
-                    <h3 className="font-bold text-neutral-900 dark:text-white">{entry.item_code}</h3>
+                    <h3 className=" text-neutral-900 dark:text-white">{entry.item_code}</h3>
                     <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">{entry.item_name}</p>
                   </div>
                   <div className="p-4 space-y-3">
@@ -391,7 +391,7 @@ export default function StockLedger() {
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold mb-2">Movement</p>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <p className={`text-xs font-bold ${
+                            <p className={`text-xs  ${
                               entry.qty_in > 0 
                                 ? 'text-green-700 dark:text-green-400' 
                                 : 'text-neutral-600 dark:text-neutral-500'
@@ -409,7 +409,7 @@ export default function StockLedger() {
                             </p>
                           </div>
                         </div>
-                        <p className={`text-xs font-bold mt-2 ${
+                        <p className={`text-xs  mt-2 ${
                           entry.qty_in > 0 
                             ? 'text-green-700 dark:text-green-400' 
                             : 'text-red-700 dark:text-red-400'
@@ -422,7 +422,7 @@ export default function StockLedger() {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Balance</p>
-                        <p className="text-xs font-bold text-blue-600 dark:text-blue-400">{entry.balance_qty || 0}</p>
+                        <p className="text-xs  text-blue-600 dark:text-blue-400">{entry.balance_qty || 0}</p>
                       </div>
                       <div>
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Rate</p>
@@ -434,7 +434,7 @@ export default function StockLedger() {
                       {getTransactionIcon(entry.transaction_type)}
                       <div>
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Type</p>
-                        <p className={`text-xs font-bold ${getTransactionColor(entry.transaction_type)}`}>
+                        <p className={`text-xs  ${getTransactionColor(entry.transaction_type)}`}>
                           {entry.transaction_type}
                         </p>
                       </div>

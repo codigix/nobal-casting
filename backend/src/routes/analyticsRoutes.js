@@ -1,11 +1,15 @@
 import express from 'express';
 import BuyingAnalyticsController from '../controllers/BuyingAnalyticsController.js';
 import InventoryAnalyticsController from '../controllers/InventoryAnalyticsController.js';
+import ProductionAnalyticsController from '../controllers/ProductionAnalyticsController.js';
 
 const router = express.Router();
 
 // Inventory Analytics
 router.get('/inventory', InventoryAnalyticsController.getInventoryAnalytics);
+
+// Production Analytics
+router.get('/production/project-analysis/:soId', ProductionAnalyticsController.getProjectDetailedAnalysis);
 
 // Analytics Summary
 router.get('/buying/summary', BuyingAnalyticsController.getSummary);

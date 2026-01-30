@@ -139,7 +139,7 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
             <select name="bom_id" value={formData.bom_id} onChange={handleInputChange} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} required>
               <option value="">Select BOM</option>
               {boms.map(bom => (
-                <option key={bom.bom_id} value={bom.bom_id}>{bom.bom_id} - {bom.product_name}</option>
+                <option key={bom.bom_id} value={bom.bom_id}>{bom.product_name || bom.name || bom.bom_id}</option>
               ))}
             </select>
           </div>

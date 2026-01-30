@@ -369,11 +369,11 @@ export default function StockEntries() {
   ]
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-2 sm:p-5 lg:p-6">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-2 sm:p-5 lg:p-3">
       <div className=" mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
-            <h1 className="text-xl font-black text-neutral-900 dark:text-white flex items-center gap-3">
+            <h1 className="text-xl OEE Intelligence text-neutral-900 dark:text-white flex items-center gap-3">
               <Package size={28} className="text-amber-500" />
               Stock Entries
             </h1>
@@ -381,7 +381,7 @@ export default function StockEntries() {
           </div>
           <button
             onClick={formModal.open}
-            className="flex items-center justify-center gap-2 p-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-xs shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 whitespace-nowrap text-xs"
+            className="flex items-center justify-center gap-2 p-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-xs shadow-lg hover: transition-all duration-300 hover:-translate-y-1 whitespace-nowrap text-xs"
           >
             <Plus size={18} />
             Create Entry
@@ -677,7 +677,7 @@ export default function StockEntries() {
             <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-2 mb-4">
               <Package size={40} className="text-neutral-400 dark:text-neutral-600" />
             </div>
-            <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">No Stock Entries Found</h3>
+            <h3 className="text-lg  text-neutral-900 dark:text-white mb-2">No Stock Entries Found</h3>
             <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center max-w-md mb-6">Create your first stock entry to start tracking inventory movements.</p>
           </div>
         ) : (
@@ -756,7 +756,7 @@ export default function StockEntries() {
                 <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-2 mb-4">
                   <Package size={40} className="text-neutral-400 dark:text-neutral-600" />
                 </div>
-                <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">No Matching Entries</h3>
+                <h3 className="text-lg  text-neutral-900 dark:text-white mb-2">No Matching Entries</h3>
                 <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center max-w-md">Try adjusting your search or filters.</p>
               </div>
             ) : viewMode === 'table' ? (
@@ -768,7 +768,7 @@ export default function StockEntries() {
                 {paginatedData.map((entry) => (
                   <div
                     key={entry.id}
-                    className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden"
+                    className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800  hover:shadow-lg transition-all duration-300 overflow-hidden"
                   >
                     <div className={`bg-gradient-to-br ${getTypeColor(entry.entry_type || entry.reference_doctype)}p-2 flex items-start justify-between`}>
                       <div className="flex items-start gap-2">
@@ -776,7 +776,7 @@ export default function StockEntries() {
                           {getTypeIcon(entry.entry_type || entry.reference_doctype)}
                         </div>
                         <div>
-                          <h3 className="font-bold text-neutral-900 text-base">{entry.entry_id}</h3>
+                          <h3 className=" text-neutral-900 text-base">{entry.entry_id}</h3>
                           <p className="text-xs text-neutral-700 font-medium">{entry.entry_type || entry.reference_doctype || 'Entry'}</p>
                         </div>
                       </div>

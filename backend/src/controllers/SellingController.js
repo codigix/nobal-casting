@@ -439,6 +439,7 @@ export class SellingController {
           customer_phone: finalCustomerPhone,
           quotation_id,
           order_amount: finalAmount,
+          total_amount: finalAmount,
           total_value: finalAmount,
           delivery_date,
           order_terms: finalTerms,
@@ -466,10 +467,12 @@ export class SellingController {
 
     try {
       let query = `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.profit_margin_percentage, sso.cgst_rate, sso.sgst_rate, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.qty, sso.source_warehouse, sso.order_type, sso.customer_name, sso.customer_email, sso.customer_phone, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
+                          sso.order_amount as total_amount,
                           sso.order_amount as total_value, 
                           COALESCE(c.name, sso.customer_name, '') as customer_full_name,
                           COALESCE(c.email, sso.customer_email, '') as customer_email_alt,
-                          COALESCE(c.phone, sso.customer_phone, '') as customer_phone_alt
+                          COALESCE(c.phone, sso.customer_phone, '') as customer_phone_alt,
+                          (SELECT status FROM production_plan WHERE sales_order_id = sso.sales_order_id ORDER BY created_at DESC LIMIT 1) as production_plan_status
                    FROM selling_sales_order sso
                    LEFT JOIN selling_customer c ON sso.customer_id = c.customer_id
                    WHERE sso.deleted_at IS NULL`
@@ -480,8 +483,12 @@ export class SellingController {
         params.push(customer_id)
       }
       if (status) {
-        query += ' AND sso.status = ?'
-        params.push(status)
+        if (status === 'overdue') {
+          query += " AND sso.status NOT IN ('complete', 'dispatched', 'delivered') AND sso.delivery_date < CURRENT_DATE"
+        } else {
+          query += ' AND sso.status = ?'
+          params.push(status)
+        }
       }
 
       query += ' ORDER BY sso.created_at DESC'
@@ -493,10 +500,10 @@ export class SellingController {
         customer_name: order.customer_name || order.customer_full_name,
         customer_email: order.customer_email || order.customer_email_alt,
         customer_phone: order.customer_phone || order.customer_phone_alt,
-        items: order.items ? JSON.parse(order.items) : [],
-        bom_finished_goods: order.bom_finished_goods ? JSON.parse(order.bom_finished_goods) : [],
-        bom_raw_materials: order.bom_raw_materials ? JSON.parse(order.bom_raw_materials) : [],
-        bom_operations: order.bom_operations ? JSON.parse(order.bom_operations) : []
+        items: order.items ? (typeof order.items === 'string' ? JSON.parse(order.items) : order.items) : [],
+        bom_finished_goods: order.bom_finished_goods ? (typeof order.bom_finished_goods === 'string' ? JSON.parse(order.bom_finished_goods) : order.bom_finished_goods) : [],
+        bom_raw_materials: order.bom_raw_materials ? (typeof order.bom_raw_materials === 'string' ? JSON.parse(order.bom_raw_materials) : order.bom_raw_materials) : [],
+        bom_operations: order.bom_operations ? (typeof order.bom_operations === 'string' ? JSON.parse(order.bom_operations) : order.bom_operations) : []
       }))
       
       res.json({ success: true, data: processedOrders })
@@ -531,6 +538,7 @@ export class SellingController {
 
       const [updated] = await db.execute(
         `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.profit_margin_percentage, sso.cgst_rate, sso.sgst_rate, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.qty, sso.source_warehouse, sso.order_type, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
+                sso.order_amount as total_amount,
                 sso.order_amount as total_value, 
                 COALESCE(c.name, '') as customer_name,
                 COALESCE(c.email, '') as customer_email,
@@ -543,10 +551,10 @@ export class SellingController {
 
       const processedOrder = {
         ...updated[0],
-        items: updated[0].items ? JSON.parse(updated[0].items) : [],
-        bom_finished_goods: updated[0].bom_finished_goods ? JSON.parse(updated[0].bom_finished_goods) : [],
-        bom_raw_materials: updated[0].bom_raw_materials ? JSON.parse(updated[0].bom_raw_materials) : [],
-        bom_operations: updated[0].bom_operations ? JSON.parse(updated[0].bom_operations) : []
+        items: updated[0].items ? (typeof updated[0].items === 'string' ? JSON.parse(updated[0].items) : updated[0].items) : [],
+        bom_finished_goods: updated[0].bom_finished_goods ? (typeof updated[0].bom_finished_goods === 'string' ? JSON.parse(updated[0].bom_finished_goods) : updated[0].bom_finished_goods) : [],
+        bom_raw_materials: updated[0].bom_raw_materials ? (typeof updated[0].bom_raw_materials === 'string' ? JSON.parse(updated[0].bom_raw_materials) : updated[0].bom_raw_materials) : [],
+        bom_operations: updated[0].bom_operations ? (typeof updated[0].bom_operations === 'string' ? JSON.parse(updated[0].bom_operations) : updated[0].bom_operations) : []
       }
 
       res.json({ success: true, data: processedOrder })
@@ -563,13 +571,15 @@ export class SellingController {
     try {
       const [orders] = await db.execute(
         `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.profit_margin_percentage, sso.cgst_rate, sso.sgst_rate, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.qty, sso.source_warehouse, sso.order_type, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
+                sso.order_amount as total_amount,
                 sso.order_amount as total_value,
                 sso.customer_name,
                 sso.customer_email,
                 sso.customer_phone,
                 COALESCE(c.name, sso.customer_name, '') as customer_full_name,
                 COALESCE(c.email, sso.customer_email, '') as customer_email_alt,
-                COALESCE(c.phone, sso.customer_phone, '') as customer_phone_alt
+                COALESCE(c.phone, sso.customer_phone, '') as customer_phone_alt,
+                (SELECT status FROM production_plan WHERE sales_order_id = sso.sales_order_id ORDER BY created_at DESC LIMIT 1) as production_plan_status
          FROM selling_sales_order sso
          LEFT JOIN selling_customer c ON sso.customer_id = c.customer_id
          WHERE sso.sales_order_id = ? AND sso.deleted_at IS NULL`,
@@ -586,10 +596,10 @@ export class SellingController {
         customer_name: order.customer_name || order.customer_full_name,
         customer_email: order.customer_email || order.customer_email_alt,
         customer_phone: order.customer_phone || order.customer_phone_alt,
-        items: order.items ? JSON.parse(order.items) : [],
-        bom_finished_goods: order.bom_finished_goods ? JSON.parse(order.bom_finished_goods) : [],
-        bom_raw_materials: order.bom_raw_materials ? JSON.parse(order.bom_raw_materials) : [],
-        bom_operations: order.bom_operations ? JSON.parse(order.bom_operations) : []
+        items: order.items ? (typeof order.items === 'string' ? JSON.parse(order.items) : order.items) : [],
+        bom_finished_goods: order.bom_finished_goods ? (typeof order.bom_finished_goods === 'string' ? JSON.parse(order.bom_finished_goods) : order.bom_finished_goods) : [],
+        bom_raw_materials: order.bom_raw_materials ? (typeof order.bom_raw_materials === 'string' ? JSON.parse(order.bom_raw_materials) : order.bom_raw_materials) : [],
+        bom_operations: order.bom_operations ? (typeof order.bom_operations === 'string' ? JSON.parse(order.bom_operations) : order.bom_operations) : []
       }
 
       res.json({ success: true, data: processedOrder })
@@ -609,7 +619,7 @@ export class SellingController {
       }
 
       const [orders] = await db.execute(
-        `SELECT sso.sales_order_id, sso.customer_id, sso.order_amount, sso.delivery_date, sso.status, sso.items, sso.bom_id, sso.bom_name, sso.customer_name, sso.customer_email, sso.customer_phone, c.name, c.email, c.phone
+        `SELECT sso.sales_order_id, sso.customer_id, sso.order_amount, sso.order_amount as total_amount, sso.order_amount as total_value, sso.delivery_date, sso.status, sso.items, sso.bom_id, sso.bom_name, sso.customer_name, sso.customer_email, sso.customer_phone, c.name, c.email, c.phone
          FROM selling_sales_order sso
          LEFT JOIN selling_customer c ON sso.customer_id = c.customer_id
          WHERE sso.deleted_at IS NULL AND sso.status != 'cancelled'`,
@@ -792,6 +802,7 @@ export class SellingController {
       // Fetch updated order with customer info
       const [updated] = await db.execute(
         `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.qty, sso.source_warehouse, sso.order_type, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
+                sso.order_amount as total_amount,
                 sso.order_amount as total_value, 
                 COALESCE(c.name, '') as customer_name,
                 COALESCE(c.email, '') as customer_email,
@@ -804,10 +815,10 @@ export class SellingController {
 
       const processedOrder = {
         ...updated[0],
-        items: updated[0].items ? JSON.parse(updated[0].items) : [],
-        bom_finished_goods: updated[0].bom_finished_goods ? JSON.parse(updated[0].bom_finished_goods) : [],
-        bom_raw_materials: updated[0].bom_raw_materials ? JSON.parse(updated[0].bom_raw_materials) : [],
-        bom_operations: updated[0].bom_operations ? JSON.parse(updated[0].bom_operations) : []
+        items: updated[0].items ? (typeof updated[0].items === 'string' ? JSON.parse(updated[0].items) : updated[0].items) : [],
+        bom_finished_goods: updated[0].bom_finished_goods ? (typeof updated[0].bom_finished_goods === 'string' ? JSON.parse(updated[0].bom_finished_goods) : updated[0].bom_finished_goods) : [],
+        bom_raw_materials: updated[0].bom_raw_materials ? (typeof updated[0].bom_raw_materials === 'string' ? JSON.parse(updated[0].bom_raw_materials) : updated[0].bom_raw_materials) : [],
+        bom_operations: updated[0].bom_operations ? (typeof updated[0].bom_operations === 'string' ? JSON.parse(updated[0].bom_operations) : updated[0].bom_operations) : []
       }
 
       res.json({ success: true, data: processedOrder })

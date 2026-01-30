@@ -213,12 +213,12 @@ export default function StockBalance() {
   ]
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-2 sm:p-5 lg:p-6">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-2 sm:p-5 lg:p-3">
       <div className=" mx-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
-            <h1 className="text-xl font-black text-neutral-900 dark:text-white flex items-center gap-3">
+            <h1 className="text-xl OEE Intelligence text-neutral-900 dark:text-white flex items-center gap-3">
               <BarChart3 size={28} className="text-amber-500" />
               Stock Balance
             </h1>
@@ -227,7 +227,7 @@ export default function StockBalance() {
           <button
             onClick={fetchStockBalance}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xs font-medium text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 p-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xs font-medium text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
             Refresh
@@ -237,12 +237,12 @@ export default function StockBalance() {
         {error && <Alert type="danger">{error}</Alert>}
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-950/40 rounded-xs p-2 border border-blue-200 dark:border-blue-900">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase">Total Items</p>
-                <p className="text-2xl font-black text-blue-900 dark:text-blue-100 mt-1">{stats.total}</p>
+                <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 ">Total Items</p>
+                <p className="text-xl  OEE Intelligence text-blue-900 dark:text-blue-100 mt-1">{stats.total}</p>
               </div>
               <div className="p-2 bg-blue-200 dark:bg-blue-900/50 rounded-xs">
                 <Package size={20} className="text-blue-600 dark:text-blue-400" />
@@ -253,8 +253,8 @@ export default function StockBalance() {
           <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/20 dark:to-amber-950/40 rounded-xs p-2 border border-amber-200 dark:border-amber-900">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase">Low Stock</p>
-                <p className="text-2xl font-black text-amber-900 dark:text-amber-100 mt-1">{stats.low}</p>
+                <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 ">Low Stock</p>
+                <p className="text-xl  OEE Intelligence text-amber-900 dark:text-amber-100 mt-1">{stats.low}</p>
               </div>
               <div className="p-2 bg-amber-200 dark:bg-amber-900/50 rounded-xs">
                 <AlertTriangle size={20} className="text-amber-600 dark:text-amber-400" />
@@ -265,8 +265,8 @@ export default function StockBalance() {
           <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-950/40 rounded-xs p-2 border border-red-200 dark:border-red-900">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-semibold text-red-700 dark:text-red-400 uppercase">Out of Stock</p>
-                <p className="text-2xl font-black text-red-900 dark:text-red-100 mt-1">{stats.outOfStock}</p>
+                <p className="text-xs font-semibold text-red-700 dark:text-red-400 ">Out of Stock</p>
+                <p className="text-xl  OEE Intelligence text-red-900 dark:text-red-100 mt-1">{stats.outOfStock}</p>
               </div>
               <div className="p-2 bg-red-200 dark:bg-red-900/50 rounded-xs">
                 <AlertTriangle size={20} className="text-red-600 dark:text-red-400" />
@@ -357,7 +357,7 @@ export default function StockBalance() {
             <div className="rounded-full bg-neutral-100 dark:bg-neutral-80 0 p-2 mb-4">
               <BarChart3 size={40} className="text-neutral-400 dark:text-neutral-600" />
             </div>
-            <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">No Stock Items Found</h3>
+            <h3 className="text-lg  text-neutral-900 dark:text-white mb-2">No Stock Items Found</h3>
             <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center max-w-md">Try adjusting your search or filters.</p>
           </div>
         ) : viewMode === 'table' ? (
@@ -375,18 +375,18 @@ export default function StockBalance() {
             {paginatedData.map((stock) => (
               <div key={`${stock.item_code}-${stock.warehouse_name}`} className="bg-white dark:bg-neutral-800 rounded-xs border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-950/30 p-3 border-b border-neutral-200 dark:border-neutral-700">
-                  <h3 className="font-bold text-neutral-900 dark:text-white">{stock.item_code}</h3>
+                  <h3 className=" text-neutral-900 dark:text-white">{stock.item_code}</h3>
                   <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">{stock.item_name}</p>
                 </div>
                 <div className="p-4 space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Current Stock</p>
-                      <p className="text-xs font-bold text-neutral-900 dark:text-white">{Number(stock.current_qty || 0).toFixed(2)}</p>
+                      <p className="text-xs  text-neutral-900 dark:text-white">{Number(stock.current_qty || 0).toFixed(2)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Available Qty</p>
-                      <p className="text-xs font-bold text-green-600 dark:text-green-400">{Number(stock.available_qty || 0).toFixed(2)}</p>
+                      <p className="text-xs  text-green-600 dark:text-green-400">{Number(stock.available_qty || 0).toFixed(2)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Reserved Qty</p>
@@ -426,7 +426,7 @@ export default function StockBalance() {
                     {getStatusIcon(stock.current_qty, stock.reorder_level)}
                     <div>
                       <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Status</p>
-                      <p className="text-xs font-bold" style={{ color: getStockStatus(stock.current_qty, stock.reorder_level).color }}>
+                      <p className="text-xs " style={{ color: getStockStatus(stock.current_qty, stock.reorder_level).color }}>
                         {getStockStatus(stock.current_qty, stock.reorder_level).text}
                       </p>
                     </div>

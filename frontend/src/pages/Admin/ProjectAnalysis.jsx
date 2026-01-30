@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react'
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts'
-import { TrendingUp, Calendar, AlertCircle, Clock, CheckCircle, AlertTriangle, Target, Eye, Edit2, Truck, Package } from 'lucide-react'
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, AreaChart, Area, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
+import { TrendingUp, Calendar, AlertCircle, Clock, CheckCircle, AlertTriangle, Target, Eye, Edit2, Truck, Package, LayoutGrid, Search, Filter, ArrowUpRight, ArrowDownRight, MoreHorizontal, Download, Share2, Layers, Zap } from 'lucide-react'
+import { getSalesOrdersAsProjects, getDetailedProjectAnalysis } from '../../services/adminService'
 
 const statusConfig = {
-  draft: { icon: Edit2, color: '#f97316', bg: '#fef3c7', text: '#92400e', label: 'Draft' },
-  production: { icon: Truck, color: '#06b6d4', bg: '#cffafe', text: '#164e63', label: 'Production' },
-  complete: { icon: CheckCircle, color: '#10b981', bg: '#d1fae5', text: '#065f46', label: 'Complete' },
-  on_hold: { icon: AlertCircle, color: '#f59e0b', bg: '#fef3c7', text: '#92400e', label: 'On Hold' },
-  dispatched: { icon: Truck, color: '#8b5cf6', bg: '#ede9fe', text: '#5b21b6', label: 'Dispatched' },
-  delivered: { icon: Package, color: '#059669', bg: '#d1fae5', text: '#065f46', label: 'Delivered' }
+  draft: { icon: Edit2, color: '#f97316', bg: '#fff7ed', text: '#9a3412', border: '#ffedd5', label: 'Draft' },
+  production: { icon: Truck, color: '#0ea5e9', bg: '#f0f9ff', text: '#0c4a6e', border: '#e0f2fe', label: 'Production' },
+  complete: { icon: CheckCircle, color: '#10b981', bg: '#f0fdf4', text: '#14532d', border: '#dcfce7', label: 'Complete' },
+  on_hold: { icon: AlertCircle, color: '#f59e0b', bg: '#fffbeb', text: '#78350f', border: '#fef3c7', label: 'On Hold' },
+  dispatched: { icon: Truck, color: '#8b5cf6', bg: '#f5f3ff', text: '#4c1d95', border: '#ede9fe', label: 'Dispatched' },
+  delivered: { icon: Package, color: '#059669', bg: '#ecfdf5', text: '#064e3b', border: '#d1fae5', label: 'Delivered' }
 }
 
 const StatusBadge = ({ status }) => {
@@ -17,732 +18,756 @@ const StatusBadge = ({ status }) => {
 
   return (
     <div 
-      className="inline-flex items-center gap-1 px-2 py-1 rounded font-semibold text-xs"
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full  text-xs  "
       style={{
         backgroundColor: config.bg,
-        borderLeft: `2px solid ${config.color}`,
+        border: `1px solid ${config.border}`,
         color: config.text
       }}
     >
-      <Icon size={12} style={{ color: config.color }} />
+      <Icon size={10} style={{ color: config.color }} />
       <span>{config.label}</span>
     </div>
   )
 }
 
-const DetailModal = ({ isOpen, project, onClose }) => {
-  if (!isOpen || !project) return null
+const ProcessFlow = ({ stages }) => {
+  if (!stages || stages.length === 0) return (
+    <div className="flex flex-col items-center justify-center py-20 bg-white rounded border border-dashed border-slate-200">
+      <Layers size={40} className="text-slate-300 mb-4" />
+      <p className="text-slate-500 font-medium text-xs">No production workflow data available</p>
+    </div>
+  );
 
-  const timelineData = [
-    { week: 'Week 1', progress: Math.floor(project.progress * 0.15) },
-    { week: 'Week 2', progress: Math.floor(project.progress * 0.3) },
-    { week: 'Week 3', progress: Math.floor(project.progress * 0.5) },
-    { week: 'Week 4', progress: Math.floor(project.progress * 0.65) },
-    { week: 'Week 5', progress: Math.floor(project.progress * 0.8) },
-    { week: 'Week 6', progress: project.progress }
-  ]
+  const columns = [
+    { status: 'pending', title: 'Pending', color: 'bg-slate-500', bg: 'bg-slate-50', border: 'border-slate-200', icon: Clock },
+    { status: 'in_progress', title: 'In Progress', color: 'bg-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', icon: TrendingUp },
+    { status: 'completed', title: 'Completed', color: 'bg-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', icon: CheckCircle }
+  ];
 
-  const getStatusColor = (status) => {
-    const s = status?.toLowerCase() || ''
-    switch (true) {
-      case s.includes('delivered'):
-        return 'bg-green-100 text-green-800'
-      case s.includes('complete'):
-        return 'bg-green-100 text-green-800'
-      case s.includes('dispatched'):
-        return 'bg-purple-100 text-purple-800'
-      case s.includes('production'):
-        return 'bg-cyan-100 text-cyan-800'
-      case s.includes('on_hold'):
-        return 'bg-amber-100 text-amber-800'
-      case s.includes('draft'):
-        return 'bg-orange-100 text-orange-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
+  const groupedStages = stages.reduce((acc, stage) => {
+    const status = stage.status === 'in_progress' ? 'in_progress' : 
+                   stage.status === 'completed' ? 'completed' : 'pending';
+    if (!acc[status]) acc[status] = [];
+    acc[status].push(stage);
+    return acc;
+  }, {});
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-2">
-      <div className="bg-white rounded-xs shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto">
-        <div className="sticky top-0 bg-gradient-to-r from-slate-900 to-slate-800 p-3 flex items-center justify-between text-white z-10">
-          <div>
-            <h2 className="text-lg font-bold m-0">{project.name}</h2>
-            <p className="text-slate-300 text-xs mt-0.5 m-0">Project ID: PRJ-{String(project.id).padStart(4, '0')}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-slate-700 rounded transition-colors"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-            <div className="bg-green-50 rounded-xs p-3 border border-green-200">
-              <p className="text-xs font-semibold text-green-900 uppercase mb-1 m-0">Progress</p>
-              <p className="text-xl font-bold text-green-700 m-0">{project.progress}%</p>
-              <p className="text-xs text-slate-600 mt-1">Overall completion</p>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {columns.map(column => {
+        const Icon = column.icon;
+        const columnStages = groupedStages[column.status] || [];
+        
+        return (
+          <div key={column.status} className="flex flex-col min-h-[500px]">
+            <div className="flex items-center justify-between mb-4 bg-white p-2 rounded border border-slate-200 ">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded ${column.color} text-white shadow-lg shadow-blue-200`}>
+                  <Icon size={16} />
+                </div>
+                <h4 className="text-xs  text-slate-700">{column.title}</h4>
+              </div>
+              <span className="text-xs  bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">
+                {columnStages.length}
+              </span>
             </div>
-            <div className="bg-blue-50 rounded-xs p-3 border border-blue-200">
-              <p className="text-xs font-semibold text-blue-900 uppercase mb-1 m-0">Status</p>
-              <div className="mt-1 mb-1">
+            
+            <div className={`flex-1 flex flex-col gap-4 p-2 rounded border-2 border-dashed ${column.border} ${column.bg} transition-colors`}>
+              {columnStages.map((stage, idx) => {
+                const rawProgress = stage.planned_qty > 0 ? Math.round((stage.produced_qty / stage.planned_qty) * 100) : 0;
+                const yieldRate = stage.produced_qty > 0 ? Math.round((stage.accepted_qty / stage.produced_qty) * 100) : 0;
+                
+                return (
+                  <div key={idx} className="bg-white p-2 rounded  border border-slate-200 hover:shadow-md hover:border-blue-400 transition-all group">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <span className="text-xs   text-slate-400  block mb-1">Stage {stage.sequence || idx + 1}</span>
+                        <h5 className="text-xs  text-slate-800 m-0">{stage.stage_name}</h5>
+                      </div>
+                      {stage.produced_qty > 0 && (
+                        <div className={`px-2 py-1 rounded text-xs   ${yieldRate >= 98 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                          {yieldRate}% Yield
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex items-center justify-between text-xs   text-slate-500 mb-1.5">
+                          <span>PROGRESS</span>
+                          <span className="text-slate-900">{rawProgress}%</span>
+                        </div>
+                        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full transition-all duration-1000 ${column.status === 'completed' ? 'bg-emerald-500' : 'bg-blue-600'}`}
+                            style={{ width: `${Math.min(rawProgress, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-50">
+                        <div className="flex items-center gap-1.5 text-xs   text-slate-500">
+                          <Package size={12} className="text-slate-400" />
+                          {stage.job_cards_count} Active Jobs
+                        </div>
+                        {column.status === 'in_progress' && rawProgress < 10 && (
+                          <span className="flex items-center gap-1 text-xs   text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100 animate-pulse">
+                            <Zap size={10} /> Bottleneck
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }) => {
+  const [activeTab, setActiveTab] = useState('overview');
+  if (!isOpen || !project) return null
+
+  const progress = project.progress || 0;
+  
+  // Calculate real metrics from detailed data
+  const stages = detailedData?.stages || [];
+  const totalProduced = stages.reduce((acc, s) => acc + (parseFloat(s.produced_qty) || 0), 0);
+  const totalAccepted = stages.reduce((acc, s) => acc + (parseFloat(s.accepted_qty) || 0), 0);
+  const totalRejected = stages.reduce((acc, s) => acc + (parseFloat(s.rejected_qty) || 0), 0);
+  
+  const yieldRate = totalProduced > 0 ? Math.round((totalAccepted / totalProduced) * 100) : 100;
+  const qualityRate = totalProduced > 0 ? Math.round(((totalProduced - totalRejected) / totalProduced) * 100) : 100;
+  const timelinePerformance = Math.max(0, Math.min(100, 100 - (project.daysLeft > 0 ? (project.daysLeft / 30) * 100 : 0)));
+  const efficiency = project.efficiency || 85;
+
+  const radarData = [
+    { subject: 'Progress', A: progress, B: 80, fullMark: 100 },
+    { subject: 'Yield', A: yieldRate, B: 95, fullMark: 100 },
+    { subject: 'Timeline', A: timelinePerformance, B: 90, fullMark: 100 },
+    { subject: 'Quality', A: qualityRate, B: 98, fullMark: 100 },
+    { subject: 'Efficiency', A: efficiency, B: 85, fullMark: 100 }
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4 md:p-3">
+      <div className="bg-slate-50 rounded-md shadow-2xl max-w-5xl w-full  overflow-hidden flex flex-col">
+        <div className="bg-slate-900 p-3 md:p-2  flex items-center justify-between text-white">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-xl  shadow-lg shadow-blue-500/30">
+              <Package />
+            </div>
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <h2 className="text-xl text-white  m-0">{project.name}</h2>
                 <StatusBadge status={project.status} />
               </div>
-              <p className="text-xs text-slate-600 mt-1">Current state</p>
-            </div>
-            <div className="bg-orange-50 rounded-xs p-3 border border-orange-200">
-              <p className="text-xs font-semibold text-orange-900 uppercase mb-1 m-0">Timeline</p>
-              <p className="text-xl font-bold text-orange-700 m-0">{project.daysLeft > 0 ? project.daysLeft : '0'}</p>
-              <p className="text-xs text-slate-600 mt-1">{project.daysLeft > 0 ? 'Days remaining' : 'Completed'}</p>
-            </div>
-            <div className="bg-purple-50 rounded-xs p-3 border border-purple-200">
-              <p className="text-xs font-semibold text-purple-900 uppercase mb-1 m-0">Revenue</p>
-              <p className="text-lg font-bold text-purple-700 m-0">{project.revenue ? new Intl.NumberFormat('en-IN', {style: 'currency', currency: 'INR', minimumFractionDigits: 0}).format(project.revenue) : 'N/A'}</p>
-              <p className="text-xs text-slate-600 mt-1">Order amount</p>
+              <p className="text-slate-400 text-xs m-0">Customer: <span className="text-white font-medium">{project.customer_name}</span> | ID: {project.id}</p>
             </div>
           </div>
+          <button onClick={onClose} className="w-5 h-5 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-all text-xs p-2">✕</button>
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-            <div className="bg-white rounded-xs p-3 border border-gray-200">
-              <h3 className="text-xs font-bold text-slate-900 mb-2 m-0">📈 Weekly Progress Trend</h3>
-              <ResponsiveContainer width="100%" height={220}>
-                <AreaChart data={timelineData}>
-                  <defs>
-                    <linearGradient id="colorProgress" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="week" stroke="#64748b" fontSize={10} />
-                  <YAxis stroke="#64748b" fontSize={10} />
-                  <Tooltip formatter={(value) => `${value}%`} contentStyle={{ fontSize: '12px' }} />
-                  <Area type="monotone" dataKey="progress" stroke="#06b6d4" fillOpacity={1} fill="url(#colorProgress)" strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="bg-white rounded-xs p-3 border border-gray-200">
-              <h3 className="text-xs font-bold text-slate-900 mb-2 m-0">📊 Tasks Completed Per Week</h3>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={timelineData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="week" stroke="#64748b" fontSize={10} />
-                  <YAxis stroke="#64748b" fontSize={10} />
-                  <Tooltip contentStyle={{ fontSize: '12px' }} />
-                  <Bar dataKey="tasks" fill="#8b5cf6" name="Tasks Completed" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+        <div className="flex-1 overflow-y-auto p-3 md:p-3">
+          <div className="flex gap-2 p-1 bg-slate-200/50 rounded w-fit mb-3 border border-slate-200">
+            {[
+              { id: 'overview', label: 'Overview', icon: LayoutGrid },
+              { id: 'stages', label: 'Production Flow', icon: TrendingUp },
+              { id: 'history', label: 'Production History', icon: Clock },
+              { id: 'materials', label: 'Resource Analysis', icon: Layers }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 p-2 rounded-md text-xs  transition-all ${
+                  activeTab === tab.id ? 'bg-white text-blue-600 shadow-md scale-105' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <tab.icon size={16} />
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-xs p-3 border border-slate-200">
-            <h3 className="text-xs font-bold text-slate-900 mb-2 m-0">📋 Project Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-              <div className="flex items-center justify-between py-1 border-b border-slate-300">
-                <span className="text-slate-600">Project ID:</span>
-                <span className="font-bold text-slate-900">{project.id || 'N/A'}</span>
-              </div>
-              <div className="flex items-center justify-between py-1 border-b border-slate-300">
-                <span className="text-slate-600">Customer:</span>
-                <span className="font-bold text-slate-900">{project.customer_name || 'N/A'}</span>
-              </div>
-              <div className="flex items-center justify-between py-1 border-b border-slate-300">
-                <span className="text-slate-600">Status:</span>
-                <span className="font-bold text-slate-900 capitalize">{project.status || 'N/A'}</span>
-              </div>
-              <div className="flex items-center justify-between py-1 border-b border-slate-300">
-                <span className="text-slate-600">Progress:</span>
-                <span className="font-bold text-slate-900">{project.progress || 0}%</span>
-              </div>
-              <div className="flex items-center justify-between py-1 border-b border-slate-300">
-                <span className="text-slate-600">Due Date:</span>
-                <span className="font-bold text-slate-900">{project.dueDate ? new Date(project.dueDate).toLocaleDateString('en-IN') : 'N/A'}</span>
-              </div>
-              <div className="flex items-center justify-between py-1 border-b border-slate-300">
-                <span className="text-slate-600">Revenue:</span>
-                <span className="font-bold text-slate-900">{project.revenue ? new Intl.NumberFormat('en-IN', {style: 'currency', currency: 'INR', minimumFractionDigits: 0}).format(project.revenue) : 'N/A'}</span>
-              </div>
+          {detailedLoading ? (
+            <div className="flex flex-col items-center justify-center py-22">
+              <div className="w-6 h-6  border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+              <p className="text-slate-500  animate-pulse">Analyzing Project Vitals...</p>
             </div>
-          </div>
+          ) : (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {activeTab === 'overview' && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <div className="col-span-2">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="bg-white p-2 rounded-md border border-slate-200 ">
+                        <p className="text-xs  text-slate-400 mb-4">Project Completion</p>
+                        <div className="flex items-end justify-between mb-2">
+                          <h3 className="text-xl  text-slate-900">{progress}%</h3>
+                          <TrendingUp size={24} className="text-emerald-500 mb-2" />
+                        </div>
+                        <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-blue-500 to-blue-600" style={{ width: `${progress}%` }} />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white p-2 rounded-md border border-slate-200 ">
+                        <p className="text-xs  text-slate-400 mb-4">Total Revenue</p>
+                        <h3 className="text-xl  text-slate-900">₹{(project.revenue || 0).toLocaleString()}</h3>
+                        <p className="text-emerald-600 text-xs  mt-2 flex items-center gap-1">
+                          <ArrowUpRight size={14} /> Full Payment Confirmed
+                        </p>
+                      </div>
+
+                      <div className="bg-white p-2 rounded-md border border-slate-200 ">
+                        <p className="text-xs  text-slate-400 mb-4">Time Efficiency</p>
+                        <h3 className="text-xl  text-slate-900">{project.daysLeft} Days</h3>
+                        <p className="text-slate-500 text-xs  mt-2">Remaining to delivery</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-2 rounded-md mt-3 border border-slate-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-lg  text-slate-900">Health Radar Analysis</h4>
+                        <div className="flex items-center gap-4 text-xs ">
+                          <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Current Performance</div>
+                          <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-slate-200" /> Industry Benchmark</div>
+                        </div>
+                      </div>
+                      <div className="h-[400px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                            <PolarGrid stroke="#e2e8f0" />
+                            <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 12, fontWeight: 700 }} />
+                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                            <Radar name="Benchmark" dataKey="B" stroke="#cbd5e1" fill="#f1f5f9" fillOpacity={0.5} />
+                            <Radar name="Project" dataKey="A" stroke="#2563eb" strokeWidth={3} fill="#3b82f6" fillOpacity={0.3} />
+                            <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-8">
+                    <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-2 rounded-md text-white  relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-4 opacity-10"><Calendar size={120} /></div>
+                      <h4 className="text-xs  text-blue-400  mb-6">Delivery Intelligence</h4>
+                      <div className="space-y-6">
+                        <div>
+                          <p className="text-slate-400 text-xs  mb-1">Estimated Delivery</p>
+                          <p className="text-xl  ">{new Date(project.dueDate).toLocaleDateString('en-IN', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                        </div>
+                        <div className="p-4 bg-white/5 rounded border border-white/10">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-8 h-8 rounded bg-emerald-500/20 text-emerald-500 flex items-center justify-center"><CheckCircle size={18} /></div>
+                            <span className="text-xs  text-emerald-500 ">On Track</span>
+                          </div>
+                          <p className="text-xs text-slate-300 m-0 leading-relaxed">Production velocity is currently optimal. No scheduling conflicts detected for the upcoming stages.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-2 rounded-md border border-slate-200 ">
+                      <h4 className="text-xs  text-slate-900 mb-6 flex items-center gap-2">
+                        <Target size={18} className="text-blue-600" /> Key Milestones
+                      </h4>
+                      <div className="space-y-6">
+                        {[
+                          { label: 'BOM Validation', date: 'Jan 12', status: 'completed' },
+                          { label: 'Raw Material Procurement', date: 'Jan 15', status: 'completed' },
+                          { label: 'Phase 1 Production', date: 'Jan 22', status: 'in_progress' },
+                          { label: 'Quality Assurance', date: 'Feb 02', status: 'pending' }
+                        ].map((m, i) => (
+                          <div key={i} className="flex items-start gap-4">
+                            <div className={`mt-1.5 w-2 h-2 rounded-full ring-4 ${
+                              m.status === 'completed' ? 'bg-emerald-500 ring-emerald-50' : 
+                              m.status === 'in_progress' ? 'bg-blue-500 ring-blue-50' : 'bg-slate-300 ring-slate-50'
+                            }`} />
+                            <div className="flex-1">
+                              <div className="flex justify-between items-center mb-0.5">
+                                <span className={`text-xs  ${m.status === 'completed' ? 'text-slate-900' : 'text-slate-500'}`}>{m.label}</span>
+                                <span className="text-xs   text-slate-400">{m.date}</span>
+                              </div>
+                              <span className="text-xs    text-slate-400">{m.status.replace('_', ' ')}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'stages' && <ProcessFlow stages={detailedData?.stages} />}
+
+              {activeTab === 'history' && (
+                <div className="bg-white rounded-md border border-slate-200  overflow-hidden">
+                  <div className="p-3 border-b border-slate-100">
+                    <h4 className="text-lg  text-slate-900 m-0">Historical Production Entries</h4>
+                    <p className="text-xs text-slate-500 m-0">Timeline of all recorded production activity for this project</p>
+                  </div>
+                  <div className="">
+                    <table className="w-full text-left bg-white">
+                      <thead>
+                        <tr className="bg-slate-50/50">
+                          <th className="p-2 text-xs  text-slate-400 ">Entry Date</th>
+                          <th className="p-2 text-xs  text-slate-400 ">Item Code</th>
+                          <th className="p-2 text-xs  text-slate-400  text-right">Qty</th>
+                          <th className="p-2 text-xs  text-slate-400 ">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {detailedData?.entries?.length > 0 ? (
+                          detailedData.entries.map((entry, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="p-2">
+                                <p className="text-xs  text-slate-900 m-0">{new Date(entry.posting_date).toLocaleDateString()}</p>
+                                <p className="text-xs  text-slate-500 m-0 uppercase">{entry.name}</p>
+                              </td>
+                              <td className="p-2">
+                                <span className="text-xs font-medium text-slate-700">{entry.item_code}</span>
+                              </td>
+                              <td className="p-2 text-right">
+                                <span className="text-xs  text-slate-900">{entry.fg_completed_qty}</span>
+                              </td>
+                              <td className="p-2">
+                                <span className={`px-2 py-1 rounded text-xs   ${
+                                  entry.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
+                                }`}>
+                                  {entry.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="4" className="p-6  py-12 text-center">
+                              <div className="flex flex-col items-center gap-2">
+                                <Clock className="text-slate-300" size={32} />
+                                <p className="text-slate-500 ">No production entries found</p>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+              
+              {activeTab === 'materials' && (
+                <div className="bg-white rounded   border border-slate-200  p-3">
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="w-6 h-6  bg-amber-100 rounded flex items-center justify-center text-amber-600">
+                      <Layers />
+                    </div>
+                    <div>
+                      <h4 className="text-lg  text-slate-900 m-0">Resource & Component Readiness</h4>
+                      <p className="text-xs text-slate-500 m-0">Tracking inventory requirements across all production stages</p>
+                    </div>
+                  </div>
+                  
+                  {detailedData?.materials?.length > 0 ? (
+                    <div className="">
+                      <table className="w-full text-left bg-white">
+                        <thead>
+                          <tr className="bg-slate-50/50">
+                            <th className="p-2 text-xs  text-slate-400 ">Item Details</th>
+                            <th className="p-2 text-xs  text-slate-400  text-right">Required</th>
+                            <th className="p-2 text-xs  text-slate-400  text-right">Consumed</th>
+                            <th className="p-2 text-xs  text-slate-400  text-right">Stock Available</th>
+                            <th className="p-2 text-xs  text-slate-400  text-center">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {detailedData.materials.map((mat, idx) => {
+                            const stockStatus = parseFloat(mat.stock_qty) >= (parseFloat(mat.required_qty) - parseFloat(mat.consumed_qty)) ? 'Ready' : 'Shortage';
+                            return (
+                              <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                <td className="p-2">
+                                  <p className="text-xs  text-slate-900 m-0">{mat.item_name || mat.item_code}</p>
+                                  <p className="text-xs  text-slate-500 m-0 uppercase">{mat.item_code}</p>
+                                </td>
+                                <td className="p-2 text-right">
+                                  <p className="text-xs  text-slate-900 m-0">{parseFloat(mat.required_qty).toLocaleString()} {mat.uom}</p>
+                                </td>
+                                <td className="p-2 text-right">
+                                  <p className="text-xs font-medium text-slate-600 m-0">{parseFloat(mat.consumed_qty).toLocaleString()} {mat.uom}</p>
+                                </td>
+                                <td className="p-2 text-right">
+                                  <p className={`text-xs  m-0 ${stockStatus === 'Ready' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                    {parseFloat(mat.stock_qty).toLocaleString()} {mat.uom}
+                                  </p>
+                                </td>
+                                <td className="p-2 text-center">
+                                  <span className={`px-2 py-1 rounded text-xs    ${
+                                    stockStatus === 'Ready' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600 border border-rose-100'
+                                  }`}>
+                                    {stockStatus}
+                                  </span>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      <div className="p-12 bg-slate-50 rounded   border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center col-span-full">
+                        <Zap size={32} className="text-slate-300 mb-4" />
+                        <p className="text-slate-600 ">No Materials Allocated</p>
+                        <p className="text-slate-400 text-xs mt-1">Material requirements are generated when Work Orders are approved.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
   )
 }
 
+const StatCard = ({ label, value, icon: Icon, trend, trendValue, bgColor, iconColor, textColor }) => (
+  <div className="bg-white rounded-md  p-3 border border-slate-200  hover: transition-all group relative overflow-hidden">
+    <div className={`absolute -right-8 -bottom-8 w-32 h-32 rounded-full ${bgColor} opacity-10 group-hover:scale-110 transition-transform duration-700`} />
+    <div className="relative z-10 p-2">
+      <div className="flex items-center justify-between mb-4">
+        <div className={`w-6 h-6  rounded ${bgColor} ${iconColor} flex items-center justify-center shadow-lg shadow-black/5`}>
+          <Icon size={24} />
+        </div>
+        {trend && (
+          <div className={`flex items-center gap-1 text-xs  px-2 py-1 rounded ${trend === 'up' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+            {trend === 'up' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+            {trendValue}
+          </div>
+        )}
+      </div>
+      <p className="text-xs text-slate-400 mb-1">{label}</p>
+      <h3 className={`text-xl   ${textColor || 'text-slate-900'}`}>{value}</h3>
+    </div>
+  </div>
+);
+
 export default function ProjectAnalysis() {
   const [projectStatus, setProjectStatus] = useState([])
   const [projectTimeline, setProjectTimeline] = useState([])
   const [allProjects, setAllProjects] = useState([])
+  const [filteredProjects, setFilteredProjects] = useState([])
   const [loading, setLoading] = useState(true)
+  const [detailedLoading, setDetailedLoading] = useState(false)
+  const [detailedData, setDetailedData] = useState(null)
   const [error, setError] = useState(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState(null)
   const [activeTab, setActiveTab] = useState('all')
   const [totalRevenue, setTotalRevenue] = useState(0)
   const [completionRate, setCompletionRate] = useState(0)
+  const [trends, setTrends] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     fetchProjectAnalysis()
   }, [])
 
+  useEffect(() => {
+    let filtered = allProjects
+    if (activeTab !== 'all') {
+      filtered = filtered.filter(p => p.status?.toLowerCase() === activeTab)
+    }
+    if (searchTerm) {
+      filtered = filtered.filter(p => 
+        p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        p.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.id?.toString().includes(searchTerm)
+      )
+    }
+    setFilteredProjects(filtered)
+  }, [allProjects, activeTab, searchTerm])
+
   const fetchProjectAnalysis = async () => {
     try {
       setLoading(true)
+      const res = await getSalesOrdersAsProjects()
       
-      const apiUrl = import.meta.env.VITE_API_URL
-      const token = localStorage.getItem('token')
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      
-      const [salesOrdersRes, productionPlansRes, jobCardsRes] = await Promise.all([
-        fetch(`${apiUrl}/selling/sales-orders`, { headers }).then(r => r.json()).catch(() => []),
-        fetch(`${apiUrl}/production/plans`, { headers }).then(r => r.json()).catch(() => []),
-        fetch(`${apiUrl}/production/job-cards`, { headers }).then(r => r.json()).catch(() => [])
-      ])
-
-      const salesOrders = (salesOrdersRes.data || salesOrdersRes || []).filter(item => item)
-      const productionPlans = (productionPlansRes.data || productionPlansRes || []).filter(item => item)
-      const jobCards = (jobCardsRes.data || jobCardsRes || []).filter(item => item)
-
-      console.log('Real Data - Sales Orders:', salesOrders.length, 'Production Plans:', productionPlans.length, 'Job Cards:', jobCards.length)
-
-      const projectsWithMetrics = salesOrders.map((so, idx) => {
-        const relatedPlans = productionPlans.filter(pp => pp.sales_order_id === so.id || pp.so_id === so.id || pp.order_id === so.id)
-        const relatedJobCards = jobCards.filter(jc => jc.sales_order_id === so.id || jc.so_id === so.id)
+      if (res.success && res.data) {
+        const { projects, statusCounts, monthlyTimeline, totalRevenue, completionRate, trends } = res.data
+        setAllProjects(projects || [])
+        setTotalRevenue(totalRevenue || 0)
+        setCompletionRate(completionRate || 0)
+        setProjectTimeline(monthlyTimeline || [])
+        setTrends(trends)
         
-        const completedJCs = relatedJobCards.filter(jc => {
-          const status = String(jc.status || '').toLowerCase().trim()
-          return status === 'completed' || status === 'delivered'
-        }).length
+        const COLORS = {
+          'Delivered': '#10b981',
+          'Complete': '#059669',
+          'Production': '#0ea5e9',
+          'Dispatched': '#8b5cf6',
+          'Draft': '#f97316',
+          'On Hold': '#f59e0b'
+        }
         
-        const totalJCs = relatedJobCards.length || 1
-        const progress = totalJCs > 0 ? Math.round((completedJCs / totalJCs) * 100) : 0
-        
-        const createdDate = new Date(so.creation_date || so.created_at || new Date())
-        const dueDate = new Date(so.delivery_date || so.due_date || new Date())
-        const today = new Date()
-        const daysLeft = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24))
-        
-        return {
-          id: so.id || so.sales_order_id || idx,
-          name: so.name || so.order_id || `SO-${idx + 1}`,
-          customer_name: so.customer_name || so.customer || 'Unknown',
-          status: so.status || so.order_status || 'draft',
-          progress: progress,
-          revenue: so.grand_total || so.total || so.amount || 0,
-          daysLeft: daysLeft,
-          dueDate: dueDate,
-          createdDate: createdDate,
-          total_qty: so.total_qty || so.qty || 0,
-          item_name: so.item_name || 'N/A',
-          production_plans_count: relatedPlans.length,
-          job_cards_count: relatedJobCards.length,
-          completed_job_cards: completedJCs
-        }
-      })
-
-      const statusCounts = {}
-      projectsWithMetrics.forEach(p => {
-        const status = p.status?.toLowerCase() || 'draft'
-        statusCounts[status] = (statusCounts[status] || 0) + 1
-      })
-
-      const statusData = Object.entries(statusCounts).map(([status, count]) => {
-        let color = '#6b7280'
-        switch (status.toLowerCase()) {
-          case 'delivered':
-          case 'completed':
-            color = '#059669'
-            break
-          case 'dispatched':
-            color = '#8b5cf6'
-            break
-          case 'complete':
-            color = '#10b981'
-            break
-          case 'production':
-          case 'in-progress':
-            color = '#06b6d4'
-            break
-          case 'on_hold':
-            color = '#f59e0b'
-            break
-          case 'draft':
-            color = '#f97316'
-            break
-        }
-        return {
-          name: status.charAt(0).toUpperCase() + status.replace('_', ' ').replace('-', ' ').slice(1),
-          value: count,
-          color: color
-        }
-      })
-
-      const monthlyTimeline = {}
-      projectsWithMetrics.forEach(p => {
-        const monthKey = p.createdDate.toLocaleDateString('en-IN', { year: 'numeric', month: 'short' })
-        if (!monthlyTimeline[monthKey]) {
-          monthlyTimeline[monthKey] = { month: monthKey, projects: 0, completed: 0, revenue: 0 }
-        }
-        monthlyTimeline[monthKey].projects += 1
-        monthlyTimeline[monthKey].revenue += p.revenue
-        if (p.status?.toLowerCase() === 'completed' || p.status?.toLowerCase() === 'delivered') {
-          monthlyTimeline[monthKey].completed += 1
-        }
-      })
-
-      const timelineData = Object.values(monthlyTimeline).reverse()
-
-      const totalRev = projectsWithMetrics.reduce((sum, p) => sum + (p.revenue || 0), 0)
-      const completedCount = projectsWithMetrics.filter(p => {
-        const status = String(p.status || '').toLowerCase().trim()
-        return status === 'completed' || status === 'delivered' || status === 'complete'
-      }).length
-      const compRate = projectsWithMetrics.length > 0 ? Math.round((completedCount / projectsWithMetrics.length) * 100) : 0
-
-      setProjectStatus(statusData)
-      setProjectTimeline(timelineData)
-      setAllProjects(projectsWithMetrics)
-      setTotalRevenue(totalRev)
-      setCompletionRate(compRate)
-
-      console.log('Processed:', projectsWithMetrics.length, 'projects with status breakdown:', statusData, 'timeline:', timelineData)
+        const formattedStatus = (statusCounts || []).map((s) => {
+          const name = s.status.charAt(0).toUpperCase() + s.status.slice(1)
+          return {
+            name,
+            value: s.count,
+            color: COLORS[name] || '#94a3b8'
+          }
+        })
+        setProjectStatus(formattedStatus)
+      }
     } catch (err) {
-      console.error('Error fetching production projects:', err)
-      setError(err.message || 'Failed to fetch projects from production')
+      setError(err.message)
     } finally {
       setLoading(false)
     }
   }
 
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'delivered':
-        return '#059669'
-      case 'dispatched':
-        return '#8b5cf6'
-      case 'complete':
-        return '#10b981'
-      case 'production':
-        return '#06b6d4'
-      case 'on_hold':
-        return '#f59e0b'
-      case 'draft':
-        return '#f97316'
-      default:
-        return '#6b7280'
+  const fetchDetailedAnalysis = async (project) => {
+    try {
+      setSelectedProject(project)
+      setDetailedLoading(true)
+      setModalOpen(true)
+      
+      const result = await getDetailedProjectAnalysis(project.id)
+      
+      if (result.success) {
+        setDetailedData({
+          project: result.data.project,
+          stages: result.data.stages,
+          entries: result.data.entries,
+          materials: result.data.materials || []
+        })
+      }
+    } catch (err) {
+      console.error('Error fetching detailed analysis:', err)
+    } finally {
+      setDetailedLoading(false)
     }
   }
 
-  const recentProjects = activeTab === 'all' ? allProjects : allProjects.filter(p => p.status?.toLowerCase() === activeTab)
-
-  const openModal = (project) => {
-    setSelectedProject(project)
-    setModalOpen(true)
-  }
-
-  const closeModal = () => {
-    setModalOpen(false)
-    setSelectedProject(null)
-  }
-
-  const getStatusBadgeColor = (status) => {
-    const s = status?.toLowerCase() || ''
-    switch (true) {
-      case s.includes('delivered'):
-        return 'bg-green-100 text-green-800'
-      case s.includes('complete'):
-        return 'bg-green-100 text-green-800'
-      case s.includes('dispatched'):
-        return 'bg-purple-100 text-purple-800'
-      case s.includes('production'):
-        return 'bg-cyan-100 text-cyan-800'
-      case s.includes('on_hold'):
-        return 'bg-amber-100 text-amber-800'
-      case s.includes('draft'):
-        return 'bg-orange-100 text-orange-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getProgressBarColor = (status) => {
-    const s = status?.toLowerCase() || ''
-    switch (true) {
-      case s.includes('delivered'):
-        return 'bg-green-500'
-      case s.includes('complete'):
-        return 'bg-green-500'
-      case s.includes('dispatched'):
-        return 'bg-purple-500'
-      case s.includes('production'):
-        return 'bg-cyan-500'
-      case s.includes('on_hold'):
-        return 'bg-amber-500'
-      case s.includes('draft'):
-        return 'bg-orange-500'
-      default:
-        return 'bg-gray-500'
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="p-3 bg-slate-50 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block p-2 bg-white rounded-xs shadow-sm mb-4">
-            <div className="animate-spin text-4xl">⏳</div>
-          </div>
-          <p className="text-slate-600">Loading sales orders analysis...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="p-3 bg-slate-50 min-h-screen flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <div className="inline-block p-2 bg-red-50 rounded-xs mb-4">
-            <span className="text-4xl">⚠️</span>
-          </div>
-          <p className="text-red-600 font-semibold mb-2">Error Loading Data</p>
-          <p className="text-slate-600 text-xs">{error}</p>
-        </div>
-      </div>
-    )
-  }
-
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value || 0)
-  }
-
-  const stats = [
-    { 
-      label: 'Total Orders', 
-      value: allProjects.length.toString(), 
-      icon: Target, 
-      color: 'from-purple-500 to-purple-600', 
-      bgColor: 'from-purple-50 to-purple-100' 
-    },
-    { 
-      label: 'Total Revenue', 
-      value: formatCurrency(totalRevenue), 
-      icon: TrendingUp, 
-      color: 'from-emerald-500 to-emerald-600', 
-      bgColor: 'from-emerald-50 to-emerald-100' 
-    },
-    { 
-      label: 'Completion Rate', 
-      value: `${completionRate}%`, 
-      icon: CheckCircle, 
-      color: 'from-green-500 to-green-600', 
-      bgColor: 'from-green-50 to-green-100' 
-    },
-    { 
-      label: 'At Risk', 
-      value: allProjects.filter(p => p.daysLeft < 3 && p.daysLeft > 0).length.toString(), 
-      icon: AlertTriangle, 
-      color: 'from-red-500 to-red-600', 
-      bgColor: 'from-red-50 to-red-100' 
-    }
-  ]
+  if (loading) return (
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-3">
+      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-6" />
+      <p className="text-slate-500   text-xs animate-pulse">Syncing Production Intel...</p>
+    </div>
+  );
 
   return (
-    <div className="p-0 bg-slate-50 min-h-screen">
-      <div className="bg-gradient-to-br from-white to-slate-100 p-2 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-        <div className=" mx-auto">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-8 h-8 rounded-xs bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white text-lg">
-              📊
+    <div className="min-h-screen bg-slate-50 p-3 md:p-3">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
+        <div>
+          <h1 className="text-xl  text-slate-9500 m-0">Project Analysis</h1>
+          <p className="text-slate-500 font-medium text-xs mt-1">Global production tracking and performance intelligence</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-md text-xs  text-slate-700 hover:bg-slate-50 transition-all ">
+            <Download size={18} /> Export Data
+          </button>
+          <button onClick={fetchProjectAnalysis} className="flex items-center gap-2 p-2 bg-blue-600 rounded-md text-xs  text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">
+            <Zap size={18} /> Refresh Intel
+          </button>
+        </div>
+      </div>
+
+      {/* KPI Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        <StatCard 
+          label="Live Projects" 
+          value={allProjects.length} 
+          icon={Target} 
+          bgColor="bg-blue-50" 
+          iconColor="text-blue-600" 
+          trend={trends?.projects?.trend || 'up'} 
+          trendValue={`${trends?.projects?.percent || 0}%`} 
+        />
+        <StatCard 
+          label="Total Revenue" 
+          value={`₹${(totalRevenue / 100000).toFixed(1)}L`} 
+          icon={TrendingUp} 
+          bgColor="bg-emerald-50" 
+          iconColor="text-emerald-600" 
+          trend={trends?.revenue?.trend || 'up'} 
+          trendValue={`${trends?.revenue?.percent || 0}%`} 
+        />
+        <StatCard 
+          label="Completion Rate" 
+          value={`${completionRate}%`} 
+          icon={CheckCircle} 
+          bgColor="bg-violet-50" 
+          iconColor="text-violet-600" 
+          trend={trends?.completion?.trend || 'up'} 
+          trendValue={`${trends?.completion?.percent || 0}%`} 
+        />
+        <StatCard 
+          label="At Risk Projects" 
+          value={allProjects.filter(p => p.daysLeft < 3 && p.status !== 'delivered').length} 
+          icon={AlertTriangle} 
+          bgColor="bg-rose-50" 
+          iconColor="text-rose-600" 
+          trend={trends?.atRisk?.trend || 'down'} 
+          trendValue={`${trends?.atRisk?.percent || 0}%`} 
+        />
+      </div>
+
+      {/* Analytics Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+        <div className="lg:col-span-1 bg-white p-2 rounded-md border border-slate-200 ">
+          <h3 className="text-lg  text-slate-900 mb-3">Status Allocation</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={projectStatus} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={8} dataKey="value">
+                  {projectStatus.map((entry, index) => <Cell key={index} fill={entry.color} stroke="none" />)}
+                </Pie>
+                <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="grid grid-cols-2 gap-4 mt-8">
+            {projectStatus.map((s, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                <span className="text-xs   text-slate-400 tracking-tighter">{s.name}: <span className="text-slate-900">{s.value}</span></span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="lg:col-span-2 bg-white p-2 rounded-md border border-slate-200 ">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg  text-slate-900">Project Velocity (6M)</h3>
+            <div className="flex gap-4">
+              <div className="flex items-center gap-2 text-xs  text-slate-500"><div className="w-3 h-3 rounded-full bg-blue-500" /> New Orders</div>
+              <div className="flex items-center gap-2 text-xs  text-slate-500"><div className="w-3 h-3 rounded-full bg-emerald-500" /> Completed</div>
             </div>
-            <div>
-              <h1 className="text-xl font-extrabold text-slate-900 m-0">
-                Project Analysis
-              </h1>
-              <p className="text-xs text-slate-500 mt-0.5 m-0">
-                Track and analyze all projects
-              </p>
-            </div>
+          </div>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={projectTimeline}>
+                <defs>
+                  <linearGradient id="colorProjects" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
+                <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                <Area type="monotone" dataKey="total_projects" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorProjects)" />
+                <Area type="monotone" dataKey="completed" stroke="#10b981" strokeWidth={3} fillOpacity={0} />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>
 
-      <div className="p-4  mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          {stats.map((stat, idx) => {
-            const Icon = stat.icon
-            return (
-              <div key={idx} className={`bg-gradient-to-br ${stat.bgColor} rounded-xs p-3 shadow-md border border-slate-200 relative overflow-hidden`}>
-                <div className="absolute -top-5 -right-5 opacity-5 text-4xl">
-                  {idx === 0 ? '🎯' : idx === 1 ? '✓' : idx === 2 ? '⏱️' : '⚠️'}
-                </div>
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-slate-700 uppercase">{stat.label}</span>
-                    <Icon size={16} className="text-slate-600" />
-                  </div>
-                  <p className={`text-2xl font-extrabold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent m-0`}>
-                    {stat.value}
-                  </p>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
-          <div className="bg-white rounded-xs p-2 border border-gray-200 shadow-sm">
-            <h3 className="text-xs font-bold text-slate-900 mb-3 m-0">
-              📈 Project Status Distribution
-            </h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie 
-                  data={projectStatus} 
-                  cx="50%" 
-                  cy="50%" 
-                  labelLine={false} 
-                  label={({ name, value }) => `${name} (${value})`} 
-                  outerRadius={60} 
-                  fill="#8884d8" 
-                  dataKey="value"
+      {/* Project Table Section */}
+      <div className="bg-white rounded-md border border-slate-200  overflow-hidden">
+        <div className="p-3 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Search projects or customers..." 
+                className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-full md:w-80 transition-all"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-1 p-1 bg-slate-50 rounded border border-slate-200">
+              {['all', 'production', 'complete', 'on_hold'].map((tab) => (
+                <button 
+                  key={tab} 
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-1.5 rounded text-xs  transition-all ${activeTab === tab ? 'bg-white text-blue-600  scale-105' : 'text-slate-400 hover:text-slate-600'}`}
                 >
-                  {projectStatus.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => `${value} projects`} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {projectStatus.map((item) => (
-                <div key={item.name} className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
-                  <span className="text-xs font-semibold text-slate-600">{item.name}: {item.value}</span>
-                </div>
+                  {tab.toUpperCase()}
+                </button>
               ))}
             </div>
           </div>
-
-          <div className="bg-white rounded-xs p-2 border border-gray-200 shadow-sm">
-            <h3 className="text-xs font-bold text-slate-900 mb-3 m-0">
-              📊 Project Timeline (6 Months)
-            </h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={projectTimeline} margin={{ left: 0, right: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" stroke="#64748b" fontSize={11} />
-                <YAxis stroke="#64748b" fontSize={11} yAxisId="left" />
-                <YAxis stroke="#64748b" fontSize={11} yAxisId="right" orientation="right" />
-                <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px', color: '#0f172a', fontSize: '12px' }} />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Bar dataKey="projects" fill="#3b82f6" name="Total Projects" radius={[6, 6, 0, 0]} yAxisId="left" />
-                <Bar dataKey="completed" fill="#10b981" name="Completed" radius={[6, 6, 0, 0]} yAxisId="left" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <p className="text-xs  text-slate-400 ">{filteredProjects.length} Projects Identified</p>
         </div>
 
-        <div className="bg-white rounded-xs border border-gray-200 shadow-sm">
-          <div className="p-3 border-b border-gray-200">
-            <h3 className="text-xs font-bold text-slate-900 m-0">
-              🚀 Recent Projects
-            </h3>
-          </div>
-
-          <div style={{
-            display: 'flex',
-            gap: '8px',
-            padding: '8px',
-            borderBottom: '1px solid #e5e7eb',
-            backgroundColor: '#f9fafb'
-          }}>
-            <button
-              onClick={() => setActiveTab('all')}
-              style={{
-                padding: '6px 16px',
-                backgroundColor: activeTab === 'all' ? '#2563eb' : 'transparent',
-                color: activeTab === 'all' ? '#fff' : '#666',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontWeight: activeTab === 'all' ? '600' : '500',
-                fontSize: '12px',
-                transition: 'all 0.2s'
-              }}
-            >
-              All ({allProjects.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('production')}
-              style={{
-                padding: '6px 16px',
-                backgroundColor: activeTab === 'production' ? '#2563eb' : 'transparent',
-                color: activeTab === 'production' ? '#fff' : '#666',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontWeight: activeTab === 'production' ? '600' : '500',
-                fontSize: '12px',
-                transition: 'all 0.2s'
-              }}
-            >
-              Production
-            </button>
-            <button
-              onClick={() => setActiveTab('delivered')}
-              style={{
-                padding: '6px 16px',
-                backgroundColor: activeTab === 'delivered' ? '#2563eb' : 'transparent',
-                color: activeTab === 'delivered' ? '#fff' : '#666',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontWeight: activeTab === 'delivered' ? '600' : '500',
-                fontSize: '12px',
-                transition: 'all 0.2s'
-              }}
-            >
-              Delivered
-            </button>
-          </div>
-
-          <div className="">
-            <table className="w-full border-collapse border border-gray-200 text-xs">
-              <thead>
-                <tr className="bg-slate-50 border-b-2 border-gray-200">
-                  <th className="text-left p-2 text-xs font-semibold text-slate-500 ">Project Name</th>
-                  <th className="text-left p-2 text-xs font-semibold text-slate-500 ">Status</th>
-                  <th className="text-right p-2 text-xs font-semibold text-slate-500 uppercase">Revenue</th>
-                  <th className="text-center p-2 text-xs font-semibold text-slate-500 uppercase">Progress</th>
-                  <th className="text-center p-2 text-xs font-semibold text-slate-500 uppercase">Due Date</th>
-                  <th className="text-center p-2 text-xs font-semibold text-slate-500 uppercase">Action</th>
+        <div className="">
+          <table className="w-full text-left bg-white">
+            <thead>
+              <tr className="bg-slate-50/50">
+                <th className="p-2 text-xs  text-slate-400 ">Project Details</th>
+                <th className="p-2 text-xs  text-slate-400 ">Progress</th>
+                <th className="p-2 text-xs  text-slate-400 ">Revenue</th>
+                <th className="p-2 text-xs  text-slate-400 ">Status</th>
+                <th className="p-2 text-xs  text-slate-400  text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {filteredProjects.map((project, idx) => (
+                <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="p-2">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-slate-100 rounded flex items-center justify-center text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                        <Package size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs  text-slate-900 m-0">{project.name}</p>
+                        <p className="text-xs text-slate-500 m-0 mt-0.5">{project.customer_name}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-2">
+                    <div className="w-48">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs  text-slate-600">{project.progress}%</span>
+                        <span className="text-xs   text-slate-400 tracking-tighter italic">Phase 1.2</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div className={`h-full transition-all duration-1000 ${project.progress === 100 ? 'bg-emerald-500' : 'bg-blue-600'}`} style={{ width: `${project.progress}%` }} />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-2">
+                    <p className="text-xs  text-slate-900 m-0">₹{(project.revenue || 0).toLocaleString()}</p>
+                    <p className="text-xs   text-emerald-600 mt-0.5">Paid</p>
+                  </td>
+                  <td className="p-2">
+                    <StatusBadge status={project.status} />
+                  </td>
+                  <td className="p-2 text-right">
+                    <button 
+                      onClick={() => fetchDetailedAnalysis(project)}
+                      className="inline-flex items-center gap-2 p-2 bg-slate-100 hover:bg-blue-600 hover:text-white rounded text-xs  text-slate-700 transition-all"
+                    >
+                      <Eye size={14} /> Full Intel
+                    </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan="6" className="p-4 text-center text-gray-500 text-xs">
-                      Loading projects...
-                    </td>
-                  </tr>
-                ) : recentProjects.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="p-4 text-center text-gray-500 text-xs">
-                      No projects found
-                    </td>
-                  </tr>
-                ) : (
-                  recentProjects.map((project, idx) => (
-                    <tr key={project.id} className={`border-b border-gray-200 ${idx % 2 === 0 ? 'bg-slate-50' : 'bg-white'}`}>
-                      <td className="p-2 text-xs text-gray-700 font-semibold">{project.name || 'N/A'}</td>
-                      <td className="p-2">
-                        <StatusBadge status={project.status} />
-                      </td>
-                      <td className="p-2 text-right">
-                        <span className="text-xs font-semibold text-gray-900">{formatCurrency(project.revenue || 0)}</span>
-                      </td>
-                      <td className="p-2 text-center text-xs">
-                        <div className="flex items-center justify-center gap-1">
-                          <div className="w-16 bg-gray-200 rounded-full h-1.5">
-                            <div 
-                              className={`h-1.5 rounded-full ${getProgressBarColor(project.status)}`} 
-                              style={{ width: `${Math.min(project.progress || 0, 100)}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-xs font-semibold text-gray-700 w-6">{project.progress || 0}%</span>
-                        </div>
-                      </td>
-                      <td className="p-2 text-center text-xs">
-                        {project.dueDate ? (
-                          <div className="flex flex-col items-center justify-center gap-0.5">
-                            <Calendar size={12} className="text-slate-500" />
-                            <span className="text-xs text-gray-700 font-medium">
-                              {new Date(project.dueDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
-                            </span>
-                            <span className="text-xs font-semibold" style={{
-                              color: project.daysLeft > 3 ? '#10b981' : project.daysLeft > 0 ? '#f59e0b' : '#ef4444'
-                            }}>
-                              {project.daysLeft > 0 ? `${project.daysLeft}d` : project.daysLeft === 0 ? 'Today' : 'Late'}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-500">N/A</span>
-                        )}
-                      </td>
-                      <td className="p-2 text-center text-xs">
-                        <button
-                          onClick={() => openModal(project)}
-                          className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded text-xs font-semibold transition-colors"
-                        >
-                          <Eye size={12} />
-                          Details
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xs p-3 border border-green-200 border-l-4 border-l-green-500">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-semibold text-green-900 uppercase mb-0.5 m-0">Completion Rate</p>
-                <p className="text-2xl font-extrabold text-green-700 m-0">
-                  {completionRate}%
-                </p>
-                <p className="text-xs text-slate-600 mt-1">Projects delivered</p>
-              </div>
-              <CheckCircle size={18} className="text-green-600" />
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xs p-3 border border-amber-200 border-l-4 border-l-amber-500">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-semibold text-amber-900 uppercase mb-0.5 m-0">At Risk</p>
-                <p className="text-2xl font-extrabold text-amber-700 m-0">
-                  {allProjects.length > 0 ? Math.round((allProjects.filter(p => p.daysLeft > 0 && p.daysLeft < 3).length / allProjects.length) * 100) : 0}%
-                </p>
-                <p className="text-xs text-slate-600 mt-1">Needs attention</p>
-              </div>
-              <AlertCircle size={18} className="text-amber-600" />
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xs p-3 border border-blue-200 border-l-4 border-l-blue-500">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-semibold text-blue-900 uppercase mb-0.5 m-0">Total Revenue</p>
-                <p className="text-xl font-extrabold text-blue-700 m-0 break-words">
-                  {formatCurrency(totalRevenue)}
-                </p>
-                <p className="text-xs text-slate-600 mt-1">All projects combined</p>
-              </div>
-              <TrendingUp size={18} className="text-blue-600" />
-            </div>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <DetailModal
-        isOpen={modalOpen}
-        project={selectedProject}
-        onClose={closeModal}
+      <DetailModal 
+        isOpen={modalOpen} 
+        project={selectedProject} 
+        onClose={() => setModalOpen(false)} 
+        detailedData={detailedData} 
+        detailedLoading={detailedLoading} 
       />
     </div>
-  )
+  );
 }

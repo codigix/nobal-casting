@@ -5,7 +5,7 @@ import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
 import { Plus, Trash2, Package, FileText, Truck, Calendar, AlertCircle } from 'lucide-react'
 
-export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
+export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo, purchaseOrder }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [purchaseOrders, setPurchaseOrders] = useState([])
@@ -16,6 +16,9 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     grn_no: '',
     po_no: '',
+    mr_id: '',
+    department: '',
+    purpose: '',
     supplier_id: '',
     supplier_name: '',
     receipt_date: new Date().toISOString().split('T')[0],
@@ -23,18 +26,54 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
   })
 
   const [grnItems, setGrnItems] = useState([
-    { item_code: '', item_name: '', po_qty: 0, received_qty: 0, batch_no: '', warehouse_name: '', uom: '' }
+    { item_code: '', item_name: '', po_qty: 0, received_qty: 0, rate: 0, batch_no: '', warehouse_name: '', uom: '', current_stock: 0 }
   ])
+
+  const fetchItemStock = async (itemCode, warehouseName, index) => {
+    if (!itemCode || !warehouseName) return
+
+    try {
+      const response = await api.get('/stock/stock-balance', {
+        params: { item_code: itemCode, warehouse_name: warehouseName }
+      })
+      
+      let stock = 0
+      const data = response.data.data || response.data
+      if (Array.isArray(data)) {
+        const warehouseStock = data.find(s => s.warehouse_name === warehouseName || s.warehouse === warehouseName)
+        stock = warehouseStock ? (warehouseStock.available_qty || warehouseStock.qty || 0) : 0
+      } else if (data && typeof data === 'object') {
+        stock = data.available_qty || data.qty || 0
+      }
+
+      const newItems = [...grnItems]
+      if (newItems[index]) {
+        newItems[index].current_stock = stock
+        setGrnItems(newItems)
+      }
+    } catch (err) {
+      console.error('Error fetching stock:', err)
+    }
+  }
 
   useEffect(() => {
     if (isOpen) {
-      fetchPurchaseOrders()
       fetchWarehouses()
       fetchSuppliers()
       fetchItems()
       generateGRNNo()
+      
+      if (purchaseOrder) {
+        handlePOSelect(purchaseOrder.po_no, [purchaseOrder])
+      } else if (initialPoNo) {
+        fetchPurchaseOrders().then((pos) => {
+          handlePOSelect(initialPoNo, pos)
+        })
+      } else {
+        fetchPurchaseOrders()
+      }
     }
-  }, [isOpen])
+  }, [isOpen, initialPoNo, purchaseOrder])
 
   const generateGRNNo = async () => {
     try {
@@ -51,10 +90,14 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
 
   const fetchPurchaseOrders = async () => {
     try {
-      const response = await api.get('/purchase-orders?status=submitted')
-      setPurchaseOrders(response.data.data || [])
+      // Fetch POs that are submitted, to_receive or partially_received
+      const response = await api.get('/purchase-orders?status=submitted,to_receive,partially_received')
+      const pos = response.data.data || []
+      setPurchaseOrders(pos)
+      return pos
     } catch (err) {
       console.error('Error fetching purchase orders:', err)
+      return []
     }
   }
 
@@ -95,12 +138,15 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
     }
   }
 
-  const handlePOSelect = (poNo) => {
-    const selectedPO = purchaseOrders.find(po => po.po_no === poNo)
+  const handlePOSelect = (poNo, pos = purchaseOrders) => {
+    const selectedPO = pos.find(po => po.po_no === poNo)
     if (selectedPO) {
       setFormData(prev => ({
         ...prev,
         po_no: selectedPO.po_no,
+        mr_id: selectedPO.mr_id || '',
+        department: selectedPO.department || '',
+        purpose: selectedPO.purpose || '',
         supplier_id: selectedPO.supplier_id,
         supplier_name: selectedPO.supplier_name || ''
       }))
@@ -112,11 +158,20 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
           item_name: item.item_name,
           po_qty: item.qty || item.quantity || 0,
           received_qty: item.qty || item.quantity || 0,
+          rate: item.rate || 0,
           batch_no: '',
           warehouse_name: defaultWarehouse,
-          uom: item.uom || ''
+          uom: item.uom || '',
+          current_stock: 0
         }))
         setGrnItems(newItems)
+        
+        // Fetch stock for all items
+        newItems.forEach((item, idx) => {
+          if (item.item_code && item.warehouse_name) {
+            fetchItemStock(item.item_code, item.warehouse_name, idx)
+          }
+        })
       }
     }
   }
@@ -136,13 +191,17 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
     const newItems = [...grnItems]
     newItems[index] = { ...newItems[index], [field]: value }
     setGrnItems(newItems)
+
+    if (field === 'warehouse_name' && newItems[index].item_code) {
+      fetchItemStock(newItems[index].item_code, value, index)
+    }
   }
 
   const handleAddItem = () => {
     const defaultWarehouse = warehouses && warehouses.length > 0 ? warehouses[0].warehouse_name : ''
     setGrnItems([
       ...grnItems,
-      { item_code: '', item_name: '', po_qty: 0, received_qty: 0, batch_no: '', warehouse_name: defaultWarehouse, uom: '' }
+      { item_code: '', item_name: '', po_qty: 0, received_qty: 0, rate: 0, batch_no: '', warehouse_name: defaultWarehouse, uom: '', current_stock: 0 }
     ])
   }
 
@@ -160,9 +219,15 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
         ...newItems[index],
         item_code: selectedItem.item_code,
         item_name: selectedItem.name || selectedItem.item_name,
-        uom: selectedItem.uom || ''
+        uom: selectedItem.uom || '',
+        rate: selectedItem.valuation_rate || selectedItem.rate || 0,
+        current_stock: 0
       }
       setGrnItems(newItems)
+      
+      if (newItems[index].warehouse_name) {
+        fetchItemStock(itemCode, newItems[index].warehouse_name, index)
+      }
     }
   }
 
@@ -192,6 +257,9 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
       const payload = {
         grn_no: formData.grn_no,
         po_no: formData.po_no || '',
+        material_request_id: formData.mr_id || '',
+        department: formData.department || '',
+        purpose: formData.purpose || '',
         supplier_id: formData.supplier_id,
         supplier_name: formData.supplier_name,
         receipt_date: formData.receipt_date,
@@ -238,7 +306,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
         <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xsp-2 mb-4 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="m-0 mb-0.5 text-lg font-bold text-white">Create New GRN Request</h2>
+              <h2 className="m-0 mb-0.5 text-lg  text-white">Create New GRN Request</h2>
               <p className="m-0 text-xs opacity-90 text-gray-300">Register received goods and manage inventory</p>
             </div>
             <div className="bg-white bg-opacity-20 rounded px-2.5 py-1.5 text-xs font-semibold font-mono whitespace-nowrap">
@@ -252,15 +320,15 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
         {/* Two Column Layout for Form Sections */}
         <div className="grid grid-cols-2 gap-4 mb-4">
           {/* GRN Header Section */}
-          <div className="bg-white border border-gray-200 rounded-xs p-3.5 shadow-sm">
+          <div className="bg-white border border-gray-200 rounded-xs p-3.5 ">
             <div className="flex items-center gap-2 mb-3">
               <FileText size={16} className="text-indigo-500" />
               <h3 className="m-0 text-xs font-semibold text-gray-900">GRN Information</h3>
             </div>
             
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-2">
               <div>
-                <label className="block text-xs font-semibold mb-1 text-gray-500 uppercase tracking-wide">
+                <label className="block text-xs font-semibold mb-1 text-gray-500  tracking-wide">
                   GRN Number
                 </label>
                 <input
@@ -272,7 +340,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold mb-1 text-gray-500 uppercase tracking-wide">
+                <label className="block text-xs font-semibold mb-1 text-gray-500  tracking-wide">
                   Receipt Date <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -286,15 +354,15 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           {/* Supplier Section */}
-          <div className="bg-white border border-gray-200 rounded-xs p-3.5 shadow-sm">
+          <div className="bg-white border border-gray-200 rounded-xs p-3.5 ">
             <div className="flex items-center gap-2 mb-3">
               <Truck size={16} className="text-indigo-500" />
               <h3 className="m-0 text-xs font-semibold text-gray-900">Supplier Information</h3>
             </div>
             
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-2">
               <div>
-                <label className="block text-xs font-semibold mb-1 text-gray-500 uppercase tracking-wide">
+                <label className="block text-xs font-semibold mb-1 text-gray-500  tracking-wide">
                   Select Supplier <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -312,7 +380,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold mb-1 text-gray-500 uppercase tracking-wide">
+                <label className="block text-xs font-semibold mb-1 text-gray-500  tracking-wide">
                   Purchase Order (Optional)
                 </label>
                 <select
@@ -333,7 +401,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
         </div>
 
         {/* Items Section */}
-        <div className="bg-white border border-gray-200 rounded-xs p-3.5 mb-4 shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-xs p-3.5 mb-4 ">
           <div className="flex items-center gap-2 mb-3">
             <Package size={16} className="text-indigo-500" />
             <h3 className="m-0 text-xs font-semibold text-gray-900">Received Items</h3>
@@ -348,7 +416,10 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
                 <tr className="bg-gray-100">
                   <th className="px-2.5 py-2.5 text-left border border-gray-200 font-semibold text-gray-500">Item Code</th>
                   <th className="px-2.5 py-2.5 text-left border border-gray-200 font-semibold text-gray-500">Item Name</th>
-                  <th className="px-2.5 py-2.5 text-center border border-gray-200 font-semibold text-gray-500">Qty</th>
+                  <th className="px-2.5 py-2.5 text-center border border-gray-200 font-semibold text-gray-500">Stock</th>
+                  <th className="px-2.5 py-2.5 text-center border border-gray-200 font-semibold text-gray-500">PO Qty</th>
+                  <th className="px-2.5 py-2.5 text-center border border-gray-200 font-semibold text-gray-500">Received Qty</th>
+                  <th className="px-2.5 py-2.5 text-center border border-gray-200 font-semibold text-gray-500">Rate</th>
                   <th className="px-2.5 py-2.5 text-center border border-gray-200 font-semibold text-gray-500">UOM</th>
                   <th className="px-2.5 py-2.5 text-left border border-gray-200 font-semibold text-gray-500">Batch</th>
                   <th className="px-2.5 py-2.5 text-left border border-gray-200 font-semibold text-gray-500">Warehouse</th>
@@ -383,8 +454,33 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
                     <td className="px-2.5 py-2.5 border border-gray-200">
                       <input
                         type="number"
+                        value={item.current_stock}
+                        readOnly
+                        className="w-full px-1.5 py-1 border border-gray-200 rounded text-center text-xs bg-blue-50 text-blue-600 font-semibold"
+                      />
+                    </td>
+                    <td className="px-2.5 py-2.5 border border-gray-200">
+                      <input
+                        type="number"
+                        value={item.po_qty}
+                        readOnly
+                        className="w-full px-1.5 py-1 border border-gray-200 rounded text-center text-xs bg-gray-50 text-gray-500"
+                      />
+                    </td>
+                    <td className="px-2.5 py-2.5 border border-gray-200">
+                      <input
+                        type="number"
                         value={item.received_qty}
                         onChange={(e) => handleItemChange(index, 'received_qty', parseFloat(e.target.value) || 0)}
+                        className="w-full px-1.5 py-1 border border-gray-200 rounded text-center text-xs text-gray-700 font-bold"
+                        min="0"
+                      />
+                    </td>
+                    <td className="px-2.5 py-2.5 border border-gray-200">
+                      <input
+                        type="number"
+                        value={item.rate}
+                        onChange={(e) => handleItemChange(index, 'rate', parseFloat(e.target.value) || 0)}
                         className="w-full px-1.5 py-1 border border-gray-200 rounded text-center text-xs text-gray-700"
                         min="0"
                       />
@@ -443,14 +539,14 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess }) {
           <button
             type="button"
             onClick={handleAddItem}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-indigo-500 text-white rounded text-xs font-semibold hover:bg-indigo-600 transition-colors"
+            className="inline-flex items-center gap-1.5 p-2 .5 py-2.5 bg-indigo-500 text-white rounded text-xs font-semibold hover:bg-indigo-600 transition-colors"
           >
             <Plus size={14} /> Add Item
           </button>
         </div>
 
         {/* Notes Section */}
-        <div className="bg-white border border-gray-200 rounded-xs p-3.5 shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-xs p-3.5 ">
           <div className="flex items-center gap-2 mb-2.5">
             <AlertCircle size={16} className="text-indigo-500" />
             <h3 className="m-0 text-xs font-semibold text-gray-900">Additional Notes</h3>

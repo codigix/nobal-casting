@@ -22,7 +22,7 @@ export default function Layout({ children }) {
       {/* Sidebar */}
       <aside className={`sidebar ${sidebarOpen ? 'w-64' : 'w-20'} transition-all duration-300`} style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--sidebar-text)' }}>
         <div className="p-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold">ERP</h1>
+          <h1 className="text-xl ">ERP</h1>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-2 rounded transition-colors"
@@ -54,7 +54,7 @@ export default function Layout({ children }) {
         {/* Header */}
         <header className="px-8 py-4 flex-between border-b" style={{ backgroundColor: 'var(--header-bg)', borderColor: 'var(--header-border)' }}>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Aluminium Precision Casting ERP</h1>
+            <h1 className="text-xl " style={{ color: 'var(--text-primary)' }}>Aluminium Precision Casting ERP</h1>
             <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Manage your operations efficiently</p>
           </div>
           <div className="flex items-center gap-4">

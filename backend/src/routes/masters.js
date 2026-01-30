@@ -15,6 +15,9 @@ router.get('/machine-stats', MastersController.getMachineStats)
 router.get('/project-stats', MastersController.getProjectStats)
 router.get('/production-reports', MastersController.getProductionReports)
 router.get('/project-analysis', MastersController.getProjectAnalysis)
+router.get('/project-analysis/:id', MastersController.getDetailedProjectAnalysis)
 router.get('/sales-orders-analysis', MastersController.getSalesOrdersAsProjects)
+router.get('/customer-stats', MastersController.getCustomerStatistics)
+router.get('/customer-stats/:id', MastersController.getCustomerDetailedStats)
 
 export default router

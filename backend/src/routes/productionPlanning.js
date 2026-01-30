@@ -25,6 +25,7 @@ export function createProductionPlanningRoutes(db) {
   router.delete('/raw-material/:id', authMiddleware, controller.deleteRawMaterialItem.bind(controller))
 
   router.patch('/:plan_id/submit', authMiddleware, controller.submitPlan.bind(controller))
+  router.post('/:plan_id/create-work-orders', authMiddleware, controller.createWorkOrders.bind(controller))
   router.delete('/:plan_id', authMiddleware, controller.deletePlan.bind(controller))
 
   return router

@@ -134,12 +134,12 @@ const MaintenanceSchedule = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50p-3  ">
       <div className=" mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-3">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <h1 className="text-xl  text-gray-900 flex items-center gap-2">
               <Clock className="w-8 h-8 text-orange-600" />
               Maintenance Management
             </h1>
@@ -147,7 +147,7 @@ const MaintenanceSchedule = () => {
           </div>
           <button
             onClick={() => handleOpenModal()}
-            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xs flex items-center gap-2"
+            className="bg-orange-600 hover:bg-orange-700 text-white p-2 rounded-xs flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
             Add Maintenance
@@ -166,7 +166,7 @@ const MaintenanceSchedule = () => {
           <div className="flex border-b">
             <button
               onClick={() => setActiveTab('schedule')}
-              className={`px-6 py-3 font-medium ${
+              className={`p-6  py-2 font-medium ${
                 activeTab === 'schedule'
                   ? 'border-b-2 border-orange-600 text-orange-600'
                   : 'text-gray-600 hover:text-gray-900'
@@ -176,7 +176,7 @@ const MaintenanceSchedule = () => {
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`px-6 py-3 font-medium ${
+              className={`p-6  py-2 font-medium ${
                 activeTab === 'history'
                   ? 'border-b-2 border-orange-600 text-orange-600'
                   : 'text-gray-600 hover:text-gray-900'
@@ -188,7 +188,7 @@ const MaintenanceSchedule = () => {
 
           {/* Search Bar */}
           <div className="p-4 border-b">
-            <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded">
+            <div className="flex items-center gap-2 bg-gray-50 p-2 rounded">
               <Search className="w-5 h-5 text-gray-400" />
               <input
                 type="text"
@@ -207,12 +207,12 @@ const MaintenanceSchedule = () => {
             <table className="w-full">
               <thead className="bg-gray-100 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Tool ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Maintenance Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Scheduled Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Cost</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold  text-gray-900">Status</th>
-                  <th className="px-6 py-3 text-center text-xs font-semibold  text-gray-900">Actions</th>
+                  <th className="p-6  py-2 text-left text-xs font-semibold  text-gray-900">Tool ID</th>
+                  <th className="p-6  py-2 text-left text-xs font-semibold  text-gray-900">Maintenance Type</th>
+                  <th className="p-6  py-2 text-left text-xs font-semibold  text-gray-900">Scheduled Date</th>
+                  <th className="p-6  py-2 text-left text-xs font-semibold  text-gray-900">Cost</th>
+                  <th className="p-6  py-2 text-left text-xs font-semibold  text-gray-900">Status</th>
+                  <th className="p-6  py-2 text-center text-xs font-semibold  text-gray-900">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -226,7 +226,7 @@ const MaintenanceSchedule = () => {
                       </td>
                       <td className="p-2 text-xs text-gray-900 font-medium">₹{item.cost}</td>
                       <td className="p-2">
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
+                        <span className={`inline-block p-2  py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
                           {item.status}
                         </span>
                       </td>
@@ -250,7 +250,7 @@ const MaintenanceSchedule = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan="6" className="p-6  py-8 text-center text-gray-500">
                       No maintenance records found
                     </td>
                   </tr>
@@ -264,16 +264,16 @@ const MaintenanceSchedule = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xs shadow-xl max-w-md w-full mx-4">
-            <div className="flex justify-between items-center p-6 border-b">
-              <h2 className="text-xl font-bold text-gray-900">
+          <div className="bg-white rounded-xs  max-w-md w-full mx-4">
+            <div className="flex justify-between items-centerp-3   border-b">
+              <h2 className="text-xl  text-gray-900">
                 {editingId ? 'Edit Maintenance' : 'Add Maintenance'}
               </h2>
               <button onClick={handleCloseModal}>
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-3 space-y-4">
               <div>
                 <label className="block text-xs  text-gray-700 mb-1">Tool ID *</label>
                 <input
@@ -282,7 +282,7 @@ const MaintenanceSchedule = () => {
                   value={formData.toolId}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full p-2  py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
               <div>
@@ -292,7 +292,7 @@ const MaintenanceSchedule = () => {
                   value={formData.maintenanceType}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full p-2  py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="">Select type</option>
                   <option value="preventive">Preventive</option>
@@ -307,7 +307,7 @@ const MaintenanceSchedule = () => {
                   name="scheduledDate"
                   value={formData.scheduledDate}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full p-2  py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
               <div>
@@ -317,7 +317,7 @@ const MaintenanceSchedule = () => {
                   name="cost"
                   value={formData.cost}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full p-2  py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
               <div>
@@ -326,7 +326,7 @@ const MaintenanceSchedule = () => {
                   name="status"
                   value={formData.status}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full p-2  py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="pending">Pending</option>
                   <option value="in_progress">In Progress</option>
@@ -341,20 +341,20 @@ const MaintenanceSchedule = () => {
                   value={formData.description}
                   onChange={handleInputChange}
                   rows="3"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full p-2  py-2 border border-gray-300 rounded-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-xs text-gray-700 hover:bg-gray-50"
+                  className="flex-1 p-2 border border-gray-300 rounded-xs text-gray-700 hover:bg-gray-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-xs hover:bg-orange-700"
+                  className="flex-1 p-2 bg-orange-600 text-white rounded-xs hover:bg-orange-700"
                 >
                   {editingId ? 'Update' : 'Create'}
                 </button>

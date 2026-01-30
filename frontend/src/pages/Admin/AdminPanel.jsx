@@ -193,10 +193,10 @@ export default function AdminPanel() {
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-medium text-gray-600 mb-2">{label}</p>
-          <p className="text-xl font-bold text-gray-800">{value}</p>
+          <p className="text-xl  text-gray-800">{value}</p>
         </div>
         <div
-          className="p-3 rounded-xs"
+          className="p-2 rounded-xs"
           style={{ backgroundColor: `rgba(${color === 'primary' ? '37, 99, 235' : color === 'success' ? '16, 185, 129' : '249, 115, 22'}, 0.1)` }}
         >
           <Icon size={24} color={color === 'primary' ? '#2563eb' : color === 'success' ? '#10b981' : '#f97316'} />
@@ -208,7 +208,7 @@ export default function AdminPanel() {
   const QuickActionButton = ({ icon: Icon, label, onClick, variant = 'secondary' }) => (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2 rounded-xs font-medium transition-all ${
+      className={`flex items-center gap-2 p-2 rounded-xs font-medium transition-all ${
         variant === 'primary'
           ? 'bg-blue-500 text-white hover:bg-blue-600'
           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -223,7 +223,7 @@ export default function AdminPanel() {
     <Card className="hover:shadow-lg transition-shadow">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h3 className="text-lg font-bold text-gray-800 capitalize">{dept}</h3>
+          <h3 className="text-lg  text-gray-800 capitalize">{dept}</h3>
           <p className="text-xs text-gray-600">Department Management</p>
         </div>
         <Badge color="secondary">{dept.charAt(0).toUpperCase()}</Badge>
@@ -254,34 +254,34 @@ export default function AdminPanel() {
   return (
     <div className="min-h-screen bg-slate-950">
       {/* Modern Gradient Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 px-6 py-12 mb-8 border-b border-blue-500/20">
+      <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-6  py-12 mb-3 border-b border-blue-500/20">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500 rounded-full blur-3xl" />
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500 rounded-full blur-3xl" />
         </div>
-        <div className="relative z-10 max-w-7xl mx-auto">
+        <div className="relative z-10 max-w-5xl mx-auto">
           <div className="flex items-center gap-4 mb-2">
-            <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg">
+            <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-md">
               <Shield size={32} className="text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-white mb-1">Administration Dashboard</h1>
+              <h1 className="text-4xl  text-white mb-1">Administration Dashboard</h1>
               <p className="text-blue-200">Monitor system health, manage resources, and oversee operations</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 pb-8">
+      <div className="max-w-5xl mx-auto p-6  pb-8">
         {error && <Alert type="danger">{error}</Alert>}
 
         {/* Modern Tab Navigation */}
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-4 border-b border-slate-700">
+        <div className="flex gap-2 mb-3  pb-4 border-b border-slate-700">
           {['overview', 'machines', 'projects', 'reports', 'departments', 'masters', 'security'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-3 font-semibold capitalize transition-all whitespace-nowrap rounded-t-lg text-sm ${
+              className={`p-2 font-semibold capitalize transition-all whitespace-nowrap rounded-t-lg text-xs ${
                 activeTab === tab
                   ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30'
                   : 'text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
@@ -299,11 +299,11 @@ export default function AdminPanel() {
             {criticalAlerts.length > 0 && (
               <div className="space-y-3">
                 {criticalAlerts.map((alert) => (
-                  <div key={alert.id} className="relative overflow-hidden p-5 bg-gradient-to-r from-red-900/40 to-red-800/20 border border-red-500/40 rounded-lg backdrop-blur-sm flex items-start gap-4 hover:border-red-500/60 transition-all">
+                  <div key={alert.id} className="relative overflow-hidden p-5 bg-gradient-to-r from-red-900/40 to-red-800/20 border border-red-500/40 rounded-md backdrop-blur-sm flex items-start gap-4 hover:border-red-500/60 transition-all">
                     <div className="absolute inset-0 opacity-5 bg-red-600" />
                     <AlertTriangle size={24} className="text-red-400 flex-shrink-0 mt-0.5 relative z-10" />
                     <div className="relative z-10 flex-1">
-                      <p className="text-sm font-bold text-red-200">{alert.title}</p>
+                      <p className="text-xs  text-red-200">{alert.title}</p>
                       <p className="text-xs text-red-300 mt-1">{alert.message}</p>
                     </div>
                   </div>
@@ -314,15 +314,15 @@ export default function AdminPanel() {
             {/* Main KPI Cards - Modern Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Total Users Card */}
-              <div className="group relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 p-6 border border-slate-700 hover:border-blue-500/50 transition-all hover:shadow-xl hover:shadow-blue-500/10">
+              <div className="group relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-blue-500/50 transition-all hover: hover:shadow-blue-500/10">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br from-blue-500 to-transparent transition-opacity" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
                     <Users size={24} className="text-blue-400" />
-                    <span className="text-xs font-bold text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full">Users</span>
+                    <span className="text-xs  text-blue-400 bg-blue-500/10 p-2  py-1 rounded-full">Users</span>
                   </div>
-                  <p className="text-slate-400 text-sm font-medium mb-2">Total Users</p>
-                  <p className="text-4xl font-bold text-white mb-3">{stats.users}</p>
+                  <p className="text-slate-400 text-xs font-medium mb-2">Total Users</p>
+                  <p className="text-4xl  text-white mb-3">{stats.users}</p>
                   <div className="h-1 bg-slate-700 rounded-full overflow-hidden">
                     <div className="h-full bg-gradient-to-r from-blue-500 to-blue-400" style={{ width: `${Math.min((stats.users / 1000) * 100, 100)}%` }} />
                   </div>
@@ -330,15 +330,15 @@ export default function AdminPanel() {
               </div>
 
               {/* Total Warehouses Card */}
-              <div className="group relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 p-6 border border-slate-700 hover:border-green-500/50 transition-all hover:shadow-xl hover:shadow-green-500/10">
+              <div className="group relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-green-500/50 transition-all hover: hover:shadow-green-500/10">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br from-green-500 to-transparent transition-opacity" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
                     <Warehouse size={24} className="text-green-400" />
-                    <span className="text-xs font-bold text-green-400 bg-green-500/10 px-3 py-1 rounded-full">Warehouses</span>
+                    <span className="text-xs  text-green-400 bg-green-500/10 p-2  py-1 rounded-full">Warehouses</span>
                   </div>
-                  <p className="text-slate-400 text-sm font-medium mb-2">Total Warehouses</p>
-                  <p className="text-4xl font-bold text-white mb-3">{stats.warehouses}</p>
+                  <p className="text-slate-400 text-xs font-medium mb-2">Total Warehouses</p>
+                  <p className="text-4xl  text-white mb-3">{stats.warehouses}</p>
                   <div className="h-1 bg-slate-700 rounded-full overflow-hidden">
                     <div className="h-full bg-gradient-to-r from-green-500 to-green-400" style={{ width: `${Math.min((stats.warehouses / 100) * 100, 100)}%` }} />
                   </div>
@@ -346,15 +346,15 @@ export default function AdminPanel() {
               </div>
 
               {/* Total Items Card */}
-              <div className="group relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 p-6 border border-slate-700 hover:border-amber-500/50 transition-all hover:shadow-xl hover:shadow-amber-500/10">
+              <div className="group relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-amber-500/50 transition-all hover: hover:shadow-amber-500/10">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br from-amber-500 to-transparent transition-opacity" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
                     <Package size={24} className="text-amber-400" />
-                    <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full">Items</span>
+                    <span className="text-xs  text-amber-400 bg-amber-500/10 p-2  py-1 rounded-full">Items</span>
                   </div>
-                  <p className="text-slate-400 text-sm font-medium mb-2">Total Items</p>
-                  <p className="text-4xl font-bold text-white mb-3">{stats.items}</p>
+                  <p className="text-slate-400 text-xs font-medium mb-2">Total Items</p>
+                  <p className="text-4xl  text-white mb-3">{stats.items}</p>
                   <div className="h-1 bg-slate-700 rounded-full overflow-hidden">
                     <div className="h-full bg-gradient-to-r from-amber-500 to-amber-400" style={{ width: `${Math.min((stats.items / 10000) * 100, 100)}%` }} />
                   </div>
@@ -362,15 +362,15 @@ export default function AdminPanel() {
               </div>
 
               {/* Active Users Card */}
-              <div className="group relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 p-6 border border-slate-700 hover:border-purple-500/50 transition-all hover:shadow-xl hover:shadow-purple-500/10">
+              <div className="group relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-purple-500/50 transition-all hover: hover:shadow-purple-500/10">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br from-purple-500 to-transparent transition-opacity" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
                     <Activity size={24} className="text-purple-400" />
-                    <span className="text-xs font-bold text-purple-400 bg-purple-500/10 px-3 py-1 rounded-full">Active</span>
+                    <span className="text-xs  text-purple-400 bg-purple-500/10 p-2  py-1 rounded-full">Active</span>
                   </div>
-                  <p className="text-slate-400 text-sm font-medium mb-2">Active Users</p>
-                  <p className="text-4xl font-bold text-white mb-3">{systemMetrics.activeUsers}</p>
+                  <p className="text-slate-400 text-xs font-medium mb-2">Active Users</p>
+                  <p className="text-4xl  text-white mb-3">{systemMetrics.activeUsers}</p>
                   <div className="h-1 bg-slate-700 rounded-full overflow-hidden">
                     <div className="h-full bg-gradient-to-r from-purple-500 to-purple-400" style={{ width: `${Math.min((systemMetrics.activeUsers / 500) * 100, 100)}%` }} />
                   </div>
@@ -380,21 +380,21 @@ export default function AdminPanel() {
 
             {/* System Performance Metrics - Modern Gradient Cards */}
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+              <h2 className="text-xl   text-white flex items-center gap-3">
                 <Gauge size={28} className="text-blue-400" />
                 System Performance
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* API Performance Card */}
-                <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 p-6 border border-slate-700 hover:border-blue-500/50 transition-all">
+                <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-blue-500/50 transition-all">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl" />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-sm font-bold text-slate-200">API Performance</h3>
+                      <h3 className="text-xs  text-slate-200">API Performance</h3>
                       <div className={`w-3 h-3 rounded-full ${systemMetrics.apiResponseTime < 200 ? 'bg-green-500 animate-pulse' : systemMetrics.apiResponseTime < 400 ? 'bg-amber-500 animate-pulse' : 'bg-red-500'}`} />
                     </div>
                     <p className="text-slate-400 text-xs mb-2">Response Time</p>
-                    <p className="text-3xl font-bold text-blue-400 mb-4">{systemMetrics.apiResponseTime.toFixed(0)}<span className="text-lg text-slate-400">ms</span></p>
+                    <p className="text-xl   text-blue-400 mb-4">{systemMetrics.apiResponseTime.toFixed(0)}<span className="text-lg text-slate-400">ms</span></p>
                     <div className="space-y-2">
                       <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
                         <div className="h-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all" style={{ width: `${Math.min(systemMetrics.apiResponseTime / 5, 100)}%` }} />
@@ -405,31 +405,31 @@ export default function AdminPanel() {
                 </div>
 
                 {/* System Health Card */}
-                <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 p-6 border border-slate-700 hover:border-green-500/50 transition-all">
+                <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-green-500/50 transition-all">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-2xl" />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-sm font-bold text-slate-200">System Health</h3>
+                      <h3 className="text-xs  text-slate-200">System Health</h3>
                       <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
                     </div>
                     <p className="text-slate-400 text-xs mb-2">Uptime Status</p>
-                    <p className="text-3xl font-bold text-green-400 mb-4">{systemMetrics.systemUptime}</p>
-                    <div className="inline-block px-3 py-1 bg-green-500/20 border border-green-500/50 rounded-full">
+                    <p className="text-xl   text-green-400 mb-4">{systemMetrics.systemUptime}</p>
+                    <div className="inline-block p-2  py-1 bg-green-500/20 border border-green-500/50 rounded-full">
                       <p className="text-xs font-semibold text-green-300">Operational</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Error Rate Card */}
-                <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 p-6 border border-slate-700 hover:border-amber-500/50 transition-all">
+                <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-amber-500/50 transition-all">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl" />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-sm font-bold text-slate-200">Error Rate</h3>
+                      <h3 className="text-xs  text-slate-200">Error Rate</h3>
                       <div className={`w-3 h-3 rounded-full ${systemMetrics.errorRate < 1 ? 'bg-green-500' : systemMetrics.errorRate < 3 ? 'bg-amber-500 animate-pulse' : 'bg-red-500 animate-pulse'}`} />
                     </div>
                     <p className="text-slate-400 text-xs mb-2">Current Rate</p>
-                    <p className="text-3xl font-bold text-amber-400 mb-4">{systemMetrics.errorRate.toFixed(2)}<span className="text-lg text-slate-400">%</span></p>
+                    <p className="text-xl   text-amber-400 mb-4">{systemMetrics.errorRate.toFixed(2)}<span className="text-lg text-slate-400">%</span></p>
                     <div className="space-y-2">
                       <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
                         <div className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all" style={{ width: `${Math.min(systemMetrics.errorRate * 20, 100)}%` }} />
@@ -443,21 +443,21 @@ export default function AdminPanel() {
 
             {/* Database & Cache Performance */}
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+              <h2 className="text-xl   text-white flex items-center gap-3">
                 <Database size={28} className="text-purple-400" />
                 Database & Infrastructure
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Database Status Card */}
-                <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 p-6 border border-slate-700 hover:border-blue-500/50 transition-all">
+                <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-blue-500/50 transition-all">
                   <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl" />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-sm font-bold text-slate-200">Database Status</h3>
+                      <h3 className="text-xs  text-slate-200">Database Status</h3>
                       <div className={`w-3 h-3 rounded-full ${systemMetrics.databaseConnections < 80 ? 'bg-green-500 animate-pulse' : 'bg-amber-500 animate-pulse'}`} />
                     </div>
                     <p className="text-slate-400 text-xs mb-2">Active Connections</p>
-                    <p className="text-3xl font-bold text-blue-400 mb-4">{systemMetrics.databaseConnections}<span className="text-lg text-slate-400"> / 100</span></p>
+                    <p className="text-xl   text-blue-400 mb-4">{systemMetrics.databaseConnections}<span className="text-lg text-slate-400"> / 100</span></p>
                     <div className="space-y-3">
                       <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
                         <div className="h-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all" style={{ width: `${systemMetrics.databaseConnections}%` }} />
@@ -468,15 +468,15 @@ export default function AdminPanel() {
                 </div>
 
                 {/* Cache Performance Card */}
-                <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 p-6 border border-slate-700 hover:border-green-500/50 transition-all">
+                <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-green-500/50 transition-all">
                   <div className="absolute top-0 right-0 w-40 h-40 bg-green-500/10 rounded-full blur-2xl" />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-sm font-bold text-slate-200">Cache Performance</h3>
+                      <h3 className="text-xs  text-slate-200">Cache Performance</h3>
                       <div className={`w-3 h-3 rounded-full ${systemMetrics.cacheHitRate > 90 ? 'bg-green-500 animate-pulse' : systemMetrics.cacheHitRate > 80 ? 'bg-amber-500 animate-pulse' : 'bg-red-500'}`} />
                     </div>
                     <p className="text-slate-400 text-xs mb-2">Hit Rate</p>
-                    <p className="text-3xl font-bold text-green-400 mb-4">{systemMetrics.cacheHitRate.toFixed(1)}<span className="text-lg text-slate-400">%</span></p>
+                    <p className="text-xl   text-green-400 mb-4">{systemMetrics.cacheHitRate.toFixed(1)}<span className="text-lg text-slate-400">%</span></p>
                     <div className="space-y-3">
                       <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
                         <div className="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all" style={{ width: `${systemMetrics.cacheHitRate}%` }} />
@@ -490,11 +490,11 @@ export default function AdminPanel() {
 
             {/* Recent Activity - Timeline Style */}
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+              <h2 className="text-xl   text-white flex items-center gap-3">
                 <Activity size={28} className="text-cyan-400" />
                 Recent Activity Log
               </h2>
-              <div className="relative rounded-lg bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 p-6 backdrop-blur-sm">
+              <div className="relative rounded-md bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700p-3   backdrop-blur-sm">
                 <div className="space-y-4">
                   {recentEvents.length > 0 ? (
                     recentEvents.slice(0, 8).map((event, idx) => (
@@ -520,7 +520,7 @@ export default function AdminPanel() {
                         {/* Event content */}
                         <div className="flex-1 py-1">
                           <div className="flex items-start justify-between">
-                            <p className="text-sm font-medium text-slate-200">{event.message}</p>
+                            <p className="text-xs font-medium text-slate-200">{event.message}</p>
                             <span className="text-xs text-slate-400 flex-shrink-0 ml-4">
                               {event.timestamp instanceof Date 
                                 ? event.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
@@ -544,7 +544,7 @@ export default function AdminPanel() {
 
             {/* Quick Actions - Modern Button Grid */}
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+              <h2 className="text-xl   text-white flex items-center gap-3">
                 <Zap size={28} className="text-amber-400" />
                 Quick Actions
               </h2>
@@ -552,48 +552,48 @@ export default function AdminPanel() {
                 {/* Add User Button */}
                 <button
                   onClick={() => navigate('/admin/employees-designations?action=add')}
-                  className="group relative overflow-hidden rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 p-4 transition-all hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5"
+                  className="group relative overflow-hidden rounded-md bg-gradient-to-br from-blue-600 to-blue-700 p-4 transition-all hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5"
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
                   <div className="relative z-10 flex items-center gap-3 justify-center">
                     <Plus size={20} className="text-white" />
-                    <span className="text-sm font-semibold text-white">Add User</span>
+                    <span className="text-xs font-semibold text-white">Add User</span>
                   </div>
                 </button>
 
                 {/* New Warehouse Button */}
                 <button
                   onClick={() => navigate('/inventory/warehouses')}
-                  className="group relative overflow-hidden rounded-lg bg-gradient-to-br from-green-600 to-green-700 p-4 transition-all hover:shadow-lg hover:shadow-green-500/30 hover:-translate-y-0.5"
+                  className="group relative overflow-hidden rounded-md bg-gradient-to-br from-green-600 to-green-700 p-4 transition-all hover:shadow-lg hover:shadow-green-500/30 hover:-translate-y-0.5"
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
                   <div className="relative z-10 flex items-center gap-3 justify-center">
                     <Warehouse size={20} className="text-white" />
-                    <span className="text-sm font-semibold text-white">New Warehouse</span>
+                    <span className="text-xs font-semibold text-white">New Warehouse</span>
                   </div>
                 </button>
 
                 {/* Master Data Button */}
                 <button
                   onClick={() => setActiveTab('masters')}
-                  className="group relative overflow-hidden rounded-lg bg-gradient-to-br from-purple-600 to-purple-700 p-4 transition-all hover:shadow-lg hover:shadow-purple-500/30 hover:-translate-y-0.5"
+                  className="group relative overflow-hidden rounded-md bg-gradient-to-br from-purple-600 to-purple-700 p-4 transition-all hover:shadow-lg hover:shadow-purple-500/30 hover:-translate-y-0.5"
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
                   <div className="relative z-10 flex items-center gap-3 justify-center">
                     <Database size={20} className="text-white" />
-                    <span className="text-sm font-semibold text-white">Master Data</span>
+                    <span className="text-xs font-semibold text-white">Master Data</span>
                   </div>
                 </button>
 
                 {/* Audit Logs Button */}
                 <button
                   onClick={() => navigate('/admin/audit-logs')}
-                  className="group relative overflow-hidden rounded-lg bg-gradient-to-br from-cyan-600 to-cyan-700 p-4 transition-all hover:shadow-lg hover:shadow-cyan-500/30 hover:-translate-y-0.5"
+                  className="group relative overflow-hidden rounded-md bg-gradient-to-br from-cyan-600 to-cyan-700 p-4 transition-all hover:shadow-lg hover:shadow-cyan-500/30 hover:-translate-y-0.5"
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
                   <div className="relative z-10 flex items-center gap-3 justify-center">
                     <Wrench size={20} className="text-white" />
-                    <span className="text-sm font-semibold text-white">Audit Logs</span>
+                    <span className="text-xs font-semibold text-white">Audit Logs</span>
                   </div>
                 </button>
               </div>
@@ -604,7 +604,7 @@ export default function AdminPanel() {
         {/* Machine Stats Tab */}
         {activeTab === 'machines' && (
           <div className="space-y-8">
-            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+            <h2 className="text-xl   text-white flex items-center gap-3">
               <Gauge size={32} className="text-orange-400" />
               Machine Statistics & Performance
             </h2>
@@ -612,62 +612,62 @@ export default function AdminPanel() {
             {/* Machine Performance Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Total Machines */}
-              <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 p-6 border border-slate-700 hover:border-blue-500/50 transition-all">
+              <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-blue-500/50 transition-all">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
                     <Gauge size={24} className="text-blue-400" />
-                    <span className="text-xs font-bold text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full">Machines</span>
+                    <span className="text-xs  text-blue-400 bg-blue-500/10 p-2  py-1 rounded-full">Machines</span>
                   </div>
                   <p className="text-slate-400 text-xs font-medium mb-1">Total Machines</p>
-                  <p className="text-4xl font-bold text-blue-400">{machineStats.total}</p>
+                  <p className="text-4xl  text-blue-400">{machineStats.total}</p>
                 </div>
               </div>
 
               {/* Operational */}
-              <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 p-6 border border-slate-700 hover:border-green-500/50 transition-all">
+              <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-green-500/50 transition-all">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 rounded-full blur-2xl" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
                     <CheckCircle size={24} className="text-green-400" />
-                    <span className="text-xs font-bold text-green-400 bg-green-500/10 px-3 py-1 rounded-full">Active</span>
+                    <span className="text-xs  text-green-400 bg-green-500/10 p-2  py-1 rounded-full">Active</span>
                   </div>
                   <p className="text-slate-400 text-xs font-medium mb-1">Operational</p>
-                  <p className="text-4xl font-bold text-green-400">{machineStats.operational}</p>
+                  <p className="text-4xl  text-green-400">{machineStats.operational}</p>
                 </div>
               </div>
 
               {/* In Maintenance */}
-              <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 p-6 border border-slate-700 hover:border-amber-500/50 transition-all">
+              <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-amber-500/50 transition-all">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
                     <Clock size={24} className="text-amber-400" />
-                    <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full">Service</span>
+                    <span className="text-xs  text-amber-400 bg-amber-500/10 p-2  py-1 rounded-full">Service</span>
                   </div>
                   <p className="text-slate-400 text-xs font-medium mb-1">In Maintenance</p>
-                  <p className="text-4xl font-bold text-amber-400">{machineStats.maintenance}</p>
+                  <p className="text-4xl  text-amber-400">{machineStats.maintenance}</p>
                 </div>
               </div>
 
               {/* OEE Status */}
-              <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 p-6 border border-slate-700 hover:border-purple-500/50 transition-all">
+              <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-purple-500/50 transition-all">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
                     <TrendingUp size={24} className="text-purple-400" />
-                    <span className="text-xs font-bold text-purple-400 bg-purple-500/10 px-3 py-1 rounded-full">OEE</span>
+                    <span className="text-xs  text-purple-400 bg-purple-500/10 p-2  py-1 rounded-full">OEE</span>
                   </div>
                   <p className="text-slate-400 text-xs font-medium mb-1">Overall Equipment</p>
-                  <p className="text-3xl font-bold text-purple-400">{machineStats.machines.length > 0 ? '92%' : '—'}</p>
+                  <p className="text-xl   text-purple-400">{machineStats.machines.length > 0 ? '92%' : '—'}</p>
                 </div>
               </div>
             </div>
 
             {/* Machine Performance & Downtime Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="rounded-lg bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 p-6 backdrop-blur-sm">
-                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <div className="rounded-md bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700p-3   backdrop-blur-sm">
+                <h3 className="text-lg  text-white mb-6 flex items-center gap-2">
                   <BarChart3 size={24} className="text-blue-400" />
                   Daily Machine Performance
                 </h3>
@@ -691,8 +691,8 @@ export default function AdminPanel() {
                 </ResponsiveContainer>
               </div>
 
-              <div className="rounded-lg bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 p-6 backdrop-blur-sm">
-                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+              <div className="rounded-md bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700p-3   backdrop-blur-sm">
+                <h3 className="text-lg  text-white mb-6 flex items-center gap-2">
                   <AlertTriangle size={24} className="text-red-400" />
                   Machine Downtime Breakdown
                 </h3>
@@ -721,25 +721,25 @@ export default function AdminPanel() {
             </div>
 
             {/* Machine Details Table */}
-            <div className="rounded-lg bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 p-6 backdrop-blur-sm overflow-x-auto">
-              <h3 className="text-lg font-bold text-white mb-6">Machine Information</h3>
+            <div className="rounded-md bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700p-3   backdrop-blur-sm ">
+              <h3 className="text-lg  text-white mb-6">Machine Information</h3>
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-600">
-                    <th className="text-left p-3 font-semibold text-slate-300 text-sm">Machine ID</th>
-                    <th className="text-left p-3 font-semibold text-slate-300 text-sm">Name</th>
-                    <th className="text-left p-3 font-semibold text-slate-300 text-sm">Status</th>
-                    <th className="text-left p-3 font-semibold text-slate-300 text-sm">Days Since Maintenance</th>
+                    <th className="text-left p-3 font-semibold text-slate-300 text-xs">Machine ID</th>
+                    <th className="text-left p-3 font-semibold text-slate-300 text-xs">Name</th>
+                    <th className="text-left p-3 font-semibold text-slate-300 text-xs">Status</th>
+                    <th className="text-left p-3 font-semibold text-slate-300 text-xs">Days Since Maintenance</th>
                   </tr>
                 </thead>
                 <tbody>
                   {machineStats.machines.length > 0 ? (
                     machineStats.machines.map((machine) => (
                       <tr key={machine.id} className="border-b border-slate-700 hover:bg-slate-700/30 transition-colors">
-                        <td className="p-3 text-slate-200 font-medium text-sm">{machine.id}</td>
-                        <td className="p-3 text-slate-200 text-sm">{machine.name}</td>
+                        <td className="p-3 text-slate-200 font-medium text-xs">{machine.id}</td>
+                        <td className="p-3 text-slate-200 text-xs">{machine.name}</td>
                         <td className="p-3">
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                          <span className={`inline-block p-2  py-1 rounded-full text-xs font-semibold ${
                             machine.status === 'active' ? 'bg-green-500/20 text-green-300 border border-green-500/30' :
                             machine.status === 'maintenance' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
                             'bg-red-500/20 text-red-300 border border-red-500/30'
@@ -747,12 +747,12 @@ export default function AdminPanel() {
                             {machine.status}
                           </span>
                         </td>
-                        <td className="p-3 text-slate-400 text-sm">{machine.days_since_maintenance || '—'}</td>
+                        <td className="p-3 text-slate-400 text-xs">{machine.days_since_maintenance || '—'}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="4" className="py-8 px-4 text-center text-slate-400 text-sm">
+                      <td colSpan="4" className="py-8 px-4 text-center text-slate-400 text-xs">
                         No machine data available
                       </td>
                     </tr>
@@ -766,18 +766,18 @@ export default function AdminPanel() {
         {/* Project Status Tab */}
         {activeTab === 'projects' && (
           <div className="space-y-8">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <h2 className="text-xl  text-gray-800 flex items-center gap-2">
               <CheckCircle size={28} className="text-green-600" />
               Project Status & Tracking
             </h2>
 
             {/* Project Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <Card>
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-600 mb-2">Total Projects</p>
-                    <p className="text-xl font-bold text-gray-800">{projectStats.total}</p>
+                    <p className="text-xl  text-gray-800">{projectStats.total}</p>
                   </div>
                   <Clock size={24} className="text-blue-600" />
                 </div>
@@ -786,7 +786,7 @@ export default function AdminPanel() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-600 mb-2">Running</p>
-                    <p className="text-xl font-bold text-amber-600">{projectStats.running}</p>
+                    <p className="text-xl  text-amber-600">{projectStats.running}</p>
                   </div>
                   <AlertTriangle size={24} className="text-amber-600" />
                 </div>
@@ -795,7 +795,7 @@ export default function AdminPanel() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-600 mb-2">Completed</p>
-                    <p className="text-xl font-bold text-green-600">{projectStats.completed}</p>
+                    <p className="text-xl  text-green-600">{projectStats.completed}</p>
                   </div>
                   <CheckCircle size={24} className="text-green-600" />
                 </div>
@@ -804,7 +804,7 @@ export default function AdminPanel() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-600 mb-2">Pending</p>
-                    <p className="text-xl font-bold text-blue-600">{projectStats.total - projectStats.running - projectStats.completed}</p>
+                    <p className="text-xl  text-blue-600">{projectStats.total - projectStats.running - projectStats.completed}</p>
                   </div>
                   <TrendingUp size={24} className="text-blue-600" />
                 </div>
@@ -812,9 +812,9 @@ export default function AdminPanel() {
             </div>
 
             {/* Project Status & Timeline Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <Card>
-                <h3 className="text-lg font-bold text-gray-800 mb-4">Project Status Distribution</h3>
+                <h3 className="text-lg  text-gray-800 mb-4">Project Status Distribution</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie data={[
@@ -837,7 +837,7 @@ export default function AdminPanel() {
               </Card>
 
               <Card>
-                <h3 className="text-lg font-bold text-gray-800 mb-4">Monthly Project Timeline</h3>
+                <h3 className="text-lg  text-gray-800 mb-4">Monthly Project Timeline</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={[
                     { month: 'Jan', started: 2, completed: 1 },
@@ -867,7 +867,7 @@ export default function AdminPanel() {
 
             {/* Running Projects */}
             <Card>
-              <h3 className="text-lg font-bold text-gray-800 mb-4">Running Projects</h3>
+              <h3 className="text-lg  text-gray-800 mb-4">Running Projects</h3>
               <div className="space-y-4">
                 {projectStats.projects.length > 0 ? (
                   projectStats.projects.map((project) => (
@@ -909,7 +909,7 @@ export default function AdminPanel() {
         {activeTab === 'reports' && (
           <div className="space-y-8">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <h2 className="text-xl  text-gray-800 flex items-center gap-2">
                 <BarChart3 size={28} className="text-purple-600" />
                 Production Reports & Analytics
               </h2>
@@ -921,7 +921,7 @@ export default function AdminPanel() {
                       setReportPeriod(period)
                       fetchProductionReports(period)
                     }}
-                    className={`px-4 py-2 rounded-xs font-medium transition-all capitalize ${
+                    className={`p-2 rounded-xs font-medium transition-all capitalize ${
                       reportPeriod === period
                         ? 'bg-purple-600 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -936,12 +936,12 @@ export default function AdminPanel() {
             {/* Report Metrics */}
             {reportPeriod === 'daily' && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <Card>
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-xs font-medium text-gray-600 mb-2">Production (Today)</p>
-                        <p className="text-xl font-bold text-blue-600">{productionReports.totalProduced}</p>
+                        <p className="text-xl  text-blue-600">{productionReports.totalProduced}</p>
                         <p className="text-xs text-gray-600 mt-2">units produced</p>
                       </div>
                       <Package size={24} className="text-blue-600" />
@@ -951,7 +951,7 @@ export default function AdminPanel() {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-xs font-medium text-gray-600 mb-2">Quality Score (Today)</p>
-                        <p className="text-xl font-bold text-green-600">{productionReports.qualityScore}%</p>
+                        <p className="text-xl  text-green-600">{productionReports.qualityScore}%</p>
                         <p className="text-xs text-gray-600 mt-2">good product rate</p>
                       </div>
                       <CheckCircle size={24} className="text-green-600" />
@@ -961,7 +961,7 @@ export default function AdminPanel() {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-xs font-medium text-gray-600 mb-2">Rejected (Today)</p>
-                        <p className="text-xl font-bold text-red-600">{productionReports.totalRejected}</p>
+                        <p className="text-xl  text-red-600">{productionReports.totalRejected}</p>
                         <p className="text-xs text-gray-600 mt-2">units rejected</p>
                       </div>
                       <AlertTriangle size={24} className="text-red-600" />
@@ -970,26 +970,26 @@ export default function AdminPanel() {
                 </div>
                 {productionReports.reports.length > 0 && (
                   <Card>
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Production Details</h3>
+                    <h3 className="text-lg  text-gray-800 mb-4">Production Details</h3>
                     <div className="">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Period</th>
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Produced</th>
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Rejected</th>
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Hours</th>
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Machines</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Period</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Produced</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Rejected</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Hours</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Machines</th>
                           </tr>
                         </thead>
                         <tbody>
                           {productionReports.reports.slice(0, 5).map((report, idx) => (
                             <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="py-2 px-3 text-gray-800">{report.period}</td>
-                              <td className="py-2 px-3 text-gray-800 font-medium">{report.produced || 0}</td>
-                              <td className="py-2 px-3 text-red-600">{report.rejected || 0}</td>
-                              <td className="py-2 px-3 text-gray-600">{report.hours || 0}</td>
-                              <td className="py-2 px-3 text-gray-600">{report.machines_used || 0}</td>
+                              <td className="py-2 p-2  text-gray-800">{report.period}</td>
+                              <td className="py-2 p-2  text-gray-800 font-medium">{report.produced || 0}</td>
+                              <td className="py-2 p-2  text-red-600">{report.rejected || 0}</td>
+                              <td className="py-2 p-2  text-gray-600">{report.hours || 0}</td>
+                              <td className="py-2 p-2  text-gray-600">{report.machines_used || 0}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1002,12 +1002,12 @@ export default function AdminPanel() {
 
             {reportPeriod === 'weekly' && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <Card>
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-xs font-medium text-gray-600 mb-2">Production (This Week)</p>
-                        <p className="text-xl font-bold text-blue-600">{productionReports.totalProduced}</p>
+                        <p className="text-xl  text-blue-600">{productionReports.totalProduced}</p>
                         <p className="text-xs text-gray-600 mt-2">units produced</p>
                       </div>
                       <Package size={24} className="text-blue-600" />
@@ -1017,7 +1017,7 @@ export default function AdminPanel() {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-xs font-medium text-gray-600 mb-2">Quality Score (This Week)</p>
-                        <p className="text-xl font-bold text-green-600">{productionReports.qualityScore}%</p>
+                        <p className="text-xl  text-green-600">{productionReports.qualityScore}%</p>
                         <p className="text-xs text-gray-600 mt-2">good product rate</p>
                       </div>
                       <CheckCircle size={24} className="text-green-600" />
@@ -1027,7 +1027,7 @@ export default function AdminPanel() {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-xs font-medium text-gray-600 mb-2">Rejected (This Week)</p>
-                        <p className="text-xl font-bold text-red-600">{productionReports.totalRejected}</p>
+                        <p className="text-xl  text-red-600">{productionReports.totalRejected}</p>
                         <p className="text-xs text-gray-600 mt-2">units rejected</p>
                       </div>
                       <AlertTriangle size={24} className="text-red-600" />
@@ -1036,26 +1036,26 @@ export default function AdminPanel() {
                 </div>
                 {productionReports.reports.length > 0 && (
                   <Card>
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Weekly Production Breakdown</h3>
+                    <h3 className="text-lg  text-gray-800 mb-4">Weekly Production Breakdown</h3>
                     <div className="">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Week</th>
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Produced</th>
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Rejected</th>
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Hours</th>
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Machines</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Week</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Produced</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Rejected</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Hours</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Machines</th>
                           </tr>
                         </thead>
                         <tbody>
                           {productionReports.reports.slice(0, 7).map((report, idx) => (
                             <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="py-2 px-3 text-gray-800">{report.period}</td>
-                              <td className="py-2 px-3 text-gray-800 font-medium">{report.produced || 0}</td>
-                              <td className="py-2 px-3 text-red-600">{report.rejected || 0}</td>
-                              <td className="py-2 px-3 text-gray-600">{report.hours || 0}</td>
-                              <td className="py-2 px-3 text-gray-600">{report.machines_used || 0}</td>
+                              <td className="py-2 p-2  text-gray-800">{report.period}</td>
+                              <td className="py-2 p-2  text-gray-800 font-medium">{report.produced || 0}</td>
+                              <td className="py-2 p-2  text-red-600">{report.rejected || 0}</td>
+                              <td className="py-2 p-2  text-gray-600">{report.hours || 0}</td>
+                              <td className="py-2 p-2  text-gray-600">{report.machines_used || 0}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1068,12 +1068,12 @@ export default function AdminPanel() {
 
             {reportPeriod === 'monthly' && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <Card>
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-xs font-medium text-gray-600 mb-2">Production (This Month)</p>
-                        <p className="text-xl font-bold text-blue-600">{productionReports.totalProduced}</p>
+                        <p className="text-xl  text-blue-600">{productionReports.totalProduced}</p>
                         <p className="text-xs text-gray-600 mt-2">units produced</p>
                       </div>
                       <Package size={24} className="text-blue-600" />
@@ -1083,7 +1083,7 @@ export default function AdminPanel() {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-xs font-medium text-gray-600 mb-2">Quality Score (This Month)</p>
-                        <p className="text-xl font-bold text-green-600">{productionReports.qualityScore}%</p>
+                        <p className="text-xl  text-green-600">{productionReports.qualityScore}%</p>
                         <p className="text-xs text-gray-600 mt-2">good product rate</p>
                       </div>
                       <CheckCircle size={24} className="text-green-600" />
@@ -1093,7 +1093,7 @@ export default function AdminPanel() {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-xs font-medium text-gray-600 mb-2">Rejected (This Month)</p>
-                        <p className="text-xl font-bold text-red-600">{productionReports.totalRejected}</p>
+                        <p className="text-xl  text-red-600">{productionReports.totalRejected}</p>
                         <p className="text-xs text-gray-600 mt-2">units rejected</p>
                       </div>
                       <AlertTriangle size={24} className="text-red-600" />
@@ -1102,26 +1102,26 @@ export default function AdminPanel() {
                 </div>
                 {productionReports.reports.length > 0 && (
                   <Card>
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Monthly Production Summary</h3>
+                    <h3 className="text-lg  text-gray-800 mb-4">Monthly Production Summary</h3>
                     <div className="">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Month</th>
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Produced</th>
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Rejected</th>
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Hours</th>
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Machines</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Month</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Produced</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Rejected</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Hours</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Machines</th>
                           </tr>
                         </thead>
                         <tbody>
                           {productionReports.reports.slice(0, 12).map((report, idx) => (
                             <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="py-2 px-3 text-gray-800">{report.period}</td>
-                              <td className="py-2 px-3 text-gray-800 font-medium">{report.produced || 0}</td>
-                              <td className="py-2 px-3 text-red-600">{report.rejected || 0}</td>
-                              <td className="py-2 px-3 text-gray-600">{report.hours || 0}</td>
-                              <td className="py-2 px-3 text-gray-600">{report.machines_used || 0}</td>
+                              <td className="py-2 p-2  text-gray-800">{report.period}</td>
+                              <td className="py-2 p-2  text-gray-800 font-medium">{report.produced || 0}</td>
+                              <td className="py-2 p-2  text-red-600">{report.rejected || 0}</td>
+                              <td className="py-2 p-2  text-gray-600">{report.hours || 0}</td>
+                              <td className="py-2 p-2  text-gray-600">{report.machines_used || 0}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1134,12 +1134,12 @@ export default function AdminPanel() {
 
             {reportPeriod === 'yearly' && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <Card>
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-xs font-medium text-gray-600 mb-2">Production (This Year)</p>
-                        <p className="text-xl font-bold text-blue-600">{productionReports.totalProduced}</p>
+                        <p className="text-xl  text-blue-600">{productionReports.totalProduced}</p>
                         <p className="text-xs text-gray-600 mt-2">units produced</p>
                       </div>
                       <Package size={24} className="text-blue-600" />
@@ -1149,7 +1149,7 @@ export default function AdminPanel() {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-xs font-medium text-gray-600 mb-2">Quality Score (This Year)</p>
-                        <p className="text-xl font-bold text-green-600">{productionReports.qualityScore}%</p>
+                        <p className="text-xl  text-green-600">{productionReports.qualityScore}%</p>
                         <p className="text-xs text-gray-600 mt-2">good product rate</p>
                       </div>
                       <CheckCircle size={24} className="text-green-600" />
@@ -1159,7 +1159,7 @@ export default function AdminPanel() {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-xs font-medium text-gray-600 mb-2">Rejected (This Year)</p>
-                        <p className="text-xl font-bold text-red-600">{productionReports.totalRejected}</p>
+                        <p className="text-xl  text-red-600">{productionReports.totalRejected}</p>
                         <p className="text-xs text-gray-600 mt-2">units rejected</p>
                       </div>
                       <AlertTriangle size={24} className="text-red-600" />
@@ -1168,26 +1168,26 @@ export default function AdminPanel() {
                 </div>
                 {productionReports.reports.length > 0 && (
                   <Card>
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Yearly Production Summary</h3>
+                    <h3 className="text-lg  text-gray-800 mb-4">Yearly Production Summary</h3>
                     <div className="">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Month</th>
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Produced</th>
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Rejected</th>
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Hours</th>
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Machines</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Month</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Produced</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Rejected</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Hours</th>
+                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Machines</th>
                           </tr>
                         </thead>
                         <tbody>
                           {productionReports.reports.map((report, idx) => (
                             <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="py-2 px-3 text-gray-800">{report.period}</td>
-                              <td className="py-2 px-3 text-gray-800 font-medium">{report.produced || 0}</td>
-                              <td className="py-2 px-3 text-red-600">{report.rejected || 0}</td>
-                              <td className="py-2 px-3 text-gray-600">{report.hours || 0}</td>
-                              <td className="py-2 px-3 text-gray-600">{report.machines_used || 0}</td>
+                              <td className="py-2 p-2  text-gray-800">{report.period}</td>
+                              <td className="py-2 p-2  text-gray-800 font-medium">{report.produced || 0}</td>
+                              <td className="py-2 p-2  text-red-600">{report.rejected || 0}</td>
+                              <td className="py-2 p-2  text-gray-600">{report.hours || 0}</td>
+                              <td className="py-2 p-2  text-gray-600">{report.machines_used || 0}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1203,7 +1203,7 @@ export default function AdminPanel() {
         {/* Departments Tab */}
         {activeTab === 'departments' && (
           <div className="space-y-6">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <h2 className="text-xl  text-gray-800 flex items-center gap-2">
               <Users size={28} className="text-blue-600" />
               Departments
             </h2>
@@ -1215,7 +1215,7 @@ export default function AdminPanel() {
                 <p className="text-center text-gray-600 py-8">No departments found</p>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {departments.map((dept) => (
                   <DepartmentCard key={dept} dept={dept} />
                 ))}
@@ -1227,17 +1227,17 @@ export default function AdminPanel() {
         {/* Masters Tab */}
         {activeTab === 'masters' && (
           <div className="space-y-6">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <h2 className="text-xl  text-gray-800 flex items-center gap-2">
               <Wrench size={28} className="text-blue-600" />
               Master Data Management
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {/* Machines */}
               <Card>
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800">Machines</h3>
+                    <h3 className="text-lg  text-gray-800">Machines</h3>
                     <p className="text-xs text-gray-600">Manage production machines</p>
                   </div>
                   <Zap className="text-orange-500" />
@@ -1257,7 +1257,7 @@ export default function AdminPanel() {
               <Card>
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800">Operators</h3>
+                    <h3 className="text-lg  text-gray-800">Operators</h3>
                     <p className="text-xs text-gray-600">Manage production operators</p>
                   </div>
                   <Users className="text-blue-500" />
@@ -1277,7 +1277,7 @@ export default function AdminPanel() {
               <Card>
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800">Tools</h3>
+                    <h3 className="text-lg  text-gray-800">Tools</h3>
                     <p className="text-xs text-gray-600">Manage tool room tools</p>
                   </div>
                   <Wrench className="text-green-500" />
@@ -1297,7 +1297,7 @@ export default function AdminPanel() {
               <Card>
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800">QC Checklists</h3>
+                    <h3 className="text-lg  text-gray-800">QC Checklists</h3>
                     <p className="text-xs text-gray-600">Inspection checklists</p>
                   </div>
                   <BarChart3 className="text-purple-500" />
@@ -1317,7 +1317,7 @@ export default function AdminPanel() {
               <Card>
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800">Item Groups</h3>
+                    <h3 className="text-lg  text-gray-800">Item Groups</h3>
                     <p className="text-xs text-gray-600">Manage item classification</p>
                   </div>
                   <Package className="text-yellow-500" />
@@ -1337,7 +1337,7 @@ export default function AdminPanel() {
               <Card>
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800">Units of Measure</h3>
+                    <h3 className="text-lg  text-gray-800">Units of Measure</h3>
                     <p className="text-xs text-gray-600">Manage measurement units</p>
                   </div>
                   <TrendingUp className="text-indigo-500" />
@@ -1359,14 +1359,14 @@ export default function AdminPanel() {
         {/* Security Tab */}
         {activeTab === 'security' && (
           <div className="space-y-6">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <h2 className="text-xl  text-gray-800 flex items-center gap-2">
               <Shield size={28} className="text-red-600" />
               Security & Audit
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Card>
-                <h3 className="text-lg font-bold text-gray-800 mb-4">Audit Logs</h3>
+                <h3 className="text-lg  text-gray-800 mb-4">Audit Logs</h3>
                 <p className="text-xs text-gray-600 mb-4">View all system activities and user actions</p>
                 <Button
                   variant="primary"
@@ -1378,7 +1378,7 @@ export default function AdminPanel() {
               </Card>
 
               <Card>
-                <h3 className="text-lg font-bold text-gray-800 mb-4">User Roles</h3>
+                <h3 className="text-lg  text-gray-800 mb-4">User Roles</h3>
                 <p className="text-xs text-gray-600 mb-4">Manage user roles and permissions</p>
                 <Button
                   variant="primary"
@@ -1390,7 +1390,7 @@ export default function AdminPanel() {
               </Card>
 
               <Card>
-                <h3 className="text-lg font-bold text-gray-800 mb-4">Access Control</h3>
+                <h3 className="text-lg  text-gray-800 mb-4">Access Control</h3>
                 <p className="text-xs text-gray-600 mb-4">Configure department-wise access</p>
                 <Button
                   variant="primary"
@@ -1402,7 +1402,7 @@ export default function AdminPanel() {
               </Card>
 
               <Card>
-                <h3 className="text-lg font-bold text-gray-800 mb-4">System Backups</h3>
+                <h3 className="text-lg  text-gray-800 mb-4">System Backups</h3>
                 <p className="text-xs text-gray-600 mb-4">Manage database backups and recovery</p>
                 <Button variant="primary" onClick={() => {}} className="w-full">
                   Backup & Restore
