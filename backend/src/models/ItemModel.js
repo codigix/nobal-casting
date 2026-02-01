@@ -243,23 +243,32 @@ export class ItemModel {
 
   async getAll(filters = {}) {
     try {
-      let query = `SELECT * FROM item WHERE is_active = 1`
+      let query = `
+        SELECT 
+          i.*, 
+          COALESCE(SUM(sb.current_qty), 0) as quantity 
+        FROM item i
+        LEFT JOIN stock_balance sb ON i.item_code = sb.item_code
+        WHERE i.is_active = 1
+      `
       const params = []
 
       if (filters.item_group) {
-        query += ` AND item_group = ?`
+        query += ` AND i.item_group = ?`
         params.push(filters.item_group)
       }
 
       if (filters.search) {
-        query += ` AND (name LIKE ? OR item_code LIKE ?)`
+        query += ` AND (i.name LIKE ? OR i.item_code LIKE ?)`
         const searchTerm = `%${filters.search}%`
         params.push(searchTerm, searchTerm)
       }
 
+      query += ` GROUP BY i.item_code`
+
       const limit = filters.limit || 100
       const offset = filters.offset || 0
-      query += ` ORDER BY name LIMIT ${limit} OFFSET ${offset}`
+      query += ` ORDER BY i.name LIMIT ${limit} OFFSET ${offset}`
 
       const [items] = await this.db.execute(query, params)
       return items

@@ -129,11 +129,15 @@ class GRNRequestModel {
     try {
       const db = this.getDb()
       let query = `
-        SELECT gr.*, u.full_name as created_by_user, u2.full_name as assigned_user, COUNT(gri.id) as total_items
+        SELECT gr.*, u.full_name as created_by_user, u2.full_name as assigned_user, COALESCE(gri_agg.total_items, 0) as total_items
         FROM grn_requests gr
         LEFT JOIN users u ON gr.created_by = u.user_id
         LEFT JOIN users u2 ON gr.assigned_to = u2.user_id
-        LEFT JOIN grn_request_items gri ON gr.id = gri.grn_request_id
+        LEFT JOIN (
+           SELECT grn_request_id, COUNT(id) as total_items
+           FROM grn_request_items
+           GROUP BY grn_request_id
+        ) gri_agg ON gr.id = gri_agg.grn_request_id
         WHERE 1=1
       `
       const params = []
@@ -159,7 +163,7 @@ class GRNRequestModel {
         params.push(filters.created_by)
       }
 
-      query += ' GROUP BY gr.id ORDER BY gr.created_at DESC'
+      query += ' ORDER BY gr.created_at DESC'
 
       const [rows] = await db.query(query, params)
       

@@ -304,7 +304,7 @@ export default function BOM() {
       render: (value, row) => (
         <div 
           onClick={() => handleEdit(row)}
-          className="group cursor-pointer py-2"
+          className="group cursor-pointer "
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-100 transition-all duration-300  ">

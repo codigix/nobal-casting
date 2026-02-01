@@ -69,12 +69,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans selection:bg-blue-100 selection:text-blue-700">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <div className="bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-200">
-            <Building2 className="w-10 h-10 text-white" strokeWidth={1.5} />
-          </div>
-        </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900 tracking-tight">
+        <h2 className="mt-6 text-center text-xl  text-slate-900 ">
           Nobal Casting
         </h2>
         <p className="mt-2 text-center text-sm text-slate-600">
@@ -83,21 +78,21 @@ export default function LoginPage() {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-xl shadow-slate-200/50 sm:rounded-3xl sm:px-10 border border-slate-100">
+        <div className="bg-white p-2  shadow-slate-200/50  border border-slate-100">
           {/* Auth Toggle */}
-          <div className="flex p-1 bg-slate-100 rounded-xl mb-8">
+          <div className="flex p-1 bg-slate-100 mb-3">
             <button
               onClick={() => { setIsLogin(true); setError(''); setSuccess(''); }}
-              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
-                isLogin ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              className={`flex-1 py-2 text-xs rounded transition-all duration-200 ${
+                isLogin ? 'bg-white text-blue-600 ' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               Sign In
             </button>
             <button
               onClick={() => { setIsLogin(false); setError(''); setSuccess(''); }}
-              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
-                !isLogin ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              className={`flex-1 p-2 text-xs  rounded transition-all duration-200 ${
+                !isLogin ? 'bg-white text-blue-600 ' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               Register
@@ -118,15 +113,15 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
+          <form className="" onSubmit={handleSubmit}>
             {!isLogin && (
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">
+                <label className="block text-xs  text-slate-700 mb-1.5 ml-1">
                   Full Name
                 </label>
-                <div className="relative group">
+                <div className="relative group mb-3">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                    <User className="h-3 w-3 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                   </div>
                   <input
                     type="text"
@@ -134,7 +129,7 @@ export default function LoginPage() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     disabled={loading}
-                    className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all sm:text-sm"
+                    className="block w-full pl-11 pr-4 py-2 bg-slate-50 border border-slate-200 rounded text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-xs"
                     placeholder="Enter your name"
                   />
                 </div>
@@ -142,12 +137,12 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">
+              <label className="block text-xs  text-slate-700 mb-1.5 ml-1">
                 Email Address
               </label>
-              <div className="relative group">
+              <div className="relative group mb-3">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  <Mail className="h-3 w-3 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                 </div>
                 <input
                   type="email"
@@ -155,7 +150,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
-                  className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all sm:text-sm"
+                  className="block w-full pl-11 pr-4 py-2 bg-slate-50 border border-slate-200 rounded text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-xs"
                   placeholder="name@company.com"
                 />
               </div>
@@ -163,7 +158,7 @@ export default function LoginPage() {
 
             {!isLogin && (
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">
+                <label className="block text-xs  text-slate-700 mb-1.5 ml-1">
                   Department
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -173,9 +168,9 @@ export default function LoginPage() {
                       type="button"
                       onClick={() => setDepartment(dept.value)}
                       disabled={loading}
-                      className={`flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-semibold transition-all duration-200 ${
+                      className={`flex flex-col items-center justify-center p-2 rounded border text-xs  transition-all duration-200 ${
                         department === dept.value
-                          ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm shadow-blue-100'
+                          ? 'bg-blue-50 border-blue-500 text-blue-700  shadow-blue-100'
                           : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
                       }`}
                     >
@@ -188,21 +183,21 @@ export default function LoginPage() {
             )}
 
             <div>
-              <div className="flex items-center justify-between mb-1.5 ml-1">
-                <label className="block text-sm font-semibold text-slate-700">
+              <div className="flex mt-3 items-center justify-between mb-1.5 ml-1">
+                <label className="block text-xs  text-slate-700">
                   Password
                 </label>
                 {isLogin && (
                   <div className="text-sm">
-                    <a href="#" className="font-semibold text-blue-600 hover:text-blue-500">
+                    <a href="#" className=" text-blue-600 hover:text-blue-500">
                       Forgot?
                     </a>
                   </div>
                 )}
               </div>
-              <div className="relative group">
+              <div className="relative group mb-3">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  <Lock className="h-3 w-3 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -210,7 +205,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
-                  className="block w-full pl-11 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all sm:text-sm"
+                  className="block w-full pl-11 pr-12 py-2 bg-slate-50 border border-slate-200 rounded text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all sm:text-sm"
                   placeholder="••••••••"
                 />
                 <button
@@ -225,12 +220,12 @@ export default function LoginPage() {
 
             {!isLogin && (
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">
+                <label className="block text-xs  text-slate-700 mb-1.5 ml-1">
                   Confirm Password
                 </label>
-                <div className="relative group">
+                <div className="relative group mb-3 ">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                    <Lock className="h-3 w-3 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                   </div>
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
@@ -238,13 +233,13 @@ export default function LoginPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     disabled={loading}
-                    className="block w-full pl-11 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all sm:text-sm"
+                    className="block w-full pl-11 pr-12 py-2 bg-slate-50 border border-slate-200 rounded text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all sm:text-sm"
                     placeholder="••••••••"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                    className="absolute inset-y-0 right-0 p-2 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
                   >
                     {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
@@ -255,7 +250,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-blue-200 text-sm  text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 active:transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full flex justify-center p-2 border border-transparent rounded  shadow-blue-200 text-xs  text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 active:transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <div className="flex items-center gap-2">
@@ -272,8 +267,8 @@ export default function LoginPage() {
           </form>
 
           {isLogin && (
-            <div className="mt-8 pt-8 border-t border-slate-100">
-              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+            <div className="mt-2 border-t border-slate-100">
+              <div className="bg-slate-50 rounded p-2 border border-slate-100">
                 <p className="text-[11px]  text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5" />
                   Demo Access
@@ -281,11 +276,11 @@ export default function LoginPage() {
                 <div className="flex flex-col gap-1 text-sm">
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500">Email</span>
-                    <code className="text-blue-600 bg-blue-50/50 px-2 py-0.5 rounded font-semibold">test@example.com</code>
+                    <code className="text-blue-600 bg-blue-50/50 px-2 py-0.5 rounded ">test@example.com</code>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500">Key</span>
-                    <code className="text-blue-600 bg-blue-50/50 px-2 py-0.5 rounded font-semibold">password123</code>
+                    <code className="text-blue-600 bg-blue-50/50 px-2 py-0.5 rounded ">password123</code>
                   </div>
                 </div>
               </div>

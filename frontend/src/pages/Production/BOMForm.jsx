@@ -32,14 +32,14 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
           <Icon size={10} strokeWidth={2.2} />
         </div>
         <div>
-          <h2 className="text-base font-semibold flex items-center gap-2">
+          <h2 className="text-base flex items-center gap-2">
             <span className={`${theme.text}  text-xs`}>{title.split(' ')[0]}</span>
-            <span className="text-slate-900 tracking-tight  ">{title.split(' ').slice(1).join(' ')}</span>
+            <span className="text-slate-900   ">{title.split(' ').slice(1).join(' ')}</span>
           </h2>
           {subtitle && <p className=" text-xs  font-medium text-slate-400  mt-1 opacity-80">{subtitle}</p>}
         </div>
         {badge && (
-          <span className={`ml-2 px-3 py-1 ${theme.bg} ${theme.text}  text-xs    rounded-full border ${theme.border}  tracking-wider`}>
+          <span className={`ml-2 px-3 py-1 ${theme.bg} ${theme.text}  text-xs    rounded border ${theme.border}  tracking-wider`}>
             {badge}
           </span>
         )}
@@ -56,13 +56,13 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
 
 const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = 'blue' }) => {
   const themes = {
-    blue: 'text-blue-600 bg-blue-50/50 border-blue-100',
-    emerald: 'text-emerald-600 bg-emerald-50/50 border-emerald-100',
-    amber: 'text-amber-600 bg-amber-50/50 border-amber-100',
-    rose: 'text-rose-600 bg-rose-50/50 border-rose-100',
-    indigo: 'text-indigo-600 bg-indigo-50/50 border-indigo-100',
-    slate: 'text-slate-600 bg-slate-50/50 border-slate-100',
-    cyan: 'text-cyan-600 bg-cyan-50/50 border-cyan-100'
+    blue: 'text-blue-600 bg-blue-50/30 border-blue-100/50',
+    emerald: 'text-emerald-600 bg-emerald-50/30 border-emerald-100/50',
+    amber: 'text-amber-600 bg-amber-50/30 border-amber-100/50',
+    rose: 'text-rose-600 bg-rose-50/30 border-rose-100/50',
+    indigo: 'text-indigo-600 bg-indigo-50/30 border-indigo-100/50',
+    slate: 'text-slate-600 bg-slate-50/30 border-slate-100/50',
+    cyan: 'text-cyan-600 bg-cyan-50/30 border-cyan-100/50'
   }
 
   const activeTheme = themes[themeColor] || themes.blue
@@ -71,25 +71,19 @@ const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = '
     <button
       type="button"
       onClick={() => onClick(section)}
-      className={`w-full flex items-center justify-between  p-2 rounded transition-all duration-500 group relative  ${isActive
-          ? `${activeTheme} shadow-md border translate-x-1`
-          : 'text-slate-500 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-100'
+      className={`flex items-center gap-2 p-1 rounded  transition-all duration-300 group relative border ${isActive
+        ? `${activeTheme}  border-current/20 scale-[1.02]`
+        : 'text-slate-500 hover:bg-white hover:text-slate-900 border-transparent hover:border-slate-100'
         }`}
     >
-      {isActive && (
-        <div className={`absolute left-0 top-0 w-1 h-full ${activeTheme.split(' ')[0].replace('text', 'bg')}`} />
-      )}
-      <div className="flex items-center gap-4">
-        <div className={`p-2 rounded  transition-all duration-500 ${isActive ? 'bg-white shadow-lg scale-110 rotate-3' : 'bg-slate-50 group-hover:bg-white'}`}>
-          <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
-        </div>
-        <span className="text-[11px]     ">{label}</span>
+      <div className={`p-1.5 rounded transition-all duration-300 ${isActive ? 'bg-white ' : 'bg-slate-50 group-hover:bg-white'}`}>
+        <Icon size={14} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
       </div>
+      <span className={`text-xs   ${isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`}>
+        {label}
+      </span>
       {isActive && (
-        <div className="flex items-center gap-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-          <div className="w-1 h-1 rounded-full bg-current opacity-40" />
-        </div>
+        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded bg-current opacity-40" />
       )}
     </button>
   )
@@ -703,71 +697,70 @@ export default function BOMForm() {
             try {
               const bomDetailsResponse = await productionService.getBOMDetails(bom.bom_id)
               const bomDetails = bomDetailsResponse && bomDetailsResponse.data ? bomDetailsResponse.data : bomDetailsResponse
-              if (bomDetails && bomDetails.lines && bomDetails.lines.length > 0) {
+              if (bomDetails) {
                 totalCost = 0
-
-                if (isFinishedGoods) {
-                  const newBomLines = []
+                // Sum up materials cost
+                if (bomDetails.lines) {
                   for (const line of bomDetails.lines) {
-                    try {
-                      const itemResp = await productionService.getItemDetails(line.component_code)
-                      const itemRate = itemResp?.data?.valuation_rate || 0
-                      const qty = parseFloat(line.quantity || 0)
-                      const lossPercentage = itemResp?.data?.loss_percentage || line.item_loss_percentage || '0'
-                      const amount = (itemRate * qty).toFixed(2)
-                      const scrapQty = (qty * (parseFloat(lossPercentage) / 100)).toFixed(2)
-
-                      totalCost += parseFloat(amount)
-
-                      newBomLines.push({
-                        id: Date.now() + Math.random(),
-                        component_code: line.component_code,
-                        component_name: line.component_name || itemResp?.data?.name || '',
-                        qty: qty.toString(),
-                        uom: line.uom || 'Kg',
-                        item_group: line.item_group,
-                        rate: itemRate.toString(),
-                        amount: amount,
-                        loss_percentage: lossPercentage,
-                        scrap_qty: scrapQty,
-                        notes: line.notes || ''
-                      })
-                    } catch (e) {
-                      console.warn(`Failed to fetch details for ${line.component_code}:`, e)
-                    }
+                    const itemResp = await productionService.getItemDetails(line.component_code)
+                    const itemRate = parseFloat(itemResp?.data?.valuation_rate || line.rate || 0)
+                    totalCost += (itemRate * parseFloat(line.quantity || 0))
                   }
-
-                  if (newBomLines.length > 0) {
-                    setBomLines([...bomLines, ...newBomLines])
-                    alert(`✓ Added ${newBomLines.length} sub-assemblies from ${componentName}`)
-                    setNewLine({ component_code: '', component_name: '', qty: '1', uom: 'Kg', item_group: '', rate: '0', selling_price: '0', notes: '', loss_percentage: '0', scrap_qty: '0' })
-                    return
-                  }
-                } else {
-                  for (const line of bomDetails.lines) {
-                    try {
-                      const itemResp = await productionService.getItemDetails(line.component_code)
-                      if (itemResp && itemResp.data) {
-                        const itemRate = parseFloat(itemResp.data.valuation_rate || 0)
-                        const qty = parseFloat(line.quantity || 0)
-                        totalCost += (itemRate * qty)
-                      }
-                    } catch (e) {
-                      console.warn(`Failed to fetch cost for ${line.component_code}:`, e)
-                    }
+                }
+                // Sum up operations cost
+                if (bomDetails.operations) {
+                  for (const op of bomDetails.operations) {
+                    totalCost += parseFloat(op.operating_cost || 0)
                   }
                 }
               }
             } catch (detailErr) {
-              console.warn('Failed to fetch BOM details for', value, ':', detailErr.message)
-              totalCost = parseFloat(item.valuation_rate || 0)
+              console.warn('Failed to fetch BOM details for cost calculation:', detailErr)
             }
           }
 
-          const costPerUnit = totalCost / bomQuantity
-          rate = costPerUnit.toFixed(2)
+          rate = (totalCost / bomQuantity).toFixed(2)
           if (bom.selling_rate && parseFloat(bom.selling_rate) > 0) {
             sellingPrice = (parseFloat(bom.selling_rate) / bomQuantity).toFixed(2)
+          } else if (bom.total_cost && parseFloat(bom.total_cost) > 0) {
+            // Fallback: if no selling rate, use total cost as selling price for reference
+            sellingPrice = (parseFloat(bom.total_cost) / bomQuantity).toFixed(2)
+          }
+
+          // Optional: Explosion logic for Finished Goods
+          if (isFinishedGoods && window.confirm(`Explode BOM for ${componentName}? (Cancel to add as a single item)`)) {
+            const bomDetailsResponse = await productionService.getBOMDetails(bom.bom_id)
+            const bomDetails = bomDetailsResponse && bomDetailsResponse.data ? bomDetailsResponse.data : bomDetailsResponse
+            if (bomDetails && bomDetails.lines && bomDetails.lines.length > 0) {
+              const newBomLines = []
+              for (const line of bomDetails.lines) {
+                try {
+                  const itemResp = await productionService.getItemDetails(line.component_code)
+                  const itemRate = itemResp?.data?.valuation_rate || 0
+                  const qty = parseFloat(line.quantity || 0)
+                  const amount = (itemRate * qty).toFixed(2)
+                  
+                  newBomLines.push({
+                    id: Date.now() + Math.random(),
+                    component_code: line.component_code,
+                    component_name: line.component_name || itemResp?.data?.name || '',
+                    qty: qty.toString(),
+                    uom: line.uom || 'Kg',
+                    item_group: line.item_group,
+                    rate: itemRate.toString(),
+                    amount: amount,
+                    loss_percentage: itemResp?.data?.loss_percentage || '0',
+                    scrap_qty: '0',
+                    notes: line.notes || ''
+                  })
+                } catch (e) { console.warn(e) }
+              }
+              if (newBomLines.length > 0) {
+                setBomLines([...bomLines, ...newBomLines])
+                setNewLine({ component_code: '', component_name: '', qty: '1', uom: 'Kg', item_group: '', rate: '0', selling_price: '0', notes: '', loss_percentage: '0', scrap_qty: '0' })
+                return
+              }
+            }
           }
         }
       } catch (bomErr) {
@@ -777,15 +770,15 @@ export default function BOMForm() {
 
     const selectedItem = items.find(i => i.item_code === value) || item
     const lossPercentage = selectedItem?.loss_percentage || '0'
-    setNewLine({ 
-      ...newLine, 
-      component_code: value, 
-      component_name: componentName, 
-      rate, 
+    setNewLine({
+      ...newLine,
+      component_code: value,
+      component_name: componentName,
+      rate,
       selling_price: sellingPrice,
       uom: selectedItem?.uom || newLine.uom,
       item_group: selectedItem?.item_group || newLine.item_group,
-      loss_percentage: lossPercentage 
+      loss_percentage: lossPercentage
     })
   }
 
@@ -820,31 +813,29 @@ export default function BOMForm() {
             try {
               const bomDetailsResponse = await productionService.getBOMDetails(bom.bom_id)
               const bomDetails = bomDetailsResponse && bomDetailsResponse.data ? bomDetailsResponse.data : bomDetailsResponse
-              if (bomDetails && bomDetails.lines && bomDetails.lines.length > 0) {
+              if (bomDetails) {
                 totalCost = 0
-                for (const line of bomDetails.lines) {
-                  try {
+                if (bomDetails.lines) {
+                  for (const line of bomDetails.lines) {
                     const itemResp = await productionService.getItemDetails(line.component_code)
-                    if (itemResp && itemResp.data) {
-                      const itemRate = parseFloat(itemResp.data.valuation_rate || 0)
-                      const qty = parseFloat(line.quantity || 0)
-                      totalCost += (itemRate * qty)
-                    }
-                  } catch (e) {
-                    console.warn(`Failed to fetch cost for ${line.component_code}:`, e)
+                    const itemRate = parseFloat(itemResp?.data?.valuation_rate || line.rate || 0)
+                    totalCost += (itemRate * parseFloat(line.quantity || 0))
+                  }
+                }
+                if (bomDetails.operations) {
+                  for (const op of bomDetails.operations) {
+                    totalCost += parseFloat(op.operating_cost || 0)
                   }
                 }
               }
-            } catch (detailErr) {
-              console.warn('Failed to fetch BOM details for', value, ':', detailErr.message)
-              totalCost = parseFloat(item.valuation_rate || 0)
-            }
+            } catch (detailErr) { console.warn(detailErr) }
           }
 
-          const costPerUnit = totalCost / bomQuantity
-          rate = costPerUnit.toFixed(2)
+          rate = (totalCost / bomQuantity).toFixed(2)
           if (bom.selling_rate && parseFloat(bom.selling_rate) > 0) {
             sellingPrice = (parseFloat(bom.selling_rate) / bomQuantity).toFixed(2)
+          } else if (bom.total_cost && parseFloat(bom.total_cost) > 0) {
+            sellingPrice = (parseFloat(bom.total_cost) / bomQuantity).toFixed(2)
           }
         }
       } catch (bomErr) {
@@ -892,13 +883,13 @@ export default function BOMForm() {
     const selling_amount = qty * sellingPrice
     const lossPercentage = parseFloat(newLine.loss_percentage) || 0
     const scrapQty = (qty * lossPercentage) / 100
-    setBomLines([...bomLines, { 
-      ...newLine, 
-      id: Date.now(), 
-      amount, 
+    setBomLines([...bomLines, {
+      ...newLine,
+      id: Date.now(),
+      amount,
       selling_amount,
-      loss_percentage: lossPercentage, 
-      scrap_qty: scrapQty 
+      loss_percentage: lossPercentage,
+      scrap_qty: scrapQty
     }])
     setNewLine({
       component_code: '',
@@ -927,7 +918,7 @@ export default function BOMForm() {
           const rate = parseFloat(updated.rate) || 0
           const sellingPrice = parseFloat(updated.selling_price) || 0
           const lossPercentage = parseFloat(updated.loss_percentage) || 0
-          
+
           updated.amount = (qty * rate).toFixed(2)
           updated.selling_amount = (qty * sellingPrice).toFixed(2)
           updated.scrap_qty = ((qty * lossPercentage) / 100).toFixed(2)
@@ -969,7 +960,7 @@ export default function BOMForm() {
     const sellingPrice = parseFloat(newRawMaterial.selling_price) || 0
     const amount = qty * rate
     const selling_amount = qty * sellingPrice
-    
+
     setRawMaterials([...rawMaterials, { ...newRawMaterial, id: Date.now(), amount, selling_amount }])
     setNewRawMaterial({
       item_code: '',
@@ -1150,7 +1141,7 @@ export default function BOMForm() {
               <div className="flex items-center gap-2 text-xs font-medium text-slate-400 mt-1">
                 <Activity size={12} className="text-indigo-500" />
                 <span>Manufacturing Intelligence</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                <span className="w-1.5 h-1.5 rounded bg-slate-200" />
                 <span className="text-indigo-600 ">{formData.status?.toUpperCase() || 'DRAFT'}</span>
               </div>
             </div>
@@ -1177,90 +1168,78 @@ export default function BOMForm() {
         </div>
 
         <form id="bom-form" onSubmit={handleSubmit} className="relative">
-          <div className="grid grid-cols-4 gap-6 items-start">
-            {/* Sidebar Navigation */}
-            <div className="col-span-1 sticky top-8 ">
-              <div className="space-y-6">
-                {/* BOM Intelligence Widget */}
-                <div className="bg-slate-900 rounded  relative  group">
-                  <div className="absolute -right-10 -to p-2 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all duration-1000" />
-                  <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-emerald-500/5 rounded-full blur-3xl group-hover:bg-emerald-500/10 transition-all duration-1000" />
+          <div className="space-y-6">
+            {/* Horizontal Header Navigation */}
+            <div className="flex flex-col md:flex-row gap-4 items-stretch">
+              {/* BOM Intelligence Widget */}
+              <div className="md:w-1/3 bg-slate-900 rounded p-2 relative group overflow-hidden  shadow-slate-200/50">
+                <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/10 rounded blur-3xl group-hover:bg-indigo-500/20 transition-all duration-1000" />
+                <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-emerald-500/5 rounded blur-3xl group-hover:bg-emerald-500/10 transition-all duration-1000" />
 
-                  <div className="relative z-10 p-2">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="relative">  
-                          <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping absolute inset-0" />
-                          <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 relative z-10" />
-                        </div>
-                        <span className="text-white  text-xs        opacity-90">Neural Core</span>
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <div className="w-2 h-2 rounded bg-indigo-500 animate-ping absolute inset-0" />
+                        <div className="w-2 h-2 rounded bg-indigo-500 relative z-10" />
                       </div>
-                      <div className="flex -space-x-2">
-                        {[1, 2, 3].map(i => (
-                          <div key={i} className="w-5 h-5 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center">
-                            <div className="w-1 h-1 rounded-full bg-indigo-400 opacity-40" />
-                          </div>
-                        ))}
+                      <span className="text-white text-[10px] opacity-70 font-bold tracking-[0.2em] uppercase">Neural Core</span>
+                    </div>
+                    <div className="flex -space-x-1.5">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="w-5 h-5 rounded border border-slate-800 bg-slate-800/50 flex items-center justify-center backdrop-blur-sm">
+                          <div className="w-1 h-1 rounded bg-indigo-400/40" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-white/5 rounded p-2 border border-white/5 backdrop-blur-md">
+                      <p className="text-slate-500 text-[8px] uppercase font-bold mb-1 tracking-widest">Protocol</p>
+                      <div className="flex items-center gap-1.5 overflow-hidden">
+                        <Activity size={12} className="text-indigo-400 shrink-0" />
+                        <p className="text-white text-[10px] truncate capitalize">
+                          {activeSection.replace('_', ' ')}
+                        </p>
                       </div>
                     </div>
 
-                    <div className="flex items-stretch gap-2">
-                      <div className="flex-[1.4] bg-white/5 rounded p-2 border border-white/5 backdrop-blur-md min-w-0">
-                        <p className="text-slate-500 text-[8px]      mb-2 px-1">Protocol</p>
-                        <div className="flex items-center gap-2">
-                          <div className="p-1.5 bg-indigo-500/20 rounded-lg shrink-0">
-                            <Activity size={12} className="text-indigo-400" />
-                          </div>
-                          <p className="text-white    text-xs  tracking-tight truncate">
-                            {activeSection.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                          </p>
-                        </div>
-                      </div>
-
-
-                    </div>
-                    <div className='flex gap-2 mt-2'>
-                      <div className="flex-1 bg-white/5 rounded p-2 border border-white/5 backdrop-blur-sm hover:border-indigo-500/30 transition-all group/stat min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-slate-500 text-[8px]     ">Materials</p>
-                          <Database size={10} className="text-slate-600 group-hover/stat:text-indigo-400 transition-colors" />
-                        </div>
-                        <p className="text-white   text-lg tracking-tighter">
+                    <div className="bg-white/5 rounded-lg p-2.5 border border-white/5 backdrop-blur-sm hover:border-indigo-500/20 transition-all">
+                      <p className="text-slate-500 text-[8px] uppercase font-bold mb-1 tracking-widest">Nodes</p>
+                      <div className="flex items-center gap-1.5">
+                        <Database size={12} className="text-slate-400" />
+                        <p className="text-white text-sm font-bold ">
                           {rawMaterials.length + bomLines.length}
                         </p>
                       </div>
+                    </div>
 
-                      <div className="flex-1 bg-white/5 rounded p-2 border border-white/5 backdrop-blur-sm hover:border-emerald-500/30 transition-all group/stat min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-slate-500 text-[8px]     ">Ops</p>
-                          <Settings size={10} className="text-slate-600 group-hover/stat:text-emerald-400 transition-colors" />
-                        </div>
-                        <p className="text-white   text-lg tracking-tighter">
+                    <div className="bg-white/5 rounded-lg p-2.5 border border-white/5 backdrop-blur-sm hover:border-emerald-500/20 transition-all">
+                      <p className="text-slate-500 text-[8px] uppercase font-bold mb-1 tracking-widest">Ops</p>
+                      <div className="flex items-center gap-1.5">
+                        <Settings size={12} className="text-slate-400" />
+                        <p className="text-white text-sm font-bold ">
                           {operations.length}
                         </p>
                       </div>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Navigation Links */}
-                <div className="bg-white/60 backdrop-blur-xl rounded border border-slate-200/50  shadow-slate-200/40 flex flex-col gap-1.5">
+              {/* Navigation Links - Horizontal */}
+              <div className="md:w-2/3 flex flex-col justify-between gap-3">
+                <div className="bg-white/70 backdrop-blur-2xl rounded border border-slate-200/60  p-1.5 flex flex-wrap items-center gap-1.5">
                   <NavItem
-                    label="Product Info"
+                    label="Product"
                     icon={Database}
                     section="product"
                     isActive={activeSection === 'product'}
                     onClick={scrollToSection}
                     themeColor="blue"
                   />
-                  <NavItem
-                    label="BOM Settings"
-                    icon={Settings}
-                    section="settings"
-                    isActive={activeSection === 'settings'}
-                    onClick={scrollToSection}
-                    themeColor="slate"
-                  />
+
                   <NavItem
                     label="Components"
                     icon={Layers}
@@ -1270,7 +1249,7 @@ export default function BOMForm() {
                     themeColor="indigo"
                   />
                   <NavItem
-                    label="Raw Materials"
+                    label="Materials"
                     icon={Database}
                     section="raw_materials"
                     isActive={activeSection === 'raw_materials'}
@@ -1278,7 +1257,7 @@ export default function BOMForm() {
                     themeColor="amber"
                   />
                   <NavItem
-                    label="Operations"
+                    label="Protocols"
                     icon={Settings}
                     section="operations"
                     isActive={activeSection === 'operations'}
@@ -1286,7 +1265,7 @@ export default function BOMForm() {
                     themeColor="emerald"
                   />
                   <NavItem
-                    label="Scrap Items"
+                    label="Scrap"
                     icon={Trash2}
                     section="scrap"
                     isActive={activeSection === 'scrap'}
@@ -1294,7 +1273,7 @@ export default function BOMForm() {
                     themeColor="rose"
                   />
                   <NavItem
-                    label="Costing"
+                    label="Valuation"
                     icon={TrendingDown}
                     section="costing"
                     isActive={activeSection === 'costing'}
@@ -1303,21 +1282,25 @@ export default function BOMForm() {
                   />
                 </div>
 
-                {/* Primary Action Buttons */}
-                <div className="flex flex-col gap-3">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white rounded py-4  text-xs     shadow-indigo-100 hover:bg-indigo-700 transition-all hover:-translate-y-1 active:scale-95 disabled:opacity-50"
-                  >
-                    {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={18} />}
-                    Initialize
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="group relative bg-indigo-600 text-white rounded p-2 text-xs shadow-indigo-200 hover:shadow-indigo-300 transition-all active:scale-[0.98] disabled:opacity-50"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-violet-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative flex items-center justify-center gap-3">
+                    {loading ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded animate-spin" />
+                    ) : (
+                      <Save size={16} className="group-hover:rotate-12 transition-transform" />
+                    )}
+                    <span>Initialize Production formulation</span>
+                  </div>
+                </button>
               </div>
             </div>
 
-            <div className="col-span-3">
+            <div className="w-full">
               {error && (
                 <div className="flex items-center gap-4 rounded border border-rose-100 bg-rose-50/50  p-2 text-rose-800 animate-in fade-in slide-in-from-top-2 backdrop-blur-sm">
                   <div className="p-2 bg-rose-100 rounded-lg">
@@ -1341,8 +1324,9 @@ export default function BOMForm() {
                   />
                   {expandedSections.product && (
                     <div className=" p-2">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <FieldWrapper label="Strategic Product Name" required>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
+                       <div className='col-span-3'>
+                         <FieldWrapper label="Item Name" required>
                           <SearchableSelect
                             value={formData.product_name}
                             onChange={handleProductNameChange}
@@ -1356,8 +1340,10 @@ export default function BOMForm() {
                             className="glass-input"
                           />
                         </FieldWrapper>
+                       </div>
 
-                        <FieldWrapper label="Strategic Item Code" required>
+                        <div className='col-span-3'>
+                          <FieldWrapper label=" Item Code" required>
                           <SearchableSelect
                             value={formData.item_code}
                             onChange={handleItemCodeChange}
@@ -1371,8 +1357,10 @@ export default function BOMForm() {
                             className="glass-input"
                           />
                         </FieldWrapper>
+                        </div>
 
-                        <FieldWrapper label="Classification Group">
+                        <div className='col-span-3'>
+                          <FieldWrapper label="Item Group">
                           <SearchableSelect
                             value={formData.item_group}
                             onChange={(value) => setFormData({ ...formData, item_group: value })}
@@ -1384,8 +1372,10 @@ export default function BOMForm() {
                             className="glass-input"
                           />
                         </FieldWrapper>
+                        </div>
 
-                        <FieldWrapper label="Batch Quantity Specification" required>
+                        <div className='col-span-3'>
+                          <FieldWrapper label="Quantity" required>
                           <div className="rounded  border border-slate-200 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all bg-white">
                             <input
                               type="number"
@@ -1398,7 +1388,9 @@ export default function BOMForm() {
 
                           </div>
                         </FieldWrapper>
-                        <FieldWrapper label="UOM">
+                        </div>
+                        <div className='col-span-3'>
+                          <FieldWrapper label="UOM">
                           <div className=" border-l border-slate-100 bg-slate-50/50">
                             <SearchableSelect
                               value={formData.uom}
@@ -1413,22 +1405,26 @@ export default function BOMForm() {
                           </div>
 
                         </FieldWrapper>
+                        </div>
+                        <div className='col-span-2'>
+                          <FieldWrapper label="Revision Protocol">
+                            <div className="relative group/input">
+                              <input
+                                type="number"
+                                name="revision"
+                                value={formData.revision}
+                                onChange={handleInputChange}
+                                step="1"
+                                className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all focus:outline-none  "
+                              />
+                              <div className="absolute right-4 top-1/2 -translate-y-1/2  text-xs    text-slate-300    group-focus-within/input:text-blue-500 transition-colors">VER</div>
+                            </div>
+                          </FieldWrapper>
+                        </div>
 
-                        <FieldWrapper label="Revision Protocol">
-                          <div className="relative group/input">
-                            <input
-                              type="number"
-                              name="revision"
-                              value={formData.revision}
-                              onChange={handleInputChange}
-                              step="1"
-                              className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all focus:outline-none  "
-                            />
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2  text-xs    text-slate-300    group-focus-within/input:text-blue-500 transition-colors">VER</div>
-                          </div>
-                        </FieldWrapper>
 
-                        <FieldWrapper label="Item Valuation Rate (₹)">
+                        <div className='col-span-2'>
+                          <FieldWrapper label="Item Valuation Rate (₹)">
                           <div className="relative group/input">
                             <input
                               type="number"
@@ -1441,8 +1437,10 @@ export default function BOMForm() {
                             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-300 group-focus-within/input:text-blue-500 transition-colors">INR</div>
                           </div>
                         </FieldWrapper>
+                        </div>
 
-                        <FieldWrapper label="Selling Rate (₹)">
+                        <div className='col-span-2'>
+                          <FieldWrapper label="Selling Rate (₹)">
                           <div className="relative group/input">
                             <input
                               type="number"
@@ -1455,8 +1453,10 @@ export default function BOMForm() {
                             <div className="absolute right-4 top-1/2 -translate-y-1/2  text-xs    text-slate-300    group-focus-within/input:text-emerald-500 transition-colors">INR</div>
                           </div>
                         </FieldWrapper>
+                        </div>
 
-                        <FieldWrapper label="Total Target Value (₹)">
+                        <div className='col-span-2'>
+                          <FieldWrapper label="Total Target Value (₹)">
                           <div className="relative group/input">
                             <input
                               type="text"
@@ -1467,30 +1467,31 @@ export default function BOMForm() {
                             <div className="absolute right-4 top-1/2 -translate-y-1/2  text-xs    text-slate-300">AUTO</div>
                           </div>
                         </FieldWrapper>
+                        </div>
 
-                        <div className="flex items-center gap-2 pt-4">
+                        <div className="flex col-span-12 items-center gap-2 pt-4">
                           <label className="flex items-center gap-4 cursor-pointer group">
-                            <div className={`w-12 h-7 rounded-full transition-all duration-500 relative ${formData.is_active ? 'bg-emerald-500 shadow-lg shadow-emerald-100' : 'bg-slate-200'}`}>
+                            <div className={`w-12 h-7 rounded transition-all duration-500 relative ${formData.is_active ? 'bg-emerald-500 shadow-lg shadow-emerald-100' : 'bg-slate-200'}`}>
                               <input
                                 type="checkbox"
                                 checked={formData.is_active}
                                 onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                                 className="hidden"
                               />
-                              <div className={`absolute top-1 w-5 h-5 rounded-full bg-white   transition-all duration-500 ${formData.is_active ? 'left-6' : 'left-1'}`} />
+                              <div className={`absolute top-1 w-5 h-5 rounded bg-white   transition-all duration-500 ${formData.is_active ? 'left-6' : 'left-1'}`} />
                             </div>
                             <span className=" text-xs    text-slate-500    group-hover:text-slate-900 transition-colors">Active</span>
                           </label>
 
                           <label className="flex items-center gap-4 cursor-pointer group">
-                            <div className={`w-12 h-7 rounded-full transition-all duration-500 relative ${formData.is_default ? 'bg-blue-600 shadow-lg shadow-blue-100' : 'bg-slate-200'}`}>
+                            <div className={`w-12 h-7 rounded transition-all duration-500 relative ${formData.is_default ? 'bg-blue-600 shadow-lg shadow-blue-100' : 'bg-slate-200'}`}>
                               <input
                                 type="checkbox"
                                 checked={formData.is_default}
                                 onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
                                 className="hidden"
                               />
-                              <div className={`absolute top-1 w-5 h-5 rounded-full bg-white   transition-all duration-500 ${formData.is_default ? 'left-6' : 'left-1'}`} />
+                              <div className={`absolute top-1 w-5 h-5 rounded bg-white   transition-all duration-500 ${formData.is_default ? 'left-6' : 'left-1'}`} />
                             </div>
                             <span className=" text-xs    text-slate-500    group-hover:text-slate-900 transition-colors">Default</span>
                           </label>
@@ -1501,7 +1502,7 @@ export default function BOMForm() {
                 </Card>
 
                 {/* Settings Card */}
-                <Card className=" border border-slate-200/50 p-2  shadow-slate-200/40 bg-white/90 backdrop-blur-xl rounded">
+                {/* <Card className=" border border-slate-200/50 p-2  shadow-slate-200/40 bg-white/90 backdrop-blur-xl rounded">
                   <SectionHeader
                     id="settings"
                     title="BOM Settings"
@@ -1596,47 +1597,47 @@ export default function BOMForm() {
                       </div>
                       <div className="flex flex-wrap items-center col-span-2 gap-6 pt-4">
                           <label className="flex items-center gap-4 cursor-pointer group">
-                            <div className={`w-12 h-7 rounded-full transition-all duration-500 relative ${formData.with_operations ? 'bg-indigo-600 shadow-lg shadow-indigo-100' : 'bg-slate-200'}`}>
+                            <div className={`w-12 h-7 rounded transition-all duration-500 relative ${formData.with_operations ? 'bg-indigo-600 shadow-lg shadow-indigo-100' : 'bg-slate-200'}`}>
                               <input
                                 type="checkbox"
                                 checked={formData.with_operations}
                                 onChange={(e) => setFormData({ ...formData, with_operations: e.target.checked })}
                                 className="hidden"
                               />
-                              <div className={`absolute top-1 w-5 h-5 rounded-full bg-white   transition-all duration-500 ${formData.with_operations ? 'left-6' : 'left-1'}`} />
+                              <div className={`absolute top-1 w-5 h-5 rounded bg-white   transition-all duration-500 ${formData.with_operations ? 'left-6' : 'left-1'}`} />
                             </div>
                             <span className=" text-xs    text-slate-500    group-hover:text-slate-900 transition-colors">With Operations</span>
                           </label>
 
                           <label className="flex items-center gap-4 cursor-pointer group">
-                            <div className={`w-12 h-7 rounded-full transition-all duration-500 relative ${formData.allow_alternative_item ? 'bg-indigo-600 shadow-lg shadow-indigo-100' : 'bg-slate-200'}`}>
+                            <div className={`w-12 h-7 rounded transition-all duration-500 relative ${formData.allow_alternative_item ? 'bg-indigo-600 shadow-lg shadow-indigo-100' : 'bg-slate-200'}`}>
                               <input
                                 type="checkbox"
                                 checked={formData.allow_alternative_item}
                                 onChange={(e) => setFormData({ ...formData, allow_alternative_item: e.target.checked })}
                                 className="hidden"
                               />
-                              <div className={`absolute top-1 w-5 h-5 rounded-full bg-white   transition-all duration-500 ${formData.allow_alternative_item ? 'left-6' : 'left-1'}`} />
+                              <div className={`absolute top-1 w-5 h-5 rounded bg-white   transition-all duration-500 ${formData.allow_alternative_item ? 'left-6' : 'left-1'}`} />
                             </div>
                             <span className=" text-xs    text-slate-500    group-hover:text-slate-900 transition-colors">Allow Alternatives</span>
                           </label>
 
                           <label className="flex items-center gap-4 cursor-pointer group">
-                            <div className={`w-12 h-7 rounded-full transition-all duration-500 relative ${formData.auto_sub_assembly_rate ? 'bg-indigo-600 shadow-lg shadow-indigo-100' : 'bg-slate-200'}`}>
+                            <div className={`w-12 h-7 rounded transition-all duration-500 relative ${formData.auto_sub_assembly_rate ? 'bg-indigo-600 shadow-lg shadow-indigo-100' : 'bg-slate-200'}`}>
                               <input
                                 type="checkbox"
                                 checked={formData.auto_sub_assembly_rate}
                                 onChange={(e) => setFormData({ ...formData, auto_sub_assembly_rate: e.target.checked })}
                                 className="hidden"
                               />
-                              <div className={`absolute top-1 w-5 h-5 rounded-full bg-white   transition-all duration-500 ${formData.auto_sub_assembly_rate ? 'left-6' : 'left-1'}`} />
+                              <div className={`absolute top-1 w-5 h-5 rounded bg-white   transition-all duration-500 ${formData.auto_sub_assembly_rate ? 'left-6' : 'left-1'}`} />
                             </div>
                             <span className=" text-xs    text-slate-500    group-hover:text-slate-900 transition-colors">Auto Set Sub-assembly Rate</span>
                           </label>
                         </div>
                     </div>
                   )}
-                </Card>
+                </Card> */}
 
                 {/* Components Section */}
                 <Card className=" border border-slate-200/50 p-2  shadow-slate-200/40 bg-white/90 backdrop-blur-xl rounded">
@@ -1664,7 +1665,7 @@ export default function BOMForm() {
                         </h4>
 
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-2 relative z-10">
-                          <div className="md:col-span-4">
+                          <div className="md:col-span-3">
                             <FieldWrapper label="Subassemblies Name" required>
                               <SearchableSelect
                                 value={newLine.component_code}
@@ -1678,7 +1679,7 @@ export default function BOMForm() {
                               />
                             </FieldWrapper>
                           </div>
-                          <div className="md:col-span-4">
+                          <div className="md:col-span-3">
                             <FieldWrapper label="Item Group">
                               <SearchableSelect
                                 value={newLine.item_group}
@@ -1692,7 +1693,7 @@ export default function BOMForm() {
                               />
                             </FieldWrapper>
                           </div>
-                          <div className="md:col-span-4">
+                          <div className="md:col-span-1">
                             <FieldWrapper label="Qty" required>
                               <div className="relative group/input">
                                 <input
@@ -1706,7 +1707,7 @@ export default function BOMForm() {
                               </div>
                             </FieldWrapper>
                           </div>
-                          <div className="md:col-span-4">
+                          <div className="md:col-span-3">
                             <FieldWrapper label="UOM">
                               <SearchableSelect
                                 value={newLine.uom}
@@ -1720,21 +1721,9 @@ export default function BOMForm() {
                               />
                             </FieldWrapper>
                           </div>
-                          
+
                           <div className="md:col-span-2">
                             <FieldWrapper label="Valuation (₹)">
-                              <input
-                                type="number"
-                                value={newLine.selling_price}
-                                onChange={(e) => setNewLine({ ...newLine, selling_price: e.target.value })}
-                                onKeyDown={handleKeyDown}
-                                step="0.01"
-                                className="w-full bg-white border border-slate-200 rounded p-2 text-xs focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
-                              />
-                            </FieldWrapper>
-                          </div>
-                          <div className="md:col-span-2">
-                            <FieldWrapper label="Selling (₹)">
                               <input
                                 type="number"
                                 value={newLine.rate}
@@ -1745,19 +1734,9 @@ export default function BOMForm() {
                               />
                             </FieldWrapper>
                           </div>
-                          <div className="md:col-span-2">
-                            <FieldWrapper label="Loss %">
-                              <input
-                                type="number"
-                                value={newLine.loss_percentage}
-                                onChange={(e) => setNewLine({ ...newLine, loss_percentage: e.target.value })}
-                                onKeyDown={handleKeyDown}
-                                step="0.01"
-                                className="w-full bg-white border border-slate-200 rounded p-2 text-xs focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none text-center"
-                              />
-                            </FieldWrapper>
-                          </div>
-                          
+
+
+
                           <div className="md:col-span-2 flex items-end">
                             <button
                               type="button"
@@ -1795,7 +1774,7 @@ export default function BOMForm() {
                                       <span className=" text-xs    text-slate-200 group-hover:text-indigo-300 transition-colors">{String(index + 1).padStart(2, '0')}</span>
                                     </td>
                                     <td className="p-2 ">
-                                      <div className="  text-slate-900 text-xs  tracking-tight">{line.component_name}</div>
+                                      <div className="  text-slate-900 text-xs  ">{line.component_name}</div>
                                       <div className="flex items-center gap-2 mt-1.5">
                                         <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[9px]   rounded   ">{line.component_code}</span>
                                         {parseFloat(line.loss_percentage) > 0 && (
@@ -1817,7 +1796,7 @@ export default function BOMForm() {
                                       {isEditing ? (
                                         <input type="number" value={data.rate || ''} onChange={(e) => setEditingRowData({ ...data, rate: e.target.value })} className="w-24 bg-white border border-indigo-200 rounded  p-2 text-xs   text-right focus:ring-4 focus:ring-indigo-500/10 outline-none  " />
                                       ) : (
-                                                                                <div className="text-xs   text-slate-500 italic">₹{parseFloat(line.selling_price || 0).toLocaleString()}</div>
+                                        <div className="text-xs   text-slate-500 italic">₹{parseFloat(line.rate || 0).toLocaleString()}</div>
 
                                       )}
                                     </td>
@@ -1825,11 +1804,11 @@ export default function BOMForm() {
                                       {isEditing ? (
                                         <input type="number" value={data.selling_price || ''} onChange={(e) => setEditingRowData({ ...data, selling_price: e.target.value })} className="w-24 bg-white border border-indigo-200 rounded  p-2 text-xs   text-right focus:ring-4 focus:ring-indigo-500/10 outline-none  " />
                                       ) : (
-                                        <div className="text-xs   text-slate-500 italic">₹{parseFloat(line.rate || 0).toLocaleString()}</div>
+                                        <div className="text-xs   text-slate-500 italic">₹{parseFloat(line.selling_price || 0).toLocaleString()}</div>
                                       )}
                                     </td>
                                     <td className="p-2  text-right">
-                                      <span className="  text-indigo-600 text-xs ">₹{parseFloat(isEditing ? (parseFloat(data.qty || 0) * parseFloat(data.selling_price || 0)) : (line.selling_amount || line.amount || 0)).toLocaleString()}</span>
+                                      <span className="  text-indigo-600 text-xs ">₹{parseFloat(isEditing ? (parseFloat(data.qty || 0) * parseFloat(data.rate || 0)) : (line.amount || 0)).toLocaleString()}</span>
                                     </td>
                                     <td className="p-2 ">
                                       <div className="flex items-center justify-center gap-2">
@@ -1840,7 +1819,7 @@ export default function BOMForm() {
                                               const rate = parseFloat(editingRowData.rate) || 0
                                               const sellingPrice = parseFloat(editingRowData.selling_price) || 0
                                               const lossPercentage = parseFloat(editingRowData.loss_percentage) || 0
-                                              
+
                                               const updatedData = {
                                                 ...editingRowData,
                                                 amount: (qty * rate).toFixed(2),
@@ -1908,9 +1887,9 @@ export default function BOMForm() {
                         {/* RM Consumption Preview */}
                         {rawMaterials.length > 0 && (
                           <div className="bg-amber-500/5 rounded border border-amber-200/30 p-2 relative  group">
-                            <div className="absolute -right-10 -to p-2 w-40 h-40 bg-amber-500/5 rounded-full blur-3xl group-hover:bg-amber-500/10 transition-all duration-1000" />
+                            <div className="absolute -right-10 -to p-2 w-40 h-40 bg-amber-500/5 rounded blur-3xl group-hover:bg-amber-500/10 transition-all duration-1000" />
                             <h4 className=" text-xs    text-amber-600     mb-6 flex items-center gap-3">
-                              <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              <div className="w-1.5 h-1.5 rounded bg-amber-500 animate-pulse" />
                               Intelligence Forecast (for {formData.quantity} {formData.uom})
                             </h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 relative z-10">
@@ -1937,8 +1916,8 @@ export default function BOMForm() {
                             Add Raw Material
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-12 gap-2 relative z-10">
-                            <div className="md:col-span-4">
-                              <FieldWrapper label="Item Name" required>
+                            <div className="md:col-span-3">
+                              <FieldWrapper label="Material Name" required>
                                 <SearchableSelect
                                   value={newRawMaterial.item_code}
                                   onChange={handleRawMaterialItemChange}
@@ -1951,7 +1930,7 @@ export default function BOMForm() {
                                 />
                               </FieldWrapper>
                             </div>
-                            <div className="md:col-span-4">
+                            <div className="md:col-span-3">
                               <FieldWrapper label="Item Group">
                                 <SearchableSelect
                                   value={newRawMaterial.item_group}
@@ -1965,7 +1944,7 @@ export default function BOMForm() {
                                 />
                               </FieldWrapper>
                             </div>
-                            <div className="md:col-span-4">
+                            <div className="md:col-span-3">
                               <FieldWrapper label="Warehouse">
                                 <SearchableSelect
                                   value={newRawMaterial.source_warehouse}
@@ -1979,58 +1958,7 @@ export default function BOMForm() {
                                 />
                               </FieldWrapper>
                             </div>
-                            <div className="md:col-span-4">
-                              <FieldWrapper label="Qty" required>
-                                <input
-                                  type="number"
-                                  value={newRawMaterial.qty}
-                                  onChange={(e) => handleNewRawMaterialChange('qty', e.target.value)}
-                                  onKeyDown={handleKeyDown}
-                                  step="0.01"
-                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all focus:outline-none  "
-                                />
-                              </FieldWrapper>
-                            </div>
-                            <div className="md:col-span-4">
-                              <FieldWrapper label="UOM">
-                                <SearchableSelect
-                                  value={newRawMaterial.uom}
-                                  onChange={(value) => setNewRawMaterial({ ...newRawMaterial, uom: value })}
-                                  options={uomList.map(uom => ({
-                                    label: uom,
-                                    value: uom
-                                  }))}
-                                  placeholder="Select"
-                                  className="glass-input"
-                                />
-                              </FieldWrapper>
-                            </div>
-                            
-                            <div className="md:col-span-4">
-                              <FieldWrapper label="Rate (₹)">
-                                <input
-                                  type="number"
-                                  value={newRawMaterial.rate}
-                                  onChange={(e) => handleNewRawMaterialChange('rate', e.target.value)}
-                                  onKeyDown={handleKeyDown}
-                                  step="0.01"
-                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all focus:outline-none  "
-                                />
-                              </FieldWrapper>
-                            </div>
-
-                            <div className="md:col-span-4">
-                              <FieldWrapper label="Amount (₹)">
-                                <input
-                                  type="number"
-                                  value={newRawMaterial.amount}
-                                  readOnly
-                                  className="w-full rounded border border-slate-100 bg-slate-50  p-2 text-xs    text-slate-500 cursor-not-allowed outline-none font-medium"
-                                />
-                              </FieldWrapper>
-                            </div>
-                            
-                            <div className="md:col-span-4">
+                            <div className="md:col-span-3">
                               <FieldWrapper label="Operation">
                                 <SearchableSelect
                                   value={newRawMaterial.operation}
@@ -2044,14 +1972,66 @@ export default function BOMForm() {
                                 />
                               </FieldWrapper>
                             </div>
-                            <div className="md:col-span-4 flex items-end">
+                            <div className="md:col-span-2">
+                              <FieldWrapper label="Qty" required>
+                                <input
+                                  type="number"
+                                  value={newRawMaterial.qty}
+                                  onChange={(e) => handleNewRawMaterialChange('qty', e.target.value)}
+                                  onKeyDown={handleKeyDown}
+                                  step="0.01"
+                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all focus:outline-none  "
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-3">
+                              <FieldWrapper label="UOM">
+                                <SearchableSelect
+                                  value={newRawMaterial.uom}
+                                  onChange={(value) => setNewRawMaterial({ ...newRawMaterial, uom: value })}
+                                  options={uomList.map(uom => ({
+                                    label: uom,
+                                    value: uom
+                                  }))}
+                                  placeholder="Select"
+                                  className="glass-input"
+                                />
+                              </FieldWrapper>
+                            </div>
+
+                            <div className="md:col-span-2">
+                              <FieldWrapper label="Rate (₹)">
+                                <input
+                                  type="number"
+                                  value={newRawMaterial.rate}
+                                  onChange={(e) => handleNewRawMaterialChange('rate', e.target.value)}
+                                  onKeyDown={handleKeyDown}
+                                  step="0.01"
+                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all focus:outline-none  "
+                                />
+                              </FieldWrapper>
+                            </div>
+
+                            <div className="md:col-span-2">
+                              <FieldWrapper label="Amount (₹)">
+                                <input
+                                  type="number"
+                                  value={newRawMaterial.amount}
+                                  readOnly
+                                  className="w-full rounded border border-slate-100 bg-slate-50  p-2 text-xs    text-slate-500 cursor-not-allowed outline-none font-medium"
+                                />
+                              </FieldWrapper>
+                            </div>
+
+                            
+                            <div className="md:col-span-3 flex items-end">
                               <button
                                 type="button"
                                 onClick={addNewRawMaterial}
                                 className="w-full flex items-center justify-center gap-1 bg-rose-600 text-white rounded p-2 text-xs  shadow-md hover:bg-rose-700 transition-all hover:-translate-y-1 active:scale-95"
                               >
                                 <Plus size={14} strokeWidth={3} />
-                                Add 
+                                Add
                               </button>
                             </div>
                           </div>
@@ -2061,7 +2041,7 @@ export default function BOMForm() {
                           <div className="space-y-6">
                             <div className="flex items-center justify-between px-2">
                               <div className="flex items-center gap-3">
-                                <div className="w-1.5 h-6 bg-amber-500 rounded-full" />
+                                <div className="w-1.5 h-6 bg-amber-500 rounded" />
                                 <span className="">Material Intelligence Matrix</span>
                               </div>
                               <span className=" text-xs    text-slate-400   ">{rawMaterials.length} Total Nodes</span>
@@ -2086,7 +2066,7 @@ export default function BOMForm() {
                                           {groupName.charAt(0)}
                                         </div>
                                         <div className="text-left">
-                                          <h3 className="text-sm   text-slate-900 tracking-tight">{groupName}</h3>
+                                          <h3 className="text-sm   text-slate-900 ">{groupName}</h3>
                                           <div className="flex items-center gap-2 mt-1">
                                             <p className="text-[9px]   text-slate-400   ">{groupItems.length} Strategic Nodes</p>
                                           </div>
@@ -2128,7 +2108,7 @@ export default function BOMForm() {
                                                       <span className=" text-xs    text-slate-300">{(index + 1).toString().padStart(2, '0')}</span>
                                                     </td>
                                                     <td className="p-2 ">
-                                                      <div className="text-xs   text-slate-900 tracking-tight">{material.item_name}</div>
+                                                      <div className="text-xs   text-slate-900 ">{material.item_name}</div>
                                                       <div className="text-[9px]   text-amber-600    mt-1">{material.item_code}</div>
                                                     </td>
                                                     <td className="p-2  text-right">
@@ -2159,31 +2139,31 @@ export default function BOMForm() {
                                                       <div className="flex items-center justify-center gap-2">
                                                         {isEditing ? (
                                                           <>
-                                                            <button type="button" onClick={async () => { 
+                                                            <button type="button" onClick={async () => {
                                                               const qty = parseFloat(editingRowData.qty || 0);
                                                               const rate = parseFloat(editingRowData.rate || 0);
                                                               const sellingPrice = parseFloat(editingRowData.selling_price || 0);
-                                                              const updatedData = { 
-                                                                ...editingRowData, 
+                                                              const updatedData = {
+                                                                ...editingRowData,
                                                                 amount: (qty * rate),
                                                                 selling_amount: (qty * sellingPrice)
-                                                              }; 
-                                                              const updated = rawMaterials.map(m => m.id === material.id ? updatedData : m); 
-                                                              setRawMaterials(updated); 
-                                                              if (id) { 
-                                                                try { 
-                                                                  setLoading(true); 
-                                                                  const payload = { ...formData, lines: bomLines, rawMaterials: updated, operations, scrapItems, quantity: parseFloat(formData.quantity), revision: parseInt(formData.revision), process_loss_percentage: parseFloat(formData.process_loss_percentage) }; 
-                                                                  await productionService.updateBOM(id, payload); 
-                                                                  setEditingRowId(null); 
-                                                                } catch (err) { 
-                                                                  setError('Failed to update material node'); 
-                                                                } finally { 
-                                                                  setLoading(false); 
-                                                                } 
-                                                              } else { 
-                                                                setEditingRowId(null); 
-                                                              } 
+                                                              };
+                                                              const updated = rawMaterials.map(m => m.id === material.id ? updatedData : m);
+                                                              setRawMaterials(updated);
+                                                              if (id) {
+                                                                try {
+                                                                  setLoading(true);
+                                                                  const payload = { ...formData, lines: bomLines, rawMaterials: updated, operations, scrapItems, quantity: parseFloat(formData.quantity), revision: parseInt(formData.revision), process_loss_percentage: parseFloat(formData.process_loss_percentage) };
+                                                                  await productionService.updateBOM(id, payload);
+                                                                  setEditingRowId(null);
+                                                                } catch (err) {
+                                                                  setError('Failed to update material node');
+                                                                } finally {
+                                                                  setLoading(false);
+                                                                }
+                                                              } else {
+                                                                setEditingRowId(null);
+                                                              }
                                                             }} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded  transition-all"><Check size={16} strokeWidth={3} /></button>
                                                             <button type="button" onClick={() => setEditingRowId(null)} className="p-2 text-slate-400 hover:bg-slate-50 rounded  transition-all"><X size={16} strokeWidth={3} /></button>
                                                           </>
@@ -2242,31 +2222,33 @@ export default function BOMForm() {
                             <Plus size={14} className="text-emerald-500" strokeWidth={3} />
                             Operations
                           </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 relative z-10">
-                            <div className="md:col-span-4">
-                              <FieldWrapper label="Operations" required>
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-2 relative z-10">
+                            <div className="md:col-span-3">
+                              <FieldWrapper label="Operation *" required>
                                 <SearchableSelect
                                   value={newOperation.operation_name}
                                   onChange={(value) => {
                                     const op = operationsList.find(o => o.name === value)
+                                    const cost = calculateOperationCost(newOperation.operation_time, newOperation.setup_time, op?.hourly_rate || '0')
                                     setNewOperation({
                                       ...newOperation,
                                       operation_name: value,
                                       workstation_type: op?.workstation_type || '',
-                                      hourly_rate: op?.hourly_rate || '0'
+                                      hourly_rate: op?.hourly_rate || '0',
+                                      operating_cost: cost.toFixed(2)
                                     })
                                   }}
                                   options={operationsList.filter(op => op && op.name).map(op => ({
                                     label: op.name,
                                     value: op.name
                                   }))}
-                                  placeholder="Identify process..."
+                                  placeholder="Search operator"
                                   className="glass-input"
                                 />
                               </FieldWrapper>
                             </div>
-                            <div className="md:col-span-4">
-                              <FieldWrapper label="Allocated Workstation">
+                            <div className="md:col-span-3">
+                              <FieldWrapper label="Workstation">
                                 <SearchableSelect
                                   value={newOperation.workstation_type}
                                   onChange={(value) => setNewOperation({ ...newOperation, workstation_type: value })}
@@ -2274,13 +2256,13 @@ export default function BOMForm() {
                                     label: ws.name,
                                     value: ws.name
                                   }))}
-                                  placeholder="Workstation link..."
+                                  placeholder="Select"
                                   className="glass-input"
                                 />
                               </FieldWrapper>
                             </div>
-                            <div className="md:col-span-4">
-                              <FieldWrapper label="Target Warehouse ">
+                             <div className="md:col-span-3">
+                              <FieldWrapper label="Target Warehouse">
                                 <SearchableSelect
                                   value={newOperation.target_warehouse}
                                   onChange={(value) => setNewOperation({ ...newOperation, target_warehouse: value })}
@@ -2288,46 +2270,68 @@ export default function BOMForm() {
                                     label: wh.warehouse_name || wh.name,
                                     value: wh.warehouse_name || wh.name
                                   }))}
-                                  placeholder="Select warehouse..."
+                                  placeholder="Select"
                                   className="glass-input"
                                 />
                               </FieldWrapper>
                             </div>
                             <div className="md:col-span-3">
-                              <FieldWrapper label="Execution Time (m)">
+                              <FieldWrapper label="Cycle Time (min)">
                                 <input
                                   type="number"
                                   value={newOperation.operation_time}
-                                  onChange={(e) => setNewOperation({ ...newOperation, operation_time: e.target.value })}
+                                  onChange={(e) => {
+                                    const val = e.target.value
+                                    const cost = calculateOperationCost(val, newOperation.setup_time, newOperation.hourly_rate)
+                                    setNewOperation({ ...newOperation, operation_time: val, operating_cost: cost.toFixed(2) })
+                                  }}
                                   onKeyDown={handleKeyDown}
                                   className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
                                 />
                               </FieldWrapper>
                             </div>
-                            <div className="md:col-span-3">
-                              <FieldWrapper label="Setup Time (m)">
+                            <div className="md:col-span-2">
+                              <FieldWrapper label="Setup Time (min)">
                                 <input
                                   type="number"
                                   value={newOperation.setup_time}
-                                  onChange={(e) => setNewOperation({ ...newOperation, setup_time: e.target.value })}
+                                  onChange={(e) => {
+                                    const val = e.target.value
+                                    const cost = calculateOperationCost(newOperation.operation_time, val, newOperation.hourly_rate)
+                                    setNewOperation({ ...newOperation, setup_time: val, operating_cost: cost.toFixed(2) })
+                                  }}
                                   onKeyDown={handleKeyDown}
                                   className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
                                 />
                               </FieldWrapper>
                             </div>
-                            <div className="md:col-span-3">
-                              <FieldWrapper label="Hourly Valuation (₹)">
+                            <div className="md:col-span-2">
+                              <FieldWrapper label="Hourly Rate (₹)">
                                 <input
                                   type="number"
                                   value={newOperation.hourly_rate}
-                                  onChange={(e) => setNewOperation({ ...newOperation, hourly_rate: e.target.value })}
+                                  onChange={(e) => {
+                                    const val = e.target.value
+                                    const cost = calculateOperationCost(newOperation.operation_time, newOperation.setup_time, val)
+                                    setNewOperation({ ...newOperation, hourly_rate: val, operating_cost: cost.toFixed(2) })
+                                  }}
                                   onKeyDown={handleKeyDown}
                                   className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
                                 />
                               </FieldWrapper>
                             </div>
-                            <div className="md:col-span-3">
-                              <FieldWrapper label="Protocol Type">
+                            <div className="md:col-span-2">
+                              <FieldWrapper label="Cost (₹)">
+                                <input
+                                  type="number"
+                                  value={newOperation.operating_cost}
+                                  readOnly
+                                  className="w-full rounded border border-slate-200 bg-slate-50  p-2 text-xs focus:outline-none "
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-2">
+                              <FieldWrapper label="Type">
                                 <select
                                   value={newOperation.operation_type}
                                   onChange={(e) => setNewOperation({ ...newOperation, operation_type: e.target.value })}
@@ -2338,14 +2342,15 @@ export default function BOMForm() {
                                 </select>
                               </FieldWrapper>
                             </div>
-                            <div className="md:col-span-3 flex items-end">
+                           
+                            <div className="md:col-span-4 flex items-end pb-1">
                               <button
                                 type="button"
                                 onClick={addOperation}
-                                className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white rounded p-2  text-xs        shadow-emerald-100 hover:bg-emerald-700 transition-all hover:-translate-y-1 active:scale-95"
+                                className="w-full flex items-center justify-center gap-1 bg-indigo-600 text-white rounded p-2 text-xs shadow-md hover:bg-indigo-700 transition-all hover:-translate-y-1 active:scale-95"
                               >
-                                <Plus size={18} strokeWidth={2.5} />
-                                Integrate Protocol
+                                <Plus size={14} strokeWidth={3} />
+                                Add
                               </button>
                             </div>
                           </div>
@@ -2357,46 +2362,49 @@ export default function BOMForm() {
                               <table className="w-full text-left border-collapse">
                                 <thead>
                                   <tr>
-                                    <th className="p-2 text-xs   text-slate-400  w-20">Index</th>
-                                    <th className="p-2 text-xs   text-slate-400 ">Protocol Detail</th>
+                                    <th className="p-2 text-xs   text-slate-400  w-12">#</th>
+                                    <th className="p-2 text-xs   text-slate-400 ">Operation</th>
                                     <th className="p-2 text-xs   text-slate-400 ">Workstation</th>
-                                    <th className="p-2 text-xs   text-slate-400  text-right">Timing</th>
-                                    <th className="p-2 text-xs   text-slate-400  text-right">Valuation</th>
-                                    <th className="p-2 text-xs   text-slate-400  text-center">Protocol</th>
-                                    <th className="p-2 text-xs   text-slate-400  text-center w-32">Control</th>
+                                    <th className="p-2 text-xs   text-slate-400  text-right">Cycle (min)</th>
+                                    <th className="p-2 text-xs   text-slate-400  text-right">Setup (min)</th>
+                                    <th className="p-2 text-xs   text-slate-400  text-right">Hourly Rate (₹)</th>
+                                    <th className="p-2 text-xs   text-slate-400  text-right">Cost (₹)</th>
+                                    <th className="p-2 text-xs   text-slate-400  text-center">Type</th>
+                                    <th className="p-2 text-xs   text-slate-400 ">Target Warehouse</th>
+                                    <th className="p-2 text-xs   text-slate-400  text-center w-12">Del</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                   {operations.map((op, index) => (
                                     <tr key={op.id} className="hover:bg-slate-50/50 transition-colors group">
                                       <td className="p-2 ">
-                                        <span className=" text-xs    text-slate-300">{(index + 1).toString().padStart(2, '0')}</span>
+                                        <span className=" text-xs    text-slate-300">{index + 1}</span>
                                       </td>
                                       <td className="p-2 ">
-                                        <div className="text-xs   text-slate-900 tracking-tight">{op.operation_name}</div>
-                                        <div className="text-[9px]   text-emerald-600    mt-1 flex items-center gap-2">
-                                          <Database size={10} />
-                                          {op.target_warehouse || 'Standard Node'}
-                                        </div>
+                                        <div className="text-xs   text-slate-900 ">{op.operation_name}</div>
                                       </td>
                                       <td className="p-2 ">
-                                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[9px]      border border-slate-200">
-                                          <Settings size={10} className="text-slate-400" />
-                                          {op.workstation_type || 'General'}
-                                        </span>
+                                        <div className="text-xs   text-slate-700">{op.workstation_type || '-'}</div>
                                       </td>
                                       <td className="p-2  text-right">
-                                        <div className="text-xs   text-slate-900">{parseFloat(op.operation_time || 0).toFixed(1)}m</div>
-                                        <div className="text-[9px]   text-slate-400 mt-1  tracking-tighter">+{op.setup_time || op.fixed_time}m Setup</div>
+                                        <div className="text-xs   text-slate-900">{parseFloat(op.operation_time || 0).toFixed(2)}</div>
                                       </td>
                                       <td className="p-2  text-right">
-                                        <div className="text-xs   text-emerald-600">₹{parseFloat(op.operating_cost || 0).toLocaleString()}</div>
-                                        <div className="text-[9px]   text-slate-400 mt-1  tracking-tighter">₹{parseFloat(op.hourly_rate || 0).toLocaleString()}/hr</div>
+                                        <div className="text-xs   text-slate-900">{parseFloat(op.setup_time || 0).toFixed(2)}</div>
+                                      </td>
+                                      <td className="p-2  text-right">
+                                        <div className="text-xs   text-slate-700">₹{parseFloat(op.hourly_rate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                      </td>
+                                      <td className="p-2  text-right">
+                                        <div className="text-xs   text-slate-900 font-bold bg-slate-100 rounded px-2 py-0.5 inline-block min-w-[60px]">₹{parseFloat(op.operating_cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                                       </td>
                                       <td className="p-2  text-center">
-                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-[9px]      ${op.operation_type === 'OUTSOURCED' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
-                                          {op.operation_type === 'OUTSOURCED' ? 'Out' : 'In'}
+                                        <span className={`inline-flex items-center px-3 py-1 rounded text-[9px]      ${op.operation_type === 'OUTSOURCED' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                                          {op.operation_type === 'OUTSOURCED' ? 'Outsourced' : 'In-House'}
                                         </span>
+                                      </td>
+                                      <td className="p-2 ">
+                                        <div className="text-xs   text-slate-700">{op.target_warehouse || '-'}</div>
                                       </td>
                                       <td className="p-2  text-center">
                                         <button
@@ -2519,7 +2527,7 @@ export default function BOMForm() {
                                         <span className=" text-xs    text-slate-300">{(index + 1).toString().padStart(2, '0')}</span>
                                       </td>
                                       <td className="p-2 ">
-                                        <div className="text-xs   text-slate-900 tracking-tight">{item.item_name}</div>
+                                        <div className="text-xs   text-slate-900 ">{item.item_name}</div>
                                         <div className="text-[9px]   text-rose-600    mt-1">{item.item_code}</div>
                                       </td>
                                       <td className="p-2  text-right">
@@ -2559,163 +2567,163 @@ export default function BOMForm() {
                     </div>
                   )}
                 </Card>
-                 <Card className="bg-white border-slate-200 rounded  mb-4   shadow-slate-200/50 mt-3">
-            <SectionHeader
-              id="costing"
-              title="Manufacturing Costing Intelligence"
-              icon={TrendingDown}
-              subtitle={`Strategic Valuation • Total Production Cost: ₹${totalBOMCost.toLocaleString()}`}
-              isExpanded={true}
-              onToggle={() => { }}
-              themeColor="cyan"
-            />
-            <div className="p-6">
-              {/* Primary Metrics High-Fidelity Row */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <div className="relative group bg-blue-50/40 rounded p-2 border border-blue-100/50 transition-all hover: hover:shadow-blue-100/20">
-                  <div className="flex items-center gap-2 relative z-10">
-                    <div className="p-2 bg-white shadow-lg shadow-blue-100/50 text-blue-600 rounded  group-hover:scale-110 transition-transform duration-500">
-                      <Package size={14} />
-                    </div>
-                    <div>
-                      <p className="text-xs  text-blue-400    mb-1">Material Valuation</p>
-                      <h4 className="text-xl  text-slate-800 tracking-tight">₹{materialCost.toLocaleString()}</h4>
-                      <p className="text-xs  text-blue-600/60 mt-1 ">Net Raw Consumption</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="relative group bg-emerald-50/40 rounded p-2 border border-emerald-100/50 transition-all hover: hover:shadow-emerald-100/20">
-                  <div className="flex items-center gap-2 relative z-10">
-                    <div className="p-2 bg-white shadow-lg shadow-emerald-100/50 text-emerald-600 rounded  group-hover:scale-110 transition-transform duration-500">
-                      <Users size={14} />
-                    </div>
-                    <div>
-                      <p className="text-xs  text-emerald-400    mb-1">Labour & Ops</p>
-                      <h4 className="text-xl  text-slate-800 tracking-tight">₹{labourCost.toLocaleString()}</h4>
-                      <p className="text-xs  text-emerald-600/60 mt-1 ">Process Intelligence</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="relative group bg-cyan-50/40 rounded p-2 border border-cyan-100/50 transition-all hover: hover:shadow-cyan-100/20">
-                  <div className="flex items-center gap-2 relative z-10">
-                    <div className="p-2 bg-white shadow-lg shadow-cyan-100/50 text-cyan-600 rounded  group-hover:scale-110 transition-transform duration-500">
-                      <TrendingDown size={14} />
-                    </div>
-                    <div>
-                      <p className="text-xs  text-cyan-400    mb-1">Strategic Total</p>
-                      <h4 className="text-xl  text-slate-800 tracking-tight">₹{totalBOMCost.toLocaleString()}</h4>
-                      <p className="text-xs  text-cyan-600/60 mt-1 ">Per {formData.quantity} {formData.uom} Batch</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Detailed Breakdown Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 px-2">
-                <div className="space-y-6">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1 h-4 bg-blue-500 rounded-full" />
-                    <h5 className="text-xs  text-slate-400 ">Material Resource Breakdown</h5>
-                  </div>
-                  <div className="space-y-3 bg-slate-50/50 rounded p-2 border border-slate-100">
-                    <div className="flex items-center justify-between  p-2 rounded  hover:bg-white hover:  transition-all group">
-                      <span className="text-xs  text-slate-500 group-hover:text-slate-800">Primary Components Cost</span>
-                      <span className="text-sm  text-slate-900">₹{totalComponentCost.toLocaleString()}</span>
-                    </div>
-                    <div className="flex items-center justify-between  p-2 rounded  hover:bg-white hover:  transition-all group">
-                      <span className="text-xs  text-slate-500 group-hover:text-slate-800">Raw Materials Valuation</span>
-                      <span className="text-sm  text-slate-900">₹{totalRawMaterialCost.toLocaleString()}</span>
-                    </div>
-                    <div className="flex items-center justify-between  p-2 rounded  bg-rose-50/50 border border-rose-100/50 group">
-                      <span className="text-xs  text-rose-600">Scrap Recovery (Deduction)</span>
-                      <span className="text-sm  text-rose-600">-₹{totalScrapLossCost.toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1 h-4 bg-emerald-500 rounded-full" />
-                    <h5 className="text-xs  text-slate-400 ">Operational Efficiency</h5>
-                  </div>
-                  <div className="space-y-3 bg-slate-50/50 rounded p-2 border border-slate-100">
-                    <div className="flex items-center justify-between  p-2 rounded  hover:bg-white hover:  transition-all group">
-                      <span className="text-xs  text-slate-500 group-hover:text-slate-800">Production Process Cost</span>
-                      <span className="text-sm  text-slate-900">₹{totalOperationCost.toLocaleString()}</span>
-                    </div>
-                    <div className="flex items-center justify-between  p-2 rounded  bg-amber-50/50 border border-amber-100/50 group">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs  text-amber-700">Total Material Loss</span>
-                        <AlertTriangle size={12} className="text-amber-500" />
+                <Card className="bg-white border-slate-200 rounded  mb-4   shadow-slate-200/50 mt-3">
+                  <SectionHeader
+                    id="costing"
+                    title="Manufacturing Costing Intelligence"
+                    icon={TrendingDown}
+                    subtitle={`Strategic Valuation • Total Production Cost: ₹${totalBOMCost.toLocaleString()}`}
+                    isExpanded={true}
+                    onToggle={() => { }}
+                    themeColor="cyan"
+                  />
+                  <div className="p-6">
+                    {/* Primary Metrics High-Fidelity Row */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                      <div className="relative group bg-blue-50/40 rounded p-2 border border-blue-100/50 transition-all hover: hover:shadow-blue-100/20">
+                        <div className="flex items-center gap-2 relative z-10">
+                          <div className="p-2 bg-white shadow-lg shadow-blue-100/50 text-blue-600 rounded  group-hover:scale-110 transition-transform duration-500">
+                            <Package size={14} />
+                          </div>
+                          <div>
+                            <p className="text-xs  text-blue-400    mb-1">Material Valuation</p>
+                            <h4 className="text-xl  text-slate-800 ">₹{materialCost.toLocaleString()}</h4>
+                            <p className="text-xs  text-blue-600/60 mt-1 ">Net Raw Consumption</p>
+                          </div>
+                        </div>
                       </div>
-                      <span className="text-sm  text-amber-700">{totalScrapQty.toFixed(2)} {formData.uom}</span>
+
+                      <div className="relative group bg-emerald-50/40 rounded p-2 border border-emerald-100/50 transition-all hover: hover:shadow-emerald-100/20">
+                        <div className="flex items-center gap-2 relative z-10">
+                          <div className="p-2 bg-white shadow-lg shadow-emerald-100/50 text-emerald-600 rounded  group-hover:scale-110 transition-transform duration-500">
+                            <Users size={14} />
+                          </div>
+                          <div>
+                            <p className="text-xs  text-emerald-400    mb-1">Labour & Ops</p>
+                            <h4 className="text-xl  text-slate-800 ">₹{labourCost.toLocaleString()}</h4>
+                            <p className="text-xs  text-emerald-600/60 mt-1 ">Process Intelligence</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="relative group bg-cyan-50/40 rounded p-2 border border-cyan-100/50 transition-all hover: hover:shadow-cyan-100/20">
+                        <div className="flex items-center gap-2 relative z-10">
+                          <div className="p-2 bg-white shadow-lg shadow-cyan-100/50 text-cyan-600 rounded  group-hover:scale-110 transition-transform duration-500">
+                            <TrendingDown size={14} />
+                          </div>
+                          <div>
+                            <p className="text-xs  text-cyan-400    mb-1">Strategic Total</p>
+                            <h4 className="text-xl  text-slate-800 ">₹{totalBOMCost.toLocaleString()}</h4>
+                            <p className="text-xs  text-cyan-600/60 mt-1 ">Per {formData.quantity} {formData.uom} Batch</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Detailed Breakdown Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 px-2">
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="w-1 h-4 bg-blue-500 rounded" />
+                          <h5 className="text-xs  text-slate-400 ">Material Resource Breakdown</h5>
+                        </div>
+                        <div className="space-y-3 bg-slate-50/50 rounded p-2 border border-slate-100">
+                          <div className="flex items-center justify-between  p-2 rounded  hover:bg-white hover:  transition-all group">
+                            <span className="text-xs  text-slate-500 group-hover:text-slate-800">Primary Components Cost</span>
+                            <span className="text-sm  text-slate-900">₹{totalComponentCost.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center justify-between  p-2 rounded  hover:bg-white hover:  transition-all group">
+                            <span className="text-xs  text-slate-500 group-hover:text-slate-800">Raw Materials Valuation</span>
+                            <span className="text-sm  text-slate-900">₹{totalRawMaterialCost.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center justify-between  p-2 rounded  bg-rose-50/50 border border-rose-100/50 group">
+                            <span className="text-xs  text-rose-600">Scrap Recovery (Deduction)</span>
+                            <span className="text-sm  text-rose-600">-₹{totalScrapLossCost.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2">
+                          <div className="w-1 h-4 bg-emerald-500 rounded" />
+                          <h5 className="text-xs  text-slate-400 ">Operational Efficiency</h5>
+                        </div>
+                        <div className="space-y-3 bg-slate-50/50 rounded p-2 border border-slate-100">
+                          <div className="flex items-center justify-between  p-2 rounded  hover:bg-white hover:  transition-all group">
+                            <span className="text-xs  text-slate-500 group-hover:text-slate-800">Production Process Cost</span>
+                            <span className="text-sm  text-slate-900">₹{totalOperationCost.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center justify-between  p-2 rounded  bg-amber-50/50 border border-amber-100/50 group">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs  text-amber-700">Total Material Loss</span>
+                              <AlertTriangle size={12} className="text-amber-500" />
+                            </div>
+                            <span className="text-sm  text-amber-700">{totalScrapQty.toFixed(2)} {formData.uom}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Prominent Unit Cost Strategic Footer */}
+                    <div className="mt-5 flex flex-col md:flex-row items-center justify-between bg-slate-900 rounded p-2   shadow-slate-300 text-white gap-2 relative">
+                      <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Layers size={80} className="text-indigo-400" />
+                      </div>
+                      <div className="flex items-center gap-2 relative z-10">
+                        <div className="w-10 h-10 bg-indigo-500/20 backdrop-blur-xl rounded flex items-center justify-center border border-white/10 shadow-inner group-hover:scale-110 transition-transform duration-700">
+                          <Layers size={36} className="text-indigo-400" />
+                        </div>
+                        <div>
+                          <p className="text-xs  text-indigo-400 mb-2">Net Formulation Cost</p>
+                          <p className="text-sm font-medium text-slate-400 leading-relaxed">Intelligence based on batch size of <span className="text-white ">{formData.quantity} {formData.uom}</span></p>
+                        </div>
+                      </div>
+                      <div className="text-center md:text-right relative z-10">
+                        <h3 className="text-xl  text-white er mb-2">
+                          <span className="text-xl  text-indigo-500 mr-2">₹</span>
+                          {(formData.quantity && formData.quantity !== '0' ? (totalBOMCost / parseFloat(formData.quantity)) : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h3>
+                        <p className="text-xs  text-slate-500 ">Estimated Strategic Cost / {formData.uom}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Prominent Unit Cost Strategic Footer */}
-              <div className="mt-5 flex flex-col md:flex-row items-center justify-between bg-slate-900 rounded p-2   shadow-slate-300 text-white gap-2 relative">
-                <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <Layers size={80} className="text-indigo-400" />
-                </div>
-                <div className="flex items-center gap-2 relative z-10">
-                  <div className="w-10 h-10 bg-indigo-500/20 backdrop-blur-xl rounded flex items-center justify-center border border-white/10 shadow-inner group-hover:scale-110 transition-transform duration-700">
-                    <Layers size={36} className="text-indigo-400" />
+                  <div className="flex items-center justify-between bg-slate-50 rounded p-2 border border-slate-200/50 mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className=" p-2bg-white rounded  text-slate-400 border border-slate-100">
+                        <AlertCircle size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs  text-slate-700">Final Verification</p>
+                        <p className="text-xs text-slate-400 font-medium text-xs">Ensure all specifications meet manufacturing standards</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={() => navigate('/manufacturing/bom')}
+                        className="inline-flex items-center gap-2 rounded bg-white p-2 text-xs  text-slate-600 border border-slate-200 hover:bg-slate-50 transition-all active:scale-95  "
+                      >
+                        <RotateCcw size={18} />
+                        Discard
+                      </button>
+                      <button
+                        type="submit"
+                        form="bom-form"
+                        disabled={loading}
+                        className="inline-flex items-center gap-2 rounded bg-indigo-600 p-2 text-xs  text-white  shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        {loading ? (
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded animate-spin" />
+                        ) : (
+                          <>
+                            <Save size={18} />
+                            {id ? 'Commit Changes' : 'Initialize Formulation'}
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs  text-indigo-400 mb-2">Net Formulation Cost</p>
-                    <p className="text-sm font-medium text-slate-400 leading-relaxed">Intelligence based on batch size of <span className="text-white ">{formData.quantity} {formData.uom}</span></p>
-                  </div>
-                </div>
-                <div className="text-center md:text-right relative z-10">
-                  <h3 className="text-xl  text-white tracking-tighter mb-2">
-                    <span className="text-xl  text-indigo-500 mr-2">₹</span>
-                    {(formData.quantity && formData.quantity !== '0' ? (totalBOMCost / parseFloat(formData.quantity)) : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </h3>
-                  <p className="text-xs  text-slate-500 ">Estimated Strategic Cost / {formData.uom}</p>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between bg-slate-50 rounded p-2 border border-slate-200/50 mb-6">
-            <div className="flex items-center gap-3">
-              <div className=" p-2bg-white rounded  text-slate-400 border border-slate-100">
-                <AlertCircle size={20} />
-              </div>
-              <div>
-                <p className="text-xs  text-slate-700">Final Verification</p>
-                <p className="text-xs text-slate-400 font-medium text-xs">Ensure all specifications meet manufacturing standards</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <button
-                type="button"
-                onClick={() => navigate('/manufacturing/bom')}
-                className="inline-flex items-center gap-2 rounded bg-white p-2 text-xs  text-slate-600 border border-slate-200 hover:bg-slate-50 transition-all active:scale-95  "
-              >
-                <RotateCcw size={18} />
-                Discard
-              </button>
-              <button
-                type="submit"
-                form="bom-form"
-                disabled={loading}
-                className="inline-flex items-center gap-2 rounded bg-indigo-600 p-2 text-xs  text-white  shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <Save size={18} />
-                    {id ? 'Commit Changes' : 'Initialize Formulation'}
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-          </Card>
+                </Card>
               </div> {/* END OF space-y-6 */}
 
             </div>
@@ -2725,8 +2733,8 @@ export default function BOMForm() {
             {/* Form Footer Actions - Strategic Placement */}
 
           </div>
-         
-          
+
+
         </form>
 
 
@@ -2740,7 +2748,7 @@ export default function BOMForm() {
                       <FileText size={24} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <h2 className="text-lg  text-slate-800 tracking-tight">Formulation Drafts</h2>
+                      <h2 className="text-lg  text-slate-800 ">Formulation Drafts</h2>
                       <p className="text-xs text-slate-400     mt-0.5">Recover Strategic Specifications</p>
                     </div>
                   </div>

@@ -108,10 +108,14 @@ export class PurchaseReceiptModel {
 
   async getAll(filters = {}) {
     try {
-      let query = `SELECT pr.*, s.name as supplier_name, COUNT(pri.grn_item_id) as item_count
+      let query = `SELECT pr.*, s.name as supplier_name, COALESCE(pri_agg.item_count, 0) as item_count
                    FROM purchase_receipt pr
                    LEFT JOIN supplier s ON pr.supplier_id = s.supplier_id
-                   LEFT JOIN purchase_receipt_item pri ON pr.grn_no = pri.grn_no
+                   LEFT JOIN (
+                      SELECT grn_no, COUNT(grn_item_id) as item_count
+                      FROM purchase_receipt_item
+                      GROUP BY grn_no
+                   ) pri_agg ON pr.grn_no = pri_agg.grn_no
                    WHERE 1=1`
       const params = []
 
@@ -132,7 +136,7 @@ export class PurchaseReceiptModel {
 
       const limit = filters.limit || 50
       const offset = filters.offset || 0
-      query += ` GROUP BY pr.grn_no ORDER BY pr.created_at DESC LIMIT ${limit} OFFSET ${offset}`
+      query += ` ORDER BY pr.created_at DESC LIMIT ${limit} OFFSET ${offset}`
 
       const [grns] = await this.db.execute(query, params)
       return grns

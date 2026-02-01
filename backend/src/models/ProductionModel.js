@@ -1628,6 +1628,12 @@ async deleteAllBOMRawMaterials(bom_id) {
         [jobCardId]
       );
 
+      // 3. Get all inward challans for this job card
+      const [challans] = await this.db.query(
+        'SELECT quantity_received, quantity_accepted, quantity_rejected, received_date FROM inward_challan WHERE job_card_id = ?',
+        [jobCardId]
+      );
+
       // Group by date and shift to handle the "inferred production" logic
       const shifts = {};
 
@@ -1669,6 +1675,22 @@ async deleteAllBOMRawMaterials(bom_id) {
         totalScrap += s.scrap;
       });
 
+      // Add challan quantities
+      challans.forEach(challan => {
+        const qReceived = parseFloat(challan.quantity_received) || 0;
+        const qAccepted = parseFloat(challan.quantity_accepted) || 0;
+        const qRejected = parseFloat(challan.quantity_rejected) || 0;
+
+        // For challans, we treat quantity_received as production
+        totalProduced += qReceived;
+        totalRejected += qRejected;
+        
+        // If qReceived is 0 but qAccepted is > 0, infer production
+        if (qReceived === 0 && qAccepted > 0) {
+          totalProduced += qAccepted + qRejected;
+        }
+      });
+
       const totalAccepted = Math.max(0, totalProduced - totalRejected - totalScrap);
 
       // 3. Update Job Card
@@ -1708,8 +1730,39 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
+  async _getMaxAllowedQuantity(jobCardId) {
+    try {
+      const jobCard = await this.getJobCardDetails(jobCardId);
+      if (!jobCard) return 0;
+
+      const [previousCards] = await this.db.query(
+        'SELECT accepted_quantity, produced_quantity, rejected_quantity FROM job_card WHERE work_order_id = ? AND operation_sequence < ? ORDER BY operation_sequence DESC LIMIT 1',
+        [jobCard.work_order_id, jobCard.operation_sequence || 0]
+      );
+
+      if (previousCards && previousCards.length > 0) {
+        const prev = previousCards[0];
+        return parseFloat(prev.accepted_quantity) || (parseFloat(prev.produced_quantity) || 0) - (parseFloat(prev.rejected_quantity) || 0);
+      }
+
+      return parseFloat(jobCard.planned_quantity) || 0;
+    } catch (error) {
+      console.error('Error in _getMaxAllowedQuantity:', error);
+      return 0;
+    }
+  }
+
   async createTimeLog(data) {
     try {
+      const maxAllowed = await this._getMaxAllowedQuantity(data.job_card_id);
+      const currentJobCard = await this.getJobCardDetails(data.job_card_id);
+      const currentProduced = parseFloat(currentJobCard?.produced_quantity || 0);
+      const newQty = parseFloat(data.completed_qty || 0);
+
+      if (currentProduced + newQty > maxAllowed + 0.0001) {
+        throw new Error(`Quantity Validation Error: Total production (${(currentProduced + newQty).toFixed(2)}) would exceed allowed quantity (${maxAllowed.toFixed(2)}) based on previous operation or plan.`);
+      }
+
       const timeLogId = `TL-${Date.now()}`
       const query = `INSERT INTO time_log (time_log_id, job_card_id, day_number, log_date, employee_id, operator_name, workstation_name, shift, from_time, to_time, time_in_minutes, completed_qty, accepted_qty, rejected_qty, scrap_qty, inhouse, outsource)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -1770,6 +1823,23 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async createRejection(data) {
     try {
+      const maxAllowed = await this._getMaxAllowedQuantity(data.job_card_id);
+      const currentJobCard = await this.getJobCardDetails(data.job_card_id);
+      
+      // Calculate current accepted quantity excluding what we are about to add (if we were updating, but this is create)
+      const currentAccepted = parseFloat(currentJobCard?.accepted_quantity || 0);
+      const newAccepted = parseFloat(data.accepted_qty || 0);
+
+      // We should also check total production vs accepted
+      // In this system, accepted + rejected + scrap = produced (usually)
+      // Actually _syncJobCardQuantities does: 
+      // totalProduced = SUM(time_log.completed_qty)
+      // totalAccepted = SUM(rejection_entry.accepted_qty)
+      
+      if (currentAccepted + newAccepted > maxAllowed + 0.0001) {
+        throw new Error(`Quantity Validation Error: Total accepted quantity (${(currentAccepted + newAccepted).toFixed(2)}) would exceed allowed quantity (${maxAllowed.toFixed(2)}) based on previous operation or plan.`);
+      }
+
       const rejectionId = `REJ-${Date.now()}`
       const query = `INSERT INTO rejection_entry (rejection_id, job_card_id, day_number, log_date, shift, accepted_qty, rejection_reason, rejected_qty, scrap_qty, notes)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -1966,6 +2036,16 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async createInwardChallan(data) {
     try {
+      const maxAllowed = await this._getMaxAllowedQuantity(data.job_card_id);
+      const currentJobCard = await this.getJobCardDetails(data.job_card_id);
+      
+      const currentAccepted = parseFloat(currentJobCard?.accepted_quantity || 0);
+      const newAccepted = parseFloat(data.quantity_accepted || 0);
+
+      if (currentAccepted + newAccepted > maxAllowed + 0.0001) {
+        throw new Error(`Quantity Validation Error: Total accepted quantity from challan (${(currentAccepted + newAccepted).toFixed(2)}) would exceed allowed quantity (${maxAllowed.toFixed(2)}) based on previous operation or plan.`);
+      }
+
       const challanNumber = `IC-${Date.now()}`
       const query = `INSERT INTO inward_challan (challan_number, outward_challan_id, job_card_id, vendor_id, vendor_name, quantity_received, quantity_accepted, quantity_rejected, notes, status, created_by)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -1982,6 +2062,10 @@ async deleteAllBOMRawMaterials(bom_id) {
         'received',
         data.created_by || null
       ])
+
+      // Sync quantities
+      await this._syncJobCardQuantities(data.job_card_id);
+
       return { challan_number: challanNumber, ...data }
     } catch (error) {
       throw error
@@ -2011,6 +2095,13 @@ async deleteAllBOMRawMaterials(bom_id) {
       
       const query = `UPDATE inward_challan SET ${updateFields.join(', ')}, updated_at = NOW() WHERE id = ?`
       await this.db.query(query, values)
+
+      // Get job_card_id to sync
+      const [rows] = await this.db.query('SELECT job_card_id FROM inward_challan WHERE id = ?', [id]);
+      if (rows.length > 0) {
+        await this._syncJobCardQuantities(rows[0].job_card_id);
+      }
+
       return true
     } catch (error) {
       throw error

@@ -41,6 +41,7 @@ export async function listItems(req, res) {
     }
 
     const items = await model.getAll(filters)
+    console.log(`Fetched ${items.length} items. First item quantity:`, items[0]?.quantity)
     res.json({ success: true, data: items })
   } catch (error) {
     res.status(400).json({ success: false, error: error.message })

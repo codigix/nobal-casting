@@ -635,13 +635,16 @@ export class MaterialRequestModel {
       const [rows] = await db.execute(
         `SELECT mr.*, 
                 COALESCE(c.name, u.full_name, mr.requested_by_id) as requested_by_name, 
-                COUNT(mri.mr_item_id) as item_count 
+                COALESCE(mri_agg.item_count, 0) as item_count 
          FROM material_request mr 
          LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
          LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
-         LEFT JOIN material_request_item mri ON mr.mr_id = mri.mr_id 
+         LEFT JOIN (
+            SELECT mr_id, COUNT(mr_item_id) as item_count
+            FROM material_request_item
+            GROUP BY mr_id
+         ) mri_agg ON mr.mr_id = mri_agg.mr_id 
          WHERE mr.status = "draft" 
-         GROUP BY mr.mr_id 
          ORDER BY mr.created_at DESC`
       )
       return rows

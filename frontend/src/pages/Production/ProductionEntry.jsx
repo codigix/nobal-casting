@@ -14,19 +14,22 @@ import Card from '../../components/Card/Card'
 const normalizeStatus = (status) => String(status || '').toLowerCase().trim()
 
 // Helper Components for the Redesign
-const SectionTitle = ({ title, icon: Icon, badge }) => (
-  <div className="flex items-center justify-between mb-6">
-    <div className="flex items-center gap-3">
-      <div className="p-2 bg-indigo-50 text-indigo-600 rounded">
-        <Icon size={18} />
+const SectionTitle = ({ title, icon: Icon, badge, subtitle }) => (
+  <div className="mb-6">
+    <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+          <Icon size={18} />
+        </div>
+        <h3 className="text-sm font-semibold text-slate-900 tracking-tight">{title}</h3>
       </div>
-      <h3 className="text-sm  text-slate-900 tracking-tight">{title}</h3>
+      {badge && (
+        <span className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase rounded-full border border-slate-200">
+          {badge}
+        </span>
+      )}
     </div>
-    {badge && (
-      <span className="p-2 bg-slate-100 text-slate-500 text-xs   rounded-full border border-slate-200 text-xs ">
-        {badge}
-      </span>
-    )}
+    {subtitle && <p className="text-xs text-slate-500 ml-11">{subtitle}</p>}
   </div>
 )
 
@@ -47,26 +50,26 @@ export default function ProductionEntry() {
   const { jobCardId } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
-  
+
   const [jobCardData, setJobCardData] = useState(null)
+  const [allJobCards, setAllJobCards] = useState([])
   const [previousOperationData, setPreviousOperationData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [itemName, setItemName] = useState('')
   const [operationCycleTime, setOperationCycleTime] = useState(0)
   const [salesOrderQuantity, setSalesOrderQuantity] = useState(0)
-  const [activeTab, setActiveTab] = useState('timelogs')
   const [currentTime, setCurrentTime] = useState(new Date())
-  
+
   const [timeLogs, setTimeLogs] = useState([])
   const [rejections, setRejections] = useState([])
   const [downtimes, setDowntimes] = useState([])
-  
+
   const [shifts] = useState(['A', 'B', 'C'])
   const [warehouses, setWarehouses] = useState([])
   const [workstations, setWorkstations] = useState([])
   const [operators, setOperators] = useState([])
   const [operations, setOperations] = useState([])
-  
+
   const [nextOperationForm, setNextOperationForm] = useState({
     next_operator_id: '',
     next_warehouse_id: '',
@@ -76,6 +79,16 @@ export default function ProductionEntry() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formLoading, setFormLoading] = useState(false)
+
+  const totalProducedQty = timeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0)
+  const totalAcceptedQty = rejections.reduce((sum, r) => sum + (parseFloat(r.accepted_qty) || 0), 0)
+  const totalRejectedQty = rejections.reduce((sum, r) => sum + (parseFloat(r.rejected_qty) || 0), 0)
+  const totalScrapQty = rejections.reduce((sum, r) => sum + (parseFloat(r.scrap_qty) || 0), 0)
+  const totalDowntimeMinutes = downtimes.reduce((sum, d) => sum + (parseFloat(d.duration_minutes) || 0), 0)
+
+  const maxAllowedQty = previousOperationData 
+    ? (parseFloat(previousOperationData.accepted_quantity) || (parseFloat(previousOperationData.produced_quantity) || 0) - (parseFloat(previousOperationData.rejected_quantity) || 0))
+    : parseFloat(jobCardData?.planned_quantity || 0);
 
   const rejectionReasons = [
     'Size/Dimension Error',
@@ -188,14 +201,56 @@ export default function ProductionEntry() {
     )
   }
 
+  const [activeSection, setActiveSection] = useState('time-logs')
+
+  const scrollToSection = (sectionId) => {
+    setActiveSection(sectionId)
+    const element = document.getElementById(sectionId)
+    if (element) {
+      const headerOffset = 20
+      const elementPosition = element.getBoundingClientRect().top
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      })
+    }
+  }
+
+  const NavItem = ({ label, icon: Icon, section, isActive, onClick, color = 'indigo' }) => {
+    const colors = {
+      indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100',
+      emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+      amber: 'text-amber-600 bg-amber-50 border-amber-100',
+      rose: 'text-rose-600 bg-rose-50 border-rose-100'
+    }
+
+    return (
+      <button
+        onClick={() => onClick(section)}
+        className={`flex items-center gap-3 w-full p-2 rounded transition-all duration-200 border ${
+          isActive 
+            ? `${colors[color]} shadow-sm translate-x-1` 
+            : 'text-slate-500 hover:bg-slate-50 border-transparent'
+        }`}
+      >
+        <div className={`p-1.5 rounded ${isActive ? 'bg-white shadow-sm' : 'bg-slate-100'}`}>
+          <Icon size={16} />
+        </div>
+        <span className="text-xs font-medium">{label}</span>
+      </button>
+    )
+  }
+
   useEffect(() => {
     if (jobCardData && operators.length > 0 && workstations.length > 0) {
       const newTimeLogForm = { ...timeLogForm }
       let hasChanges = false
 
       if (jobCardData.operator_id) {
-        const matchingOperator = operators.find(op => 
-          op.employee_id === jobCardData.operator_id || 
+        const matchingOperator = operators.find(op =>
+          op.employee_id === jobCardData.operator_id ||
           op.name === jobCardData.operator_id ||
           `${op.first_name} ${op.last_name}` === jobCardData.operator_id
         )
@@ -207,8 +262,8 @@ export default function ProductionEntry() {
       }
 
       if (jobCardData.machine_id) {
-        const matchingWorkstation = workstations.find(ws => 
-          ws.name === jobCardData.machine_id || 
+        const matchingWorkstation = workstations.find(ws =>
+          ws.name === jobCardData.machine_id ||
           ws.workstation_name === jobCardData.machine_id ||
           ws.id === jobCardData.machine_id
         )
@@ -227,18 +282,18 @@ export default function ProductionEntry() {
   useEffect(() => {
     if (jobCardData && operations.length > 0 && warehouses.length > 0) {
       const currentOperation = jobCardData.operation
-      
+
       if (currentOperation) {
-        const currentOpIndex = operations.findIndex(op => 
-          op.operation_name === currentOperation || 
+        const currentOpIndex = operations.findIndex(op =>
+          op.operation_name === currentOperation ||
           op.name === currentOperation ||
           op.operation_id === currentOperation ||
           op.id === currentOperation
         )
-        
+
         if (currentOpIndex !== -1 && currentOpIndex < operations.length - 1) {
           const nextOp = operations[currentOpIndex + 1]
-          
+
           const newNextOperationForm = {
             next_operator_id: '',
             next_warehouse_id: nextOp.target_warehouse || '',
@@ -246,7 +301,7 @@ export default function ProductionEntry() {
             inhouse: false,
             outsource: false
           }
-          
+
           setNextOperationForm(newNextOperationForm)
         }
       }
@@ -262,9 +317,9 @@ export default function ProductionEntry() {
         productionService.getEmployees(),
         productionService.getOperationsList()
       ])
-      
+
       let jobCard = jobCardRes.data || jobCardRes
-      
+
       if (!jobCard?.job_card_id) {
         toast.addToast('Job card not found', 'error')
         setTimeout(() => navigate('/manufacturing/job-cards'), 1500)
@@ -272,7 +327,7 @@ export default function ProductionEntry() {
       }
 
       const jobCardStatus = normalizeStatus(jobCard?.status)
-      
+
       if (jobCardStatus === 'draft') {
         await productionService.updateJobCard(jobCard.job_card_id, { status: 'pending' })
         await productionService.updateJobCard(jobCard.job_card_id, { status: 'in-progress' })
@@ -281,32 +336,32 @@ export default function ProductionEntry() {
         await productionService.updateJobCard(jobCard.job_card_id, { status: 'in-progress' })
         jobCard.status = 'in-progress'
       }
-      
+
       setWorkstations(wsRes.data || [])
       setOperators(empRes.data || [])
       setJobCardData(jobCard)
-      
+
       let allOperations = []
       let woData = null
-      
+
       if (jobCard?.work_order_id) {
         try {
           const woRes = await productionService.getWorkOrder(jobCard.work_order_id)
           woData = woRes?.data || woRes
-          
+
           const soQty = woData?.qty_to_manufacture || woData?.quantity || woData?.planned_quantity || 0
           setSalesOrderQuantity(parseFloat(soQty) || 0)
-          
+
           allOperations = woData?.operations || []
-          
+
           if (allOperations.length === 0 && woData?.item_code) {
             const bomResponse = await productionService.getBOMs({ item_code: woData.item_code })
             const boms = bomResponse.data || []
-            
+
             if (boms.length > 0) {
               const bomDetails = await productionService.getBOMDetails(boms[0].bom_id)
               const bomData = bomDetails.data || bomDetails
-              
+
               allOperations = bomData?.operations || []
             }
           }
@@ -314,13 +369,13 @@ export default function ProductionEntry() {
           console.error('Failed to fetch work order/BOM operations:', err)
         }
       }
-      
+
       if (allOperations.length === 0) {
         allOperations = opsRes.data || []
       }
-      
+
       const globalOps = opsRes.data || []
-      
+
       const enrichedOperations = allOperations.map(op => {
         if (!op.name && !op.operation_name && op.operation_id) {
           const globalOp = globalOps.find(g => g.operation_id === op.operation_id || g.id === op.operation_id)
@@ -332,21 +387,21 @@ export default function ProductionEntry() {
         }
         return op
       })
-      
+
       const sortedOperations = enrichedOperations.sort((a, b) => {
         const seqA = parseInt(a.sequence || a.seq || a.operation_seq || 0)
         const seqB = parseInt(b.sequence || b.seq || b.operation_seq || 0)
         return seqA - seqB
       })
-      
+
       setOperations(sortedOperations)
-      
+
       if (jobCard?.work_order_id) {
         fetchItemName(jobCard.work_order_id)
         fetchOperationCycleTime(jobCard, woData)
         fetchPreviousOperationData(jobCard)
       }
-      
+
       await Promise.all([
         fetchWarehouses(),
         fetchTimeLogs(),
@@ -386,37 +441,37 @@ export default function ProductionEntry() {
   const fetchOperationCycleTime = async (jobCard, woData) => {
     try {
       if (!jobCard?.work_order_id) return
-      
+
       let bomId = woData?.bom_id
       let bomData = null
-      
+
       if (bomId) {
         const bomResponse = await productionService.getBOMDetails(bomId)
         bomData = bomResponse?.data || bomResponse
       }
-      
+
       if (!bomData && woData?.item_code) {
         const bomResponse = await productionService.getBOMs({ item_code: woData.item_code })
         const boms = bomResponse.data || []
-        
+
         if (boms.length > 0) {
           const bomDetails = await productionService.getBOMDetails(boms[0].bom_id || boms[0].id)
           bomData = bomDetails.data || bomDetails
         }
       }
-      
+
       if (bomData) {
         const operations = bomData?.bom_operations || bomData?.operations || []
         const jobCardOp = (jobCard.operation || '').toLowerCase().trim()
-        
+
         const operation = operations.find(op => {
           const opName = (op.name || op.operation_name || '').toLowerCase().trim()
           return opName === jobCardOp
         })
-        
+
         if (operation) {
           console.log('Found operation:', operation)
-          const cycleTime = 
+          const cycleTime =
             parseFloat(operation.operation_time) ||
             parseFloat(operation.cycle_time) ||
             parseFloat(operation.cycle) ||
@@ -424,7 +479,7 @@ export default function ProductionEntry() {
             parseFloat(operation.time_per_unit) ||
             parseFloat(operation.time) ||
             0
-          
+
           console.log('Cycle time extracted:', cycleTime, 'from field operation_time')
           if (cycleTime > 0) {
             setOperationCycleTime(cycleTime)
@@ -450,13 +505,14 @@ export default function ProductionEntry() {
     try {
       if (!currentJobCard?.work_order_id) return
 
-      const response = await productionService.getJobCards({ 
-        work_order_id: currentJobCard.work_order_id 
+      const response = await productionService.getJobCards({
+        work_order_id: currentJobCard.work_order_id
       })
-      const allJobCards = response.data || []
-      
+      const cards = response.data || []
+      setAllJobCards(cards)
+
       // Sort job cards by sequence (handling nulls/strings)
-      const sortedJobCards = [...allJobCards].sort((a, b) => {
+      const sortedJobCards = [...cards].sort((a, b) => {
         const seqA = parseInt(a.operation_sequence) || 0
         const seqB = parseInt(b.operation_sequence) || 0
         if (seqA !== seqB) return seqA - seqB
@@ -466,7 +522,7 @@ export default function ProductionEntry() {
 
       // Find current job card index in sorted list
       const currentIndex = sortedJobCards.findIndex(jc => jc.job_card_id === currentJobCard.job_card_id)
-      
+
       if (currentIndex > 0) {
         setPreviousOperationData(sortedJobCards[currentIndex - 1])
       }
@@ -523,11 +579,11 @@ export default function ProductionEntry() {
     if (timeLogForm.from_time && timeLogForm.to_time) {
       let [fromHour, fromMin] = timeLogForm.from_time.split(':').map(Number)
       let [toHour, toMin] = timeLogForm.to_time.split(':').map(Number)
-      
+
       // Convert to 24h
       fromHour = fromHour % 12;
       if (timeLogForm.from_period === 'PM') fromHour += 12;
-      
+
       toHour = toHour % 12;
       if (timeLogForm.to_period === 'PM') toHour += 12;
 
@@ -544,11 +600,11 @@ export default function ProductionEntry() {
     if (!fromTime || !toTime) return 0
     let [fromHour, fromMin] = fromTime.split(':').map(Number)
     let [toHour, toMin] = toTime.split(':').map(Number)
-    
+
     // Convert to 24h
     fromHour = fromHour % 12;
     if (fromPeriod === 'PM') fromHour += 12;
-    
+
     toHour = toHour % 12;
     if (toPeriod === 'PM') toHour += 12;
 
@@ -591,6 +647,12 @@ export default function ProductionEntry() {
         return
       }
 
+      const newQty = parseFloat(timeLogForm.completed_qty) || 0;
+      if (totalProducedQty + newQty > maxAllowedQty + 0.0001) {
+        toast.addToast(`Total completed quantity (${(totalProducedQty + newQty).toFixed(2)}) cannot exceed allowed quantity (${maxAllowedQty.toFixed(2)}). Previous operation output/planned quantity is the limit.`, 'error');
+        return;
+      }
+
       setFormLoading(true)
       const payload = {
         job_card_id: jobCardId,
@@ -610,10 +672,10 @@ export default function ProductionEntry() {
 
       await productionService.createTimeLog(payload)
       toast.addToast('Time log added successfully', 'success')
-      
+
       const currentDayNumber = timeLogForm.day_number;
       const currentLogDate = timeLogForm.log_date;
-      
+
       const defaultWorkstation = jobCardData?.assigned_workstation_id || workstations[0]?.name || ''
       setTimeLogForm({
         employee_id: '',
@@ -630,7 +692,7 @@ export default function ProductionEntry() {
         inhouse: jobCardData?.inhouse || false,
         outsource: jobCardData?.outsource || false
       })
-      
+
       setTimeout(() => {
         fetchTimeLogs()
       }, 300)
@@ -700,7 +762,7 @@ export default function ProductionEntry() {
 
   const handleAddRejection = async (e) => {
     e.preventDefault()
-    
+
     if (rejectionForm.accepted_qty <= 0 && rejectionForm.rejected_qty <= 0 && rejectionForm.scrap_qty <= 0) {
       toast.addToast('Please enter at least one quantity', 'error')
       return
@@ -709,6 +771,12 @@ export default function ProductionEntry() {
     if (rejectionForm.rejected_qty > 0 && !rejectionForm.reason) {
       toast.addToast('Please select a reason for rejection', 'error')
       return
+    }
+
+    const newAcceptedQty = parseFloat(rejectionForm.accepted_qty) || 0;
+    if (totalAcceptedQty + newAcceptedQty > maxAllowedQty + 0.0001) {
+      toast.addToast(`Total accepted quantity (${(totalAcceptedQty + newAcceptedQty).toFixed(2)}) cannot exceed allowed quantity (${maxAllowedQty.toFixed(2)}). Previous operation output/planned quantity is the limit.`, 'error');
+      return;
     }
 
     try {
@@ -727,10 +795,10 @@ export default function ProductionEntry() {
 
       await productionService.createRejection(payload)
       toast.addToast('Quality record added successfully', 'success')
-      
+
       const currentDayNumber = rejectionForm.day_number;
       const currentLogDate = rejectionForm.log_date;
-      
+
       setRejectionForm({
         reason: '',
         day_number: currentDayNumber,
@@ -740,7 +808,7 @@ export default function ProductionEntry() {
         scrap_qty: 0,
         notes: ''
       })
-      
+
       setTimeout(() => {
         fetchRejections()
       }, 300)
@@ -764,7 +832,7 @@ export default function ProductionEntry() {
 
   const handleAddDowntime = async (e) => {
     e.preventDefault()
-    
+
     if (!downtimeForm.type || !downtimeForm.from_time || !downtimeForm.to_time) {
       toast.addToast('Please fill all required fields', 'error')
       return
@@ -773,12 +841,12 @@ export default function ProductionEntry() {
     try {
       setFormLoading(true)
       const durationMinutes = calculateDowntimeDuration(
-        downtimeForm.from_time, 
+        downtimeForm.from_time,
         downtimeForm.to_time,
         downtimeForm.from_period,
         downtimeForm.to_period
       )
-      
+
       const payload = {
         job_card_id: jobCardId,
         day_number: parseInt(downtimeForm.day_number) || 1,
@@ -793,10 +861,10 @@ export default function ProductionEntry() {
 
       await productionService.createDowntime(payload)
       toast.addToast('Downtime entry recorded', 'success')
-      
+
       const currentDayNumber = downtimeForm.day_number;
       const currentLogDate = downtimeForm.log_date;
-      
+
       setDowntimeForm({
         type: '',
         reason: '',
@@ -807,7 +875,7 @@ export default function ProductionEntry() {
         to_time: '',
         to_period: 'AM'
       })
-      
+
       setTimeout(() => {
         fetchDowntimes()
       }, 300)
@@ -829,17 +897,23 @@ export default function ProductionEntry() {
     }
   }
 
-  const totalProducedQty = timeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0)
-  const totalAcceptedQty = rejections.reduce((sum, r) => sum + (parseFloat(r.accepted_qty) || 0), 0)
-  const totalRejectedQty = rejections.reduce((sum, r) => sum + (parseFloat(r.rejected_qty) || 0), 0)
-  const totalScrapQty = rejections.reduce((sum, r) => sum + (parseFloat(r.scrap_qty) || 0), 0)
-  const totalDowntimeMinutes = downtimes.reduce((sum, d) => sum + (parseFloat(d.duration_minutes) || 0), 0)
-
   const handleSubmitProduction = async () => {
     try {
       setIsSubmitting(true)
 
       const plannedQty = parseFloat(jobCardData?.planned_quantity || 0)
+
+      if (totalProducedQty > maxAllowedQty + 0.0001) {
+        toast.addToast(`Validation Error: Total produced quantity (${totalProducedQty.toFixed(2)}) exceeds allowed quantity (${maxAllowedQty.toFixed(2)}).`, 'error');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (totalAcceptedQty > maxAllowedQty + 0.0001) {
+        toast.addToast(`Validation Error: Total accepted quantity (${totalAcceptedQty.toFixed(2)}) exceeds allowed quantity (${maxAllowedQty.toFixed(2)}).`, 'error');
+        setIsSubmitting(false);
+        return;
+      }
 
       if (totalProducedQty < plannedQty) {
         const shortfall = (plannedQty - totalProducedQty).toFixed(2)
@@ -855,34 +929,47 @@ export default function ProductionEntry() {
         rejected_quantity: totalRejectedQty,
         scrap_quantity: totalScrapQty
       }
-      
+
       await productionService.updateJobCard(jobCardData.job_card_id, updatePayload)
 
       let successMessage = 'Production completed successfully'
 
       if (nextOperationForm.next_operation_id && nextOperationForm.next_warehouse_id) {
-        const selectedOp = operations.find(op => 
-          (op.operation_id || op.id) === nextOperationForm.next_operation_id || 
+        const selectedOp = operations.find(op =>
+          (op.operation_id || op.id) === nextOperationForm.next_operation_id ||
           (op.operation_name || op.name) === nextOperationForm.next_operation_id
         )
 
-        const nextJobCard = {
-          work_order_id: jobCardData.work_order_id,
-          operation: selectedOp?.operation_name || selectedOp?.name,
-          machine_id: selectedOp?.workstation_type || selectedOp?.workstation_name || jobCardData.machine_id || jobCardData.assigned_workstation_id,
-          ...(nextOperationForm.next_operator_id && { operator_id: nextOperationForm.next_operator_id }),
-          planned_quantity: totalAcceptedQty,
-          operation_sequence: (jobCardData.operation_sequence || 0) + 1,
-          status: 'draft'
+        const nextSequence = (parseInt(jobCardData.operation_sequence) || 0) + 1
+        const existingNextJobCard = allJobCards.find(jc => 
+          parseInt(jc.operation_sequence) === nextSequence
+        )
+
+        if (existingNextJobCard) {
+          const updatePayload = {
+            planned_quantity: totalAcceptedQty,
+            ...(nextOperationForm.next_operator_id && { operator_id: nextOperationForm.next_operator_id }),
+            machine_id: selectedOp?.workstation_type || selectedOp?.workstation_name || jobCardData.machine_id || jobCardData.assigned_workstation_id
+          }
+          await productionService.updateJobCard(existingNextJobCard.job_card_id, updatePayload)
+        } else {
+          const nextJobCard = {
+            work_order_id: jobCardData.work_order_id,
+            operation: selectedOp?.operation_name || selectedOp?.name,
+            machine_id: selectedOp?.workstation_type || selectedOp?.workstation_name || jobCardData.machine_id || jobCardData.assigned_workstation_id,
+            ...(nextOperationForm.next_operator_id && { operator_id: nextOperationForm.next_operator_id }),
+            planned_quantity: totalAcceptedQty,
+            operation_sequence: nextSequence,
+            status: 'draft'
+          }
+          await productionService.createJobCard(nextJobCard)
         }
 
-        await productionService.createJobCard(nextJobCard)
-        
-        successMessage = 'Production completed and next operation assigned successfully'
+        successMessage = 'Production completed and next operation updated successfully'
       }
 
       toast.addToast(successMessage, 'success')
-      
+
       setTimeout(() => {
         navigate('/manufacturing/job-cards')
       }, 1500)
@@ -903,53 +990,94 @@ export default function ProductionEntry() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] p-4 pb-20">
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200">
-        <div className="p-6  h-16 flex items-center justify-between">
+      <div className="max-w-[1600px] mx-auto space-y-6">
+        {/* Unified Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="p-2 bg-indigo-600 rounded shadow-lg shadow-indigo-200">
-              <Activity className="w-5 h-5 text-white" />
+            <div className="p-3 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-100">
+              <Activity className="w-6 h-6 text-white" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg  text-slate-900 tracking-tight">
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="text-xl font-semibold text-slate-900 tracking-tight">
                   Production Entry
                 </h1>
                 <StatusBadge status={jobCardData?.status} />
               </div>
-              <p className="text-xs   text-slate-400 text-xs ">
-                {jobCardData?.job_card_id || 'LOADING...'} • {new Date().toLocaleDateString('en-GB')}
+              <p className="text-sm text-slate-500 flex items-center gap-2">
+                <span className="font-medium text-slate-700">{jobCardData?.job_card_id || 'LOADING...'}</span>
+                <span className="text-slate-300">•</span>
+                <span>{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <button
+             <button
               onClick={() => navigate('/manufacturing/job-cards')}
-              className="text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-lg transition-all"
             >
-              Back to Job Cards
+              <ArrowLeft size={16} />
+              Back
             </button>
             <button
               onClick={handleSubmitProduction}
               disabled={isSubmitting}
-              className="flex items-center gap-2 p-2   bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50   hover:shadow-md transition-all text-xs  "
+              className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 shadow-lg shadow-slate-200 transition-all text-sm font-medium"
             >
               {isSubmitting ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
-                <FileText size={16} />
+                <CheckCircle size={18} />
               )}
               COMPLETE PRODUCTION
             </button>
           </div>
         </div>
-      </div>
 
-      <div className=" p-6">
-        <div className="grid grid-cols-12 gap-8">
-          {/* Left Column: Context & Intelligence */}
+        <div className="grid grid-cols-12 gap-6">
+          {/* Left Column: Context & Navigation */}
           <div className="col-span-12 lg:col-span-3 space-y-6">
+            {/* Quick Navigation Card */}
+            <Card className="p-4 border-slate-200 shadow-sm bg-white rounded-xl">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4 px-2">
+                Navigation
+              </h3>
+              <div className="space-y-1">
+                <NavItem 
+                  label="Time Logs" 
+                  icon={Clock} 
+                  section="time-logs" 
+                  isActive={activeSection === 'time-logs'} 
+                  onClick={scrollToSection}
+                />
+                <NavItem 
+                  label="Quality Check" 
+                  icon={ShieldCheck} 
+                  section="quality-entry" 
+                  isActive={activeSection === 'quality-entry'} 
+                  onClick={scrollToSection}
+                  color="emerald"
+                />
+                <NavItem 
+                  label="Downtime Logs" 
+                  icon={AlertTriangle} 
+                  section="downtime" 
+                  isActive={activeSection === 'downtime'} 
+                  onClick={scrollToSection}
+                  color="amber"
+                />
+                <NavItem 
+                  label="Next Operation" 
+                  icon={ArrowRight} 
+                  section="next-operation" 
+                  isActive={activeSection === 'next-operation'} 
+                  onClick={scrollToSection}
+                  color="indigo"
+                />
+              </div>
+            </Card>
+
             <Card className=" border-none bg-white rounded ">
               <div className="p-2 bg-slate-900 text-white flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -962,7 +1090,7 @@ export default function ProductionEntry() {
                   {jobCardData?.status || 'Draft'}
                 </div>
               </div>
-              
+
               <div className="p-2 ">
                 <div>
                   <p className="text-xs  text-slate-400  mb-3">Target Item</p>
@@ -1017,7 +1145,7 @@ export default function ProductionEntry() {
                     <div>
                       <p className="text-[9px]  text-slate-400  mb-1">Accepted</p>
                       <p className="text-sm  text-emerald-600">
-                        {parseFloat(parseFloat(previousOperationData.accepted_quantity) || ( (parseFloat(previousOperationData.produced_quantity) || 0) - (parseFloat(previousOperationData.rejected_quantity) || 0) )).toLocaleString()}
+                        {parseFloat(parseFloat(previousOperationData.accepted_quantity) || ((parseFloat(previousOperationData.produced_quantity) || 0) - (parseFloat(previousOperationData.rejected_quantity) || 0))).toLocaleString()}
                       </p>
                     </div>
                     <div>
@@ -1041,29 +1169,29 @@ export default function ProductionEntry() {
                 }
                 return sum
               }, 0)
-              
+
               const efficiency = actualMinutes > 0 ? ((expectedMinutes / actualMinutes) * 100).toFixed(0) : 0
               const qualityScore = totalProducedQty > 0 ? ((totalAcceptedQty / totalProducedQty) * 100).toFixed(1) : 0
-              
+
               return (
                 <div className="space-y-4">
-                  <StatCard 
-                    label="Efficiency" 
-                    value={`${efficiency}%`} 
+                  <StatCard
+                    label="Efficiency"
+                    value={`${efficiency}%`}
                     icon={Activity}
                     color={efficiency >= 90 ? 'emerald' : efficiency >= 75 ? 'amber' : 'rose'}
                     subtitle={`${actualMinutes.toFixed(0)} / ${expectedMinutes.toFixed(0)} MIN`}
                   />
-                  <StatCard 
-                    label="Quality" 
-                    value={`${qualityScore}%`} 
+                  <StatCard
+                    label="Quality"
+                    value={`${qualityScore}%`}
                     icon={CheckCircle2}
                     color={qualityScore >= 98 ? 'emerald' : 'amber'}
                     subtitle="ACCEPTANCE RATE"
                   />
-                  <StatCard 
-                    label="Productivity" 
-                    value={actualMinutes > 0 ? ((totalAcceptedQty / (actualMinutes / 60)).toFixed(1)) : '0'} 
+                  <StatCard
+                    label="Productivity"
+                    value={actualMinutes > 0 ? ((totalAcceptedQty / (actualMinutes / 60)).toFixed(1)) : '0'}
                     icon={Boxes}
                     color="indigo"
                     subtitle="UNITS PER HOUR"
@@ -1073,700 +1201,673 @@ export default function ProductionEntry() {
             })()}
           </div>
 
-          {/* Right Column: Production Actions & Logs */}
-          <div className="col-span-12 lg:col-span-9 ">
-            {/* Tabs Navigation */}
-            <div className="flex gap-8 border-b border-slate-200">
-              {[
-                { id: 'timelogs', label: 'Time Logs', icon: Clock },
-                { id: 'rejections', label: 'Quality Control', icon: ShieldCheck },
-                { id: 'downtimes', label: 'Downtime Log', icon: AlertTriangle }
-              ].map(tab => {
-                const TabIcon = tab.icon
-                const isActive = activeTab === tab.id
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 p-2 transition-all text-xs  border-b-2 relative  ${
-                      isActive 
-                        ? 'border-indigo-600 text-indigo-600' 
-                        : 'border-transparent text-slate-400 hover:text-slate-600'
-                    }`}
-                  >
-                    <TabIcon size={16} />
-                    <span>{tab.label}</span>
-                  </button>
-                )
-              })}
-            </div>
+          <div className="col-span-12 lg:col-span-9 space-y-8">
+            {/* Time Logs Section */}
+            <div id="time-logs" className="animate-in fade-in slide-in-from-bottom-2 bg-white duration-300">
+              <Card className="p-3 border-none  overflow-visible">
+                <SectionTitle title="Add Time Log" icon={Plus} />
+                <form onSubmit={handleAddTimeLog} className="flex flex-wrap gap-2 ">
+                  <FieldWrapper label="Day & Date" required>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        value={timeLogForm.day_number}
+                        onChange={(e) => handleDayChange(e.target.value, 'timeLog')}
+                        className="w-14 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        required
+                      />
+                      <input
+                        type="date"
+                        value={timeLogForm.log_date}
+                        onChange={(e) => handleDateChange(e.target.value, 'timeLog')}
+                        className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        required
+                      />
+                    </div>
+                  </FieldWrapper>
 
-            {/* Content Area based on Tab */}
-            {activeTab === 'timelogs' && (
-              <div className=" animate-in fade-in slide-in-from-bottom-2 bg-white duration-300">
-                <Card className="p-3 border-none  overflow-visible">
-                  <SectionTitle title="Add Time Log" icon={Plus} />
-                  <form onSubmit={handleAddTimeLog} className="flex flex-wrap gap-2 ">
-                    <FieldWrapper label="Day & Date" required>
-                      <div className="flex gap-2">
+                  <FieldWrapper label="Operator" required>
+                    <SearchableSelect
+                      value={timeLogForm.employee_id}
+                      onChange={handleOperatorChange}
+                      options={operators.map(op => ({
+                        value: op.employee_id,
+                        label: `${op.first_name} ${op.last_name}`
+                      }))}
+                      placeholder="Select Operator"
+                      containerClassName=" rounded bg-slate-50 border-slate-200 transition-all"
+                    />
+                  </FieldWrapper>
+
+                  <FieldWrapper label="Workstation" required>
+                    <SearchableSelect
+                      value={timeLogForm.machine_id}
+                      onChange={(value) => setTimeLogForm({ ...timeLogForm, machine_id: value })}
+                      options={workstations.map(ws => ({
+                        value: ws.name || ws.workstation_name || ws.id,
+                        label: ws.workstation_name || ws.name || ws.id
+                      }))}
+                      placeholder="Select Machine"
+                      containerClassName=" rounded bg-slate-50 border-slate-200 transition-all"
+                    />
+                  </FieldWrapper>
+
+                  <FieldWrapper label="Shift" required>
+                    <select
+                      value={timeLogForm.shift}
+                      onChange={(e) => setTimeLogForm({ ...timeLogForm, shift: e.target.value })}
+                      className="w-full p-2  bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
+                    >
+                      {shifts.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </FieldWrapper>
+
+                  <div className="md:col-span-2">
+                    <FieldWrapper label="Production Period" required>
+                      <div className="flex gap-2 items-center">
+                        <div className="flex flex-1 gap-1">
                           <input
-                            type="number"
-                            min="1"
-                            value={timeLogForm.day_number}
-                            onChange={(e) => handleDayChange(e.target.value, 'timeLog')}
-                            className="w-14 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                            required
-                          />
-                          <input
-                            type="date"
-                            value={timeLogForm.log_date}
-                            onChange={(e) => handleDateChange(e.target.value, 'timeLog')}
+                            type="time"
+                            value={timeLogForm.from_time}
+                            onChange={(e) => setTimeLogForm({ ...timeLogForm, from_time: e.target.value })}
                             className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
                             required
                           />
-                      </div>
-                    </FieldWrapper>
-
-                    <FieldWrapper label="Operator" required>
-                      <SearchableSelect
-                        value={timeLogForm.employee_id}
-                        onChange={handleOperatorChange}
-                        options={operators.map(op => ({
-                          value: op.employee_id,
-                          label: `${op.first_name} ${op.last_name}`
-                        }))}
-                        placeholder="Select Operator"
-                        containerClassName=" rounded bg-slate-50 border-slate-200 transition-all"
-                      />
-                    </FieldWrapper>
-
-                    <FieldWrapper label="Workstation" required>
-                      <SearchableSelect
-                        value={timeLogForm.machine_id}
-                        onChange={(value) => setTimeLogForm({ ...timeLogForm, machine_id: value })}
-                        options={workstations.map(ws => ({
-                          value: ws.name || ws.workstation_name || ws.id,
-                          label: ws.workstation_name || ws.name || ws.id
-                        }))}
-                        placeholder="Select Machine"
-                        containerClassName=" rounded bg-slate-50 border-slate-200 transition-all"
-                      />
-                    </FieldWrapper>
-
-                    <FieldWrapper label="Shift" required>
-                      <select
-                        value={timeLogForm.shift}
-                        onChange={(e) => setTimeLogForm({ ...timeLogForm, shift: e.target.value })}
-                        className="w-full p-2  bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
-                      >
-                        {shifts.map(s => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
-                    </FieldWrapper>
-
-                    <div className="md:col-span-2">
-                      <FieldWrapper label="Production Period" required>
-                        <div className="flex gap-2 items-center">
-                          <div className="flex flex-1 gap-1">
-                            <input
-                              type="time"
-                              value={timeLogForm.from_time}
-                              onChange={(e) => setTimeLogForm({ ...timeLogForm, from_time: e.target.value })}
-                              className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                              required
-                            />
-                            <select
-                              value={timeLogForm.from_period}
-                              onChange={(e) => setTimeLogForm({ ...timeLogForm, from_period: e.target.value })}
-                              className="p-2 bg-slate-100 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
-                            >
-                              <option value="AM">AM</option>
-                              <option value="PM">PM</option>
-                            </select>
-                          </div>
-                          <ArrowRight size={14} className="text-slate-300 shrink-0" />
-                          <div className="flex flex-1 gap-1">
-                            <input
-                              type="time"
-                              value={timeLogForm.to_time}
-                              onChange={(e) => setTimeLogForm({ ...timeLogForm, to_time: e.target.value })}
-                              className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                              required
-                            />
-                            <select
-                              value={timeLogForm.to_period}
-                              onChange={(e) => setTimeLogForm({ ...timeLogForm, to_period: e.target.value })}
-                              className="p-2 bg-slate-100 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
-                            >
-                              <option value="AM">AM</option>
-                              <option value="PM">PM</option>
-                            </select>
-                          </div>
+                          <select
+                            value={timeLogForm.from_period}
+                            onChange={(e) => setTimeLogForm({ ...timeLogForm, from_period: e.target.value })}
+                            className="p-2 bg-slate-100 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
+                          >
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
+                          </select>
                         </div>
-                      </FieldWrapper>
-                    </div>
-
-                    <FieldWrapper label="Completed Qty" required>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={timeLogForm.completed_qty}
-                          onChange={(e) => setTimeLogForm({ ...timeLogForm, completed_qty: e.target.value })}
-                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                          required
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px]  text-slate-400 ">UNITS</span>
+                        <ArrowRight size={14} className="text-slate-300 shrink-0" />
+                        <div className="flex flex-1 gap-1">
+                          <input
+                            type="time"
+                            value={timeLogForm.to_time}
+                            onChange={(e) => setTimeLogForm({ ...timeLogForm, to_time: e.target.value })}
+                            className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                            required
+                          />
+                          <select
+                            value={timeLogForm.to_period}
+                            onChange={(e) => setTimeLogForm({ ...timeLogForm, to_period: e.target.value })}
+                            className="p-2 bg-slate-100 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
+                          >
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
+                          </select>
+                        </div>
                       </div>
                     </FieldWrapper>
-
-                    <div className="flex items-end ">
-                      <button
-                        type="submit"
-                        disabled={formLoading}
-                        className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 shadow-md shadow-indigo-100 hover:shadow-lg transition-all text-xs p-2"
-                      >
-                        {formLoading ? (
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                          <Plus size={16} />
-                        )}
-                        Log Production
-                      </button>
-                    </div>
-                  </form>
-                </Card>
-
-                <Card className="border-none  overflow-hidden">
-                  <div className="p-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-white text-indigo-600 rounded  border border-slate-100">
-                        <Clock size={16} />
-                      </div>
-                      <h3 className="text-[11px]  text-slate-900 text-xs ">Time Log History</h3>
-                    </div>
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left bg-white">
-                      <thead>
-                        <tr className="bg-slate-50/50 border-b border-slate-100">
-                          <th className="p-2 text-xs text-slate-400 ">Operator</th>
-                          <th className="p-2 text-xs text-slate-400 ">Workstation</th>
-                          <th className="p-2 text-xs text-slate-400  text-center">Timing</th>
-                          <th className="p-2 text-xs text-slate-400  text-right">Qty</th>
-                          <th className="p-4 w-16"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {timeLogs.map((log) => (
-                          <tr key={log.id || log.time_log_id} className="group hover:bg-slate-50/50 transition-colors">
-                            <td className="p-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xs  text-slate-600 border border-slate-200">
-                                  {log.operator_name?.split(' ').map(n => n[0]).join('')}
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium text-slate-900">{log.operator_name}</p>
-                                  <p className="text-xs text-slate-400 ">Day {log.day_number}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-4">
-                              <span className="text-xs font-medium text-slate-600">{log.workstation_name}</span>
-                            </td>
-                            <td className="p-4 text-center">
-                              <div className="inline-flex items-center gap-3 p-2  py-1.5 bg-slate-50 rounded border border-slate-100">
-                                <span className="text-xs  text-slate-700">{format12h(log.from_time)}</span>
-                                <ArrowRight size={12} className="text-slate-300" />
-                                <span className="text-xs  text-slate-700">{format12h(log.to_time)}</span>
-                              </div>
-                            </td>
-                            <td className="p-4 text-right">
-                              <span className="text-sm  text-slate-900">{log.completed_qty}</span>
-                            </td>
-                            <td className="p-4 text-center">
-                              <button
-                                onClick={() => handleDeleteTimeLog(log.id || log.time_log_id)}
-                                className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all "
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
-              </div>
-            )}
 
-            {activeTab === 'rejections' && (
-              <div className=" animate-in fade-in slide-in-from-bottom-2 duration-300 bg-white">
-                <Card className="p-3 border-none ">
-                  <SectionTitle title="Record Quality Entry" icon={ShieldCheck} />
-                  <form onSubmit={handleAddRejection} className="flex flex-wrap gap-2">
-                    <FieldWrapper label="Day & Date" required>
-                      <div className="flex gap-2">
-                        <input
-                          type="number"
-                          min="1"
-                          value={rejectionForm.day_number}
-                          onChange={(e) => handleDayChange(e.target.value, 'rejection')}
-                          className="w-14 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                          required
-                        />
-                        <input
-                          type="date"
-                          value={rejectionForm.log_date}
-                          onChange={(e) => handleDateChange(e.target.value, 'rejection')}
-                          className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                          required
-                        />
-                      </div>
-                    </FieldWrapper>
-
-                    <FieldWrapper label="Shift" required>
-                      <select
-                        value={rejectionForm.shift}
-                        onChange={(e) => setRejectionForm({ ...rejectionForm, shift: e.target.value })}
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
-                      >
-                        {shifts.map(s => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
-                    </FieldWrapper>
-
-                    <FieldWrapper label="Accepted Qty">
+                  <FieldWrapper label="Completed Qty" required>
+                    <div className="relative">
                       <input
                         type="number"
                         step="0.01"
-                        value={rejectionForm.accepted_qty}
-                        onChange={(e) => setRejectionForm({ ...rejectionForm, accepted_qty: e.target.value })}
+                        value={timeLogForm.completed_qty}
+                        onChange={(e) => setTimeLogForm({ ...timeLogForm, completed_qty: e.target.value })}
                         className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                      />
-                    </FieldWrapper>
-
-                    <FieldWrapper label="Rejected Qty">
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={rejectionForm.rejected_qty}
-                        onChange={(e) => setRejectionForm({ ...rejectionForm, rejected_qty: e.target.value })}
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                      />
-                    </FieldWrapper>
-
-                    <FieldWrapper label="Scrap Qty">
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={rejectionForm.scrap_qty}
-                        onChange={(e) => setRejectionForm({ ...rejectionForm, scrap_qty: e.target.value })}
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                      />
-                    </FieldWrapper>
-
-                    <FieldWrapper label="Reason">
-                      <SearchableSelect
-                        value={rejectionForm.reason}
-                        onChange={(value) => setRejectionForm({ ...rejectionForm, reason: value })}
-                        options={rejectionReasons.map(r => ({ value: r, label: r }))}
-                        placeholder="Select Reason"
-                        containerClassName=" rounded bg-slate-50 border-slate-200 transition-all"
-                      />
-                    </FieldWrapper>
-
-                    <FieldWrapper label="Notes">
-                      <input
-                        type="text"
-                        value={rejectionForm.notes}
-                        onChange={(e) => setRejectionForm({ ...rejectionForm, notes: e.target.value })}
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                        placeholder="Optional notes"
-                      />
-                    </FieldWrapper>
-
-                    <div className="flex items-end pb-0.5">
-                      <button
-                        type="submit"
-                        disabled={formLoading}
-                        className="w-full p-2 flex items-center justify-center gap-2 bg-rose-600 text-white rounded hover:bg-rose-700 disabled:opacity-50 shadow-md shadow-rose-100 hover:shadow-lg transition-all text-xs "
-                      >
-                        {formLoading ? (
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                          <ShieldCheck size={16} />
-                        )}
-                        Log Quality
-                      </button>
-                    </div>
-                  </form>
-                </Card>
-
-                <Card className="border-none  overflow-hidden">
-                  <div className="p-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-white text-rose-600 rounded  border border-slate-100">
-                        <ShieldCheck size={16} />
-                      </div>
-                      <h3 className="text-[11px]  text-slate-900 text-xs ">Quality History</h3>
-                    </div>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left bg-white">
-                      <thead>
-                        <tr className="bg-slate-50/50 border-b border-slate-100">
-                          <th className="p-2 text-xs text-slate-400 ">Date/Day</th>
-                          <th className="p-2 text-xs text-slate-400 ">Reason</th>
-                          <th className="p-2 text-xs text-slate-400  text-right">Accepted</th>
-                          <th className="p-2 text-xs text-slate-400  text-right">Rejected</th>
-                          <th className="p-4 w-16"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {rejections.map((rej) => (
-                          <tr key={rej.rejection_id} className="group hover:bg-slate-50/50 transition-colors">
-                            <td className="p-4">
-                              <p className="text-sm font-medium text-slate-900">{new Date(rej.log_date).toLocaleDateString()}</p>
-                              <p className="text-xs text-slate-400 ">Day {rej.day_number}</p>
-                            </td>
-                            <td className="p-4">
-                              <span className="text-xs font-medium text-slate-600">{rej.reason || rej.rejection_reason || 'N/A'}</span>
-                            </td>
-                            <td className="p-4 text-right">
-                              <span className="text-sm  text-emerald-600">{rej.accepted_qty}</span>
-                            </td>
-                            <td className="p-4 text-right">
-                              <span className="text-sm  text-rose-600">{rej.rejected_qty}</span>
-                            </td>
-                            <td className="p-4 text-center">
-                              <button
-                                onClick={() => handleDeleteRejection(rej.rejection_id)}
-                                className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all "
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
-              </div>
-            )}
-
-            {activeTab === 'downtimes' && (
-              <div className=" animate-in fade-in slide-in-from-bottom-2 duration-300 bg-white">
-                <Card className="p-3 border-none  overflow-visible">
-                  <SectionTitle title="Record Downtime" icon={AlertTriangle} />
-                  <form onSubmit={handleAddDowntime} className="flex flex-wrap gap-2">
-                    <FieldWrapper label="Day & Date" required>
-                      <div className="flex gap-2">
-                        <input
-                          type="number"
-                          min="1"
-                          value={downtimeForm.day_number}
-                          onChange={(e) => handleDayChange(e.target.value, 'downtime')}
-                          className="w-14 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                          required
-                        />
-                        <input
-                          type="date"
-                          value={downtimeForm.log_date}
-                          onChange={(e) => handleDateChange(e.target.value, 'downtime')}
-                          className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                          required
-                        />
-                      </div>
-                    </FieldWrapper>
-
-                    <FieldWrapper label="Shift" required>
-                      <select
-                        value={downtimeForm.shift}
-                        onChange={(e) => setDowntimeForm({ ...downtimeForm, shift: e.target.value })}
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
-                      >
-                        {shifts.map(s => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
-                    </FieldWrapper>
-
-                    <FieldWrapper label="Type" required>
-                      <select
-                        value={downtimeForm.type}
-                        onChange={(e) => setDowntimeForm({ ...downtimeForm, type: e.target.value })}
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
                         required
-                      >
-                        <option value="">Select Type</option>
-                        {downtimeTypes.map(t => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                      </select>
-                    </FieldWrapper>
-
-                    <div className="md:col-span-2">
-                      <FieldWrapper label="Timing" required>
-                        <div className="flex gap-2 items-center">
-                          <div className="flex flex-1 gap-1">
-                            <input
-                              type="time"
-                              value={downtimeForm.from_time}
-                              onChange={(e) => setDowntimeForm({ ...downtimeForm, from_time: e.target.value })}
-                              className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                              required
-                            />
-                            <select
-                              value={downtimeForm.from_period}
-                              onChange={(e) => setDowntimeForm({ ...downtimeForm, from_period: e.target.value })}
-                              className="p-2 bg-slate-100 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
-                            >
-                              <option value="AM">AM</option>
-                              <option value="PM">PM</option>
-                            </select>
-                          </div>
-                          <ArrowRight size={14} className="text-slate-300 shrink-0" />
-                          <div className="flex flex-1 gap-1">
-                            <input
-                              type="time"
-                              value={downtimeForm.to_time}
-                              onChange={(e) => setDowntimeForm({ ...downtimeForm, to_time: e.target.value })}
-                              className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                              required
-                            />
-                            <select
-                              value={downtimeForm.to_period}
-                              onChange={(e) => setDowntimeForm({ ...downtimeForm, to_period: e.target.value })}
-                              className="p-2 bg-slate-100 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
-                            >
-                              <option value="AM">AM</option>
-                              <option value="PM">PM</option>
-                            </select>
-                          </div>
-                        </div>
-                      </FieldWrapper>
-                    </div>
-
-                    <FieldWrapper label="Reason">
-                      <input
-                        type="text"
-                        value={downtimeForm.reason}
-                        onChange={(e) => setDowntimeForm({ ...downtimeForm, reason: e.target.value })}
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                        placeholder="Optional reason"
                       />
-                    </FieldWrapper>
-
-                    <div className="flex items-end pb-0.5">
-                      <button
-                        type="submit"
-                        disabled={formLoading}
-                        className="w-full p-2 flex items-center justify-center gap-2 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 shadow-md shadow-amber-100 hover:shadow-lg transition-all text-xs  "
-                      >
-                        {formLoading ? (
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                          <AlertTriangle size={16} />
-                        )}
-                        Log Downtime
-                      </button>
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px]  text-slate-400 ">UNITS</span>
                     </div>
-                  </form>
-                </Card>
+                  </FieldWrapper>
 
-                <Card className="border-none  overflow-hidden">
-                  <div className="p-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-white text-amber-600 rounded  border border-slate-100">
-                        <AlertTriangle size={16} />
-                      </div>
-                      <h3 className="text-[11px]  text-slate-900 text-xs ">Downtime History</h3>
-                    </div>
+                  <div className="flex items-end ">
+                    <button
+                      type="submit"
+                      disabled={formLoading}
+                      className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 shadow-md shadow-indigo-100 hover:shadow-lg transition-all text-xs p-2"
+                    >
+                      {formLoading ? (
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <Plus size={16} />
+                      )}
+                      Log Production
+                    </button>
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left bg-white">
-                      <thead>
-                        <tr className="bg-slate-50/50 border-b border-slate-100">
-                          <th className="p-2 text-xs text-slate-400 ">Type/Reason</th>
-                          <th className="p-2 text-xs text-slate-400  text-center">Timing</th>
-                          <th className="p-2 text-xs text-slate-400  text-right">Duration</th>
-                          <th className="p-4 w-16"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {downtimes.map((dt) => (
-                          <tr key={dt.downtime_id} className="group hover:bg-slate-50/50 transition-colors">
-                            <td className="p-4">
-                              <p className="text-sm font-medium text-slate-900">{dt.type || dt.downtime_type}</p>
-                              <p className="text-xs text-slate-400 ">{dt.reason || dt.downtime_reason || 'No reason'}</p>
-                            </td>
-                            <td className="p-4 text-center">
-                              <div className="inline-flex items-center gap-3 p-2  py-1.5 bg-slate-50 rounded border border-slate-100">
-                                <span className="text-xs  text-slate-700">{format12h(dt.from_time)}</span>
-                                <ArrowRight size={12} className="text-slate-300" />
-                                <span className="text-xs  text-slate-700">{format12h(dt.to_time)}</span>
+                </form>
+              </Card>
+              <Card className="border-none  overflow-hidden">
+                <div className="p-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-white text-indigo-600 rounded  border border-slate-100">
+                      <Clock size={16} />
+                    </div>
+                    <h3 className="text-[11px]  text-slate-900 text-xs ">Time Log History</h3>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left bg-white">
+                    <thead>
+                      <tr className="bg-slate-50/50 border-b border-slate-100">
+                        <th className="p-2 text-xs text-slate-400 ">Operator</th>
+                        <th className="p-2 text-xs text-slate-400 ">Workstation</th>
+                        <th className="p-2 text-xs text-slate-400  text-center">Timing</th>
+                        <th className="p-2 text-xs text-slate-400  text-right">Qty</th>
+                        <th className="p-4 w-16"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {timeLogs.map((log) => (
+                        <tr key={log.id || log.time_log_id} className="group hover:bg-slate-50/50 transition-colors">
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xs  text-slate-600 border border-slate-200">
+                                {log.operator_name?.split(' ').map(n => n[0]).join('')}
                               </div>
-                            </td>
-                            <td className="p-4 text-right">
-                              <span className="text-sm  text-slate-900">{dt.duration_minutes || calculateDowntimeDuration(dt.from_time, dt.to_time, dt.from_period, dt.to_period)} min</span>
-                            </td>
-                            <td className="p-4 text-center">
-                              <button
-                                onClick={() => handleDeleteDowntime(dt.downtime_id)}
-                                className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all "
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
-              </div>
-            )}
-
-            {/* Next Operation/Finalize Section */}
-            <div className="mt-12 pt-8 border-t border-slate-200">
-              <Card className="p-0 border-none  overflow-visible relative bg-white">
-                <div className="flex flex-col md:flex-row">
-                  {/* Left branding/info strip */}
-                  <div className=" w-10 bg-emerald-600 rounded flex items-center justify-center p-4">
-                    <div className="rotate-0 md:-rotate-90 whitespace-nowrap text-white  text-xs tracking-[0.3em] flex items-center gap-3">
-                      <CheckCircle2 size={16} />
-                      PHASE ASSIGNMENT
-                    </div>
-                  </div>
-
-                  <div className="flex-1 p-2">
-                    <div className="flex items-center justify-between mb-8">
-                      <div>
-                        <h3 className="text-md  text-slate-900 flex items-center gap-2">
-                          Next Stage Configuration
-                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-xs rounded border border-emerald-100 ">Active</span>
-                        </h3>
-                        <p className="text-xs text-slate-400 mt-1">Specify destination and operational parameters for the next manufacturing phase</p>
-                      </div>
-                      <div className="hidden sm:flex items-center gap-2 text-emerald-600 bg-emerald-50 p-2  py-1.5 rounded border border-emerald-100">
-                        <Activity size={14} className="animate-pulse" />
-                        <span className="text-xs ">READY TO DISPATCH</span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <FieldWrapper label="NEXT OPERATION" required>
-                        <div className="group relative">
-                          <SearchableSelect
-                            value={nextOperationForm.next_operation_id}
-                            onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_operation_id: val })}
-                            options={operations.map(op => ({
-                              value: op.operation_id || op.id || op.operation_name || op.name,
-                              label: op.operation_name || op.name
-                            }))}
-                            placeholder="Select Next Op"
-                            containerClassName="p-2  rounded bg-slate-50 border-slate-200 transition-all"
-                          />
-                          <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-0 group-focus-within:h-6 bg-emerald-500 rounded-full transition-all duration-300"></div>
-                        </div>
-                      </FieldWrapper>
-
-                      <FieldWrapper label="ASSIGN OPERATOR">
-                        <div className="group relative">
-                          <SearchableSelect
-                            value={nextOperationForm.next_operator_id}
-                            onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_operator_id: val })}
-                            options={operators.map(op => ({
-                              value: op.employee_id,
-                              label: `${op.first_name} ${op.last_name}`
-                            }))}
-                            placeholder="Search Operator..."
-                            containerClassName="p-2  rounded bg-slate-50 border-slate-200 transition-all"
-                          />
-                          <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-0 group-focus-within:h-6 bg-indigo-500 rounded-full transition-all duration-300"></div>
-                        </div>
-                      </FieldWrapper>
-
-                      <FieldWrapper label="TARGET WAREHOUSE" required>
-                        <div className="group relative">
-                          <SearchableSelect
-                            value={nextOperationForm.next_warehouse_id}
-                            onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_warehouse_id: val })}
-                            options={warehouses.map(w => ({
-                              value: w.warehouse_id || w.id || w.name,
-                              label: w.warehouse_name || w.name
-                            }))}
-                            placeholder="Select Destination"
-                            containerClassName="p-2  rounded bg-slate-50 border-slate-200 transition-all"
-                          />
-                          <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-0 group-focus-within:h-6 bg-amber-500 rounded-full transition-all duration-300"></div>
-                        </div>
-                      </FieldWrapper>
-                    </div>
-
-                    <div className="mt-2 border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                      <div className=" items-center gap-6">
-                        <p className="text-xs text-slate-400 ">Execution Mode:</p>
-                        <div className="flex items-center gap-4">
-                          <button
-                            type="button"
-                            onClick={() => setNextOperationForm({ ...nextOperationForm, inhouse: !nextOperationForm.inhouse, outsource: false })}
-                            className={`flex items-center gap-3 p-2 rounded border-2 transition-all duration-300 ${nextOperationForm.inhouse ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-md shadow-emerald-100' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
-                          >
-                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${nextOperationForm.inhouse ? 'border-emerald-500 bg-white' : 'border-slate-300'}`}>
-                              {nextOperationForm.inhouse && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                              <div>
+                                <p className="text-sm font-medium text-slate-900">{log.operator_name}</p>
+                                <p className="text-xs text-slate-400 ">Day {log.day_number}</p>
+                              </div>
                             </div>
-                            <span className="text-xs ">IN-HOUSE</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setNextOperationForm({ ...nextOperationForm, outsource: !nextOperationForm.outsource, inhouse: false })}
-                            className={`flex items-center gap-3 p-2 rounded border-2 transition-all duration-300 ${nextOperationForm.outsource ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-md shadow-indigo-100' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
-                          >
-                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${nextOperationForm.outsource ? 'border-indigo-500 bg-white' : 'border-slate-300'}`}>
-                              {nextOperationForm.outsource && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+                          </td>
+                          <td className="p-4">
+                            <span className="text-xs font-medium text-slate-600">{log.workstation_name}</span>
+                          </td>
+                          <td className="p-4 text-center">
+                            <div className="inline-flex items-center gap-3 p-2  py-1.5 bg-slate-50 rounded border border-slate-100">
+                              <span className="text-xs  text-slate-700">{format12h(log.from_time)}</span>
+                              <ArrowRight size={12} className="text-slate-300" />
+                              <span className="text-xs  text-slate-700">{format12h(log.to_time)}</span>
                             </div>
-                            <span className="text-xs ">OUTSOURCE</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={handleSubmitProduction}
-                        disabled={isSubmitting}
-                        className="relative group overflow-hidden p-2 bg-slate-900 text-white rounded hover:shadow-2xl hover:shadow-emerald-200 transition-all duration-500 disabled:opacity-50 flex items-center justify-center gap-4 active:scale-95"
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-emerald-400 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500"></div>
-                        <div className="relative flex items-center gap-4">
-                          {isSubmitting ? (
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          ) : (
-                            <div className="p-1.5 bg-white/10 rounded group-hover:bg-white/20 transition-colors">
-                              <FileText size={10} />
-                            </div>
-                          )}
-                          <div className="text-left">
-                            <p className="text-xs text-white/50  leading-none">Finalize & Dispatch</p>
-                            <p className="text-xs ">Move to Next Stage</p>
-                          </div>
-                          <ChevronRight size={10} className="group-hover:translate-x-1 transition-transform" />
-                        </div>
-                      </button>
+                          </td>
+                          <td className="p-4 text-right">
+                            <span className="text-sm  text-slate-900">{log.completed_qty}</span>
+                          </td>
+                          <td className="p-4 text-center">
+                            <button
+                              onClick={() => handleDeleteTimeLog(log.id || log.time_log_id)}
+                              className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all "
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
+            <div id="quality-entry" className=" animate-in fade-in slide-in-from-bottom-2 duration-300 bg-white">
+              <Card className="p-3 border-none ">
+                <SectionTitle title="Record Quality Entry" icon={ShieldCheck} />
+                <form onSubmit={handleAddRejection} className="flex flex-wrap gap-2">
+                  <FieldWrapper label="Day & Date" required>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        value={rejectionForm.day_number}
+                        onChange={(e) => handleDayChange(e.target.value, 'rejection')}
+                        className="w-14 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        required
+                      />
+                      <input
+                        type="date"
+                        value={rejectionForm.log_date}
+                        onChange={(e) => handleDateChange(e.target.value, 'rejection')}
+                        className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        required
+                      />
                     </div>
+                  </FieldWrapper>
+
+                  <FieldWrapper label="Shift" required>
+                    <select
+                      value={rejectionForm.shift}
+                      onChange={(e) => setRejectionForm({ ...rejectionForm, shift: e.target.value })}
+                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
+                    >
+                      {shifts.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </FieldWrapper>
+
+                  <FieldWrapper label="Accepted Qty">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={rejectionForm.accepted_qty}
+                      onChange={(e) => setRejectionForm({ ...rejectionForm, accepted_qty: e.target.value })}
+                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                    />
+                  </FieldWrapper>
+
+                  <FieldWrapper label="Rejected Qty">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={rejectionForm.rejected_qty}
+                      onChange={(e) => setRejectionForm({ ...rejectionForm, rejected_qty: e.target.value })}
+                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                    />
+                  </FieldWrapper>
+
+                  <FieldWrapper label="Scrap Qty">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={rejectionForm.scrap_qty}
+                      onChange={(e) => setRejectionForm({ ...rejectionForm, scrap_qty: e.target.value })}
+                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                    />
+                  </FieldWrapper>
+
+                  <FieldWrapper label="Reason">
+                    <SearchableSelect
+                      value={rejectionForm.reason}
+                      onChange={(value) => setRejectionForm({ ...rejectionForm, reason: value })}
+                      options={rejectionReasons.map(r => ({ value: r, label: r }))}
+                      placeholder="Select Reason"
+                      containerClassName=" rounded bg-slate-50 border-slate-200 transition-all"
+                    />
+                  </FieldWrapper>
+
+                  <FieldWrapper label="Notes">
+                    <input
+                      type="text"
+                      value={rejectionForm.notes}
+                      onChange={(e) => setRejectionForm({ ...rejectionForm, notes: e.target.value })}
+                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                      placeholder="Optional notes"
+                    />
+                  </FieldWrapper>
+
+                  <div className="flex items-end pb-0.5">
+                    <button
+                      type="submit"
+                      disabled={formLoading}
+                      className="w-full p-2 flex items-center justify-center gap-2 bg-rose-600 text-white rounded hover:bg-rose-700 disabled:opacity-50 shadow-md shadow-rose-100 hover:shadow-lg transition-all text-xs "
+                    >
+                      {formLoading ? (
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <ShieldCheck size={16} />
+                      )}
+                      Log Quality
+                    </button>
                   </div>
+                </form>
+              </Card>
+
+              <Card className="border-none  overflow-hidden">
+                <div className="p-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-white text-rose-600 rounded  border border-slate-100">
+                      <ShieldCheck size={16} />
+                    </div>
+                    <h3 className="text-[11px]  text-slate-900 text-xs ">Quality History</h3>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left bg-white">
+                    <thead>
+                      <tr className="bg-slate-50/50 border-b border-slate-100">
+                        <th className="p-2 text-xs text-slate-400 ">Date/Day</th>
+                        <th className="p-2 text-xs text-slate-400 ">Reason</th>
+                        <th className="p-2 text-xs text-slate-400  text-right">Accepted</th>
+                        <th className="p-2 text-xs text-slate-400  text-right">Rejected</th>
+                        <th className="p-4 w-16"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {rejections.map((rej) => (
+                        <tr key={rej.rejection_id} className="group hover:bg-slate-50/50 transition-colors">
+                          <td className="p-4">
+                            <p className="text-sm font-medium text-slate-900">{new Date(rej.log_date).toLocaleDateString()}</p>
+                            <p className="text-xs text-slate-400 ">Day {rej.day_number}</p>
+                          </td>
+                          <td className="p-4">
+                            <span className="text-xs font-medium text-slate-600">{rej.reason || rej.rejection_reason || 'N/A'}</span>
+                          </td>
+                          <td className="p-4 text-right">
+                            <span className="text-sm  text-emerald-600">{rej.accepted_qty}</span>
+                          </td>
+                          <td className="p-4 text-right">
+                            <span className="text-sm  text-rose-600">{rej.rejected_qty}</span>
+                          </td>
+                          <td className="p-4 text-center">
+                            <button
+                              onClick={() => handleDeleteRejection(rej.rejection_id)}
+                              className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all "
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </Card>
             </div>
 
-          </div>
+<div id="downtime" className=" animate-in fade-in slide-in-from-bottom-2 duration-300 bg-white">
+          <Card className="p-3 border-none  overflow-visible">
+            <SectionTitle title="Record Downtime" icon={AlertTriangle} />
+            <form onSubmit={handleAddDowntime} className="flex flex-wrap gap-2">
+              <FieldWrapper label="Day & Date" required>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    value={downtimeForm.day_number}
+                    onChange={(e) => handleDayChange(e.target.value, 'downtime')}
+                    className="w-14 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                    required
+                  />
+                  <input
+                    type="date"
+                    value={downtimeForm.log_date}
+                    onChange={(e) => handleDateChange(e.target.value, 'downtime')}
+                    className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                    required
+                  />
+                </div>
+              </FieldWrapper>
+
+              <FieldWrapper label="Shift" required>
+                <select
+                  value={downtimeForm.shift}
+                  onChange={(e) => setDowntimeForm({ ...downtimeForm, shift: e.target.value })}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
+                >
+                  {shifts.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </FieldWrapper>
+
+              <FieldWrapper label="Type" required>
+                <select
+                  value={downtimeForm.type}
+                  onChange={(e) => setDowntimeForm({ ...downtimeForm, type: e.target.value })}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
+                  required
+                >
+                  <option value="">Select Type</option>
+                  {downtimeTypes.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </FieldWrapper>
+
+              <div className="md:col-span-2">
+                <FieldWrapper label="Timing" required>
+                  <div className="flex gap-2 items-center">
+                    <div className="flex flex-1 gap-1">
+                      <input
+                        type="time"
+                        value={downtimeForm.from_time}
+                        onChange={(e) => setDowntimeForm({ ...downtimeForm, from_time: e.target.value })}
+                        className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        required
+                      />
+                      <select
+                        value={downtimeForm.from_period}
+                        onChange={(e) => setDowntimeForm({ ...downtimeForm, from_period: e.target.value })}
+                        className="p-2 bg-slate-100 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
+                      >
+                        <option value="AM">AM</option>
+                        <option value="PM">PM</option>
+                      </select>
+                    </div>
+                    <ArrowRight size={14} className="text-slate-300 shrink-0" />
+                    <div className="flex flex-1 gap-1">
+                      <input
+                        type="time"
+                        value={downtimeForm.to_time}
+                        onChange={(e) => setDowntimeForm({ ...downtimeForm, to_time: e.target.value })}
+                        className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        required
+                      />
+                      <select
+                        value={downtimeForm.to_period}
+                        onChange={(e) => setDowntimeForm({ ...downtimeForm, to_period: e.target.value })}
+                        className="p-2 bg-slate-100 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
+                      >
+                        <option value="AM">AM</option>
+                        <option value="PM">PM</option>
+                      </select>
+                    </div>
+                  </div>
+                </FieldWrapper>
+              </div>
+
+              <FieldWrapper label="Reason">
+                <input
+                  type="text"
+                  value={downtimeForm.reason}
+                  onChange={(e) => setDowntimeForm({ ...downtimeForm, reason: e.target.value })}
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  placeholder="Optional reason"
+                />
+              </FieldWrapper>
+
+              <div className="flex items-end pb-0.5">
+                <button
+                  type="submit"
+                  disabled={formLoading}
+                  className="w-full p-2 flex items-center justify-center gap-2 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 shadow-md shadow-amber-100 hover:shadow-lg transition-all text-xs  "
+                >
+                  {formLoading ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <AlertTriangle size={16} />
+                  )}
+                  Log Downtime
+                </button>
+              </div>
+            </form>
+          </Card>
+
+          <Card className="border-none  overflow-hidden">
+            <div className="p-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 bg-white text-amber-600 rounded  border border-slate-100">
+                  <AlertTriangle size={16} />
+                </div>
+                <h3 className="text-[11px]  text-slate-900 text-xs ">Downtime History</h3>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left bg-white">
+                <thead>
+                  <tr className="bg-slate-50/50 border-b border-slate-100">
+                    <th className="p-2 text-xs text-slate-400 ">Type/Reason</th>
+                    <th className="p-2 text-xs text-slate-400  text-center">Timing</th>
+                    <th className="p-2 text-xs text-slate-400  text-right">Duration</th>
+                    <th className="p-4 w-16"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {downtimes.map((dt) => (
+                    <tr key={dt.downtime_id} className="group hover:bg-slate-50/50 transition-colors">
+                      <td className="p-4">
+                        <p className="text-sm font-medium text-slate-900">{dt.type || dt.downtime_type}</p>
+                        <p className="text-xs text-slate-400 ">{dt.reason || dt.downtime_reason || 'No reason'}</p>
+                      </td>
+                      <td className="p-4 text-center">
+                        <div className="inline-flex items-center gap-3 p-2  py-1.5 bg-slate-50 rounded border border-slate-100">
+                          <span className="text-xs  text-slate-700">{format12h(dt.from_time)}</span>
+                          <ArrowRight size={12} className="text-slate-300" />
+                          <span className="text-xs  text-slate-700">{format12h(dt.to_time)}</span>
+                        </div>
+                      </td>
+                      <td className="p-4 text-right">
+                        <span className="text-sm  text-slate-900">{dt.duration_minutes || calculateDowntimeDuration(dt.from_time, dt.to_time, dt.from_period, dt.to_period)} min</span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <button
+                          onClick={() => handleDeleteDowntime(dt.downtime_id)}
+                          className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all "
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         </div>
+          </div>
+
+          {/* Quality Control Section */}
+
+        </div>
+
+        {/* Downtime Log Section */}
+        
       </div>
+
+      {/* Next Operation/Finalize Section */}
+      <div id="next-operation" className="mt-12 pt-8 border-t border-slate-200">
+        <Card className="p-0 border-none  overflow-visible relative bg-white">
+          <div className="flex flex-col md:flex-row">
+            {/* Left branding/info strip */}
+            <div className=" w-10 bg-emerald-600 rounded flex items-center justify-center p-4">
+              <div className="rotate-0 md:-rotate-90 whitespace-nowrap text-white  text-xs tracking-[0.3em] flex items-center gap-3">
+                <CheckCircle2 size={16} />
+                PHASE ASSIGNMENT
+              </div>
+            </div>
+
+            <div className="flex-1 p-2">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-md  text-slate-900 flex items-center gap-2">
+                    Next Stage Configuration
+                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-xs rounded border border-emerald-100 ">Active</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">Specify destination and operational parameters for the next manufacturing phase</p>
+                </div>
+                <div className="hidden sm:flex items-center gap-2 text-emerald-600 bg-emerald-50 p-2  py-1.5 rounded border border-emerald-100">
+                  <Activity size={14} className="animate-pulse" />
+                  <span className="text-xs ">READY TO DISPATCH</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <FieldWrapper label="NEXT OPERATION" required>
+                  <div className="group relative">
+                    <SearchableSelect
+                      value={nextOperationForm.next_operation_id}
+                      onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_operation_id: val })}
+                      options={operations.map(op => ({
+                        value: op.operation_id || op.id || op.operation_name || op.name,
+                        label: op.operation_name || op.name
+                      }))}
+                      placeholder="Select Next Op"
+                      containerClassName="p-2  rounded bg-slate-50 border-slate-200 transition-all"
+                    />
+                    <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-0 group-focus-within:h-6 bg-emerald-500 rounded-full transition-all duration-300"></div>
+                  </div>
+                </FieldWrapper>
+
+                <FieldWrapper label="ASSIGN OPERATOR">
+                  <div className="group relative">
+                    <SearchableSelect
+                      value={nextOperationForm.next_operator_id}
+                      onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_operator_id: val })}
+                      options={operators.map(op => ({
+                        value: op.employee_id,
+                        label: `${op.first_name} ${op.last_name}`
+                      }))}
+                      placeholder="Search Operator..."
+                      containerClassName="p-2  rounded bg-slate-50 border-slate-200 transition-all"
+                    />
+                    <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-0 group-focus-within:h-6 bg-indigo-500 rounded-full transition-all duration-300"></div>
+                  </div>
+                </FieldWrapper>
+
+                <FieldWrapper label="TARGET WAREHOUSE" required>
+                  <div className="group relative">
+                    <SearchableSelect
+                      value={nextOperationForm.next_warehouse_id}
+                      onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_warehouse_id: val })}
+                      options={warehouses.map(w => ({
+                        value: w.warehouse_id || w.id || w.name,
+                        label: w.warehouse_name || w.name
+                      }))}
+                      placeholder="Select Destination"
+                      containerClassName="p-2  rounded bg-slate-50 border-slate-200 transition-all"
+                    />
+                    <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-0 group-focus-within:h-6 bg-amber-500 rounded-full transition-all duration-300"></div>
+                  </div>
+                </FieldWrapper>
+              </div>
+
+              <div className="mt-2 border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div className=" items-center gap-6">
+                  <p className="text-xs text-slate-400 ">Execution Mode:</p>
+                  <div className="flex items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setNextOperationForm({ ...nextOperationForm, inhouse: !nextOperationForm.inhouse, outsource: false })}
+                      className={`flex items-center gap-3 p-2 rounded border-2 transition-all duration-300 ${nextOperationForm.inhouse ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-md shadow-emerald-100' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
+                    >
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${nextOperationForm.inhouse ? 'border-emerald-500 bg-white' : 'border-slate-300'}`}>
+                        {nextOperationForm.inhouse && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                      </div>
+                      <span className="text-xs ">IN-HOUSE</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setNextOperationForm({ ...nextOperationForm, outsource: !nextOperationForm.outsource, inhouse: false })}
+                      className={`flex items-center gap-3 p-2 rounded border-2 transition-all duration-300 ${nextOperationForm.outsource ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-md shadow-indigo-100' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
+                    >
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${nextOperationForm.outsource ? 'border-indigo-500 bg-white' : 'border-slate-300'}`}>
+                        {nextOperationForm.outsource && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+                      </div>
+                      <span className="text-xs ">OUTSOURCE</span>
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSubmitProduction}
+                  disabled={isSubmitting}
+                  className="relative group overflow-hidden p-2 bg-slate-900 text-white rounded hover:shadow-2xl hover:shadow-emerald-200 transition-all duration-500 disabled:opacity-50 flex items-center justify-center gap-4 active:scale-95"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-emerald-400 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500"></div>
+                  <div className="relative flex items-center gap-4">
+                    {isSubmitting ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <div className="p-1.5 bg-white/10 rounded group-hover:bg-white/20 transition-colors">
+                        <FileText size={10} />
+                      </div>
+                    )}
+                    <div className="text-left">
+                      <p className="text-xs text-white/50  leading-none">Finalize & Dispatch</p>
+                      <p className="text-xs ">Move to Next Stage</p>
+                    </div>
+                    <ChevronRight size={10} className="group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+
     </div>
+
+
   )
 }
