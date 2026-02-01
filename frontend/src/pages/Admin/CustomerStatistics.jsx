@@ -54,22 +54,22 @@ const DetailModal = ({ isOpen, item, onClose, detailedData, loading }) => {
           ) : (
             <>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                <div className="bg-white p-2 rounded-md border border-slate-200 ">
+                <div className="bg-white p-2 rounded  border border-slate-200 ">
                   <p className="text-xs   text-slate-400  mb-1">Total Revenue</p>
                   <h4 className="text-xl ftext-slate-900">₹{parseFloat(item.revenue).toLocaleString()}</h4>
                 </div>
-                <div className="bg-white p-2 rounded-md border border-slate-200 ">
+                <div className="bg-white p-2 rounded  border border-slate-200 ">
                   <p className="text-xs   text-slate-400  mb-1">Total Orders</p>
                   <h4 className="text-xl ftext-slate-900">{item.orders}</h4>
                 </div>
-                <div className="bg-white p-2 rounded-md border border-slate-200 ">
+                <div className="bg-white p-2 rounded  border border-slate-200 ">
                   <p className="text-xs   text-slate-400  mb-1">Avg Order Value</p>
                   <h4 className="text-xl ftext-slate-900">₹{item.orders > 0 ? Math.round(item.revenue / item.orders).toLocaleString() : 0}</h4>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
-                <div className="bg-white p-2 rounded-md border border-slate-200 ">
+                <div className="bg-white p-2 rounded  border border-slate-200 ">
                   <h4 className="text-xs  text-slate-900 mb-6 ">Revenue Performance (6M)</h4>
                   <div className="h-64">
                     {monthlyData.length > 0 ? (
@@ -94,7 +94,7 @@ const DetailModal = ({ isOpen, item, onClose, detailedData, loading }) => {
                   </div>
                 </div>
 
-                <div className="bg-white p-2 rounded-md border border-slate-200 ">
+                <div className="bg-white p-2 rounded  border border-slate-200 ">
                   <h4 className="text-xs  text-slate-900 mb-6 ">Order Velocity</h4>
                   <div className="h-64">
                     {monthlyData.length > 0 ? (
@@ -115,7 +115,7 @@ const DetailModal = ({ isOpen, item, onClose, detailedData, loading }) => {
               </div>
 
               {detailedData?.recentOrders?.length > 0 && (
-                <div className="bg-white p-2 rounded-md border border-slate-200 ">
+                <div className="bg-white p-2 rounded  border border-slate-200 ">
                   <h4 className="text-xs  text-slate-900 mb-6 ">Recent Transactions</h4>
                   <div className="">
                     <table className="w-full text-left bg-white">
@@ -196,7 +196,7 @@ export default function CustomerStatistics() {
   }
 
   if (loading || !data) return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-3">
+    <div className="min-h-screen bg-slate-50 p-2 flex flex-col items-center justify-center p-3">
       <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-6" />
       <p className="text-slate-500   text-xs animate-pulse">Analyzing Customer Portfolios...</p>
     </div>
@@ -218,7 +218,7 @@ export default function CustomerStatistics() {
     .slice(0, 10)
 
   return (
-    <div className="min-h-screen bg-slate-50 p-3 md:p-3">
+    <div className="min-h-screen bg-slate-50 p-2 p-3 md:p-3">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
         <div>
@@ -277,7 +277,7 @@ export default function CustomerStatistics() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
         {/* Main Trend Chart */}
-        <div className="lg:col-span-2 bg-white p-2 rounded-md border border-slate-200 ">
+        <div className="lg:col-span-2 bg-white p-2 rounded  border border-slate-200 ">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg  text-slate-900">Revenue Trends: Segment Comparison</h3>
             <div className="flex gap-4">
@@ -310,7 +310,7 @@ export default function CustomerStatistics() {
         </div>
 
         {/* Segmentation Pie */}
-        <div className="bg-white p-2 rounded-md border border-slate-200 ">
+        <div className="bg-white p-2 rounded  border border-slate-200 ">
           <h3 className="text-lg  text-slate-900 mb-3">Customer Segmentation</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -338,7 +338,7 @@ export default function CustomerStatistics() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
         {/* Performance Radar */}
-        <div className="bg-white p-2 rounded-md border border-slate-200 ">
+        <div className="bg-white p-2 rounded  border border-slate-200 ">
           <h3 className="text-lg  text-slate-900 mb-3">Segment Capabilities</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -354,7 +354,7 @@ export default function CustomerStatistics() {
         </div>
 
         {/* Top Customers Bar */}
-        <div className="lg:col-span-2 bg-white p-2 rounded-md border border-slate-200 ">
+        <div className="lg:col-span-2 bg-white p-2 rounded  border border-slate-200 ">
           <h3 className="text-lg  text-slate-900 mb-3">Top 10 Strategic Partners</h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -376,7 +376,7 @@ export default function CustomerStatistics() {
 
       {/* Customer List Table */}
       <div className="bg-white rounded   border border-slate-200  overflow-hidden">
-        <div className="p-3 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="p-3 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 my-4">
           <div className="flex items-center gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />

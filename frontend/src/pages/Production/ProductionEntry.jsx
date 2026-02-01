@@ -23,7 +23,7 @@ const SectionTitle = ({ title, icon: Icon, badge }) => (
       <h3 className="text-sm  text-slate-900 tracking-tight">{title}</h3>
     </div>
     {badge && (
-      <span className="p-2 bg-slate-100 text-slate-500 text-xs   rounded-full border border-slate-200 text-xs tracking-widest">
+      <span className="p-2 bg-slate-100 text-slate-500 text-xs   rounded-full border border-slate-200 text-xs ">
         {badge}
       </span>
     )}
@@ -181,7 +181,7 @@ export default function ProductionEntry() {
     const { color, icon: Icon } = config[s] || config.draft
 
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px]  text-xs tracking-widest border ${color}`}>
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px]  text-xs  border ${color}`}>
         <Icon size={10} />
         {s.toUpperCase()}
       </span>
@@ -902,7 +902,7 @@ export default function ProductionEntry() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] pb-20">
+    <div className="min-h-screen bg-[#f8fafc] p-4 pb-20">
       {/* Sticky Header */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200">
         <div className="p-6  h-16 flex items-center justify-between">
@@ -917,7 +917,7 @@ export default function ProductionEntry() {
                 </h1>
                 <StatusBadge status={jobCardData?.status} />
               </div>
-              <p className="text-xs   text-slate-400 text-xs tracking-widest">
+              <p className="text-xs   text-slate-400 text-xs ">
                 {jobCardData?.job_card_id || 'LOADING...'} • {new Date().toLocaleDateString('en-GB')}
               </p>
             </div>
@@ -933,7 +933,7 @@ export default function ProductionEntry() {
             <button
               onClick={handleSubmitProduction}
               disabled={isSubmitting}
-              className="flex items-center gap-2 p-2   bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50 shadow-sm hover:shadow-md transition-all text-xs  uppercase"
+              className="flex items-center gap-2 p-2   bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50   hover:shadow-md transition-all text-xs  "
             >
               {isSubmitting ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -965,7 +965,7 @@ export default function ProductionEntry() {
               
               <div className="p-2 ">
                 <div>
-                  <p className="text-xs  text-slate-400 tracking-widest uppercase mb-3">Target Item</p>
+                  <p className="text-xs  text-slate-400  mb-3">Target Item</p>
                   <div className="p-2 bg-slate-50 border border-slate-100 rounded">
                     <p className="text-sm  text-slate-900 leading-tight">
                       {itemName || jobCardData?.item_name || 'N/A'}
@@ -981,16 +981,16 @@ export default function ProductionEntry() {
 
                 <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <p className="text-xs  text-slate-400 tracking-widest uppercase mb-1">Planned</p>
+                    <p className="text-xs  text-slate-400  mb-1">Planned</p>
                     <div className="flex items-baseline gap-1">
                       <p className="text-lg text-slate-900">
                         {parseFloat(jobCardData?.planned_quantity || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                       </p>
-                      <span className="text-xs  text-slate-400 uppercase">Units</span>
+                      <span className="text-xs  text-slate-400 ">Units</span>
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs  text-slate-400 tracking-widest uppercase mb-1">Current Op</p>
+                    <p className="text-xs  text-slate-400  mb-1">Current Op</p>
                     <div className="flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
                       <p className="text-[11px]  text-indigo-600  truncate" title={jobCardData?.operation}>
@@ -1006,22 +1006,22 @@ export default function ProductionEntry() {
               <Card className="p-0 border-none bg-emerald-50/20 rounded-2xl overflow-hidden border border-emerald-100/50">
                 <div className="p-3 bg-emerald-600 text-white flex items-center gap-2">
                   <CheckCircle size={14} />
-                  <h3 className="text-xs  tracking-[0.2em] uppercase text-white/90">Previous Phase</h3>
+                  <h3 className="text-xs  tracking-[0.2em] text-white/90">Previous Phase</h3>
                 </div>
-                <div className="p-4 space-y-4">
+                <div className="p-2 space-y-2">
                   <div>
-                    <p className="text-[9px]  text-emerald-600/70 tracking-widest uppercase mb-1">Operation</p>
+                    <p className="text-[9px]  text-emerald-600/70  mb-1">Operation</p>
                     <p className="text-[11px]  text-slate-900 ">{previousOperationData.operation}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-[9px]  text-slate-400 tracking-widest uppercase mb-1">Accepted</p>
+                      <p className="text-[9px]  text-slate-400  mb-1">Accepted</p>
                       <p className="text-sm  text-emerald-600">
                         {parseFloat(parseFloat(previousOperationData.accepted_quantity) || ( (parseFloat(previousOperationData.produced_quantity) || 0) - (parseFloat(previousOperationData.rejected_quantity) || 0) )).toLocaleString()}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[9px]  text-slate-400 tracking-widest uppercase mb-1">Rejected</p>
+                      <p className="text-[9px]  text-slate-400  mb-1">Rejected</p>
                       <p className="text-sm  text-rose-500">
                         {parseFloat(previousOperationData.rejected_quantity || 0).toLocaleString()}
                       </p>
@@ -1106,7 +1106,7 @@ export default function ProductionEntry() {
               <div className=" animate-in fade-in slide-in-from-bottom-2 bg-white duration-300">
                 <Card className="p-3 border-none  overflow-visible">
                   <SectionTitle title="Add Time Log" icon={Plus} />
-                  <form onSubmit={handleAddTimeLog} className="flex flex-wrap ">
+                  <form onSubmit={handleAddTimeLog} className="flex flex-wrap gap-2 ">
                     <FieldWrapper label="Day & Date" required>
                       <div className="flex gap-2">
                           <input
@@ -1244,7 +1244,7 @@ export default function ProductionEntry() {
                       <div className="p-1.5 bg-white text-indigo-600 rounded  border border-slate-100">
                         <Clock size={16} />
                       </div>
-                      <h3 className="text-[11px]  text-slate-900 text-xs tracking-widest">Time Log History</h3>
+                      <h3 className="text-[11px]  text-slate-900 text-xs ">Time Log History</h3>
                     </div>
                   </div>
                   <div className="overflow-x-auto">
@@ -1306,7 +1306,7 @@ export default function ProductionEntry() {
               <div className=" animate-in fade-in slide-in-from-bottom-2 duration-300 bg-white">
                 <Card className="p-3 border-none ">
                   <SectionTitle title="Record Quality Entry" icon={ShieldCheck} />
-                  <form onSubmit={handleAddRejection} className="flex flex-wrap">
+                  <form onSubmit={handleAddRejection} className="flex flex-wrap gap-2">
                     <FieldWrapper label="Day & Date" required>
                       <div className="flex gap-2">
                         <input
@@ -1412,7 +1412,7 @@ export default function ProductionEntry() {
                       <div className="p-1.5 bg-white text-rose-600 rounded  border border-slate-100">
                         <ShieldCheck size={16} />
                       </div>
-                      <h3 className="text-[11px]  text-slate-900 text-xs tracking-widest">Quality History</h3>
+                      <h3 className="text-[11px]  text-slate-900 text-xs ">Quality History</h3>
                     </div>
                   </div>
                   <div className="overflow-x-auto">
@@ -1463,7 +1463,7 @@ export default function ProductionEntry() {
               <div className=" animate-in fade-in slide-in-from-bottom-2 duration-300 bg-white">
                 <Card className="p-3 border-none  overflow-visible">
                   <SectionTitle title="Record Downtime" icon={AlertTriangle} />
-                  <form onSubmit={handleAddDowntime} className="flex flex-wrap">
+                  <form onSubmit={handleAddDowntime} className="flex flex-wrap gap-2">
                     <FieldWrapper label="Day & Date" required>
                       <div className="flex gap-2">
                         <input
@@ -1566,7 +1566,7 @@ export default function ProductionEntry() {
                       <button
                         type="submit"
                         disabled={formLoading}
-                        className="w-full p-2 flex items-center justify-center gap-2 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 shadow-md shadow-amber-100 hover:shadow-lg transition-all text-xs  uppercase"
+                        className="w-full p-2 flex items-center justify-center gap-2 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 shadow-md shadow-amber-100 hover:shadow-lg transition-all text-xs  "
                       >
                         {formLoading ? (
                           <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -1585,7 +1585,7 @@ export default function ProductionEntry() {
                       <div className="p-1.5 bg-white text-amber-600 rounded  border border-slate-100">
                         <AlertTriangle size={16} />
                       </div>
-                      <h3 className="text-[11px]  text-slate-900 text-xs tracking-widest">Downtime History</h3>
+                      <h3 className="text-[11px]  text-slate-900 text-xs ">Downtime History</h3>
                     </div>
                   </div>
                   <div className="overflow-x-auto">

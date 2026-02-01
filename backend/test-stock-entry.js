@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import axios from 'axios'
 
-const API_BASE = process.env.API_URL || 'http://localhost:3000'
+const API_BASE = process.env.API_URL || 'http://localhost:5001'
+console.log('Using API_BASE:', API_BASE)
 
 const colors = {
   reset: '\x1b[0m',
@@ -260,7 +261,7 @@ async function runTests() {
       throw new Error('No stock entry to verify')
     }
 
-    const res = await client.get('/api/stock/balance')
+    const res = await client.get('/api/stock/stock-balance')
     if (res.status !== 200) {
       throw new Error(`Expected status 200, got ${res.status}`)
     }

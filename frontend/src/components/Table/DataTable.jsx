@@ -12,7 +12,9 @@ export default function DataTable({
   pageSize = 10,
   disablePagination = false,
   hideColumnToggle = false,
-  defaultHiddenColumns = []
+  defaultHiddenColumns = [],
+  externalVisibleColumns = null,
+  onVisibleColumnsChange = null
 }) {
   const actualRenderActions = renderActions || actions;
 
@@ -22,9 +24,14 @@ export default function DataTable({
     direction: 'asc'
   })
   const [currentPage, setCurrentPage] = useState(1)
-  const [visibleColumns, setVisibleColumns] = useState(
+  
+  const [internalVisibleColumns, setInternalVisibleColumns] = useState(
     new Set(columns.map(col => col.key).filter(key => !defaultHiddenColumns.includes(key)))
   )
+  
+  const visibleColumns = externalVisibleColumns || internalVisibleColumns
+  const setVisibleColumns = onVisibleColumnsChange || setInternalVisibleColumns
+
   const [showColumnMenu, setShowColumnMenu] = useState(false)
 
   const filteredColumns = columns.filter(col => visibleColumns.has(col.key))
@@ -106,47 +113,13 @@ export default function DataTable({
 
   return (
     <>
-     {!hideColumnToggle && (
-        <div className="table-toolbar mt-3">
-          <div className="column-toggle-container">
-            <button
-              className="column-toggle-btn"
-              onClick={() => setShowColumnMenu(!showColumnMenu)}
-              title="Toggle column visibility"
-            >
-              <Eye size={18} />
-              <span>Columns ({visibleColumns.size}/{columns.length})</span>
-              <ChevronDown size={16} />
-            </button>
-            {showColumnMenu && (
-              <div className="column-menu">
-                <div className="column-menu-header">
-                  <button onClick={showAllColumns} className="column-menu-action">Show All</button>
-                  <button onClick={hideAllColumns} className="column-menu-action">Hide All</button>
-                </div>
-                <div className="column-menu-items">
-                  {columns.map(col => (
-                    <label key={col.key} className="column-menu-item">
-                      <input
-                        type="checkbox"
-                        checked={visibleColumns.has(col.key)}
-                        onChange={() => toggleColumnVisibility(col.key)}
-                      />
-                      <span>{col.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+     
     <div className="data-table-wrapper">
      
 
       
 
-      <div className="table-responsive mt-4">
+      <div className="table-responsive">
         <table className="data-table">
           <thead>
             <tr>
@@ -167,7 +140,7 @@ export default function DataTable({
                   </div>
                 </th>
               ))}
-              {actualRenderActions && <th className="actions-col">Actions</th>}
+              {actualRenderActions && <th className="actions-col p-2">Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -186,7 +159,7 @@ export default function DataTable({
                     </td>
                   ))}
                   {actualRenderActions && (
-                    <td className="actions-col">
+                    <td className="actions-col p-2">
                       {actualRenderActions(row)}
                     </td>
                   )}

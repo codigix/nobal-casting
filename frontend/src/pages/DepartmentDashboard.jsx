@@ -247,7 +247,7 @@ export default function DepartmentDashboard() {
               ].map((stat, idx) => (
                 <div 
                   key={idx} 
-                  className={`bg-gradient-to-br ${stat.color} p-5 rounded-md border-2 transition-all duration-300 hover:shadow-lg hover:scale-105 hover:border-opacity-100`}
+                  className={`bg-gradient-to-br ${stat.color} p-5 rounded  border-2 transition-all duration-300 hover:shadow-lg hover:scale-105 hover:border-opacity-100`}
                   style={{ borderColor: stat.borderColor }}
                 >
                   <div className="flex items-start justify-between">

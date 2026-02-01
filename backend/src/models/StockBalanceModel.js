@@ -40,8 +40,13 @@ class StockBalanceModel {
       `
 
       if (filters.warehouseId) {
-        query += ' AND sb.warehouse_id = ?'
-        params.push(filters.warehouseId)
+        if (Number.isInteger(Number(filters.warehouseId))) {
+          query += ' AND sb.warehouse_id = ?'
+          params.push(Number(filters.warehouseId))
+        } else {
+          query += ' AND (w.warehouse_code = ? OR w.warehouse_name = ?)'
+          params.push(filters.warehouseId, filters.warehouseId)
+        }
       }
 
       if (filters.itemCode) {
@@ -70,7 +75,7 @@ class StockBalanceModel {
         params.push(filters.isLocked)
       }
 
-      query += ' ORDER BY i.item_code ASC'
+      query += ' ORDER BY sb.updated_at DESC'
 
       const [rows] = await db.query(query, params)
       return rows

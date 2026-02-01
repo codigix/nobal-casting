@@ -573,9 +573,9 @@ export default function ProductionPlanningForm() {
         }
       }
 
-      if (nextLevelItems.length > 0) {
-        await fetchSubAssemblyBomMaterials(nextLevelItems, level + 1, allSubAsmMaterials, allDiscoveredSubAsms);
-      }
+      // if (nextLevelItems.length > 0) {
+      //   await fetchSubAssemblyBomMaterials(nextLevelItems, level + 1, allSubAsmMaterials, allDiscoveredSubAsms);
+      // }
 
       if (level === 0) {
         console.log('=== RECURSIVE EXPLOSION COMPLETE ===');
@@ -1755,7 +1755,7 @@ export default function ProductionPlanningForm() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-4">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-2 gap-4">
         <div className="relative">
           <div className="w-6 h-6  border-4 border-indigo-100 border-t-indigo-600  rounded  animate-spin"></div>
           <div className="absolute inset-0 flex items-center justify-center">
@@ -1771,7 +1771,7 @@ export default function ProductionPlanningForm() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-20">
+    <div className="min-h-screen bg-slate-50 p-2/50 pb-20">
       {/* Sticky Header */}
       <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200">
         <div className=" px-4 sm:p-6  lg:px-8">
@@ -2023,7 +2023,7 @@ export default function ProductionPlanningForm() {
                           min="1"
                           className="w-full pl-4 pr-12 py-2.5 border border-slate-200 rounded text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-medium"
                         />
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs    text-slate-400 tracking-widest">UNIT</div>
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs    text-slate-400 ">UNIT</div>
                       </div>
                     </FieldWrapper>
                     </div>
@@ -2087,7 +2087,7 @@ export default function ProductionPlanningForm() {
                                   <span className="text-lg   text-blue-600">
                                     {item.planned_qty || item.quantity || item.qty}
                                   </span>
-                                  <span className="text-xs   text-slate-400 uppercase">PCS</span>
+                                  <span className="text-xs   text-slate-400 ">PCS</span>
                                 </div>
                               </div>
                               <div className="col-span-12 md:col-span-2">
@@ -2216,11 +2216,15 @@ export default function ProductionPlanningForm() {
                                     <td className="p-2">
                                       <div className="flex justify-center">
                                         {item.material_status ? (
-                                          <span className={`p-2  rounded  text-xs   border  
-                                            ${item.material_status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                          <span className={`px-2 py-1 rounded text-[10px] border 
+                                            ${item.material_status === 'issued' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                              item.material_status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                                               item.material_status === 'requested' ? 'bg-blue-50 text-blue-600 border-blue-100' :
                                                 'bg-slate-50 text-slate-400 border-slate-100'}`}>
-                                            {item.material_status}
+                                            {item.material_status === 'issued' ? 'Issued' : 
+                                             item.material_status === 'approved' ? 'Approved' : 
+                                             item.material_status === 'requested' ? 'Requested' : 
+                                             item.material_status}
                                           </span>
                                         ) : (
                                           <span className="text-xs text-slate-200">--</span>
@@ -2236,95 +2240,7 @@ export default function ProductionPlanningForm() {
                       )}
 
                       {/* Sub-Assembly Materials */}
-                      {subAssemblyBomMaterials.length > 0 && (
-                        <div className="space-y-3 ">
-                          <h4 className="text-xs    text-slate-400   flex items-center gap-2 px-1">
-                            <div className="w-1.5 h-1.5  rounded  bg-blue-500"></div>
-                            SUB-ASSEMBLY EXPLODED COMPONENTS
-                          </h4>
-
-                          {Object.entries(
-                            subAssemblyBomMaterials
-                              .filter(m => !m.is_operation)
-                              .reduce((groups, item) => {
-                                const parent = item.sub_assembly_code || 'Other'
-                                if (!groups[parent]) groups[parent] = {
-                                  name: item.sub_assembly_name || parent,
-                                  items: []
-                                }
-                                groups[parent].items.push(item)
-                                return groups
-                              }, {})
-                          ).map(([parentCode, group], groupIdx) => {
-                            const colors = [
-                              { bg: 'bg-indigo-50/50', border: 'border-indigo-100', text: 'text-indigo-600', dot: 'bg-indigo-500' },
-                              { bg: 'bg-emerald-50/50', border: 'border-emerald-100', text: 'text-emerald-600', dot: 'bg-emerald-500' },
-                              { bg: 'bg-rose-50/50', border: 'border-rose-100', text: 'text-rose-600', dot: 'bg-rose-500' },
-                              { bg: 'bg-amber-50/50', border: 'border-amber-100', text: 'text-amber-600', dot: 'bg-amber-500' }
-                            ]
-                            const color = colors[groupIdx % colors.length]
-
-                            return (
-                              <div key={parentCode} className={`p-2 rounded border-1 ${color.border} ${color.bg} transition-all duration-300 hover:shadow-lg hover:shadow-slate-200/50`}>
-                                <div className="flex items-center justify-between mb-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className={`w-2 h-2 rounded-full ${color.dot} animate-pulse`}></div>
-                                    <span className={`text-xs   tracking-widest uppercase ${color.text}`}>
-                                      PARENT: {parentCode}
-                                    </span>
-                                    <span className="text-xs text-slate-400 font-medium text-xs italic">({group.name})</span>
-                                  </div>
-                                  <div className={`px-2 py-0.5 rounded-full text-[9px]   ${color.bg} ${color.text} border ${color.border} er`}>
-                                    {group.items.length} Components
-                                  </div>
-                                </div>
-
-                                <div className="rounded border border-slate-200/60 overflow-hidden bg-white/80 backdrop-blur-sm ">
-                                  <table className="w-full text-xs">
-                                    <thead>
-                                      <tr className="bg-slate-50/80 border-b border-slate-100">
-                                        <th className="p-3 text-left text-xs   text-slate-400 ">Component</th>
-                                        <th className="p-3 text-right text-xs   text-slate-400 ">Required Qty</th>
-                                        <th className="p-3 text-left text-xs   text-slate-400 ">Warehouse</th>
-                                        <th className="p-3 text-center text-xs   text-slate-400 ">Status</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                      {group.items.map((item, idx) => (
-                                        <tr key={idx} className="hover:bg-indigo-50/30 transition-colors group">
-                                          <td className="p-3">
-                                            <p className="  text-slate-900 group-hover:text-indigo-600 transition-colors">{item.item_code || item.component_code}</p>
-                                            <p className="text-xs text-slate-500 mt-0.5 truncate max-w-[250px] italic">{item.item_name || item.component_description || item.description}</p>
-                                          </td>
-                                          <td className="p-3 text-right">
-                                            <span className="font-mono   text-slate-900">{item.quantity || item.qty}</span>
-                                          </td>
-                                          <td className="p-3">
-                                            <div className="flex items-center gap-1.5">
-                                              <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
-                                              <span className="text-xs   text-slate-500 ">
-                                                {item.warehouse || item.for_warehouse || 'Main WH'}
-                                              </span>
-                                            </div>
-                                          </td>
-                                          <td className="p-3">
-                                            <div className="flex justify-center">
-                                              <span className="flex items-center gap-1.5 p-2  py-1 rounded-full text-xs   bg-emerald-50 text-emerald-600 border border-emerald-100   shadow-emerald-50">
-                                                <div className="w-1 h-1 rounded-full bg-emerald-500"></div>
-                                                EXPLODED
-                                              </span>
-                                            </div>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
+                      
                     </div>
                   )}
                 </Card>

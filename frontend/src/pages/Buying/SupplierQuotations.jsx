@@ -9,94 +9,100 @@ import CreateQuotationModal from '../../components/Buying/CreateQuotationModal'
 import { 
   Plus, Eye, Send, Trash2, CheckCircle, XCircle, 
   RefreshCw, ClipboardList, Clock, ShieldCheck, Search, IndianRupee,
-  LayoutGrid, List
+  LayoutGrid, List, ChevronRight, Filter
 } from 'lucide-react'
 import { useToast } from '../../components/ToastContainer'
 import './Buying.css'
 
 const StatCard = ({ label, value, icon: Icon, color, onClick, isActive }) => {
-  const colorMap = {
-    primary: 'from-indigo-50 to-indigo-100 border-indigo-200 text-indigo-700',
-    success: 'from-emerald-50 to-emerald-100 border-emerald-200 text-emerald-700',
-    warning: 'from-amber-50 to-amber-100 border-amber-200 text-amber-700',
-    danger: 'from-rose-50 to-rose-100 border-rose-200 text-rose-700',
-    info: 'from-sky-50 to-sky-100 border-sky-200 text-sky-700',
-    indigo: 'from-indigo-50 to-indigo-100 border-indigo-200 text-indigo-700'
-  }
-  
   return (
     <div
       onClick={onClick}
-      className={`bg-gradient-to-br ${colorMap[color] || colorMap.primary} p-4 rounded-md border-2 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] relative overflow-hidden group cursor-pointer ${isActive ? 'ring-2 ring-offset-2 ring-indigo-500 shadow-md border-indigo-300' : ''}`}
+      className={`bg-white p-3 rounded border transition-all duration-200 cursor-pointer relative group ${
+        isActive 
+          ? 'border-indigo-600 ring-1 ring-indigo-600' 
+          : 'border-neutral-200 hover:border-neutral-300'
+      }`}
     >
-      <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-white/10 rounded-full group-hover:scale-110 transition-transform" />
-      <div className="flex items-start justify-between mb-2 relative z-10">
-        <span className="text-xs  text-gray-500 ">{label}</span>
-        <div className="p-1.5 bg-white/50 rounded shadow-sm">
-          <Icon size={16} className="text-gray-700" />
+      <div className="flex items-start justify-between mb-3">
+        <span className="text-[10px] font-bold text-neutral-500  tracking-widest">{label}</span>
+        <div className={`p-1.5 rounded ${isActive ? 'bg-indigo-50 text-indigo-600' : 'bg-neutral-50 text-neutral-400 group-hover:text-neutral-600'}`}>
+          <Icon size={14} />
         </div>
       </div>
-      <div className="relative z-10">
-        <p className="text-xl   text-gray-900">{value}</p>
+      <div>
+        <p className="text-2xl font-black text-neutral-900 tracking-tight">{value}</p>
       </div>
+      {isActive && (
+        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600" />
+      )}
     </div>
   )
 }
 
 const KanbanView = ({ data, onAction, getStatusColor }) => {
   const columns = [
-    { id: 'draft', title: 'Draft' },
-    { id: 'received', title: 'Received' },
-    { id: 'accepted', title: 'Accepted' },
-    { id: 'rejected', title: 'Rejected' }
+    { id: 'draft', title: 'DRAFT', color: 'amber' },
+    { id: 'received', title: 'RECEIVED', color: 'blue' },
+    { id: 'accepted', title: 'ACCEPTED', color: 'emerald' },
+    { id: 'rejected', title: 'REJECTED', color: 'rose' }
   ]
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4 min-h-[500px]">
+    <div className="flex gap-6 overflow-x-auto pb-6">
       {columns.map(column => (
-        <div key={column.id} className="flex-1 min-w-[300px] bg-gray-100/50 rounded-lg p-3">
-          <div className="flex items-center justify-between mb-4 px-1">
-            <h3 className=" text-gray-700 flex items-center gap-2 uppercase text-xs tracking-wider">
-              <span className={`w-2 h-2 rounded-full bg-${getStatusColor(column.id)}-500`} />
+        <div key={column.id} className="flex-1 min-w-[320px] bg-neutral-50/50 rounded border border-neutral-200 flex flex-col h-[calc(100vh-320px)]">
+          <div className="p-3 border-b border-neutral-200 bg-white flex items-center justify-between">
+            <h3 className="text-[11px] font-bold text-neutral-600 flex items-center gap-2 tracking-[0.2em]">
+              <span className={`w-1.5 h-1.5 rounded-full bg-${column.color}-500`} />
               {column.title}
-              <span className="ml-1 px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded text-xs">
-                {data.filter(q => q.status === column.id).length}
-              </span>
             </h3>
+            <span className="text-[10px] font-black bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded">
+              {data.filter(q => q.status === column.id).length}
+            </span>
           </div>
-          <div className="space-y-3">
+          
+          <div className="flex-1 overflow-y-auto p-3 space-y-3">
             {data.filter(q => q.status === column.id).map(q => (
               <div 
                 key={q.supplier_quotation_id} 
-                className="bg-white p-2 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+                className="bg-white p-4 rounded border border-neutral-200 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer group"
                 onClick={() => onAction(q, 'view')}
               >
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-xs  text-blue-600">{q.supplier_quotation_id}</span>
-                  <span className="text-xs text-gray-400 font-medium">
+                <div className="flex justify-between items-start mb-3">
+                  <span className="text-[11px] font-black text-indigo-600 tracking-wider">
+                    {q.supplier_quotation_id?.toUpperCase()}
+                  </span>
+                  <span className="text-[10px] font-medium text-neutral-400">
                     {new Date(q.created_at).toLocaleDateString()}
                   </span>
                 </div>
-                <h4 className=" text-gray-900 text-sm mb-1 truncate">{q.supplier_name}</h4>
-                <div className="flex items-center gap-2 mb-3">
-                  <Badge color="info" size="xs">{q.rfq_id ? `RFQ: ${q.rfq_id}` : 'Direct'}</Badge>
+                
+                <h4 className="text-sm font-bold text-neutral-900 mb-2 line-clamp-1">{q.supplier_name}</h4>
+                
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-[10px] font-bold bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded border border-neutral-200">
+                    {q.rfq_id ? `RFQ: ${q.rfq_id}` : 'DIRECT'}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-50">
+                
+                <div className="pt-3 border-t border-neutral-100 flex items-center justify-between">
                   <div className="flex flex-col">
-                    <span className="text-xs text-gray-400 uppercase  tracking-tighter">Total Value</span>
-                    <span className="text-sm  text-gray-900">₹{(parseFloat(q.total_value) || 0).toLocaleString('en-IN')}</span>
+                    <span className="text-[9px] font-bold text-neutral-400  tracking-widest">Total Value</span>
+                    <span className="text-sm font-black text-neutral-900">₹{(parseFloat(q.total_value) || 0).toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="flex gap-1  transition-opacity">
+                  
+                  <div className="flex gap-1">
                     <button 
                       onClick={(e) => { e.stopPropagation(); onAction(q, 'view'); }}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                      className="p-1.5 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
                     >
                       <Eye size={14} />
                     </button>
                     {q.status === 'draft' && (
                       <button 
                         onClick={(e) => { e.stopPropagation(); onAction(q, 'submit'); }}
-                        className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded"
+                        className="p-1.5 text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
                       >
                         <Send size={14} />
                       </button>
@@ -104,7 +110,7 @@ const KanbanView = ({ data, onAction, getStatusColor }) => {
                     {q.status === 'received' && (
                       <button 
                         onClick={(e) => { e.stopPropagation(); onAction(q, 'accept'); }}
-                        className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded"
+                        className="p-1.5 text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
                       >
                         <CheckCircle size={14} />
                       </button>
@@ -136,6 +142,7 @@ export default function SupplierQuotations() {
   })
   const [activeFilter, setActiveFilter] = useState('all')
   const [viewMode, setViewMode] = useState('list')
+  const [showColumnMenu, setShowColumnMenu] = useState(false)
   const { showToast } = useToast()
   const navigate = useNavigate()
 
@@ -264,84 +271,96 @@ export default function SupplierQuotations() {
     return colors[status] || 'secondary'
   }
 
-  const columns = [
+  const columns = useMemo(() => [
     { 
       key: 'supplier_quotation_id', 
-      label: 'Quote ID', 
-      width: '12%',
-      render: (val) => <span className=" text-primary-600">{val}</span>
+      label: 'QUOTE ID', 
+      render: (val) => <span className="text-indigo-600 font-black tracking-wider">{val?.toUpperCase()}</span>
     },
-    { key: 'supplier_name', label: 'Supplier', width: '15%' },
+    { 
+      key: 'supplier_name', 
+      label: 'SUPPLIER',
+      render: (val) => <span className="font-bold text-neutral-900">{val}</span>
+    },
     { 
       key: 'rfq_id', 
-      label: 'RFQ Ref', 
-      width: '10%',
-      render: (val) => val ? <Badge color="info">{val}</Badge> : 'Direct'
+      label: 'RFQ REF', 
+      render: (val) => val ? (
+        <span className="text-[10px] font-bold bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded border border-neutral-200 ">
+          {val}
+        </span>
+      ) : (
+        <span className="text-[10px] font-bold text-neutral-400  tracking-widest">Direct</span>
+      )
     },
     { 
       key: 'quote_date', 
-      label: 'Quote Date', 
-      width: '12%',
-      render: (val) => val ? new Date(val).toLocaleDateString() : 'N/A'
+      label: 'QUOTE DATE', 
+      render: (val) => val ? (
+        <span className="text-neutral-600 font-medium">{new Date(val).toLocaleDateString()}</span>
+      ) : 'N/A'
     },
     { 
       key: 'total_value', 
-      label: 'Total Value', 
-      width: '12%',
+      label: 'TOTAL VALUE', 
       render: (val) => (
-        <span className=" text-gray-900">
-          ₹{(parseFloat(val) || 0).toLocaleString('en-IN')}
-        </span>
+        <div className="text-right">
+          <span className="text-neutral-900 font-black">
+            ₹{(parseFloat(val) || 0).toLocaleString('en-IN')}
+          </span>
+        </div>
       )
     },
     { 
       key: 'status', 
-      label: 'Status', 
-      width: '12%',
+      label: 'STATUS', 
       render: (val) => (
-        <Badge color={getStatusColor(val)} variant="solid">
+        <Badge color={getStatusColor(val)} variant="solid" className="font-black tracking-widest text-[9px]">
           {val?.toUpperCase()}
         </Badge>
       )
     },
     { 
       key: 'created_at', 
-      label: 'Created', 
-      width: '12%',
-      render: (val) => val ? new Date(val).toLocaleDateString() : 'N/A'
+      label: 'CREATED', 
+      render: (val) => val ? (
+        <span className="text-neutral-500 font-medium text-xs">{new Date(val).toLocaleDateString()}</span>
+      ) : 'N/A'
     }
-  ]
+  ], [])
+
+  const [visibleColumns, setVisibleColumns] = useState(new Set(columns.map(c => c.key)))
 
   const renderActions = (row) => (
-    <div className="flex gap-2">
+    <div className="flex gap-1 justify-end">
       <Button 
         size="sm"
-        variant="icon"
+        variant="secondary"
         onClick={() => navigate(`/buying/quotation/${row.supplier_quotation_id}`)}
         title="View Quotation"
-        className="p-2"
+        className="p-1.5 h-8 w-8 rounded-none border-neutral-200"
       >
-        <Eye size={16} />
+        <Eye size={14} className="text-neutral-600" />
       </Button>
       {row.status === 'draft' && (
         <>
           <Button 
             size="sm"
-            variant="icon-info"
+            variant="secondary"
             onClick={() => handleSubmit(row.supplier_quotation_id)}
             title="Submit Quotation"
-            className="p-2"
+            className="p-1.5 h-8 w-8 rounded-none border-neutral-200 hover:border-emerald-500 group"
           >
-            <Send size={16} />
+            <Send size={14} className="text-neutral-500 group-hover:text-emerald-600" />
           </Button>
           <Button 
             size="sm"
-            variant="icon-danger"
+            variant="secondary"
             onClick={() => handleDelete(row.supplier_quotation_id)}
             title="Delete Quotation"
-            className="p-2"
+            className="p-1.5 h-8 w-8 rounded-none border-neutral-200 hover:border-rose-500 group"
           >
-            <Trash2 size={16} />
+            <Trash2 size={14} className="text-neutral-500 group-hover:text-rose-600" />
           </Button>
         </>
       )}
@@ -349,21 +368,21 @@ export default function SupplierQuotations() {
         <>
           <Button 
             size="sm"
-            variant="icon-success"
+            variant="secondary"
             onClick={() => handleAccept(row.supplier_quotation_id)}
             title="Accept Quotation"
-            className="p-2 text-emerald-600 hover:bg-emerald-50"
+            className="p-1.5 h-8 w-8 rounded-none border-neutral-200 hover:border-emerald-500 group"
           >
-            <CheckCircle size={16} />
+            <CheckCircle size={14} className="text-neutral-500 group-hover:text-emerald-600" />
           </Button>
           <Button 
             size="sm"
-            variant="icon-danger"
+            variant="secondary"
             onClick={() => handleReject(row.supplier_quotation_id)}
             title="Reject Quotation"
-            className="p-2 text-rose-600 hover:bg-rose-50"
+            className="p-1.5 h-8 w-8 rounded-none border-neutral-200 hover:border-rose-500 group"
           >
-            <XCircle size={16} />
+            <XCircle size={14} className="text-neutral-500 group-hover:text-rose-600" />
           </Button>
         </>
       )}
@@ -371,54 +390,56 @@ export default function SupplierQuotations() {
   )
 
   return (
-    <div className="w-full bg-gray-50 min-h-screen p-4">
-      <div className="max-w-5xl mx-auto space-y-6">
+    <div className="w-full bg-neutral-50 min-h-screen p-6">
+      <div className="max-w-[1600px] mx-auto space-y-6">
         {/* Modern Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-3 rounded border border-gray-200  relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-1 h-full bg-indigo-600" />
-          <div>
-            <h1 className="text-xl   text-gray-900 flex items-center gap-2">
-              <div className="p-2 bg-indigo-50 rounded-lg">
-                <ClipboardList className="text-indigo-600" size={24} />
-              </div>
-              Supplier Quotations
-            </h1>
-            <p className="text-xs text-gray-500 mt-1  ml-11">Compare and manage quotes from suppliers</p>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-4 rounded border border-neutral-200 relative overflow-hidden shadow-sm">
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-600" />
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-neutral-900 rounded">
+              <ClipboardList className="text-white" size={24} />
+            </div>
+            <div>
+              <h1 className="text-xl font-black text-neutral-900 tracking-tight ">
+                Supplier Quotations
+              </h1>
+              <p className="text-[10px] font-bold text-neutral-400 mt-0.5 tracking-widest ">Compare and manage quotes from suppliers</p>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center bg-gray-100 p-1 rounded-lg mr-2">
+          
+          <div className="flex items-center gap-4">
+            <div className="flex items-center bg-neutral-100 p-1 rounded border border-neutral-200">
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`p-2 rounded transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-indigo-600' : 'text-neutral-400 hover:text-neutral-600'}`}
                 title="List View"
               >
                 <List size={18} />
               </button>
               <button
                 onClick={() => setViewMode('kanban')}
-                className={`p-1.5 rounded-md transition-all ${viewMode === 'kanban' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`p-2 rounded transition-all ${viewMode === 'kanban' ? 'bg-white shadow-sm text-indigo-600' : 'text-neutral-400 hover:text-neutral-600'}`}
                 title="Kanban View"
               >
                 <LayoutGrid size={18} />
               </button>
             </div>
-            <div className="hidden lg:block text-right mr-2">
-              <p className="text-xs text-gray-400  uppercase">Last Sync</p>
-              <p className="text-xs text-gray-600 font-medium">{refreshTime.toLocaleTimeString()}</p>
-            </div>
+
             <button
               onClick={fetchQuotations}
-              className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all"
+              className="p-2.5 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 border border-neutral-200 rounded transition-all bg-white"
               title="Refresh Data"
             >
-              <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
             </button>
+
             <Button 
               onClick={() => setIsModalOpen(true)}
               variant="primary"
-              className="bg-indigo-600 hover:bg-indigo-700 flex items-center gap-2 shadow-lg shadow-indigo-600/20 p-2"
+              className="bg-neutral-900 hover:bg-neutral-800 text-white flex items-center gap-2 px-4 py-2 rounded h-10 border-0"
             >
-              <Plus size={18} strokeWidth={3} /> <span className="  text-xs text-white">New Quotation</span>
+              <Plus size={16} strokeWidth={3} /> 
+              <span className="text-xs font-black tracking-widest ">New Quotation</span>
             </Button>
           </div>
         </div>
@@ -429,7 +450,6 @@ export default function SupplierQuotations() {
             label="Total Value"
             value={`₹${stats.total_value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
             icon={IndianRupee}
-            color="primary"
             onClick={() => setActiveFilter('all')}
             isActive={activeFilter === 'all'}
           />
@@ -437,7 +457,6 @@ export default function SupplierQuotations() {
             label="All Quotes"
             value={stats.total}
             icon={ClipboardList}
-            color="info"
             onClick={() => setActiveFilter('all')}
             isActive={activeFilter === 'all'}
           />
@@ -445,7 +464,6 @@ export default function SupplierQuotations() {
             label="Draft"
             value={stats.draft}
             icon={Clock}
-            color="warning"
             onClick={() => setActiveFilter('draft')}
             isActive={activeFilter === 'draft'}
           />
@@ -453,7 +471,6 @@ export default function SupplierQuotations() {
             label="Received"
             value={stats.received}
             icon={Send}
-            color="info"
             onClick={() => setActiveFilter('received')}
             isActive={activeFilter === 'received'}
           />
@@ -461,7 +478,6 @@ export default function SupplierQuotations() {
             label="Accepted"
             value={stats.accepted}
             icon={ShieldCheck}
-            color="success"
             onClick={() => setActiveFilter('accepted')}
             isActive={activeFilter === 'accepted'}
           />
@@ -469,57 +485,111 @@ export default function SupplierQuotations() {
             label="Rejected"
             value={stats.rejected}
             icon={XCircle}
-            color="danger"
             onClick={() => setActiveFilter('rejected')}
             isActive={activeFilter === 'rejected'}
           />
         </div>
 
         {/* Filters Section */}
-        <div className="bg-white p-2 rounded-lg border border-gray-200 shadow-sm">
-          <AdvancedFilters 
-            filters={filters}
-            onFilterChange={setFilters}
-            filterConfig={[
-              {
-                key: 'status',
-                label: 'Status',
-                type: 'select',
-                options: [
-                  { value: '', label: 'All Statuses' },
-                  { value: 'draft', label: 'Draft' },
-                  { value: 'received', label: 'Received' },
-                  { value: 'accepted', label: 'Accepted' },
-                  { value: 'rejected', label: 'Rejected' }
-                ]
-              },
-              {
-                key: 'search',
-                label: 'Search',
-                type: 'text',
-                placeholder: 'Quote ID, supplier or RFQ...'
-              }
-            ]}
-          />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="relative flex-1 group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-indigo-600 transition-colors" size={16} />
+            <input 
+              type="text"
+              placeholder="SEARCH QUOTATIONS..."
+              value={filters.search}
+              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+              className="w-full pl-11 pr-4 py-2.5 bg-white border border-neutral-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 transition-all text-[11px] font-bold tracking-widest "
+            />
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 bg-white border border-neutral-200 px-3 py-2 rounded">
+              <Filter size={14} className="text-neutral-400" />
+              <span className="text-[10px] font-black text-neutral-400  tracking-widest">Status:</span>
+              <select 
+                value={activeFilter}
+                onChange={(e) => setActiveFilter(e.target.value)}
+                className="bg-transparent text-[11px] font-black text-indigo-600 focus:outline-none cursor-pointer  tracking-widest"
+              >
+                <option value="all">ALL STATUS</option>
+                <option value="draft">DRAFT</option>
+                <option value="received">RECEIVED</option>
+                <option value="accepted">ACCEPTED</option>
+                <option value="rejected">REJECTED</option>
+              </select>
+            </div>
+
+            <div className="relative">
+              <button
+                onClick={() => setShowColumnMenu(!showColumnMenu)}
+                className="flex items-center gap-2 text-[10px] font-black text-neutral-600 hover:border-indigo-600 hover:text-indigo-600 transition-all px-4 py-2.5 border border-neutral-200 rounded bg-white  tracking-widest"
+              >
+                <Eye size={14} />
+                <span>Columns</span>
+                <ChevronRight size={14} className={`transition-transform ${showColumnMenu ? 'rotate-90' : ''}`} />
+              </button>
+
+              {showColumnMenu && (
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-neutral-200 rounded shadow-xl z-50 py-3 overflow-hidden">
+                  <div className="px-4 py-2 border-b border-neutral-100 flex justify-between bg-neutral-50 mb-2">
+                    <button 
+                      onClick={() => setVisibleColumns(new Set(columns.map(c => c.key)))}
+                      className="text-[9px] font-black text-indigo-600 hover:underline  tracking-widest"
+                    >
+                      Show All
+                    </button>
+                    <button 
+                      onClick={() => setVisibleColumns(new Set())}
+                      className="text-[9px] font-black text-rose-600 hover:underline  tracking-widest"
+                    >
+                      Hide All
+                    </button>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto px-1">
+                    {columns.map(col => (
+                      <label key={col.key} className="flex items-center gap-3 px-4 py-2 hover:bg-neutral-50 cursor-pointer transition-colors group">
+                        <input
+                          type="checkbox"
+                          className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-600 w-3.5 h-3.5"
+                          checked={visibleColumns.has(col.key)}
+                          onChange={() => {
+                            const newSet = new Set(visibleColumns)
+                            if (newSet.has(col.key)) newSet.delete(col.key)
+                            else newSet.add(col.key)
+                            setVisibleColumns(newSet)
+                          }}
+                        />
+                        <span className="text-[10px] font-bold text-neutral-600 group-hover:text-neutral-900  tracking-wider">{col.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="bg-white rounded border border-gray-200 ">
+        <div className="bg-white rounded border border-neutral-200 shadow-sm overflow-hidden">
           {loading ? (
-            <div className="py-20 text-center">
-              <RefreshCw size={32} className="text-indigo-500 animate-spin mx-auto mb-4" />
-              <p className="text-gray-500 font-medium">Loading quotations...</p>
+            <div className="py-24 text-center">
+              <RefreshCw size={40} className="text-indigo-600 animate-spin mx-auto mb-4 stroke-[1.5]" />
+              <p className="text-[10px] font-black text-neutral-400  tracking-[0.2em]">Syncing Quotations...</p>
             </div>
           ) : filteredQuotations.length === 0 ? (
-            <div className="py-20 text-center px-4">
-              <ClipboardList size={48} className="text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg  text-gray-900 mb-1">No Quotations Found</h3>
-              <p className="text-gray-500 mb-6">Start by creating a new quotation or adjusting your filters.</p>
+            <div className="py-24 text-center px-4 bg-neutral-50/50">
+              <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6 border border-neutral-200">
+                <ClipboardList size={32} className="text-neutral-300" />
+              </div>
+              <h3 className="text-sm font-black text-neutral-900 mb-2  tracking-widest">No Quotations Found</h3>
+              <p className="text-[11px] font-medium text-neutral-500 mb-8 max-w-xs mx-auto">Start by creating a new quotation or adjusting your search filters.</p>
               <Button 
                 onClick={() => { setFilters({ status: '', search: '' }); setActiveFilter('all'); }}
                 variant="secondary" 
                 size="sm"
+                className="px-6 py-2 rounded-none font-black text-[10px] tracking-widest  border-neutral-300"
               >
-                Clear all filters
+                Clear Filters
               </Button>
             </div>
           ) : (
@@ -532,7 +602,9 @@ export default function SupplierQuotations() {
                     renderActions={renderActions}
                     filterable={false}
                     sortable={true}
-                    pageSize={10}
+                    pageSize={12}
+                    externalVisibleColumns={visibleColumns}
+                    hideColumnToggle={true}
                   />
                 </div>
               ) : (

@@ -685,12 +685,38 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async createBOM(data) {
     try {
-      const query = `INSERT INTO bom (bom_id, item_code, description, quantity, uom, status, revision, effective_date, created_by, total_cost, selling_rate)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      const query = `INSERT INTO bom (
+        bom_id, item_code, product_name, item_group, description, 
+        quantity, uom, status, revision, is_active, is_default, 
+        allow_alternative_item, auto_sub_assembly_rate, project, 
+        cost_rate_based_on, valuation_rate_value, selling_rate, 
+        currency, with_operations, process_loss_percentage, 
+        transfer_material_against, routing, total_cost, 
+        effective_date, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      
       await this.db.query(
         query,
-        [data.bom_id, data.item_code, data.description, data.quantity || 1, 
-         data.uom, data.status, data.revision, data.effective_date, data.created_by, data.total_cost || 0, data.selling_rate || 0]
+        [
+          data.bom_id, data.item_code, data.product_name, data.item_group, data.description,
+          data.quantity || 1, data.uom, data.status || 'Draft', data.revision || 1,
+          data.is_active !== undefined ? data.is_active : true,
+          data.is_default !== undefined ? data.is_default : false,
+          data.allow_alternative_item !== undefined ? data.allow_alternative_item : false,
+          data.auto_sub_assembly_rate !== undefined ? data.auto_sub_assembly_rate : false,
+          data.project || null,
+          data.cost_rate_based_on || 'Valuation Rate',
+          data.valuation_rate_value || 0,
+          data.selling_rate || 0,
+          data.currency || 'INR',
+          data.with_operations !== undefined ? data.with_operations : false,
+          data.process_loss_percentage || 0,
+          data.transfer_material_against || 'Work Order',
+          data.routing || null,
+          data.total_cost || 0,
+          data.effective_date || null,
+          data.created_by
+        ]
       )
       return data
     } catch (error) {
@@ -783,14 +809,28 @@ async deleteAllBOMRawMaterials(bom_id) {
       if (data.item_code) { fields.push('item_code = ?'); values.push(data.item_code) }
       if (data.product_name) { fields.push('product_name = ?'); values.push(data.product_name) }
       if (data.item_group) { fields.push('item_group = ?'); values.push(data.item_group) }
-      if (data.description) { fields.push('description = ?'); values.push(data.description) }
+      if (data.description !== undefined) { fields.push('description = ?'); values.push(data.description) }
       if (data.quantity) { fields.push('quantity = ?'); values.push(data.quantity) }
       if (data.uom) { fields.push('uom = ?'); values.push(data.uom) }
       if (data.status) { fields.push('status = ?'); values.push(data.status) }
       if (data.revision) { fields.push('revision = ?'); values.push(data.revision) }
-      if (data.effective_date) { fields.push('effective_date = ?'); values.push(data.effective_date) }
-      if (data.total_cost !== undefined) { fields.push('total_cost = ?'); values.push(data.total_cost) }
+      if (data.effective_date !== undefined) { fields.push('effective_date = ?'); values.push(data.effective_date) }
+      if (data.is_active !== undefined) { fields.push('is_active = ?'); values.push(data.is_active) }
+      if (data.is_default !== undefined) { fields.push('is_default = ?'); values.push(data.is_default) }
+      if (data.allow_alternative_item !== undefined) { fields.push('allow_alternative_item = ?'); values.push(data.allow_alternative_item) }
+      if (data.auto_sub_assembly_rate !== undefined) { fields.push('auto_sub_assembly_rate = ?'); values.push(data.auto_sub_assembly_rate) }
+      if (data.project !== undefined) { fields.push('project = ?'); values.push(data.project) }
+      if (data.cost_rate_based_on) { fields.push('cost_rate_based_on = ?'); values.push(data.cost_rate_based_on) }
+      if (data.valuation_rate_value !== undefined) { fields.push('valuation_rate_value = ?'); values.push(data.valuation_rate_value) }
       if (data.selling_rate !== undefined) { fields.push('selling_rate = ?'); values.push(data.selling_rate) }
+      if (data.currency) { fields.push('currency = ?'); values.push(data.currency) }
+      if (data.with_operations !== undefined) { fields.push('with_operations = ?'); values.push(data.with_operations) }
+      if (data.process_loss_percentage !== undefined) { fields.push('process_loss_percentage = ?'); values.push(data.process_loss_percentage) }
+      if (data.transfer_material_against) { fields.push('transfer_material_against = ?'); values.push(data.transfer_material_against) }
+      if (data.routing !== undefined) { fields.push('routing = ?'); values.push(data.routing) }
+      if (data.total_cost !== undefined) { fields.push('total_cost = ?'); values.push(data.total_cost) }
+
+      if (fields.length === 0) return false
 
       fields.push('updated_at = NOW()')
       values.push(bom_id)

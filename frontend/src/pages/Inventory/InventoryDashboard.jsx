@@ -176,10 +176,10 @@ export default function InventoryDashboard() {
   }
 
   const StatCard = ({ label, value, icon: Icon, color, trend, trendValue, trendDirection }) => (
-    <div className={`bg-gradient-to-br ${color} p-5 rounded-md border-2 transition-all duration-300 hover:shadow-lg hover:scale-105 relative overflow-hidden group`}>
+    <div className={`bg-gradient-to-br ${color} p-5 rounded  border-2 transition-all duration-300 hover:shadow-lg hover:scale-105 relative overflow-hidden group`}>
       <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full group-hover:scale-110 transition-transform" />
       <div className="flex items-start justify-between mb-2">
-        <span className="text-xs    text-gray-500 uppercase">{label}</span>
+        <span className="text-xs    text-gray-500 ">{label}</span>
         <div className="p-2 bg-white/50 rounded ">
           <Icon size={18} className="text-gray-700" />
         </div>
@@ -227,7 +227,7 @@ export default function InventoryDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
           <StatCard 
             label="Total Value" 
-            value={`₹${(stats.totalValue / 100000).toFixed(1)}L`}
+            value={`₹${(Number(stats.totalValue) / 100000).toFixed(1)}L`}
             icon={DollarSign}
             color="from-emerald-50 to-emerald-100"
             trend="Total Portfolio"
@@ -236,7 +236,7 @@ export default function InventoryDashboard() {
           />
           <StatCard 
             label="Total Items" 
-            value={stats.totalItems} 
+            value={Number(stats.totalItems) || 0} 
             icon={Package}
             color="from-blue-50 to-blue-100"
             trend="Active SKUs"
@@ -245,7 +245,7 @@ export default function InventoryDashboard() {
           />
           <StatCard 
             label="Movements" 
-            value={stats.totalMovements}
+            value={Number(stats.totalMovements) || 0}
             icon={Activity}
             color="from-amber-50 to-amber-100"
             trend="Monthly Activity"
@@ -254,7 +254,7 @@ export default function InventoryDashboard() {
           />
           <StatCard 
             label="Low Stock" 
-            value={stats.lowStockItems}
+            value={Number(stats.lowStockItems) || 0}
             icon={AlertTriangle}
             color="from-rose-50 to-rose-100"
             trend="Items at risk"
@@ -622,10 +622,10 @@ export default function InventoryDashboard() {
                         <span className="text-red-600  text-lg">{Number(item.current_qty).toFixed(0)}</span>
                       </div>
                       <div className="flex justify-between items-end">
-                        <p className="text-xs  text-gray-400  uppercase">
+                        <p className="text-xs  text-gray-400  ">
                           Value: ₹{(Number(item.total_value) || 0).toLocaleString()}
                         </p>
-                        <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[9px]  rounded-full uppercase">Critical</span>
+                        <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[9px]  rounded-full ">Critical</span>
                       </div>
                     </div>
                   ))}

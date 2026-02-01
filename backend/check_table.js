@@ -11,12 +11,13 @@ const pool = mysql.createPool({
 try {
   const conn = await pool.getConnection()
   
-  const [tables] = await conn.query(`SHOW TABLES LIKE 'production_plan'`)
+  const tableName = process.argv[2] || 'production_plan'
+  const [tables] = await conn.query(`SHOW TABLES LIKE ?`, [tableName])
   console.log('Tables found:', tables)
   
   if (tables.length > 0) {
-    const [columns] = await conn.query(`DESCRIBE production_plan`)
-    console.log('\nCurrent columns in production_plan:')
+    const [columns] = await conn.query(`DESCRIBE ${tableName}`)
+    console.log(`\nCurrent columns in ${tableName}:`)
     columns.forEach(c => console.log(`  ${c.Field}: ${c.Type}`))
   } else {
     console.log('Table does not exist')

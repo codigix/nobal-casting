@@ -113,7 +113,7 @@ export default function EmployeesDesignations() {
       designation: employee.designation || '',
       department: employee.department || '',
       joining_date: employee.joining_date ? employee.joining_date.split('T')[0] : '',
-      is_active: employee.is_active !== false
+      is_active: employee.status === 'active' || employee.is_active !== false
     })
     setShowEmployeeForm(true)
   }
@@ -133,21 +133,30 @@ export default function EmployeesDesignations() {
         ? `${import.meta.env.VITE_API_URL}/hr/employees/${editingEmployee.employee_id || editingEmployee.id}`
         : `${import.meta.env.VITE_API_URL}/hr/employees`
 
+      // Prepare data for backend (map is_active to status)
+      const { is_active, ...rest } = employeeFormData
+      const payload = {
+        ...rest,
+        status: is_active ? 'active' : 'inactive'
+      }
+
       const response = await fetch(url, {
         method,
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(employeeFormData)
+        body: JSON.stringify(payload)
       })
+
+      const data = await response.json()
 
       if (response.ok) {
         toast.addToast(editingEmployee ? 'Employee updated successfully' : 'Employee created successfully', 'success')
         setShowEmployeeForm(false)
         fetchEmployees()
       } else {
-        throw new Error('Failed to save employee')
+        throw new Error(data.message || 'Failed to save employee')
       }
     } catch (err) {
       console.error('Failed to save employee:', err)
@@ -211,8 +220,9 @@ export default function EmployeesDesignations() {
     try {
       const token = localStorage.getItem('token')
       const method = editingDesignation ? 'PUT' : 'POST'
+      const id = editingDesignation?.designation_id || editingDesignation?.id || editingDesignation?.name
       const url = editingDesignation 
-        ? `${import.meta.env.VITE_API_URL}/hr/designations/${editingDesignation.id || editingDesignation.name}`
+        ? `${import.meta.env.VITE_API_URL}/hr/designations/${encodeURIComponent(id)}`
         : `${import.meta.env.VITE_API_URL}/hr/designations`
 
       const response = await fetch(url, {
@@ -224,12 +234,14 @@ export default function EmployeesDesignations() {
         body: JSON.stringify(designationFormData)
       })
 
+      const data = await response.json()
+
       if (response.ok) {
         toast.addToast(editingDesignation ? 'Designation updated' : 'Designation created', 'success')
         setShowDesignationForm(false)
         fetchDesignations()
       } else {
-        throw new Error('Failed to save designation')
+        throw new Error(data.message || 'Failed to save designation')
       }
     } catch (err) {
       console.error('Failed to save designation:', err)
@@ -245,16 +257,19 @@ export default function EmployeesDesignations() {
     setLoading(true)
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/hr/designations/${designation.id || designation.name}`, {
+      const id = designation.designation_id || designation.id || designation.name
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/hr/designations/${encodeURIComponent(id)}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })
+
+      const data = await response.json()
 
       if (response.ok) {
         toast.addToast('Designation deleted successfully', 'success')
         fetchDesignations()
       } else {
-        throw new Error('Failed to delete designation')
+        throw new Error(data.message || 'Failed to delete designation')
       }
     } catch (err) {
       console.error('Failed to delete designation:', err)
@@ -406,7 +421,7 @@ export default function EmployeesDesignations() {
                       >
                         <option value="">Select Designation</option>
                         {designations.map(des => (
-                          <option key={des.id || des.name} value={des.name || des.id}>
+                          <option key={des.designation_id || des.id || des.name} value={des.name || des.designation_id || des.id}>
                             {des.name}
                           </option>
                         ))}
@@ -636,7 +651,7 @@ export default function EmployeesDesignations() {
                     </thead>
                     <tbody>
                       {filteredDesignations.map((des, idx) => (
-                        <tr key={des.id || des.name} className={`border-b border-gray-200 hover:bg-gray-50 transition ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                        <tr key={des.designation_id || des.id || des.name} className={`border-b border-gray-200 hover:bg-gray-50 transition ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                           <td className="p-2 font-medium text-gray-900">{des.name}</td>
                           <td className="p-2 text-gray-700">{des.description || '-'}</td>
                           <td className="p-2 text-center">

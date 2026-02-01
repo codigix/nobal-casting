@@ -560,7 +560,7 @@ export default function JobCard() {
               </div>
               <button
                 onClick={handleTruncate}
-                className="group flex items-center gap-2 p-2  py-3 text-rose-600 hover:bg-rose-50 rounded  transition-all duration-300"
+                className="group flex items-center gap-2 p-2  py-2 text-rose-600 hover:bg-rose-50 rounded  transition-all duration-300"
               >
                 <Trash size={18} className="group-hover:rotate-12 transition-transform" />
                 <span className="text-xs  ">Reset Queue</span>
@@ -651,7 +651,7 @@ export default function JobCard() {
         </div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-32 bg-white rounded-[3rem] border border-gray-100 ">
+          <div className="flex flex-col items-center justify-center py-22 bg-white rounded-[3rem] border border-gray-100 ">
             <div className="relative">
               <div className="w-20 h-20 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
               <div className="absolute inset-0 flex items-center justify-center">
@@ -785,7 +785,7 @@ export default function JobCard() {
                                           <select 
                                             value={inlineEditData.status} 
                                             onChange={(e) => handleInlineInputChange('status', e.target.value)} 
-                                            className="w-full px-4 py-3 bg-white border border-gray-100 rounded  text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all "
+                                            className="w-full p-2  bg-white border border-gray-100 rounded  text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all "
                                           >
                                             {(() => {
                                               const currentStatus = (inlineEditData.status || 'draft').toLowerCase()
@@ -828,10 +828,10 @@ export default function JobCard() {
                                                   onChange={(e) => handleInlineInputChange('planned_quantity', e.target.value)}
                                                   step="0.01"
                                                   max={isFirstTask ? undefined : maxPlannableQty}
-                                                  className="w-full px-4 py-3 bg-white border border-gray-100 rounded  text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all "
+                                                  className="w-full p-2  bg-white border border-gray-100 rounded  text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all "
                                                 />
                                                 {!isFirstTask && isFinite(maxPlannableQty) && (
-                                                  <p className="text-xs  text-amber-600 mt-1 ml-1 uppercase er">Cap: {maxPlannableQty.toFixed(2)}</p>
+                                                  <p className="text-xs  text-amber-600 mt-1 ml-1 er">Cap: {maxPlannableQty.toFixed(2)}</p>
                                                 )}
                                               </div>
                                             )
@@ -850,10 +850,10 @@ export default function JobCard() {
                                                   onChange={(e) => handleInlineInputChange('produced_quantity', e.target.value)}
                                                   step="0.01"
                                                   max={isValidProducibleNumber ? maxProducibleQty : undefined}
-                                                  className="w-full px-4 py-3 bg-white border border-gray-100 rounded  text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all "
+                                                  className="w-full p-2  bg-white border border-gray-100 rounded  text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all "
                                                 />
                                                 {isValidProducibleNumber && (
-                                                  <p className="text-xs  text-emerald-600 mt-1 ml-1 uppercase er">Limit: {maxProducibleQty.toFixed(2)}</p>
+                                                  <p className="text-xs  text-emerald-600 mt-1 ml-1 er">Limit: {maxProducibleQty.toFixed(2)}</p>
                                                 )}
                                               </div>
                                             )
@@ -865,7 +865,7 @@ export default function JobCard() {
                                             type="date" 
                                             value={inlineEditData.scheduled_start_date} 
                                             onChange={(e) => handleInlineInputChange('scheduled_start_date', e.target.value)} 
-                                            className="w-full px-4 py-3 bg-white border border-gray-100 rounded  text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all "
+                                            className="w-full p-2  bg-white border border-gray-100 rounded  text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all "
                                           />
                                         </div>
                                         <div className="space-y-2">
@@ -874,7 +874,7 @@ export default function JobCard() {
                                             type="date" 
                                             value={inlineEditData.scheduled_end_date} 
                                             onChange={(e) => handleInlineInputChange('scheduled_end_date', e.target.value)} 
-                                            className="w-full px-4 py-3 bg-white border border-gray-100 rounded  text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all "
+                                            className="w-full p-2  bg-white border border-gray-100 rounded  text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all "
                                           />
                                         </div>
                                       </div>

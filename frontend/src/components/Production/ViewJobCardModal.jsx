@@ -216,7 +216,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
             <div className="bg-white rounded p-6 border border-gray-100   space-y-4">
               <div className="flex items-center gap-3 mb-2">
                 <div className="bg-indigo-50 p-2 rounded  text-indigo-600">

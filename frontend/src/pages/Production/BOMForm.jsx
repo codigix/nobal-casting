@@ -508,6 +508,7 @@ export default function BOMForm() {
             item_group: itemData.item_group || prev.item_group,
             uom: itemData.uom || prev.uom,
             selling_rate: itemData.selling_rate || '0',
+            valuation_rate_value: itemData.valuation_rate || '0',
             weight_per_unit: itemData.weight_per_unit || prev.weight_per_unit,
             weight_uom: itemData.weight_uom || prev.weight_uom
           }))
@@ -525,7 +526,7 @@ export default function BOMForm() {
     }))
     setError(null)
 
-    if (value && !formData.item_code) {
+    if (value) {
       const selectedItem = items.find(item =>
         (item.name === value || item.item_name === value) &&
         (item.item_group === 'Finished Goods' || item.item_group === 'Finished Good' || item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')
@@ -537,7 +538,8 @@ export default function BOMForm() {
           product_name: value,
           item_group: selectedItem.item_group || prev.item_group,
           uom: selectedItem.uom || prev.uom,
-          selling_rate: selectedItem.selling_rate || '0'
+          selling_rate: selectedItem.selling_rate || '0',
+          valuation_rate_value: selectedItem.valuation_rate || '0'
         }))
       }
     }
@@ -545,14 +547,23 @@ export default function BOMForm() {
 
   const handleItemCodeChange = (value) => {
     const selectedItem = items.find(item => item.item_code === value)
-    setFormData(prev => ({
-      ...prev,
-      item_code: value,
-      item_group: selectedItem?.item_group || prev.item_group
-    }))
     if (selectedItem) {
-      handleInputChange({ target: { name: 'item_code', value: value } })
+      setFormData(prev => ({
+        ...prev,
+        item_code: value,
+        product_name: selectedItem.name || selectedItem.item_name || prev.product_name,
+        item_group: selectedItem.item_group || prev.item_group,
+        uom: selectedItem.uom || prev.uom,
+        selling_rate: selectedItem.selling_rate || '0',
+        valuation_rate_value: selectedItem.valuation_rate || '0'
+      }))
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        item_code: value
+      }))
     }
+    setError(null)
   }
 
   const handleLineChange = async (e) => {
@@ -567,8 +578,8 @@ export default function BOMForm() {
         const response = await productionService.getItemDetails(value)
         if (response.success && response.data) {
           const itemData = response.data
-          let rate = itemData.valuation_rate || '0'
           let sellingPrice = itemData.selling_rate || '0'
+          let rate = (sellingPrice !== '0' && sellingPrice !== 0) ? sellingPrice : (itemData.valuation_rate || '0')
 
           if (itemData.item_group === 'Sub Assemblies' || itemData.item_group === 'Sub-assembly') {
             try {
@@ -603,11 +614,12 @@ export default function BOMForm() {
                   }
                 }
 
-                const costPerUnit = totalCost / bomQuantity
-                rate = costPerUnit.toFixed(2)
-
                 if (bom.selling_rate && parseFloat(bom.selling_rate) > 0) {
                   sellingPrice = (parseFloat(bom.selling_rate) / bomQuantity).toFixed(2)
+                  rate = sellingPrice
+                } else {
+                  const costPerUnit = totalCost / bomQuantity
+                  rate = costPerUnit.toFixed(2)
                 }
               }
             } catch (bomErr) {
@@ -656,8 +668,8 @@ export default function BOMForm() {
 
   const handleComponentChange = async (value) => {
     let item = items.find(i => i.item_code === value)
-    let rate = item?.valuation_rate || '0'
     let sellingPrice = item?.selling_rate || '0'
+    let rate = (sellingPrice !== '0' && sellingPrice !== 0) ? sellingPrice : (item?.valuation_rate || '0')
     let componentName = item?.name || ''
 
     if (!componentName) {
@@ -750,11 +762,12 @@ export default function BOMForm() {
             }
           }
 
-          const costPerUnit = totalCost / bomQuantity
-          rate = costPerUnit.toFixed(2)
-
           if (bom.selling_rate && parseFloat(bom.selling_rate) > 0) {
             sellingPrice = (parseFloat(bom.selling_rate) / bomQuantity).toFixed(2)
+            rate = sellingPrice
+          } else {
+            const costPerUnit = totalCost / bomQuantity
+            rate = costPerUnit.toFixed(2)
           }
         }
       } catch (bomErr) {
@@ -762,7 +775,7 @@ export default function BOMForm() {
       }
     }
 
-    const selectedItem = items.find(i => i.item_code === value)
+    const selectedItem = items.find(i => i.item_code === value) || item
     const lossPercentage = selectedItem?.loss_percentage || '0'
     setNewLine({ 
       ...newLine, 
@@ -770,14 +783,16 @@ export default function BOMForm() {
       component_name: componentName, 
       rate, 
       selling_price: sellingPrice,
+      uom: selectedItem?.uom || newLine.uom,
+      item_group: selectedItem?.item_group || newLine.item_group,
       loss_percentage: lossPercentage 
     })
   }
 
   const handleRawMaterialItemChange = async (value) => {
     let item = items.find(i => i.item_code === value)
-    let rate = item?.valuation_rate || '0'
     let sellingPrice = item?.selling_rate || '0'
+    let rate = (sellingPrice !== '0' && sellingPrice !== 0) ? sellingPrice : (item?.valuation_rate || '0')
 
     if (!item) {
       try {
@@ -825,11 +840,12 @@ export default function BOMForm() {
             }
           }
 
-          const costPerUnit = totalCost / bomQuantity
-          rate = costPerUnit.toFixed(2)
-
           if (bom.selling_rate && parseFloat(bom.selling_rate) > 0) {
             sellingPrice = (parseFloat(bom.selling_rate) / bomQuantity).toFixed(2)
+            rate = sellingPrice
+          } else {
+            const costPerUnit = totalCost / bomQuantity
+            rate = costPerUnit.toFixed(2)
           }
         }
       } catch (bomErr) {
@@ -842,8 +858,10 @@ export default function BOMForm() {
       item_code: value,
       item_name: item?.name || item?.item_name || '',
       item_group: item?.item_group || '',
+      uom: item?.uom || newRawMaterial.uom,
       rate,
-      selling_price: sellingPrice
+      selling_price: sellingPrice,
+      source_warehouse: item?.stock?.[0]?.warehouse_code || item?.stock?.[0]?.warehouse_name || newRawMaterial.source_warehouse
     })
   }
 
@@ -1100,7 +1118,7 @@ export default function BOMForm() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-2">
+    <div className="min-h-screen bg-slate-50 p-2/50 p-2">
       <div className="max-w-5xl mx-auto">
         {/* Header Section */}
         <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -1464,7 +1482,7 @@ export default function BOMForm() {
                   />
                   {expandedSections.settings && (
                     <div className=" p-2">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <FieldWrapper label="Cost Rate Based On">
                           <SearchableSelect
                             value={formData.cost_rate_based_on}
@@ -1473,6 +1491,57 @@ export default function BOMForm() {
                               { label: 'Valuation Rate', value: 'Valuation Rate' },
                               { label: 'Last Purchase Rate', value: 'Last Purchase Rate' },
                               { label: 'Price List', value: 'Price List' }
+                            ]}
+                            className="glass-input"
+                          />
+                        </FieldWrapper>
+
+                        <FieldWrapper label="Routing">
+                          <div className="relative group/input">
+                            <input
+                              type="text"
+                              name="routing"
+                              value={formData.routing}
+                              onChange={handleInputChange}
+                              placeholder="Select Routing..."
+                              className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-slate-500 focus:ring-4 focus:ring-slate-500/10 transition-all focus:outline-none  "
+                            />
+                          </div>
+                        </FieldWrapper>
+
+                        <FieldWrapper label="Project">
+                          <div className="relative group/input">
+                            <input
+                              type="text"
+                              name="project"
+                              value={formData.project}
+                              onChange={handleInputChange}
+                              placeholder="Link to Project..."
+                              className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-slate-500 focus:ring-4 focus:ring-slate-500/10 transition-all focus:outline-none  "
+                            />
+                          </div>
+                        </FieldWrapper>
+
+                        <FieldWrapper label="Currency">
+                          <div className="relative group/input">
+                            <input
+                              type="text"
+                              name="currency"
+                              value={formData.currency}
+                              onChange={handleInputChange}
+                              className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-slate-500 focus:ring-4 focus:ring-slate-500/10 transition-all focus:outline-none  "
+                            />
+                          </div>
+                        </FieldWrapper>
+
+                        <FieldWrapper label="Transfer Material Against">
+                          <SearchableSelect
+                            value={formData.transfer_material_against}
+                            onChange={(value) => setFormData({ ...formData, transfer_material_against: value })}
+                            options={[
+                              { label: 'Work Order', value: 'Work Order' },
+                              { label: 'Job Card', value: 'Job Card' },
+                              { label: 'Manual', value: 'Manual' }
                             ]}
                             className="glass-input"
                           />
@@ -1492,7 +1561,9 @@ export default function BOMForm() {
                           </div>
                         </FieldWrapper>
 
-                        <div className="flex items-center col-span-2 gap-2 pt-4">
+                        
+                      </div>
+                      <div className="flex flex-wrap items-center col-span-2 gap-6 pt-4">
                           <label className="flex items-center gap-4 cursor-pointer group">
                             <div className={`w-12 h-7 rounded-full transition-all duration-500 relative ${formData.with_operations ? 'bg-indigo-600 shadow-lg shadow-indigo-100' : 'bg-slate-200'}`}>
                               <input
@@ -1518,8 +1589,20 @@ export default function BOMForm() {
                             </div>
                             <span className=" text-xs    text-slate-500    group-hover:text-slate-900 transition-colors">Allow Alternatives</span>
                           </label>
+
+                          <label className="flex items-center gap-4 cursor-pointer group">
+                            <div className={`w-12 h-7 rounded-full transition-all duration-500 relative ${formData.auto_sub_assembly_rate ? 'bg-indigo-600 shadow-lg shadow-indigo-100' : 'bg-slate-200'}`}>
+                              <input
+                                type="checkbox"
+                                checked={formData.auto_sub_assembly_rate}
+                                onChange={(e) => setFormData({ ...formData, auto_sub_assembly_rate: e.target.checked })}
+                                className="hidden"
+                              />
+                              <div className={`absolute top-1 w-5 h-5 rounded-full bg-white   transition-all duration-500 ${formData.auto_sub_assembly_rate ? 'left-6' : 'left-1'}`} />
+                            </div>
+                            <span className=" text-xs    text-slate-500    group-hover:text-slate-900 transition-colors">Auto Set Sub-assembly Rate</span>
+                          </label>
                         </div>
-                      </div>
                     </div>
                   )}
                 </Card>
@@ -1549,14 +1632,14 @@ export default function BOMForm() {
                           Add Component Specification
                         </h4>
 
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 relative z-10">
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-2 relative z-10">
                           <div className="md:col-span-4">
-                            <FieldWrapper label="Component / Sub-Assembly" required>
+                            <FieldWrapper label="Subassemblies Name" required>
                               <SearchableSelect
                                 value={newLine.component_code}
                                 onChange={handleComponentChange}
                                 options={items.filter(item => item && item.item_code && item.name).map(item => ({
-                                  label: item.name,
+                                  label: `${item.item_code} - ${item.name}`,
                                   value: item.item_code
                                 }))}
                                 placeholder="Search protocol components..."
@@ -1564,8 +1647,22 @@ export default function BOMForm() {
                               />
                             </FieldWrapper>
                           </div>
-                          <div className="md:col-span-1">
-                            <FieldWrapper label="Quantity" required>
+                          <div className="md:col-span-4">
+                            <FieldWrapper label="Item Group">
+                              <SearchableSelect
+                                value={newLine.item_group}
+                                onChange={(value) => setNewLine({ ...newLine, item_group: value })}
+                                options={itemGroups.map(ig => ({
+                                  label: ig.name || ig.item_group,
+                                  value: ig.name || ig.item_group
+                                }))}
+                                placeholder="Select"
+                                className="glass-input"
+                              />
+                            </FieldWrapper>
+                          </div>
+                          <div className="md:col-span-4">
+                            <FieldWrapper label="Qty" required>
                               <div className="relative group/input">
                                 <input
                                   type="number"
@@ -1573,12 +1670,26 @@ export default function BOMForm() {
                                   onChange={(e) => setNewLine({ ...newLine, qty: e.target.value })}
                                   onKeyDown={handleKeyDown}
                                   step="0.01"
-                                  className="w-full bg-white border border-slate-200 rounded  p-2 text-xs    focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
+                                  className="w-full bg-white border border-slate-200 rounded p-2 text-xs focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
                                 />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2  text-xs    text-slate-400 ">{newLine.uom || 'Kg'}</span>
                               </div>
                             </FieldWrapper>
                           </div>
+                          <div className="md:col-span-4">
+                            <FieldWrapper label="UOM">
+                              <SearchableSelect
+                                value={newLine.uom}
+                                onChange={(value) => setNewLine({ ...newLine, uom: value })}
+                                options={uomList.map(uom => ({
+                                  label: uom,
+                                  value: uom
+                                }))}
+                                placeholder="Select"
+                                className="glass-input"
+                              />
+                            </FieldWrapper>
+                          </div>
+                          
                           <div className="md:col-span-2">
                             <FieldWrapper label="Valuation (₹)">
                               <input
@@ -1587,20 +1698,19 @@ export default function BOMForm() {
                                 onChange={(e) => setNewLine({ ...newLine, selling_price: e.target.value })}
                                 onKeyDown={handleKeyDown}
                                 step="0.01"
-                                className="w-full bg-white border border-slate-200 rounded  p-2 text-xs    focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
+                                className="w-full bg-white border border-slate-200 rounded p-2 text-xs focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
                               />
                             </FieldWrapper>
                           </div>
                           <div className="md:col-span-2">
-                            <FieldWrapper label="Selling Price (₹)">
-                              
+                            <FieldWrapper label="Selling (₹)">
                               <input
                                 type="number"
                                 value={newLine.rate}
                                 onChange={(e) => setNewLine({ ...newLine, rate: e.target.value })}
                                 onKeyDown={handleKeyDown}
                                 step="0.01"
-                                className="w-full bg-white border border-slate-200 rounded  p-2 text-xs    focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
+                                className="w-full bg-white border border-slate-200 rounded p-2 text-xs focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
                               />
                             </FieldWrapper>
                           </div>
@@ -1612,18 +1722,19 @@ export default function BOMForm() {
                                 onChange={(e) => setNewLine({ ...newLine, loss_percentage: e.target.value })}
                                 onKeyDown={handleKeyDown}
                                 step="0.01"
-                                className="w-full bg-white border border-slate-200 rounded  p-2 text-xs    focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none text-center"
+                                className="w-full bg-white border border-slate-200 rounded p-2 text-xs focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none text-center"
                               />
                             </FieldWrapper>
                           </div>
+                          
                           <div className="md:col-span-2 flex items-end">
                             <button
                               type="button"
                               onClick={addBomLine}
-                              className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white rounded p-2  text-xs        shadow-indigo-100 hover:bg-indigo-700 transition-all hover:-translate-y-1 active:scale-95"
+                              className="w-full flex items-center justify-center gap-1 bg-indigo-600 text-white rounded p-2 text-xs font-bold shadow-md hover:bg-indigo-700 transition-all hover:-translate-y-1 active:scale-95"
                             >
-                              <Plus size={16} strokeWidth={3} />
-                              ADD ITEM
+                              <Plus size={14} strokeWidth={3} />
+                              Add
                             </button>
                           </div>
                         </div>
@@ -1771,7 +1882,7 @@ export default function BOMForm() {
                               <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                               Intelligence Forecast (for {formData.quantity} {formData.uom})
                             </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 relative z-10">
                               {calculateRMConsumption(formData.quantity).map((consumption, idx) => (
                                 <div key={idx} className="flex items-center justify-between  p-2 bg-white/80 backdrop-blur-md rounded border border-amber-100   hover: hover:shadow-amber-100/30 hover:-translate-y-1 transition-all group/item">
                                   <div className=".5">
@@ -1792,11 +1903,11 @@ export default function BOMForm() {
                         <div className="p-2 bg-slate-50/50 rounded border border-slate-200/50 relative ">
                           <h4 className=" text-xs    text-slate-500     mb-6 flex items-center gap-3">
                             <Plus size={14} className="text-amber-500" strokeWidth={3} />
-                            Register Strategic Material
+                            Add Raw Material
                           </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 relative z-10">
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-2 relative z-10">
                             <div className="md:col-span-4">
-                              <FieldWrapper label="Material Specification" required>
+                              <FieldWrapper label="Item Name" required>
                                 <SearchableSelect
                                   value={newRawMaterial.item_code}
                                   onChange={handleRawMaterialItemChange}
@@ -1804,13 +1915,41 @@ export default function BOMForm() {
                                     label: item.name,
                                     value: item.item_code
                                   }))}
-                                  placeholder="Identify asset..."
+                                  placeholder="Search by name.."
+                                  className="glass-input"
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-4">
+                              <FieldWrapper label="Item Group">
+                                <SearchableSelect
+                                  value={newRawMaterial.item_group}
+                                  onChange={(value) => setNewRawMaterial({ ...newRawMaterial, item_group: value })}
+                                  options={itemGroups.map(ig => ({
+                                    label: ig.name || ig.item_group,
+                                    value: ig.name || ig.item_group
+                                  }))}
+                                  placeholder="Select"
+                                  className="glass-input"
+                                />
+                              </FieldWrapper>
+                            </div>
+                            <div className="md:col-span-4">
+                              <FieldWrapper label="Warehouse">
+                                <SearchableSelect
+                                  value={newRawMaterial.source_warehouse}
+                                  onChange={(value) => setNewRawMaterial({ ...newRawMaterial, source_warehouse: value })}
+                                  options={warehousesList.filter(wh => wh && (wh.warehouse_name || wh.name)).map(wh => ({
+                                    label: wh.warehouse_name || wh.name,
+                                    value: wh.warehouse_name || wh.name
+                                  }))}
+                                  placeholder="Select"
                                   className="glass-input"
                                 />
                               </FieldWrapper>
                             </div>
                             <div className="md:col-span-2">
-                              <FieldWrapper label="Quantity" required>
+                              <FieldWrapper label="Qty" required>
                                 <input
                                   type="number"
                                   value={newRawMaterial.qty}
@@ -1821,8 +1960,23 @@ export default function BOMForm() {
                                 />
                               </FieldWrapper>
                             </div>
+                            <div className="md:col-span-4">
+                              <FieldWrapper label="UOM">
+                                <SearchableSelect
+                                  value={newRawMaterial.uom}
+                                  onChange={(value) => setNewRawMaterial({ ...newRawMaterial, uom: value })}
+                                  options={uomList.map(uom => ({
+                                    label: uom,
+                                    value: uom
+                                  }))}
+                                  placeholder="Select"
+                                  className="glass-input"
+                                />
+                              </FieldWrapper>
+                            </div>
+                            
                             <div className="md:col-span-2">
-                              <FieldWrapper label="Valuation (₹)">
+                              <FieldWrapper label="Rate (₹)">
                                 <input
                                   type="number"
                                   value={newRawMaterial.rate}
@@ -1833,25 +1987,28 @@ export default function BOMForm() {
                                 />
                               </FieldWrapper>
                             </div>
-                            <div className="md:col-span-2">
-                              <FieldWrapper label="Selling Price (₹)">
-                                <input
-                                  type="number"
-                                  value={newRawMaterial.selling_price}
-                                  onChange={(e) => setNewRawMaterial({ ...newRawMaterial, selling_price: e.target.value })}
-                                  onKeyDown={handleKeyDown}
-                                  step="0.01"
-                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all focus:outline-none  "
+                            
+                            <div className="md:col-span-4">
+                              <FieldWrapper label="Operation">
+                                <SearchableSelect
+                                  value={newRawMaterial.operation}
+                                  onChange={(value) => setNewRawMaterial({ ...newRawMaterial, operation: value })}
+                                  options={operationsList.filter(op => op && op.name).map(op => ({
+                                    label: op.name,
+                                    value: op.name
+                                  }))}
+                                  placeholder="Select"
+                                  className="glass-input"
                                 />
                               </FieldWrapper>
                             </div>
-                            <div className="md:col-span-2 flex items-end">
+                            <div className="md:col-span-1 flex items-end">
                               <button
                                 type="button"
                                 onClick={addNewRawMaterial}
-                                className="w-full flex items-center justify-center gap-1 bg-amber-600 text-white rounded p-2  text-xs        shadow-amber-100 hover:bg-amber-700 transition-all hover:-translate-y-1 active:scale-95"
+                                className="w-full flex items-center justify-center gap-1 bg-rose-600 text-white rounded p-2 text-xs font-bold shadow-md hover:bg-rose-700 transition-all hover:-translate-y-1 active:scale-95"
                               >
-                                <Plus size={8} strokeWidth={2.5} />
+                                <Plus size={14} strokeWidth={3} />
                                 Add 
                               </button>
                             </div>
@@ -2041,11 +2198,11 @@ export default function BOMForm() {
                         <div className="p-2 bg-slate-50/50 rounded border border-slate-200/50 relative ">
                           <h4 className=" text-xs    text-slate-500     mb-6 flex items-center gap-3">
                             <Plus size={14} className="text-emerald-500" strokeWidth={3} />
-                            Register Production Protocol
+                            Operations
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 relative z-10">
                             <div className="md:col-span-4">
-                              <FieldWrapper label="Protocol Specification" required>
+                              <FieldWrapper label="Operations" required>
                                 <SearchableSelect
                                   value={newOperation.operation_name}
                                   onChange={(value) => {
@@ -2067,7 +2224,7 @@ export default function BOMForm() {
                               </FieldWrapper>
                             </div>
                             <div className="md:col-span-4">
-                              <FieldWrapper label="Neural Workstation">
+                              <FieldWrapper label="Allocated Workstation">
                                 <SearchableSelect
                                   value={newOperation.workstation_type}
                                   onChange={(value) => setNewOperation({ ...newOperation, workstation_type: value })}
@@ -2081,7 +2238,7 @@ export default function BOMForm() {
                               </FieldWrapper>
                             </div>
                             <div className="md:col-span-4">
-                              <FieldWrapper label="Target Node">
+                              <FieldWrapper label="Target Warehouse ">
                                 <SearchableSelect
                                   value={newOperation.target_warehouse}
                                   onChange={(value) => setNewOperation({ ...newOperation, target_warehouse: value })}
@@ -2462,7 +2619,7 @@ export default function BOMForm() {
                 <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
                   <Layers size={80} className="text-indigo-400" />
                 </div>
-                <div className="flex items-center gap-6 relative z-10">
+                <div className="flex items-center gap-2 relative z-10">
                   <div className="w-10 h-10 bg-indigo-500/20 backdrop-blur-xl rounded flex items-center justify-center border border-white/10 shadow-inner group-hover:scale-110 transition-transform duration-700">
                     <Layers size={36} className="text-indigo-400" />
                   </div>

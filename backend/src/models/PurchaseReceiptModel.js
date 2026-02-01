@@ -91,9 +91,11 @@ export class PurchaseReceiptModel {
       if (grns.length === 0) return null
 
       const [items] = await this.db.execute(
-        `SELECT pri.*, i.name as item_name
+        `SELECT pri.*, i.name as item_name, poi.rate
          FROM purchase_receipt_item pri
          LEFT JOIN item i ON pri.item_code = i.item_code
+         JOIN purchase_receipt pr ON pri.grn_no = pr.grn_no
+         LEFT JOIN purchase_order_item poi ON pr.po_no = poi.po_no AND pri.item_code = poi.item_code
          WHERE pri.grn_no = ?`,
         [grn_no]
       )
@@ -193,9 +195,10 @@ export class PurchaseReceiptModel {
         const rate = Number(item.purchase_rate || 0)
         const receipt_date = item.receipt_date || new Date()
 
-        // 1. Move accepted quantity to ACCEPTED warehouse
+        // 1. Move accepted quantity to the designated warehouse (default: ACCEPTED)
         if (accepted > 0) {
-          await this.updateStock(item.item_code, 'ACCEPTED', accepted, 'GRN-Accepted', grn_no, rate, receipt_date)
+          const targetWarehouse = item.warehouse_code || 'ACCEPTED'
+          await this.updateStock(item.item_code, targetWarehouse, accepted, 'GRN-Accepted', grn_no, rate, receipt_date)
         }
 
         // 2. Move rejected quantity to REJECTED warehouse

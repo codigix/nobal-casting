@@ -22,7 +22,7 @@ const SectionTitle = ({ title, icon: Icon, badge }) => (
       <h3 className="text-xs text-slate-900 text-xs">{title}</h3>
     </div>
     {badge && (
-      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs   rounded-full border border-slate-200 text-xstracking-widest">
+      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs   rounded-full border border-slate-200 text-xs">
         {badge}
       </span>
     )}
@@ -32,7 +32,7 @@ const SectionTitle = ({ title, icon: Icon, badge }) => (
 const FieldWrapper = ({ label, children, error, required }) => (
   <div className=".5">
     <div className="flex items-center justify-between">
-      <label className="text-xs   text-slate-400 text-xstracking-widest flex items-center gap-1">
+      <label className="text-xs   text-slate-400 text-xs flex items-center gap-1">
         {label}
         {required && <span className="text-rose-500">*</span>}
       </label>
@@ -432,7 +432,7 @@ export default function WorkOrderForm() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] pb-20">
+    <div className="min-h-screen bg-[#f8fafc] p-4 pb-20">
       
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200">
         <div className=" p-6  h-16 flex items-center justify-between">
@@ -445,11 +445,11 @@ export default function WorkOrderForm() {
                 <h1 className="text-lg  text-slate-900 tracking-tight">
                   {id ? (isReadOnly ? 'WORK ORDER RECORD' : 'EDIT WORK ORDER') : 'CREATE MANUFACTURING ORDER'}
                 </h1>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs   text-xstracking-widest border ${getStatusColor(formData.status)}`}>
+                <span className={`px-2.5 py-0.5 rounded-full text-xs   text-xs border ${getStatusColor(formData.status)}`}>
                   {formData.status}
                 </span>
               </div>
-              <p className="text-xs   text-slate-400 text-xstracking-widest">
+              <p className="text-xs   text-slate-400 text-xs">
                 {id || 'DRAFT-NEW'} • {new Date().toLocaleDateString('en-GB')}
               </p>
             </div>
@@ -476,7 +476,7 @@ export default function WorkOrderForm() {
         </div>
       </div>
 
-      <div className="sticky top-16 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 p-6  py-3">
+      <div className="sticky top-16 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 p-6  py-2">
         <div className="max-w-[1600px] mx-auto flex flex-wrap items-center gap-2">
           <NavItem
             label="01 Foundation"
@@ -509,8 +509,8 @@ export default function WorkOrderForm() {
 
           <div className="ml-auto flex items-center gap-4 bg-slate-900 p-2 rounded text-white shadow-lg shadow-slate-200 min-w-[220px]">
             <div className="flex-1">
-              <div className="flex items-center justify-between text-[9px]  mb-1 tracking-widest">
-                <span className="opacity-60 uppercase">Execution Pulse</span>
+              <div className="flex items-center justify-between text-[9px]  mb-1 ">
+                <span className="opacity-60 ">Execution Pulse</span>
                 <span className="text-indigo-400">{((completionMetrics.totalCompleted / (formData.qty_to_manufacture || 1)) * 100).toFixed(0)}%</span>
               </div>
               <div className="w-full bg-white/10 rounded-full h-1 overflow-hidden">
@@ -549,7 +549,7 @@ export default function WorkOrderForm() {
               <div className="col-span-12 lg:col-span-8">
                 <Card className="p-6 border-none overflow-visible">
                   <SectionTitle title="01 Foundation Setup" icon={Settings} />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
                     <FieldWrapper label="Target Item to Manufacture" required>
                       <SearchableSelect
                         value={formData.item_to_manufacture}
@@ -626,7 +626,7 @@ export default function WorkOrderForm() {
                   <div className="relative z-10 flex flex-col h-full">
                     <div className="flex items-center gap-2 mb-6 text-indigo-100">
                       <ShieldCheck size={20} />
-                      <h4 className="text-xs  uppercase">Configuration Guard</h4>
+                      <h4 className="text-xs  ">Configuration Guard</h4>
                     </div>
                     <p className="text-sm text-indigo-50 font-medium leading-relaxed mb-8">
                       Locking the configuration prevents accidental changes to BOM and quantities once production has been initiated.
@@ -636,7 +636,7 @@ export default function WorkOrderForm() {
                       {!isReadOnly && id && (
                         <button
                           onClick={() => setIsEditMode(!isEditMode)}
-                          className={`w-full py-3 rounded text-xs  transition-all shadow-lg ${isEditMode ? 'bg-white text-indigo-600' : 'bg-indigo-500 text-white hover:bg-indigo-400'}`}
+                          className={`w-full py-2 rounded text-xs  transition-all shadow-lg ${isEditMode ? 'bg-white text-indigo-600' : 'bg-indigo-500 text-white hover:bg-indigo-400'}`}
                         >
                           {isEditMode ? 'COMMIT & LOCK CONFIG' : 'UNLOCK FOR REVISION'}
                         </button>
@@ -695,13 +695,13 @@ export default function WorkOrderForm() {
               </div>
 
               <div className="col-span-12 lg:col-span-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
-                  <div className="p-6 rounded  bg-white border border-slate-200 shadow-sm flex flex-col">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 h-full">
+                  <div className="p-6 rounded  bg-white border border-slate-200   flex flex-col">
                     <div className="flex items-center gap-3 mb-4 text-emerald-600">
                       <div className="p-2 bg-emerald-50 rounded">
                         <Activity size={18} />
                       </div>
-                      <h4 className="text-xs  uppercase">Efficiency Projection</h4>
+                      <h4 className="text-xs  ">Efficiency Projection</h4>
                     </div>
                     <div className="flex-1 flex flex-col justify-center">
                       <div className="text-xl  text-slate-900 mb-1">{completionMetrics.efficiency}%</div>
@@ -714,7 +714,7 @@ export default function WorkOrderForm() {
                       <div className="p-2 bg-white/5 rounded border border-white/10">
                         <Clock size={18} />
                       </div>
-                      <h4 className="text-xs  uppercase">Time Expenditure</h4>
+                      <h4 className="text-xs  ">Time Expenditure</h4>
                     </div>
                     <div className="flex-1 flex flex-col justify-center">
                       <div className="text-3xl  text-white mb-1">{(completionMetrics.totalActualTime / 60).toFixed(1)}h</div>
@@ -730,13 +730,13 @@ export default function WorkOrderForm() {
           <div id="operations" className={activeSection === 'operations' ? 'block' : 'hidden'}>
             <div className="grid grid-cols-12 gap-8">
               <div className="col-span-12 lg:col-span-9">
-                <Card className="border-none overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <Card className="border-none overflow-hidden   hover:shadow-md transition-shadow">
                   <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-white text-indigo-600 rounded border border-slate-100 shadow-sm">
+                      <div className="p-1.5 bg-white text-indigo-600 rounded border border-slate-100  ">
                         <Layers size={16} />
                       </div>
-                      <h3 className="text-xs  text-slate-900 tracking-widest uppercase">03 Operation Sequence</h3>
+                      <h3 className="text-xs  text-slate-900  ">03 Operation Sequence</h3>
                     </div>
                     {jobCards.length > 0 && (
                       <div className="flex items-center gap-2 p-2  py-1 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-100">
@@ -751,10 +751,10 @@ export default function WorkOrderForm() {
                       <table className="w-full text-left bg-white">
                         <thead>
                           <tr className="bg-slate-50/30">
-                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase">Phase</th>
-                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase">Workstation</th>
-                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase text-center">Status</th>
-                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase text-right">Progress</th>
+                            <th className="p-2  text-xs  text-slate-400  ">Phase</th>
+                            <th className="p-2  text-xs  text-slate-400  ">Workstation</th>
+                            <th className="p-2  text-xs  text-slate-400  text-center">Status</th>
+                            <th className="p-2  text-xs  text-slate-400  text-right">Progress</th>
                             {!isReadOnly && <th className="p-2  w-10"></th>}
                           </tr>
                         </thead>
@@ -792,7 +792,7 @@ export default function WorkOrderForm() {
                                 </td>
                                 <td className="p-2 ">
                                   <div className="flex justify-center">
-                                    <span className={`p-2  py-1 rounded-full text-xs  border shadow-sm ${getStatusColor(jc.status)}`}>
+                                    <span className={`p-2  py-1 rounded-full text-xs  border   ${getStatusColor(jc.status)}`}>
                                       {(jc.status || 'pending').toUpperCase()}
                                     </span>
                                   </div>
@@ -848,17 +848,17 @@ export default function WorkOrderForm() {
                   <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
                     <BarChart3 size={100} className="text-white" />
                   </div>
-                  <div className="p-6 relative z-10">
+                  <div className="p-2 relative z-10">
                     <div className="flex items-center gap-2 mb-6">
                       <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded border border-indigo-500/30">
                         <TrendingUp size={18} />
                       </div>
-                      <h3 className="text-xs  text-white tracking-[0.2em] uppercase">Execution Health</h3>
+                      <h3 className="text-xs  text-white tracking-[0.2em] ">Execution Health</h3>
                     </div>
                     <div className="space-y-8">
                       <div>
                         <div className="flex justify-between items-end mb-3">
-                          <span className="text-xs  text-slate-400 tracking-widest uppercase">Completion Rate</span>
+                          <span className="text-xs  text-slate-400  ">Completion Rate</span>
                           <span className="text-xl   text-white">
                             {((completionMetrics.totalCompleted / (formData.qty_to_manufacture || 1)) * 100).toFixed(0)}%
                           </span>
@@ -872,11 +872,11 @@ export default function WorkOrderForm() {
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="bg-white/5 p-4 rounded  border border-white/10 hover:bg-white/[0.08] transition-colors group/card">
-                          <p className="text-[9px]  text-slate-500 mb-2 tracking-widest uppercase group-hover/card:text-indigo-400 transition-colors">Yield</p>
+                          <p className="text-[9px]  text-slate-500 mb-2  group-hover/card:text-indigo-400 transition-colors">Yield</p>
                           <p className="text-xl  text-white">{completionMetrics.qualityScore}%</p>
                         </div>
                         <div className="bg-white/5 p-4 rounded  border border-white/10 hover:bg-white/[0.08] transition-colors group/card">
-                          <p className="text-[9px]  text-slate-500 mb-2 tracking-widest uppercase group-hover/card:text-amber-400 transition-colors">Actual Hrs</p>
+                          <p className="text-[9px]  text-slate-500 mb-2  group-hover/card:text-amber-400 transition-colors">Actual Hrs</p>
                           <p className="text-xl  text-white">{(completionMetrics.totalActualTime / 60).toFixed(1)}h</p>
                         </div>
                       </div>
@@ -884,17 +884,17 @@ export default function WorkOrderForm() {
                   </div>
                 </Card>
 
-                <Card className="p-4 border-none shadow-sm">
+                <Card className="p-4 border-none  ">
                   <SectionTitle title="Operational Panel" icon={Zap} />
                   <div className="space-y-3">
                     <button
                       onClick={handleSubmit}
                       disabled={loading}
-                      className="w-full flex items-center justify-between px-4 py-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded  border border-indigo-100 transition-all group"
+                      className="w-full flex items-center justify-between p-2  bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded  border border-indigo-100 transition-all group"
                     >
                       <div className="flex items-center gap-3">
                         <Save size={16} />
-                        <span className="text-xs  uppercase">Commit Progress</span>
+                        <span className="text-xs  ">Commit Progress</span>
                       </div>
                       <ArrowRight size={14} className=" group-hover:translate-x-1 transition-all" />
                     </button>
@@ -902,11 +902,11 @@ export default function WorkOrderForm() {
                     <button
                       onClick={createJobCardsFromOperations}
                       disabled={loading || jobCards.length > 0}
-                      className="w-full flex items-center justify-between px-4 py-3 bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30 rounded  transition-all group shadow-lg shadow-slate-200"
+                      className="w-full flex items-center justify-between p-2  bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30 rounded  transition-all group shadow-lg shadow-slate-200"
                     >
                       <div className="flex items-center gap-3">
                         <Layers size={16} />
-                        <span className="text-xs  uppercase">Release job cards</span>
+                        <span className="text-xs  ">Release job cards</span>
                       </div>
                       <Zap size={14} className="text-amber-400" />
                     </button>
@@ -920,16 +920,16 @@ export default function WorkOrderForm() {
           <div id="inventory" className={activeSection === 'inventory' ? 'block' : 'hidden'}>
             <div className="grid grid-cols-12 gap-8">
               <div className="col-span-12 lg:col-span-9">
-                <Card className="border-none overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <Card className="border-none overflow-hidden   hover:shadow-md transition-shadow">
                   <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-white text-emerald-600 rounded border border-slate-100 shadow-sm">
+                      <div className="p-1.5 bg-white text-emerald-600 rounded border border-slate-100  ">
                         <Boxes size={16} />
                       </div>
-                      <h3 className="text-xs  text-slate-900 tracking-widest uppercase">04 Required Inventory</h3>
+                      <h3 className="text-xs  text-slate-900  ">04 Required Inventory</h3>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button className="p-2 text-slate-400 hover:text-indigo-600 transition-all bg-white rounded border border-slate-100 shadow-sm">
+                      <button className="p-2 text-slate-400 hover:text-indigo-600 transition-all bg-white rounded border border-slate-100  ">
                         <Filter size={14} />
                       </button>
                     </div>
@@ -940,11 +940,11 @@ export default function WorkOrderForm() {
                       <table className="w-full text-left bg-white">
                         <thead>
                           <tr className="bg-slate-50/30">
-                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase">Raw Material</th>
-                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase text-right">Required</th>
-                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase text-right">Transferred</th>
-                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase text-right">Consumed</th>
-                            <th className="p-2  text-xs  text-slate-400 tracking-widest uppercase text-right">Yield Loss</th>
+                            <th className="p-2  text-xs  text-slate-400  ">Raw Material</th>
+                            <th className="p-2  text-xs  text-slate-400  text-right">Required</th>
+                            <th className="p-2  text-xs  text-slate-400  text-right">Transferred</th>
+                            <th className="p-2  text-xs  text-slate-400  text-right">Consumed</th>
+                            <th className="p-2  text-xs  text-slate-400  text-right">Yield Loss</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -963,7 +963,7 @@ export default function WorkOrderForm() {
                                 <td className="p-2  text-right">
                                   <div className="flex flex-col items-end">
                                     <span className="text-xs  text-slate-900">{mat.required_qty}</span>
-                                    <span className="text-[9px]  text-slate-400 uppercase">{mat.uom}</span>
+                                    <span className="text-[9px]  text-slate-400 ">{mat.uom}</span>
                                   </div>
                                 </td>
                                 <td className="p-2  text-right">
@@ -1006,7 +1006,7 @@ export default function WorkOrderForm() {
                     </div>
                   ) : (
                     <div className="p-20 text-center bg-slate-50/10">
-                      <div className="w-16 h-16 bg-white border border-slate-100 text-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+                      <div className="w-16 h-16 bg-white border border-slate-100 text-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-6  ">
                         <Boxes size={32} />
                       </div>
                       <h4 className="text-sm  text-slate-900 mb-2">Stock Requirements Empty</h4>
@@ -1026,7 +1026,7 @@ export default function WorkOrderForm() {
                   <div className="relative z-10">
                     <div className="flex items-center gap-2 mb-6 text-indigo-100">
                       <ShieldCheck size={20} />
-                      <h4 className="text-xs  tracking-[0.2em] uppercase">Inventory Advisory</h4>
+                      <h4 className="text-xs  tracking-[0.2em] ">Inventory Advisory</h4>
                     </div>
                     <p className="text-xs text-indigo-50 font-medium leading-relaxed mb-8">
                       System tracks real-time material transfers. Ensure all raw materials are transferred from "Stores" to "Production" before consumption.
@@ -1046,14 +1046,14 @@ export default function WorkOrderForm() {
                   </div>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm relative overflow-hidden group">
+                <div className="p-5 rounded-2xl bg-white border border-slate-200   relative overflow-hidden group">
                    <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform">
                     <Info size={80} className="text-slate-900" />
                   </div>
                   <div className="relative z-10">
                     <div className="flex items-center gap-2 mb-3 text-slate-900">
                       <Info size={16} />
-                      <h4 className="text-xs  uppercase">Yield Note</h4>
+                      <h4 className="text-xs  ">Yield Note</h4>
                     </div>
                     <p className="text-xs text-slate-500 font-medium leading-relaxed">
                       Yield loss is automatically calculated as the delta between transferred and consumed quantities.

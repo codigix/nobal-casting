@@ -217,8 +217,8 @@ export const getStockEntryStatistics = async (req, res) => {
       stats.by_status[entry.status]++
 
       // Totals
-      stats.total_qty += entry.total_qty || 0
-      stats.total_value += entry.total_value || 0
+      stats.total_qty += Number(entry.total_qty) || 0
+      stats.total_value += Number(entry.total_value) || 0
     })
 
     res.json({ success: true, data: stats })

@@ -27,9 +27,12 @@ export class MaterialRequestModel {
   static async getAll(db, filters = {}) {
     try {
       let query = `
-        SELECT mr.*, c.name as requested_by_name, po.po_no as linked_po_no, po.status as po_status
+        SELECT mr.*, 
+               COALESCE(c.name, u.full_name, mr.requested_by_id) as requested_by_name, 
+               po.po_no as linked_po_no, po.status as po_status
         FROM material_request mr 
         LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
+        LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
         LEFT JOIN purchase_order po ON mr.mr_id = po.mr_id AND po.status != 'cancelled'
         WHERE 1=1`
       const params = []
@@ -97,9 +100,12 @@ export class MaterialRequestModel {
   static async getById(db, mrId) {
     try {
       const [mrRows] = await db.execute(
-        `SELECT mr.*, c.name as requested_by_name, po.po_no as linked_po_no, po.status as po_status
+        `SELECT mr.*, 
+                COALESCE(c.name, u.full_name, mr.requested_by_id) as requested_by_name, 
+                po.po_no as linked_po_no, po.status as po_status
          FROM material_request mr 
          LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
+         LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
          LEFT JOIN purchase_order po ON mr.mr_id = po.mr_id AND po.status != 'cancelled'
          WHERE mr.mr_id = ?`,
         [mrId]
@@ -251,12 +257,14 @@ export class MaterialRequestModel {
       if (!mrRows.length) throw new Error('Material request not found')
       const request = mrRows[0]
 
-      // Allow idempotent approval - if already approved, just return
-      if (request.status === 'approved') {
+      // Allow idempotent approval - if already approved or completed, just return
+      if (request.status === 'approved' || request.status === 'completed') {
         return await this.getById(db, mrId)
       }
 
-      if (request.status !== 'draft' && request.status !== 'pending') throw new Error('Only draft or pending MRs can be approved')
+      if (request.status !== 'draft' && request.status !== 'pending') {
+        throw new Error(`Only draft or pending material requests can be approved. Current status: ${request.status}`)
+      }
 
       // Get items
       const [items] = await db.execute('SELECT * FROM material_request_item WHERE mr_id = ?', [mrId])
@@ -310,13 +318,14 @@ export class MaterialRequestModel {
         console.log(`[MR Approval] Found plan_id: ${plan_id}`)
 
         try {
+          const pprmStatus = isStockTransaction ? 'issued' : 'approved'
           await db.execute(
             `UPDATE production_plan_raw_material 
              SET material_status = ? 
              WHERE plan_id = ? AND mr_id = ?`,
-            ['approved', plan_id, mrId]
+            [pprmStatus, plan_id, mrId]
           )
-          console.log(`[MR Approval] Production plan material status updated to 'approved'`)
+          console.log(`[MR Approval] Production plan material status updated to '${pprmStatus}'`)
         } catch (error) {
           console.error(`[MR Approval] Error updating production plan material status:`, error.message)
         }
@@ -617,7 +626,16 @@ export class MaterialRequestModel {
   static async getPending(db) {
     try {
       const [rows] = await db.execute(
-        'SELECT mr.*, c.name as requested_by_name, COUNT(mri.mr_item_id) as item_count FROM material_request mr LEFT JOIN contact c ON mr.requested_by_id = c.contact_id LEFT JOIN material_request_item mri ON mr.mr_id = mri.mr_id WHERE mr.status = "draft" GROUP BY mr.mr_id ORDER BY mr.created_at DESC'
+        `SELECT mr.*, 
+                COALESCE(c.name, u.full_name, mr.requested_by_id) as requested_by_name, 
+                COUNT(mri.mr_item_id) as item_count 
+         FROM material_request mr 
+         LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
+         LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
+         LEFT JOIN material_request_item mri ON mr.mr_id = mri.mr_id 
+         WHERE mr.status = "draft" 
+         GROUP BY mr.mr_id 
+         ORDER BY mr.created_at DESC`
       )
       return rows
     } catch (error) {
@@ -631,7 +649,13 @@ export class MaterialRequestModel {
   static async getApproved(db) {
     try {
       const [rows] = await db.execute(
-        'SELECT mr.*, c.name as requested_by_name FROM material_request mr LEFT JOIN contact c ON mr.requested_by_id = c.contact_id WHERE mr.status = "approved" ORDER BY mr.required_by_date ASC'
+        `SELECT mr.*, 
+                COALESCE(c.name, u.full_name, mr.requested_by_id) as requested_by_name 
+         FROM material_request mr 
+         LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
+         LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
+         WHERE mr.status = "approved" 
+         ORDER BY mr.required_by_date ASC`
       )
       return rows
     } catch (error) {

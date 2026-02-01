@@ -988,7 +988,7 @@ export default function ProductionPlanning() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-8">
+    <div className="min-h-screen bg-slate-50 p-2/50 p-8">
       <div className="max-w-5xl mx-auto space-y-8">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -1017,7 +1017,7 @@ export default function ProductionPlanning() {
           <div className="flex items-center gap-3">
             <button
               onClick={handleTruncate}
-              className="group flex items-center gap-2 px-5 py-3 text-rose-600 hover:bg-rose-50 rounded  transition-all text-xs    border border-transparent hover:border-rose-100"
+              className="group flex items-center gap-2 px-5 py-2 text-rose-600 hover:bg-rose-50 rounded  transition-all text-xs    border border-transparent hover:border-rose-100"
             >
               <Trash2 size={16} className="group-hover:rotate-12 transition-transform" />
               Reset System
@@ -1067,7 +1067,7 @@ export default function ProductionPlanning() {
         {/* Main Content Board */}
         <div className="bg-white rounded  border border-gray-100   overflow-hidden">
           {/* Dashboard Control Bar */}
-          <div className="p-6 border-b border-gray-50 bg-gray-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="p-6 border-b border-gray-50 bg-gray-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4 my-4">
             <div className="flex items-center gap-4">
               <div className="bg-white p-2 rounded    border border-gray-100 text-indigo-600">
                 <BarChart3 size={20} />
@@ -1084,7 +1084,7 @@ export default function ProductionPlanning() {
                 <input
                   type="text"
                   placeholder="SEARCH STRATEGIES..."
-                  className="pl-12 pr-6 py-3 bg-white border border-gray-100 rounded  text-xs    focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all w-full md:w-80"
+                  className="pl-12 pr-6 py-2 bg-white border border-gray-100 rounded  text-xs    focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all w-full md:w-80"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -1097,7 +1097,7 @@ export default function ProductionPlanning() {
 
           <div className="">
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-32 bg-gray-50/30">
+              <div className="flex flex-col items-center justify-center py-22 bg-gray-50/30">
                 <div className="w-6 h-6  border-4 border-indigo-600/20 border-t-indigo-600 rounded-full animate-spin mb-6" />
                 <p className="text-xs   text-slate-500  animate-pulse">Synchronizing Production Intelligence...</p>
               </div>
@@ -1156,7 +1156,7 @@ export default function ProductionPlanning() {
                               <span>{formatDate(plan.expected_completion_date)}</span>
                             </div>
                             {plan.expected_completion_date && (
-                              <span className={`inline-flex items-center gap-1.5 p-2  py-1 rounded-full text-[9px]  tracking-widest border ${isOverdue ? 'text-rose-600 bg-rose-50 border-rose-100' : 'text-emerald-600 bg-emerald-50 border-emerald-100'
+                              <span className={`inline-flex items-center gap-1.5 p-2  py-1 rounded-full text-[9px]   border ${isOverdue ? 'text-rose-600 bg-rose-50 border-rose-100' : 'text-emerald-600 bg-emerald-50 border-emerald-100'
                                 }`}>
                                 {isOverdue ? <AlertCircle size={15} /> : <CheckCircle2 size={15} />}
                                 {isOverdue ? 'OVERDUE' : 'ON SCHEDULE'}
@@ -1168,7 +1168,7 @@ export default function ProductionPlanning() {
                           <div className="space-y-3 max-w-[220px]">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-xs   text-gray-400 ">{progressValue}% COMPLETE</span>
-                              <span className="text-xs   text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md">{opsInfo} OPS</span>
+                              <span className="text-xs   text-slate-900 bg-slate-100 px-2 py-0.5 rounded ">{opsInfo} OPS</span>
                             </div>
                             <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden shadow-inner">
                               <div
@@ -1223,7 +1223,7 @@ export default function ProductionPlanning() {
                             >
                               <FileText size={15} />
                               {mrHistory[plan.plan_id] && mrHistory[plan.plan_id].length > 0 && (
-                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white shadow-sm animate-in zoom-in duration-300">
+                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-xs   text-white   animate-in zoom-in duration-300">
                                   {mrHistory[plan.plan_id].length}
                                 </span>
                               )}
@@ -1243,7 +1243,7 @@ export default function ProductionPlanning() {
                 </tbody>
               </table>
             ) : (
-              <div className="flex flex-col items-center justify-center py-32 text-center bg-gray-50/30">
+              <div className="flex flex-col items-center justify-center py-22 text-center bg-gray-50/30">
                 <div className="w-24 h-24 rounded bg-white shadow-xl shadow-gray-200/50 flex items-center justify-center text-gray-200 mb-6 border border-gray-100">
                   <Layers size={48} />
                 </div>
@@ -1524,7 +1524,7 @@ export default function ProductionPlanning() {
                             </td>
                             <td className="p-2  text-right">
                               <span className="text-xs  text-gray-900">{item.qty || item.quantity || 0}</span>
-                              <span className="ml-1 text-xs   text-slate-400 uppercase">{item.uom || 'pcs'}</span>
+                              <span className="ml-1 text-xs   text-slate-400 ">{item.uom || 'pcs'}</span>
                             </td>
                             <td className="p-2  text-right text-xs  text-gray-900">
                               {stock ? stock.available.toFixed(2) : '-'}
@@ -1597,7 +1597,7 @@ export default function ProductionPlanning() {
                   <FileText className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">Request Traceability History</h2>
+                  <h2 className="text-xl   text-gray-900">Request Traceability History</h2>
                   <p className="text-xs font-medium text-gray-400 mt-0.5 flex items-center gap-2">
                     <Activity size={12} className="text-indigo-500" />
                     Linked Material Requests for Plan: {selectedPlanForHistory.plan_id}
@@ -1627,16 +1627,16 @@ export default function ProductionPlanning() {
                     <div key={mr.mr_id} className="border border-gray-100 rounded  overflow-hidden hover:shadow-md transition-shadow">
                       <div className="bg-gray-50/50 p-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center border border-gray-200 text-indigo-600 font-bold text-xs">
+                          <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center border border-gray-200 text-indigo-600   text-xs">
                             {idx + 1}
                           </div>
                           <div>
-                            <h3 className="text-sm font-bold text-gray-900">{mr.mr_id}</h3>
+                            <h3 className="text-sm   text-gray-900">{mr.mr_id}</h3>
                             <p className="text-xs text-gray-400 font-medium">Requested: {new Date(mr.request_date).toLocaleDateString()}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                          <span className={`px-2 py-1 rounded-full text-xs tracking-wider border ${
                             mr.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                             mr.status === 'approved' ? 'bg-blue-50 text-blue-600 border-blue-100' :
                             mr.status === 'draft' ? 'bg-gray-50 text-gray-600 border-gray-100' :
@@ -1650,15 +1650,15 @@ export default function ProductionPlanning() {
                         <table className="w-full text-left">
                           <thead>
                             <tr className="text-xs text-gray-400 border-b border-gray-50">
-                              <th className="pb-2 font-bold uppercase">Item Details</th>
-                              <th className="pb-2 font-bold uppercase text-right">Requested Qty</th>
+                              <th className="pb-2   ">Item Details</th>
+                              <th className="pb-2 text-right">Requested Qty</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-50">
                             {mr.items && mr.items.map((item, itemIdx) => (
                               <tr key={itemIdx} className="text-xs">
                                 <td className="py-2">
-                                  <p className="font-bold text-gray-800">{item.item_code}</p>
+                                  <p className="  text-gray-800">{item.item_code}</p>
                                   <p className="text-xs text-gray-400">{item.item_name}</p>
                                 </td>
                                 <td className="py-2 text-right font-medium text-gray-900">
@@ -1670,11 +1670,11 @@ export default function ProductionPlanning() {
                         </table>
                         {mr.linked_po_no && (
                           <div className="mt-3 pt-3 border-t border-dashed border-gray-100 flex items-center gap-2">
-                            <span className="text-xs text-gray-400 font-bold uppercase">Linked PO:</span>
+                            <span className="text-xs text-gray-400   ">Linked PO:</span>
                             <span className="text-xs bg-slate-900 text-white px-2 py-0.5 rounded font-mono">
                               {mr.linked_po_no}
                             </span>
-                            <span className={`text-xs font-bold uppercase ${
+                            <span className={`text-xs ${
                               mr.po_status === 'completed' ? 'text-emerald-500' : 'text-amber-500'
                             }`}>
                               ({mr.po_status})
@@ -1687,10 +1687,10 @@ export default function ProductionPlanning() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-20 bg-gray-50/50 rounded  border border-dashed border-gray-200">
-                  <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-gray-200 mb-4 shadow-sm border border-gray-100">
+                  <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-gray-200 mb-4   border border-gray-100">
                     <Boxes size={32} />
                   </div>
-                  <h3 className="text-base font-bold text-gray-900">No Request History Found</h3>
+                  <h3 className="text-base   text-gray-900">No Request History Found</h3>
                   <p className="text-xs text-gray-400 mt-1">This production plan has no historical material requests yet.</p>
                 </div>
               )}
@@ -1702,7 +1702,7 @@ export default function ProductionPlanning() {
                   setShowHistoryModal(false)
                   setSelectedPlanForHistory(null)
                 }}
-                className="px-6 py-2 bg-slate-900 text-white text-xs font-bold rounded hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+                className="px-6 py-2 bg-slate-900 text-white text-xs   rounded hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
               >
                 Close Archive
               </button>

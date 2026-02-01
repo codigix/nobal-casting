@@ -17,7 +17,8 @@ import {
   MaterialRequests,
   PurchaseOrders,
   PurchaseOrderForm,
-  PurchaseOrderDetail
+  PurchaseOrderDetail,
+  PurchaseInvoices
 } from './pages/Buying'
 
 import {
@@ -283,6 +284,19 @@ function App() {
                   <DepartmentLayout>
                     <DepartmentProtectedRoute departments={['inventory', 'admin']}>
                       <PurchaseOrderDetail />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/buying/purchase-invoices"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['inventory', 'admin']}>
+                      <PurchaseInvoices />
                     </DepartmentProtectedRoute>
                   </DepartmentLayout>
                 </ProtectedRoute>

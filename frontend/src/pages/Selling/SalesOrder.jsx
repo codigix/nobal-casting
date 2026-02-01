@@ -322,7 +322,7 @@ export default function SalesOrder() {
                           : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      <div className="p-1 rounded-md" style={{ backgroundColor: `${cfg.color}15` }}>
+                      <div className="p-1 rounded " style={{ backgroundColor: `${cfg.color}15` }}>
                         <cfg.icon size={12} style={{ color: cfg.color }} />
                       </div>
                       <span className="flex-1 text-left">{cfg.label}</span>
@@ -405,7 +405,7 @@ export default function SalesOrder() {
             onClick={() => navigate(`/manufacturing/sales-orders/${value}?readonly=true`)}
             className="flex items-center gap-4 group cursor-pointer "
           >
-            <div className="w-10 h-10 rounded  bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all shadow-sm">
+            <div className="w-10 h-10 rounded  bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all  ">
               <Package size={20} />
             </div>
             <div>
@@ -444,7 +444,7 @@ export default function SalesOrder() {
         return (
           <div className="p-2 min-w-[140px]">
             <div 
-              className="w-full flex items-center justify-between p-2 py-1.5 text-xs rounded border transition-all shadow-sm"
+              className="w-full flex items-center justify-between p-2 py-1.5 text-xs rounded border transition-all  "
               style={{
                 backgroundColor: config.bg,
                 borderColor: `${config.color}40`,
@@ -541,7 +541,7 @@ export default function SalesOrder() {
   ]
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-4">
+    <div className="min-h-screen bg-slate-50 p-2/50 p-4 md:p-4">
       <div className="max-w-5xl mx-auto">
         {/* Modern Page Header */}
         <div className="mb-2  flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -565,14 +565,14 @@ export default function SalesOrder() {
           <div className="flex items-center gap-3">
             <button 
               onClick={fetchOrders}
-              className="p-2 rounded  bg-white text-slate-400 border border-slate-200 hover:text-blue-600 hover:border-blue-200 transition-all active:scale-95 shadow-sm"
+              className="p-2 rounded  bg-white text-slate-400 border border-slate-200 hover:text-blue-600 hover:border-blue-200 transition-all active:scale-95  "
               title="Refresh Data"
             >
               <RefreshCcw size={18} className={loading ? 'animate-spin' : ''} />
             </button>
             <button 
               onClick={handleTruncate}
-              className="inline-flex items-center gap-2 rounded  bg-white p-2.5 text-xs  text-rose-600 border border-rose-100 hover:bg-rose-50 transition-all active:scale-95 shadow-sm"
+              className="inline-flex items-center gap-2 rounded  bg-white p-2.5 text-xs  text-rose-600 border border-rose-100 hover:bg-rose-50 transition-all active:scale-95  "
             >
               <Trash2 size={18} />
               Reset All
@@ -626,7 +626,7 @@ export default function SalesOrder() {
               <h3 className="text-slate-500 text-xs  ">Active Fulfillment</h3>
               <div className="flex items-baseline gap-2">
                 <p className="text-xl  text-slate-900">{stats.production + stats.confirmed || 0}</p>
-                <span className="text-xs text-slate-400 font-medium text-xs  uppercase">Orders</span>
+                <span className="text-xs text-slate-400 font-medium text-xs  ">Orders</span>
               </div>
               <div className="pt-4 space-y-2 mt-4">
                 <div className="flex justify-between text-[8px]  text-slate-400 ">
@@ -656,7 +656,7 @@ export default function SalesOrder() {
               <h3 className="text-slate-500 text-xs  ">Critical Alerts</h3>
               <div className="flex items-baseline gap-2">
                 <p className="text-xl   text-rose-600">{stats.overdue}</p>
-                <span className="text-xs text-rose-400  uppercase">Overdue</span>
+                <span className="text-xs text-rose-400  ">Overdue</span>
               </div>
               
             </div>
@@ -675,7 +675,7 @@ export default function SalesOrder() {
               <h3 className="text-slate-500 text-xs  ">Succesful Deliveries</h3>
               <div className="flex items-baseline gap-2">
                 <p className="text-xl  text-slate-900">{stats.delivered + stats.complete || 0}</p>
-                <span className="text-xs text-slate-400  uppercase">Success</span>
+                <span className="text-xs text-slate-400  ">Success</span>
               </div>
               <div className="flex flex-col gap-1 mt-2 ">
                 <div className="text-xs text-slate-500  ">Growth Vector</div>
@@ -723,7 +723,7 @@ export default function SalesOrder() {
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-blue-500 transition-colors" size={14} />
             </div>
 
-            <button className="p-2 rounded  bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm">
+            <button className="p-2 rounded  bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-all  ">
               <Download size={18} />
             </button>
           </div>
@@ -732,22 +732,22 @@ export default function SalesOrder() {
         {error && (
           <div className="mb-2  flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50/50 p-4 text-rose-800 animate-in fade-in slide-in-from-top-2 backdrop-blur-sm">
             <AlertCircle className="h-5 w-5 text-rose-500" />
-            <p className="text-xs  uppercase tracking-wide">{error}</p>
+            <p className="text-xs  tracking-wide">{error}</p>
           </div>
         )}
 
         {/* Data Matrix Section */}
         <div className="relative">
           {loading ? (
-            <div className="glass-card flex flex-col items-center justify-center py-32 text-slate-400 border-none">
+            <div className="glass-card flex flex-col items-center justify-center py-22 text-slate-400 border-none">
               <div className="relative mb-6">
                 <div className="h-20 w-20 animate-spin rounded-full border-4 border-slate-100 border-t-blue-600 shadow-xl shadow-blue-50"></div>
                 <ShoppingCart size={32} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-600" />
               </div>
-              <p className="text-xs  uppercase tracking-[0.3em] animate-pulse">Syncing Operational Data...</p>
+              <p className="text-xs  tracking-[0.3em] animate-pulse">Syncing Operational Data...</p>
             </div>
           ) : filteredOrders.length === 0 ? (
-            <div className="glass-card flex flex-col items-center justify-center py-32 text-center border-none">
+            <div className="glass-card flex flex-col items-center justify-center py-22 text-center border-none">
               <div className="mb-2  p-2 rounded-3xl bg-slate-50 text-slate-300">
                 <Package size={64} strokeWidth={1} />
               </div>

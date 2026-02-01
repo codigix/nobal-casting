@@ -23,7 +23,7 @@ const SectionTitle = ({ title, icon: Icon, badge }) => (
       <h3 className="text-sm  text-slate-900 tracking-tight">{title}</h3>
     </div>
     {badge && (
-      <span className="p-2 bg-slate-100 text-slate-500 text-xs rounded-full border border-slate-200 text-xs tracking-widest">
+      <span className="p-2 bg-slate-100 text-slate-500 text-xs rounded-full border border-slate-200 text-xs ">
         {badge}
       </span>
     )}
@@ -44,7 +44,7 @@ const StatusBadge = ({ status }) => {
   const { color, icon: Icon } = config[s] || config.pending
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] text-xs tracking-widest border ${color}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] text-xs  border ${color}`}>
       <Icon size={10} />
       {s.toUpperCase()}
     </span>
@@ -781,7 +781,7 @@ const EntryCard = ({ item, statusKey = 'status' }) => {
           </div>
           <div>
             <h4 className="text-xs  text-slate-900 tracking-tight">{item.name || item.id}</h4>
-            <p className="text-xs font-medium text-slate-400 tracking-widest uppercase">{item.id}</p>
+            <p className="text-xs font-medium text-slate-400  ">{item.id}</p>
           </div>
         </div>
         <StatusBadge status={item[statusKey]} />
@@ -791,7 +791,7 @@ const EntryCard = ({ item, statusKey = 'status' }) => {
           if (['id', 'name', statusKey].includes(key)) return null
           return (
             <div key={key}>
-              <p className="text-[9px]  text-slate-400 tracking-widest uppercase mb-0.5">{key.replace(/_/g, ' ')}</p>
+              <p className="text-[9px]  text-slate-400  mb-0.5">{key.replace(/_/g, ' ')}</p>
               <p className="text-xs font-medium text-slate-900">{value}</p>
             </div>
           )
@@ -832,7 +832,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
         <h3 className="text-sm  text-slate-900 tracking-tight">{title}</h3>
         {subtitle && <p className="text-xs  text-slate-400  mt-0.5">{subtitle}</p>}
       </div>
-      <div className="w-10 h-10 rounded  bg-white border border-slate-100 flex items-center justify-center text-indigo-600 shadow-sm">
+      <div className="w-10 h-10 rounded  bg-white border border-slate-100 flex items-center justify-center text-indigo-600  ">
         <BarChart3 size={18} />
       </div>
     </div>
@@ -854,7 +854,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
   }
 
   return (
-  <div className="min-h-screen bg-[#f8fafc] pb-12">
+  <div className="min-h-screen bg-[#f8fafc] p-4 pb-12">
     {/* Sticky Top Header */}
     <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200">
       <div className=" p-6 ">

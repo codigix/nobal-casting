@@ -11,6 +11,7 @@ router.delete('/:invoice_no', controller.deleteInvoice)
 
 // Actions
 router.post('/:invoice_no/submit', controller.submitInvoice)
+router.post('/:invoice_no/cancel', controller.cancelInvoice)
 router.post('/:invoice_no/mark-paid', controller.markAsPaid)
 
 export default router

@@ -134,7 +134,7 @@ export default function SearchableSelect({
 
   return (
     <div className={`w-full relative ${isOpen ? 'z-50' : 'z-0'}`} ref={containerRef}>
-      {label && <label className="block text-xs  text-slate-400 tracking-widest uppercase mb-1">{label}{required && ' *'}</label>}
+      {label && <label className="block text-xs  text-slate-400  mb-1">{label}{required && ' *'}</label>}
       <div className="relative">
         <div className={`flex  items-center border transition-all  rounded ${containerClassName || ' bg-white border-gray-300'} ${isOpen ? 'ring-2 ring-blue-500/20 border-blue-500' : 'focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500'}`}>
           <input

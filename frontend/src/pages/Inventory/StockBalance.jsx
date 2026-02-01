@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import api from '../../services/api'
 import DataTable from '../../components/Table/DataTable'
 import Alert from '../../components/Alert/Alert'
 import Badge from '../../components/Badge/Badge'
 import Button from '../../components/Button/Button'
-import { BarChart3, X, Grid3x3, List, TrendingUp, AlertTriangle, Package, ArrowDown, ArrowUp, RefreshCw } from 'lucide-react'
+import { BarChart3, X, Grid3x3, List, TrendingUp, AlertTriangle, Package, ArrowDown, ArrowUp, RefreshCw, Settings2, Search, LayoutGrid, Table as TableIcon, RotateCcw } from 'lucide-react'
 import StockMovementModal from '../../components/Inventory/StockMovementModal'
 import './Inventory.css'
 
@@ -17,11 +17,12 @@ export default function StockBalance() {
   const [statusFilter, setStatusFilter] = useState('')
   const [warehouses, setWarehouses] = useState([])
   const [stats, setStats] = useState({ total: 0, low: 0, outOfStock: 0 })
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(12)
   const [viewMode, setViewMode] = useState('table')
   const [showMovementModal, setShowMovementModal] = useState(false)
   const [selectedStockItem, setSelectedStockItem] = useState(null)
+  const [showColumnMenu, setShowColumnMenu] = useState(false)
+
+  const [visibleColumns, setVisibleColumns] = useState(new Set(['item_code', 'item_name', 'warehouse_name', 'current_qty', 'uom', 'available_qty', 'stock_status']))
 
   useEffect(() => {
     fetchWarehouses()
@@ -55,7 +56,6 @@ export default function StockBalance() {
       const response = await api.get(`/stock/stock-balance?${params}`)
       const stockData = Array.isArray(response.data.data) ? response.data.data : []
       
-      // Calculate statistics
       const lowStock = stockData.filter(s => s.current_qty <= (s.reorder_level || 0)).length
       const outOfStock = stockData.filter(s => s.current_qty === 0).length
       
@@ -75,9 +75,9 @@ export default function StockBalance() {
   }
 
   const getStockStatus = (quantity, reorderLevel) => {
-    if (quantity === 0) return { text: 'Out of Stock', badge: 'danger', color: '#ef4444' }
-    if (quantity <= (reorderLevel || 0)) return { text: 'Low Stock', badge: 'warning', color: '#f59e0b' }
-    return { text: 'In Stock', badge: 'success', color: '#10b981' }
+    if (quantity === 0) return { text: 'Out of Stock', variant: 'danger' }
+    if (quantity <= (reorderLevel || 0)) return { text: 'Low Stock', variant: 'warning' }
+    return { text: 'In Stock', variant: 'success' }
   }
 
   const getStockStatusValue = (quantity, reorderLevel) => {
@@ -86,32 +86,27 @@ export default function StockBalance() {
     return 'in-stock'
   }
 
-  const getStatusIcon = (quantity, reorderLevel) => {
-    if (quantity === 0) return <AlertTriangle size={16} className="text-red-500" />
-    if (quantity <= (reorderLevel || 0)) return <AlertTriangle size={16} className="text-amber-500" />
-    return <TrendingUp size={16} className="text-green-500" />
-  }
+  const filteredStocks = useMemo(() => {
+    return stocks.filter(stock => {
+      const matchesSearch = stock.item_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            stock.item_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesStatus = statusFilter === '' || getStockStatusValue(stock.current_qty || 0, stock.reorder_level) === statusFilter
+      return matchesSearch && matchesStatus
+    })
+  }, [stocks, searchTerm, statusFilter])
 
-  const filteredStocks = stocks.filter(stock => {
-    const matchesSearch = stock.item_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          stock.item_name?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === '' || getStockStatusValue(stock.current_qty || 0, stock.reorder_level) === statusFilter
-    return matchesSearch && matchesStatus
-  })
-
-  const totalPages = Math.ceil(filteredStocks.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedData = filteredStocks.slice(startIndex, endIndex)
+  const latestItem = useMemo(() => {
+    if (!stocks || stocks.length === 0) return null;
+    return [...stocks].sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0))[0];
+  }, [stocks])
 
   const handleClearFilters = () => {
     setSearchTerm('')
     setStatusFilter('')
     setWarehouseFilter('')
-    setCurrentPage(1)
   }
 
-  const columns = [
+  const columns = useMemo(() => [
     { key: 'item_code', label: 'Item Code' },
     { key: 'item_name', label: 'Item Name' },
     { key: 'item_group', label: 'Item Group' },
@@ -119,373 +114,355 @@ export default function StockBalance() {
     {
       key: 'current_qty',
       label: 'Current Stock',
-      render: (value) => <strong>{Number(value || 0).toFixed(2)}</strong>
+      render: (value) => <span className="font-bold">{Number(value || 0).toFixed(2)}</span>
     },
     { key: 'uom', label: 'UOM' },
     {
       key: 'available_qty',
       label: 'Available Qty',
-      render: (value) => <strong>{Number(value || 0).toFixed(2)}</strong>
+      render: (value) => <span className="font-bold">{Number(value || 0).toFixed(2)}</span>
     },
-
     {
       key: 'last_receipt_date',
       label: 'Last Receipt',
       render: (value) => value ? new Date(value).toLocaleDateString() : '-'
     },
     {
-      key: 'last_issue_date',
-      label: 'Last Issue',
-      render: (value) => value ? new Date(value).toLocaleDateString() : '-'
-    },
-
-    {
-      key: 'in_quantity',
-      label: 'Inward Movement',
-      render: (value, row) => {
-        if (!row) return null
-        const qty = Number(value || 0)
-        const val = Number(row.in_value || 0)
-        return (
-          <div className="flex gap-1 min-w-max">
-            <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded p-1 flex gap-2">
-              <span className="text-xs font-semibold text-green-700 dark:text-green-400">↓ {qty.toFixed(2)}</span>
-              <span className="text-xs text-green-600 dark:text-green-500 block">₹{val.toFixed(2)}</span>
-            </div>
-          </div>
-        )
-      }
-    },
-    {
-      key: 'out_quantity',
-      label: 'Outward Movement',
-      render: (value, row) => {
-        if (!row) return null
-        const qty = Number(value || 0)
-        const val = Number(row.out_value || 0)
-        return (
-          <div className="flex gap-1 min-w-max">
-            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded p-1 flex gap-2">
-              <span className="text-xs font-semibold text-red-700 dark:text-red-400">↑ {qty.toFixed(2)}</span>
-              <span className="text-xs text-red-600 dark:text-red-500 block">₹{val.toFixed(2)}</span>
-            </div>
-          </div>
-        )
-      }
-    },
-
-    {
       key: 'stock_status',
       label: 'Status',
       render: (value, row) => {
-        if (!row) return null
         const status = getStockStatus(row.current_qty, row.reorder_level)
-        return <Badge className={status.class}>{status.text}</Badge>
-      }
-    },
-    {
-      key: 'actions',
-      label: 'Actions',
-      render: (value, row) => {
-        if (!row) return null
-        return (
-          <div className="flex gap-2">
-            <Button
-              variant="success"
-              size="sm"
-              onClick={() => { setSelectedStockItem({ ...row, movement_type: 'IN' }); setShowMovementModal(true) }}
-              className="text-xs flex items-center gap-1"
-            >
-              <ArrowDown size={14} /> IN
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => { setSelectedStockItem({ ...row, movement_type: 'OUT' }); setShowMovementModal(true) }}
-              className="text-xs flex items-center gap-1"
-            >
-              <ArrowUp size={14} /> OUT
-            </Button>
-          </div>
-        )
+        return <Badge variant={status.variant}>{status.text}</Badge>
       }
     }
-  ]
+  ], [])
+
+  const renderActions = (row) => (
+    <div className="flex gap-2">
+      <button
+        onClick={() => { setSelectedStockItem({ ...row, movement_type: 'IN' }); setShowMovementModal(true) }}
+        className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold bg-green-50 text-green-700 border border-green-200 rounded-xs hover:bg-green-100 transition-colors"
+      >
+        <ArrowDown size={12} /> IN
+      </button>
+      <button
+        onClick={() => { setSelectedStockItem({ ...row, movement_type: 'OUT' }); setShowMovementModal(true) }}
+        className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 rounded-xs hover:bg-red-100 transition-colors"
+      >
+        <ArrowUp size={12} /> OUT
+      </button>
+    </div>
+  )
+
+  const toggleColumn = (key) => {
+    setVisibleColumns(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(key)) {
+        if (newSet.size > 1) newSet.delete(key)
+      } else {
+        newSet.add(key)
+      }
+      return newSet
+    })
+  }
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-2 sm:p-5 lg:p-3">
-      <div className=" mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-4">
+      <div className="max-w-[1600px] mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <div>
-            <h1 className="text-xl OEE Intelligence text-neutral-900 dark:text-white flex items-center gap-3">
-              <BarChart3 size={28} className="text-amber-500" />
+            <h1 className="text-xl font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+              <BarChart3 size={24} className="text-amber-500" />
               Stock Balance
             </h1>
-            <p className="text-xs text-neutral-600 dark:text-neutral-400">Monitor inventory levels across all warehouses</p>
+            <p className="text-xs text-neutral-500 mt-1">Monitor inventory levels across all warehouses</p>
           </div>
           <button
             onClick={fetchStockBalance}
             disabled={loading}
-            className="flex items-center gap-2 p-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xs font-medium text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-xs transition-all shadow-sm active:transform active:scale-95 disabled:opacity-50"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             Refresh
           </button>
         </div>
 
-        {error && <Alert type="danger">{error}</Alert>}
+        {error && <Alert type="danger" className="mb-4">{error}</Alert>}
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-950/40 rounded-xs p-2 border border-blue-200 dark:border-blue-900">
-            <div className="flex items-start justify-between">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="bg-white dark:bg-neutral-900 p-4 border border-neutral-200 dark:border-neutral-800 rounded-xs">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 ">Total Items</p>
-                <p className="text-xl  OEE Intelligence text-blue-900 dark:text-blue-100 mt-1">{stats.total}</p>
+                <p className="text-[10px] font-bold text-neutral-400  tracking-wider">Total Items</p>
+                <p className="text-2xl font-bold text-neutral-900 dark:text-white mt-1">{stats.total}</p>
               </div>
-              <div className="p-2 bg-blue-200 dark:bg-blue-900/50 rounded-xs">
-                <Package size={20} className="text-blue-600 dark:text-blue-400" />
+              <div className="p-2 bg-blue-50 dark:bg-blue-950/30 text-blue-600 rounded-xs">
+                <Package size={20} />
               </div>
             </div>
           </div>
-
-          <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/20 dark:to-amber-950/40 rounded-xs p-2 border border-amber-200 dark:border-amber-900">
-            <div className="flex items-start justify-between">
+          <div className="bg-white dark:bg-neutral-900 p-4 border border-neutral-200 dark:border-neutral-800 rounded-xs">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 ">Low Stock</p>
-                <p className="text-xl  OEE Intelligence text-amber-900 dark:text-amber-100 mt-1">{stats.low}</p>
+                <p className="text-[10px] font-bold text-neutral-400  tracking-wider">Low Stock</p>
+                <p className="text-2xl font-bold text-amber-600 mt-1">{stats.low}</p>
               </div>
-              <div className="p-2 bg-amber-200 dark:bg-amber-900/50 rounded-xs">
-                <AlertTriangle size={20} className="text-amber-600 dark:text-amber-400" />
+              <div className="p-2 bg-amber-50 dark:bg-amber-950/30 text-amber-600 rounded-xs">
+                <AlertTriangle size={20} />
               </div>
             </div>
           </div>
-
-          <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-950/40 rounded-xs p-2 border border-red-200 dark:border-red-900">
-            <div className="flex items-start justify-between">
+          <div className="bg-white dark:bg-neutral-900 p-4 border border-neutral-200 dark:border-neutral-800 rounded-xs">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-red-700 dark:text-red-400 ">Out of Stock</p>
-                <p className="text-xl  OEE Intelligence text-red-900 dark:text-red-100 mt-1">{stats.outOfStock}</p>
+                <p className="text-[10px] font-bold text-neutral-400  tracking-wider">Out of Stock</p>
+                <p className="text-2xl font-bold text-red-600 mt-1">{stats.outOfStock}</p>
               </div>
-              <div className="p-2 bg-red-200 dark:bg-red-900/50 rounded-xs">
-                <AlertTriangle size={20} className="text-red-600 dark:text-red-400" />
+              <div className="p-2 bg-red-50 dark:bg-red-950/30 text-red-600 rounded-xs">
+                <AlertTriangle size={20} />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Filters */}
-        {stocks.length > 0 && (
-          <div className="mb-5 flex flex-col sm:flex-row gap-3">
-            <input
-              type="text"
-              placeholder="Search by item code or name..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value)
-                setCurrentPage(1)
-              }}
-              className="flex-1 p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
-            />
-            <select 
-              value={warehouseFilter} 
-              onChange={(e) => {
-                setWarehouseFilter(e.target.value)
-                setCurrentPage(1)
-              }}
-              className="p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-            >
-              <option value="">All Warehouses</option>
-              {warehouses.map(wh => (
-                <option key={wh.id} value={wh.id}>
-                  {wh.warehouse_name}
-                </option>
-              ))}
-            </select>
-            <select 
-              value={statusFilter} 
-              onChange={(e) => {
-                setStatusFilter(e.target.value)
-                setCurrentPage(1)
-              }}
-              className="p-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-            >
-              <option value="">All Status</option>
-              <option value="in-stock">In Stock</option>
-              <option value="low-stock">Low Stock</option>
-              <option value="out-of-stock">Out of Stock</option>
-            </select>
-            {(searchTerm || statusFilter || warehouseFilter) && (
-              <button 
-                onClick={handleClearFilters}
-                className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all flex items-center gap-1 text-xs"
-              >
-                <X size={14} />
-                Clear
-              </button>
-            )}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setViewMode('table')}
-                className={`p-1 rounded-xs transition-all ${viewMode === 'table' ? 'bg-amber-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
-                title="Table view"
-              >
-                <List size={18} />
-              </button>
-              <button
-                onClick={() => setViewMode('card')}
-                className={`p-2 rounded-xs transition-all ${viewMode === 'card' ? 'bg-amber-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'}`}
-                title="Card view"
-              >
-                <Grid3x3 size={18} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Content */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800">
-            <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-2 mb-4 animate-pulse">
-              <BarChart3 size={40} className="text-neutral-400 dark:text-neutral-600" />
-            </div>
-            <p className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">Loading stock balance...</p>
-          </div>
-        ) : filteredStocks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800">
-            <div className="rounded-full bg-neutral-100 dark:bg-neutral-80 0 p-2 mb-4">
-              <BarChart3 size={40} className="text-neutral-400 dark:text-neutral-600" />
-            </div>
-            <h3 className="text-lg  text-neutral-900 dark:text-white mb-2">No Stock Items Found</h3>
-            <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center max-w-md">Try adjusting your search or filters.</p>
-          </div>
-        ) : viewMode === 'table' ? (
-          <div className=" ">
-            <DataTable 
-              columns={columns} 
-              data={filteredStocks}
-              pageSize={itemsPerPage}
-              filterable={true}
-              sortable={true}
-            />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {paginatedData.map((stock) => (
-              <div key={`${stock.item_code}-${stock.warehouse_name}`} className="bg-white dark:bg-neutral-800 rounded-xs border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-950/30 p-3 border-b border-neutral-200 dark:border-neutral-700">
-                  <h3 className=" text-neutral-900 dark:text-white">{stock.item_code}</h3>
-                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">{stock.item_name}</p>
-                </div>
-                <div className="p-4 space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Current Stock</p>
-                      <p className="text-xs  text-neutral-900 dark:text-white">{Number(stock.current_qty || 0).toFixed(2)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Available Qty</p>
-                      <p className="text-xs  text-green-600 dark:text-green-400">{Number(stock.available_qty || 0).toFixed(2)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Reserved Qty</p>
-                      <p className="text-xs font-semibold text-neutral-900 dark:text-white">{Number(stock.reserved_qty || 0).toFixed(2)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">UOM</p>
-                      <p className="text-xs font-semibold text-neutral-900 dark:text-white">{stock.uom || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Total Value</p>
-                      <p className="text-xs font-semibold text-neutral-900 dark:text-white">₹{Number(stock.total_value || 0).toFixed(2)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Valuation Rate</p>
-                      <p className="text-xs font-semibold text-neutral-900 dark:text-white">₹{Number(stock.valuation_rate || 0).toFixed(4)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Last Receipt</p>
-                      <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{stock.last_receipt_date ? new Date(stock.last_receipt_date).toLocaleDateString() : '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Last Issue</p>
-                      <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{stock.last_issue_date ? new Date(stock.last_issue_date).toLocaleDateString() : '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Warehouse</p>
-                      <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{stock.warehouse_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Item Group</p>
-                      <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">{stock.item_group || '-'}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-2 border-t border-neutral-200 dark:border-neutral-700">
-                    {getStatusIcon(stock.current_qty, stock.reorder_level)}
-                    <div>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Status</p>
-                      <p className="text-xs " style={{ color: getStockStatus(stock.current_qty, stock.reorder_level).color }}>
-                        {getStockStatus(stock.current_qty, stock.reorder_level).text}
-                      </p>
-                    </div>
-                  </div>
+        {latestItem && (
+          <div className="mb-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-xs p-3 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-500">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/40 rounded-full flex items-center justify-center text-amber-600">
+                <TrendingUp size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-amber-600  tracking-wider">Latest Stock Movement</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-sm font-bold text-neutral-900 dark:text-white">{latestItem.item_name} ({latestItem.item_code})</span>
+                  <span className="text-xs text-neutral-500">•</span>
+                  <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">{latestItem.warehouse_name}</span>
                 </div>
               </div>
-            ))}
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-bold text-neutral-900 dark:text-white">{Number(latestItem.current_qty).toFixed(2)} {latestItem.uom}</p>
+              <p className="text-[10px] text-neutral-500 mt-0.5">Updated {new Date(latestItem.updated_at).toLocaleString()}</p>
+            </div>
           </div>
         )}
 
-        {/* Card Pagination */}
-        {viewMode === 'card' && totalPages > 1 && (
-          <div className="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="text-xs text-neutral-600 dark:text-neutral-400">
-              Showing {startIndex + 1} to {Math.min(endIndex, filteredStocks.length)} of {filteredStocks.length} items
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs overflow-hidden">
+          <div className="p-3 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative flex-1 min-w-[200px] max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={14} />
+                <input
+                  type="text"
+                  placeholder="Search item..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-all"
+                />
+              </div>
+
+              <select
+                value={warehouseFilter}
+                onChange={(e) => setWarehouseFilter(e.target.value)}
+                className="px-3 py-2 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 focus:outline-none focus:ring-1 focus:ring-amber-500 min-w-[140px]"
               >
-                Previous
-              </button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-2 py-1.5 rounded-xs text-xs font-medium transition-all ${
-                      currentPage === page
-                        ? 'bg-amber-500 text-white'
-                        : 'border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800'
-                    }`}
-                  >
-                    {page}
-                  </button>
+                <option value="">All Warehouses</option>
+                {warehouses.map(wh => (
+                  <option key={wh.id} value={wh.id}>{wh.warehouse_name}</option>
                 ))}
-              </div>
-              <button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              </select>
+
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 text-xs border border-neutral-200 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 focus:outline-none focus:ring-1 focus:ring-amber-500 min-w-[140px]"
               >
-                Next
-              </button>
+                <option value="">All Status</option>
+                <option value="in-stock">In Stock</option>
+                <option value="low-stock">Low Stock</option>
+                <option value="out-of-stock">Out of Stock</option>
+              </select>
+
+              {(searchTerm || statusFilter || warehouseFilter) && (
+                <button
+                  onClick={handleClearFilters}
+                  className="p-2 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
+                  title="Clear filters"
+                >
+                  <RotateCcw size={16} />
+                </button>
+              )}
+
+              <div className="h-6 w-px bg-neutral-200 dark:bg-neutral-800 mx-1" />
+
+              <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-1 rounded-xs">
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`p-1.5 rounded-xs transition-all ${viewMode === 'table' ? 'bg-white dark:bg-neutral-700 shadow-sm text-amber-600' : 'text-neutral-500 hover:text-neutral-700'}`}
+                  title="Table View"
+                >
+                  <TableIcon size={14} />
+                </button>
+                <button
+                  onClick={() => setViewMode('card')}
+                  className={`p-1.5 rounded-xs transition-all ${viewMode === 'card' ? 'bg-white dark:bg-neutral-700 shadow-sm text-amber-600' : 'text-neutral-500 hover:text-neutral-700'}`}
+                  title="Grid View"
+                >
+                  <LayoutGrid size={14} />
+                </button>
+              </div>
+
+              <div className="relative ml-auto">
+                <button
+                  onClick={() => setShowColumnMenu(!showColumnMenu)}
+                  className={`flex items-center gap-2 px-3 py-2 text-xs font-medium border rounded-xs transition-all ${showColumnMenu ? 'bg-neutral-100 border-neutral-300' : 'bg-white border-neutral-200 hover:border-neutral-300'}`}
+                >
+                  <Settings2 size={14} />
+                  Columns
+                </button>
+
+                {showColumnMenu && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowColumnMenu(false)} />
+                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs shadow-xl z-20 py-2">
+                      <div className="px-3 py-1 text-[10px] font-bold text-neutral-400  tracking-wider border-b border-neutral-100 dark:border-neutral-700 mb-1">
+                        Visible Columns
+                      </div>
+                      {columns.map(col => (
+                        <label key={col.key} className="flex items-center px-3 py-1.5 hover:bg-neutral-50 dark:hover:bg-neutral-700/50 cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={visibleColumns.has(col.key)}
+                            onChange={() => toggleColumn(col.key)}
+                            className="w-3.5 h-3.5 rounded-xs border-neutral-300 text-amber-500 focus:ring-amber-500"
+                          />
+                          <span className="ml-2 text-xs text-neutral-700 dark:text-neutral-300">{col.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        )}
 
-        {/* Stock Movement Modal */}
-        {showMovementModal && (
-          <StockMovementModal
-            initialItem={selectedStockItem}
-            onClose={() => { setShowMovementModal(false); setSelectedStockItem(null) }}
-            onSuccess={() => { setShowMovementModal(false); setSelectedStockItem(null); fetchStockBalance() }}
-          />
-        )}
+          <div className="p-0">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mb-4" />
+                <p className="text-xs text-neutral-500">Loading stock balance...</p>
+              </div>
+            ) : filteredStocks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+                <div className="w-12 h-12 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-4">
+                  <BarChart3 size={24} className="text-neutral-400" />
+                </div>
+                <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">No stock items found</h3>
+                <p className="text-xs text-neutral-500 mt-1 max-w-xs">
+                  {searchTerm || statusFilter || warehouseFilter 
+                    ? "Try adjusting your filters to find what you're looking for." 
+                    : "Stock balance will appear here once items are added."}
+                </p>
+                {(searchTerm || statusFilter || warehouseFilter) && (
+                  <button
+                    onClick={handleClearFilters}
+                    className="mt-4 text-xs text-amber-600 font-medium hover:underline"
+                  >
+                    Clear all filters
+                  </button>
+                )}
+              </div>
+            ) : viewMode === 'table' ? (
+              <DataTable
+                columns={columns}
+                data={filteredStocks}
+                renderActions={renderActions}
+                externalVisibleColumns={visibleColumns}
+                hideColumnToggle={true}
+              />
+            ) : (
+              <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-neutral-50/50 dark:bg-neutral-950/50">
+                {filteredStocks.map((stock) => {
+                  const status = getStockStatus(stock.current_qty, stock.reorder_level)
+                  return (
+                    <div
+                      key={`${stock.item_code}-${stock.warehouse_id}`}
+                      className="group bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs overflow-hidden hover:shadow-md transition-all duration-300"
+                    >
+                      <div className={`h-1.5 w-full ${status.variant === 'danger' ? 'bg-red-500' : status.variant === 'warning' ? 'bg-amber-500' : 'bg-green-500'}`} />
+                      <div className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="p-2 bg-neutral-50 dark:bg-neutral-800 rounded-xs text-neutral-500">
+                              <Package size={16} />
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-bold text-neutral-900 dark:text-white group-hover:text-amber-600 transition-colors">
+                                {stock.item_code}
+                              </h3>
+                              <p className="text-[10px] text-neutral-500  font-bold tracking-wider">
+                                {stock.item_group}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge variant={status.variant} className="text-[10px] px-1.5 py-0">
+                            {status.text}
+                          </Badge>
+                        </div>
+
+                        <div className="space-y-3">
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-1">
+                            {stock.item_name}
+                          </p>
+                          
+                          <div className="flex items-center gap-1.5">
+                            <LayoutGrid size={12} className="text-neutral-400" />
+                            <span className="text-[11px] text-neutral-600 dark:text-neutral-400 truncate">{stock.warehouse_name}</span>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-neutral-400  tracking-tight">Stock</span>
+                              <span className="text-xs font-bold text-neutral-900 dark:text-white">
+                                {Number(stock.current_qty).toFixed(2)} {stock.uom}
+                              </span>
+                            </div>
+                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => { setSelectedStockItem({ ...stock, movement_type: 'IN' }); setShowMovementModal(true) }}
+                                className="p-1.5 bg-green-50 text-green-600 rounded-xs hover:bg-green-100"
+                                title="Stock In"
+                              >
+                                <ArrowDown size={14} />
+                              </button>
+                              <button
+                                onClick={() => { setSelectedStockItem({ ...stock, movement_type: 'OUT' }); setShowMovementModal(true) }}
+                                className="p-1.5 bg-red-50 text-red-600 rounded-xs hover:bg-red-100"
+                                title="Stock Out"
+                              >
+                                <ArrowUp size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
+      {showMovementModal && selectedStockItem && (
+        <StockMovementModal
+          isOpen={showMovementModal}
+          onClose={() => { setShowMovementModal(false); setSelectedStockItem(null) }}
+          item={selectedStockItem}
+          onSuccess={fetchStockBalance}
+        />
+      )}
     </div>
   )
 }

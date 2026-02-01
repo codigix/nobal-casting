@@ -1,3 +1,5 @@
+import AccountsFinanceModel from './AccountsFinanceModel.js'
+
 export class PurchaseInvoiceModel {
   generateId() {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -11,33 +13,27 @@ export class PurchaseInvoiceModel {
     const purchase_invoice_no = `INV-${Date.now()}`
 
     try {
-      let taxes_amount = 0
-
-      // Calculate taxes if template provided
-      if (data.tax_template_id) {
-        const [taxes] = await this.db.execute(
-          `SELECT SUM(rate) as total_rate FROM tax_item WHERE template_id = ?`,
-          [data.tax_template_id]
-        )
-        // Simplified: taxes_amount would be calculated on items total
-        taxes_amount = 0
-      }
-
       await this.db.execute(
         `INSERT INTO purchase_invoice 
-         (purchase_invoice_no, supplier_id, po_no, grn_no, invoice_date, due_date, tax_template_id, taxes_amount, status, created_by_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (purchase_invoice_no, supplier_id, po_no, grn_no, invoice_date, due_date, tax_template_id, 
+          net_amount, tax_rate, tax_amount, gross_amount, notes, status, payment_status, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           purchase_invoice_no,
           data.supplier_id,
-          data.po_no,
-          data.grn_no,
+          data.po_no || null,
+          data.grn_no || null,
           data.invoice_date || new Date(),
-          data.due_date,
-          data.tax_template_id,
-          taxes_amount,
-          'draft',
-          data.created_by_id
+          data.due_date || null,
+          data.tax_template_id || null,
+          data.net_amount || 0,
+          data.tax_rate || 0,
+          data.tax_amount || 0,
+          data.gross_amount || 0,
+          data.notes || null,
+          data.status || 'draft',
+          data.payment_status || 'unpaid',
+          data.created_by || 'System'
         ]
       )
 
@@ -46,10 +42,9 @@ export class PurchaseInvoiceModel {
         for (const item of data.items) {
           await this.db.execute(
             `INSERT INTO purchase_invoice_item 
-             (invoice_item_id, purchase_invoice_no, item_code, qty, rate)
-             VALUES (?, ?, ?, ?, ?)`,
+             (purchase_invoice_no, item_code, qty, rate)
+             VALUES (?, ?, ?, ?)`,
             [
-              this.generateId(),
               purchase_invoice_no,
               item.item_code,
               item.qty,
@@ -119,7 +114,6 @@ export class PurchaseInvoiceModel {
         params.push(filters.invoice_date_to)
       }
 
-      // Add search filter for invoice number, supplier name, or invoice reference
       if (filters.search) {
         query += ` AND (pi.purchase_invoice_no LIKE ? OR s.name LIKE ? OR pi.po_no LIKE ?)`
         const searchTerm = `%${filters.search}%`
@@ -137,59 +131,179 @@ export class PurchaseInvoiceModel {
     }
   }
 
-  async calculateNetAmount(purchase_invoice_no) {
+  async calculateNetAmount(purchase_invoice_no, connection = this.db) {
     try {
-      const [result] = await this.db.execute(
+      const [rows] = await connection.execute(
         `SELECT SUM(qty * rate) as subtotal FROM purchase_invoice_item WHERE purchase_invoice_no = ?`,
         [purchase_invoice_no]
       )
-      const subtotal = result[0]?.subtotal || 0
+      const subtotal = Number(rows[0]?.subtotal || 0)
 
-      // Get invoice to check tax template
-      const [invoice] = await this.db.execute(
-        `SELECT tax_template_id FROM purchase_invoice WHERE purchase_invoice_no = ?`,
+      const [invoice] = await connection.execute(
+        `SELECT tax_rate FROM purchase_invoice WHERE purchase_invoice_no = ?`,
         [purchase_invoice_no]
       )
 
-      let tax_amount = 0
-      if (invoice[0]?.tax_template_id) {
-        const [taxInfo] = await this.db.execute(
-          `SELECT SUM(rate) as total_rate FROM tax_item WHERE template_id = ?`,
-          [invoice[0].tax_template_id]
-        )
-        const taxRate = taxInfo[0]?.total_rate || 0
-        tax_amount = (subtotal * taxRate) / 100
-      }
+      const taxRate = Number(invoice[0]?.tax_rate || 0)
+      const tax_amount = (subtotal * taxRate) / 100
 
       return {
         subtotal,
         tax_amount,
-        net_amount: subtotal + tax_amount
+        gross_amount: subtotal + tax_amount
       }
     } catch (error) {
       throw new Error(`Failed to calculate net amount: ${error.message}`)
     }
   }
 
-  async submit(purchase_invoice_no) {
-    try {
-      const { subtotal, tax_amount, net_amount } = await this.calculateNetAmount(purchase_invoice_no)
+  async submit(purchase_invoice_no, userId) {
+    const connection = await this.db.getConnection()
+    await connection.beginTransaction()
 
-      await this.db.execute(
-        `UPDATE purchase_invoice SET status = 'submitted', taxes_amount = ?, net_amount = ? WHERE purchase_invoice_no = ?`,
-        [tax_amount, net_amount, purchase_invoice_no]
+    try {
+      // Get invoice details
+      const invoice = await this.getById(purchase_invoice_no)
+      if (!invoice) throw new Error('Invoice not found')
+      if (invoice.status !== 'draft') throw new Error('Only draft invoices can be submitted')
+
+      const { subtotal, tax_amount, gross_amount } = await this.calculateNetAmount(purchase_invoice_no, connection)
+
+      // Update invoice status and totals
+      await connection.execute(
+        `UPDATE purchase_invoice 
+         SET status = 'submitted', 
+             tax_amount = ?, 
+             net_amount = ?, 
+             gross_amount = ?,
+             updated_by = ?
+         WHERE purchase_invoice_no = ?`,
+        [tax_amount, subtotal, gross_amount, userId || 'System', purchase_invoice_no]
       )
 
-      return { success: true, net_amount }
+      // Update PO status if all items are invoiced (simplified for now)
+      if (invoice.po_no) {
+        await connection.execute(
+          `UPDATE purchase_order SET status = 'completed' WHERE po_no = ? AND status = 'to_receive'`,
+          [invoice.po_no]
+        )
+      }
+
+      // Record Ledger Entries
+      const accountsModel = new AccountsFinanceModel(this.db)
+      
+      // Credit Vendor (Increase Liability)
+      await accountsModel.recordLedgerEntry({
+        transaction_date: invoice.invoice_date,
+        account_type: 'vendor',
+        account_id: invoice.supplier_id,
+        debit: 0,
+        credit: gross_amount,
+        description: `Purchase Invoice: ${purchase_invoice_no}`,
+        reference_doctype: 'Purchase Invoice',
+        reference_id: purchase_invoice_no
+      }, connection)
+
+      // Debit Purchase Expense (Increase Expense)
+      await accountsModel.recordLedgerEntry({
+        transaction_date: invoice.invoice_date,
+        account_type: 'expense',
+        account_id: 'Purchase Account',
+        debit: gross_amount,
+        credit: 0,
+        description: `Purchase Invoice: ${purchase_invoice_no}`,
+        reference_doctype: 'Purchase Invoice',
+        reference_id: purchase_invoice_no
+      }, connection)
+
+      // Update Supplier Balance
+      await connection.execute(
+        `UPDATE supplier SET balance = balance + ? WHERE supplier_id = ?`,
+        [gross_amount, invoice.supplier_id]
+      )
+
+      await connection.commit()
+      return { success: true, gross_amount }
     } catch (error) {
+      await connection.rollback()
       throw new Error(`Failed to submit invoice: ${error.message}`)
+    } finally {
+      connection.release()
+    }
+  }
+
+  async cancel(purchase_invoice_no, userId) {
+    const connection = await this.db.getConnection()
+    await connection.beginTransaction()
+
+    try {
+      const invoice = await this.getById(purchase_invoice_no)
+      if (!invoice) throw new Error('Invoice not found')
+      if (invoice.status !== 'submitted') throw new Error('Only submitted invoices can be cancelled')
+
+      await connection.execute(
+        `UPDATE purchase_invoice 
+         SET status = 'cancelled', 
+             updated_by = ?
+         WHERE purchase_invoice_no = ?`,
+        [userId || 'System', purchase_invoice_no]
+      )
+
+      // If it was linked to a PO, we might need to revert PO status
+      if (invoice.po_no) {
+        await connection.execute(
+          `UPDATE purchase_order SET status = 'to_receive' WHERE po_no = ? AND status = 'completed'`,
+          [invoice.po_no]
+        )
+      }
+
+      // Reverse Ledger Entries
+      const accountsModel = new AccountsFinanceModel(this.db)
+      
+      // Debit Vendor (Decrease Liability)
+      await accountsModel.recordLedgerEntry({
+        transaction_date: new Date(),
+        account_type: 'vendor',
+        account_id: invoice.supplier_id,
+        debit: invoice.gross_amount,
+        credit: 0,
+        description: `Reversal of Purchase Invoice: ${purchase_invoice_no}`,
+        reference_doctype: 'Purchase Invoice',
+        reference_id: purchase_invoice_no
+      }, connection)
+
+      // Credit Purchase Expense (Decrease Expense)
+      await accountsModel.recordLedgerEntry({
+        transaction_date: new Date(),
+        account_type: 'expense',
+        account_id: 'Purchase Account',
+        debit: 0,
+        credit: invoice.gross_amount,
+        description: `Reversal of Purchase Invoice: ${purchase_invoice_no}`,
+        reference_doctype: 'Purchase Invoice',
+        reference_id: purchase_invoice_no
+      }, connection)
+
+      // Update Supplier Balance (Reverse)
+      await connection.execute(
+        `UPDATE supplier SET balance = balance - ? WHERE supplier_id = ?`,
+        [invoice.gross_amount, invoice.supplier_id]
+      )
+
+      await connection.commit()
+      return { success: true }
+    } catch (error) {
+      await connection.rollback()
+      throw new Error(`Failed to cancel invoice: ${error.message}`)
+    } finally {
+      connection.release()
     }
   }
 
   async markAsPaid(purchase_invoice_no) {
     try {
       await this.db.execute(
-        `UPDATE purchase_invoice SET status = 'paid' WHERE purchase_invoice_no = ?`,
+        `UPDATE purchase_invoice SET status = 'paid', payment_status = 'paid' WHERE purchase_invoice_no = ?`,
         [purchase_invoice_no]
       )
       return { success: true }
@@ -200,6 +314,10 @@ export class PurchaseInvoiceModel {
 
   async delete(purchase_invoice_no) {
     try {
+      const invoice = await this.getById(purchase_invoice_no)
+      if (!invoice) throw new Error('Invoice not found')
+      if (invoice.status !== 'draft') throw new Error('Only draft invoices can be deleted')
+
       await this.db.execute(`DELETE FROM purchase_invoice_item WHERE purchase_invoice_no = ?`, [purchase_invoice_no])
       await this.db.execute(`DELETE FROM purchase_invoice WHERE purchase_invoice_no = ?`, [purchase_invoice_no])
       return { success: true }

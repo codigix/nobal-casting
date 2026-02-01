@@ -5,7 +5,10 @@ export async function createInvoice(req, res) {
     const db = req.app.locals.db
     const model = new PurchaseInvoiceModel(db)
 
-    const result = await model.create(req.body)
+    const result = await model.create({
+      ...req.body,
+      created_by: req.user?.id || 'System'
+    })
     res.status(201).json({ success: true, data: result })
   } catch (error) {
     res.status(400).json({ success: false, error: error.message })
@@ -55,7 +58,19 @@ export async function submitInvoice(req, res) {
     const db = req.app.locals.db
     const model = new PurchaseInvoiceModel(db)
 
-    const result = await model.submit(req.params.invoice_no)
+    const result = await model.submit(req.params.invoice_no, req.user?.id)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message })
+  }
+}
+
+export async function cancelInvoice(req, res) {
+  try {
+    const db = req.app.locals.db
+    const model = new PurchaseInvoiceModel(db)
+
+    const result = await model.cancel(req.params.invoice_no, req.user?.id)
     res.json({ success: true, data: result })
   } catch (error) {
     res.status(400).json({ success: false, error: error.message })

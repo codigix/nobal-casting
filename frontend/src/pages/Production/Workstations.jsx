@@ -100,7 +100,7 @@ export default function Workstations() {
   }, [workstations])
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-8">
+    <div className="min-h-screen bg-slate-50 p-2/50 p-8">
       <div className="max-w-5xl mx-auto">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
@@ -284,7 +284,7 @@ export default function Workstations() {
                             </div>
                             <div>
                               <p className=" text-slate-900 text-xs group-hover:text-indigo-600 transition-colors">{ws.workstation_name || ws.name}</p>
-                              <p className="text-xs  text-slate-400 font-medium text-xs uppercase">{ws.name}</p>
+                              <p className="text-xs  text-slate-400 font-medium text-xs ">{ws.name}</p>
                             </div>
                           </div>
                         </td>

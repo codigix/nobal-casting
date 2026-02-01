@@ -1,36 +1,52 @@
-import React, { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, FolderOpen } from 'lucide-react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { 
+  Plus, Edit2, Trash2, FolderOpen, Search, 
+  Settings2, X, Activity, RefreshCw, ChevronRight,
+  Layout, Grid3x3, List as ListIcon, Database, Info,
+  Box, Tag, AlertTriangle
+} from 'lucide-react'
 import api from '../../services/api'
+import { useToast } from '../../components/ToastContainer'
+import DataTable from '../../components/Table/DataTable'
+import Button from '../../components/Button/Button'
+import Alert from '../../components/Alert/Alert'
+import Card from '../../components/Card/Card'
+import Modal from '../../components/Modal/Modal'
 
 export default function ItemGroups() {
+  const toast = useToast()
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [editingGroup, setEditingGroup] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [refreshTime, setRefreshTime] = useState(new Date())
   const [formData, setFormData] = useState({
     name: '',
     description: ''
   })
 
-  useEffect(() => {
-    fetchItemGroups()
-  }, [])
-
-  const fetchItemGroups = async () => {
+  const fetchItemGroups = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
       const response = await api.get('/item-groups')
-      setGroups(response.data.data || [])
+      if (response.data.success) {
+        setGroups(response.data.data || [])
+      }
+      setRefreshTime(new Date())
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Failed to fetch item groups')
-      setGroups([])
+      setError(err.response?.data?.error || 'Failed to fetch item groups')
+      toast.addToast('Error fetching item groups', 'error')
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    fetchItemGroups()
+  }, [fetchItemGroups])
 
   const handleOpenForm = (group = null) => {
     if (group) {
@@ -52,24 +68,12 @@ export default function ItemGroups() {
   const handleCloseForm = () => {
     setShowForm(false)
     setEditingGroup(null)
-    setFormData({
-      name: '',
-      description: ''
-    })
-  }
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!formData.name.trim()) {
-      setError('Item Group name is required')
+      toast.addToast('Group name is required', 'warning')
       return
     }
 
@@ -77,188 +81,266 @@ export default function ItemGroups() {
       setLoading(true)
       if (editingGroup) {
         await api.put(`/item-groups/${editingGroup.id}`, formData)
-        setSuccess('Item Group updated successfully')
+        toast.addToast('Item Group updated successfully', 'success')
       } else {
         await api.post('/item-groups', formData)
-        setSuccess('Item Group created successfully')
+        toast.addToast('Item Group created successfully', 'success')
       }
-      setTimeout(() => setSuccess(null), 3000)
       handleCloseForm()
       fetchItemGroups()
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Failed to save item group')
+      toast.addToast(err.response?.data?.error || 'Failed to save item group', 'error')
     } finally {
       setLoading(false)
     }
   }
 
   const handleDelete = async (groupId) => {
-    if (window.confirm('Are you sure you want to delete this item group?')) {
-      try {
-        await api.delete(`/item-groups/${groupId}`)
-        setSuccess('Item Group deleted successfully')
-        setTimeout(() => setSuccess(null), 3000)
-        fetchItemGroups()
-      } catch (err) {
-        setError(err.response?.data?.error || err.message || 'Failed to delete item group')
-      }
+    if (!window.confirm('Are you sure you want to delete this item group?')) return
+    
+    try {
+      await api.delete(`/item-groups/${groupId}`)
+      toast.addToast('Item Group deleted successfully', 'success')
+      fetchItemGroups()
+    } catch (err) {
+      toast.addToast(err.response?.data?.error || 'Failed to delete item group', 'error')
     }
   }
 
-  return (
-    <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6  py-6 min-h-screen">
-      {/* Header */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+  const filteredGroups = useMemo(() => {
+    return groups.filter(group => 
+      !searchTerm || 
+      group.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      group.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }, [groups, searchTerm])
+
+  const stats = useMemo(() => {
+    const total = groups.length
+    const withDescription = groups.filter(g => g.description).length
+    const recent = groups.length // Logic can be improved if created_at is available
+    
+    return { total, withDescription, recent }
+  }, [groups])
+
+  const columns = useMemo(() => [
+    {
+      key: 'name',
+      label: 'Group Name',
+      render: (val) => (
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xs bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white">
-            <FolderOpen size={20} />
+          <div className="p-2 rounded bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+            <Tag size={16} />
           </div>
+          <span className="font-bold text-slate-900 dark:text-white  tracking-wider">{val}</span>
+        </div>
+      )
+    },
+    {
+      key: 'description',
+      label: 'Description',
+      render: (val) => (
+        <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">{val || '—'}</span>
+      )
+    }
+  ], [])
+
+  const StatCard = ({ label, value, icon: Icon, color, description }) => {
+    const colorMap = {
+      primary: 'from-blue-500/10 to-blue-500/5 border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400',
+      success: 'from-emerald-500/10 to-emerald-500/5 border-emerald-200 dark:border-emerald-800/50 text-emerald-600 dark:text-emerald-400',
+      indigo: 'from-indigo-500/10 to-indigo-500/5 border-indigo-200 dark:border-indigo-800/50 text-indigo-600 dark:text-indigo-400'
+    }
+    
+    return (
+      <Card className={`bg-gradient-to-br ${colorMap[color] || colorMap.primary} p-4 border-2 transition-all hover:shadow-lg`}>
+        <div className="flex items-start justify-between relative z-10">
           <div>
-            <h1 className="text-xl  text-gray-900">Item Groups</h1>
-            <p className="text-xs text-gray-600">Manage product categories and groups</p>
+            <span className="text-[10px] font-bold  tracking-widest text-slate-500 dark:text-slate-400">{label}</span>
+            <p className="text-2xl font-black mt-1 text-slate-900 dark:text-white">{value}</p>
+            {description && <p className="text-[10px] mt-1 text-slate-400 dark:text-slate-500">{description}</p>}
+          </div>
+          <div className="p-2 rounded-lg bg-white dark:bg-slate-900 shadow-sm border border-inherit">
+            <Icon size={20} className="text-inherit" />
           </div>
         </div>
-        <button 
-          onClick={() => handleOpenForm()}
-          className="btn-primary flex items-center gap-2 bg-gradient-to-br from-purple-400 to-purple-600"
-        >
-          <Plus size={16} /> Add Item Group
-        </button>
-      </div>
+      </Card>
+    )
+  }
 
-      {/* Alerts */}
-      {success && (
-        <div className="mb-4 flex items-center gap-2 rounded-xs border border-green-300 bg-green-50 p-3 text-xs text-green-800">
-          <span>✓</span> {success}
-        </div>
-      )}
-
-      {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-xs border border-red-300 bg-red-50 p-3 text-xs text-red-800">
-          <span>✕</span> {error}
-        </div>
-      )}
-
-      {/* Modal Form */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xs shadow-lg w-full max-w-mdp-3  ">
-            <h2 className="text-lg  text-gray-900 mb-4">
-              {editingGroup ? 'Edit Item Group' : 'Add Item Group'}
-            </h2>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2">
-                  Group Name *
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  placeholder="e.g., Raw Materials, Finished Goods..."
-                  className="w-full rounded-xs border border-gray-300 bg-white p-2  py-2 text-xs text-gray-900 placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                  required
-                />
+  return (
+    <div className="w-full bg-slate-50 dark:bg-slate-950 min-h-screen p-4 transition-colors duration-300">
+      <div className="max-w-[1200px] mx-auto space-y-6">
+        
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="bg-indigo-600 p-3 rounded  shadow-lg shadow-indigo-600/20">
+              <FolderOpen className="text-white" size={24} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400  tracking-widest">
+                <span>Buying</span>
+                <ChevronRight size={12} />
+                <span>Classification</span>
               </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2">
-                  Description
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="Optional description..."
-                  rows="3"
-                  className="w-full rounded-xs border border-gray-300 bg-white p-2  py-2 text-xs text-gray-900 placeholder-gray-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                />
-              </div>
-
-              <div className="flex gap-3 justify-end pt-4">
-                <button
-                  type="button"
-                  onClick={handleCloseForm}
-                  className="p-2 rounded-xs border border-gray-300 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="p-2 rounded-xs bg-gradient-to-br from-purple-400 to-purple-600 text-xs font-medium text-white hover:from-purple-500 hover:to-purple-700 disabled:opacity-50 transition-all"
-                >
-                  {loading ? 'Saving...' : 'Save'}
-                </button>
-              </div>
-            </form>
+              <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Item Groups</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Categorize items for better management and reporting</p>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Table */}
-      <div className="overflow-hidden rounded-xs border border-gray-200 bg-white">
-        {loading && !showForm ? (
-          <div className="flex items-center justify-center px-4 py-12 text-gray-500">
-            <div className="text-xs">Loading item groups...</div>
-          </div>
-        ) : groups.length === 0 ? (
-          <div className="flex flex-col items-center justify-center px-4 py-12 text-gray-500">
-            <FolderOpen size={32} className="mb-3 opacity-50" />
-            <div className="text-xs">No item groups found</div>
+          
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => handleOpenForm()}
-              className="mt-4 p-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs font-semibold rounded-xs hover:from-purple-600 hover:to-purple-700 transition-all"
+              onClick={fetchItemGroups}
+              className="p-3 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded  transition-all border border-transparent hover:border-indigo-200 dark:hover:border-indigo-800"
             >
-              Create First Item Group
+              <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
             </button>
+            <Button 
+              onClick={() => handleOpenForm()}
+              variant="primary"
+              className="flex items-center gap-2 px-6 py-2.5 rounded  text-xs font-black shadow-xl shadow-indigo-600/20 transition-all bg-indigo-600 hover:bg-indigo-700 border-none"
+            >
+              <Plus size={18} strokeWidth={3} /> NEW GROUP
+            </Button>
           </div>
-        ) : (
-          <div className="">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="p-2 text-left font-semibold text-gray-700">Name</th>
-                  <th className="p-2 text-left font-semibold text-gray-700">Description</th>
-                  <th className="p-2 text-center font-semibold text-gray-700">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groups.map((group, idx) => (
-                  <tr
-                    key={group.id}
-                    className={`border-b border-gray-100 ${
-                      idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                    } hover:bg-purple-50 transition-colors`}
-                  >
-                    <td className="p-2 font-semibold text-gray-900">{group.name}</td>
-                    <td className="p-2 text-gray-700">{group.description || '—'}</td>
-                    <td className="p-2 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => handleOpenForm(group)}
-                          className="rounded-md p-2 text-gray-600 hover:bg-blue-100 hover:text-blue-600 transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(group.id)}
-                          className="rounded-md p-2 text-gray-600 hover:bg-red-100 hover:text-red-600 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        </div>
+
+        {error && <Alert type="danger" className="rounded  border-2">{error}</Alert>}
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard
+            label="Total Groups"
+            value={stats.total}
+            icon={FolderOpen}
+            color="indigo"
+            description="Active categories"
+          />
+          <StatCard
+            label="Documented"
+            value={stats.withDescription}
+            icon={Info}
+            color="success"
+            description="Groups with descriptions"
+          />
+          <StatCard
+            label="System Health"
+            value="Active"
+            icon={Activity}
+            color="primary"
+            description="Syncing correctly"
+          />
+        </div>
+
+        {/* Toolbar & Table */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="relative group flex-1 md:max-w-md">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+              <input
+                type="text"
+                placeholder="Search groups..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded  text-xs font-medium focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all dark:text-white"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800">
+                <span className="flex h-2 w-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                <span className="text-[10px] font-black text-indigo-700 dark:text-indigo-400  tracking-tighter">Live Database</span>
+              </div>
+            </div>
           </div>
-        )}
+
+          <DataTable
+            columns={columns}
+            data={filteredGroups}
+            loading={loading}
+            className="border-none"
+            rowClassName="group hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors"
+            renderActions={(row) => (
+              <div className="flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity pr-4">
+                <Button 
+                  size="sm" 
+                  variant="secondary" 
+                  onClick={() => handleOpenForm(row)}
+                  className="p-2 rounded-lg border shadow-sm bg-white dark:bg-slate-800"
+                >
+                  <Edit2 size={14} className="text-slate-600 dark:text-slate-400" />
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="danger" 
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleDelete(row.id)
+                  }}
+                  className="p-2 rounded-lg border-2 shadow-sm"
+                >
+                  <Trash2 size={14} />
+                </Button>
+              </div>
+            )}
+          />
+        </div>
+
+        {/* Modal Form */}
+        <Modal
+          isOpen={showForm}
+          onClose={handleCloseForm}
+          title={editingGroup ? 'Edit Item Group' : 'Create New Group'}
+          size="md"
+        >
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-500 dark:text-slate-400  tracking-widest">
+                Group Name <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g., Raw Materials"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded  text-xs font-bold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all dark:text-white"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-500 dark:text-slate-400  tracking-widest">
+                Description
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Briefly describe the purpose of this group..."
+                rows="4"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded  text-xs font-medium focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all dark:text-white resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3 justify-end pt-4">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleCloseForm}
+                className="px-6 py-2.5 rounded  text-xs font-bold border-2"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="px-8 py-2.5 rounded  text-xs font-black shadow-lg shadow-indigo-600/20 bg-indigo-600 hover:bg-indigo-700 border-none"
+              >
+                {loading ? 'Processing...' : (editingGroup ? 'Update Group' : 'Create Group')}
+              </Button>
+            </div>
+          </form>
+        </Modal>
       </div>
     </div>
   )

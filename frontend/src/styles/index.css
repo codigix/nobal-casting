@@ -78,7 +78,7 @@
   }
 
   .card {
-    @apply bg-[var(--card-bg)] rounded-md shadow-md p-3   border border-[var(--card-border)];
+    @apply bg-[var(--card-bg)] rounded  shadow-md p-3   border border-[var(--card-border)];
   }
 
   .card-hover {
@@ -206,7 +206,7 @@
   }
 
   .glass-effect {
-    @apply backdrop-blur-md bg-white/10 border border-white/20 rounded-md;
+    @apply backdrop-blur-md bg-white/10 border border-white/20 rounded ;
   }
 
   .gradient-primary {

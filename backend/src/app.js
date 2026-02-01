@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.js'
 import itemRoutes from './routes/items.js'
 import purchaseReceiptRoutes from './routes/purchaseReceipts.js'
 import purchaseOrderRoutes from './routes/purchaseOrders.js'
+import purchaseInvoiceRoutes from './routes/purchaseInvoices.js'
 import grnRequestRoutes from './routes/grnRequests.js'
 import analyticsRoutes from './routes/analyticsRoutes.js'
 import stockWarehouseRoutes from './routes/stockWarehouses.js'
@@ -23,9 +24,13 @@ import sellingRoutes from './routes/selling.js'
 import uomRoutes from './routes/uom.js'
 import itemGroupRoutes from './routes/itemGroup.js'
 import materialRequestRoutes from './routes/materialRequests.js'
+import quotationRoutes from './routes/quotations.js'
+import rfqRoutes from './routes/rfqs.js'
+import taxTemplateRoutes from './routes/taxTemplates.js'
 import mastersRoutes from './routes/masters.js'
 import machinesRoutes from './routes/machines.js'
 import notificationRoutes from './routes/notifications.js'
+import { createFinanceRoutes } from './routes/finance.js'
 import { createOEERoutes } from './routes/oee.js'
 
 dotenv.config()
@@ -55,7 +60,8 @@ async function initializeDatabase() {
       port: process.env.DB_PORT || 3306,
       waitForConnections: true,
       connectionLimit: 10,
-      queueLimit: 0
+      queueLimit: 0,
+      charset: 'utf8mb4'
     })
 
     await db.execute('SELECT 1')
@@ -762,6 +768,7 @@ function setupRoutes() {
   app.use('/api/item-groups', itemGroupRoutes)
   app.use('/api/uom', uomRoutes)
   app.use('/api/purchase-orders', purchaseOrderRoutes)
+  app.use('/api/purchase-invoices', purchaseInvoiceRoutes)
   app.use('/api/purchase-receipts', purchaseReceiptRoutes)
   app.use('/api/grn-requests', grnRequestRoutes)
   app.use('/api/stock/grns', grnRequestRoutes)
@@ -778,10 +785,15 @@ function setupRoutes() {
   app.use('/api/production-planning', createProductionPlanningRoutes(db))
   app.use('/api/customers', customerRoutes)
   app.use('/api/material-requests', materialRequestRoutes)
+  app.use('/api/rfqs', rfqRoutes)
+  app.use('/api/quotations', quotationRoutes)
+  app.use('/api/tax-templates', taxTemplateRoutes)
   
   app.use('/api/hr', createHRPayrollRoutes(db))
   
   app.use('/api/selling', sellingRoutes)
+  
+  app.use('/api/finance', createFinanceRoutes(db))
   
   app.use('/api/analytics', analyticsRoutes)
   

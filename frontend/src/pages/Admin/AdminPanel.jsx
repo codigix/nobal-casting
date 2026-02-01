@@ -261,7 +261,7 @@ export default function AdminPanel() {
         </div>
         <div className="relative z-10 max-w-5xl mx-auto">
           <div className="flex items-center gap-4 mb-2">
-            <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-md">
+            <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded ">
               <Shield size={32} className="text-white" />
             </div>
             <div>
@@ -299,7 +299,7 @@ export default function AdminPanel() {
             {criticalAlerts.length > 0 && (
               <div className="space-y-3">
                 {criticalAlerts.map((alert) => (
-                  <div key={alert.id} className="relative overflow-hidden p-5 bg-gradient-to-r from-red-900/40 to-red-800/20 border border-red-500/40 rounded-md backdrop-blur-sm flex items-start gap-4 hover:border-red-500/60 transition-all">
+                  <div key={alert.id} className="relative overflow-hidden p-5 bg-gradient-to-r from-red-900/40 to-red-800/20 border border-red-500/40 rounded  backdrop-blur-sm flex items-start gap-4 hover:border-red-500/60 transition-all">
                     <div className="absolute inset-0 opacity-5 bg-red-600" />
                     <AlertTriangle size={24} className="text-red-400 flex-shrink-0 mt-0.5 relative z-10" />
                     <div className="relative z-10 flex-1">
@@ -314,7 +314,7 @@ export default function AdminPanel() {
             {/* Main KPI Cards - Modern Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Total Users Card */}
-              <div className="group relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-blue-500/50 transition-all hover: hover:shadow-blue-500/10">
+              <div className="group relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-blue-500/50 transition-all hover: hover:shadow-blue-500/10">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br from-blue-500 to-transparent transition-opacity" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
@@ -330,7 +330,7 @@ export default function AdminPanel() {
               </div>
 
               {/* Total Warehouses Card */}
-              <div className="group relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-green-500/50 transition-all hover: hover:shadow-green-500/10">
+              <div className="group relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-green-500/50 transition-all hover: hover:shadow-green-500/10">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br from-green-500 to-transparent transition-opacity" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
@@ -346,7 +346,7 @@ export default function AdminPanel() {
               </div>
 
               {/* Total Items Card */}
-              <div className="group relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-amber-500/50 transition-all hover: hover:shadow-amber-500/10">
+              <div className="group relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-amber-500/50 transition-all hover: hover:shadow-amber-500/10">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br from-amber-500 to-transparent transition-opacity" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
@@ -362,7 +362,7 @@ export default function AdminPanel() {
               </div>
 
               {/* Active Users Card */}
-              <div className="group relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-purple-500/50 transition-all hover: hover:shadow-purple-500/10">
+              <div className="group relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-purple-500/50 transition-all hover: hover:shadow-purple-500/10">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br from-purple-500 to-transparent transition-opacity" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
@@ -386,7 +386,7 @@ export default function AdminPanel() {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* API Performance Card */}
-                <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-blue-500/50 transition-all">
+                <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-blue-500/50 transition-all">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl" />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-6">
@@ -405,7 +405,7 @@ export default function AdminPanel() {
                 </div>
 
                 {/* System Health Card */}
-                <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-green-500/50 transition-all">
+                <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-green-500/50 transition-all">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-2xl" />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-6">
@@ -421,7 +421,7 @@ export default function AdminPanel() {
                 </div>
 
                 {/* Error Rate Card */}
-                <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-amber-500/50 transition-all">
+                <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-amber-500/50 transition-all">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl" />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-6">
@@ -449,7 +449,7 @@ export default function AdminPanel() {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Database Status Card */}
-                <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-blue-500/50 transition-all">
+                <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-blue-500/50 transition-all">
                   <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl" />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-6">
@@ -468,7 +468,7 @@ export default function AdminPanel() {
                 </div>
 
                 {/* Cache Performance Card */}
-                <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-green-500/50 transition-all">
+                <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-green-500/50 transition-all">
                   <div className="absolute top-0 right-0 w-40 h-40 bg-green-500/10 rounded-full blur-2xl" />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-6">
@@ -494,7 +494,7 @@ export default function AdminPanel() {
                 <Activity size={28} className="text-cyan-400" />
                 Recent Activity Log
               </h2>
-              <div className="relative rounded-md bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700p-3   backdrop-blur-sm">
+              <div className="relative rounded  bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700p-3   backdrop-blur-sm">
                 <div className="space-y-4">
                   {recentEvents.length > 0 ? (
                     recentEvents.slice(0, 8).map((event, idx) => (
@@ -552,7 +552,7 @@ export default function AdminPanel() {
                 {/* Add User Button */}
                 <button
                   onClick={() => navigate('/admin/employees-designations?action=add')}
-                  className="group relative overflow-hidden rounded-md bg-gradient-to-br from-blue-600 to-blue-700 p-4 transition-all hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5"
+                  className="group relative overflow-hidden rounded  bg-gradient-to-br from-blue-600 to-blue-700 p-4 transition-all hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5"
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
                   <div className="relative z-10 flex items-center gap-3 justify-center">
@@ -564,7 +564,7 @@ export default function AdminPanel() {
                 {/* New Warehouse Button */}
                 <button
                   onClick={() => navigate('/inventory/warehouses')}
-                  className="group relative overflow-hidden rounded-md bg-gradient-to-br from-green-600 to-green-700 p-4 transition-all hover:shadow-lg hover:shadow-green-500/30 hover:-translate-y-0.5"
+                  className="group relative overflow-hidden rounded  bg-gradient-to-br from-green-600 to-green-700 p-4 transition-all hover:shadow-lg hover:shadow-green-500/30 hover:-translate-y-0.5"
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
                   <div className="relative z-10 flex items-center gap-3 justify-center">
@@ -576,7 +576,7 @@ export default function AdminPanel() {
                 {/* Master Data Button */}
                 <button
                   onClick={() => setActiveTab('masters')}
-                  className="group relative overflow-hidden rounded-md bg-gradient-to-br from-purple-600 to-purple-700 p-4 transition-all hover:shadow-lg hover:shadow-purple-500/30 hover:-translate-y-0.5"
+                  className="group relative overflow-hidden rounded  bg-gradient-to-br from-purple-600 to-purple-700 p-4 transition-all hover:shadow-lg hover:shadow-purple-500/30 hover:-translate-y-0.5"
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
                   <div className="relative z-10 flex items-center gap-3 justify-center">
@@ -588,7 +588,7 @@ export default function AdminPanel() {
                 {/* Audit Logs Button */}
                 <button
                   onClick={() => navigate('/admin/audit-logs')}
-                  className="group relative overflow-hidden rounded-md bg-gradient-to-br from-cyan-600 to-cyan-700 p-4 transition-all hover:shadow-lg hover:shadow-cyan-500/30 hover:-translate-y-0.5"
+                  className="group relative overflow-hidden rounded  bg-gradient-to-br from-cyan-600 to-cyan-700 p-4 transition-all hover:shadow-lg hover:shadow-cyan-500/30 hover:-translate-y-0.5"
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
                   <div className="relative z-10 flex items-center gap-3 justify-center">
@@ -612,7 +612,7 @@ export default function AdminPanel() {
             {/* Machine Performance Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Total Machines */}
-              <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-blue-500/50 transition-all">
+              <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-blue-500/50 transition-all">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
@@ -625,7 +625,7 @@ export default function AdminPanel() {
               </div>
 
               {/* Operational */}
-              <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-green-500/50 transition-all">
+              <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-green-500/50 transition-all">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 rounded-full blur-2xl" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
@@ -638,7 +638,7 @@ export default function AdminPanel() {
               </div>
 
               {/* In Maintenance */}
-              <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-amber-500/50 transition-all">
+              <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-amber-500/50 transition-all">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
@@ -651,7 +651,7 @@ export default function AdminPanel() {
               </div>
 
               {/* OEE Status */}
-              <div className="relative overflow-hidden rounded-md bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-purple-500/50 transition-all">
+              <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-purple-500/50 transition-all">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl" />
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
@@ -666,7 +666,7 @@ export default function AdminPanel() {
 
             {/* Machine Performance & Downtime Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <div className="rounded-md bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700p-3   backdrop-blur-sm">
+              <div className="rounded  bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700p-3   backdrop-blur-sm">
                 <h3 className="text-lg  text-white mb-6 flex items-center gap-2">
                   <BarChart3 size={24} className="text-blue-400" />
                   Daily Machine Performance
@@ -691,7 +691,7 @@ export default function AdminPanel() {
                 </ResponsiveContainer>
               </div>
 
-              <div className="rounded-md bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700p-3   backdrop-blur-sm">
+              <div className="rounded  bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700p-3   backdrop-blur-sm">
                 <h3 className="text-lg  text-white mb-6 flex items-center gap-2">
                   <AlertTriangle size={24} className="text-red-400" />
                   Machine Downtime Breakdown
@@ -721,7 +721,7 @@ export default function AdminPanel() {
             </div>
 
             {/* Machine Details Table */}
-            <div className="rounded-md bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700p-3   backdrop-blur-sm ">
+            <div className="rounded  bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700p-3   backdrop-blur-sm ">
               <h3 className="text-lg  text-white mb-6">Machine Information</h3>
               <table className="w-full">
                 <thead>

@@ -1,10 +1,16 @@
-import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import api from '../../services/api'
 import Card from '../../components/Card/Card'
 import Button from '../../components/Button/Button'
 import Badge from '../../components/Badge/Badge'
 import Alert from '../../components/Alert/Alert'
-import { ArrowDown, ArrowUp, Filter, RefreshCw, Plus, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react'
+import DataTable from '../../components/Table/DataTable'
+import { 
+  ArrowDown, ArrowUp, Filter, RefreshCw, Plus, CheckCircle, 
+  Clock, XCircle, AlertCircle, Search, ArrowRight, Eye, 
+  MoreVertical, Download, Settings2, X, Activity, Database,
+  TrendingUp, TrendingDown, Package
+} from 'lucide-react'
 import StockMovementModal from '../../components/Inventory/StockMovementModal'
 
 export default function StockMovements() {
@@ -16,19 +22,19 @@ export default function StockMovements() {
   const [typeFilter, setTypeFilter] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [selectedMovement, setSelectedMovement] = useState(null)
+  const [showColumnMenu, setShowColumnMenu] = useState(false)
+  const [visibleColumns, setVisibleColumns] = useState(new Set([
+    'transaction_no', 'item_code', 'movement_type', 'quantity', 'warehouse_name', 'status', 'created_at'
+  ]))
 
-  useEffect(() => {
-    fetchMovements()
-  }, [statusFilter, typeFilter])
-
-  const fetchMovements = async () => {
+  const fetchMovements = useCallback(async () => {
     try {
       setLoading(true)
-      const params = new URLSearchParams()
-      if (statusFilter) params.append('status', statusFilter)
-      if (typeFilter) params.append('movement_type', typeFilter)
+      const params = {}
+      if (statusFilter) params.status = statusFilter
+      if (typeFilter) params.movement_type = typeFilter
 
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/stock/movements?${params}`)
+      const response = await api.get('/stock/movements', { params })
       if (response.data.success) {
         setMovements(response.data.data || [])
         setError(null)
@@ -41,13 +47,28 @@ export default function StockMovements() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [statusFilter, typeFilter])
+
+  useEffect(() => {
+    fetchMovements()
+  }, [fetchMovements])
+
+  const stats = useMemo(() => {
+    const s = { total: 0, in: 0, out: 0, pending: 0, completed: 0 }
+    movements.forEach(m => {
+      s.total++
+      if (m.movement_type === 'IN') s.in += parseFloat(m.quantity)
+      else if (m.movement_type === 'OUT') s.out += parseFloat(m.quantity)
+      
+      if (m.status === 'Pending') s.pending++
+      else if (m.status === 'Completed') s.completed++
+    })
+    return s
+  }, [movements])
 
   const handleApprove = async (movementId) => {
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/stock/movements/${movementId}/approve`
-      )
+      const response = await api.post(`/stock/movements/${movementId}/approve`)
       if (response.data.success) {
         fetchMovements()
       }
@@ -58,10 +79,7 @@ export default function StockMovements() {
 
   const handleReject = async (movementId, reason) => {
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/stock/movements/${movementId}/reject`,
-        { reason }
-      )
+      const response = await api.post(`/stock/movements/${movementId}/reject`, { reason })
       if (response.data.success) {
         fetchMovements()
       }
@@ -70,209 +88,286 @@ export default function StockMovements() {
     }
   }
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Pending':
-        return 'bg-amber-100 text-amber-700'
-      case 'Approved':
-        return 'bg-blue-100 text-blue-700'
-      case 'Completed':
-        return 'bg-green-100 text-green-700'
-      case 'Cancelled':
-        return 'bg-red-100 text-red-700'
-      default:
-        return 'bg-neutral-100 text-neutral-700'
+  const getStatusConfig = (status) => {
+    const configs = {
+      Pending: { label: 'Pending', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800', icon: Clock },
+      Approved: { label: 'Approved', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800', icon: CheckCircle },
+      Completed: { label: 'Completed', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800', icon: CheckCircle },
+      Cancelled: { label: 'Cancelled', color: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border-rose-200 dark:border-rose-800', icon: XCircle }
     }
+    return configs[status] || { label: status, color: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700', icon: AlertCircle }
   }
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'Pending':
-        return <Clock size={16} />
-      case 'Approved':
-        return <CheckCircle size={16} />
-      case 'Completed':
-        return <CheckCircle size={16} />
-      case 'Cancelled':
-        return <XCircle size={16} />
-      default:
-        return <AlertCircle size={16} />
-    }
-  }
+  const filteredMovements = useMemo(() => {
+    return movements.filter(m => {
+      const matchesSearch = !searchTerm || 
+        m.transaction_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.item_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.item_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      return matchesSearch
+    })
+  }, [movements, searchTerm])
 
-  const filteredMovements = movements.filter(m => {
-    const matchesSearch = !searchTerm || 
-      m.transaction_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.item_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.item_name?.toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesSearch
-  })
+  const columns = useMemo(() => [
+    {
+      key: 'transaction_no',
+      label: 'Transaction #',
+      render: (val) => <span className="font-bold text-neutral-900 dark:text-white  tracking-wider">{val}</span>
+    },
+    {
+      key: 'item_code',
+      label: 'Item',
+      render: (val, row) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-neutral-900 dark:text-white">{val}</span>
+          <span className="text-[10px] text-neutral-400  truncate max-w-[150px]">{row.item_name}</span>
+        </div>
+      )
+    },
+    {
+      key: 'movement_type',
+      label: 'Type',
+      render: (val) => (
+        <div className="flex items-center gap-1.5">
+          {val === 'IN' ? (
+            <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+              <ArrowDown size={12} /> IN
+            </Badge>
+          ) : (
+            <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border-rose-200 dark:border-rose-800 flex items-center gap-1">
+              <ArrowUp size={12} /> OUT
+            </Badge>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'quantity',
+      label: 'Quantity',
+      render: (val) => <span className="font-bold text-neutral-900 dark:text-white">{parseFloat(val).toFixed(2)}</span>
+    },
+    {
+      key: 'warehouse_name',
+      label: 'Warehouse',
+      render: (val) => <span className="text-neutral-600 dark:text-neutral-400">{val}</span>
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (val) => {
+        const config = getStatusConfig(val)
+        const Icon = config.icon
+        return (
+          <Badge className={`${config.color} flex items-center gap-1.5 w-fit border`}>
+            <Icon size={12} />
+            {config.label.toUpperCase()}
+          </Badge>
+        )
+      }
+    },
+    {
+      key: 'created_at',
+      label: 'Date',
+      render: (val) => (
+        <div className="flex flex-col text-[11px]">
+          <span className="text-neutral-700 dark:text-neutral-300 font-medium">{new Date(val).toLocaleDateString()}</span>
+          <span className="text-neutral-400">{new Date(val).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+      )
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (_, row) => (
+        <div className="flex items-center gap-2">
+          {row.status === 'Pending' && (
+            <>
+              <button
+                onClick={() => handleApprove(row.id)}
+                className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xs transition-colors"
+                title="Approve"
+              >
+                <CheckCircle size={16} />
+              </button>
+              <button
+                onClick={() => handleReject(row.id, 'Rejected by user')}
+                className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xs transition-colors"
+                title="Reject"
+              >
+                <XCircle size={16} />
+              </button>
+            </>
+          )}
+          <button className="p-1.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xs transition-colors">
+            <MoreVertical size={16} />
+          </button>
+        </div>
+      )
+    }
+  ], [fetchMovements])
 
   return (
-    <div className="p-4 sm:p-3 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl  text-neutral-900 dark:text-neutral-100">Stock Movements</h1>
-          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Track material IN/OUT transactions with approval workflow</p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="primary"
-            onClick={() => { setSelectedMovement(null); setShowModal(true) }}
-            className="flex items-center gap-2"
-          >
-            <Plus size={18} /> New Movement
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={fetchMovements}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw size={18} />
-          </Button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-2 sm:p-5 lg:p-3">
+      <div className="mx-auto">
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+          <div>
+            <h1 className="text-xl  text-neutral-900 dark:text-white flex items-center gap-3">
+              <RefreshCw size={28} className="text-blue-500" />
+              Stock Movements
+            </h1>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">Track material IN/OUT transactions with approval workflow</p>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={fetchMovements}
+              className="flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-4 py-2 rounded-xs text-xs font-semibold border border-neutral-200 dark:border-neutral-800 transition-all shadow-sm"
+            >
+              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+              Refresh
+            </button>
 
-      {error && <Alert type="danger">{error}</Alert>}
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <input
-          type="text"
-          placeholder="Search by transaction #, item code, or item name..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">All Status</option>
-          <option value="Pending">Pending</option>
-          <option value="Approved">Approved</option>
-          <option value="Completed">Completed</option>
-          <option value="Cancelled">Cancelled</option>
-        </select>
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">All Types</option>
-          <option value="IN">IN</option>
-          <option value="OUT">OUT</option>
-        </select>
-      </div>
-
-      {/* Content */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-neutral-600">Loading stock movements...</p>
+            <button
+              onClick={() => { setSelectedMovement(null); setShowModal(true) }}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xs text-xs font-semibold shadow-lg shadow-blue-200 dark:shadow-none transition-all"
+            >
+              <Plus size={16} />
+              New Movement
+            </button>
           </div>
         </div>
-      ) : filteredMovements.length === 0 ? (
-        <Card className="p-12 text-center">
-          <AlertCircle size={32} className="mx-auto text-neutral-300 mb-3" />
-          <p className="text-neutral-600">No stock movements found</p>
-        </Card>
-      ) : (
-        <div className="">
-          <table className="w-full text-xs">
-            <thead className="bg-neutral-100 dark:bg-neutral-800">
-              <tr>
-                <th className="p-2 text-left font-semibold text-neutral-900 dark:text-neutral-100">Transaction #</th>
-                <th className="p-2 text-left font-semibold text-neutral-900 dark:text-neutral-100">Item</th>
-                <th className="p-2 text-left font-semibold text-neutral-900 dark:text-neutral-100">Type</th>
-                <th className="p-2 text-right font-semibold text-neutral-900 dark:text-neutral-100">Quantity</th>
-                <th className="p-2 text-left font-semibold text-neutral-900 dark:text-neutral-100">Warehouse</th>
-                <th className="p-2 text-left font-semibold text-neutral-900 dark:text-neutral-100">Reference</th>
-                <th className="p-2 text-left font-semibold text-neutral-900 dark:text-neutral-100">Status</th>
-                <th className="p-2 text-left font-semibold text-neutral-900 dark:text-neutral-100">Date</th>
-                <th className="p-2 text-center font-semibold text-neutral-900 dark:text-neutral-100">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
-              {filteredMovements.map((movement) => (
-                <tr key={movement.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
-                  <td className="p-2 font-mono text-blue-600 dark:text-blue-400">{movement.transaction_no}</td>
-                  <td className="p-2">
-                    <div>
-                      <p className="font-medium text-neutral-900 dark:text-neutral-100">{movement.item_code}</p>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400">{movement.item_name}</p>
-                    </div>
-                  </td>
-                  <td className="p-2">
-                    <div className="flex items-center gap-2">
-                      {movement.movement_type === 'IN' ? (
-                        <>
-                          <ArrowDown size={16} className="text-green-600" />
-                          <span className="font-semibold text-green-600">IN</span>
-                        </>
-                      ) : (
-                        <>
-                          <ArrowUp size={16} className="text-red-600" />
-                          <span className="font-semibold text-red-600">OUT</span>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                  <td className="p-2 text-right font-semibold">{parseFloat(movement.quantity).toFixed(2)}</td>
-                  <td className="p-2 text-neutral-600 dark:text-neutral-400">{movement.warehouse_name}</td>
-                  <td className="p-2 text-xs">
-                    <div>
-                      <p className="font-medium text-neutral-900 dark:text-neutral-100">{movement.reference_type}</p>
-                      {movement.reference_name && (
-                        <p className="text-neutral-600 dark:text-neutral-400">{movement.reference_name}</p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="p-2">
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(movement.status)}
-                      <Badge className={getStatusColor(movement.status)}>
-                        {movement.status}
-                      </Badge>
-                    </div>
-                  </td>
-                  <td className="p-2 text-xs text-neutral-600 dark:text-neutral-400">
-                    {new Date(movement.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="p-2 text-center">
-                    {movement.status === 'Pending' && (
-                      <div className="flex gap-2 justify-center">
-                        <Button
-                          variant="success"
-                          size="sm"
-                          onClick={() => handleApprove(movement.id)}
-                          className="text-xs"
-                        >
-                          Approve
-                        </Button>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() => handleReject(movement.id, 'Rejected by user')}
-                          className="text-xs"
-                        >
-                          Reject
-                        </Button>
-                      </div>
-                    )}
-                    {movement.status !== 'Pending' && (
-                      <span className="text-xs text-neutral-500">-</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+        {error && <Alert type="danger" className="mb-6">{error}</Alert>}
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+          {[
+            { label: 'Total Movements', value: stats.total, icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-950/30' },
+            { label: 'Stock IN', value: stats.in.toFixed(0), icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-950/30' },
+            { label: 'Stock OUT', value: stats.out.toFixed(0), icon: TrendingDown, color: 'text-rose-600', bg: 'bg-rose-50 dark:bg-rose-950/30' },
+            { label: 'Pending', value: stats.pending, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/30' },
+            { label: 'Completed', value: stats.completed, icon: CheckCircle, color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-950/30' }
+          ].map((stat, i) => (
+            <div key={i} className="bg-white dark:bg-neutral-900 rounded-xs p-3 border border-neutral-200 dark:border-neutral-800 flex flex-col gap-2 hover:border-blue-100 dark:hover:border-blue-900 transition-colors group shadow-sm">
+              <div className={`w-8 h-8 rounded-xs ${stat.bg} ${stat.color} flex items-center justify-center transition-transform group-hover:scale-110 shadow-sm`}>
+                <stat.icon size={16} />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-neutral-400  tracking-wider leading-none mb-1">{stat.label}</p>
+                <h3 className="text-lg font-bold text-neutral-900 dark:text-white leading-none">{stat.value}</h3>
+              </div>
+            </div>
+          ))}
         </div>
-      )}
+
+        {/* Command Center Toolbar */}
+        <div className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800 shadow-sm mb-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between p-2 gap-3">
+            <div className="flex flex-1 items-center gap-2">
+              <div className="relative flex-1 max-w-md group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-blue-500 transition-colors" size={16} />
+                <input
+                  type="text"
+                  placeholder="Search transaction #, item code, or name..."
+                  className="w-full pl-9 pr-4 py-1.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs transition-all"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="w-[1px] h-6 bg-neutral-200 dark:bg-neutral-800 mx-1" />
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs">
+                  <Filter size={14} className="text-neutral-400" />
+                  <select
+                    className="bg-transparent border-none text-[11px] font-medium text-neutral-600 dark:text-neutral-400 focus:ring-0 cursor-pointer p-0 pr-6"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                </div>
+                
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs">
+                  <Database size={14} className="text-neutral-400" />
+                  <select
+                    className="bg-transparent border-none text-[11px] font-medium text-neutral-600 dark:text-neutral-400 focus:ring-0 cursor-pointer p-0 pr-6"
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                  >
+                    <option value="">All Types</option>
+                    <option value="IN">IN</option>
+                    <option value="OUT">OUT</option>
+                  </select>
+                </div>
+              </div>
+
+              { (searchTerm || statusFilter || typeFilter) && (
+                <button
+                  onClick={() => { setSearchTerm(''); setStatusFilter(''); setTypeFilter(''); }}
+                  className="text-[11px] font-medium text-rose-500 hover:text-rose-600 flex items-center gap-1"
+                >
+                  <X size={14} />
+                  Clear Filters
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowColumnMenu(!showColumnMenu)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xs border text-[11px] font-medium transition-all ${showColumnMenu ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400' : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'}`}
+              >
+                <Settings2 size={14} />
+                Columns
+              </button>
+              
+              <button className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs text-[11px] font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-sm">
+                <Download size={14} />
+                Export
+              </button>
+            </div>
+          </div>
+
+          {showColumnMenu && (
+            <div className="p-3 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/30 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {columns.filter(c => c.key !== 'actions').map(col => (
+                <label key={col.key} className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    className="w-3 h-3 rounded-xs border-neutral-300 dark:border-neutral-700 text-blue-600 focus:ring-blue-500 bg-white dark:bg-neutral-900"
+                    checked={visibleColumns.has(col.key)}
+                    onChange={() => {
+                      const next = new Set(visibleColumns)
+                      if (next.has(col.key)) next.delete(col.key)
+                      else next.add(col.key)
+                      setVisibleColumns(next)
+                    }}
+                  />
+                  <span className="text-[11px] text-neutral-600 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors capitalize">
+                    {col.label.replace('_', ' ')}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Content View */}
+        <div className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800 ">
+          <DataTable
+            columns={columns}
+            data={filteredMovements}
+            loading={loading}
+            externalVisibleColumns={visibleColumns}
+          />
+        </div>
+      </div>
 
       {/* Modal */}
       {showModal && (

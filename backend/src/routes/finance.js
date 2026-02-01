@@ -1,12 +1,14 @@
 import express from 'express'
 import AccountsFinanceController from '../controllers/AccountsFinanceController.js'
 import AccountsFinanceModel from '../models/AccountsFinanceModel.js'
+import { PaymentEntryModel } from '../models/PaymentEntryModel.js'
 import authMiddleware from '../middleware/authMiddleware.js'
 
 export function createFinanceRoutes(db) {
   const router = express.Router()
   const accountsFinanceModel = new AccountsFinanceModel(db)
-  const accountsFinanceController = new AccountsFinanceController(accountsFinanceModel)
+  const paymentEntryModel = new PaymentEntryModel(db)
+  const accountsFinanceController = new AccountsFinanceController(accountsFinanceModel, paymentEntryModel)
 
   // ============= ACCOUNT LEDGER =============
   router.post(

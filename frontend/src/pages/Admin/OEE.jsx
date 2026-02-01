@@ -121,7 +121,7 @@ const MachineCard = ({ machine, onClick }) => {
 
       <div className="flex flex-col gap-2 mb-6">
         <div className="flex justify-between items-center">
-          <span className="text-xs  text-slate-400   uppercase">Engagement</span>
+          <span className="text-xs  text-slate-400   ">Engagement</span>
           <span className="text-xs   text-slate-700">{machine.entries > 0 ? 'ACTIVE PRODUCTION' : 'IDLE / NO ENTRIES'}</span>
         </div>
         <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -138,7 +138,7 @@ const MachineCard = ({ machine, onClick }) => {
           <span className={`text-xl   ${machine.oee >= 85 ? 'text-emerald-600' : machine.oee >= 70 ? 'text-amber-600' : 'text-rose-600'}`}>{machine.oee}%</span>
         </div>
         <div className="flex items-center gap-1.5 text-slate-400 group-hover:text-indigo-600 transition-colors">
-          <span className="text-xs    uppercase">Details</span>
+          <span className="text-xs    ">Details</span>
           <ChevronRight size={18} />
         </div>
       </div>
@@ -674,8 +674,8 @@ const lineMetrics = useMemo(() => {
             </div>
             <div>
               <div className="flex items-center gap-3">
-                <h4 className="text-base  text-white m-0  uppercase">AI Optimization Engine</h4>
-                <span className="p-2  py-1 rounded-full bg-indigo-500/20 text-indigo-400 text-xs    border border-indigo-500/30 uppercase">Active</span>
+                <h4 className="text-base  text-white m-0  ">AI Optimization Engine</h4>
+                <span className="p-2  py-1 rounded-full bg-indigo-500/20 text-indigo-400 text-xs    border border-indigo-500/30 ">Active</span>
               </div>
               <div className="flex flex-col md:flex-row gap-4 mt-4">
                 {aiInsights.map((insight, i) => (
@@ -689,7 +689,7 @@ const lineMetrics = useMemo(() => {
               </div>
             </div>
           </div>
-          <button className="whitespace-nowrap px-8 py-4 bg-white text-slate-900 text-xs  rounded hover:bg-indigo-50 transition-all tracking-[0.2em]  uppercase">
+          <button className="whitespace-nowrap px-8 py-4 bg-white text-slate-900 text-xs  rounded hover:bg-indigo-50 transition-all tracking-[0.2em]  ">
             Optimize All Lines
           </button>
         </div>
@@ -701,7 +701,7 @@ const lineMetrics = useMemo(() => {
         <div className="lg:col-span-7 bg-white rounded p-3 border border-slate-200  relative overflow-hidden">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="text-lg  text-slate-900 m-0 tracking-tight uppercase">OEE Trend Analysis</h3>
+              <h3 className="text-lg  text-slate-900 m-0 tracking-tight ">OEE Trend Analysis</h3>
               <span className="text-xs   text-slate-400  mt-1 block">Real-time Performance Indexing</span>
             </div>
           </div>
@@ -737,10 +737,10 @@ const lineMetrics = useMemo(() => {
         </div>
 
         {/* Production Summary (Planned vs Actual) */}
-        <div className="lg:col-span-5 bg-white rounded-md p-3 border border-slate-200 ">
+        <div className="lg:col-span-5 bg-white rounded  p-3 border border-slate-200 ">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="text-base  text-slate-900 m-0 tracking-tight uppercase">Production Summary</h3>
+              <h3 className="text-base  text-slate-900 m-0 tracking-tight ">Production Summary</h3>
               <span className="text-xs   text-slate-400  mt-1 block">Output against target</span>
             </div>
           </div>
@@ -756,10 +756,10 @@ const lineMetrics = useMemo(() => {
               return (
                 <div key={i}>
                   <div className="flex justify-between items-end mb-2">
-                    <span className="text-xs  text-slate-500 uppercase">{item.label}</span>
+                    <span className="text-xs  text-slate-500 ">{item.label}</span>
                     <span className={`text-lg  ${item.text}`}>{item.val.toLocaleString()}</span>
                   </div>
-                  <div className="h-10 w-full bg-slate-50 rounded-md overflow-hidden border border-slate-100 p-1">
+                  <div className="h-10 w-full bg-slate-50 rounded  overflow-hidden border border-slate-100 p-1">
                     <div 
                       className={`h-full rounded-sm ${item.color} transition-all duration-1000 `} 
                       style={{ width: `${width}%` }}
@@ -795,7 +795,7 @@ const lineMetrics = useMemo(() => {
                 <Layers size={28} />
               </div>
               <div>
-                <h3 className="text-xl  text-slate-800 tracking-tight m-0 uppercase">Line Performance Analytics</h3>
+                <h3 className="text-xl  text-slate-800 tracking-tight m-0 ">Line Performance Analytics</h3>
                 <p className="text-slate-500 text-xs font-semibold m-0 mt-1 ">Granular breakdown of production line efficiency and cycle times</p>
               </div>
             </div>
@@ -804,14 +804,14 @@ const lineMetrics = useMemo(() => {
               {lineMetrics.map(line => (
                 <div key={line.name} className="p-3 bg-slate-50/50 rounded border border-slate-100 hover:border-indigo-200 transition-all group">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-xs  text-slate-800  uppercase">{line.name}</h4>
+                    <h4 className="text-xs  text-slate-800  ">{line.name}</h4>
                     <span className={`p-2  py-1.5 rounded text-xs    ${line.statusColor}`}>{line.status}</span>
                   </div>
                   
                   <div className="space-y-8">
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs   text-slate-400  uppercase">Efficiency Index</span>
+                        <span className="text-xs   text-slate-400  ">Efficiency Index</span>
                         <span className={`text-xs  ${line.oee >= 80 ? 'text-emerald-600' : line.oee >= 60 ? 'text-amber-600' : 'text-rose-600'}`}>{line.oee.toFixed(1)}%</span>
                       </div>
                       <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
@@ -824,17 +824,17 @@ const lineMetrics = useMemo(() => {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col">
-                        <span className="text-[9px]  text-slate-400  uppercase">Availability</span>
+                        <span className="text-[9px]  text-slate-400  ">Availability</span>
                         <span className="text-xs  text-slate-700">{line.a.toFixed(1)}%</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-[9px]  text-slate-400  uppercase">Performance</span>
+                        <span className="text-[9px]  text-slate-400  ">Performance</span>
                         <span className="text-xs  text-slate-700">{line.p.toFixed(1)}%</span>
                       </div>
                     </div>
                   </div>
 
-                  <button className="w-full mt-8 py-4 bg-white border border-slate-200 text-slate-500 text-xs   rounded hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-all  uppercase">
+                  <button className="w-full mt-8 py-4 bg-white border border-slate-200 text-slate-500 text-xs   rounded hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-all  ">
                     Line Details
                   </button>
                 </div>
@@ -851,8 +851,8 @@ const lineMetrics = useMemo(() => {
                   <Monitor size={28} />
                 </div>
                 <div>
-                  <h2 className="text-xl   text-slate-800 m-0 tracking-tight uppercase">Asset Monitoring</h2>
-                  <p className="text-xs  text-slate-400  mt-1 uppercase">Real-time telemetry and health status</p>
+                  <h2 className="text-xl   text-slate-800 m-0 tracking-tight ">Asset Monitoring</h2>
+                  <p className="text-xs  text-slate-400  mt-1 ">Real-time telemetry and health status</p>
                 </div>
               </div>
               
@@ -865,7 +865,7 @@ const lineMetrics = useMemo(() => {
                 ].map((s, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <span className={`w-2.5 h-2.5 rounded-full ${s.color}`}></span>
-                    <span className="text-xs   text-slate-600  uppercase">{s.count} {s.label}</span>
+                    <span className="text-xs   text-slate-600  ">{s.count} {s.label}</span>
                   </div>
                 ))}
               </div>
@@ -886,7 +886,7 @@ const lineMetrics = useMemo(() => {
                 <div className="w-6 h-6  bg-indigo-50 rounded flex items-center justify-center text-indigo-600">
                   <PieChart size={24} />
                 </div>
-                <h3 className="text-base  text-slate-800 tracking-tight m-0 uppercase">Loss Category Distribution</h3>
+                <h3 className="text-base  text-slate-800 tracking-tight m-0 ">Loss Category Distribution</h3>
               </div>
               
               <ResponsiveContainer width="100%" height={320}>
@@ -917,7 +917,7 @@ const lineMetrics = useMemo(() => {
                 <div className="w-6 h-6  bg-rose-50 rounded flex items-center justify-center text-rose-600">
                   <AlertCircle size={24} />
                 </div>
-                <h3 className="text-base  text-slate-800 tracking-tight m-0 uppercase">Top Bottleneck Insights</h3>
+                <h3 className="text-base  text-slate-800 tracking-tight m-0 ">Top Bottleneck Insights</h3>
               </div>
               
               <div className="space-y-4">
@@ -926,13 +926,13 @@ const lineMetrics = useMemo(() => {
                     <div className="flex items-center gap-4">
                       <div className={`w-2 h-12 rounded-full ${item.color}`}></div>
                       <div>
-                        <h4 className="text-xs  m-0  text-slate-800 uppercase">{item.name}</h4>
-                        <span className="text-xs  font-semibold text-slate-400  uppercase">{item.line}</span>
+                        <h4 className="text-xs  m-0  text-slate-800 ">{item.name}</h4>
+                        <span className="text-xs  font-semibold text-slate-400  ">{item.line}</span>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-xs  text-slate-800">{item.loss}</div>
-                      <span className={`text-[9px]  px-2 py-1 rounded-md tracking-tighter ${item.impact === 'High' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'}`}>
+                      <span className={`text-[9px]  px-2 py-1 rounded  tracking-tighter ${item.impact === 'High' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'}`}>
                         {item.impact}
                       </span>
                     </div>
@@ -940,7 +940,7 @@ const lineMetrics = useMemo(() => {
                 ))}
               </div>
 
-              <button className="w-full mt-8 py-4 bg-slate-800 text-white text-xs   rounded hover:bg-slate-700 transition-all  shadow-lg shadow-slate-800/20 uppercase">
+              <button className="w-full mt-8 py-4 bg-slate-800 text-white text-xs   rounded hover:bg-slate-700 transition-all  shadow-lg shadow-slate-800/20 ">
                 Full Loss Report
               </button>
             </div>
@@ -960,7 +960,7 @@ const lineMetrics = useMemo(() => {
             <div className="p-2 bg-indigo-100 rounded">
               <Gauge size={20} className="text-indigo-600" />
             </div>
-            <h1 className="text-xl  text-slate-800 m-0 tracking-tight uppercase">OEE Intelligence</h1>
+            <h1 className="text-xl  text-slate-800 m-0 tracking-tight ">OEE Intelligence</h1>
           </div>
           <p className="text-slate-500 text-xs font-semibold ">Real-time manufacturing performance & optimization engine</p>
         </div>
@@ -1026,7 +1026,7 @@ const lineMetrics = useMemo(() => {
             <div className="w-10 h-10 rounded bg-slate-100 flex items-center justify-center text-slate-500">
               <Filter size={18} />
             </div>
-            <span className="text-xs  text-slate-400  uppercase">Global Filters</span>
+            <span className="text-xs  text-slate-400  ">Global Filters</span>
           </div>
           
           <div className="h-12 w-[1px] bg-slate-100 hidden md:block"></div>
@@ -1042,7 +1042,7 @@ const lineMetrics = useMemo(() => {
             { label: 'Shift', icon: Clock, value: filters.shift, options: ['All Shifts', 'Day Shift', 'Night Shift'] }
           ].map((f, i) => (
             <div key={i} className="flex flex-col min-w-[160px]">
-              <span className="text-xs   text-slate-400  mb-2 flex items-center gap-2 uppercase">
+              <span className="text-xs   text-slate-400  mb-2 flex items-center gap-2 ">
                 <f.icon size={14} />
                 {f.label}
               </span>
@@ -1059,7 +1059,7 @@ const lineMetrics = useMemo(() => {
 
         <div className="flex items-center gap-4 bg-indigo-50 p-6  py-2 rounded border border-indigo-100">
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
-          <span className="text-xs   text-indigo-600  uppercase">
+          <span className="text-xs   text-indigo-600  ">
             Last Sync: {lastSync.toLocaleTimeString()}
           </span>
         </div>
@@ -1072,7 +1072,7 @@ const lineMetrics = useMemo(() => {
       {/* Modern High-End Detail Modal */}
       {selectedMachine && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4 lg:p-3">
-          <div className="bg-white rounded-md shadow-2xl max-w-[1300px] w-full  overflow-hidden flex flex-col relative animate-in fade-in zoom-in duration-300 border border-white/20">
+          <div className="bg-white rounded  shadow-2xl max-w-[1300px] w-full  overflow-hidden flex flex-col relative animate-in fade-in zoom-in duration-300 border border-white/20">
             {/* Close Button */}
             <button 
               onClick={() => setSelectedMachine(null)}
@@ -1085,7 +1085,7 @@ const lineMetrics = useMemo(() => {
               {/* --- Sidebar: Asset Identity --- */}
               <div className="lg:w-[360px] bg-slate-50/80 border-r border-slate-200 p-4 flex flex-col overflow-y-auto">
                 <div className="relative mb-3 w-fit">
-                  <div className="w-10 h-10 rounded-md bg-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-indigo-600/30">
+                  <div className="w-10 h-10 rounded  bg-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-indigo-600/30">
                     <Cpu size={20} />
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-white border-4 border-slate-50 flex items-center justify-center">
@@ -1094,17 +1094,17 @@ const lineMetrics = useMemo(() => {
                 </div>
 
                 <div>
-                  <h2 className="text-xl   text-slate-900 m-0 tracking-tight leading-tight uppercase">{selectedMachine.name}</h2>
+                  <h2 className="text-xl   text-slate-900 m-0 tracking-tight leading-tight ">{selectedMachine.name}</h2>
                   <div className="flex items-center gap-2 mt-2">
                     <span className="px-2 py-0.5 bg-slate-200 rounded text-[9px]  text-slate-600 ">{selectedMachine.id}</span>
                     <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                    <span className="text-[9px]  text-indigo-500  uppercase">{selectedMachine.line}</span>
+                    <span className="text-[9px]  text-indigo-500  ">{selectedMachine.line}</span>
                   </div>
                 </div>
                 
                 <div className="mt-5">
                   {/* Health Widget */}
-                  <div className="p-2 rounded-md bg-white border border-slate-200  relative overflow-hidden group">
+                  <div className="p-2 rounded  bg-white border border-slate-200  relative overflow-hidden group">
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-xs   text-slate-400 ">Health Index</span>
                       <span className="text-xs  text-emerald-600">{selectedMachine.health}%</span>
@@ -1132,7 +1132,7 @@ const lineMetrics = useMemo(() => {
                           <div className={`p-2 rounded ${item.bg}`}>
                             <item.icon size={16} className={item.color} />
                           </div>
-                          <span className="text-xs   text-slate-400  uppercase">{item.label}</span>
+                          <span className="text-xs   text-slate-400  ">{item.label}</span>
                         </div>
                         <span className="text-xs  text-slate-900">{item.val}</span>
                       </div>
@@ -1142,11 +1142,11 @@ const lineMetrics = useMemo(() => {
 
                 {/* AI Strategy Card */}
                 <div className="mt-auto pt-8">
-                  <div className="p-2 rounded-md bg-slate-900 text-white  relative overflow-hidden">
+                  <div className="p-2 rounded  bg-slate-900 text-white  relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full -mr-12 -mt-12 blur-2xl"></div>
                     <div className="flex items-center gap-2 mb-3">
                       <Rocket size={16} className="text-indigo-400" />
-                      <span className="text-[9px]  tracking-[0.2em] uppercase">AI Insight</span>
+                      <span className="text-[9px]  tracking-[0.2em] ">AI Insight</span>
                     </div>
                     <p className="text-[11px] font-medium text-slate-300 leading-relaxed mb-4">
                       Increase <span className="text-white ">Pressure</span> to <span className="text-indigo-400 ">185 PSI</span> for <span className="text-white ">+4.2%</span> gain.
@@ -1192,7 +1192,7 @@ const lineMetrics = useMemo(() => {
                     <div key={i} className={`p-2 rounded ${stat.highlight ? 'bg-indigo-50/50 border-2 border-indigo-100' : 'bg-slate-50/50 border border-slate-100'}`}>
                       <span className="text-xs   text-slate-400  block mb-3">{stat.label}</span>
                       <div className="text-xl   text-slate-900 tracking-tighter mb-2">{stat.val}%</div>
-                      <span className={`text-xs   px-2 py-1 rounded-md tracking-tighter ${
+                      <span className={`text-xs   px-2 py-1 rounded  tracking-tighter ${
                         stat.trend.includes('+') ? 'bg-emerald-100 text-emerald-600' : 
                         stat.trend.includes('-') ? 'bg-rose-100 text-rose-600' : 'bg-slate-200 text-slate-600'
                       }`}>
@@ -1205,7 +1205,7 @@ const lineMetrics = useMemo(() => {
                 {/* Correlation Area */}
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-6">
-                    <h4 className="text-[11px]  text-slate-900  uppercase">
+                    <h4 className="text-[11px]  text-slate-900  ">
                       {modalTab === 'Overview' ? 'Cycle Correlation Trend' : 'Historical OEE Trend'}
                     </h4>
                     <div className="flex gap-3">
@@ -1258,7 +1258,7 @@ const lineMetrics = useMemo(() => {
                         <div key={i} className="flex items-center justify-between p-3 bg-white rounded border border-slate-100 hover:border-indigo-200 transition-all">
                           <div>
                             <span className="text-[9px]  text-slate-400  mb-1 block">Event ID-202{i+1}</span>
-                            <span className="text-xs  text-slate-800 uppercase">{d.reason}</span>
+                            <span className="text-xs  text-slate-800 ">{d.reason}</span>
                           </div>
                           <div className="text-right">
                             <span className="text-base  text-slate-900 block">{d.minutes}m</span>

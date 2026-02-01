@@ -13,6 +13,7 @@ class StockEntryModel {
       const db = this.getDb()
       let query = `
         SELECT 
+          se.id,
           se.id as entry_id,
           se.entry_no,
           se.entry_date,
@@ -31,6 +32,8 @@ class StockEntryModel {
           fw.warehouse_name as from_warehouse_name,
           tw.warehouse_code as to_warehouse_code,
           tw.warehouse_name as to_warehouse_name,
+          se.total_qty,
+          se.total_value,
           COALESCE(tw.warehouse_name, fw.warehouse_name) as warehouse_name,
           u.full_name as created_by_user,
           COUNT(sei.id) as total_items
@@ -319,7 +322,7 @@ class StockEntryModel {
           const valuationRate = Number(item.valuation_rate) || 0
 
           const transactionTypeMap = {
-            'Material Receipt': 'Receipt',
+            'Material Receipt': 'Purchase Receipt',
             'Material Issue': 'Issue',
             'Material Transfer': 'Transfer',
             'Manufacturing Return': 'Manufacturing Return',
@@ -407,11 +410,106 @@ class StockEntryModel {
   static async cancel(id, userId) {
     try {
       const db = this.getDb()
-      await db.query(
-        `UPDATE stock_entries SET status = 'Cancelled', updated_by = ? WHERE id = ?`,
-        [userId, id]
-      )
-      return this.getById(id)
+      const connection = await db.getConnection()
+      await connection.beginTransaction()
+
+      try {
+        // Get entry details
+        const entry = await this.getById(id)
+        if (!entry) throw new Error('Stock entry not found')
+
+        if (entry.status !== 'Submitted') {
+          throw new Error('Only submitted stock entries can be cancelled')
+        }
+
+        // Check for period closing lock
+        await PeriodClosingModel.checkLock(connection, entry.entry_date)
+
+        // Process each item to REVERSE movements
+        for (const item of entry.items) {
+          const itemCode = item.item_code
+          const itemQty = Number(item.qty) || 0
+          const valuationRate = Number(item.valuation_rate) || 0
+
+          const transactionTypeMap = {
+            'Material Receipt': 'Purchase Receipt',
+            'Material Issue': 'Issue',
+            'Material Transfer': 'Transfer',
+            'Manufacturing Return': 'Manufacturing Return',
+            'Repack': 'Repack',
+            'Scrap Entry': 'Scrap Entry'
+          }
+          const transactionType = transactionTypeMap[entry.entry_type] || entry.entry_type
+
+          // 1. Reverse Inward movement (Receipt, Transfer, Manufacturing Return, Repack)
+          if (['Material Receipt', 'Material Transfer', 'Manufacturing Return', 'Repack'].includes(entry.entry_type)) {
+            const toWarehouseId = entry.to_warehouse_id
+            if (toWarehouseId) {
+              // Deduct from Target (Reverse of Addition)
+              await StockBalanceModel.upsert(itemCode, toWarehouseId, {
+                current_qty: -itemQty,
+                is_increment: true
+              }, connection)
+
+              // Add Ledger Entry (REVERSAL - OUT)
+              await StockLedgerModel.create({
+                item_code: itemCode,
+                warehouse_id: toWarehouseId,
+                transaction_date: new Date().toISOString().split('T')[0],
+                transaction_type: transactionType,
+                qty_in: 0,
+                qty_out: itemQty,
+                valuation_rate: valuationRate,
+                reference_doctype: 'Stock Entry',
+                reference_name: entry.entry_no,
+                remarks: `Reversal of ${entry.entry_no} (Cancelled)`,
+                created_by: userId
+              }, connection)
+            }
+          }
+
+          // 2. Reverse Outward movement (Issue, Transfer, Scrap, Repack)
+          if (['Material Issue', 'Material Transfer', 'Scrap Entry', 'Repack'].includes(entry.entry_type)) {
+            const fromWarehouseId = entry.from_warehouse_id
+            if (fromWarehouseId) {
+              // Add back to Source (Reverse of Deduction)
+              await StockBalanceModel.upsert(itemCode, fromWarehouseId, {
+                current_qty: itemQty,
+                is_increment: true
+              }, connection)
+
+              // Add Ledger Entry (REVERSAL - IN)
+              await StockLedgerModel.create({
+                item_code: itemCode,
+                warehouse_id: fromWarehouseId,
+                transaction_date: new Date().toISOString().split('T')[0],
+                transaction_type: transactionType,
+                qty_in: itemQty,
+                qty_out: 0,
+                valuation_rate: valuationRate,
+                reference_doctype: 'Stock Entry',
+                reference_name: entry.entry_no,
+                remarks: `Reversal of ${entry.entry_no} (Cancelled)`,
+                created_by: userId
+              }, connection)
+            }
+          }
+        }
+
+        // Update status
+        await connection.query(
+          `UPDATE stock_entries SET status = 'Cancelled', updated_by = ? WHERE id = ?`,
+          [userId, id]
+        )
+
+        await connection.commit()
+        return this.getById(id)
+      } catch (error) {
+        await connection.rollback()
+        throw error
+      } finally {
+        connection.release()
+      }
     } catch (error) {
       throw new Error(`Failed to cancel stock entry: ${error.message}`)
     }

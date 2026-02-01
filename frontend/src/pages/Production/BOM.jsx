@@ -49,7 +49,7 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
   const colorStyle = colorMap[color] || colorMap.blue
 
   return (
-    <div className="relative group  bg-white rounded p-2 border border-slate-100 shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1">
+    <div className="relative group  bg-white rounded p-2 border border-slate-100   transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1">
       <div className={`absolute top-0 right-0 w-32 h-32 -mr-8 -mt-8 rounded opacity-[0.03] group-hover:opacity-[0.07] transition-opacity duration-500 ${colorStyle.split(' ')[1]}`} />
       
       <div className="relative flex justify-between items-start">
@@ -58,7 +58,7 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
           <div className="flex items-baseline gap-2">
             <h3 className="text-xl  text-slate-800 ">{value}</h3>
             {trend && (
-              <span className={`text-xs  px-1.5 py-0.5 rounded-md ${trend > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+              <span className={`text-xs  px-1.5 py-0.5 rounded  ${trend > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
                 {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}%
               </span>
             )}
@@ -99,7 +99,7 @@ const StatusBadge = ({ status }) => {
   const config = configs[status] || configs.draft
   const Icon = config.icon
   return (
-    <span className={`inline-flex items-center gap-1.5 p-1 rounded text-xs    border shadow-sm ${config.color}`}>
+    <span className={`inline-flex items-center gap-1.5 p-1 rounded text-xs    border   ${config.color}`}>
       <Icon size={10} strokeWidth={3} />
       {config.label}
     </span>
@@ -109,7 +109,7 @@ const StatusBadge = ({ status }) => {
 const BOMTypeBadge = ({ type }) => {
   const isFG = type === 'Finished Good'
   return (
-    <span className={`inline-flex items-center gap-1.5 p-1 rounded text-xs    border shadow-sm ${
+    <span className={`inline-flex items-center gap-1.5 p-1 rounded text-xs    border   ${
       isFG 
         ? 'bg-indigo-50 text-indigo-700 border-indigo-100' 
         : 'bg-cyan-50 text-cyan-700 border-cyan-100'
@@ -307,7 +307,7 @@ export default function BOM() {
           className="group cursor-pointer py-2"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-100 transition-all duration-300 shadow-sm">
+            <div className="w-10 h-10 rounded bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-100 transition-all duration-300  ">
               <Database size={20} strokeWidth={2.5} />
             </div>
             <div>
@@ -339,7 +339,7 @@ export default function BOM() {
             <span className="text-xs  text-slate-700">
               {parseFloat(row.quantity || 0).toLocaleString()} 
             </span>
-            <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-xs  rounded uppercase ">{row.uom}</span>
+            <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-xs  rounded ">{row.uom}</span>
           </div>
           <span className="text-xs  text-slate-400 mt-1 ">Base Unit Qty</span>
         </div>
@@ -384,7 +384,7 @@ export default function BOM() {
               {row.updated_at ? new Date(row.updated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
             </span>
           </div>
-          <span className="text-xs  text-slate-400 uppercase  mt-1 ml-4">
+          <span className="text-xs  text-slate-400  mt-1 ml-4">
              {row.updated_at ? new Date(row.updated_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : ''}
           </span>
         </div>
@@ -428,7 +428,7 @@ export default function BOM() {
   }, [boms])
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-4">
+    <div className="min-h-screen bg-slate-50 p-2/50 p-4 md:p-4">
       {/* Strategic Header Section */}
       <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-4">
@@ -451,7 +451,7 @@ export default function BOM() {
           <button 
             onClick={handleSyncStatuses}
             disabled={loading}
-            className="inline-flex items-center gap-2 rounded bg-white p-2 text-xs  text-slate-700 ring-1 ring-inset ring-slate-200 hover:bg-slate-50 transition-all active:scale-95 shadow-sm hover:shadow-md disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded bg-white p-2 text-xs  text-slate-700 ring-1 ring-inset ring-slate-200 hover:bg-slate-50 transition-all active:scale-95   hover:shadow-md disabled:opacity-50"
           >
             <RefreshCw size={18} className={`text-amber-500 ${loading ? 'animate-spin' : ''}`} />
             Sync Lifecycle
@@ -467,7 +467,7 @@ export default function BOM() {
           
           <button 
             onClick={handleTruncate}
-            className="inline-flex items-center gap-2 rounded bg-white p-2.5 text-xs  text-rose-600 ring-1 ring-inset ring-rose-100 hover:bg-rose-50 transition-all active:scale-95 shadow-sm"
+            className="inline-flex items-center gap-2 rounded bg-white p-2.5 text-xs  text-rose-600 ring-1 ring-inset ring-rose-100 hover:bg-rose-50 transition-all active:scale-95  "
           >
             <Trash2 size={18} />
             Reset System
@@ -520,7 +520,7 @@ export default function BOM() {
                 <div className="p-2 bg-indigo-500/20 rounded border border-indigo-400/30 text-indigo-400">
                   <BarChart3 size={18} strokeWidth={2.5} />
                 </div>
-                <h3 className="text-xs  text-indigo-400 uppercase tracking-[0.3em]">Critical Cost Intelligence</h3>
+                <h3 className="text-xs  text-indigo-400 tracking-[0.3em]">Critical Cost Intelligence</h3>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -536,7 +536,7 @@ export default function BOM() {
                       <div className="text-xl  text-white  flex items-baseline gap-1">
                         <span className="text-xs text-indigo-500">₹</span>
                         {unitCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                        <span className="text-xs text-slate-600  ml-1 uppercase">/ {bom.uom || 'unit'}</span>
+                        <span className="text-xs text-slate-600  ml-1 ">/ {bom.uom || 'unit'}</span>
                       </div>
                       <div className="w-full bg-slate-800/50 h-1.5 rounded overflow-hidden border border-white/5">
                         <div 
@@ -553,7 +553,7 @@ export default function BOM() {
           
           <Card className="bg-white border-slate-100 p-2 ">
             <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-indigo-50 rounded border border-indigo-100 text-indigo-600 shadow-sm">
+              <div className="p-2 bg-indigo-50 rounded border border-indigo-100 text-indigo-600  ">
                 <Target size={18} strokeWidth={2.5} />
               </div>
               <h3 className="text-xs  text-slate-800 ">Strategic Composition</h3>
@@ -601,8 +601,8 @@ export default function BOM() {
       {/* Dynamic Alerts */}
       <div className="">
         {success && (
-          <div className="flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 text-xs text-emerald-800 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="rounded bg-white p-2 shadow-sm text-emerald-600"><Check size={18} strokeWidth={3} /></div>
+          <div className="flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 text-xs text-emerald-800   animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="rounded bg-white p-2   text-emerald-600"><Check size={18} strokeWidth={3} /></div>
             <div>
               <p className="  text-xs">Strategic Success</p>
               <p className=" opacity-80">{success}</p>
@@ -611,8 +611,8 @@ export default function BOM() {
         )}
 
         {error && (
-          <div className="flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50/50 p-4 text-xs text-rose-800 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="rounded bg-white p-2 shadow-sm text-rose-600"><AlertCircle size={18} strokeWidth={3} /></div>
+          <div className="flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50/50 p-4 text-xs text-rose-800   animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="rounded bg-white p-2   text-rose-600"><AlertCircle size={18} strokeWidth={3} /></div>
             <div>
               <p className="  text-xs">Operational ror</p>
               <p className=" opacity-80">{error}</p>
@@ -709,14 +709,14 @@ export default function BOM() {
             />
           ) : (
             <div className="flex flex-col items-center justify-center py-24 bg-slate-50/30">
-              <div className="w-20 h-20 bg-white rounded-3xl border border-slate-100 shadow-sm flex items-center justify-center mb-6 group hover:scale-110 transition-transform duration-500">
+              <div className="w-20 h-20 bg-white rounded-3xl border border-slate-100   flex items-center justify-center mb-6 group hover:scale-110 transition-transform duration-500">
                 <FileText size={40} className="text-slate-200 group-hover:text-indigo-200 transition-colors" />
               </div>
-              <p className="text-xs  text-slate-400 uppercase tracking-[0.2em]">No Formulations Found</p>
+              <p className="text-xs  text-slate-400 tracking-[0.2em]">No Formulations Found</p>
               <p className="mt-2 text-xs text-slate-400 font-medium text-xs">Initialize your first BOM to begin manufacturing intelligence</p>
               <button 
                 onClick={() => navigate('/manufacturing/bom/new')}
-                className="mt-6 inline-flex items-center gap-2 rounded bg-white p-6  py-2.5 text-xs  text-indigo-600 border border-indigo-100 hover:bg-indigo-50 transition-all shadow-sm"
+                className="mt-6 inline-flex items-center gap-2 rounded bg-white p-6  py-2.5 text-xs  text-indigo-600 border border-indigo-100 hover:bg-indigo-50 transition-all  "
               >
                 <Plus size={14} strokeWidth={3} />
                 Create New Specification

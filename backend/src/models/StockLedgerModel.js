@@ -85,16 +85,16 @@
       } = data
 
       // Get current balance
-      const [lastEntry] = await db.query(
+      const [rows] = await db.query(
         `SELECT balance_qty FROM stock_ledger 
         WHERE item_code = ? AND warehouse_id = ? 
         ORDER BY transaction_date DESC, id DESC LIMIT 1`,
         [item_code, warehouse_id]
       )
 
-      const previousBalance = lastEntry ? lastEntry[0].balance_qty : 0
-      const balance_qty = previousBalance + (qty_in || 0) - (qty_out || 0)
-      const transaction_value = (qty_in || qty_out) * valuation_rate
+      const previousBalance = rows.length > 0 ? rows[0].balance_qty : 0
+      const balance_qty = Number(previousBalance) + (Number(qty_in) || 0) - (Number(qty_out) || 0)
+      const transaction_value = (Number(qty_in) || Number(qty_out)) * Number(valuation_rate || 0)
 
       const [result] = await db.query(
         `INSERT INTO stock_ledger (

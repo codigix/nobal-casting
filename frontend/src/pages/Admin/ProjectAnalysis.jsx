@@ -156,7 +156,7 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4 md:p-3">
-      <div className="bg-slate-50 rounded-md shadow-2xl max-w-5xl w-full  overflow-hidden flex flex-col">
+      <div className="bg-slate-50 rounded  shadow-2xl max-w-5xl w-full  overflow-hidden flex flex-col">
         <div className="bg-slate-900 p-3 md:p-2  flex items-center justify-between text-white">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-xl  shadow-lg shadow-blue-500/30">
@@ -173,7 +173,7 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
           <button onClick={onClose} className="w-5 h-5 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-all text-xs p-2">✕</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 md:p-3">
+        <div className="flex-1 overflow-y-auto p-3 md:p-3 max-h-[25pc]">
           <div className="flex gap-2 p-1 bg-slate-200/50 rounded w-fit mb-3 border border-slate-200">
             {[
               { id: 'overview', label: 'Overview', icon: LayoutGrid },
@@ -184,7 +184,7 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 p-2 rounded-md text-xs  transition-all ${
+                className={`flex items-center gap-2 p-2 rounded  text-xs  transition-all ${
                   activeTab === tab.id ? 'bg-white text-blue-600 shadow-md scale-105' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
@@ -205,7 +205,7 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   <div className="col-span-2">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div className="bg-white p-2 rounded-md border border-slate-200 ">
+                      <div className="bg-white p-2 rounded  border border-slate-200 ">
                         <p className="text-xs  text-slate-400 mb-4">Project Completion</p>
                         <div className="flex items-end justify-between mb-2">
                           <h3 className="text-xl  text-slate-900">{progress}%</h3>
@@ -216,7 +216,7 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
                         </div>
                       </div>
                       
-                      <div className="bg-white p-2 rounded-md border border-slate-200 ">
+                      <div className="bg-white p-2 rounded  border border-slate-200 ">
                         <p className="text-xs  text-slate-400 mb-4">Total Revenue</p>
                         <h3 className="text-xl  text-slate-900">₹{(project.revenue || 0).toLocaleString()}</h3>
                         <p className="text-emerald-600 text-xs  mt-2 flex items-center gap-1">
@@ -224,14 +224,14 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
                         </p>
                       </div>
 
-                      <div className="bg-white p-2 rounded-md border border-slate-200 ">
+                      <div className="bg-white p-2 rounded  border border-slate-200 ">
                         <p className="text-xs  text-slate-400 mb-4">Time Efficiency</p>
                         <h3 className="text-xl  text-slate-900">{project.daysLeft} Days</h3>
                         <p className="text-slate-500 text-xs  mt-2">Remaining to delivery</p>
                       </div>
                     </div>
 
-                    <div className="bg-white p-2 rounded-md mt-3 border border-slate-200">
+                    <div className="bg-white p-2 rounded  mt-3 border border-slate-200">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-lg  text-slate-900">Health Radar Analysis</h4>
                         <div className="flex items-center gap-4 text-xs ">
@@ -255,7 +255,7 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
                   </div>
 
                   <div className="space-y-8">
-                    <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-2 rounded-md text-white  relative overflow-hidden">
+                    <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-2 rounded  text-white  relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-4 opacity-10"><Calendar size={120} /></div>
                       <h4 className="text-xs  text-blue-400  mb-6">Delivery Intelligence</h4>
                       <div className="space-y-6">
@@ -273,7 +273,7 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
                       </div>
                     </div>
 
-                    <div className="bg-white p-2 rounded-md border border-slate-200 ">
+                    <div className="bg-white p-2 rounded  border border-slate-200 ">
                       <h4 className="text-xs  text-slate-900 mb-6 flex items-center gap-2">
                         <Target size={18} className="text-blue-600" /> Key Milestones
                       </h4>
@@ -307,7 +307,7 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
               {activeTab === 'stages' && <ProcessFlow stages={detailedData?.stages} />}
 
               {activeTab === 'history' && (
-                <div className="bg-white rounded-md border border-slate-200  overflow-hidden">
+                <div className="bg-white rounded  border border-slate-200  overflow-hidden">
                   <div className="p-3 border-b border-slate-100">
                     <h4 className="text-lg  text-slate-900 m-0">Historical Production Entries</h4>
                     <p className="text-xs text-slate-500 m-0">Timeline of all recorded production activity for this project</p>
@@ -328,7 +328,7 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
                             <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                               <td className="p-2">
                                 <p className="text-xs  text-slate-900 m-0">{new Date(entry.posting_date).toLocaleDateString()}</p>
-                                <p className="text-xs  text-slate-500 m-0 uppercase">{entry.name}</p>
+                                <p className="text-xs  text-slate-500 m-0 ">{entry.name}</p>
                               </td>
                               <td className="p-2">
                                 <span className="text-xs font-medium text-slate-700">{entry.item_code}</span>
@@ -392,7 +392,7 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
                               <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                                 <td className="p-2">
                                   <p className="text-xs  text-slate-900 m-0">{mat.item_name || mat.item_code}</p>
-                                  <p className="text-xs  text-slate-500 m-0 uppercase">{mat.item_code}</p>
+                                  <p className="text-xs  text-slate-500 m-0 ">{mat.item_code}</p>
                                 </td>
                                 <td className="p-2 text-right">
                                   <p className="text-xs  text-slate-900 m-0">{parseFloat(mat.required_qty).toLocaleString()} {mat.uom}</p>
@@ -438,7 +438,7 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
 }
 
 const StatCard = ({ label, value, icon: Icon, trend, trendValue, bgColor, iconColor, textColor }) => (
-  <div className="bg-white rounded-md  p-3 border border-slate-200  hover: transition-all group relative overflow-hidden">
+  <div className="bg-white rounded   p-3 border border-slate-200  hover: transition-all group relative overflow-hidden">
     <div className={`absolute -right-8 -bottom-8 w-32 h-32 rounded-full ${bgColor} opacity-10 group-hover:scale-110 transition-transform duration-700`} />
     <div className="relative z-10 p-2">
       <div className="flex items-center justify-between mb-4">
@@ -557,14 +557,14 @@ export default function ProjectAnalysis() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-3">
+    <div className="min-h-screen bg-slate-50 p-2 flex flex-col items-center justify-center p-3">
       <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-6" />
       <p className="text-slate-500   text-xs animate-pulse">Syncing Production Intel...</p>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 p-3 md:p-3">
+    <div className="min-h-screen bg-slate-50 p-2 p-3 md:p-3">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
         <div>
@@ -572,10 +572,10 @@ export default function ProjectAnalysis() {
           <p className="text-slate-500 font-medium text-xs mt-1">Global production tracking and performance intelligence</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-md text-xs  text-slate-700 hover:bg-slate-50 transition-all ">
+          <button className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded  text-xs  text-slate-700 hover:bg-slate-50 transition-all ">
             <Download size={18} /> Export Data
           </button>
-          <button onClick={fetchProjectAnalysis} className="flex items-center gap-2 p-2 bg-blue-600 rounded-md text-xs  text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">
+          <button onClick={fetchProjectAnalysis} className="flex items-center gap-2 p-2 bg-blue-600 rounded  text-xs  text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">
             <Zap size={18} /> Refresh Intel
           </button>
         </div>
@@ -623,7 +623,7 @@ export default function ProjectAnalysis() {
 
       {/* Analytics Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
-        <div className="lg:col-span-1 bg-white p-2 rounded-md border border-slate-200 ">
+        <div className="lg:col-span-1 bg-white p-2 rounded  border border-slate-200 ">
           <h3 className="text-lg  text-slate-900 mb-3">Status Allocation</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -645,7 +645,7 @@ export default function ProjectAnalysis() {
           </div>
         </div>
 
-        <div className="lg:col-span-2 bg-white p-2 rounded-md border border-slate-200 ">
+        <div className="lg:col-span-2 bg-white p-2 rounded  border border-slate-200 ">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg  text-slate-900">Project Velocity (6M)</h3>
             <div className="flex gap-4">
@@ -675,8 +675,8 @@ export default function ProjectAnalysis() {
       </div>
 
       {/* Project Table Section */}
-      <div className="bg-white rounded-md border border-slate-200  overflow-hidden">
-        <div className="p-3 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white rounded  border border-slate-200  overflow-hidden">
+        <div className="p-3 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 my-4">
           <div className="flex items-center gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />

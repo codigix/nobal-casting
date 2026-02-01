@@ -1,5 +1,6 @@
 import GRNRequestModel from '../models/GRNRequestModel.js'
 import StockEntryModel from '../models/StockEntryModel.js'
+import StockBalanceModel from '../models/StockBalanceModel.js'
 import { PurchaseOrderModel } from '../models/PurchaseOrderModel.js'
 import { MaterialRequestModel } from '../models/MaterialRequestModel.js'
 
@@ -393,31 +394,12 @@ export const inventoryApproveGRN = async (req, res) => {
               const valuationRate = Number(item.valuation_rate) || 0
               const totalValue = acceptedQty * valuationRate
 
-              await db.query(
-                `INSERT INTO stock_balance 
-                  (item_code, warehouse_id, current_qty, reserved_qty, available_qty, valuation_rate, total_value, last_receipt_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_DATE)
-                ON DUPLICATE KEY UPDATE 
-                  current_qty = current_qty + ?,
-                  available_qty = available_qty + ?,
-                  valuation_rate = ?,
-                  total_value = total_value + ?,
-                  last_receipt_date = CURRENT_DATE,
-                  updated_at = CURRENT_TIMESTAMP`,
-                [
-                  item.item_code,
-                  warehouseId,
-                  acceptedQty,
-                  0,
-                  acceptedQty,
-                  valuationRate,
-                  totalValue,
-                  acceptedQty,
-                  acceptedQty,
-                  valuationRate,
-                  totalValue
-                ]
-              )
+              await StockBalanceModel.upsert(item.item_code, warehouseId, {
+                current_qty: acceptedQty,
+                is_increment: true,
+                incoming_rate: valuationRate,
+                last_receipt_date: new Date()
+              }, db)
 
               console.log(`Updated stock balance for ${item.item_code}: +${acceptedQty} units`)
             }

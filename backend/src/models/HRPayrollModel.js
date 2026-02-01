@@ -62,14 +62,24 @@ class HRPayrollModel {
 
   async updateEmployee(employee_id, data) {
     try {
+      const allowedFields = [
+        'first_name', 'last_name', 'email', 'phone', 'date_of_birth', 
+        'gender', 'department', 'designation', 'joining_date', 
+        'status', 'salary', 'bank_account', 'uan_number'
+      ]
+      
       let query = 'UPDATE employee_master SET '
       const params = []
       const fields = []
 
       Object.entries(data).forEach(([key, value]) => {
-        fields.push(`${key} = ?`)
-        params.push(value)
+        if (allowedFields.includes(key)) {
+          fields.push(`${key} = ?`)
+          params.push(value)
+        }
       })
+
+      if (fields.length === 0) return false
 
       query += fields.join(', ')
       query += ', updated_at = CURRENT_TIMESTAMP WHERE employee_id = ?'
@@ -124,14 +134,19 @@ class HRPayrollModel {
 
   async updateDesignation(designation_id, data) {
     try {
+      const allowedFields = ['name', 'description']
       let query = 'UPDATE designation_master SET '
       const params = []
       const fields = []
 
       Object.entries(data).forEach(([key, value]) => {
-        fields.push(`${key} = ?`)
-        params.push(value)
+        if (allowedFields.includes(key)) {
+          fields.push(`${key} = ?`)
+          params.push(value)
+        }
       })
+
+      if (fields.length === 0) return false
 
       query += fields.join(', ')
       query += ' WHERE designation_id = ? OR name = ?'

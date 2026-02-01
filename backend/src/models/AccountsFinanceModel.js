@@ -5,14 +5,15 @@ class AccountsFinanceModel {
 
   // ============= ACCOUNT LEDGER =============
 
-  async recordLedgerEntry(data) {
+  async recordLedgerEntry(data, connection = null) {
     try {
-      const entry_id = `LGR-${Date.now()}`
-      const [result] = await this.db.query(
+      const db = connection || this.db
+      const entry_id = `LGR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      const [result] = await db.query(
         `INSERT INTO account_ledger 
         (entry_id, transaction_date, account_type, account_id, debit, credit, description, reference_doctype, reference_id)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [entry_id, data.transaction_date, data.account_type, data.account_id,
+        [entry_id, data.transaction_date || new Date(), data.account_type, data.account_id,
          data.debit || 0, data.credit || 0, data.description, data.reference_doctype, data.reference_id]
       )
       return { entry_id, ...data }

@@ -117,7 +117,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`p-2  py-1.5 rounded-md text-xs    transition-all ${
+                    className={`p-2  py-1.5 rounded  text-xs    transition-all ${
                       activeTab === tab
                         ? 'bg-blue-600 text-white shadow-md'
                         : 'text-slate-600 hover:bg-slate-50'
@@ -193,7 +193,7 @@ const StatCard = ({ label, value, icon: Icon, color, trend, trendValue, trendDir
   <div className={`bg-gradient-to-br ${color} p-5 rounded border border-white/20  transition-all duration-300 hover:shadow-md hover:-translate-y-1 relative overflow-hidden group`}>
     <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-white/10 rounded-full group-hover:scale-110 transition-transform" />
     <div className="flex items-start justify-between mb-2">
-      <span className="text-xs    text-slate-500 uppercase">{label}</span>
+      <span className="text-xs    text-slate-500 ">{label}</span>
       <div className="p-2 bg-white/60 rounded ">
         <Icon size={18} className="text-slate-700" />
       </div>
@@ -372,7 +372,7 @@ const MachineAnalysis = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-2">
         <div className="animate-spin mb-4">
           <RefreshCw size={40} className="text-blue-600" />
         </div>
@@ -385,7 +385,7 @@ const MachineAnalysis = () => {
     <div className="w-full bg-slate-50 min-h-screen p-4 md:p-3">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 my-4 mb-3">
           <div>
             <h1 className="text-xl  text-slate-900 flex items-center gap-2">
               <Monitor className="text-blue-600" /> Machine Analysis
@@ -396,7 +396,7 @@ const MachineAnalysis = () => {
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden sm:block text-right">
-              <p className="text-xs   text-slate-400 uppercase">Last Synchronized</p>
+              <p className="text-xs   text-slate-400 ">Last Synchronized</p>
               <p className="text-xs  text-slate-700">{refreshTime.toLocaleTimeString()}</p>
             </div>
             <button
@@ -554,13 +554,13 @@ const MachineAnalysis = () => {
                 <input 
                   type="text" 
                   placeholder="Search by Machine Code or Name..."
-                  className="w-full bg-white border border-slate-200 rounded-md p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full bg-white border border-slate-200 rounded  p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               <select 
-                className="bg-white border border-slate-200 rounded-md p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                className="bg-white border border-slate-200 rounded  p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
               >

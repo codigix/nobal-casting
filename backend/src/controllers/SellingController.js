@@ -1,3 +1,5 @@
+import { SalesInvoiceModel } from '../models/SalesInvoiceModel.js'
+
 export class SellingController {
   // ============================================
   // CUSTOMER ENDPOINTS
@@ -1006,91 +1008,30 @@ export class SellingController {
 
   static async createInvoice(req, res) {
     const db = req.app.locals.db
-    const { delivery_note_id, invoice_date, amount, total_value, due_date, tax_rate, invoice_type } = req.body
+    const model = new SalesInvoiceModel(db)
 
     try {
-      // Accept both field name variations
-      const finalAmount = amount || total_value
-
-      if (!delivery_note_id || !invoice_date || !finalAmount) {
-        return res.status(400).json({ error: 'Delivery note, invoice date, and amount are required' })
-      }
-
-      // Validate delivery note exists
-      const [noteCheck] = await db.execute(
-        'SELECT delivery_note_id FROM selling_delivery_note WHERE delivery_note_id = ? AND deleted_at IS NULL',
-        [delivery_note_id]
-      )
-
-      if (!noteCheck.length) {
-        return res.status(400).json({ error: 'Delivery note not found. Please select a valid delivery note.' })
-      }
-
-      const invoice_id = `INV-${Date.now()}`
-
-      await db.execute(
-        `INSERT INTO selling_invoice 
-         (invoice_id, delivery_note_id, invoice_date, amount, due_date, tax_rate, invoice_type, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'draft')`,
-        [
-          invoice_id,
-          delivery_note_id,
-          invoice_date,
-          finalAmount,
-          due_date || null,
-          tax_rate || 0,
-          invoice_type || 'standard'
-        ]
-      )
-
-      res.status(201).json({
-        success: true,
-        data: {
-          invoice_id,
-          delivery_note_id,
-          invoice_date,
-          amount: finalAmount,
-          due_date,
-          tax_rate: tax_rate || 0,
-          invoice_type: invoice_type || 'standard',
-          status: 'draft'
-        }
+      const result = await model.create({
+        ...req.body,
+        created_by: req.user?.full_name || 'System'
       })
+      res.status(201).json({ success: true, data: result })
     } catch (error) {
       console.error('Error creating invoice:', error)
-      res.status(500).json({ error: 'Failed to create invoice', details: error.message })
+      res.status(500).json({ error: error.message })
     }
   }
 
   static async getInvoices(req, res) {
     const db = req.app.locals.db
-    const { delivery_note_id, status } = req.query
+    const model = new SalesInvoiceModel(db)
 
     try {
-      let query = `SELECT si.*, sdn.delivery_note_id, sdn.sales_order_id, sc.name as customer_name
-                   FROM selling_invoice si
-                   LEFT JOIN selling_delivery_note sdn ON si.delivery_note_id = sdn.delivery_note_id
-                   LEFT JOIN selling_sales_order sso ON sdn.sales_order_id = sso.sales_order_id
-                   LEFT JOIN selling_customer sc ON sso.customer_id = sc.customer_id
-                   WHERE si.deleted_at IS NULL`
-      const params = []
-
-      if (delivery_note_id) {
-        query += ' AND si.delivery_note_id = ?'
-        params.push(delivery_note_id)
-      }
-      if (status) {
-        query += ' AND si.status = ?'
-        params.push(status)
-      }
-
-      query += ' ORDER BY si.created_at DESC'
-
-      const [invoices] = await db.execute(query, params)
+      const invoices = await model.getAll(req.query)
       res.json({ success: true, data: invoices })
     } catch (error) {
       console.error('Error fetching invoices:', error)
-      res.status(500).json({ error: 'Failed to fetch invoices', details: error.message })
+      res.status(500).json({ error: error.message })
     }
   }
 
@@ -1101,69 +1042,42 @@ export class SellingController {
   static async submitInvoice(req, res) {
     const db = req.app.locals.db
     const { id } = req.params
-    const { status } = req.body || {}
+    const model = new SalesInvoiceModel(db)
 
     try {
-      // Check if invoice exists
-      const [invoices] = await db.execute(
-        'SELECT invoice_id, status FROM selling_invoice WHERE invoice_id = ? AND deleted_at IS NULL',
-        [id]
-      )
-
-      if (!invoices.length) {
-        return res.status(404).json({ error: 'Invoice not found' })
-      }
-
-      // Update status to issued
-      const newStatus = status || 'issued'
-      await db.execute(
-        'UPDATE selling_invoice SET status = ?, updated_at = NOW() WHERE invoice_id = ?',
-        [newStatus, id]
-      )
-
-      // Fetch updated invoice
-      const [updated] = await db.execute(
-        `SELECT si.*, sdn.delivery_note_id, sso.sales_order_id, sc.name as customer_name 
-         FROM selling_invoice si
-         LEFT JOIN selling_delivery_note sdn ON si.delivery_note_id = sdn.delivery_note_id
-         LEFT JOIN selling_sales_order sso ON sdn.sales_order_id = sso.sales_order_id
-         LEFT JOIN selling_customer sc ON sso.customer_id = sc.customer_id
-         WHERE si.invoice_id = ?`,
-        [id]
-      )
-
-      res.json({ success: true, data: updated[0] })
+      const result = await model.submit(id, req.user?.full_name || 'System')
+      res.json({ success: true, data: result })
     } catch (error) {
       console.error('Error submitting invoice:', error)
-      res.status(500).json({ error: 'Failed to submit invoice', details: error.message })
+      res.status(500).json({ error: error.message })
+    }
+  }
+
+  static async cancelInvoice(req, res) {
+    const db = req.app.locals.db
+    const { id } = req.params
+    const model = new SalesInvoiceModel(db)
+
+    try {
+      const result = await model.cancel(id, req.user?.full_name || 'System')
+      res.json({ success: true, data: result })
+    } catch (error) {
+      console.error('Error cancelling invoice:', error)
+      res.status(500).json({ error: error.message })
     }
   }
 
   static async deleteInvoice(req, res) {
     const db = req.app.locals.db
     const { id } = req.params
+    const model = new SalesInvoiceModel(db)
 
     try {
-      // Check if invoice exists
-      const [invoices] = await db.execute(
-        'SELECT invoice_id FROM selling_invoice WHERE invoice_id = ? AND deleted_at IS NULL',
-        [id]
-      )
-
-      if (!invoices.length) {
-        return res.status(404).json({ error: 'Invoice not found' })
-      }
-
-      // Soft delete
-      await db.execute(
-        'UPDATE selling_invoice SET deleted_at = NOW(), updated_at = NOW() WHERE invoice_id = ?',
-        [id]
-      )
-
+      await model.delete(id)
       res.json({ success: true, message: 'Invoice deleted successfully' })
     } catch (error) {
       console.error('Error deleting invoice:', error)
-      res.status(500).json({ error: 'Failed to delete invoice', details: error.message })
+      res.status(500).json({ error: error.message })
     }
   }
 

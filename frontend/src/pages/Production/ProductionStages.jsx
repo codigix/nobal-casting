@@ -241,7 +241,7 @@ export default function ProductionStages() {
                 </button>
               </div>
 
-              <div className="p-4 space-y-4">
+              <div className="p-2 space-y-2">
                 <div>
                   <label className="block text-xs  text-gray-700 mb-1">
                     Stage Code *

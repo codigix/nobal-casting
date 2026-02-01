@@ -149,16 +149,7 @@ export default function DepartmentLayout({ children }) {
             { label: 'Operations', path: '/manufacturing/operations', icon: Zap }
           ]
         },
-        {
-          id: 'buying',
-          label: 'Procurement',
-          icon: ShoppingCart,
-          section: 'APPS',
-          submenu: [
-            { label: 'Material Requests', path: '/inventory/material-requests', icon: FileText },
-            { label: 'Purchase Orders', path: '/buying/purchase-orders', icon: Package }
-          ]
-        },
+        
         {
           id: 'analytics',
           label: 'Analytics',

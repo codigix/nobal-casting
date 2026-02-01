@@ -1,3 +1,6 @@
+import StockBalanceModel from './StockBalanceModel.js'
+import StockLedgerModel from './StockLedgerModel.js'
+
 class StockMovementModel {
   static getDb() {
     return global.db
@@ -175,13 +178,10 @@ class StockMovementModel {
           }
 
           // Deduct from source warehouse
-          const newSourceQty = sourceQty - movement.quantity
-          if (sourceBalance[0]?.length > 0) {
-            await connection.query(
-              `UPDATE stock_balance SET current_qty = ? WHERE item_code = ? AND warehouse_id = ?`,
-              [newSourceQty, movement.item_code, movement.source_warehouse_id]
-            )
-          }
+          await StockBalanceModel.upsert(movement.item_code, movement.source_warehouse_id, {
+            current_qty: sourceQty - movement.quantity,
+            last_issue_date: new Date()
+          }, connection)
 
           // Create ledger entry for source (OUT)
           await connection.query(
@@ -193,24 +193,11 @@ class StockMovementModel {
           )
 
           // Add to target warehouse
-          const targetBalance = await connection.query(
-            `SELECT current_qty FROM stock_balance WHERE item_code = ? AND warehouse_id = ?`,
-            [movement.item_code, movement.target_warehouse_id]
-          )
-          const targetQty = targetBalance[0]?.[0]?.current_qty || 0
-          const newTargetQty = targetQty + movement.quantity
-
-          if (targetBalance[0]?.length > 0) {
-            await connection.query(
-              `UPDATE stock_balance SET current_qty = ? WHERE item_code = ? AND warehouse_id = ?`,
-              [newTargetQty, movement.item_code, movement.target_warehouse_id]
-            )
-          } else {
-            await connection.query(
-              `INSERT INTO stock_balance (item_code, warehouse_id, current_qty, uom) VALUES (?, ?, ?, ?)`,
-              [movement.item_code, movement.target_warehouse_id, newTargetQty, uom]
-            )
-          }
+          await StockBalanceModel.upsert(movement.item_code, movement.target_warehouse_id, {
+            current_qty: movement.quantity,
+            is_increment: true,
+            last_receipt_date: new Date()
+          }, connection)
 
           // Create ledger entry for target (IN)
           await connection.query(
@@ -234,25 +221,12 @@ class StockMovementModel {
           )
 
           // Update stock balance
-          const currentBalance = await connection.query(
-            `SELECT current_qty FROM stock_balance WHERE item_code = ? AND warehouse_id = ?`,
-            [movement.item_code, movement.warehouse_id]
-          )
-
-          const currentQty = currentBalance[0]?.[0]?.current_qty || 0
-          const newQty = qty_in > 0 ? currentQty + qty_in : currentQty - qty_out
-
-          if (currentBalance[0]?.length > 0) {
-            await connection.query(
-              `UPDATE stock_balance SET current_qty = ? WHERE item_code = ? AND warehouse_id = ?`,
-              [newQty, movement.item_code, movement.warehouse_id]
-            )
-          } else {
-            await connection.query(
-              `INSERT INTO stock_balance (item_code, warehouse_id, current_qty, uom) VALUES (?, ?, ?, ?)`,
-              [movement.item_code, movement.warehouse_id, newQty, uom]
-            )
-          }
+          await StockBalanceModel.upsert(movement.item_code, movement.warehouse_id, {
+            current_qty: qty_in > 0 ? qty_in : -qty_out,
+            is_increment: true,
+            last_receipt_date: qty_in > 0 ? new Date() : null,
+            last_issue_date: qty_out > 0 ? new Date() : null
+          }, connection)
         }
 
         await connection.commit()

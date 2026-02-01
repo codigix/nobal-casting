@@ -155,7 +155,7 @@ export default function WorkstationForm() {
 
   if (initialLoading) {
     return (
-      <div className="min-h-screen bg-slate-50/50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 p-2/50 flex items-center justify-center">
         <div className="flex flex-col items-center">
           <div className="w-6 h-6  border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
           <p className="text-slate-500 ">Loading workstation details...</p>
@@ -165,7 +165,7 @@ export default function WorkstationForm() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-4">
+    <div className="min-h-screen bg-slate-50 p-2/50 p-4 md:p-4">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">

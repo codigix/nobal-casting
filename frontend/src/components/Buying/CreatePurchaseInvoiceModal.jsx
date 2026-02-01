@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { AlertCircle, ChevronDown } from 'lucide-react'
+import { 
+  AlertCircle, ChevronDown, FileText, Calendar, User, 
+  CreditCard, Info, Package, DollarSign, Calculator, 
+  CheckCircle, ArrowRight, Building2, Receipt, ShieldCheck
+} from 'lucide-react'
 import Modal from '../Modal'
+import Button from '../Button/Button'
 
 export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
@@ -25,9 +30,16 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess 
   useEffect(() => {
     if (isOpen) {
       fetchAcceptedGRNs()
-      // Set today's date as default
       const today = new Date().toISOString().split('T')[0]
-      setFormData(prev => ({ ...prev, invoice_date: today }))
+      const nextMonth = new Date()
+      nextMonth.setMonth(nextMonth.getMonth() + 1)
+      const dueDate = nextMonth.toISOString().split('T')[0]
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        invoice_date: today,
+        due_date: dueDate 
+      }))
     }
   }, [isOpen])
 
@@ -36,7 +48,6 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess 
       const res = await fetch(`${import.meta.env.VITE_API_URL}/purchase-receipts`)
       const data = await res.json()
       if (data.success) {
-        // Filter for accepted GRNs that don't have invoices yet
         setGrns(data.data?.filter(grn => grn.status === 'accepted') || [])
       }
     } catch (error) {
@@ -51,9 +62,27 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess 
       const data = await res.json()
       if (data.success) {
         setSelectedGrn(data.data)
+        
+        if (data.data.items && data.data.items.length > 0) {
+          const netAmount = data.data.items.reduce((sum, item) => {
+            return sum + ((item.received_qty || 0) * (item.rate || 0))
+          }, 0)
+          
+          const taxRate = parseFloat(formData.tax_rate) || 18
+          const taxAmount = (netAmount * taxRate) / 100
+          const grossAmount = netAmount + taxAmount
+          
+          setFormData(prev => ({
+            ...prev,
+            net_amount: netAmount.toFixed(2),
+            tax_amount: taxAmount.toFixed(2),
+            gross_amount: grossAmount.toFixed(2)
+          }))
+        }
       }
     } catch (error) {
       console.error('Error fetching GRN details:', error)
+      setError('Failed to fetch GRN details. Please try again.')
     } finally {
       setLoadingGrn(false)
     }
@@ -61,26 +90,22 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess 
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-    setError(null)
-
-    // Auto-calculate tax and gross amount
-    if (name === 'net_amount' || name === 'tax_rate') {
-      const netAmount = name === 'net_amount' ? parseFloat(value) || 0 : parseFloat(formData.net_amount) || 0
-      const taxRate = name === 'tax_rate' ? parseFloat(value) || 0 : parseFloat(formData.tax_rate) || 0
-      const taxAmount = (netAmount * taxRate) / 100
-      const grossAmount = netAmount + taxAmount
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value }
       
-      setFormData(prev => ({
-        ...prev,
-        [name]: value,
-        tax_amount: taxAmount.toFixed(2),
-        gross_amount: grossAmount.toFixed(2)
-      }))
-    }
+      if (name === 'net_amount' || name === 'tax_rate') {
+        const netAmount = name === 'net_amount' ? parseFloat(value) || 0 : parseFloat(newData.net_amount) || 0
+        const taxRate = name === 'tax_rate' ? parseFloat(value) || 0 : parseFloat(newData.tax_rate) || 0
+        const taxAmount = (netAmount * taxRate) / 100
+        const grossAmount = netAmount + taxAmount
+        
+        newData.tax_amount = taxAmount.toFixed(2)
+        newData.gross_amount = grossAmount.toFixed(2)
+      }
+      
+      return newData
+    })
+    setError(null)
   }
 
   const handleGRNChange = async (e) => {
@@ -96,35 +121,11 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess 
     }))
     setError(null)
     
-    // Fetch GRN details with items
     if (grnNo) {
       await fetchGRNDetails(grnNo)
     } else {
       setSelectedGrn(null)
     }
-  }
-
-  const calculateTotalFromItems = () => {
-    if (!selectedGrn?.items || selectedGrn.items.length === 0) return 0
-    return selectedGrn.items.reduce((sum, item) => {
-      return sum + ((item.received_qty || 0) * (item.rate || 0))
-    }, 0)
-  }
-
-  const handlePrefillFromGRN = () => {
-    if (!selectedGrn?.items) return
-    
-    const netAmount = calculateTotalFromItems()
-    const taxRate = parseFloat(formData.tax_rate) || 18
-    const taxAmount = (netAmount * taxRate) / 100
-    const grossAmount = netAmount + taxAmount
-
-    setFormData(prev => ({
-      ...prev,
-      net_amount: netAmount.toFixed(2),
-      tax_amount: taxAmount.toFixed(2),
-      gross_amount: grossAmount.toFixed(2)
-    }))
   }
 
   const handleSubmit = async (e) => {
@@ -137,443 +138,316 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess 
         throw new Error('Please fill in all required fields')
       }
 
+      const invoiceItems = selectedGrn?.items?.map(item => ({
+        item_code: item.item_code,
+        qty: item.received_qty || 0,
+        rate: item.rate || 0
+      })) || []
+
       const res = await fetch(`${import.meta.env.VITE_API_URL}/purchase-invoices`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          grn_no: formData.grn_no,
-          po_no: formData.po_no,
-          supplier_name: formData.supplier_name,
-          invoice_date: formData.invoice_date,
-          due_date: formData.due_date,
+          ...formData,
           net_amount: parseFloat(formData.net_amount),
           tax_rate: parseFloat(formData.tax_rate),
           tax_amount: parseFloat(formData.tax_amount),
           gross_amount: parseFloat(formData.gross_amount),
-          notes: formData.notes || null,
           status: 'draft',
-          payment_status: 'unpaid'
+          payment_status: 'unpaid',
+          items: invoiceItems
         })
       })
 
       const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to create purchase invoice')
-      }
+      if (!res.ok) throw new Error(data.error || 'Failed to create purchase invoice')
 
-      // Reset form
-      const today = new Date().toISOString().split('T')[0]
-      setFormData({
-        grn_no: '',
-        po_no: '',
-        supplier_name: '',
-        invoice_date: today,
-        due_date: '',
-        net_amount: '',
-        tax_rate: '18',
-        tax_amount: '0',
-        gross_amount: '0',
-        notes: ''
-      })
-      
       onSuccess?.()
       onClose()
     } catch (err) {
-      setError(err.message || 'Failed to create purchase invoice')
+      setError(err.message)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="📋 Create Purchase Invoice" size="lg">
-      <form onSubmit={handleSubmit}>
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title={
+        <div className="flex items-center gap-2">
+          <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
+            <Receipt size={20} />
+          </div>
+          <div>
+            <h2 className="text-lg  text-slate-800">Create Purchase Invoice</h2>
+            <p className="text-xs font-medium text-slate-500">Record a new invoice against a Good Receipt Note</p>
+          </div>
+        </div>
+      } 
+      size="xl"
+    >
+      <form onSubmit={handleSubmit} className="p-1">
         {error && (
-          <div style={{
-            background: '#fee2e2',
-            border: '1px solid #fecaca',
-            borderRadius: '8px',
-            padding: '12px 16px',
-            marginBottom: '20px',
-            color: '#dc2626',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            fontSize: '0.9rem'
-          }}>
-            <AlertCircle size={18} />
-            {error}
+          <div className="flex items-center gap-3 p-2 mb-6 text-xs border bg-rose-50 border-rose-200 text-rose-600 rounded">
+            <AlertCircle size={15} className="shrink-0" />
+            <p className="font-medium">{error}</p>
           </div>
         )}
 
-        {/* GRN and PO Selection */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              GRN Number *
-            </label>
-            <select
-              name="grn_no"
-              value={formData.grn_no}
-              onChange={handleGRNChange}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                backgroundColor: '#fff'
-              }}
-            >
-              <option value="">Select GRN</option>
-              {grns.map(grn => (
-                <option key={grn.grn_no} value={grn.grn_no}>
-                  {grn.grn_no} - {grn.supplier_name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#666' }}>
-              PO Number (Auto-populated)
-            </label>
-            <input
-              type="text"
-              value={formData.po_no}
-              disabled
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                backgroundColor: '#f3f4f6',
-                cursor: 'not-allowed',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#666' }}>
-              Supplier (Auto-populated)
-            </label>
-            <input
-              type="text"
-              value={formData.supplier_name}
-              disabled
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                backgroundColor: '#f3f4f6',
-                cursor: 'not-allowed',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Invoice Date *
-            </label>
-            <input
-              type="date"
-              name="invoice_date"
-              value={formData.invoice_date}
-              onChange={handleInputChange}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-        </div>
-
-        {/* GRN Items Display */}
-        {selectedGrn && (
-          <div style={{ 
-            backgroundColor: '#f9fafb', 
-            border: '1px solid #e5e7eb', 
-            borderRadius: '8px', 
-            padding: '16px', 
-            marginBottom: '20px',
-            maxHeight: '400px',
-            overflowY: 'auto'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#333' }}>
-                📦 GRN Items ({selectedGrn.items?.length || 0})
-              </h4>
-              <button
-                type="button"
-                onClick={handlePrefillFromGRN}
-                style={{
-                  padding: '6px 12px',
-                  backgroundColor: '#dbeafe',
-                  border: '1px solid #0284c7',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '0.85rem',
-                  fontWeight: 500,
-                  color: '#0284c7',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#bfdbfe'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#dbeafe'}
-              >
-                💡 Prefill Amount
-              </button>
-            </div>
-            
-            {loadingGrn ? (
-              <p style={{ fontSize: '0.9rem', color: '#666', textAlign: 'center', padding: '20px' }}>
-                Loading items...
-              </p>
-            ) : selectedGrn.items && selectedGrn.items.length > 0 ? (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{
-                  width: '100%',
-                  borderCollapse: 'collapse',
-                  fontSize: '0.85rem'
-                }}>
-                  <thead>
-                    <tr style={{ backgroundColor: '#f3f4f6', borderBottom: '2px solid #e5e7eb' }}>
-                      <th style={{ padding: '8px', textAlign: 'left', fontWeight: 600, color: '#374151' }}>Item Code</th>
-                      <th style={{ padding: '8px', textAlign: 'left', fontWeight: 600, color: '#374151' }}>Received Qty</th>
-                      <th style={{ padding: '8px', textAlign: 'left', fontWeight: 600, color: '#374151' }}>Warehouse</th>
-                      <th style={{ padding: '8px', textAlign: 'left', fontWeight: 600, color: '#374151' }}>Batch No</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedGrn.items.map((item, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                        <td style={{ padding: '8px', color: '#374151' }}>{item.item_code}</td>
-                        <td style={{ padding: '8px', color: '#374151' }}>{item.received_qty || 0}</td>
-                        <td style={{ padding: '8px', color: '#374151' }}>{item.warehouse_code || '-'}</td>
-                        <td style={{ padding: '8px', color: '#374151' }}>{item.batch_no || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+        <div className=" gap-8">
+          {/* Left Column: Form Fields */}
+          <div className="">
+            {/* Section 1: Source Info */}
+            <section>
+              <div className="flex items-center gap-2 mb-4 text-slate-800">
+                <div className="p-2 bg-slate-100 rounded">
+                  <Building2 size={16} />
+                </div>
+                <h3 className="text-xs    text-slate-600">Source Information</h3>
               </div>
-            ) : (
-              <p style={{ fontSize: '0.9rem', color: '#999', textAlign: 'center', padding: '20px' }}>
-                No items in this GRN
-              </p>
-            )}
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-2 bg-slate-50 rounded border border-slate-200 ">
+                <div className="">
+                  <label className="text-xs  text-slate-700 flex items-center gap-1.5">
+                    GRN Number <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      name="grn_no"
+                      value={formData.grn_no}
+                      onChange={handleGRNChange}
+                      required
+                      className="w-full pl-3 pr-10 py-2 bg-white border border-slate-300 rounded text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none appearance-none  font-medium"
+                    >
+                      <option value="">Select an accepted GRN</option>
+                      {grns.map(grn => (
+                        <option key={grn.grn_no} value={grn.grn_no}>
+                          {grn.grn_no} - {grn.supplier_name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                <div className="">
+                  <label className="text-xs  text-slate-700">Supplier</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formData.supplier_name}
+                      readOnly
+                      placeholder="Auto-populated"
+                      className="w-full pl-9 pr-4 py-2 bg-slate-100 border border-slate-200 rounded text-xs text-slate-600 font-medium cursor-not-allowed outline-none"
+                    />
+                    <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  </div>
+                </div>
+
+                <div className="">
+                  <label className="text-xs  text-slate-700">Purchase Order</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formData.po_no}
+                      readOnly
+                      placeholder="Auto-populated"
+                      className="w-full pl-9 pr-4 py-2 bg-slate-100 border border-slate-200 rounded text-xs text-slate-600 font-medium cursor-not-allowed outline-none"
+                    />
+                    <FileText size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  </div>
+                </div>
+
+                <div className="">
+                  <label className="text-xs  text-slate-700">Invoice Date *</label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      name="invoice_date"
+                      value={formData.invoice_date}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none  font-medium"
+                    />
+                    <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  </div>
+                </div>
+
+                <div className="">
+                  <label className="text-xs  text-slate-700">Due Date *</label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      name="due_date"
+                      value={formData.due_date}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none  font-medium"
+                    />
+                    <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Section 2: Items Verification */}
+            <section className='my-2'>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 text-slate-800">
+                  <div className="p-1.5 bg-slate-100 rounded ">
+                    <Package size={16} />
+                  </div>
+                  <h3 className="text-xs    text-slate-600">Item Verification</h3>
+                </div>
+                {selectedGrn && (
+                  <span className="text-xs  px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100  tracking-tight">
+                    {selectedGrn.items?.length || 0} Items Linked
+                  </span>
+                )}
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden ">
+                {loadingGrn ? (
+                  <div className="flex flex-col items-center justify-center py-12 gap-3">
+                    <RefreshCw className="text-indigo-500 animate-spin" size={24} />
+                    <p className="text-xs font-medium text-slate-500 italic">Fetching GRN items...</p>
+                  </div>
+                ) : selectedGrn?.items?.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50/50 border-b border-slate-100">
+                          <th className="px-5 py-3 text-[11px]  text-slate-500  ">Item Details</th>
+                          <th className="px-5 py-3 text-[11px]  text-slate-500   text-right">Received</th>
+                          <th className="px-5 py-3 text-[11px]  text-slate-500   text-right">Rate</th>
+                          <th className="px-5 py-3 text-[11px]  text-slate-500   text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {selectedGrn.items.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-5 py-3">
+                              <div className="flex flex-col">
+                                <span className="text-xs  text-slate-800">{item.item_code}</span>
+                                <span className="text-xs text-slate-400 font-medium italic">{item.item_name || 'No description'}</span>
+                              </div>
+                            </td>
+                            <td className="px-5 py-3 text-right">
+                              <span className="text-xs font-medium text-slate-600">{item.received_qty}</span>
+                            </td>
+                            <td className="px-5 py-3 text-right">
+                              <span className="text-xs font-medium text-slate-600">₹{(item.rate || 0).toLocaleString()}</span>
+                            </td>
+                            <td className="px-5 py-3 text-right">
+                              <span className="text-xs  text-slate-900">₹{((item.received_qty || 0) * (item.rate || 0)).toLocaleString()}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center p-2">
+                    <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+                      <Receipt size={24} className="text-slate-300" />
+                    </div>
+                    <p className="text-xs font-medium text-slate-400">Select a GRN to verify items</p>
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
-        )}
 
-        {/* Invoice Amounts */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Net Amount (₹) *
-            </label>
-            <input
-              type="number"
-              name="net_amount"
-              placeholder="0.00"
-              value={formData.net_amount}
-              onChange={handleInputChange}
-              step="0.01"
-              min="0"
-              required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                boxSizing: 'border-box'
-              }}
-            />
+          {/* Right Column: Financials & Summary */}
+          <div className="my-3">
+            <section className="bg-slate-900 rounded p-2 text-white  relative overflow-hidden">
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-500/10 rounded-full -ml-12 -mb-12 blur-2xl" />
+              
+              <div className="relative z-10 ">
+                <div className="flex items-center gap-2 pb-4 border-b border-white/10">
+                  <Calculator size={15} className="text-indigo-400" />
+                  <h3 className="text-xs text-white">Financial Summary</h3>
+                </div>
+
+                <div className="">
+                  <div className="mt-2">
+                    <label className="text-xs  text-slate-400  ">Net Amount (Subtotal)</label>
+                    <div className="relative group">
+                      <input
+                        type="number"
+                        name="net_amount"
+                        value={formData.net_amount}
+                        onChange={handleInputChange}
+                        required
+                        step="0.01"
+                        className="w-full pl-10 pr-4 p-2 bg-white/5 border border-white/10 rounded text-xs  text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      />
+                      <DollarSign size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-2">
+                    <div className="">
+                      <label className="text-xs  text-slate-400  ">Tax Rate (%)</label>
+                      <select
+                        name="tax_rate"
+                        value={formData.tax_rate}
+                        onChange={handleInputChange}
+                        className="w-full p-2 bg-white/5 border border-white/10 rounded text-xs  text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none"
+                      >
+                        <option value="0" className="text-slate-900">0%</option>
+                        <option value="5" className="text-slate-900">5%</option>
+                        <option value="12" className="text-slate-900">12%</option>
+                        <option value="18" className="text-slate-900">18%</option>
+                        <option value="28" className="text-slate-900">28%</option>
+                      </select>
+                    </div>
+                    <div className="">
+                      <label className="text-xs  text-slate-400  ">Tax Amount</label>
+                      <div className="w-full p-2 bg-white/5 border border-white/10 rounded text-xs  text-indigo-300">
+                        ₹{(parseFloat(formData.tax_amount) || 0).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-white/10">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-slate-400">Total Payable</span>
+                      <ShieldCheck size={16} className="text-emerald-500" />
+                    </div>
+                    <div className="text-xl  text-white ">
+                      ₹{(parseFloat(formData.gross_amount) || 0).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+           
+
+            <div className="flex  gap-3 pt-2">
+              <Button
+                type="submit"
+                loading={loading}
+                className="w-full  bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded flex items-center justify-center gap-2 text-base transition-all active:scale-[0.98]"
+              >
+                {loading ? <RefreshCw className="animate-spin" size={15} /> : <CheckCircle size={15} />}
+                Create Purchase Invoice
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={onClose}
+                className="w-full  text-slate-500  hover:bg-slate-100 transition-all rounded p-2"
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
-
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Tax Rate (%) *
-            </label>
-            <select
-              name="tax_rate"
-              value={formData.tax_rate}
-              onChange={handleInputChange}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                backgroundColor: '#fff'
-              }}
-            >
-              <option value="0">0% (Exempt)</option>
-              <option value="5">5%</option>
-              <option value="12">12%</option>
-              <option value="18">18%</option>
-              <option value="28">28%</option>
-            </select>
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#666' }}>
-              Tax Amount (₹) (Auto-calculated)
-            </label>
-            <input
-              type="text"
-              value={`₹${parseFloat(formData.tax_amount || 0).toFixed(2)}`}
-              disabled
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                backgroundColor: '#f3f4f6',
-                cursor: 'not-allowed',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Due Date and Gross Amount */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Due Date *
-            </label>
-            <input
-              type="date"
-              name="due_date"
-              value={formData.due_date}
-              onChange={handleInputChange}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#666' }}>
-              Gross Amount (₹) (Auto-calculated)
-            </label>
-            <input
-              type="text"
-              value={`₹${parseFloat(formData.gross_amount || 0).toFixed(2)}`}
-              disabled
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                backgroundColor: '#f3f4f6',
-                cursor: 'not-allowed',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Notes */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-            Notes
-          </label>
-          <textarea
-            name="notes"
-            placeholder="Additional invoice notes..."
-            value={formData.notes}
-            onChange={handleInputChange}
-            rows="3"
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              border: '1px solid #ddd',
-              borderRadius: '6px',
-              fontSize: '0.95rem',
-              fontFamily: 'inherit',
-              boxSizing: 'border-box',
-              resize: 'vertical'
-            }}
-          />
-        </div>
-
-        {/* Summary Card */}
-        <div style={{
-          backgroundColor: '#f0fdf4',
-          border: '1px solid #bbf7d0',
-          borderRadius: '6px',
-          padding: '12px 16px',
-          marginBottom: '20px'
-        }}>
-          <p style={{ margin: 0, fontSize: '0.9rem', color: '#166534' }}>
-            <strong>📊 Invoice Summary:</strong> Net ₹{parseFloat(formData.net_amount || 0).toFixed(2)} + Tax ₹{parseFloat(formData.tax_amount || 0).toFixed(2)} = <strong>Total ₹{parseFloat(formData.gross_amount || 0).toFixed(2)}</strong>
-          </p>
-        </div>
-
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '30px' }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              padding: '10px 24px',
-              backgroundColor: '#f3f4f6',
-              border: '1px solid #ddd',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '0.95rem',
-              fontWeight: 500,
-              transition: 'all 0.2s'
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              padding: '10px 24px',
-              background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontSize: '0.95rem',
-              fontWeight: 600,
-              opacity: loading ? 0.65 : 1,
-              transition: 'all 0.2s'
-            }}
-          >
-            {loading ? 'Creating Invoice...' : '✓ Create Invoice'}
-          </button>
         </div>
       </form>
     </Modal>

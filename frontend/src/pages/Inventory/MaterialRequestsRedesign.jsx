@@ -110,6 +110,10 @@ export default function MaterialRequestsRedesign() {
     try {
       const response = await api.patch(`/material-requests/${id}/approve`)
       toast.addToast(response.data.message || 'Material request approved successfully', 'success')
+      
+      // Dispatch event to notify other components (like Stock Balance) to refresh
+      window.dispatchEvent(new CustomEvent('materialRequestApproved', { detail: { mrId: id } }))
+      
       fetchRequests()
     } catch (err) {
       toast.addToast(err.response?.data?.error || 'Failed to approve', 'error')
@@ -186,7 +190,7 @@ export default function MaterialRequestsRedesign() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-6">
+    <div className="min-h-screen bg-slate-50 p-2/50 p-6">
       <div className="max-w-5xl mx-auto">
         <CreateMaterialRequestModal 
           isOpen={isModalOpen}
@@ -208,7 +212,7 @@ export default function MaterialRequestsRedesign() {
         />
 
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 my-4 mb-6">
           <div>
             <div className="flex items-center gap-3 mb-1">
               <div className="w-10 h-10 rounded  bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
@@ -222,7 +226,7 @@ export default function MaterialRequestsRedesign() {
           </div>
           
           <div className="flex items-center gap-3">
-            <div className="flex bg-white p-1 rounded  border border-slate-200 shadow-sm">
+            <div className="flex bg-white p-1 rounded  border border-slate-200  ">
               <button 
                 onClick={() => setViewMode('grid')}
                 className={`p-2 rounded-lg text-sm font-semibold transition-all ${viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
@@ -306,7 +310,7 @@ export default function MaterialRequestsRedesign() {
         </div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-200 shadow-sm">
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-200  ">
             <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
             <p className="text-slate-500 font-medium">Loading material requests...</p>
           </div>
@@ -361,7 +365,7 @@ export default function MaterialRequestsRedesign() {
                         </div>
                         <div className="pt-3 border-t border-slate-50">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs  text-slate-400 uppercase">Stock Status</span>
+                            <span className="text-xs  text-slate-400 ">Stock Status</span>
                             <span className={`text-xs  ${
                               stockStatus.all === 'available' ? 'text-emerald-600' : 
                               stockStatus.all === 'partial' ? 'text-amber-600' : 'text-rose-600'

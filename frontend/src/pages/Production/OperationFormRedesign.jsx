@@ -185,7 +185,7 @@ export default function OperationFormRedesign() {
 
   if (initialLoading) {
     return (
-      <div className="min-h-screen bg-slate-50/50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 p-2/50 flex items-center justify-center">
         <div className="flex flex-col items-center">
           <div className="w-6 h-6  border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
           <p className="text-slate-500 ">Loading operation details...</p>
@@ -195,7 +195,7 @@ export default function OperationFormRedesign() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-4">
+    <div className="min-h-screen bg-slate-50 p-2/50 p-4 md:p-4">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
@@ -354,7 +354,7 @@ export default function OperationFormRedesign() {
                   <Zap size={18} className="text-indigo-600" />
                   <h3 className="text-xs  text-slate-900 ">Sub-Operations / Tasks</h3>
                 </div>
-                <div className="text-xs   text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md ">
+                <div className="text-xs   text-indigo-600 bg-indigo-50 px-2 py-1 rounded  ">
                   Total Time: {(Number(totalTime) || 0).toFixed(2)} Hrs
                 </div>
               </div>
@@ -387,7 +387,7 @@ export default function OperationFormRedesign() {
                             step="0.1"
                             min="0"
                           />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs   text-slate-400 uppercase">Hrs</span>
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs   text-slate-400 ">Hrs</span>
                         </div>
                         {subOperations.length > 1 && (
                           <button 
@@ -431,7 +431,7 @@ export default function OperationFormRedesign() {
                     />
                   </div>
                   <div>
-                    <span className="block text-xs  text-slate-700 uppercase tracking-wide group-hover:text-indigo-600 transition-colors">Corrective</span>
+                    <span className="block text-xs  text-slate-700 tracking-wide group-hover:text-indigo-600 transition-colors">Corrective</span>
                     <span className="text-xs  text-slate-400 font-medium text-xs">Mark as rework operation</span>
                   </div>
                 </label>
@@ -447,7 +447,7 @@ export default function OperationFormRedesign() {
                     />
                   </div>
                   <div>
-                    <span className="block text-xs  text-slate-700 uppercase tracking-wide group-hover:text-indigo-600 transition-colors">Batch Based</span>
+                    <span className="block text-xs  text-slate-700 tracking-wide group-hover:text-indigo-600 transition-colors">Batch Based</span>
                     <span className="text-xs  text-slate-400 font-medium text-xs">Use specific batch sizes</span>
                   </div>
                 </label>

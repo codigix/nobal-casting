@@ -46,7 +46,7 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
         </div>
         <div>
           <h2 className="text-sm  flex items-center gap-2">
-            <span className={`${theme.text} uppercase tracking-[0.1em] text-xs`}>{title.split(' ')[0]}</span>
+            <span className={`${theme.text} tracking-[0.1em] text-xs`}>{title.split(' ')[0]}</span>
             <span className="text-slate-800 tracking-tight">{title.split(' ').slice(1).join(' ')}</span>
           </h2>
           {subtitle && <p className="text-xs  text-slate-400  opacity-70">{subtitle}</p>}
@@ -86,12 +86,12 @@ const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = '
       onClick={() => onClick(section)}
       className={`w-full flex items-center justify-between p-2 rounded  transition-all duration-300 group ${
         isActive 
-          ? `${activeTheme} shadow-sm border  translate-x-1` 
+          ? `${activeTheme}   border  translate-x-1` 
           : 'text-slate-500 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-100'
       }`}
     >
       <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-lg transition-all duration-300 ${isActive ? 'bg-white shadow-sm scale-110' : 'bg-slate-50 group-hover:bg-white'}`}>
+        <div className={`p-2 rounded-lg transition-all duration-300 ${isActive ? 'bg-white   scale-110' : 'bg-slate-50 group-hover:bg-white'}`}>
           <Icon size={8} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
         </div>
         <span className="text-[11px]  ">{label}</span>
@@ -108,7 +108,7 @@ const FieldWrapper = ({ label, children, error, required }) => (
         {label}
         {required && <span className="text-rose-500">*</span>}
       </label>
-      {error && <span className="text-xs  text-rose-500 animate-pulse uppercase">{error}</span>}
+      {error && <span className="text-xs  text-rose-500 animate-pulse ">{error}</span>}
     </div>
     {children}
   </div>
@@ -131,7 +131,7 @@ const StatusBadge = ({ status }) => {
 const InfoRow = ({ label, value, icon: Icon, className = "", color = "blue" }) => {
   return (
     <div className={`flex flex-col p-2 rounded border border-slate-100 bg-white/50 backdrop-blur-sm hover:shadow-lg hover:border-blue-200 transition-all duration-300 ${className}`}>
-      <span className="text-[9px]  text-slate-400 uppercase tracking-[0.15em] mb-1.5 flex items-center gap-1.5">
+      <span className="text-[9px]  text-slate-400 tracking-[0.15em] mb-1.5 flex items-center gap-1.5">
         {Icon && <Icon size={10} className="text-slate-300" />}
         {label}
       </span>
@@ -1068,7 +1068,7 @@ export default function SalesOrderForm() {
     if (bomFinishedGoods.length === 0 && bomSubAssemblies.length === 0 && bomRawMaterials.length === 0 && bomOperations.length === 0) {
       return (
         <div className="bg-slate-50/50 border border-slate-100 rounded p-3 text-center backdrop-blur-sm">
-          <div className="w-8 h-8 bg-white rounded flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100">
+          <div className="w-8 h-8 bg-white rounded flex items-center justify-center mx-auto mb-4   border border-slate-100">
             <Database size={16} className="text-slate-300" />
           </div>
           <h3 className="text-slate-900  text-lg mb-2 ">No Engineering Data</h3>
@@ -1099,7 +1099,7 @@ export default function SalesOrderForm() {
               </span>
             </div>
 
-            <div className="bg-white/50 backdrop-blur-md rounded-3xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-md transition-all duration-500">
+            <div className="bg-white/50 backdrop-blur-md rounded-3xl border border-slate-100 overflow-hidden   hover:shadow-md transition-all duration-500">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -1189,7 +1189,7 @@ export default function SalesOrderForm() {
               </span>
             </div>
 
-            <div className="bg-white/50 backdrop-blur-md rounded-3xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-md transition-all duration-500">
+            <div className="bg-white/50 backdrop-blur-md rounded-3xl border border-slate-100 overflow-hidden   hover:shadow-md transition-all duration-500">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -1255,7 +1255,7 @@ export default function SalesOrderForm() {
                     type="button"
                     onClick={fetchSubAssemblyMaterials}
                     disabled={refreshingBom}
-                    className="flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 text-xs  text-slate-600  rounded-full hover:bg-slate-50 transition-all shadow-sm"
+                    className="flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 text-xs  text-slate-600  rounded-full hover:bg-slate-50 transition-all  "
                   >
                     {refreshingBom ? <RotateCcw size={12} className="animate-spin" /> : <RotateCcw size={12} />}
                     {refreshingBom ? 'Syncing...' : 'Sync Protocol'}
@@ -1267,7 +1267,7 @@ export default function SalesOrderForm() {
               </div>
             </div>
 
-            <div className="bg-white/50 backdrop-blur-md rounded-3xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-md transition-all duration-500">
+            <div className="bg-white/50 backdrop-blur-md rounded-3xl border border-slate-100 overflow-hidden   hover:shadow-md transition-all duration-500">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -1345,7 +1345,7 @@ export default function SalesOrderForm() {
               </span>
             </div>
 
-            <div className="bg-white/50 backdrop-blur-md rounded-3xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-md transition-all duration-500">
+            <div className="bg-white/50 backdrop-blur-md rounded-3xl border border-slate-100 overflow-hidden   hover:shadow-md transition-all duration-500">
               {bomOperations.some(op => !op.hourly_rate || parseFloat(op.hourly_rate) === 0) && (
                 <div className="bg-rose-50 border-b border-rose-100 p-3 flex items-center gap-3">
                   <AlertTriangle size={14} className="text-rose-500" />
@@ -1521,7 +1521,7 @@ export default function SalesOrderForm() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-xl  text-slate-900 tracking-tighter drop-shadow-sm">
+                  <span className="text-xl  text-slate-900 tracking-tighter drop- ">
                     {formatCurrency(grandTotal)}
                   </span>
                 </div>
@@ -1535,7 +1535,7 @@ export default function SalesOrderForm() {
 
   if (dataLoading) {
     return (
-      <div className="min-h-screen bg-slate-50/50 flex flex-col items-center justify-center p-8">
+      <div className="min-h-screen bg-slate-50 p-2/50 flex flex-col items-center justify-center p-8">
         <div className="w-8 h-8 bg-white rounded shadow-xl flex items-center justify-center mb-4 animate-bounce">
           <Database size={16} className="text-blue-600" />
         </div>
@@ -1547,7 +1547,7 @@ export default function SalesOrderForm() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-20">
+    <div className="min-h-screen bg-slate-50 p-2/50 pb-20">
       {/* 1. Global Command Header */}
       <div className="sticky top-0 z-[40] bg-white/80 backdrop-blur-xl border-b border-slate-200/60 transition-all duration-300">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -1555,7 +1555,7 @@ export default function SalesOrderForm() {
             <div className="flex items-center gap-6">
               <button
                 onClick={() => navigate('/manufacturing/sales-orders')}
-                className="group flex items-center justify-center w-12 h-12 rounded bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all duration-500 shadow-sm hover:shadow-xl hover:-translate-x-1"
+                className="group flex items-center justify-center w-12 h-12 rounded bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all duration-500   hover:shadow-xl hover:-translate-x-1"
               >
                 <ArrowLeft size={20} className="transition-transform group-hover:scale-110" />
               </button>
@@ -1584,7 +1584,7 @@ export default function SalesOrderForm() {
                 <>
                   <button
                     onClick={() => window.print()}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded  bg-white border border-slate-200 text-slate-600 text-xs   hover:bg-slate-50 transition-all shadow-sm"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded  bg-white border border-slate-200 text-slate-600 text-xs   hover:bg-slate-50 transition-all  "
                   >
                     <FileText size={16} />
                     Print
@@ -1628,7 +1628,7 @@ export default function SalesOrderForm() {
         <div className="grid grid-cols-4">
           {/* 2. Lateral Control Sidebar */}
           <div className="col-span-1 sticky top-28 space-y-4">
-            <Card className="!p-3 border-slate-200/60 shadow-sm bg-white/50 backdrop-blur-md">
+            <Card className="!p-3 border-slate-200/60   bg-white/50 backdrop-blur-md">
               <div className="">
                 <NavItem 
                   label="Foundation" 

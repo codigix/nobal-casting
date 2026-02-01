@@ -619,7 +619,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                     <select
                       value={timeLogForm.employee_id}
                       onChange={(e) => handleOperatorChange(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     >
                       <option value="">Select operator</option>
@@ -636,7 +636,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                     <select
                       value={timeLogForm.machine_id}
                       onChange={(e) => setTimeLogForm({ ...timeLogForm, machine_id: e.target.value })}
-                      className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     >
                       <option value="">Select workstation</option>
@@ -653,7 +653,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                     <select
                       value={timeLogForm.shift}
                       onChange={(e) => setTimeLogForm({ ...timeLogForm, shift: e.target.value })}
-                      className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       {shifts.map(s => (
                         <option key={s} value={s}>{s}</option>
@@ -665,14 +665,14 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
                     <label className="block text-xs text-gray-700 mb-1">Operation Time per Unit (from BOM)</label>
-                    <div className="p-2 border border-purple-300 rounded-md text-xs bg-purple-50">
+                    <div className="p-2 border border-purple-300 rounded  text-xs bg-purple-50">
                       <p className="font-semibold text-purple-700">{operationCycleTime.toFixed(2)} min</p>
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-xs text-gray-700 mb-1">Expected Duration (for all {jobCardData?.planned_quantity || 0} units)</label>
-                    <div className="p-2 border border-orange-300 rounded-md text-xs bg-orange-50">
+                    <div className="p-2 border border-orange-300 rounded  text-xs bg-orange-50">
                       <p className="font-semibold text-orange-700">{((operationCycleTime || 0) * (jobCardData?.planned_quantity || 1)).toFixed(0)} min</p>
                     </div>
                   </div>
@@ -685,7 +685,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                       type="time"
                       value={timeLogForm.from_time}
                       onChange={(e) => setTimeLogForm({ ...timeLogForm, from_time: e.target.value })}
-                      className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -696,7 +696,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                       type="time"
                       value={timeLogForm.to_time}
                       onChange={(e) => setTimeLogForm({ ...timeLogForm, to_time: e.target.value })}
-                      className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -709,14 +709,14 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                       onChange={(e) => setTimeLogForm({ ...timeLogForm, completed_qty: e.target.value })}
                       step="0.01"
                       min="0"
-                      className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs text-gray-700 mb-1">Expected Duration</label>
-                    <div className="p-2 border border-orange-300 rounded-md text-xs bg-orange-50">
+                    <div className="p-2 border border-orange-300 rounded  text-xs bg-orange-50">
                       <p className="font-semibold text-orange-700">{((operationCycleTime || 0) * (jobCardData?.planned_quantity || 1)).toFixed(0)} min</p>
                     </div>
                   </div>
@@ -725,7 +725,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                 <div className="grid grid-cols-4 gap-3 mb-3">
                   <div>
                     <label className="block text-xs text-gray-700 mb-1">Duration</label>
-                    <div className="p-2 border border-blue-300 rounded-md text-xs bg-blue-50">
+                    <div className="p-2 border border-blue-300 rounded  text-xs bg-blue-50">
                       <p className="font-semibold text-blue-700">{calculateTimeDuration()} min</p>
                     </div>
                   </div>
@@ -746,7 +746,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                       onChange={(e) => setTimeLogForm({ ...timeLogForm, accepted_qty: e.target.value })}
                       step="0.01"
                       min="0"
-                      className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
 
@@ -758,7 +758,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                       onChange={(e) => setTimeLogForm({ ...timeLogForm, rejected_qty: e.target.value })}
                       step="0.01"
                       min="0"
-                      className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
 
@@ -770,7 +770,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                       onChange={(e) => setTimeLogForm({ ...timeLogForm, scrap_qty: e.target.value })}
                       step="0.01"
                       min="0"
-                      className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
 
@@ -916,7 +916,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                     <select
                       value={rejectionForm.reason}
                       onChange={(e) => setRejectionForm({ ...rejectionForm, reason: e.target.value })}
-                      className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-red-500 focus:border-transparent"
                       required
                     >
                       <option value="">Select reason</option>
@@ -934,7 +934,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                       onChange={(e) => setRejectionForm({ ...rejectionForm, rejected_qty: parseFloat(e.target.value) || 0 })}
                       step="0.01"
                       min="0"
-                      className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-red-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -945,7 +945,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   <textarea
                     value={rejectionForm.notes}
                     onChange={(e) => setRejectionForm({ ...rejectionForm, notes: e.target.value })}
-                    className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-red-500 focus:border-transparent"
                     rows="2"
                   />
                 </div>
@@ -1017,7 +1017,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                     <select
                       value={downtimeForm.type}
                       onChange={(e) => setDowntimeForm({ ...downtimeForm, type: e.target.value })}
-                      className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       required
                     >
                       <option value="">Select type</option>
@@ -1033,7 +1033,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                       type="text"
                       value={downtimeForm.reason}
                       onChange={(e) => setDowntimeForm({ ...downtimeForm, reason: e.target.value })}
-                      className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       placeholder="Optional details"
                     />
                   </div>
@@ -1046,7 +1046,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                       type="time"
                       value={downtimeForm.from_time}
                       onChange={(e) => setDowntimeForm({ ...downtimeForm, from_time: e.target.value })}
-                      className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -1057,7 +1057,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                       type="time"
                       value={downtimeForm.to_time}
                       onChange={(e) => setDowntimeForm({ ...downtimeForm, to_time: e.target.value })}
-                      className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -1068,7 +1068,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                       type="number"
                       value={calculateDowntimeDuration(downtimeForm.from_time, downtimeForm.to_time)}
                       disabled
-                      className="w-full p-2 border border-gray-300 rounded-md text-xs bg-gray-100 text-gray-600"
+                      className="w-full p-2 border border-gray-300 rounded  text-xs bg-gray-100 text-gray-600"
                     />
                   </div>
                 </div>

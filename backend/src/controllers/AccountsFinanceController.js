@@ -1,6 +1,7 @@
 class AccountsFinanceController {
-  constructor(accountsFinanceModel) {
+  constructor(accountsFinanceModel, paymentEntryModel) {
     this.accountsFinanceModel = accountsFinanceModel
+    this.paymentEntryModel = paymentEntryModel
   }
 
   // ============= ACCOUNT LEDGER =============
@@ -81,7 +82,7 @@ class AccountsFinanceController {
         })
       }
 
-      const payment = await this.accountsFinanceModel.recordVendorPayment({
+      const payment = await this.paymentEntryModel.createVendorPayment({
         vendor_id,
         purchase_order_id,
         payment_date,
@@ -141,18 +142,17 @@ class AccountsFinanceController {
         })
       }
 
-      const success = await this.accountsFinanceModel.updateVendorPaymentStatus(payment_id, status)
-
-      if (!success) {
-        return res.status(404).json({
-          success: false,
-          message: 'Payment not found'
-        })
+      let result
+      if (status === 'paid') {
+        result = await this.paymentEntryModel.submitVendorPayment(payment_id, req.user?.id)
+      } else {
+        result = await this.accountsFinanceModel.updateVendorPaymentStatus(payment_id, status)
       }
 
       res.status(200).json({
         success: true,
-        message: 'Vendor payment status updated successfully'
+        message: 'Vendor payment status updated successfully',
+        data: result
       })
     } catch (error) {
       res.status(500).json({
@@ -177,7 +177,7 @@ class AccountsFinanceController {
         })
       }
 
-      const payment = await this.accountsFinanceModel.recordCustomerPayment({
+      const payment = await this.paymentEntryModel.createCustomerPayment({
         customer_id,
         sales_order_id,
         payment_date,
@@ -237,18 +237,17 @@ class AccountsFinanceController {
         })
       }
 
-      const success = await this.accountsFinanceModel.updateCustomerPaymentStatus(payment_id, status)
-
-      if (!success) {
-        return res.status(404).json({
-          success: false,
-          message: 'Payment not found'
-        })
+      let result
+      if (status === 'received') {
+        result = await this.paymentEntryModel.submitCustomerPayment(payment_id, req.user?.id)
+      } else {
+        result = await this.accountsFinanceModel.updateCustomerPaymentStatus(payment_id, status)
       }
 
       res.status(200).json({
         success: true,
-        message: 'Customer payment status updated successfully'
+        message: 'Customer payment status updated successfully',
+        data: result
       })
     } catch (error) {
       res.status(500).json({

@@ -239,7 +239,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
               <select
                 value={formData.employee_id}
                 onChange={(e) => handleOperatorChange(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               >
                 <option value="">Select operator</option>
@@ -258,7 +258,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
               <select
                 value={formData.workstation_name}
                 onChange={(e) => setFormData({ ...formData, workstation_name: e.target.value })}
-                className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               >
                 <option value="">Select workstation</option>
@@ -278,7 +278,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
                 name="shift"
                 value={formData.shift}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 {shifts.map(s => (
                   <option key={s} value={s}>{s}</option>
@@ -297,7 +297,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
                 name="from_time"
                 value={formData.from_time}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
             </div>
@@ -311,7 +311,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
                 name="to_time"
                 value={formData.to_time}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
             </div>
@@ -324,7 +324,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
                 type="number"
                 value={calculateTimeDuration()}
                 disabled
-                className="w-full  p-2 border border-gray-300 rounded-md text-xs bg-gray-100 text-gray-600"
+                className="w-full  p-2 border border-gray-300 rounded  text-xs bg-gray-100 text-gray-600"
               />
             </div>
 
@@ -339,7 +339,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
                 onChange={handleChange}
                 step="0.01"
                 min="0"
-                className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -356,7 +356,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
                 onChange={handleChange}
                 step="0.01"
                 min="0"
-                className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
@@ -371,7 +371,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
                 onChange={handleChange}
                 step="0.01"
                 min="0"
-                className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
@@ -386,7 +386,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
                 onChange={handleChange}
                 step="0.01"
                 min="0"
-                className="w-full p-2 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 

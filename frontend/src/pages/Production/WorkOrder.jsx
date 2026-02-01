@@ -468,7 +468,7 @@ export default function WorkOrder() {
                         <p className="text-xs  text-gray-400 mb-8">No results match your current filters. Try adjusting them or create a new order.</p>
                         <button
                           onClick={() => navigate('/manufacturing/work-orders/new')}
-                          className="p-6  py-3 bg-indigo-600 text-white text-xs    rounded  hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-100"
+                          className="p-6  py-2 bg-indigo-600 text-white text-xs    rounded  hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-100"
                         >
                           Create First Order
                         </button>

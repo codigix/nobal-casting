@@ -11,10 +11,10 @@ export default function AdvancedFilters({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filterConfig.map(config => (
           <div key={config.key} className="flex flex-col">
-            <label className="text-xs font-semibold text-gray-700 mb-2">{config.label}</label>
+            <label className="text-xs text-gray-700 ">{config.label}</label>
             {config.type === 'select' ? (
               <select 
                 value={filters[config.key] || ''}

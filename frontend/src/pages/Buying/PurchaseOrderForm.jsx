@@ -228,7 +228,7 @@ export default function PurchaseOrderForm() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
+    <div className="min-h-screen bg-slate-50 p-2 p-4 md:p-6">
       <form onSubmit={handleSubmit} className="max-w-[1400px] mx-auto space-y-6">
         {/* Modern Header */}
         <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
@@ -237,7 +237,7 @@ export default function PurchaseOrderForm() {
               type="button"
               variant="icon"
               onClick={() => navigate(-1)}
-              className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all shadow-sm"
+              className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all  "
             >
               <ArrowLeft size={20} className="text-slate-600" />
             </Button>
@@ -249,7 +249,7 @@ export default function PurchaseOrderForm() {
                 <ChevronRight size={14} />
                 <span className="font-semibold text-indigo-600">{isEdit ? 'Edit Order' : 'New Order'}</span>
               </div>
-              <h1 className="text-2xl font-bold text-slate-900">
+              <h1 className="text-2xl   text-slate-900">
                 {isEdit ? `Edit ${po_no}` : 'Create Purchase Order'}
               </h1>
             </div>
@@ -281,7 +281,7 @@ export default function PurchaseOrderForm() {
             {/* Items Section */}
             <Card className="overflow-hidden">
               <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
-                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <h2 className="text-base   text-slate-900 flex items-center gap-2">
                   <Package size={18} className="text-indigo-600" /> Order Items
                 </h2>
                 <Button
@@ -298,11 +298,11 @@ export default function PurchaseOrderForm() {
                 <table className="w-full text-sm text-left">
                   <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
                     <tr>
-                      <th className="px-6 py-3 font-semibold uppercase tracking-wider text-[11px] w-1/2">Item</th>
-                      <th className="px-4 py-3 font-semibold uppercase tracking-wider text-[11px] text-center">Qty</th>
-                      <th className="px-4 py-3 font-semibold uppercase tracking-wider text-[11px] text-right">Rate</th>
-                      <th className="px-4 py-3 font-semibold uppercase tracking-wider text-[11px] text-right">Total</th>
-                      <th className="px-4 py-3 text-center"></th>
+                      <th className="px-6 py-2 font-semibold tracking-wider text-[11px] w-1/2">Item</th>
+                      <th className="p-2  font-semibold tracking-wider text-[11px] text-center">Qty</th>
+                      <th className="p-2  font-semibold tracking-wider text-[11px] text-right">Rate</th>
+                      <th className="p-2  font-semibold tracking-wider text-[11px] text-right">Total</th>
+                      <th className="p-2  text-center"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -343,7 +343,7 @@ export default function PurchaseOrderForm() {
                             className="w-24 ml-auto px-2 py-1.5 border border-slate-200 rounded text-right text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
                           />
                         </td>
-                        <td className="px-4 py-4 text-right font-bold text-slate-900">
+                        <td className="px-4 py-4 text-right   text-slate-900">
                           ₹{(item.qty * item.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </td>
                         <td className="px-4 py-4 text-center">
@@ -369,14 +369,14 @@ export default function PurchaseOrderForm() {
             </Card>
 
             {/* Logistics & Address */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
               <Card className="p-0 overflow-hidden">
-                <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
-                  <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                <div className="bg-slate-50 p-2  border-b border-slate-200">
+                  <h3 className="text-xs   text-slate-900 flex items-center gap-2">
                     <MapPin size={14} className="text-indigo-600" /> Shipping Address
                   </h3>
                 </div>
-                <div className="p-4 space-y-4">
+                <div className="p-2 space-y-2">
                   <Input
                     label="Address Line 1"
                     placeholder="Street address"
@@ -404,12 +404,12 @@ export default function PurchaseOrderForm() {
               </Card>
 
               <Card className="p-0 overflow-hidden">
-                <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
-                  <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                <div className="bg-slate-50 p-2  border-b border-slate-200">
+                  <h3 className="text-xs   text-slate-900 flex items-center gap-2">
                     <Truck size={14} className="text-indigo-600" /> Logistics Details
                   </h3>
                 </div>
-                <div className="p-4 space-y-4">
+                <div className="p-2 space-y-2">
                   <SearchableSelect
                     label="Incoterm"
                     value={po.incoterm}
@@ -437,10 +437,10 @@ export default function PurchaseOrderForm() {
           {/* Sidebar / Meta Information */}
           <div className="space-y-6">
             {/* General Info */}
-            <Card className="p-6 space-y-5">
+            <Card className="p-2 ">
               <div className="flex items-center gap-2 text-indigo-600 mb-2 border-b border-indigo-50 pb-3">
                 <Info size={18} />
-                <h3 className="text-sm font-bold">General Info</h3>
+                <h3 className="text-sm  ">General Info</h3>
               </div>
               
               <div className="space-y-4">
@@ -454,7 +454,7 @@ export default function PurchaseOrderForm() {
                 />
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Order Date *</label>
+                  <label className="block text-[11px]   text-slate-500 tracking-wider mb-1.5">Order Date *</label>
                   <input
                     type="date"
                     value={po.order_date}
@@ -465,7 +465,7 @@ export default function PurchaseOrderForm() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Expected Delivery</label>
+                  <label className="block text-[11px]   text-slate-500 tracking-wider mb-1.5">Expected Delivery</label>
                   <input
                     type="date"
                     value={po.expected_date}
@@ -478,15 +478,15 @@ export default function PurchaseOrderForm() {
 
             {/* Financial Summary */}
             <Card className="p-0 overflow-hidden border-indigo-100 bg-indigo-50/30">
-              <div className="bg-indigo-600 px-4 py-3">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <div className="bg-indigo-600 p-2 ">
+                <h3 className="text-sm   text-white flex items-center gap-2">
                   <Calculator size={18} /> Financial Summary
                 </h3>
               </div>
               <div className="p-5 space-y-4">
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-slate-500">Subtotal</span>
-                  <span className="font-bold text-slate-900">₹{calculateSubtotal().toLocaleString('en-IN')}</span>
+                  <span className="  text-slate-900">₹{calculateSubtotal().toLocaleString('en-IN')}</span>
                 </div>
                 
                 <div className="space-y-2 pt-2 border-t border-indigo-100">
@@ -501,7 +501,7 @@ export default function PurchaseOrderForm() {
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-slate-500">Tax Amount</span>
-                    <span className="font-bold text-amber-600">+ ₹{calculateTaxAmount().toLocaleString('en-IN')}</span>
+                    <span className="  text-amber-600">+ ₹{calculateTaxAmount().toLocaleString('en-IN')}</span>
                   </div>
                 </div>
 
@@ -519,8 +519,8 @@ export default function PurchaseOrderForm() {
 
                 <div className="pt-4 border-t-2 border-indigo-200">
                   <div className="flex justify-between items-center">
-                    <span className="text-xs font-black text-indigo-600 uppercase">Grand Total</span>
-                    <span className="text-xl font-black text-indigo-700">₹{calculateTotal().toLocaleString('en-IN')}</span>
+                    <span className="text-xs  text-indigo-600 ">Grand Total</span>
+                    <span className="text-xl  text-indigo-700">₹{calculateTotal().toLocaleString('en-IN')}</span>
                   </div>
                 </div>
               </div>
@@ -528,12 +528,12 @@ export default function PurchaseOrderForm() {
 
             {/* Payment Terms */}
             <Card className="p-0 overflow-hidden">
-              <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
-                <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+              <div className="bg-slate-50 p-2  border-b border-slate-200">
+                <h3 className="text-xs   text-slate-900 flex items-center gap-2">
                   <CreditCard size={14} className="text-indigo-600" /> Payment Terms
                 </h3>
               </div>
-              <div className="p-4 space-y-4">
+              <div className="p-2 space-y-2">
                 <Input
                   label="Description"
                   placeholder="e.g., Net 30"
@@ -542,7 +542,7 @@ export default function PurchaseOrderForm() {
                   className="text-xs"
                 />
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Due Date</label>
+                  <label className="block text-xs   text-slate-500 mb-1">Due Date</label>
                   <input
                     type="date"
                     value={po.due_date}
