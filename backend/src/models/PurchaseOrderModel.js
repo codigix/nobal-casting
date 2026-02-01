@@ -99,10 +99,15 @@ export class PurchaseOrderModel {
   async getById(po_no) {
     try {
       const [pos] = await this.db.execute(
-        `SELECT po.*, s.name as supplier_name, s.gstin, mr.department, mr.purpose
+        `SELECT po.*, s.name as supplier_name, s.gstin, 
+                mr.department, mr.purpose,
+                COALESCE(CONCAT_WS(' ', em.first_name, em.last_name), c.name, u.full_name, mr.requested_by_id) as requested_by_name
          FROM purchase_order po
          LEFT JOIN supplier s ON po.supplier_id = s.supplier_id
          LEFT JOIN material_request mr ON po.mr_id = mr.mr_id
+         LEFT JOIN employee_master em ON mr.requested_by_id = em.employee_id
+         LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
+         LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
          WHERE po.po_no = ?`,
         [po_no]
       )
@@ -131,11 +136,15 @@ export class PurchaseOrderModel {
                       s.gstin, 
                       mr.department, 
                       mr.purpose,
+                      COALESCE(CONCAT_WS(' ', em.first_name, em.last_name), c.name, u.full_name, mr.requested_by_id) as requested_by_name,
                       COALESCE(SUM(poi.received_qty), 0) as total_received_qty,
                       COALESCE(SUM(poi.qty), 0) as total_ordered_qty
                    FROM purchase_order po
                    LEFT JOIN supplier s ON po.supplier_id = s.supplier_id
                    LEFT JOIN material_request mr ON po.mr_id = mr.mr_id
+                   LEFT JOIN employee_master em ON mr.requested_by_id = em.employee_id
+                   LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
+                   LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
                    LEFT JOIN purchase_order_item poi ON po.po_no = poi.po_no
                    WHERE 1=1`
       const params = []

@@ -199,28 +199,50 @@ CREATE TABLE IF NOT EXISTS tax_item (
 -- Purchase Orders
 CREATE TABLE IF NOT EXISTS purchase_order (
   po_no VARCHAR(50) PRIMARY KEY,
+  mr_id VARCHAR(50),
   supplier_id VARCHAR(50) NOT NULL,
   order_date DATE,
   expected_date DATE,
   currency VARCHAR(10) DEFAULT 'INR',
-  taxes_and_charges_template_id VARCHAR(50),
+  tax_template_id VARCHAR(50),
   total_value DECIMAL(15,2),
   status ENUM('draft', 'submitted', 'to_receive', 'partially_received', 'completed', 'cancelled') DEFAULT 'draft',
+  shipping_address_line1 VARCHAR(255),
+  shipping_address_line2 VARCHAR(255),
+  shipping_city VARCHAR(100),
+  shipping_state VARCHAR(100),
+  shipping_pincode VARCHAR(10),
+  shipping_country VARCHAR(100) DEFAULT 'India',
+  payment_terms_description TEXT,
+  due_date DATE,
+  invoice_portion DECIMAL(5,2) DEFAULT 100,
+  payment_amount DECIMAL(15,2) DEFAULT 0,
+  advance_paid DECIMAL(15,2) DEFAULT 0,
+  tax_category VARCHAR(50) DEFAULT 'GST',
+  tax_rate DECIMAL(5,2) DEFAULT 0,
+  subtotal DECIMAL(15,2) DEFAULT 0,
+  tax_amount DECIMAL(15,2) DEFAULT 0,
+  final_amount DECIMAL(15,2) DEFAULT 0,
+  incoterm VARCHAR(50) DEFAULT 'EXW',
+  shipping_rule VARCHAR(100),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (supplier_id) REFERENCES supplier(supplier_id),
-  FOREIGN KEY (taxes_and_charges_template_id) REFERENCES taxes_and_charges_template(template_id)
+  FOREIGN KEY (tax_template_id) REFERENCES taxes_and_charges_template(template_id),
+  FOREIGN KEY (mr_id) REFERENCES material_request(mr_id)
 );
 
 -- Purchase Order Items
 CREATE TABLE IF NOT EXISTS purchase_order_item (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  po_item_id VARCHAR(50),
   po_no VARCHAR(50) NOT NULL,
   item_code VARCHAR(100) NOT NULL,
   qty DECIMAL(10,2),
   uom VARCHAR(50),
   rate DECIMAL(10,2),
   schedule_date DATE,
+  tax_rate DECIMAL(5,2) DEFAULT 0,
   received_qty DECIMAL(10,2) DEFAULT 0,
   FOREIGN KEY (po_no) REFERENCES purchase_order(po_no),
   FOREIGN KEY (item_code) REFERENCES item(item_code)
