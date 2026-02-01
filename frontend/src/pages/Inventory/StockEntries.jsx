@@ -605,7 +605,7 @@ export default function StockEntries() {
         >
           <form id="manual-entry-form" onSubmit={handleSubmit} className="space-y-4 py-2">
             <div className="form-group">
-              <label className="text-[11px] font-bold text-neutral-500  tracking-wider mb-1 block">
+              <label className="text-[11px]  text-neutral-500  tracking-wider mb-1 block">
                 Select GRN Request (Optional)
               </label>
               <select
@@ -631,23 +631,23 @@ export default function StockEntries() {
                 })}
               </select>
               <div className="mt-1.5 text-[10px] text-neutral-500 flex items-center gap-3">
-                <span>Available GRNs: <span className="font-bold text-neutral-700 dark:text-neutral-300">{grnRequests.filter(g => !grnWithEntries.has(g.grn_no)).length}</span></span>
+                <span>Available GRNs: <span className=" text-neutral-700 dark:text-neutral-300">{grnRequests.filter(g => !grnWithEntries.has(g.grn_no)).length}</span></span>
                 <span className="w-1 h-1 rounded-full bg-neutral-300" />
-                <span>Processed: <span className="font-bold text-neutral-700 dark:text-neutral-300">{grnWithEntries.size}</span></span>
+                <span>Processed: <span className=" text-neutral-700 dark:text-neutral-300">{grnWithEntries.size}</span></span>
               </div>
             </div>
 
             {selectedGRN && (
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-xs p-3">
                 <p className="text-xs text-blue-700 dark:text-blue-400 font-medium">
-                  GRN: <span className="font-bold">{selectedGRN.grn_no}</span> | PO: <span className="font-bold">{selectedGRN.po_no}</span> | Supplier: <span className="font-bold">{selectedGRN.supplier_name}</span>
+                  GRN: <span className="">{selectedGRN.grn_no}</span> | PO: <span className="">{selectedGRN.po_no}</span> | Supplier: <span className="">{selectedGRN.supplier_name}</span>
                 </p>
               </div>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-neutral-500  tracking-wider">
+                <label className="text-[11px]  text-neutral-500  tracking-wider">
                   Entry Date *
                 </label>
                 <input
@@ -660,7 +660,7 @@ export default function StockEntries() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-neutral-500  tracking-wider">
+                <label className="text-[11px]  text-neutral-500  tracking-wider">
                   Entry Type *
                 </label>
                 <select
@@ -683,7 +683,7 @@ export default function StockEntries() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-neutral-500  tracking-wider">
+                <label className="text-[11px]  text-neutral-500  tracking-wider">
                   From Warehouse
                 </label>
                 <select
@@ -701,7 +701,7 @@ export default function StockEntries() {
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-neutral-500  tracking-wider">
+                <label className="text-[11px]  text-neutral-500  tracking-wider">
                   To Warehouse {formData.entry_type === 'Material Receipt' && '*'}
                 </label>
                 <select
@@ -723,7 +723,7 @@ export default function StockEntries() {
 
             <Card className="border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/20">
               <div className="p-3 border-b border-neutral-200 dark:border-neutral-800">
-                <h4 className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300  tracking-wider flex items-center gap-2">
+                <h4 className="text-[11px]  text-neutral-700 dark:text-neutral-300  tracking-wider flex items-center gap-2">
                   <Package size={14} className="text-amber-500" />
                   Add Items
                 </h4>
@@ -731,7 +731,7 @@ export default function StockEntries() {
               <div className="p-3 space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-neutral-400 ">Item Code *</label>
+                    <label className="text-[10px]  text-neutral-400 ">Item Code *</label>
                     <select
                       value={newItem.item_code}
                       onChange={(e) => setNewItem({ ...newItem, item_code: e.target.value })}
@@ -746,7 +746,7 @@ export default function StockEntries() {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-neutral-400 ">Quantity *</label>
+                    <label className="text-[10px]  text-neutral-400 ">Quantity *</label>
                     <input
                       type="number"
                       min="1"
@@ -756,7 +756,7 @@ export default function StockEntries() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-neutral-400 ">UOM</label>
+                    <label className="text-[10px]  text-neutral-400 ">UOM</label>
                     <input
                       type="text"
                       value={newItem.uom}
@@ -769,7 +769,7 @@ export default function StockEntries() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-neutral-400 ">Batch No</label>
+                    <label className="text-[10px]  text-neutral-400 ">Batch No</label>
                     <input
                       type="text"
                       value={newItem.batch_no}
@@ -779,7 +779,7 @@ export default function StockEntries() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-neutral-400 ">Valuation Rate (₹)</label>
+                    <label className="text-[10px]  text-neutral-400 ">Valuation Rate (₹)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -802,11 +802,11 @@ export default function StockEntries() {
                     <table className="w-full text-[11px]">
                       <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
                         <tr>
-                          <th className="px-3 py-2 text-left font-bold text-neutral-500 ">Item</th>
-                          <th className="px-3 py-2 text-right font-bold text-neutral-500 ">Qty</th>
-                          <th className="px-3 py-2 text-left font-bold text-neutral-500 ">UOM</th>
-                          <th className="px-3 py-2 text-right font-bold text-neutral-500 ">Rate</th>
-                          <th className="px-3 py-2 text-center font-bold text-neutral-500  w-10"></th>
+                          <th className="px-3 py-2 text-left  text-neutral-500 ">Item</th>
+                          <th className="px-3 py-2 text-right  text-neutral-500 ">Qty</th>
+                          <th className="px-3 py-2 text-left  text-neutral-500 ">UOM</th>
+                          <th className="px-3 py-2 text-right  text-neutral-500 ">Rate</th>
+                          <th className="px-3 py-2 text-center  text-neutral-500  w-10"></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
@@ -816,7 +816,7 @@ export default function StockEntries() {
                               <div className="font-medium text-neutral-900 dark:text-white">{item.item_code}</div>
                               {item.batch_no && <div className="text-[9px] text-neutral-400">Batch: {item.batch_no}</div>}
                             </td>
-                            <td className="px-3 py-2 text-right font-bold">{item.qty}</td>
+                            <td className="px-3 py-2 text-right ">{item.qty}</td>
                             <td className="px-3 py-2 text-neutral-500">{item.uom}</td>
                             <td className="px-3 py-2 text-right">₹{Number(item.valuation_rate).toFixed(2)}</td>
                             <td className="px-3 py-2 text-center">
@@ -838,7 +838,7 @@ export default function StockEntries() {
             </Card>
 
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-neutral-500  tracking-wider">
+              <label className="text-[11px]  text-neutral-500  tracking-wider">
                 Remarks
               </label>
               <textarea
@@ -972,7 +972,7 @@ export default function StockEntries() {
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setShowColumnMenu(false)} />
                       <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs shadow-xl z-20 py-2">
-                        <div className="px-3 py-1 text-[10px] font-bold text-neutral-400  tracking-wider border-b border-neutral-100 dark:border-neutral-700 mb-1 flex justify-between">
+                        <div className="px-3 py-1 text-[10px]  text-neutral-400  tracking-wider border-b border-neutral-100 dark:border-neutral-700 mb-1 flex justify-between">
                           <span>Visible Columns</span>
                           <div className="flex gap-2">
                             <button onClick={() => setVisibleColumns(new Set(columns.map(c => c.key)))} className="text-amber-600 hover:underline">All</button>
@@ -1038,8 +1038,8 @@ export default function StockEntries() {
                                 {getTypeIcon(entry.entry_type)}
                               </div>
                               <div>
-                                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">{entry.entry_no}</h3>
-                                <p className="text-[10px] text-neutral-500 font-bold  tracking-wider">{entry.entry_type}</p>
+                                <h3 className="text-sm  text-neutral-900 dark:text-white">{entry.entry_no}</h3>
+                                <p className="text-[10px] text-neutral-500   tracking-wider">{entry.entry_type}</p>
                               </div>
                             </div>
                             <Badge variant={entry.status === 'Submitted' ? 'success' : entry.status === 'Cancelled' ? 'danger' : 'warning'}>
@@ -1053,7 +1053,7 @@ export default function StockEntries() {
                                 <Calendar size={12} />
                                 <span>{new Date(entry.entry_date).toLocaleDateString()}</span>
                               </div>
-                              <div className="font-bold text-neutral-700 dark:text-neutral-300 px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-xs">
+                              <div className=" text-neutral-700 dark:text-neutral-300 px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-xs">
                                 {entry.total_items} Items
                               </div>
                             </div>
@@ -1067,7 +1067,7 @@ export default function StockEntries() {
                               </div>
                               <div className="flex items-center gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                                <span className="text-[10px] text-neutral-900 dark:text-neutral-100 truncate flex-1 font-bold">
+                                <span className="text-[10px] text-neutral-900 dark:text-neutral-100 truncate flex-1 ">
                                   {entry.to_warehouse_name || 'No Destination'}
                                 </span>
                               </div>
@@ -1085,7 +1085,7 @@ export default function StockEntries() {
                               <>
                                 <button
                                   onClick={() => handleSubmitEntry(entry.id || entry.entry_id)}
-                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold text-white bg-green-600 hover:bg-green-700 rounded-xs transition-all shadow-sm active:scale-95"
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px]  text-white bg-green-600 hover:bg-green-700 rounded-xs transition-all shadow-sm active:scale-95"
                                 >
                                   <CheckCircle2 size={12} />
                                   SUBMIT
@@ -1100,13 +1100,13 @@ export default function StockEntries() {
                             ) : entry.status === 'Submitted' ? (
                               <button
                                 onClick={() => handleCancelEntry(entry.id || entry.entry_id)}
-                                className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px] font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-xs transition-all border border-orange-100 shadow-sm active:scale-95"
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px]  text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-xs transition-all border border-orange-100 shadow-sm active:scale-95"
                               >
                                 <RotateCcw size={12} />
                                 CANCEL & REVERSE
                               </button>
                             ) : (
-                              <div className="flex-1 text-center py-2 text-[10px] font-bold text-neutral-400 bg-neutral-50 rounded-xs border border-neutral-100 italic ">
+                              <div className="flex-1 text-center py-2 text-[10px]  text-neutral-400 bg-neutral-50 rounded-xs border border-neutral-100 italic ">
                                 Cancelled
                               </div>
                             )}
@@ -1119,13 +1119,13 @@ export default function StockEntries() {
                   {totalPages > 1 && (
                     <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-neutral-100 dark:border-neutral-800 pt-4">
                       <div className="text-[11px] text-neutral-500 font-medium">
-                        Showing <span className="text-neutral-900 dark:text-white font-bold">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-neutral-900 dark:text-white font-bold">{Math.min(currentPage * itemsPerPage, filteredEntries.length)}</span> of <span className="text-neutral-900 dark:text-white font-bold">{filteredEntries.length}</span> entries
+                        Showing <span className="text-neutral-900 dark:text-white ">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-neutral-900 dark:text-white ">{Math.min(currentPage * itemsPerPage, filteredEntries.length)}</span> of <span className="text-neutral-900 dark:text-white ">{filteredEntries.length}</span> entries
                       </div>
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                           disabled={currentPage === 1}
-                          className="px-3 py-1.5 border border-neutral-200 dark:border-neutral-700 rounded-xs text-[11px] font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                          className="px-3 py-1.5 border border-neutral-200 dark:border-neutral-700 rounded-xs text-[11px]  text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                         >
                           Previous
                         </button>
@@ -1137,7 +1137,7 @@ export default function StockEntries() {
                                 <button
                                   key={page}
                                   onClick={() => setCurrentPage(page)}
-                                  className={`w-8 h-8 rounded-xs text-[11px] font-bold transition-all ${currentPage === page ? 'bg-amber-500 text-white shadow-md' : 'text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
+                                  className={`w-8 h-8 rounded-xs text-[11px]  transition-all ${currentPage === page ? 'bg-amber-500 text-white shadow-md' : 'text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
                                 >
                                   {page}
                                 </button>
@@ -1151,7 +1151,7 @@ export default function StockEntries() {
                         <button
                           onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                           disabled={currentPage === totalPages}
-                          className="px-3 py-1.5 border border-neutral-200 dark:border-neutral-700 rounded-xs text-[11px] font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                          className="px-3 py-1.5 border border-neutral-200 dark:border-neutral-700 rounded-xs text-[11px]  text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                         >
                           Next
                         </button>

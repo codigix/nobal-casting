@@ -180,7 +180,9 @@ export default function BOMForm() {
     qty: '1',
     uom: 'Kg',
     rate: '0',
+    amount: '0',
     selling_price: '0',
+    selling_amount: '0',
     source_warehouse: '',
     operation: ''
   })
@@ -579,7 +581,8 @@ export default function BOMForm() {
         if (response.success && response.data) {
           const itemData = response.data
           let sellingPrice = itemData.selling_rate || '0'
-          let rate = (sellingPrice !== '0' && sellingPrice !== 0) ? sellingPrice : (itemData.valuation_rate || '0')
+          let valuationRate = itemData.valuation_rate || '0'
+          let rate = (valuationRate !== '0' && valuationRate !== 0) ? valuationRate : (itemData.selling_rate || '0')
 
           if (itemData.item_group === 'Sub Assemblies' || itemData.item_group === 'Sub-assembly') {
             try {
@@ -614,12 +617,10 @@ export default function BOMForm() {
                   }
                 }
 
+                const costPerUnit = totalCost / bomQuantity
+                rate = costPerUnit.toFixed(2)
                 if (bom.selling_rate && parseFloat(bom.selling_rate) > 0) {
                   sellingPrice = (parseFloat(bom.selling_rate) / bomQuantity).toFixed(2)
-                  rate = sellingPrice
-                } else {
-                  const costPerUnit = totalCost / bomQuantity
-                  rate = costPerUnit.toFixed(2)
                 }
               }
             } catch (bomErr) {
@@ -657,7 +658,7 @@ export default function BOMForm() {
           setNewScrapItem(prev => ({
             ...prev,
             item_name: itemData.name || itemData.item_name || prev.item_name,
-            rate: itemData.selling_rate || itemData.valuation_rate || prev.rate || '0'
+            rate: itemData.valuation_rate || itemData.selling_rate || prev.rate || '0'
           }))
         }
       } catch (err) {
@@ -668,8 +669,9 @@ export default function BOMForm() {
 
   const handleComponentChange = async (value) => {
     let item = items.find(i => i.item_code === value)
+    let valuationRate = item?.valuation_rate || '0'
     let sellingPrice = item?.selling_rate || '0'
-    let rate = (sellingPrice !== '0' && sellingPrice !== 0) ? sellingPrice : (item?.valuation_rate || '0')
+    let rate = (valuationRate !== '0' && valuationRate !== 0) ? valuationRate : (item?.selling_rate || '0')
     let componentName = item?.name || ''
 
     if (!componentName) {
@@ -677,7 +679,7 @@ export default function BOMForm() {
         const itemResp = await productionService.getItemDetails(value)
         if (itemResp && itemResp.data) {
           componentName = itemResp.data.name || itemResp.data.item_name || ''
-          rate = itemResp.data.valuation_rate || rate
+          rate = itemResp.data.valuation_rate || itemResp.data.selling_rate || rate
           sellingPrice = itemResp.data.selling_rate || sellingPrice
           item = itemResp.data
         }
@@ -762,12 +764,10 @@ export default function BOMForm() {
             }
           }
 
+          const costPerUnit = totalCost / bomQuantity
+          rate = costPerUnit.toFixed(2)
           if (bom.selling_rate && parseFloat(bom.selling_rate) > 0) {
             sellingPrice = (parseFloat(bom.selling_rate) / bomQuantity).toFixed(2)
-            rate = sellingPrice
-          } else {
-            const costPerUnit = totalCost / bomQuantity
-            rate = costPerUnit.toFixed(2)
           }
         }
       } catch (bomErr) {
@@ -791,15 +791,16 @@ export default function BOMForm() {
 
   const handleRawMaterialItemChange = async (value) => {
     let item = items.find(i => i.item_code === value)
+    let valuationRate = item?.valuation_rate || '0'
     let sellingPrice = item?.selling_rate || '0'
-    let rate = (sellingPrice !== '0' && sellingPrice !== 0) ? sellingPrice : (item?.valuation_rate || '0')
+    let rate = (valuationRate !== '0' && valuationRate !== 0) ? valuationRate : (item?.selling_rate || '0')
 
     if (!item) {
       try {
         const itemResp = await productionService.getItemDetails(value)
         if (itemResp && itemResp.data) {
           item = itemResp.data
-          rate = item.valuation_rate || rate
+          rate = item.valuation_rate || item.selling_rate || rate
           sellingPrice = item.selling_rate || sellingPrice
         }
       } catch (e) {
@@ -840,12 +841,10 @@ export default function BOMForm() {
             }
           }
 
+          const costPerUnit = totalCost / bomQuantity
+          rate = costPerUnit.toFixed(2)
           if (bom.selling_rate && parseFloat(bom.selling_rate) > 0) {
             sellingPrice = (parseFloat(bom.selling_rate) / bomQuantity).toFixed(2)
-            rate = sellingPrice
-          } else {
-            const costPerUnit = totalCost / bomQuantity
-            rate = costPerUnit.toFixed(2)
           }
         }
       } catch (bomErr) {
@@ -860,8 +859,24 @@ export default function BOMForm() {
       item_group: item?.item_group || '',
       uom: item?.uom || newRawMaterial.uom,
       rate,
+      amount: (parseFloat(newRawMaterial.qty || 0) * parseFloat(rate || 0)).toFixed(2),
       selling_price: sellingPrice,
+      selling_amount: (parseFloat(newRawMaterial.qty || 0) * parseFloat(sellingPrice || 0)).toFixed(2),
       source_warehouse: item?.stock?.[0]?.warehouse_code || item?.stock?.[0]?.warehouse_name || newRawMaterial.source_warehouse
+    })
+  }
+
+  const handleNewRawMaterialChange = (field, value) => {
+    setNewRawMaterial(prev => {
+      const updated = { ...prev, [field]: value }
+      if (field === 'qty' || field === 'rate' || field === 'selling_price') {
+        const qty = parseFloat(updated.qty) || 0
+        const rate = parseFloat(updated.rate) || 0
+        const sellingPrice = parseFloat(updated.selling_price) || 0
+        updated.amount = (qty * rate).toFixed(2)
+        updated.selling_amount = (qty * sellingPrice).toFixed(2)
+      }
+      return updated
     })
   }
 
@@ -963,7 +978,9 @@ export default function BOMForm() {
       qty: '1',
       uom: 'Kg',
       rate: '0',
+      amount: '0',
       selling_price: '0',
+      selling_amount: '0',
       source_warehouse: '',
       operation: ''
     })
@@ -1037,7 +1054,7 @@ export default function BOMForm() {
       uom: rm.uom,
       source_warehouse: rm.source_warehouse,
       operation: rm.operation,
-      cost: (parseFloat(rm.selling_amount || rm.amount) || 0) * (parseFloat(quantity) || 0)
+      cost: (parseFloat(rm.amount) || 0) * (parseFloat(quantity) || 0)
     }))
   }
 
@@ -1080,8 +1097,8 @@ export default function BOMForm() {
     }
   }
 
-  const totalComponentCost = bomLines.reduce((sum, line) => sum + (parseFloat(line.selling_amount || line.amount) || 0), 0)
-  const totalRawMaterialCost = rawMaterials.reduce((sum, rm) => sum + (parseFloat(rm.selling_amount || rm.amount) || 0), 0)
+  const totalComponentCost = bomLines.reduce((sum, line) => sum + (parseFloat(line.amount) || 0), 0)
+  const totalRawMaterialCost = rawMaterials.reduce((sum, rm) => sum + (parseFloat(rm.amount) || 0), 0)
   const totalOperationCost = operations.reduce((sum, op) => sum + (parseFloat(op.operating_cost) || 0), 0)
   const totalScrapQty = bomLines.reduce((sum, line) => sum + (parseFloat(line.scrap_qty) || 0), 0) +
     scrapItems.reduce((sum, item) => sum + (parseFloat(item.input_quantity) || 0), 0)
@@ -1411,6 +1428,20 @@ export default function BOMForm() {
                           </div>
                         </FieldWrapper>
 
+                        <FieldWrapper label="Item Valuation Rate (₹)">
+                          <div className="relative group/input">
+                            <input
+                              type="number"
+                              name="valuation_rate_value"
+                              value={formData.valuation_rate_value}
+                              onChange={handleInputChange}
+                              step="0.01"
+                              className="w-full rounded border border-slate-200 bg-slate-50 p-2 text-xs focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all focus:outline-none"
+                            />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-300 group-focus-within/input:text-blue-500 transition-colors">INR</div>
+                          </div>
+                        </FieldWrapper>
+
                         <FieldWrapper label="Selling Rate (₹)">
                           <div className="relative group/input">
                             <input
@@ -1731,7 +1762,7 @@ export default function BOMForm() {
                             <button
                               type="button"
                               onClick={addBomLine}
-                              className="w-full flex items-center justify-center gap-1 bg-indigo-600 text-white rounded p-2 text-xs font-bold shadow-md hover:bg-indigo-700 transition-all hover:-translate-y-1 active:scale-95"
+                              className="w-full flex items-center justify-center gap-1 bg-indigo-600 text-white rounded p-2 text-xs  shadow-md hover:bg-indigo-700 transition-all hover:-translate-y-1 active:scale-95"
                             >
                               <Plus size={14} strokeWidth={3} />
                               Add
@@ -1948,12 +1979,12 @@ export default function BOMForm() {
                                 />
                               </FieldWrapper>
                             </div>
-                            <div className="md:col-span-2">
+                            <div className="md:col-span-4">
                               <FieldWrapper label="Qty" required>
                                 <input
                                   type="number"
                                   value={newRawMaterial.qty}
-                                  onChange={(e) => setNewRawMaterial({ ...newRawMaterial, qty: e.target.value })}
+                                  onChange={(e) => handleNewRawMaterialChange('qty', e.target.value)}
                                   onKeyDown={handleKeyDown}
                                   step="0.01"
                                   className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all focus:outline-none  "
@@ -1975,15 +2006,26 @@ export default function BOMForm() {
                               </FieldWrapper>
                             </div>
                             
-                            <div className="md:col-span-2">
+                            <div className="md:col-span-4">
                               <FieldWrapper label="Rate (₹)">
                                 <input
                                   type="number"
                                   value={newRawMaterial.rate}
-                                  onChange={(e) => setNewRawMaterial({ ...newRawMaterial, rate: e.target.value })}
+                                  onChange={(e) => handleNewRawMaterialChange('rate', e.target.value)}
                                   onKeyDown={handleKeyDown}
                                   step="0.01"
                                   className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all focus:outline-none  "
+                                />
+                              </FieldWrapper>
+                            </div>
+
+                            <div className="md:col-span-4">
+                              <FieldWrapper label="Amount (₹)">
+                                <input
+                                  type="number"
+                                  value={newRawMaterial.amount}
+                                  readOnly
+                                  className="w-full rounded border border-slate-100 bg-slate-50  p-2 text-xs    text-slate-500 cursor-not-allowed outline-none font-medium"
                                 />
                               </FieldWrapper>
                             </div>
@@ -2002,11 +2044,11 @@ export default function BOMForm() {
                                 />
                               </FieldWrapper>
                             </div>
-                            <div className="md:col-span-1 flex items-end">
+                            <div className="md:col-span-4 flex items-end">
                               <button
                                 type="button"
                                 onClick={addNewRawMaterial}
-                                className="w-full flex items-center justify-center gap-1 bg-rose-600 text-white rounded p-2 text-xs font-bold shadow-md hover:bg-rose-700 transition-all hover:-translate-y-1 active:scale-95"
+                                className="w-full flex items-center justify-center gap-1 bg-rose-600 text-white rounded p-2 text-xs  shadow-md hover:bg-rose-700 transition-all hover:-translate-y-1 active:scale-95"
                               >
                                 <Plus size={14} strokeWidth={3} />
                                 Add 

@@ -168,7 +168,7 @@ export default function QuotationForm() {
             <h1 className="text-xl font-black text-neutral-900 tracking-tight ">
               {isEditMode ? 'Edit Quotation' : 'New Supplier Quotation'}
             </h1>
-            <p className="text-[10px] font-bold text-neutral-400 mt-0.5 tracking-widest ">
+            <p className="text-[10px]  text-neutral-400 mt-0.5 tracking-widest ">
               {isEditMode ? `ID: ${id?.toUpperCase()}` : 'Record supplier pricing and availability'}
             </p>
           </div>
@@ -194,13 +194,13 @@ export default function QuotationForm() {
         {error && (
           <div className="bg-rose-50 border border-rose-200 p-3 rounded flex items-center gap-3">
             <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-            <p className="text-[11px] font-bold text-rose-700  tracking-wider">{error}</p>
+            <p className="text-[11px]  text-rose-700  tracking-wider">{error}</p>
           </div>
         )}
         {success && (
           <div className="bg-emerald-50 border border-emerald-200 p-3 rounded flex items-center gap-3">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <p className="text-[11px] font-bold text-emerald-700  tracking-wider">{success}</p>
+            <p className="text-[11px]  text-emerald-700  tracking-wider">{success}</p>
           </div>
         )}
 
@@ -227,7 +227,7 @@ export default function QuotationForm() {
                     value={formData.supplier_id}
                     onChange={handleChange}
                     required
-                    className="w-full bg-neutral-50 border border-neutral-200 p-3 rounded text-sm font-bold text-neutral-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 transition-all  tracking-wider"
+                    className="w-full bg-neutral-50 border border-neutral-200 p-3 rounded text-sm  text-neutral-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 transition-all  tracking-wider"
                   >
                     <option value="">SELECT SUPPLIER</option>
                     {suppliers.map(supplier => (
@@ -244,7 +244,7 @@ export default function QuotationForm() {
                     value={formData.rfq_id}
                     onChange={handleRFQSelect}
                     required
-                    className="w-full bg-neutral-50 border border-neutral-200 p-3 rounded text-sm font-bold text-neutral-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 transition-all  tracking-wider"
+                    className="w-full bg-neutral-50 border border-neutral-200 p-3 rounded text-sm  text-neutral-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 transition-all  tracking-wider"
                   >
                     <option value="">SELECT RFQ</option>
                     {rfqs.map(rfq => (
@@ -260,7 +260,7 @@ export default function QuotationForm() {
                 <div className="space-y-4 pt-4">
                   <div className="flex items-center justify-between border-b border-neutral-900 pb-2">
                     <h3 className="text-[11px] font-black text-neutral-900  tracking-[0.3em]">Quotation Items</h3>
-                    <span className="text-[10px] font-bold text-neutral-400">{formData.items.length} ITEMS</span>
+                    <span className="text-[10px]  text-neutral-400">{formData.items.length} ITEMS</span>
                   </div>
                   
                   <div className="overflow-x-auto border border-neutral-200 rounded">
@@ -282,9 +282,9 @@ export default function QuotationForm() {
                             <tr key={idx} className="hover:bg-neutral-50 transition-colors">
                               <td className="px-4 py-4">
                                 <div className="text-xs font-black text-neutral-900">{getItemName(item.item_code)}</div>
-                                <div className="text-[9px] font-bold text-neutral-400 mt-0.5 tracking-wider ">{item.item_code}</div>
+                                <div className="text-[9px]  text-neutral-400 mt-0.5 tracking-wider ">{item.item_code}</div>
                               </td>
-                              <td className="px-4 py-4 text-right text-xs font-bold text-neutral-600">{item.qty}</td>
+                              <td className="px-4 py-4 text-right text-xs  text-neutral-600">{item.qty}</td>
                               <td className="px-4 py-4">
                                 <input 
                                   type="number"
@@ -306,7 +306,7 @@ export default function QuotationForm() {
                                   onChange={(e) => handleItemChange(idx, 'lead_time_days', e.target.value)}
                                   placeholder="0"
                                   min="0"
-                                  className="w-full bg-white border border-neutral-200 p-2 rounded text-right text-xs font-bold text-neutral-600 focus:outline-none focus:ring-1 focus:ring-indigo-600"
+                                  className="w-full bg-white border border-neutral-200 p-2 rounded text-right text-xs  text-neutral-600 focus:outline-none focus:ring-1 focus:ring-indigo-600"
                                 />
                               </td>
                               <td className="px-4 py-4">
@@ -317,7 +317,7 @@ export default function QuotationForm() {
                                   placeholder="1"
                                   min="0"
                                   step="0.01"
-                                  className="w-full bg-white border border-neutral-200 p-2 rounded text-right text-xs font-bold text-neutral-600 focus:outline-none focus:ring-1 focus:ring-indigo-600"
+                                  className="w-full bg-white border border-neutral-200 p-2 rounded text-right text-xs  text-neutral-600 focus:outline-none focus:ring-1 focus:ring-indigo-600"
                                 />
                               </td>
                             </tr>
@@ -354,7 +354,7 @@ export default function QuotationForm() {
                   onChange={handleChange}
                   placeholder="ADD ANY ADDITIONAL NOTES OR COMMENTS..."
                   rows="4"
-                  className="w-full bg-neutral-50 border border-neutral-200 p-4 rounded text-xs font-bold text-neutral-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 transition-all  tracking-wider"
+                  className="w-full bg-neutral-50 border border-neutral-200 p-4 rounded text-xs  text-neutral-900 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 transition-all  tracking-wider"
                 />
               </div>
 

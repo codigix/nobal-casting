@@ -25,7 +25,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
 
   const [items, setItems] = useState([])
   const [stockItems, setStockItems] = useState([])
-  const [requesters, setRequesters] = useState([])
+  const [employees, setEmployees] = useState([])
   const [departments, setDepartments] = useState([])
   const [warehouses, setWarehouses] = useState([])
   const [loading, setLoading] = useState(false)
@@ -40,21 +40,13 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
     }
   }, [isOpen])
 
-  // Fetch requesters when department changes
-  useEffect(() => {
-    if (formData.department) {
-      fetchRequesters(formData.department)
-    } else {
-      setRequesters([])
-    }
-  }, [formData.department])
-
   const initializeModal = async () => {
     setFetchingData(true)
     try {
       await Promise.all([
         fetchItems(),
         fetchDepartments(),
+        fetchEmployees(),
         fetchWarehouses(),
         generateSeriesNumber()
       ])
@@ -90,14 +82,16 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
     }
   }
 
-  const fetchRequesters = async (dept) => {
+  const fetchEmployees = async () => {
     try {
-      const response = await api.get(`/masters/users/department/${dept}`)
+      const response = await api.get('/hr/employees')
       if (response.data.success) {
-        setRequesters(response.data.data)
+        setEmployees(response.data.data)
+      } else if (Array.isArray(response.data)) {
+        setEmployees(response.data)
       }
     } catch (err) {
-      console.error('Failed to fetch requesters:', err)
+      console.error('Failed to fetch employees:', err)
     }
   }
 
@@ -266,7 +260,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                   </div>
                   <div className="p-2 grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-gray-400   flex items-center gap-1">
+                      <label className="text-[11px]  text-gray-400   flex items-center gap-1">
                         Series Number
                       </label>
                       <input 
@@ -278,7 +272,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-gray-400   flex items-center gap-1">
+                      <label className="text-[11px]  text-gray-400   flex items-center gap-1">
                         <Calendar size={12} /> Date
                       </label>
                       <input 
@@ -291,7 +285,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-gray-400   flex items-center gap-1">
+                      <label className="text-[11px]  text-gray-400   flex items-center gap-1">
                         Department <span className="text-red-500">*</span>
                       </label>
                       <select 
@@ -309,7 +303,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-gray-400   flex items-center gap-1">
+                      <label className="text-[11px]  text-gray-400   flex items-center gap-1">
                         Requested By <span className="text-red-500">*</span>
                       </label>
                       <select 
@@ -321,16 +315,19 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                         className="w-full p-2.5 border border-gray-200 rounded text-xs text-gray-700 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none bg-white disabled:bg-gray-50"
                       >
                         <option value="">{formData.department ? 'Select Requester' : 'Select Department First'}</option>
-                        {requesters.map(req => (
-                          <option key={req.user_id} value={req.user_id}>
-                            {req.full_name}
-                          </option>
-                        ))}
+                        {employees
+                          .filter(emp => emp.department === formData.department)
+                          .map(emp => (
+                            <option key={emp.employee_id || emp.id} value={emp.employee_id || emp.id}>
+                              {emp.first_name} {emp.last_name}
+                            </option>
+                          ))
+                        }
                       </select>
                     </div>
 
                     <div className="space-y-1.5 md:col-span-2">
-                      <label className="text-[11px] font-bold text-gray-400   flex items-center gap-1">
+                      <label className="text-[11px]  text-gray-400   flex items-center gap-1">
                         Request Purpose <span className="text-red-500">*</span>
                       </label>
                       <div className="grid grid-cols-3 gap-3">
@@ -357,7 +354,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                             {p === 'purchase' && <ClipboardList size={20} />}
                             {p === 'material_transfer' && <Warehouse size={20} />}
                             {p === 'material_issue' && <Package size={20} />}
-                            <span className="text-[10px] font-bold  text-center leading-tight">
+                            <span className="text-[10px]   text-center leading-tight">
                               {p.replace('_', ' ')}
                             </span>
                           </label>
@@ -377,7 +374,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                   </div>
                   <div className="p-5 space-y-4">
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-gray-400   flex items-center gap-1">
+                      <label className="text-[11px]  text-gray-400   flex items-center gap-1">
                          Required By Date <span className="text-red-500">*</span>
                       </label>
                       <input 
@@ -400,7 +397,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                     </div>
                     <div className="p-5 space-y-4">
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-gray-400  ">
+                        <label className="text-[11px]  text-gray-400  ">
                           Source Warehouse <span className="text-red-500">*</span>
                         </label>
                         <select 
@@ -419,7 +416,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
 
                       {formData.purpose === 'material_transfer' && (
                         <div className="space-y-1.5">
-                          <label className="text-[11px] font-bold text-gray-400  ">
+                          <label className="text-[11px]  text-gray-400  ">
                             Target Warehouse <span className="text-red-500">*</span>
                           </label>
                           <select 
@@ -449,7 +446,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                   <Package size={16} className="text-amber-500" />
                   <h3 className="text-xs font-semibold text-gray-700">Material Items</h3>
                 </div>
-                <Badge color="info" className="px-3 py-1 rounded-full text-[10px] font-bold">
+                <Badge color="info" className="px-3 py-1 rounded-full text-[10px] ">
                   {formData.items.length} ITEMS
                 </Badge>
               </div>
@@ -458,7 +455,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                 <div className="bg-gray-50/50 p-4 rounded  border border-gray-100 mb-6">
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                     <div className="md:col-span-6 space-y-1.5">
-                      <label className="text-[10px] font-bold text-gray-400  tracking-widest px-1">Select Item</label>
+                      <label className="text-[10px]  text-gray-400  tracking-widest px-1">Select Item</label>
                       <select 
                         value={newItem.item_code}
                         onChange={(e) => {
@@ -482,7 +479,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                       </select>
                     </div>
                     <div className="md:col-span-2 space-y-1.5">
-                      <label className="text-[10px] font-bold text-gray-400  tracking-widest px-1">Quantity</label>
+                      <label className="text-[10px]  text-gray-400  tracking-widest px-1">Quantity</label>
                       <input 
                         type="number"
                         min="0.01"
@@ -494,7 +491,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                       />
                     </div>
                     <div className="md:col-span-2 space-y-1.5">
-                      <label className="text-[10px] font-bold text-gray-400  tracking-widest px-1">UOM</label>
+                      <label className="text-[10px]  text-gray-400  tracking-widest px-1">UOM</label>
                       <input 
                         type="text"
                         value={newItem.uom}
@@ -506,7 +503,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                       <button
                         type="button"
                         onClick={handleAddItem}
-                        className={`w-full py-2.5 rounded text-xs font-bold   flex items-center justify-center gap-2 transition-all  ${
+                        className={`w-full py-2.5 rounded text-xs    flex items-center justify-center gap-2 transition-all  ${
                           editingItemIndex !== null 
                             ? 'bg-amber-500 text-white hover:bg-amber-600' 
                             : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -523,10 +520,10 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                     <table className="w-full text-xs text-left">
                       <thead>
                         <tr className="bg-gray-50 border-b border-gray-100">
-                          <th className="px-6 py-4 text-[10px] font-bold text-gray-400  tracking-widest">Item Description</th>
-                          <th className="px-6 py-4 text-[10px] font-bold text-gray-400  tracking-widest text-center">Qty</th>
-                          <th className="px-6 py-4 text-[10px] font-bold text-gray-400  tracking-widest text-center">UOM</th>
-                          <th className="px-6 py-4 text-[10px] font-bold text-gray-400  tracking-widest text-right">Actions</th>
+                          <th className="px-6 py-4 text-[10px]  text-gray-400  tracking-widest">Item Description</th>
+                          <th className="px-6 py-4 text-[10px]  text-gray-400  tracking-widest text-center">Qty</th>
+                          <th className="px-6 py-4 text-[10px]  text-gray-400  tracking-widest text-center">UOM</th>
+                          <th className="px-6 py-4 text-[10px]  text-gray-400  tracking-widest text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -536,7 +533,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                               <p className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">{item.item_code}</p>
                               <p className="text-xs text-gray-500 mt-0.5">{item.item_name}</p>
                             </td>
-                            <td className="px-6 py-4 text-center font-mono font-bold text-blue-600 bg-blue-50/20">{item.qty}</td>
+                            <td className="px-6 py-4 text-center font-mono  text-blue-600 bg-blue-50/20">{item.qty}</td>
                             <td className="px-6 py-4 text-center text-gray-500 font-medium italic">{item.uom}</td>
                             <td className="px-6 py-4 text-right space-x-2">
                               <button 
@@ -577,7 +574,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
           <button
             type="button"
             onClick={handleClose}
-            className="text-xs font-bold text-gray-400 hover:text-gray-600  tracking-widest transition-colors"
+            className="text-xs  text-gray-400 hover:text-gray-600  tracking-widest transition-colors"
           >
             Cancel Request
           </button>
@@ -587,7 +584,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
               variant="secondary"
               onClick={(e) => handleSubmit(e, 'draft')}
               disabled={loading || formData.items.length === 0}
-              className="px-6 py-2.5 rounded border-gray-200 text-xs font-bold  tracking-widest"
+              className="px-6 py-2.5 rounded border-gray-200 text-xs   tracking-widest"
             >
               {loading ? <RefreshCw size={14} className="animate-spin" /> : 'Draft'}
             </Button>
@@ -596,7 +593,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
               variant="primary"
               onClick={(e) => handleSubmit(e, 'pending')}
               disabled={loading || formData.items.length === 0}
-              className="px-8 py-2.5 rounded bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 text-xs font-bold  tracking-[0.2em]"
+              className="px-8 py-2.5 rounded bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 text-xs   tracking-[0.2em]"
             >
               {loading ? (
                 <span className="flex items-center gap-2">

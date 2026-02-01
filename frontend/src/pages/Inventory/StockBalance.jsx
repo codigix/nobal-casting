@@ -112,15 +112,25 @@ export default function StockBalance() {
     { key: 'item_group', label: 'Item Group' },
     { key: 'warehouse_name', label: 'Warehouse' },
     {
+      key: 'in_quantity',
+      label: 'Total In',
+      render: (value) => <span className="text-green-600 font-medium">{Number(value || 0).toFixed(2)}</span>
+    },
+    {
+      key: 'out_quantity',
+      label: 'Total Out',
+      render: (value) => <span className="text-red-600 font-medium">{Number(value || 0).toFixed(2)}</span>
+    },
+    {
       key: 'current_qty',
       label: 'Current Stock',
-      render: (value) => <span className="font-bold">{Number(value || 0).toFixed(2)}</span>
+      render: (value) => <span className="">{Number(value || 0).toFixed(2)}</span>
     },
     { key: 'uom', label: 'UOM' },
     {
       key: 'available_qty',
       label: 'Available Qty',
-      render: (value) => <span className="font-bold">{Number(value || 0).toFixed(2)}</span>
+      render: (value) => <span className="">{Number(value || 0).toFixed(2)}</span>
     },
     {
       key: 'last_receipt_date',
@@ -141,13 +151,13 @@ export default function StockBalance() {
     <div className="flex gap-2">
       <button
         onClick={() => { setSelectedStockItem({ ...row, movement_type: 'IN' }); setShowMovementModal(true) }}
-        className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold bg-green-50 text-green-700 border border-green-200 rounded-xs hover:bg-green-100 transition-colors"
+        className="flex items-center gap-1 px-2 py-1 text-[10px]  bg-green-50 text-green-700 border border-green-200 rounded-xs hover:bg-green-100 transition-colors"
       >
         <ArrowDown size={12} /> IN
       </button>
       <button
         onClick={() => { setSelectedStockItem({ ...row, movement_type: 'OUT' }); setShowMovementModal(true) }}
-        className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 rounded-xs hover:bg-red-100 transition-colors"
+        className="flex items-center gap-1 px-2 py-1 text-[10px]  bg-red-50 text-red-700 border border-red-200 rounded-xs hover:bg-red-100 transition-colors"
       >
         <ArrowUp size={12} /> OUT
       </button>
@@ -171,7 +181,7 @@ export default function StockBalance() {
       <div className="max-w-[1600px] mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <div>
-            <h1 className="text-xl font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+            <h1 className="text-xl  text-neutral-900 dark:text-white flex items-center gap-2">
               <BarChart3 size={24} className="text-amber-500" />
               Stock Balance
             </h1>
@@ -193,8 +203,8 @@ export default function StockBalance() {
           <div className="bg-white dark:bg-neutral-900 p-4 border border-neutral-200 dark:border-neutral-800 rounded-xs">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-bold text-neutral-400  tracking-wider">Total Items</p>
-                <p className="text-2xl font-bold text-neutral-900 dark:text-white mt-1">{stats.total}</p>
+                <p className="text-[10px]  text-neutral-400  tracking-wider">Total Items</p>
+                <p className="text-2xl  text-neutral-900 dark:text-white mt-1">{stats.total}</p>
               </div>
               <div className="p-2 bg-blue-50 dark:bg-blue-950/30 text-blue-600 rounded-xs">
                 <Package size={20} />
@@ -204,8 +214,8 @@ export default function StockBalance() {
           <div className="bg-white dark:bg-neutral-900 p-4 border border-neutral-200 dark:border-neutral-800 rounded-xs">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-bold text-neutral-400  tracking-wider">Low Stock</p>
-                <p className="text-2xl font-bold text-amber-600 mt-1">{stats.low}</p>
+                <p className="text-[10px]  text-neutral-400  tracking-wider">Low Stock</p>
+                <p className="text-2xl  text-amber-600 mt-1">{stats.low}</p>
               </div>
               <div className="p-2 bg-amber-50 dark:bg-amber-950/30 text-amber-600 rounded-xs">
                 <AlertTriangle size={20} />
@@ -215,8 +225,8 @@ export default function StockBalance() {
           <div className="bg-white dark:bg-neutral-900 p-4 border border-neutral-200 dark:border-neutral-800 rounded-xs">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-bold text-neutral-400  tracking-wider">Out of Stock</p>
-                <p className="text-2xl font-bold text-red-600 mt-1">{stats.outOfStock}</p>
+                <p className="text-[10px]  text-neutral-400  tracking-wider">Out of Stock</p>
+                <p className="text-2xl  text-red-600 mt-1">{stats.outOfStock}</p>
               </div>
               <div className="p-2 bg-red-50 dark:bg-red-950/30 text-red-600 rounded-xs">
                 <AlertTriangle size={20} />
@@ -232,16 +242,16 @@ export default function StockBalance() {
                 <TrendingUp size={20} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-amber-600  tracking-wider">Latest Stock Movement</p>
+                <p className="text-[10px]  text-amber-600  tracking-wider">Latest Stock Movement</p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-sm font-bold text-neutral-900 dark:text-white">{latestItem.item_name} ({latestItem.item_code})</span>
+                  <span className="text-sm  text-neutral-900 dark:text-white">{latestItem.item_name} ({latestItem.item_code})</span>
                   <span className="text-xs text-neutral-500">•</span>
                   <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">{latestItem.warehouse_name}</span>
                 </div>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-xs font-bold text-neutral-900 dark:text-white">{Number(latestItem.current_qty).toFixed(2)} {latestItem.uom}</p>
+              <p className="text-xs  text-neutral-900 dark:text-white">{Number(latestItem.current_qty).toFixed(2)} {latestItem.uom}</p>
               <p className="text-[10px] text-neutral-500 mt-0.5">Updated {new Date(latestItem.updated_at).toLocaleString()}</p>
             </div>
           </div>
@@ -325,7 +335,7 @@ export default function StockBalance() {
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setShowColumnMenu(false)} />
                     <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs shadow-xl z-20 py-2">
-                      <div className="px-3 py-1 text-[10px] font-bold text-neutral-400  tracking-wider border-b border-neutral-100 dark:border-neutral-700 mb-1">
+                      <div className="px-3 py-1 text-[10px]  text-neutral-400  tracking-wider border-b border-neutral-100 dark:border-neutral-700 mb-1">
                         Visible Columns
                       </div>
                       {columns.map(col => (
@@ -397,10 +407,10 @@ export default function StockBalance() {
                               <Package size={16} />
                             </div>
                             <div>
-                              <h3 className="text-sm font-bold text-neutral-900 dark:text-white group-hover:text-amber-600 transition-colors">
+                              <h3 className="text-sm  text-neutral-900 dark:text-white group-hover:text-amber-600 transition-colors">
                                 {stock.item_code}
                               </h3>
-                              <p className="text-[10px] text-neutral-500  font-bold tracking-wider">
+                              <p className="text-[10px] text-neutral-500   tracking-wider">
                                 {stock.item_group}
                               </p>
                             </div>
@@ -423,7 +433,7 @@ export default function StockBalance() {
                           <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800">
                             <div className="flex flex-col">
                               <span className="text-[10px] text-neutral-400  tracking-tight">Stock</span>
-                              <span className="text-xs font-bold text-neutral-900 dark:text-white">
+                              <span className="text-xs  text-neutral-900 dark:text-white">
                                 {Number(stock.current_qty).toFixed(2)} {stock.uom}
                               </span>
                             </div>

@@ -399,7 +399,7 @@ export default function PurchaseReceipts() {
       label: 'Reserved',
       render: (value) => (
         <div className="flex flex-col text-right pr-4">
-          <span className="text-xs font-bold text-neutral-600 dark:text-neutral-400">
+          <span className="text-xs  text-neutral-600 dark:text-neutral-400">
             {(parseFloat(value) || 0).toLocaleString()}
           </span>
           <span className="text-xs  text-neutral-400  ">Locked</span>
@@ -525,7 +525,7 @@ export default function PurchaseReceipts() {
               <Truck size={28} />
             </div>
             <div>
-              <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400  ">
+              <div className="flex items-center gap-2 text-xs  text-indigo-600 dark:text-indigo-400  ">
                 <span>Buying</span>
                 <ChevronRight size={12} />
                 <span>Procurement</span>
@@ -747,7 +747,7 @@ export default function PurchaseReceipts() {
                               }}
                               className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                             />
-                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{col.label}</span>
+                            <span className="text-xs  text-slate-700 dark:text-slate-300">{col.label}</span>
                           </label>
                         ))}
                       </div>
@@ -874,7 +874,7 @@ export default function PurchaseReceipts() {
           <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="p-6 border-b border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold text-neutral-900 dark:text-white flex items-center gap-3">
+                <h2 className="text-xl  text-neutral-900 dark:text-white flex items-center gap-3">
                   <div className="p-2 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                     <Boxes size={24} />
                   </div>
@@ -883,7 +883,7 @@ export default function PurchaseReceipts() {
                 <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-1">Real-time inventory levels across all warehouses</p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-4 py-2 rounded border border-indigo-100 dark:border-indigo-500/20">
+                <div className="text-sm  text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-4 py-2 rounded border border-indigo-100 dark:border-indigo-500/20">
                   {availableItems.length} Unique Items
                 </div>
                 <button 
@@ -907,7 +907,7 @@ export default function PurchaseReceipts() {
                   <div className="w-24 h-24 bg-neutral-100 dark:bg-neutral-800 rounded-3xl flex items-center justify-center mb-6 shadow-inner">
                     <Database size={48} className="text-neutral-300 dark:text-neutral-600" />
                   </div>
-                  <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">Inventory Empty</h3>
+                  <h3 className="text-xl  text-neutral-900 dark:text-white mb-2">Inventory Empty</h3>
                   <p className="text-neutral-500 dark:text-neutral-400 font-medium">No items currently available in stock.</p>
                 </div>
               ) : (

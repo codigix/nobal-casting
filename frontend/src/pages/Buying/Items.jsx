@@ -28,7 +28,7 @@ export default function Items() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showColumnMenu, setShowColumnMenu] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState(new Set([
-    'item_details', 'item_group', 'stock', 'selling_rate', 'gst_rate'
+    'item_details', 'item_group', 'stock', 'valuation_rate', 'gst_rate'
   ]))
 
   const fetchInitialData = useCallback(async () => {
@@ -111,7 +111,7 @@ export default function Items() {
             <Package size={20} />
           </div>
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate max-w-[200px]">
+            <span className="text-xs  text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate max-w-[200px]">
               {row.name}
             </span>
             <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400  tracking-tight">
@@ -129,7 +129,7 @@ export default function Items() {
         if (val === 'Finished Goods') color = 'success'
         if (val === 'Raw Material') color = 'primary'
         if (val === 'Sub-Assembly') color = 'warning'
-        return <Badge color={color} variant="flat" className="text-[10px]  font-bold">{val}</Badge>
+        return <Badge color={color} variant="flat" className="text-[10px]  ">{val}</Badge>
       }
     },
     {
@@ -139,11 +139,11 @@ export default function Items() {
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <div className={`h-2 w-2 rounded-full ${(row.quantity || 0) <= 10 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></div>
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{row.quantity || 0}</span>
-            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500  tracking-tighter bg-slate-100 dark:bg-slate-800 px-1 rounded">{row.uom}</span>
+            <span className="text-xs  text-slate-700 dark:text-slate-300">{row.quantity || 0}</span>
+            <span className="text-[10px]  text-slate-400 dark:text-slate-500  tracking-tighter bg-slate-100 dark:bg-slate-800 px-1 rounded">{row.uom}</span>
           </div>
           {(row.quantity || 0) <= 10 && (
-            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+            <span className="text-[10px]  text-amber-600 dark:text-amber-400 flex items-center gap-1">
               <AlertTriangle size={10} /> LOW STOCK
             </span>
           )}
@@ -151,15 +151,15 @@ export default function Items() {
       )
     },
     {
-      key: 'selling_rate',
-      label: 'Unit Price',
+      key: 'valuation_rate',
+      label: 'Valuation Rate',
       render: (val) => (
         <div className="flex flex-col">
           <div className="flex items-center gap-1">
             <IndianRupee size={12} className="text-slate-400" />
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{parseFloat(val || 0).toLocaleString()}</span>
+            <span className="text-xs  text-slate-700 dark:text-slate-300">{parseFloat(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
-          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Standard Rate</span>
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Valuation Rate</span>
         </div>
       )
     },
@@ -168,7 +168,7 @@ export default function Items() {
       label: 'Taxation',
       render: (val) => (
         <div className="flex flex-col">
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{val}%</span>
+          <span className="text-xs  text-slate-700 dark:text-slate-300">{val}%</span>
           <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium  tracking-widest">GST Rate</span>
         </div>
       )
@@ -192,7 +192,7 @@ export default function Items() {
         <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-current opacity-5 rounded-full group-hover:scale-125 transition-transform" />
         <div className="flex items-start justify-between relative z-10">
           <div>
-            <span className="text-[10px] font-bold  tracking-widest text-slate-500 dark:text-slate-400">{label}</span>
+            <span className="text-[10px]   tracking-widest text-slate-500 dark:text-slate-400">{label}</span>
             <p className="text-2xl font-black mt-1 text-slate-900 dark:text-white">{value}</p>
             {description && <p className="text-[10px] mt-1 text-slate-400 dark:text-slate-500">{description}</p>}
           </div>
@@ -215,7 +215,7 @@ export default function Items() {
               <Database className="text-white" size={15} />
             </div>
             <div>
-              <div className="flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-400  tracking-widest">
+              <div className="flex items-center gap-2 text-xs  text-blue-600 dark:text-blue-400  tracking-widest">
                 <span>Buying</span>
                 <ChevronRight size={12} />
                 <span>Product Management</span>
@@ -229,8 +229,8 @@ export default function Items() {
           
           <div className="flex flex-wrap items-center gap-3">
             <div className="hidden sm:block text-right px-4 border-r border-slate-200 dark:border-slate-800">
-              <p className="text-xs text-slate-400 dark:text-slate-500 font-bold  tracking-tighter">System Health</p>
-              <p className="text-xs font-bold text-emerald-500 flex items-center justify-end gap-1">
+              <p className="text-xs text-slate-400 dark:text-slate-500   tracking-tighter">System Health</p>
+              <p className="text-xs  text-emerald-500 flex items-center justify-end gap-1">
                 <Activity size={12} /> Sync Active
               </p>
             </div>
@@ -244,7 +244,7 @@ export default function Items() {
             <Button 
               onClick={() => navigate('/manufacturing/item-groups')}
               variant="secondary"
-              className="flex items-center gap-2 p-2 rounded  text-xs font-bold border-2"
+              className="flex items-center gap-2 p-2 rounded  text-xs  border-2"
             >
               <FolderOpen size={18} /> Item Groups
             </Button>
@@ -345,7 +345,7 @@ export default function Items() {
                       <button onClick={() => setShowColumnMenu(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button>
                     </div>
                     <div className="space-y-1">
-                      {['item_details', 'item_group', 'stock', 'selling_rate', 'gst_rate'].map(col => (
+                      {['item_details', 'item_group', 'stock', 'valuation_rate', 'gst_rate'].map(col => (
                         <label key={col} className="flex items-center gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg cursor-pointer transition-colors">
                           <input
                             type="checkbox"
@@ -358,7 +358,7 @@ export default function Items() {
                             }}
                             className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                           />
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 capitalize">{col.replace('_', ' ')}</span>
+                          <span className="text-xs  text-slate-700 dark:text-slate-300 capitalize">{col.replace('_', ' ')}</span>
                         </label>
                       ))}
                     </div>
@@ -377,7 +377,7 @@ export default function Items() {
               className="border-none"
               rowClassName="group hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors"
               renderActions={(row) => (
-                <div className="flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity pr-4">
+                <div className="flex items-center gap-2 justify-end pr-4">
                   <Button 
                     size="sm" 
                     variant="secondary" 

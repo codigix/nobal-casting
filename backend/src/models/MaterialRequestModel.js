@@ -28,9 +28,10 @@ export class MaterialRequestModel {
     try {
       let query = `
         SELECT mr.*, 
-               COALESCE(c.name, u.full_name, mr.requested_by_id) as requested_by_name, 
+               COALESCE(CONCAT_WS(' ', em.first_name, em.last_name), c.name, u.full_name, mr.requested_by_id) as requested_by_name, 
                po.po_no as linked_po_no, po.status as po_status
         FROM material_request mr 
+        LEFT JOIN employee_master em ON mr.requested_by_id = em.employee_id
         LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
         LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
         LEFT JOIN purchase_order po ON mr.mr_id = po.mr_id AND po.status != 'cancelled'
@@ -101,9 +102,10 @@ export class MaterialRequestModel {
     try {
       const [mrRows] = await db.execute(
         `SELECT mr.*, 
-                COALESCE(c.name, u.full_name, mr.requested_by_id) as requested_by_name, 
+                COALESCE(CONCAT_WS(' ', em.first_name, em.last_name), c.name, u.full_name, mr.requested_by_id) as requested_by_name, 
                 po.po_no as linked_po_no, po.status as po_status
          FROM material_request mr 
+         LEFT JOIN employee_master em ON mr.requested_by_id = em.employee_id
          LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
          LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
          LEFT JOIN purchase_order po ON mr.mr_id = po.mr_id AND po.status != 'cancelled'
@@ -251,14 +253,19 @@ export class MaterialRequestModel {
    * Approve material request
    */
   static async approve(db, mrId, approvedBy, sourceWarehouse = null) {
+    const connection = await db.getConnection()
     try {
+      await connection.beginTransaction()
+
       // Get MR details
-      const [mrRows] = await db.execute('SELECT * FROM material_request WHERE mr_id = ?', [mrId])
+      const [mrRows] = await connection.execute('SELECT * FROM material_request WHERE mr_id = ?', [mrId])
       if (!mrRows.length) throw new Error('Material request not found')
       const request = mrRows[0]
 
       // Allow idempotent approval - if already approved or completed, just return
       if (request.status === 'approved' || request.status === 'completed') {
+        await connection.rollback()
+        connection.release()
         return await this.getById(db, mrId)
       }
 
@@ -267,7 +274,7 @@ export class MaterialRequestModel {
       }
 
       // Get items
-      const [items] = await db.execute('SELECT * FROM material_request_item WHERE mr_id = ?', [mrId])
+      const [items] = await connection.execute('SELECT * FROM material_request_item WHERE mr_id = ?', [mrId])
 
       // Check stock for Issue/Transfer
       const isStockTransaction = ['material_transfer', 'material_issue'].includes(request.purpose)
@@ -279,12 +286,12 @@ export class MaterialRequestModel {
         throw new Error('Source warehouse is required for Material Transfer/Issue')
       }
       
-      const sourceWarehouseId = isStockTransaction ? await this.getWarehouseId(db, finalSourceWarehouse) : null
+      const sourceWarehouseId = isStockTransaction ? await this.getWarehouseId(connection, finalSourceWarehouse) : null
 
       // STRICT STOCK CHECK for Issue/Transfer
       if (isStockTransaction) {
         for (const item of items) {
-          const balance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, sourceWarehouseId)
+          const balance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, sourceWarehouseId, connection)
           const availableQty = balance ? Number(balance.available_qty || balance.current_qty || 0) : 0
           if (availableQty < Number(item.qty)) {
             throw new Error(`Insufficient stock for item ${item.item_code} in warehouse ${finalSourceWarehouse}. Required: ${item.qty}, Available: ${availableQty}`)
@@ -346,7 +353,7 @@ export class MaterialRequestModel {
           const qty = Number(item.qty)
 
           // Get current stock
-          const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, sourceWarehouseId)
+          const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, sourceWarehouseId, db)
           const currentValuation = sourceBalance ? Number(sourceBalance.valuation_rate) : 0
           const currentQty = sourceBalance ? Number(sourceBalance.current_qty) : 0
           

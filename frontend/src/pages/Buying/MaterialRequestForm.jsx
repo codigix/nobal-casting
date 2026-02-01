@@ -28,8 +28,8 @@ export default function MaterialRequestForm() {
 
   const [materialRequest, setMaterialRequest] = useState(null)
   const [items, setItems] = useState([])
-  const [contacts, setContacts] = useState([])
-  const [departments, setDepartments] = useState(['Production', 'Maintenance', 'Store'])
+  const [employees, setEmployees] = useState([])
+  const [departments, setDepartments] = useState(['Production', 'Maintenance', 'Store', 'Quality', 'Purchase', 'Sales'])
   const [warehouses, setWarehouses] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -42,8 +42,9 @@ export default function MaterialRequestForm() {
 
   useEffect(() => {
     fetchItems()
-    fetchContacts()
+    fetchEmployees()
     fetchWarehouses()
+    fetchDepartments()
     if (!isEditMode) {
       generateSeriesNumber()
     }
@@ -52,17 +53,32 @@ export default function MaterialRequestForm() {
     }
   }, [])
 
+  const fetchEmployees = async () => {
+    try {
+      const response = await api.get('/hr/employees')
+      const data = response.data.data || response.data || []
+      setEmployees(data)
+    } catch (err) {
+      console.error('Failed to fetch employees:', err)
+    }
+  }
+
   const fetchMaterialRequest = async () => {
     try {
       const response = await api.get(`/material-requests/${id}`)
       const mr = response.data.data
       setMaterialRequest(mr)
       setFormData({
+        series_no: mr.series_no,
+        transition_date: mr.transition_date?.split('T')[0],
         requested_by_id: mr.requested_by_id,
         department: mr.department,
-        required_by_date: mr.required_by_date,
+        required_by_date: mr.required_by_date?.split('T')[0],
         purpose: mr.purpose,
-        items: mr.items || []
+        items: mr.items || [],
+        items_notes: mr.items_notes || '',
+        source_warehouse: mr.source_warehouse || '',
+        target_warehouse: mr.target_warehouse || ''
       })
     } catch (err) {
       setError('Failed to fetch material request')
@@ -78,12 +94,14 @@ export default function MaterialRequestForm() {
     }
   }
 
-  const fetchContacts = async () => {
+  const fetchDepartments = async () => {
     try {
-      const response = await api.get('/suppliers/contacts/all')
-      setContacts(response.data.data || [])
+      const response = await api.get('/masters/departments')
+      if (response.data.success) {
+        setDepartments(response.data.data)
+      }
     } catch (err) {
-      console.error('Failed to fetch contacts:', err)
+      console.error('Failed to fetch departments:', err)
     }
   }
 
@@ -265,15 +283,18 @@ export default function MaterialRequestForm() {
                 name="requested_by_id"
                 value={formData.requested_by_id}
                 onChange={handleChange}
-                disabled={isFormDisabled}
+                disabled={isFormDisabled || !formData.department}
                 required
               >
-                <option value="">Select Contact</option>
-                {contacts.map(contact => (
-                  <option key={contact.contact_id} value={contact.contact_id}>
-                    {contact.name}
-                  </option>
-                ))}
+                <option value="">{formData.department ? 'Select Employee' : 'Select Department First'}</option>
+                {employees
+                  .filter(emp => emp.department === formData.department)
+                  .map(emp => (
+                    <option key={emp.employee_id || emp.id} value={emp.employee_id || emp.id}>
+                      {emp.first_name} {emp.last_name}
+                    </option>
+                  ))
+                }
               </select>
             </div>
 

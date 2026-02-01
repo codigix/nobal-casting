@@ -25,7 +25,7 @@ const StatCard = ({ label, value, icon: Icon, color, onClick, isActive }) => {
       }`}
     >
       <div className="flex items-start justify-between mb-3">
-        <span className="text-[10px] font-bold text-neutral-500  tracking-widest">{label}</span>
+        <span className="text-[10px]  text-neutral-500  tracking-widest">{label}</span>
         <div className={`p-1.5 rounded ${isActive ? 'bg-indigo-50 text-indigo-600' : 'bg-neutral-50 text-neutral-400 group-hover:text-neutral-600'}`}>
           <Icon size={14} />
         </div>
@@ -53,7 +53,7 @@ const KanbanView = ({ data, onAction, getStatusColor }) => {
       {columns.map(column => (
         <div key={column.id} className="flex-1 min-w-[320px] bg-neutral-50/50 rounded border border-neutral-200 flex flex-col h-[calc(100vh-320px)]">
           <div className="p-3 border-b border-neutral-200 bg-white flex items-center justify-between">
-            <h3 className="text-[11px] font-bold text-neutral-600 flex items-center gap-2 tracking-[0.2em]">
+            <h3 className="text-[11px]  text-neutral-600 flex items-center gap-2 tracking-[0.2em]">
               <span className={`w-1.5 h-1.5 rounded-full bg-${column.color}-500`} />
               {column.title}
             </h3>
@@ -78,17 +78,17 @@ const KanbanView = ({ data, onAction, getStatusColor }) => {
                   </span>
                 </div>
                 
-                <h4 className="text-sm font-bold text-neutral-900 mb-2 line-clamp-1">{q.supplier_name}</h4>
+                <h4 className="text-sm  text-neutral-900 mb-2 line-clamp-1">{q.supplier_name}</h4>
                 
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="text-[10px] font-bold bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded border border-neutral-200">
+                  <span className="text-[10px]  bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded border border-neutral-200">
                     {q.rfq_id ? `RFQ: ${q.rfq_id}` : 'DIRECT'}
                   </span>
                 </div>
                 
                 <div className="pt-3 border-t border-neutral-100 flex items-center justify-between">
                   <div className="flex flex-col">
-                    <span className="text-[9px] font-bold text-neutral-400  tracking-widest">Total Value</span>
+                    <span className="text-[9px]  text-neutral-400  tracking-widest">Total Value</span>
                     <span className="text-sm font-black text-neutral-900">₹{(parseFloat(q.total_value) || 0).toLocaleString('en-IN')}</span>
                   </div>
                   
@@ -280,17 +280,17 @@ export default function SupplierQuotations() {
     { 
       key: 'supplier_name', 
       label: 'SUPPLIER',
-      render: (val) => <span className="font-bold text-neutral-900">{val}</span>
+      render: (val) => <span className=" text-neutral-900">{val}</span>
     },
     { 
       key: 'rfq_id', 
       label: 'RFQ REF', 
       render: (val) => val ? (
-        <span className="text-[10px] font-bold bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded border border-neutral-200 ">
+        <span className="text-[10px]  bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded border border-neutral-200 ">
           {val}
         </span>
       ) : (
-        <span className="text-[10px] font-bold text-neutral-400  tracking-widest">Direct</span>
+        <span className="text-[10px]  text-neutral-400  tracking-widest">Direct</span>
       )
     },
     { 
@@ -403,7 +403,7 @@ export default function SupplierQuotations() {
               <h1 className="text-xl font-black text-neutral-900 tracking-tight ">
                 Supplier Quotations
               </h1>
-              <p className="text-[10px] font-bold text-neutral-400 mt-0.5 tracking-widest ">Compare and manage quotes from suppliers</p>
+              <p className="text-[10px]  text-neutral-400 mt-0.5 tracking-widest ">Compare and manage quotes from suppliers</p>
             </div>
           </div>
           
@@ -499,7 +499,7 @@ export default function SupplierQuotations() {
               placeholder="SEARCH QUOTATIONS..."
               value={filters.search}
               onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              className="w-full pl-11 pr-4 py-2.5 bg-white border border-neutral-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 transition-all text-[11px] font-bold tracking-widest "
+              className="w-full pl-11 pr-4 py-2.5 bg-white border border-neutral-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 transition-all text-[11px]  tracking-widest "
             />
           </div>
           
@@ -560,7 +560,7 @@ export default function SupplierQuotations() {
                             setVisibleColumns(newSet)
                           }}
                         />
-                        <span className="text-[10px] font-bold text-neutral-600 group-hover:text-neutral-900  tracking-wider">{col.label}</span>
+                        <span className="text-[10px]  text-neutral-600 group-hover:text-neutral-900  tracking-wider">{col.label}</span>
                       </label>
                     ))}
                   </div>

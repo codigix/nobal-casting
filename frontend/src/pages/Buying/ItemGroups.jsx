@@ -132,7 +132,7 @@ export default function ItemGroups() {
           <div className="p-2 rounded bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
             <Tag size={16} />
           </div>
-          <span className="font-bold text-slate-900 dark:text-white  tracking-wider">{val}</span>
+          <span className=" text-slate-900 dark:text-white  tracking-wider">{val}</span>
         </div>
       )
     },
@@ -156,7 +156,7 @@ export default function ItemGroups() {
       <Card className={`bg-gradient-to-br ${colorMap[color] || colorMap.primary} p-4 border-2 transition-all hover:shadow-lg`}>
         <div className="flex items-start justify-between relative z-10">
           <div>
-            <span className="text-[10px] font-bold  tracking-widest text-slate-500 dark:text-slate-400">{label}</span>
+            <span className="text-[10px]   tracking-widest text-slate-500 dark:text-slate-400">{label}</span>
             <p className="text-2xl font-black mt-1 text-slate-900 dark:text-white">{value}</p>
             {description && <p className="text-[10px] mt-1 text-slate-400 dark:text-slate-500">{description}</p>}
           </div>
@@ -179,7 +179,7 @@ export default function ItemGroups() {
               <FolderOpen className="text-white" size={24} />
             </div>
             <div>
-              <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400  tracking-widest">
+              <div className="flex items-center gap-2 text-xs  text-indigo-600 dark:text-indigo-400  tracking-widest">
                 <span>Buying</span>
                 <ChevronRight size={12} />
                 <span>Classification</span>
@@ -262,7 +262,7 @@ export default function ItemGroups() {
             className="border-none"
             rowClassName="group hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors"
             renderActions={(row) => (
-              <div className="flex items-center gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity pr-4">
+              <div className="flex items-center gap-2 justify-end pr-4">
                 <Button 
                   size="sm" 
                   variant="secondary" 
@@ -304,7 +304,7 @@ export default function ItemGroups() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g., Raw Materials"
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded  text-xs font-bold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all dark:text-white"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded  text-xs  focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all dark:text-white"
                 required
               />
             </div>
@@ -327,7 +327,7 @@ export default function ItemGroups() {
                 type="button"
                 variant="secondary"
                 onClick={handleCloseForm}
-                className="px-6 py-2.5 rounded  text-xs font-bold border-2"
+                className="px-6 py-2.5 rounded  text-xs  border-2"
               >
                 Cancel
               </Button>

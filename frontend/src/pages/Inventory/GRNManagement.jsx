@@ -141,7 +141,7 @@ export default function GRNManagement() {
       key: 'grn_no',
       label: 'GRN Number',
       render: (val) => (
-        <span className="font-bold text-neutral-900 dark:text-white  tracking-wider">{val}</span>
+        <span className=" text-neutral-900 dark:text-white  tracking-wider">{val}</span>
       )
     },
     {
@@ -156,7 +156,7 @@ export default function GRNManagement() {
       label: 'Supplier',
       render: (val) => (
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-[10px] font-bold text-neutral-500">
+          <div className="w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-[10px]  text-neutral-500">
             {val?.charAt(0) || 'S'}
           </div>
           <span className="truncate max-w-[150px]">{val}</span>
@@ -294,8 +294,8 @@ export default function GRNManagement() {
                 <stat.icon size={16} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-neutral-400  tracking-wider leading-none mb-1">{stat.label}</p>
-                <h3 className="text-lg font-bold text-neutral-900 dark:text-white leading-none">{stat.value}</h3>
+                <p className="text-[10px]  text-neutral-400  tracking-wider leading-none mb-1">{stat.label}</p>
+                <h3 className="text-lg  text-neutral-900 dark:text-white leading-none">{stat.value}</h3>
               </div>
             </div>
           ))}
@@ -411,9 +411,9 @@ export default function GRNManagement() {
                       <div className={`w-7 h-7 rounded-xs ${config.badge.split(' ')[0]} ${config.badge.split(' ')[1]} flex items-center justify-center shadow-sm`}>
                         <Icon size={14} />
                       </div>
-                      <h2 className="font-bold text-neutral-800 dark:text-neutral-200 text-xs tracking-tight ">{column.title}</h2>
+                      <h2 className=" text-neutral-800 dark:text-neutral-200 text-xs tracking-tight ">{column.title}</h2>
                     </div>
-                    <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-1.5 py-0.5 rounded-xs text-[10px] font-bold">
+                    <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-1.5 py-0.5 rounded-xs text-[10px] ">
                       {columnGrns.length}
                     </span>
                   </div>
@@ -432,7 +432,7 @@ export default function GRNManagement() {
                           >
                             <div className="flex justify-between items-start mb-3">
                               <div>
-                                <h3 className="font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors text-sm ">
+                                <h3 className=" text-neutral-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors text-sm ">
                                   {grn.grn_no}
                                 </h3>
                                 <div className="flex items-center gap-1.5 mt-1 text-neutral-400 text-[10px] font-medium">
@@ -444,7 +444,7 @@ export default function GRNManagement() {
 
                             <div className="mb-4">
                               <div className="flex items-center gap-2 text-neutral-700 dark:text-neutral-300 text-[11px] mb-2 font-medium">
-                                <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 font-bold text-[9px]">
+                                <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500  text-[9px]">
                                   {grn.supplier_name?.charAt(0) || 'S'}
                                 </div>
                                 <span className="truncate">{grn.supplier_name}</span>
@@ -452,8 +452,8 @@ export default function GRNManagement() {
                               
                               <div className="flex flex-col gap-1.5">
                                 <div className="flex justify-between text-[10px]">
-                                  <span className="text-neutral-500  font-bold tracking-wider">Progress</span>
-                                  <span className="text-neutral-900 dark:text-white font-bold">{Math.round((acceptedItems / (totalItems || 1)) * 100)}%</span>
+                                  <span className="text-neutral-500   tracking-wider">Progress</span>
+                                  <span className="text-neutral-900 dark:text-white ">{Math.round((acceptedItems / (totalItems || 1)) * 100)}%</span>
                                 </div>
                                 <div className="w-full h-1 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
                                   <div 

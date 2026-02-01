@@ -520,7 +520,7 @@ export default function BOM() {
                 <div className="p-2 bg-indigo-500/20 rounded border border-indigo-400/30 text-indigo-400">
                   <BarChart3 size={18} strokeWidth={2.5} />
                 </div>
-                <h3 className="text-xs  text-indigo-400 tracking-[0.3em]">Critical Cost Intelligence</h3>
+                <h3 className="text-xs  text-indigo-400">Critical Cost Intelligence</h3>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

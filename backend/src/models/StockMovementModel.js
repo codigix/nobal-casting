@@ -167,11 +167,11 @@ class StockMovementModel {
 
         if (movement.movement_type === 'TRANSFER') {
           // Handle transfer: deduct from source, add to target
-          const sourceBalance = await connection.query(
+          const [sourceBalanceRows] = await connection.query(
             `SELECT current_qty FROM stock_balance WHERE item_code = ? AND warehouse_id = ?`,
             [movement.item_code, movement.source_warehouse_id]
           )
-          const sourceQty = sourceBalance[0]?.[0]?.current_qty || 0
+          const sourceQty = sourceBalanceRows[0]?.current_qty || 0
 
           if (sourceQty < movement.quantity) {
             throw new Error(`Insufficient stock in source warehouse. Available: ${sourceQty}, Requested: ${movement.quantity}`)
@@ -179,18 +179,24 @@ class StockMovementModel {
 
           // Deduct from source warehouse
           await StockBalanceModel.upsert(movement.item_code, movement.source_warehouse_id, {
-            current_qty: sourceQty - movement.quantity,
+            current_qty: -movement.quantity,
+            is_increment: true,
             last_issue_date: new Date()
           }, connection)
 
-          // Create ledger entry for source (OUT)
-          await connection.query(
-            `INSERT INTO stock_ledger (
-              item_code, warehouse_id, transaction_date, transaction_type,
-              qty_in, qty_out, reference_doctype, reference_name, remarks, created_by
-            ) VALUES (?, ?, NOW(), 'Transfer', 0, ?, 'Stock Movement', ?, ?, ?)`,
-            [movement.item_code, movement.source_warehouse_id, movement.quantity, movement.transaction_no, `Transfer to warehouse: ${movement.target_warehouse_name}`, userId]
-          )
+          // Create ledger entry for source (OUT) using standardized model
+          await StockLedgerModel.create({
+            item_code: movement.item_code,
+            warehouse_id: movement.source_warehouse_id,
+            transaction_date: new Date(),
+            transaction_type: 'Transfer',
+            qty_in: 0,
+            qty_out: movement.quantity,
+            reference_doctype: 'Stock Movement',
+            reference_name: movement.transaction_no,
+            remarks: `Transfer to warehouse: ${movement.target_warehouse_name}`,
+            created_by: userId
+          }, connection)
 
           // Add to target warehouse
           await StockBalanceModel.upsert(movement.item_code, movement.target_warehouse_id, {
@@ -199,26 +205,37 @@ class StockMovementModel {
             last_receipt_date: new Date()
           }, connection)
 
-          // Create ledger entry for target (IN)
-          await connection.query(
-            `INSERT INTO stock_ledger (
-              item_code, warehouse_id, transaction_date, transaction_type,
-              qty_in, qty_out, reference_doctype, reference_name, remarks, created_by
-            ) VALUES (?, ?, NOW(), 'Transfer', ?, 0, 'Stock Movement', ?, ?, ?)`,
-            [movement.item_code, movement.target_warehouse_id, movement.quantity, movement.transaction_no, `Transfer from warehouse: ${movement.source_warehouse_name}`, userId]
-          )
+          // Create ledger entry for target (IN) using standardized model
+          await StockLedgerModel.create({
+            item_code: movement.item_code,
+            warehouse_id: movement.target_warehouse_id,
+            transaction_date: new Date(),
+            transaction_type: 'Transfer',
+            qty_in: movement.quantity,
+            qty_out: 0,
+            reference_doctype: 'Stock Movement',
+            reference_name: movement.transaction_no,
+            remarks: `Transfer from warehouse: ${movement.source_warehouse_name}`,
+            created_by: userId
+          }, connection)
         } else {
           // Handle IN/OUT movements
           const qty_in = movement.movement_type === 'IN' ? movement.quantity : 0
           const qty_out = movement.movement_type === 'OUT' ? movement.quantity : 0
 
-          await connection.query(
-            `INSERT INTO stock_ledger (
-              item_code, warehouse_id, transaction_date, transaction_type,
-              qty_in, qty_out, reference_doctype, reference_name, remarks, created_by
-            ) VALUES (?, ?, NOW(), ?, ?, ?, 'Stock Movement', ?, ?, ?)`,
-            [movement.item_code, movement.warehouse_id, movement.movement_type, qty_in, qty_out, movement.transaction_no, movement.notes, userId]
-          )
+          // Create ledger entry using standardized model
+          await StockLedgerModel.create({
+            item_code: movement.item_code,
+            warehouse_id: movement.warehouse_id,
+            transaction_date: new Date(),
+            transaction_type: movement.movement_type,
+            qty_in: qty_in,
+            qty_out: qty_out,
+            reference_doctype: 'Stock Movement',
+            reference_name: movement.transaction_no,
+            remarks: movement.notes,
+            created_by: userId
+          }, connection)
 
           // Update stock balance
           await StockBalanceModel.upsert(movement.item_code, movement.warehouse_id, {

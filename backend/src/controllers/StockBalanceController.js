@@ -2,10 +2,10 @@ import StockBalanceModel from '../models/StockBalanceModel.js'
 
 export const getAllStockBalance = async (req, res) => {
   try {
-    const { warehouseId, itemId, itemCode, search, stockStatus, isLocked } = req.query
+    const { warehouseId, warehouse_id, itemId, itemCode, search, stockStatus, isLocked } = req.query
     const filters = {
       department: req.user?.department || 'all',
-      warehouseId,
+      warehouseId: warehouseId || warehouse_id,
       itemId: itemId || itemCode,
       itemCode: itemCode || itemId,
       search,
@@ -39,10 +39,10 @@ export const getStockBalanceDetail = async (req, res) => {
 
 export const getLowStockItems = async (req, res) => {
   try {
-    const { warehouseId } = req.query
+    const { warehouseId, warehouse_id } = req.query
     const filters = {
       department: req.user?.department || 'all',
-      warehouseId
+      warehouseId: warehouseId || warehouse_id
     }
 
     const lowStockItems = await StockBalanceModel.getLowStockItems(filters)

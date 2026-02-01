@@ -1,3 +1,6 @@
+import StockBalanceModel from './StockBalanceModel.js'
+import StockLedgerModel from './StockLedgerModel.js'
+
 class InventoryModel {
   constructor(db) {
     this.db = db
@@ -24,7 +27,7 @@ class InventoryModel {
           `SELECT sb.id, sb.current_qty, sb.available_qty, w.id as warehouse_id, w.warehouse_code
            FROM stock_balance sb
            LEFT JOIN warehouses w ON sb.warehouse_id = w.id
-           WHERE sb.item_id = (SELECT id FROM items WHERE item_code = ?)
+           WHERE sb.item_code = ?
            AND (w.warehouse_code = ? OR w.warehouse_name = ?)`,
           [item_code, source_warehouse, source_warehouse]
         )
@@ -56,13 +59,11 @@ class InventoryModel {
           allocated_qty: required_qty
         })
 
-        // Update reserved quantity in stock_balance
-        await this.db.query(
-          `UPDATE stock_balance 
-           SET reserved_qty = reserved_qty + ?
-           WHERE id = ?`,
-          [required_qty, stock.id]
-        )
+        // Update reserved quantity in stock_balance using standardized model
+        await StockBalanceModel.upsert(item_code, stock.warehouse_id, {
+          reserved_qty: required_qty,
+          is_increment: true
+        }, this.db)
 
         // Log allocation
         await this.logMaterialDeduction(
@@ -182,7 +183,7 @@ class InventoryModel {
         const [stockInfo] = await this.db.query(
           `SELECT sb.id, sb.current_qty, sb.reserved_qty
            FROM stock_balance sb
-           WHERE sb.item_id = (SELECT id FROM items WHERE item_code = ?)
+           WHERE sb.item_code = ?
            AND sb.warehouse_id = ?`,
           [alloc.item_code, alloc.warehouse_id]
         )
@@ -190,46 +191,27 @@ class InventoryModel {
         if (stockInfo && stockInfo.length > 0) {
           const stock = stockInfo[0]
 
-          // Deduct final quantity from current_qty and update reserved_qty
-          const newReservedQty = Math.max(0, stock.reserved_qty - alloc.allocated_qty)
-          const newCurrentQty = stock.current_qty - finalDeductionQty
+          // Deduct final quantity from current_qty and update reserved_qty using standardized upsert
+          await StockBalanceModel.upsert(alloc.item_code, alloc.warehouse_id, {
+            current_qty: -finalDeductionQty,
+            reserved_qty: -alloc.allocated_qty,
+            is_increment: true,
+            last_issue_date: new Date()
+          }, this.db)
 
-          await this.db.query(
-            `UPDATE stock_balance 
-             SET current_qty = ?,
-                 reserved_qty = ?
-             WHERE id = ?`,
-            [newCurrentQty, newReservedQty, stock.id]
-          )
-
-          // Log final deduction in stock ledger
-          await this.db.query(
-            `INSERT INTO stock_ledger 
-             (item_id, warehouse_id, transaction_date, transaction_type, 
-              qty_out, balance_qty, reference_doctype, reference_name, remarks, created_by)
-             VALUES (
-               (SELECT id FROM items WHERE item_code = ?),
-               ?,
-               NOW(),
-               'Manufacturing Issue',
-               ?,
-               ?,
-               'Work Order',
-               ?,
-               CONCAT('Consumed: ', ?, ', Wasted: ', ?),
-               ?
-             )`,
-            [
-              alloc.item_code,
-              alloc.warehouse_id,
-              finalDeductionQty,
-              newCurrentQty,
-              work_order_id,
-              alloc.consumed_qty,
-              alloc.wasted_qty,
-              finalized_by
-            ]
-          )
+          // Log final deduction in stock ledger using standardized model
+          await StockLedgerModel.create({
+            item_code: alloc.item_code,
+            warehouse_id: alloc.warehouse_id,
+            transaction_date: new Date(),
+            transaction_type: 'Manufacturing Issue',
+            qty_in: 0,
+            qty_out: finalDeductionQty,
+            reference_doctype: 'Work Order',
+            reference_name: work_order_id,
+            remarks: `Consumed: ${alloc.consumed_qty}, Wasted: ${alloc.wasted_qty}`,
+            created_by: finalized_by
+          }, this.db)
 
           // Log in material deduction log
           await this.logMaterialDeduction(
@@ -240,7 +222,7 @@ class InventoryModel {
             'consume',
             finalDeductionQty,
             stock.current_qty,
-            newCurrentQty,
+            stock.current_qty - finalDeductionQty,
             `Final deduction: Consumed ${alloc.consumed_qty}, Wasted ${alloc.wasted_qty}`,
             finalized_by
           )
@@ -301,7 +283,7 @@ class InventoryModel {
       const [stockInfo] = await this.db.query(
         `SELECT sb.id, sb.current_qty, sb.reserved_qty
          FROM stock_balance sb
-         WHERE sb.item_id = (SELECT id FROM items WHERE item_code = ?)
+         WHERE sb.item_code = ?
          AND sb.warehouse_id = ?`,
         [item_code, warehouse_id]
       )
@@ -311,45 +293,28 @@ class InventoryModel {
       }
 
       const stock = stockInfo[0]
-      const newCurrentQty = stock.current_qty + return_qty
-      const newReservedQty = Math.max(0, stock.reserved_qty - return_qty)
 
-      // Update stock_balance
-      await this.db.query(
-        `UPDATE stock_balance 
-         SET current_qty = ?,
-             reserved_qty = ?
-         WHERE id = ?`,
-        [newCurrentQty, newReservedQty, stock.id]
-      )
+      // Update stock_balance using standardized upsert
+      const updatedBalance = await StockBalanceModel.upsert(item_code, warehouse_id, {
+        current_qty: return_qty,
+        reserved_qty: -return_qty,
+        is_increment: true,
+        last_receipt_date: new Date()
+      }, this.db)
 
-      // Log return in stock ledger
-      await this.db.query(
-        `INSERT INTO stock_ledger 
-         (item_id, warehouse_id, transaction_date, transaction_type, 
-          qty_in, balance_qty, reference_doctype, reference_name, remarks, created_by)
-         VALUES (
-           (SELECT id FROM items WHERE item_code = ?),
-           ?,
-           NOW(),
-           'Manufacturing Return',
-           ?,
-           ?,
-           'Work Order',
-           ?,
-           ?,
-           ?
-         )`,
-        [
-          item_code,
-          warehouse_id,
-          return_qty,
-          newCurrentQty,
-          work_order_id,
-          reason,
-          returned_by
-        ]
-      )
+      // Log return in stock ledger using standardized model
+      await StockLedgerModel.create({
+        item_code: item_code,
+        warehouse_id: warehouse_id,
+        transaction_date: new Date(),
+        transaction_type: 'Manufacturing Return',
+        qty_in: return_qty,
+        qty_out: 0,
+        reference_doctype: 'Work Order',
+        reference_name: work_order_id,
+        remarks: reason,
+        created_by: returned_by
+      }, this.db)
 
       // Log in material deduction log
       await this.logMaterialDeduction(
@@ -360,14 +325,14 @@ class InventoryModel {
         'return',
         return_qty,
         stock.current_qty,
-        newCurrentQty,
+        stock.current_qty + return_qty,
         reason,
         returned_by
       )
 
       return {
         returned_qty: return_qty,
-        new_balance: newCurrentQty
+        new_balance: updatedBalance?.current_qty
       }
     } catch (error) {
       throw error

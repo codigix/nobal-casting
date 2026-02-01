@@ -177,7 +177,7 @@ export default function MaterialRequests() {
     {
       key: 'mr_id',
       label: 'ID',
-      render: (val) => <span className="font-bold text-neutral-900 dark:text-white  tracking-wider">MR-{val}</span>
+      render: (val) => <span className=" text-neutral-900 dark:text-white  tracking-wider">MR-{val}</span>
     },
     {
       key: 'requested_by_name',
@@ -363,8 +363,8 @@ export default function MaterialRequests() {
                 <stat.icon size={16} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-neutral-400  tracking-wider leading-none mb-1">{stat.label}</p>
-                <h3 className="text-lg font-bold text-neutral-900 dark:text-white leading-none">{stat.value}</h3>
+                <p className="text-[10px]  text-neutral-400  tracking-wider leading-none mb-1">{stat.label}</p>
+                <h3 className="text-lg  text-neutral-900 dark:text-white leading-none">{stat.value}</h3>
               </div>
             </button>
           ))}
@@ -479,9 +479,9 @@ export default function MaterialRequests() {
                       <div className={`w-7 h-7 rounded-xs ${config.badge.split(' ')[0]} ${config.badge.split(' ')[1]} flex items-center justify-center shadow-sm`}>
                         <column.icon size={14} />
                       </div>
-                      <h3 className="font-bold text-neutral-800 dark:text-neutral-200 text-xs tracking-tight ">{column.title}</h3>
+                      <h3 className=" text-neutral-800 dark:text-neutral-200 text-xs tracking-tight ">{column.title}</h3>
                     </div>
-                    <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-1.5 py-0.5 rounded-xs text-[10px] font-bold">
+                    <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-1.5 py-0.5 rounded-xs text-[10px] ">
                       {columnRequests.length}
                     </span>
                   </div>
@@ -505,9 +505,9 @@ export default function MaterialRequests() {
                           >
                             <div className="flex justify-between items-start mb-3">
                               <div>
-                                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400  tracking-wider">MR-{req.mr_id}</span>
-                                <h4 className="font-bold text-neutral-900 dark:text-white leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors text-sm truncate">{req.requested_by_name}</h4>
-                                <p className="text-[10px] font-bold text-neutral-400  tracking-widest mt-0.5">{req.department}</p>
+                                <span className="text-[10px]  text-indigo-600 dark:text-indigo-400  tracking-wider">MR-{req.mr_id}</span>
+                                <h4 className=" text-neutral-900 dark:text-white leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors text-sm truncate">{req.requested_by_name}</h4>
+                                <p className="text-[10px]  text-neutral-400  tracking-widest mt-0.5">{req.department}</p>
                               </div>
                             </div>
 
@@ -517,7 +517,7 @@ export default function MaterialRequests() {
                                   <Calendar size={14} className="opacity-50" />
                                   <span>{new Date(req.required_by_date).toLocaleDateString()}</span>
                                 </div>
-                                <span className={`${avail.text} font-bold  text-[9px]`}>{availability.all}</span>
+                                <span className={`${avail.text}   text-[9px]`}>{availability.all}</span>
                               </div>
                               
                               <div className="w-full h-1 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">

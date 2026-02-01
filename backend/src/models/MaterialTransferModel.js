@@ -1,4 +1,7 @@
-﻿class MaterialTransferModel {
+﻿import StockBalanceModel from './StockBalanceModel.js'
+import StockLedgerModel from './StockLedgerModel.js'
+
+class MaterialTransferModel {
   static getDb() {
     return global.db
   }
@@ -211,26 +214,61 @@
 
         // Get transfer details
         const transfer = await this.getById(id)
+        if (!transfer) throw new Error('Material transfer not found')
 
-        // Create stock ledger entries
+        // Create stock ledger entries and update balances
         for (const item of transfer.items) {
-          // Deduct from source warehouse
-          await connection.query(
-            `INSERT INTO stock_ledger (
-              item_id, warehouse_id, transaction_date, transaction_type,
-              qty_in, qty_out, valuation_rate, reference_doctype, reference_name, created_by
-            ) VALUES (?, ?, ?, 'Transfer', ?, ?, ?, 'Material Transfer', ?, ?)`,
-            [item.item_id, transfer.from_warehouse_id, transfer.transfer_date, 0, item.qty, 0, 0, transfer.transfer_no, userId]
-          )
+          const itemCode = item.item_id // Based on line 97, item_id stores item_code
+          const qty = Number(item.qty) || 0
 
-          // Add to destination warehouse
-          await connection.query(
-            `INSERT INTO stock_ledger (
-              item_id, warehouse_id, transaction_date, transaction_type,
-              qty_in, qty_out, valuation_rate, reference_doctype, reference_name, created_by
-            ) VALUES (?, ?, ?, 'Transfer', ?, ?, ?, 'Material Transfer', ?, ?)`,
-            [item.item_id, transfer.to_warehouse_id, transfer.transfer_date, item.qty, 0, 0, transfer.transfer_no, userId]
-          )
+          // Get current valuation from source warehouse
+          const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(itemCode, transfer.from_warehouse_id, connection)
+          const valuationRate = sourceBalance ? Number(sourceBalance.valuation_rate) : 0
+
+          // 1. Deduct from source warehouse
+          await StockBalanceModel.upsert(itemCode, transfer.from_warehouse_id, {
+            current_qty: -qty,
+            is_increment: true,
+            last_issue_date: transfer.transfer_date
+          }, connection)
+
+          // Add Ledger Entry (OUT)
+          await StockLedgerModel.create({
+            item_code: itemCode,
+            warehouse_id: transfer.from_warehouse_id,
+            transaction_date: transfer.transfer_date,
+            transaction_type: 'Transfer',
+            qty_in: 0,
+            qty_out: qty,
+            valuation_rate: valuationRate,
+            reference_doctype: 'Material Transfer',
+            reference_name: transfer.transfer_no,
+            remarks: transfer.transfer_remarks,
+            created_by: userId
+          }, connection)
+
+          // 2. Add to destination warehouse
+          await StockBalanceModel.upsert(itemCode, transfer.to_warehouse_id, {
+            current_qty: qty,
+            is_increment: true,
+            incoming_rate: valuationRate,
+            last_receipt_date: transfer.transfer_date
+          }, connection)
+
+          // Add Ledger Entry (IN)
+          await StockLedgerModel.create({
+            item_code: itemCode,
+            warehouse_id: transfer.to_warehouse_id,
+            transaction_date: transfer.transfer_date,
+            transaction_type: 'Transfer',
+            qty_in: qty,
+            qty_out: 0,
+            valuation_rate: valuationRate,
+            reference_doctype: 'Material Transfer',
+            reference_name: transfer.transfer_no,
+            remarks: transfer.transfer_remarks,
+            created_by: userId
+          }, connection)
         }
 
         await connection.commit()

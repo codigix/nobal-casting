@@ -228,7 +228,7 @@ export default function Warehouses() {
       <div className="max-w-[1600px] mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <div>
-            <h1 className="text-xl font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+            <h1 className="text-xl  text-neutral-900 dark:text-white flex items-center gap-2">
               <Warehouse size={24} className="text-amber-500" />
               Warehouses
             </h1>
@@ -313,7 +313,7 @@ export default function Warehouses() {
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setShowColumnMenu(false)} />
                     <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs shadow-xl z-20 py-2">
-                      <div className="px-3 py-1 text-[10px] font-bold text-neutral-400  tracking-wider border-b border-neutral-100 dark:border-neutral-700 mb-1">
+                      <div className="px-3 py-1 text-[10px]  text-neutral-400  tracking-wider border-b border-neutral-100 dark:border-neutral-700 mb-1">
                         Visible Columns
                       </div>
                       {columns.map(col => (
@@ -383,10 +383,10 @@ export default function Warehouses() {
                             {getTypeIcon(warehouse.warehouse_type)}
                           </div>
                           <div>
-                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white group-hover:text-amber-600 transition-colors">
+                            <h3 className="text-sm  text-neutral-900 dark:text-white group-hover:text-amber-600 transition-colors">
                               {warehouse.warehouse_code}
                             </h3>
-                            <p className="text-[10px] text-neutral-500  font-bold tracking-wider">
+                            <p className="text-[10px] text-neutral-500   tracking-wider">
                               {warehouse.warehouse_type}
                             </p>
                           </div>
@@ -456,7 +456,7 @@ export default function Warehouses() {
           <form id="warehouse-form" onSubmit={handleSubmit} className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-neutral-500  tracking-wider">
+                <label className="text-[11px]  text-neutral-500  tracking-wider">
                   Warehouse Code *
                 </label>
                 <input
@@ -472,7 +472,7 @@ export default function Warehouses() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-neutral-500  tracking-wider">
+                <label className="text-[11px]  text-neutral-500  tracking-wider">
                   Warehouse Name *
                 </label>
                 <input
@@ -489,7 +489,7 @@ export default function Warehouses() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-neutral-500  tracking-wider">
+                <label className="text-[11px]  text-neutral-500  tracking-wider">
                   Warehouse Type *
                 </label>
                 <select
@@ -507,7 +507,7 @@ export default function Warehouses() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-neutral-500  tracking-wider">
+                <label className="text-[11px]  text-neutral-500  tracking-wider">
                   Department *
                 </label>
                 <select
@@ -528,7 +528,7 @@ export default function Warehouses() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-neutral-500  tracking-wider">
+                <label className="text-[11px]  text-neutral-500  tracking-wider">
                   Location
                 </label>
                 <input
@@ -542,7 +542,7 @@ export default function Warehouses() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-neutral-500  tracking-wider">
+                <label className="text-[11px]  text-neutral-500  tracking-wider">
                   Storage Capacity
                 </label>
                 <input
@@ -558,7 +558,7 @@ export default function Warehouses() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-neutral-500  tracking-wider">
+              <label className="text-[11px]  text-neutral-500  tracking-wider">
                 Parent Warehouse ID
               </label>
               <input

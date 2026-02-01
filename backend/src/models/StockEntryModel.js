@@ -167,9 +167,9 @@ class StockEntryModel {
   }
 
   // Create stock entry
-  static async create(data) {
+  static async create(data, dbConnection = null) {
     try {
-      const db = this.getDb()
+      const db = dbConnection || this.getDb()
       const {
         entry_no,
         entry_date,
@@ -195,9 +195,15 @@ class StockEntryModel {
         }
       }
 
-      // Start transaction
-      const connection = await db.getConnection()
-      await connection.beginTransaction()
+      // Use provided connection or get a new one and start transaction
+      let connection = dbConnection
+      let isLocalTransaction = false
+      
+      if (!connection) {
+        connection = await db.getConnection()
+        await connection.beginTransaction()
+        isLocalTransaction = true
+      }
 
       try {
         // Create entry
@@ -262,14 +268,20 @@ class StockEntryModel {
           [totalQty, totalValue, entryId]
         )
 
-        await connection.commit()
+        if (isLocalTransaction) {
+          await connection.commit()
+        }
         return this.getById(entryId)
       } catch (error) {
-        await connection.rollback()
+        if (isLocalTransaction) {
+          await connection.rollback()
+        }
         console.error('Stock entry creation error:', error)
         throw error
       } finally {
-        connection.release()
+        if (isLocalTransaction) {
+          connection.release()
+        }
       }
     } catch (error) {
       console.error('Stock entry model error:', error)
@@ -295,11 +307,19 @@ class StockEntryModel {
   }
 
   // Submit stock entry
-  static async submit(id, userId) {
+  static async submit(id, userId, dbConnection = null) {
     try {
-      const db = this.getDb()
-      const connection = await db.getConnection()
-      await connection.beginTransaction()
+      const db = dbConnection || this.getDb()
+      
+      // Use provided connection or get a new one and start transaction
+      let connection = dbConnection
+      let isLocalTransaction = false
+      
+      if (!connection) {
+        connection = await db.getConnection()
+        await connection.beginTransaction()
+        isLocalTransaction = true
+      }
 
       try {
         // Get entry details
@@ -337,7 +357,7 @@ class StockEntryModel {
             if (!fromWarehouseId) throw new Error(`Source warehouse is required for ${entry.entry_type}`)
 
             // Get current stock at source for valuation
-            const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(itemCode, fromWarehouseId)
+            const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(itemCode, fromWarehouseId, connection)
             const currentValuation = sourceBalance ? Number(sourceBalance.valuation_rate) : valuationRate
 
             // Deduct from Source
@@ -393,13 +413,19 @@ class StockEntryModel {
           }
         }
 
-        await connection.commit()
+        if (isLocalTransaction) {
+          await connection.commit()
+        }
         return this.getById(id)
       } catch (error) {
-        await connection.rollback()
+        if (isLocalTransaction) {
+          await connection.rollback()
+        }
         throw error
       } finally {
-        connection.release()
+        if (isLocalTransaction) {
+          connection.release()
+        }
       }
     } catch (error) {
       throw new Error(`Failed to submit stock entry: ${error.message}`)

@@ -151,14 +151,14 @@ export default function StockLedger() {
         if (qtyIn > 0) {
           return (
             <div className="flex flex-col">
-              <span className="text-xs font-bold text-green-600 dark:text-green-400">+{qtyIn}</span>
+              <span className="text-xs  text-green-600 dark:text-green-400">+{qtyIn}</span>
               <span className="text-[10px] text-neutral-500">₹{transValue.toFixed(2)}</span>
             </div>
           )
         } else if (qtyOut > 0) {
           return (
             <div className="flex flex-col">
-              <span className="text-xs font-bold text-red-600 dark:text-red-400">-{qtyOut}</span>
+              <span className="text-xs  text-red-600 dark:text-red-400">-{qtyOut}</span>
               <span className="text-[10px] text-neutral-500">₹{transValue.toFixed(2)}</span>
             </div>
           )
@@ -172,7 +172,7 @@ export default function StockLedger() {
       render: (value) => {
         const balance = Number(value || 0)
         return (
-          <span className={`text-xs font-bold ${balance > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-500'}`}>
+          <span className={`text-xs  ${balance > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-neutral-500'}`}>
             {balance.toFixed(2)}
           </span>
         )
@@ -202,7 +202,7 @@ export default function StockLedger() {
       <div className="max-w-[1600px] mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <div>
-            <h1 className="text-xl font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+            <h1 className="text-xl  text-neutral-900 dark:text-white flex items-center gap-2">
               <BookOpen size={24} className="text-blue-500" />
               Stock Ledger
             </h1>
@@ -328,7 +328,7 @@ export default function StockLedger() {
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setShowColumnMenu(false)} />
                     <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs shadow-xl z-20 py-2">
-                      <div className="px-3 py-1 text-[10px] font-bold text-neutral-400  tracking-wider border-b border-neutral-100 dark:border-neutral-700 mb-1">
+                      <div className="px-3 py-1 text-[10px]  text-neutral-400  tracking-wider border-b border-neutral-100 dark:border-neutral-700 mb-1">
                         Visible Columns
                       </div>
                       {columns.map(col => (
@@ -397,10 +397,10 @@ export default function StockLedger() {
                             {Number(entry.qty_in) > 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
                           </div>
                           <div>
-                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white group-hover:text-blue-600 transition-colors">
+                            <h3 className="text-sm  text-neutral-900 dark:text-white group-hover:text-blue-600 transition-colors">
                               {entry.item_code}
                             </h3>
-                            <p className="text-[10px] text-neutral-500  font-bold tracking-wider">
+                            <p className="text-[10px] text-neutral-500   tracking-wider">
                               {entry.transaction_type}
                             </p>
                           </div>
@@ -423,13 +423,13 @@ export default function StockLedger() {
                         <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800">
                           <div className="flex flex-col">
                             <span className="text-[10px] text-neutral-400  tracking-tight">Movement</span>
-                            <span className={`text-xs font-bold ${Number(entry.qty_in) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            <span className={`text-xs  ${Number(entry.qty_in) > 0 ? 'text-green-600' : 'text-red-600'}`}>
                               {Number(entry.qty_in) > 0 ? `+${entry.qty_in}` : `-${entry.qty_out}`}
                             </span>
                           </div>
                           <div className="flex flex-col items-end">
                             <span className="text-[10px] text-neutral-400  tracking-tight">Balance</span>
-                            <span className="text-xs font-bold text-blue-600">
+                            <span className="text-xs  text-blue-600">
                               {Number(entry.balance_qty).toFixed(2)}
                             </span>
                           </div>

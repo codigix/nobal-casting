@@ -112,7 +112,7 @@ export default function StockMovements() {
     {
       key: 'transaction_no',
       label: 'Transaction #',
-      render: (val) => <span className="font-bold text-neutral-900 dark:text-white  tracking-wider">{val}</span>
+      render: (val) => <span className=" text-neutral-900 dark:text-white  tracking-wider">{val}</span>
     },
     {
       key: 'item_code',
@@ -144,7 +144,7 @@ export default function StockMovements() {
     {
       key: 'quantity',
       label: 'Quantity',
-      render: (val) => <span className="font-bold text-neutral-900 dark:text-white">{parseFloat(val).toFixed(2)}</span>
+      render: (val) => <span className=" text-neutral-900 dark:text-white">{parseFloat(val).toFixed(2)}</span>
     },
     {
       key: 'warehouse_name',
@@ -254,8 +254,8 @@ export default function StockMovements() {
                 <stat.icon size={16} />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-neutral-400  tracking-wider leading-none mb-1">{stat.label}</p>
-                <h3 className="text-lg font-bold text-neutral-900 dark:text-white leading-none">{stat.value}</h3>
+                <p className="text-[10px]  text-neutral-400  tracking-wider leading-none mb-1">{stat.label}</p>
+                <h3 className="text-lg  text-neutral-900 dark:text-white leading-none">{stat.value}</h3>
               </div>
             </div>
           ))}

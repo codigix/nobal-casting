@@ -1,3 +1,8 @@
+import StockEntryModel from './StockEntryModel.js'
+import StockBalanceModel from './StockBalanceModel.js'
+import { PurchaseOrderModel } from './PurchaseOrderModel.js'
+import { MaterialRequestModel } from './MaterialRequestModel.js'
+
 class GRNRequestModel {
   static getDb() {
     return global.db
@@ -400,13 +405,43 @@ class GRNRequestModel {
     }
   }
 
-  static async inventoryApprove(id, userId) {
+  static async inventoryApprove(id, userId, approvedItemsData = []) {
     try {
       const db = this.getDb()
       const connection = await db.getConnection()
       await connection.beginTransaction()
 
       try {
+        // 1. Get current GRN details
+        const grn = await this.getById(id)
+        if (!grn) throw new Error('GRN request not found')
+
+        // 2. Update item details if provided
+        if (approvedItemsData.length > 0) {
+          for (const item of approvedItemsData) {
+            await connection.query(
+              `UPDATE grn_request_items SET 
+               accepted_qty = ?, 
+               rejected_qty = ?,
+               qc_status = ?,
+               bin_rack = ?,
+               valuation_rate = ?,
+               warehouse_name = ?
+               WHERE id = ?`,
+              [
+                Number(item.accepted_qty) || 0,
+                Number(item.rejected_qty) || 0,
+                item.qc_status || 'pass',
+                item.bin_rack || null,
+                Number(item.valuation_rate) || 0,
+                item.warehouse_name || 'Main Warehouse',
+                item.id
+              ]
+            )
+          }
+        }
+
+        // 3. Update GRN status
         await connection.query(
           `UPDATE grn_requests SET 
            status = 'approved', 
@@ -422,8 +457,96 @@ class GRNRequestModel {
           [id, 'INVENTORY_APPROVED', 'awaiting_inventory_approval', 'approved', userId]
         )
 
+        // 4. Reload GRN with updated items for further processing
+        const updatedGRN = await this.getById(id)
+
+        // 5. Update Purchase Order status and received quantities
+        if (updatedGRN.po_no) {
+          try {
+            const poModel = new PurchaseOrderModel(connection)
+            await poModel.updateReceivedQty(updatedGRN.po_no, updatedGRN.items || [])
+          } catch (poErr) {
+            console.error(`Error updating PO status for ${updatedGRN.po_no}:`, poErr)
+            // We continue as this is secondary to the GRN approval
+          }
+        }
+
+        // 6. Update Material Request status
+        if (updatedGRN.material_request_id && updatedGRN.purpose === 'purchase') {
+          await connection.query(
+            `UPDATE material_request SET status = 'completed' WHERE mr_id = ?`,
+            [updatedGRN.material_request_id]
+          )
+        }
+
+        // 7. Create and submit Stock Entry
+        const stockEntryItems = []
+        let toWarehouseId = null
+
+        for (const item of (updatedGRN.items || [])) {
+          const acceptedQty = Number(item.accepted_qty) || 0
+          if (acceptedQty > 0) {
+            stockEntryItems.push({
+              item_code: item.item_code,
+              qty: acceptedQty,
+              uom: 'Kg',
+              valuation_rate: Number(item.valuation_rate) || 0,
+              batch_no: item.batch_no || ''
+            })
+
+            if (!toWarehouseId && item.warehouse_name) {
+              const [warehouseRows] = await connection.query(
+                'SELECT id FROM warehouses WHERE warehouse_name = ? OR warehouse_code = ?',
+                [item.warehouse_name, item.warehouse_name]
+              )
+              if (warehouseRows[0]) {
+                toWarehouseId = warehouseRows[0].id
+              }
+            }
+          }
+        }
+
+        if (stockEntryItems.length > 0) {
+          if (!toWarehouseId) {
+            const [defaultWarehouse] = await connection.query('SELECT id FROM warehouses LIMIT 1')
+            toWarehouseId = defaultWarehouse[0]?.id || 1
+          }
+
+          const entry_no = await StockEntryModel.generateEntryNo('Material Receipt')
+          
+          const stockEntry = await StockEntryModel.create({
+            entry_no,
+            entry_date: new Date(),
+            entry_type: 'Material Receipt',
+            from_warehouse_id: null,
+            to_warehouse_id: toWarehouseId,
+            purpose: `GRN Approved - ${updatedGRN.grn_no}`,
+            reference_doctype: 'GRN Request',
+            reference_name: updatedGRN.grn_no,
+            remarks: `Auto-generated from GRN Request ${updatedGRN.grn_no} - Inventory Approved`,
+            created_by: userId,
+            items: stockEntryItems
+          }, connection)
+
+          if (stockEntry && stockEntry.id) {
+            await StockEntryModel.submit(stockEntry.id, userId, connection)
+          }
+        }
+
+        // 8. Handle notifications (Outside the connection if needed, but here we can just log/trigger)
+        if (updatedGRN.material_request_id) {
+          try {
+            const mr = await MaterialRequestModel.getById(connection, updatedGRN.material_request_id)
+            if (mr) {
+              await MaterialRequestModel.createNotifications(connection, mr, 'MATERIAL_ARRIVED', mr.department)
+            }
+          } catch (notifErr) {
+            console.error('Failed to send material arrival notification:', notifErr.message)
+          }
+        }
+
         await connection.commit()
-        return this.getById(id)
+        return updatedGRN
       } catch (error) {
         await connection.rollback()
         throw error

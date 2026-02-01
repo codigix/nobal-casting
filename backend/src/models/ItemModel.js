@@ -298,10 +298,27 @@ export class ItemModel {
         'family_mould', 'mould_number', 'loss_percentage'
       ]
 
+      const numericFields = [
+        'gst_rate', 'opening_stock', 'valuation_rate', 'standard_selling_rate', 'selling_rate',
+        'shelf_life_in_days', 'warranty_period_in_days', 'weight_per_unit', 'lead_time_days',
+        'minimum_order_qty', 'safety_stock', 'max_discount_percentage', 'cess_rate',
+        'no_of_cavities', 'loss_percentage', 'max_sample_quantity'
+      ]
+
       for (const field of allowedFields) {
         if (data[field] !== undefined) {
+          let value = data[field]
+          
+          if (numericFields.includes(field) && value === '') {
+            value = (['shelf_life_in_days', 'warranty_period_in_days', 'weight_per_unit', 'max_sample_quantity'].includes(field)) ? null : 0
+          }
+          
+          if (field === 'end_of_life' && value === '') {
+            value = null
+          }
+          
           updateFields.push(`${field} = ?`)
-          params.push(data[field])
+          params.push(value)
         }
       }
 
