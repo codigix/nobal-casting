@@ -115,7 +115,8 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
     const { name, value } = e.target
     
     if (name === 'department') {
-      const purpose = value === 'Production' ? 'material_issue' : 'purchase'
+      const isProduction = ['Production', 'Manufacturing'].includes(value)
+      const purpose = isProduction ? 'material_issue' : 'purchase'
       setFormData(prev => ({ 
         ...prev, 
         department: value,
@@ -316,7 +317,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                       >
                         <option value="">{formData.department ? 'Select Requester' : 'Select Department First'}</option>
                         {employees
-                          .filter(emp => emp.department === formData.department)
+                          .filter(emp => emp.department && emp.department.toLowerCase() === formData.department.toLowerCase())
                           .map(emp => (
                             <option key={emp.employee_id || emp.id} value={emp.employee_id || emp.id}>
                               {emp.first_name} {emp.last_name}

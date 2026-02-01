@@ -2094,8 +2094,8 @@ export default function BOMForm() {
                                       </div>
                                       <div className="flex items-center gap-8">
                                         <div className="text-right hidden sm:block">
-                                          <div className="text-sm   text-amber-600">₹{groupMarketValue.toLocaleString()}</div>
-                                          <div className="text-[8px]   text-slate-400  mt-1">Sub-Market Value</div>
+                                          <div className="text-sm   text-amber-600">₹{groupCost.toLocaleString()}</div>
+                                          <div className="text-[8px]   text-slate-400  mt-1">Sub-Total Value</div>
                                         </div>
                                         <div className={`w-10 h-10 rounded  flex items-center justify-center transition-all duration-500 ${isExpanded ? 'bg-amber-600 text-white rotate-180 shadow-lg' : 'bg-slate-100 text-slate-300'}`}>
                                           <ChevronDown size={20} />
@@ -2153,7 +2153,7 @@ export default function BOMForm() {
                                                       )}
                                                     </td>
                                                     <td className="p-2  text-right">
-                                                      <div className="text-xs   text-amber-600">₹{parseFloat(isEditing ? (parseFloat(data.qty || 0) * parseFloat(data.selling_price || 0)) : (material.selling_amount || 0)).toLocaleString()}</div>
+                                                      <div className="text-xs   text-amber-600">₹{parseFloat(isEditing ? (parseFloat(data.qty || 0) * parseFloat(data.rate || 0)) : (material.amount || 0)).toLocaleString()}</div>
                                                     </td>
                                                     <td className="p-2 ">
                                                       <div className="flex items-center justify-center gap-2">

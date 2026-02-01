@@ -13,30 +13,50 @@ class MastersController {
       if (!database) {
         return res.json({
           success: true,
-          data: ['all', 'inventory', 'manufacturing', 'admin'],
+          data: ['Production', 'Inventory', 'Manufacturing', 'Quality', 'Maintenance', 'Purchase', 'Admin'],
           message: 'Default departments'
         })
       }
       
       try {
-        const [departments] = await database.query(
-          `SELECT DISTINCT department FROM users WHERE department IS NOT NULL ORDER BY department`
+        // Fetch from users
+        const [userDepts] = await database.query(
+          `SELECT DISTINCT department FROM users WHERE department IS NOT NULL`
         )
         
-        const deptList = departments && departments.length > 0 
-          ? departments.map(d => d.department).filter(Boolean)
-          : ['all', 'inventory', 'manufacturing', 'admin']
+        // Fetch from employee_master
+        const [employeeDepts] = await database.query(
+          `SELECT DISTINCT department FROM employee_master WHERE department IS NOT NULL`
+        )
+        
+        // Combine and unique
+        const allDepts = new Set()
+        
+        userDepts.forEach(d => {
+          if (d.department) allDepts.add(d.department)
+        })
+        
+        employeeDepts.forEach(d => {
+          if (d.department) allDepts.add(d.department)
+        })
+        
+        // Fallback to common ones if empty
+        if (allDepts.size === 0) {
+          ['Production', 'Inventory', 'Manufacturing', 'Quality', 'Maintenance', 'Purchase', 'Admin'].forEach(d => allDepts.add(d))
+        }
+        
+        const deptList = Array.from(allDepts).sort()
         
         res.json({
           success: true,
-          data: deptList || ['all', 'inventory', 'manufacturing', 'admin'],
+          data: deptList,
           message: 'Departments fetched successfully'
         })
       } catch (queryError) {
         console.error('[MastersController.getDepartments] Query error:', queryError.message)
         res.json({
           success: true,
-          data: ['all', 'inventory', 'manufacturing', 'admin'],
+          data: ['Production', 'Inventory', 'Manufacturing', 'Quality', 'Maintenance', 'Purchase', 'Admin'],
           message: 'Using default departments due to query error'
         })
       }
@@ -44,7 +64,7 @@ class MastersController {
       console.error('[MastersController.getDepartments] Unexpected error:', error.message)
       res.json({
         success: true,
-        data: ['all', 'inventory', 'manufacturing', 'admin'],
+        data: ['Production', 'Inventory', 'Manufacturing', 'Quality', 'Maintenance', 'Purchase', 'Admin'],
         message: 'Using default departments'
       })
     }
