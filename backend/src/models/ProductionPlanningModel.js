@@ -36,7 +36,7 @@ export class ProductionPlanningModel {
       const plan = plans[0]
 
       const [fgItems] = await this.db.execute(
-        `SELECT pg.*, i.name as item_name 
+        `SELECT pg.*, i.name as item_name, pg.bom_no 
          FROM production_plan_fg pg 
          LEFT JOIN item i ON pg.item_code = i.item_code 
          WHERE pg.plan_id = ?`,
@@ -44,7 +44,7 @@ export class ProductionPlanningModel {
       ).catch(() => [])
 
       const [subAssemblies] = await this.db.execute(
-        `SELECT psa.*, i.name as item_name 
+        `SELECT psa.*, i.name as item_name, psa.bom_no 
          FROM production_plan_sub_assembly psa 
          LEFT JOIN item i ON psa.item_code = i.item_code 
          WHERE psa.plan_id = ?`,
@@ -60,7 +60,9 @@ export class ProductionPlanningModel {
       ).catch(() => [])
 
       const [operations] = await this.db.execute(
-        `SELECT * FROM production_plan_operations WHERE plan_id = ?`,
+        `SELECT * FROM production_plan_operations 
+         WHERE plan_id = ? 
+         ORDER BY FIELD(operation_type, 'FG', 'SA', 'IN_HOUSE') ASC, id ASC`,
         [plan_id]
       ).catch(() => [])
 

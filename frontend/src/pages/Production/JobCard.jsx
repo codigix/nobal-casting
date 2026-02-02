@@ -180,7 +180,7 @@ export default function JobCard() {
 
   const fetchJobCardsForWO = async (wo_id, skipToggle = false) => {
     try {
-      if (jobCardsByWO[wo_id]) {
+      if (jobCardsByWO[wo_id] && jobCardsByWO[wo_id].length > 0) {
         if (!skipToggle) {
           setExpandedWO(expandedWO === wo_id ? null : wo_id)
         } else {
@@ -189,8 +189,25 @@ export default function JobCard() {
         return
       }
 
+      // First fetch existing job cards
       const response = await productionService.getJobCards({ work_order_id: wo_id })
-      const jobCards = response.data || []
+      let jobCards = response.data || []
+
+      // If no job cards exist, try to auto-generate them once
+      if (jobCards.length === 0) {
+        try {
+          // This call will create job cards from WO operations or BOM fallback
+          const genRes = await productionService.generateJobCardsForWorkOrder(wo_id)
+          if (genRes.success || (Array.isArray(genRes.data) && genRes.data.length > 0) || (Array.isArray(genRes.jobCards) && genRes.jobCards.length > 0)) {
+            // Re-fetch to get full job card objects with all fields
+            const refreshRes = await productionService.getJobCards({ work_order_id: wo_id })
+            jobCards = refreshRes.data || []
+          }
+        } catch (genErr) {
+          console.error('Automatic job card generation failed:', genErr)
+          // We don't toast error here because it might just mean no operations are defined yet
+        }
+      }
 
       setJobCardsByWO(prev => ({
         ...prev,
@@ -231,6 +248,23 @@ export default function JobCard() {
       fetchWorkOrders()
     } catch (err) {
       toast.addToast(err.message || 'Failed to truncate job cards', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAutoGenerate = async (woId) => {
+    try {
+      setLoading(true)
+      const response = await productionService.generateJobCardsForWorkOrder(woId)
+      if (response.success || (Array.isArray(response.data) && response.data.length > 0) || (Array.isArray(response.jobCards) && response.jobCards.length > 0)) {
+        toast.addToast('Job cards generated automatically from BOM', 'success')
+        fetchJobCardsForWO(woId, true)
+      } else {
+        toast.addToast('Could not find operations/BOM for this item to auto-generate', 'warning')
+      }
+    } catch (err) {
+      toast.addToast(err.message || 'Failed to auto-generate job cards', 'error')
     } finally {
       setLoading(false)
     }
@@ -831,7 +865,7 @@ export default function JobCard() {
                                                   className="w-full p-2  bg-white border border-gray-100 rounded  text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all "
                                                 />
                                                 {!isFirstTask && isFinite(maxPlannableQty) && (
-                                                  <p className="text-xs  text-amber-600 mt-1 ml-1 er">Cap: {maxPlannableQty.toFixed(2)}</p>
+                                                  <p className="text-xs  text-amber-600 mt-1 ml-1">Cap: {maxPlannableQty.toFixed(2)}</p>
                                                 )}
                                               </div>
                                             )
@@ -853,7 +887,7 @@ export default function JobCard() {
                                                   className="w-full p-2  bg-white border border-gray-100 rounded  text-xs  text-gray-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all "
                                                 />
                                                 {isValidProducibleNumber && (
-                                                  <p className="text-xs  text-emerald-600 mt-1 ml-1 er">Limit: {maxProducibleQty.toFixed(2)}</p>
+                                                  <p className="text-xs  text-emerald-600 mt-1 ml-1">Limit: {maxProducibleQty.toFixed(2)}</p>
                                                 )}
                                               </div>
                                             )
@@ -1001,18 +1035,8 @@ export default function JobCard() {
                           <div className="w-8 h-8 bg-white rounded  flex items-center justify-center mx-auto mb-4 ">
                             <Layers className="text-indigo-400" size={32} />
                           </div>
-                          <h4 className="text-sm  text-gray-900  mb-1">Queue Empty</h4>
-                          <p className="text-xs  text-gray-500 mb-4">Job cards will appear once operations are defined.</p>
-                          <button
-                            onClick={() => {
-                              setEditingId(null);
-                              setPreSelectedWorkOrderId(wo.wo_id);
-                              setShowModal(true);
-                            }}
-                            className="p-6  py-2 bg-indigo-600 text-white rounded  text-xs   hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
-                          >
-                            Initialize Job Card
-                          </button>
+                          <h4 className="text-sm  text-gray-900  mb-1">No Operations Defined</h4>
+                          <p className="text-xs  text-gray-500">Job cards could not be generated because no operations were found in the Work Order or BOM.</p>
                         </div>
                       )}
                     </div>

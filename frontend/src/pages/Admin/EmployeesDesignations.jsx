@@ -496,13 +496,13 @@ export default function EmployeesDesignations() {
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-200">
-                        <th className="p-2 text-left text-gray-700 font-semibold">Name</th>
-                        <th className="p-2 text-left text-gray-700 font-semibold">Email</th>
-                        <th className="p-2 text-left text-gray-700 font-semibold">Phone</th>
-                        <th className="p-2 text-left text-gray-700 font-semibold">Designation</th>
-                        <th className="p-2 text-left text-gray-700 font-semibold">Department</th>
-                        <th className="p-2 text-center text-gray-700 font-semibold">Status</th>
-                        <th className="p-2 text-center text-gray-700 font-semibold">Actions</th>
+                        <th className="p-2 text-left text-gray-700 ">Name</th>
+                        <th className="p-2 text-left text-gray-700 ">Email</th>
+                        <th className="p-2 text-left text-gray-700 ">Phone</th>
+                        <th className="p-2 text-left text-gray-700 ">Designation</th>
+                        <th className="p-2 text-left text-gray-700 ">Department</th>
+                        <th className="p-2 text-center text-gray-700 ">Status</th>
+                        <th className="p-2 text-center text-gray-700 ">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -549,7 +549,7 @@ export default function EmployeesDesignations() {
             ) : (
               <div className="bg-white rounded-xs p-3 text-center ">
                 <div className="text-xl  mb-2">📭</div>
-                <div className="text-xs font-semibold  text-gray-900">
+                <div className="text-xs   text-gray-900">
                   {searchEmployee ? 'No employees found' : 'No employees created yet'}
                 </div>
               </div>
@@ -644,9 +644,9 @@ export default function EmployeesDesignations() {
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-200">
-                        <th className="p-2 text-left text-gray-700 font-semibold">Name</th>
-                        <th className="p-2 text-left text-gray-700 font-semibold">Description</th>
-                        <th className="p-2 text-center text-gray-700 font-semibold">Actions</th>
+                        <th className="p-2 text-left text-gray-700 ">Name</th>
+                        <th className="p-2 text-left text-gray-700 ">Description</th>
+                        <th className="p-2 text-center text-gray-700 ">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -681,7 +681,7 @@ export default function EmployeesDesignations() {
             ) : (
               <div className="bg-white rounded-xs p-3 text-center ">
                 <div className="text-xl  mb-2">📭</div>
-                <div className="text-xs font-semibold  text-gray-900">
+                <div className="text-xs   text-gray-900">
                   {searchDesignation ? 'No designations found' : 'No designations created yet'}
                 </div>
               </div>

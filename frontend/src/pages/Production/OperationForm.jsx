@@ -199,7 +199,7 @@ export default function OperationForm() {
               Basic Information
             </h2>
             
-            <div className="space-y-4">
+            <div className="space-y-2">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-2">
                   Operation Name <span className="text-red-500">*</span>
@@ -327,7 +327,7 @@ export default function OperationForm() {
               Job Card Settings
             </h2>
 
-            <div className="space-y-4">
+            <div className="space-y-2">
               <label className="flex items-center gap-3 cursor-pointer group p-2 rounded hover:bg-gray-50 transition">
                 <input
                   type="checkbox"
@@ -340,7 +340,7 @@ export default function OperationForm() {
               </label>
 
               {formData.create_job_card_based_on_batch_size && (
-                <div className="mt-4 p-4 bg-blue-50 rounded border border-blue-100 space-y-4">
+                <div className="mt-4 p-4 bg-blue-50 rounded border border-blue-100 space-y-2">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-2">
                       Batch Size <span className="text-red-500">*</span>
@@ -402,16 +402,16 @@ export default function OperationForm() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50">
-                      <th className="p-2 text-left text-xs font-semibold text-gray-700 w-12">No.</th>
-                      <th className="p-2 text-left text-xs font-semibold text-gray-700">Operation Step</th>
-                      <th className="p-2 text-center text-xs font-semibold text-gray-700 w-32">Time (hrs)</th>
-                      <th className="p-2 text-center text-xs font-semibold text-gray-700 w-16">Action</th>
+                      <th className="p-2 text-left text-xs  text-gray-700 w-12">No.</th>
+                      <th className="p-2 text-left text-xs  text-gray-700">Operation Step</th>
+                      <th className="p-2 text-center text-xs  text-gray-700 w-32">Time (hrs)</th>
+                      <th className="p-2 text-center text-xs  text-gray-700 w-16">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {subOperations.map((row, idx) => (
                       <tr key={row._key} className="hover:bg-gray-50 transition">
-                        <td className="p-2 text-center font-semibold text-gray-600">{row.no}</td>
+                        <td className="p-2 text-center  text-gray-600">{row.no}</td>
                         <td className="p-2">
                           <input
                             type="text"
@@ -450,7 +450,7 @@ export default function OperationForm() {
                 </table>
                 <div className="mt-4 p-3 bg-gray-50 rounded-xs text-xs">
                   <span className="text-gray-700">Total Operation Time: </span>
-                  <span className="font-semibold text-blue-600">{getTotalOperationTime().toFixed(2)} hrs</span>
+                  <span className=" text-blue-600">{getTotalOperationTime().toFixed(2)} hrs</span>
                 </div>
               </div>
             )}

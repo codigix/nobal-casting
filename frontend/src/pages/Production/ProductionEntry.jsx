@@ -21,10 +21,10 @@ const SectionTitle = ({ title, icon: Icon, badge, subtitle }) => (
         <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
           <Icon size={18} />
         </div>
-        <h3 className="text-sm font-semibold text-slate-900 tracking-tight">{title}</h3>
+        <h3 className="text-sm  text-slate-900 tracking-tight">{title}</h3>
       </div>
       {badge && (
-        <span className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase rounded-full border border-slate-200">
+        <span className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px]  uppercase rounded-full border border-slate-200">
           {badge}
         </span>
       )}
@@ -992,14 +992,14 @@ export default function ProductionEntry() {
     <div className="min-h-screen bg-[#f8fafc] p-4 pb-20">
       <div className="max-w-[1600px] mx-auto space-y-6">
         {/* Unified Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-2 rounded border border-slate-200">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-100">
               <Activity className="w-6 h-6 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-xl font-semibold text-slate-900 tracking-tight">
+                <h1 className="text-xl  text-slate-900 tracking-tight">
                   Production Entry
                 </h1>
                 <StatusBadge status={jobCardData?.status} />
@@ -1040,7 +1040,7 @@ export default function ProductionEntry() {
           <div className="col-span-12 lg:col-span-3 space-y-6">
             {/* Quick Navigation Card */}
             <Card className="p-4 border-slate-200 shadow-sm bg-white rounded-xl">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4 px-2">
+              <h3 className="text-xs  text-slate-400  mb-4 px-2">
                 Navigation
               </h3>
               <div className="space-y-1">
@@ -1174,7 +1174,7 @@ export default function ProductionEntry() {
               const qualityScore = totalProducedQty > 0 ? ((totalAcceptedQty / totalProducedQty) * 100).toFixed(1) : 0
 
               return (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <StatCard
                     label="Efficiency"
                     value={`${efficiency}%`}

@@ -232,7 +232,7 @@ export default function PurchaseOrders() {
             {row.po_no}
           </span>
           {row.mr_id ? (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 w-fit">
+            <div className="flex items-center bg-neutral-100 dark:bg-neutral-800  w-fit">
               <FileText size={10} className="text-neutral-400" />
               <span className="text-xs  text-neutral-500 dark:text-neutral-400  ">#{row.mr_id}</span>
             </div>
@@ -257,7 +257,7 @@ export default function PurchaseOrders() {
     },
     {
       key: 'timeline',
-      label: 'Timeline',
+      label: 'Order -- Expected',
       width: '20%',
       render: (_, row) => {
         const orderDate = row.order_date ? new Date(row.order_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'N/A'
@@ -266,30 +266,28 @@ export default function PurchaseOrders() {
         const expectedDate = expectedVal ? new Date(expectedVal).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'N/A'
 
         return (
-          <div className="flex items-center gap-4 py-1">
+          <div className="flex items-center gap-2 py-1">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 flex items-center justify-center rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
-                <Calendar size={14} />
+              <div className="w-4 h-4 flex items-center justify-center rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
+                <Calendar size={8} />
               </div>
               <div className="flex flex-col">
-                <span className="text-xs  text-neutral-400 dark:text-neutral-500   leading-none">Ordered</span>
                 <span className="text-xs  text-neutral-700 dark:text-neutral-300">{orderDate}</span>
               </div>
             </div>
 
-            <ArrowRight size={14} className="text-neutral-300 dark:text-neutral-700" />
+            <ArrowRight size={10} className="text-neutral-300 dark:text-neutral-700" />
 
             <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 flex items-center justify-center rounded border-1 transition-all ${
+              <div className={`w-4 h-4 flex items-center justify-center rounded border-1 transition-all ${
                 days < 0 ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 rotate-3' :
                 days < 3 ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/50 text-amber-600 dark:text-amber-400' :
                 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400'
               }`}>
-                <Clock size={14} />
+                <Clock size={8} />
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[9px]  text-neutral-400 dark:text-neutral-500   leading-none">Expected</span>
                   {expectedVal && days !== null && row.status !== 'completed' && row.status !== 'cancelled' && (
                     <span className={`text-[9px]    ${
                       days < 0 ? 'text-rose-600' : days < 3 ? 'text-amber-600' : 'text-emerald-600'
@@ -364,75 +362,66 @@ export default function PurchaseOrders() {
         )
       }
     },
-    {
-      key: 'created_by',
-      label: 'Created By',
-      width: '10%',
-      render: (val) => (
-        <span className="text-xs text-neutral-600 dark:text-neutral-400">
-          {val || 'System'}
-        </span>
-      )
-    }
+  
   ]
 
   const renderActions = (row) => (
-    <div className="flex items-center gap-1.5 justify-end">
+    <div className="flex items-center gap-1.5 justify-center">
       <Button
-        size="sm"
+        size="xs"
         variant="icon"
         onClick={(e) => {
           e.stopPropagation()
           navigate(`/buying/purchase-orders/${row.po_no}`)
         }}
-        className="w-9 h-9 rounded items-center bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 border border-neutral-200 dark:border-neutral-700 transition-all active:scale-90"
+        className="w-5 h-5 rounded items-center bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 border border-neutral-200 dark:border-neutral-700 transition-all active:scale-90"
         title="View Details"
       >
-        <Eye size={16} />
+        <Eye size={12} />
       </Button>
 
       {row.status === 'draft' && (
         <>
           <Button
-            size="sm"
+            size="xs"
             variant="icon"
             onClick={(e) => {
               e.stopPropagation()
               navigate(`/buying/purchase-orders/${row.po_no}/edit`)
             }}
-            className="w-9 h-9 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-emerald-600 dark:hover:text-emerald-400 border border-neutral-200 dark:border-neutral-700 transition-all active:scale-90"
+            className="w-5 h-5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-emerald-600 dark:hover:text-emerald-400 border border-neutral-200 dark:border-neutral-700 transition-all active:scale-90"
             title="Edit Order"
           >
-            <Edit2 size={16} />
+            <Edit2 size={12} />
           </Button>
           <Button
-            size="sm"
+            size="xs"
             variant="icon"
             onClick={(e) => {
               e.stopPropagation()
               handleSubmitPO(row.po_no)
             }}
-            className="w-9 h-9 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 border border-neutral-200 dark:border-neutral-700 transition-all active:scale-90"
+            className="w-5 h-5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 border border-neutral-200 dark:border-neutral-700 transition-all active:scale-90"
             disabled={actionLoading === row.po_no}
             title="Submit Order"
           >
-            <Send size={16} className={actionLoading === row.po_no ? 'animate-pulse' : ''} />
+            <Send size={12} className={actionLoading === row.po_no ? 'animate-pulse' : ''} />
           </Button>
         </>
       )}
 
       {(row.status === 'submitted' || row.status === 'to_receive' || row.status === 'partially_received') && (
         <Button
-          size="sm"
+          size="xs"
           variant="icon"
           onClick={(e) => {
             e.stopPropagation()
             handleReceiveMaterial(row)
           }}
-          className="w-9 h-9 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 border border-neutral-200 dark:border-neutral-700 transition-all active:scale-90"
+          className="w-5 h-5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 border border-neutral-200 dark:border-neutral-700 transition-all active:scale-90"
           title="Receive Material"
         >
-          <Download size={16} />
+          <Download size={12} />
         </Button>
       )}
     </div>
@@ -497,7 +486,7 @@ export default function PurchaseOrders() {
               className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded shadow-lg shadow-indigo-600/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] border-none text-xs  "
             >
               <Plus size={18} strokeWidth={3} />
-              CREATE ORDER
+              Create Order
             </Button>
           </div>
         </div>
@@ -649,7 +638,7 @@ export default function PurchaseOrders() {
                     <div className="space-y-3 mb-5">
                       <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
                         <Calendar size={14} />
-                        <span className="text-xs font-semibold">{new Date(order.order_date).toLocaleDateString()}</span>
+                        <span className="text-xs ">{new Date(order.order_date).toLocaleDateString()}</span>
                       </div>
                       <div className="flex items-center justify-between p-3 bg-neutral-50 dark:bg-neutral-800/50 rounded  border border-neutral-100 dark:border-neutral-800">
                         <div className="flex flex-col">

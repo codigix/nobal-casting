@@ -100,7 +100,7 @@ export default function ProductionPlan() {
           <div className="bg-green-50 border-l-4 border-green-500 rounded-xs p-2 mb-2 flex items-start gap-2">
             <div className="text-green-600 mt-0.5">✓</div>
             <div>
-              <p className="font-semibold text-green-800 text-xs">Success</p>
+              <p className=" text-green-800 text-xs">Success</p>
               <p className="text-green-700 text-xs mt-0">{success}</p>
             </div>
           </div>
@@ -110,7 +110,7 @@ export default function ProductionPlan() {
           <div className="bg-red-50 border-l-4 border-red-500 rounded-xs p-2 mb-2 flex items-start gap-2">
             <div className="text-red-600 mt-0.5">✕</div>
             <div>
-              <p className="font-semibold text-red-800 text-xs">Error</p>
+              <p className=" text-red-800 text-xs">Error</p>
               <p className="text-red-700 text-xs mt-0">{error}</p>
             </div>
           </div>
@@ -199,9 +199,9 @@ export default function ProductionPlan() {
                             className="w-4 h-4 rounded border-gray-300"
                           />
                         </td>
-                        <td className="p-2  py-2 text-xs font-semibold text-gray-900">{plan.plan_id}</td>
+                        <td className="p-2  py-2 text-xs  text-gray-900">{plan.plan_id}</td>
                         <td className="p-2  py-2">
-                          <span className={`inline-block px-2 py-1 rounded text-xs font-semibold border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
+                          <span className={`inline-block px-2 py-1 rounded text-xs  border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
                             {plan.status}
                           </span>
                         </td>

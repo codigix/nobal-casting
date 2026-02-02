@@ -180,6 +180,13 @@ export default function WorkOrderForm() {
   }, [id, productionPlanId, prefillItem, prefillBom])
 
   useEffect(() => {
+    if (id && bomOperations.length > 0 && jobCards.length === 0 && !loading && !error && !success) {
+      console.log('No job cards found for existing work order. Auto-generating...')
+      createJobCardsFromOperations(true)
+    }
+  }, [id, bomOperations.length, jobCards.length, loading, error, success])
+
+  useEffect(() => {
     if (jobCards.length > 0) {
       calculateCompletionMetrics(jobCards)
       if (bomOperations.length > 0) {
@@ -285,7 +292,34 @@ export default function WorkOrderForm() {
         status: woData.status || 'draft',
         notes: woData.notes || ''
       }))
-      if (woData.bom_id || woData.bom_no) await fetchBOMDetails(woData.bom_id || woData.bom_no)
+      if (woData.operations && woData.operations.length > 0) {
+        setBomOperations(woData.operations.map((op, idx) => ({
+          id: op.id || idx,
+          operation_name: op.operation || op.operation_name || '',
+          workstation: op.workstation || op.workstation_type || '',
+          operation_time: op.time || op.operation_time || 0,
+          operating_cost: op.operating_cost || 0,
+          operation_type: op.operation_type || 'FG',
+          hourly_rate: op.hourly_rate || 0
+        })))
+      } else if (woData.bom_id || woData.bom_no) {
+        await fetchBOMDetails(woData.bom_id || woData.bom_no)
+      }
+
+      if (woData.items && woData.items.length > 0) {
+        setBomMaterials(woData.items.map((item, idx) => ({
+          id: item.id || idx,
+          item_code: item.item_code,
+          item_name: item.item_name || '',
+          quantity: item.required_qty,
+          uom: item.uom || '',
+          required_qty: item.required_qty,
+          source_warehouse: item.source_warehouse,
+          transferred_qty: item.transferred_qty,
+          consumed_qty: item.consumed_qty,
+          returned_qty: item.returned_qty
+        })))
+      }
     } catch (err) { console.error('Failed to fetch work order:', err); setError(`Failed to load work order: ${err.message}`) }
     finally { setLoading(false) }
   }
@@ -304,7 +338,9 @@ export default function WorkOrderForm() {
         operation_name: op.operation_name || op.operation || '',
         workstation: op.workstation || op.workstation_type || '',
         operation_time: op.operation_time || op.time_in_hours || 0,
-        operating_cost: op.operating_cost || op.cost || 0
+        operating_cost: op.operating_cost || op.cost || 0,
+        operation_type: op.operation_type || 'FG',
+        hourly_rate: op.hourly_rate || 0
       }))
 
       const rawMaterials = (bomData.bom_raw_materials || bomData.rawMaterials || []).map((rm, idx) => {
@@ -431,30 +467,30 @@ export default function WorkOrderForm() {
     } catch (err) { console.error('Failed to populate workstations:', err) }
   }
 
-  const createJobCardsFromOperations = async () => {
+  const createJobCardsFromOperations = async (quiet = false) => {
     if (!id) {
-      setError('Please save the work order first before generating job cards')
+      if (!quiet) setError('Please save the work order first before generating job cards')
       return
     }
-    setLoading(true)
+    if (!quiet) setLoading(true)
     try {
       const response = await productionService.generateJobCardsForWorkOrder(id)
       if (response.success) {
-        setSuccess('Job cards generated successfully')
+        if (!quiet) setSuccess('Job cards generated successfully')
         await fetchJobCards(id)
       } else {
-        setError(response.message || 'Failed to generate job cards')
+        if (!quiet) setError(response.message || 'Failed to generate job cards')
       }
     } catch (err) {
-      setError(`Error generating job cards: ${err.message}`)
+      if (!quiet) setError(`Error generating job cards: ${err.message}`)
     } finally {
-      setLoading(false)
+      if (!quiet) setLoading(false)
     }
   }
 
   const handleSubmit = async () => {
-    if (!formData.item_to_manufacture || !formData.bom_id) {
-      setError('Please fill required fields (Item & BOM)')
+    if (!formData.item_to_manufacture) {
+      setError('Please fill required fields (Item)')
       return
     }
     setLoading(true)
@@ -472,10 +508,30 @@ export default function WorkOrderForm() {
           item_code: mat.item_code,
           source_warehouse: mat.source_warehouse || 'Stores - NC',
           required_qty: mat.required_qty
+        })),
+        operations: bomOperations.map(op => ({
+          operation_name: op.operation_name,
+          workstation_type: op.workstation,
+          operation_time: op.operation_time,
+          operating_cost: op.operating_cost,
+          operation_type: op.operation_type,
+          hourly_rate: op.hourly_rate
         }))
       }
       const response = id ? await productionService.updateWorkOrder(id, payload) : await productionService.createWorkOrder(payload)
       if (response.success) {
+        // Automatically generate job cards if it's a new work order
+        if (!id) {
+          const newWoId = response.data?.wo_id || response.wo_id
+          if (newWoId) {
+            console.log(`Automatically generating job cards for Work Order: ${newWoId}`)
+            try {
+              await productionService.generateJobCardsForWorkOrder(newWoId)
+            } catch (jcErr) {
+              console.warn('Failed to auto-generate job cards:', jcErr)
+            }
+          }
+        }
         setSuccess(`Work order ${id ? 'updated' : 'created'}`)
         setTimeout(() => navigate('/manufacturing/work-orders'), 1500)
       } else { setError(response.message || 'Save failed') }
@@ -585,7 +641,7 @@ export default function WorkOrderForm() {
 
         <div className="hidden lg:flex items-center gap-4 bg-slate-900 p-2 rounded shadow-xl shrink-0">
           <div className="flex flex-col">
-            <div className="flex items-center justify-between text-[9px] uppercase tracking-widest text-slate-400 font-bold mb-1">
+            <div className="flex items-center justify-between text-[9px] uppercase tracking-widest text-slate-400  mb-1">
               <span className="opacity-60 ">Execution Pulse</span>
               <span className="text-indigo-400 ml-2">{((completionMetrics.totalCompleted / (formData.qty_to_manufacture || 1)) * 100).toFixed(0)}%</span>
             </div>
@@ -635,7 +691,7 @@ export default function WorkOrderForm() {
                       />
                     </FieldWrapper>
 
-                    <FieldWrapper label="Bill of Materials (BOM)" required>
+                    <FieldWrapper label="Bill of Materials (BOM)">
                       <SearchableSelect
                         value={formData.bom_id}
                         onChange={(val) => handleInputChange({ target: { name: 'bom_id', value: val } })}
@@ -737,11 +793,11 @@ export default function WorkOrderForm() {
                     </div>
 
                     <div className="col-span-4 border-t border-slate-100">
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center justify-between">
                         <span className="text-xs  text-slate-400 ">Delivery Commitment</span>
-                        <div className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded text-[9px]  border border-amber-100">TARGET</div>
+                        <div className="p-1 bg-amber-50 text-amber-600 rounded text-[10px]  border border-amber-100">Parget</div>
                       </div>
-                      <p className="text-sm  text-slate-900">{formData.expected_delivery_date || 'PENDING SCHEDULE'}</p>
+                      <p className="text-xs  text-slate-900">{formData.expected_delivery_date || 'Pending Schedule'}</p>
                     </div>
                   </div>
                 </Card>
@@ -794,7 +850,7 @@ export default function WorkOrderForm() {
                     {jobCards.length > 0 && (
                       <div className="flex items-center gap-2 p-2  py-1 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-100">
                         <Activity size={12} className="animate-pulse" />
-                        <span className="text-xs  er">{jobCards.length} Tasks active</span>
+                        <span className="text-xs ">{jobCards.length} Tasks active</span>
                       </div>
                     )}
                   </div>
@@ -824,7 +880,7 @@ export default function WorkOrderForm() {
                                     </span>
                                     <div>
                                       <p className="text-xs  text-slate-900">{jc.operation_name || jc.operation}</p>
-                                      <p className="text-xs text-slate-400 font-medium text-xs er">Sequence Point</p>
+                                      <p className="text-xs text-slate-400 font-medium text-xs">Sequence Point</p>
                                     </div>
                                   </div>
                                 </td>
@@ -881,6 +937,44 @@ export default function WorkOrderForm() {
                           })}
                         </tbody>
                       </table>
+                    </div>
+                  ) : bomOperations.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <div className="p-2 bg-amber-50 border-b border-amber-100 text-amber-700 text-xs flex items-center gap-2">
+                        <Info size={14} />
+                        Planned operations from BOM. Generate job cards to start production.
+                      </div>
+                      <table className="w-full text-left bg-white">
+                        <thead>
+                          <tr className="bg-slate-50/30">
+                            <th className="p-2 text-xs text-slate-400">Operation</th>
+                            <th className="p-2 text-xs text-slate-400">Workstation</th>
+                            <th className="p-2 text-xs text-slate-400 text-right">Time (Mins)</th>
+                            <th className="p-2 text-xs text-slate-400 text-right">Cost</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {bomOperations.map((op, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="p-2 text-xs text-slate-900">{op.operation_name}</td>
+                              <td className="p-2 text-xs text-slate-600">{getWorkstationName(op.workstation)}</td>
+                              <td className="p-2 text-xs text-slate-900 text-right">{op.operation_time}</td>
+                              <td className="p-2 text-xs text-slate-900 text-right">{op.operating_cost}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {!isReadOnly && (
+                        <div className="p-4 flex justify-center border-t border-slate-100">
+                          <button
+                            onClick={createJobCardsFromOperations}
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all text-xs shadow-lg shadow-indigo-100"
+                          >
+                            <Zap size={14} />
+                            Generate Job Cards
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="p-2 text-center">

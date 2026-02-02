@@ -833,7 +833,7 @@ export default function PurchaseReceipts() {
                                       style={{ width: `${(itemStats.rejected / itemStats.total) * 100}%` }}
                                     ></div>
                                   </div>
-                                  <div className="flex justify-between mt-2 text-[9px]  er">
+                                  <div className="flex justify-between mt-2 text-[9px]">
                                     <span className="text-emerald-600">{itemStats.accepted} Accepted</span>
                                     <span className="text-rose-600">{itemStats.rejected} Rejected</span>
                                     <span className="text-amber-600">{itemStats.pending} Pending</span>
@@ -1109,7 +1109,7 @@ export default function PurchaseReceipts() {
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-2">
               <h4 className="text-xs  text-slate-900  flex items-center gap-2">
                 <ClipboardCheck size={14} className="text-indigo-500" />
                 Items Approval
@@ -1176,7 +1176,7 @@ export default function PurchaseReceipts() {
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-2">
               <h4 className="text-xs  text-slate-900  flex items-center gap-2">
                 <MapPin size={14} className="text-indigo-500" />
                 Warehouse & Valuation

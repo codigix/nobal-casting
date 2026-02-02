@@ -236,7 +236,7 @@ export default function Warehouses() {
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-xs transition-all shadow-sm active:transform active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs  rounded-xs transition-all shadow-sm active:transform active:scale-95"
           >
             <Plus size={16} />
             Create Warehouse
@@ -345,7 +345,7 @@ export default function Warehouses() {
                 <div className="w-12 h-12 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-4">
                   <Warehouse size={24} className="text-neutral-400" />
                 </div>
-                <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">No warehouses found</h3>
+                <h3 className="text-sm  text-neutral-900 dark:text-white">No warehouses found</h3>
                 <p className="text-xs text-neutral-500 mt-1 max-w-xs">
                   {searchTerm || locationFilter 
                     ? "Try adjusting your filters to find what you're looking for." 
@@ -453,7 +453,7 @@ export default function Warehouses() {
             </div>
           }
         >
-          <form id="warehouse-form" onSubmit={handleSubmit} className="space-y-4 py-2">
+          <form id="warehouse-form" onSubmit={handleSubmit} className="space-y-2 py-2">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-[11px]  text-neutral-500  tracking-wider">

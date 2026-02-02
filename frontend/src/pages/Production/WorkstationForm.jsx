@@ -394,7 +394,7 @@ export default function WorkstationForm() {
                 <h3 className="text-xs  text-slate-900 ">Maintenance</h3>
               </div>
               
-              <div className="space-y-4">
+              <div className="space-y-2">
                 <div className=".5">
                   <label className="text-xs  text-slate-400  px-1">Schedule Frequency</label>
                   <select

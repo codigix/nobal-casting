@@ -123,7 +123,7 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                 <div className="mb-6 p-2 bg-green-50 border border-green-200 rounded-xs text-green-800 flex items-start gap-3">
                   <Check size={20} className="flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold">Production Plan Generated Successfully!</p>
+                    <p className="">Production Plan Generated Successfully!</p>
                     <p className="text-xs mt-1">Plan ID: <strong>{plan.plan_id}</strong></p>
                   </div>
                 </div>
@@ -137,9 +137,9 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-blue-200">
-                            <th className="text-left py-2 font-semibold text-gray-900">Item Code</th>
-                            <th className="text-left py-2 font-semibold text-gray-900">Item Name</th>
-                            <th className="text-right py-2 font-semibold text-gray-900">Quantity</th>
+                            <th className="text-left py-2  text-gray-900">Item Code</th>
+                            <th className="text-left py-2  text-gray-900">Item Name</th>
+                            <th className="text-right py-2  text-gray-900">Quantity</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -163,11 +163,11 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-orange-200">
-                            <th className="text-left py-2 font-semibold text-gray-900">Item Code</th>
-                            <th className="text-left py-2 font-semibold text-gray-900">Item Name</th>
-                            <th className="text-right py-2 font-semibold text-gray-900">Scrap %</th>
-                            <th className="text-right py-2 font-semibold text-gray-900">Qty (before scrap)</th>
-                            <th className="text-right py-2 font-semibold text-gray-900">Planned Qty</th>
+                            <th className="text-left py-2  text-gray-900">Item Code</th>
+                            <th className="text-left py-2  text-gray-900">Item Name</th>
+                            <th className="text-right py-2  text-gray-900">Scrap %</th>
+                            <th className="text-right py-2  text-gray-900">Qty (before scrap)</th>
+                            <th className="text-right py-2  text-gray-900">Planned Qty</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -195,12 +195,12 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-green-200">
-                            <th className="text-left py-2 font-semibold text-gray-900">Item Code</th>
-                            <th className="text-left py-2 font-semibold text-gray-900">Item Name</th>
-                            <th className="text-left py-2 font-semibold text-gray-900">Group</th>
-                            <th className="text-right py-2 font-semibold text-gray-900">Total Qty</th>
-                            <th className="text-right py-2 font-semibold text-gray-900">Rate</th>
-                            <th className="text-right py-2 font-semibold text-gray-900">Amount</th>
+                            <th className="text-left py-2  text-gray-900">Item Code</th>
+                            <th className="text-left py-2  text-gray-900">Item Name</th>
+                            <th className="text-left py-2  text-gray-900">Group</th>
+                            <th className="text-right py-2  text-gray-900">Total Qty</th>
+                            <th className="text-right py-2  text-gray-900">Rate</th>
+                            <th className="text-right py-2  text-gray-900">Amount</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -211,7 +211,7 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                               <td className="py-2 text-gray-600 text-xs">{item.item_group}</td>
                               <td className="py-2 text-right font-medium text-gray-900">{item.total_qty.toFixed(3)}</td>
                               <td className="py-2 text-right text-gray-700">₹{item.rate.toFixed(2)}</td>
-                              <td className="py-2 text-right font-semibold text-green-700">₹{item.total_amount.toFixed(2)}</td>
+                              <td className="py-2 text-right  text-green-700">₹{item.total_amount.toFixed(2)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -227,12 +227,12 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-purple-200">
-                            <th className="text-left py-2 font-semibold text-gray-900">Operation</th>
-                            <th className="text-left py-2 font-semibold text-gray-900">Workstation</th>
-                            <th className="text-right py-2 font-semibold text-gray-900">Time (Minutes)</th>
-                            <th className="text-right py-2 font-semibold text-gray-900">Total Hours</th>
-                            <th className="text-right py-2 font-semibold text-gray-900">Hourly Rate</th>
-                            <th className="text-right py-2 font-semibold text-gray-900">Cost</th>
+                            <th className="text-left py-2  text-gray-900">Operation</th>
+                            <th className="text-left py-2  text-gray-900">Workstation</th>
+                            <th className="text-right py-2  text-gray-900">Time (Minutes)</th>
+                            <th className="text-right py-2  text-gray-900">Total Hours</th>
+                            <th className="text-right py-2  text-gray-900">Hourly Rate</th>
+                            <th className="text-right py-2  text-gray-900">Cost</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -243,7 +243,7 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                               <td className="py-2 text-right font-medium text-gray-900">{item.total_time.toFixed(1)}</td>
                               <td className="py-2 text-right  text-purple-700">{item.total_hours.toFixed(2)}</td>
                               <td className="py-2 text-right text-gray-700">₹{item.hourly_rate.toFixed(2)}</td>
-                              <td className="py-2 text-right font-semibold text-purple-700">₹{item.total_cost.toFixed(2)}</td>
+                              <td className="py-2 text-right  text-purple-700">₹{item.total_cost.toFixed(2)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -259,12 +259,12 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-indigo-200">
-                            <th className="text-left py-2 font-semibold text-gray-900">Operation</th>
-                            <th className="text-left py-2 font-semibold text-gray-900">Workstation</th>
-                            <th className="text-right py-2 font-semibold text-gray-900">Time per Unit (min)</th>
-                            <th className="text-right py-2 font-semibold text-gray-900">Total Time (min)</th>
-                            <th className="text-right py-2 font-semibold text-gray-900">Total Hours</th>
-                            <th className="text-right py-2 font-semibold text-gray-900">Cost</th>
+                            <th className="text-left py-2  text-gray-900">Operation</th>
+                            <th className="text-left py-2  text-gray-900">Workstation</th>
+                            <th className="text-right py-2  text-gray-900">Time per Unit (min)</th>
+                            <th className="text-right py-2  text-gray-900">Total Time (min)</th>
+                            <th className="text-right py-2  text-gray-900">Total Hours</th>
+                            <th className="text-right py-2  text-gray-900">Cost</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -275,7 +275,7 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                               <td className="py-2 text-right text-gray-700">{item.operation_time_per_unit.toFixed(1)}</td>
                               <td className="py-2 text-right font-medium text-gray-900">{item.total_time.toFixed(1)}</td>
                               <td className="py-2 text-right  text-indigo-700">{(item.total_time / 60).toFixed(2)}</td>
-                              <td className="py-2 text-right font-semibold text-indigo-700">₹{item.total_cost.toFixed(2)}</td>
+                              <td className="py-2 text-right  text-indigo-700">₹{item.total_cost.toFixed(2)}</td>
                             </tr>
                           ))}
                         </tbody>

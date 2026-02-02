@@ -207,19 +207,19 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
           <div className="mb-6 p-2 bg-blue-50 border border-blue-200 rounded-xs">
             <div className="grid grid-cols-4 gap-4 text-xs">
               <div>
-                <p className="text-gray-600 text-xs font-semibold">Job Card</p>
+                <p className="text-gray-600 text-xs ">Job Card</p>
                 <p className="text-gray-900 font-medium">{jobCardData.job_card_id}</p>
               </div>
               <div>
-                <p className="text-gray-600 text-xs font-semibold">Item</p>
+                <p className="text-gray-600 text-xs ">Item</p>
                 <p className="text-gray-900 font-medium">{itemName || jobCardData.item_name || 'Loading...'}</p>
               </div>
               <div>
-                <p className="text-gray-600 text-xs font-semibold">Planned Qty</p>
+                <p className="text-gray-600 text-xs ">Planned Qty</p>
                 <p className="text-gray-900 font-medium">{jobCardData.planned_quantity}</p>
               </div>
               <div>
-                <p className="text-gray-600 text-xs font-semibold">Operation</p>
+                <p className="text-gray-600 text-xs ">Operation</p>
                 <p className="text-gray-900 font-medium">{jobCardData.operation || 'N/A'}</p>
               </div>
             </div>
@@ -227,7 +227,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
         )}
 
         <form onSubmit={handleAddTimeLog} className="mb-8 p-2 bg-gray-50 border border-gray-200 rounded-xs">
-          <h3 className="mb-4 font-semibold text-gray-900 flex items-center gap-2">
+          <h3 className="mb-4  text-gray-900 flex items-center gap-2">
             <Plus size={18} /> Add Time Log Entry
           </h3>
           
@@ -434,34 +434,34 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
         </form>
 
         <div className="mb-6 p-2 bg-amber-50 border border-amber-200 rounded-xs">
-          <h4 className="font-semibold text-gray-900 mb-3">Production Summary</h4>
+          <h4 className=" text-gray-900 mb-3">Production Summary</h4>
           <div className="grid grid-cols-5 gap-4 text-xs">
             <div>
-              <p className="text-gray-600 text-xs font-semibold">Total Produced</p>
+              <p className="text-gray-600 text-xs ">Total Produced</p>
               <p className="text-xs  text-gray-900">
                 {timeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0).toFixed(2)}
               </p>
             </div>
             <div>
-              <p className="text-gray-600 text-xs font-semibold">Total Accepted</p>
+              <p className="text-gray-600 text-xs ">Total Accepted</p>
               <p className="text-lg  text-green-600">
                 {timeLogs.reduce((sum, log) => sum + (parseFloat(log.accepted_qty) || 0), 0).toFixed(2)}
               </p>
             </div>
             <div>
-              <p className="text-gray-600 text-xs font-semibold">Total Rejected</p>
+              <p className="text-gray-600 text-xs ">Total Rejected</p>
               <p className="text-lg  text-red-600">
                 {timeLogs.reduce((sum, log) => sum + (parseFloat(log.rejected_qty) || 0), 0).toFixed(2)}
               </p>
             </div>
             <div>
-              <p className="text-gray-600 text-xs font-semibold">Total Scrap</p>
+              <p className="text-gray-600 text-xs ">Total Scrap</p>
               <p className="text-lg  text-orange-600">
                 {timeLogs.reduce((sum, log) => sum + (parseFloat(log.scrap_qty) || 0), 0).toFixed(2)}
               </p>
             </div>
             <div>
-              <p className="text-gray-600 text-xs font-semibold">Remaining</p>
+              <p className="text-gray-600 text-xs ">Remaining</p>
               <p className="text-lg  text-blue-600">
                 {(parseFloat(jobCardData?.planned_quantity || 0) - timeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0)).toFixed(2)}
               </p>
@@ -470,7 +470,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
         </div>
 
         <div>
-          <h3 className="mb-4 font-semibold text-gray-900 flex items-center gap-2">
+          <h3 className="mb-4  text-gray-900 flex items-center gap-2">
             <Clock size={18} /> Time Log Entries ({timeLogs.length})
           </h3>
           
@@ -479,16 +479,16 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
               <table className="w-full text-xs">
                 <thead className="bg-gray-100 border-b border-gray-200">
                   <tr>
-                    <th className="p-2 text-left font-semibold text-gray-700">Operator</th>
-                    <th className="p-2 text-left font-semibold text-gray-700">Workstation</th>
-                    <th className="p-2 text-center font-semibold text-gray-700">Shift</th>
-                    <th className="p-2 text-center font-semibold text-gray-700">Time</th>
-                    <th className="p-2 text-center font-semibold text-gray-700">Completed</th>
-                    <th className="p-2 text-center font-semibold text-gray-700">Accepted</th>
-                    <th className="p-2 text-center font-semibold text-gray-700">Rejected</th>
-                    <th className="p-2 text-center font-semibold text-gray-700">Scrap</th>
-                    <th className="p-2 text-center font-semibold text-gray-700">Type</th>
-                    <th className="p-2 text-center font-semibold text-gray-700">Action</th>
+                    <th className="p-2 text-left  text-gray-700">Operator</th>
+                    <th className="p-2 text-left  text-gray-700">Workstation</th>
+                    <th className="p-2 text-center  text-gray-700">Shift</th>
+                    <th className="p-2 text-center  text-gray-700">Time</th>
+                    <th className="p-2 text-center  text-gray-700">Completed</th>
+                    <th className="p-2 text-center  text-gray-700">Accepted</th>
+                    <th className="p-2 text-center  text-gray-700">Rejected</th>
+                    <th className="p-2 text-center  text-gray-700">Scrap</th>
+                    <th className="p-2 text-center  text-gray-700">Type</th>
+                    <th className="p-2 text-center  text-gray-700">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">

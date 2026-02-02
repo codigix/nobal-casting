@@ -189,7 +189,7 @@ export default function ProductionStages() {
                         {stage.stage_sequence}
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900">{stage.stage_name}</h3>
+                        <h3 className=" text-gray-900">{stage.stage_name}</h3>
                         <p className="text-xs text-gray-600 mt-0.5">{stage.description || 'No description'}</p>
                         <div className="flex items-center gap-2 mt-2">
                           <Badge text={stage.stage_code} color="blue" />

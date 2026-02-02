@@ -204,7 +204,7 @@ export default function SupplierList() {
           </div>
           <Button
             onClick={handleAddClick}
-            className="flex items-center gap-2 bg-blue-500 text-white px-5 py-2.5 rounded  font-semibold text-xs"
+            className="flex items-center gap-2 bg-blue-500 text-white px-5 py-2.5 rounded   text-xs"
           >
             <Plus size={18} />
             Add New Supplier
@@ -215,7 +215,7 @@ export default function SupplierList() {
       <div className="bg-white rounded-xs p-5 border border-gray-200">
         <div className="grid grid-cols-4 gap-4 mb-5">
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-2">Search</label>
+            <label className="block text-xs  text-gray-600 mb-2">Search</label>
             <input
               type="text"
               placeholder="Name, ID, or GSTIN..."
@@ -226,7 +226,7 @@ export default function SupplierList() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-2">Status</label>
+            <label className="block text-xs  text-gray-600 mb-2">Status</label>
             <SearchableSelect
               value={filters.status}
               onChange={(val) => setFilters({ ...filters, status: val })}
@@ -236,7 +236,7 @@ export default function SupplierList() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-2">Group</label>
+            <label className="block text-xs  text-gray-600 mb-2">Group</label>
             <SearchableSelect
               value={filters.group}
               onChange={(val) => setFilters({ ...filters, group: val })}
@@ -275,7 +275,7 @@ export default function SupplierList() {
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-800 mb-1.5">Supplier Name *</label>
+                <label className="block text-xs  text-gray-800 mb-1.5">Supplier Name *</label>
                 <input
                   type="text"
                   placeholder="e.g., ABC Industries"
@@ -286,7 +286,7 @@ export default function SupplierList() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-800 mb-1.5">GSTIN *</label>
+                <label className="block text-xs  text-gray-800 mb-1.5">GSTIN *</label>
                 <input
                   type="text"
                   placeholder="e.g., 27AABCT1234H1Z0"
@@ -297,7 +297,7 @@ export default function SupplierList() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-800 mb-1.5">Supplier Group</label>
+                <label className="block text-xs  text-gray-800 mb-1.5">Supplier Group</label>
                 <SearchableSelect
                   value={formData.supplier_group}
                   onChange={(val) => setFormData({ ...formData, supplier_group: val })}
@@ -307,7 +307,7 @@ export default function SupplierList() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-800 mb-1.5">Rating (0-5)</label>
+                <label className="block text-xs  text-gray-800 mb-1.5">Rating (0-5)</label>
                 <input
                   type="number"
                   min="0"
@@ -320,7 +320,7 @@ export default function SupplierList() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-800 mb-1.5">Payment Terms (Days)</label>
+                <label className="block text-xs  text-gray-800 mb-1.5">Payment Terms (Days)</label>
                 <input
                   type="number"
                   min="0"
@@ -331,7 +331,7 @@ export default function SupplierList() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-800 mb-1.5">Lead Time (Days)</label>
+                <label className="block text-xs  text-gray-800 mb-1.5">Lead Time (Days)</label>
                 <input
                   type="number"
                   min="0"
@@ -357,13 +357,13 @@ export default function SupplierList() {
               <Button
                 type="button"
                 onClick={handleCancel}
-                className="px-5 py-2.5 bg-gray-200 text-gray-800 border border-gray-300 rounded  text-xs font-semibold  hover:bg-gray-300"
+                className="px-5 py-2.5 bg-gray-200 text-gray-800 border border-gray-300 rounded  text-xs   hover:bg-gray-300"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                className="px-5 py-2.5 bg-green-600 text-white rounded  text-xs font-semibold  hover:bg-green-700"
+                className="px-5 py-2.5 bg-green-600 text-white rounded  text-xs   hover:bg-green-700"
               >
                 Create Supplier
               </Button>
@@ -378,7 +378,7 @@ export default function SupplierList() {
           <p className="text-xs text-gray-500 mb-5">Try adjusting your filters or create a new supplier</p>
           <Button
             onClick={handleAddClick}
-            className="inline-block px-5 py-2.5 bg-blue-500 text-white rounded  text-xs font-semibold  hover:bg-blue-600"
+            className="inline-block px-5 py-2.5 bg-blue-500 text-white rounded  text-xs   hover:bg-blue-600"
           >
             Create First Supplier
           </Button>
@@ -388,14 +388,14 @@ export default function SupplierList() {
           <table className="w-full border-collapse border border-gray-200">
             <thead>
               <tr className="bg-gray-100 border-b-2 border-gray-200">
-                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600">Name</th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600">ID</th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600">GSTIN</th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600">Group</th>
-                <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600">Rating</th>
-                <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600">Lead Time</th>
-                <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600">Status</th>
-                <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600">Actions</th>
+                <th className="px-4 py-4 text-left text-xs  text-gray-600">Name</th>
+                <th className="px-4 py-4 text-left text-xs  text-gray-600">ID</th>
+                <th className="px-4 py-4 text-left text-xs  text-gray-600">GSTIN</th>
+                <th className="px-4 py-4 text-left text-xs  text-gray-600">Group</th>
+                <th className="px-4 py-4 text-center text-xs  text-gray-600">Rating</th>
+                <th className="px-4 py-4 text-center text-xs  text-gray-600">Lead Time</th>
+                <th className="px-4 py-4 text-center text-xs  text-gray-600">Status</th>
+                <th className="px-4 py-4 text-center text-xs  text-gray-600">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -406,7 +406,7 @@ export default function SupplierList() {
                       <form onSubmit={handleSubmit}>
                         <div className="grid grid-cols-4 gap-3 mb-3">
                           <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Name *</label>
+                            <label className="block text-xs  text-gray-600 mb-1">Name *</label>
                             <input
                               type="text"
                               value={formData.name}
@@ -416,7 +416,7 @@ export default function SupplierList() {
                           </div>
 
                           <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">GSTIN *</label>
+                            <label className="block text-xs  text-gray-600 mb-1">GSTIN *</label>
                             <input
                               type="text"
                               value={formData.gstin}
@@ -426,7 +426,7 @@ export default function SupplierList() {
                           </div>
 
                           <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Group</label>
+                            <label className="block text-xs  text-gray-600 mb-1">Group</label>
                             <SearchableSelect
                               value={formData.supplier_group}
                               onChange={(val) => setFormData({ ...formData, supplier_group: val })}
@@ -436,7 +436,7 @@ export default function SupplierList() {
                           </div>
 
                           <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Rating</label>
+                            <label className="block text-xs  text-gray-600 mb-1">Rating</label>
                             <input
                               type="number"
                               min="0"
@@ -449,7 +449,7 @@ export default function SupplierList() {
                           </div>
 
                           <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Payment Terms</label>
+                            <label className="block text-xs  text-gray-600 mb-1">Payment Terms</label>
                             <input
                               type="number"
                               min="0"
@@ -460,7 +460,7 @@ export default function SupplierList() {
                           </div>
 
                           <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1">Lead Time</label>
+                            <label className="block text-xs  text-gray-600 mb-1">Lead Time</label>
                             <input
                               type="number"
                               min="0"
@@ -490,14 +490,14 @@ export default function SupplierList() {
                           <button
                             type="button"
                             onClick={handleCancel}
-                            className="p-2 bg-red-500 text-white rounded-sm text-xs font-semibold flex items-center gap-1.5 hover:bg-red-600"
+                            className="p-2 bg-red-500 text-white rounded-sm text-xs  flex items-center gap-1.5 hover:bg-red-600"
                           >
                             <X size={14} />
                             Cancel
                           </button>
                           <button
                             type="submit"
-                            className="p-2 bg-green-500 text-white rounded-sm text-xs font-semibold flex items-center gap-1.5 hover:bg-green-600"
+                            className="p-2 bg-green-500 text-white rounded-sm text-xs  flex items-center gap-1.5 hover:bg-green-600"
                           >
                             <Check size={14} />
                             Save Changes
@@ -535,14 +535,14 @@ export default function SupplierList() {
                       <div className="flex gap-2 justify-center">
                         <button
                           onClick={() => handleEditClick(supplier)}
-                          className="p-2 bg-blue-500 text-white rounded-sm text-xs font-semibold flex items-center gap-1 hover:bg-blue-600"
+                          className="p-2 bg-blue-500 text-white rounded-sm text-xs  flex items-center gap-1 hover:bg-blue-600"
                         >
                           <Edit2 size={14} />
                           Edit
                         </button>
                         <button
                           onClick={() => handleDelete(supplier.supplier_id)}
-                          className="p-2 bg-red-500 text-white rounded-sm text-xs font-semibold flex items-center gap-1 hover:bg-red-600"
+                          className="p-2 bg-red-500 text-white rounded-sm text-xs  flex items-center gap-1 hover:bg-red-600"
                         >
                           <Trash2 size={14} />
                           Delete

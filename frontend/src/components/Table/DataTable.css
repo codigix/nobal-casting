@@ -149,11 +149,13 @@
   background: linear-gradient(180deg, var(--bg-tertiary, #f3f4f6) 0%, var(--bg-tertiary, #e5e7eb) 100%);
   border-bottom: 2px solid var(--border-color, #d1d5db);
 }
-
+th{
+  font-weight: 300 !important;;
+}
 .data-table th {
   padding: 10px;
   text-align: left;
-  font-weight: 700;
+  font-weight: 300 !important;
   font-size: 12px;
   color: var(--text-primary, #374151);
   border: none;

@@ -24,7 +24,7 @@ export default function Alert({ children, variant = 'info', title = '', classNam
           <IconComponent size={20} className="alert-icon" />
         )}
         <div>
-          {title && <h4 className="font-semibold mb-1">{title}</h4>}
+          {title && <h4 className=" mb-1">{title}</h4>}
           {children}
         </div>
       </div>

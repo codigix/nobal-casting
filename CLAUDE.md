@@ -1,4 +1,35 @@
 # Phase 19: Enhanced Inventory Dashboard with Real-Time Statistics ✅
+# Phase 21: Job Card UI Synchronization and Table Redesign ✅
+
+## Overview
+Synchronized the user interface of the "Planned Operations" section with the "Active Job Cards" table in the Job Cards page. Redesigned the preview table for planned operations to match the aesthetic and data structure of live production tracking.
+
+## Features Implemented
+
+### 1. Synchronized Table Structure
+- Updated "Planned Operations" table to include identical columns as the active view:
+  - **Operational Phase**: Displays operation name and "Pending Generation" status
+  - **Assignment**: Shows workstation/machine and "Unassigned" operator status
+  - **Status**: Displays a consistent "Planned" status badge
+  - **Metrics**: Shows efficiency progress bar (initialized at 0%) and total quantity target
+  - **Action**: Displays the planned operation time
+
+### 2. UI/UX Consistency
+- Matched icons, typography, and spacing between planned and active views
+- Added an informational banner for planned operations indicating they originate from BOM
+- Improved empty state handling for cases where no operations are defined
+
+### 3. Functional Improvements
+- Ensured "Generate Job Cards" functionality is prominent and correctly refreshes the UI
+- Fixed several typos in the Job Card inline editing interface (e.g., "er" suffix in class names)
+- Verified backend support for bulk job card generation with BOM fallback logic
+
+## Files Modified
+- `frontend/src/pages/Production/JobCard.jsx` - Major redesign of the planned operations view and table structure
+- `backend/src/models/ProductionModel.js` - Verified getWorkOrderById and generateJobCardsForWorkOrder logic
+
+---
+
 # Phase 20: Notification System for Inventory and Material Requests ✅
 
 ## Overview

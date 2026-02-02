@@ -211,7 +211,7 @@ export default function StockLedger() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleDownload}
-              className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs font-semibold rounded-xs transition-all hover:bg-neutral-50"
+              className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs  rounded-xs transition-all hover:bg-neutral-50"
             >
               <Download size={14} />
               Export CSV
@@ -219,7 +219,7 @@ export default function StockLedger() {
             <button
               onClick={fetchLedger}
               disabled={loading}
-              className="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold rounded-xs transition-all shadow-sm active:transform active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs  rounded-xs transition-all shadow-sm active:transform active:scale-95 disabled:opacity-50"
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
               Refresh
@@ -360,7 +360,7 @@ export default function StockLedger() {
                 <div className="w-12 h-12 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-4">
                   <BookOpen size={24} className="text-neutral-400" />
                 </div>
-                <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">No ledger entries found</h3>
+                <h3 className="text-sm  text-neutral-900 dark:text-white">No ledger entries found</h3>
                 <p className="text-xs text-neutral-500 mt-1 max-w-xs">
                   {filters.search || filters.warehouse_id || filters.item_code 
                     ? "Try adjusting your filters to find what you're looking for." 

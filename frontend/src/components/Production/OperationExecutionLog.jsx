@@ -89,7 +89,7 @@ export default function OperationExecutionLog({ jobCardId }) {
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-start gap-2">
                 <div>
-                  <span className="font-semibold text-xs text-gray-900">
+                  <span className=" text-xs text-gray-900">
                     {log.event_type}
                   </span>
                   {log.workstation_id && (

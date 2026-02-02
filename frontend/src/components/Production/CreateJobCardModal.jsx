@@ -6,7 +6,7 @@ import * as productionService from '../../services/productionService'
 import api from '../../services/api'
 import { useToast } from '../ToastContainer'
 
-export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editingId, preSelectedWorkOrderId }) {
+export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editingId, preSelectedWorkOrderId, preSelectedOperation }) {
   const toast = useToast()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -30,7 +30,7 @@ export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editing
   useEffect(() => {
     if (isOpen) {
       fetchData()
-      if (!editingId) {
+      if (!editingId && !preSelectedOperation) {
         setFormData({
           jc_id: '',
           wo_id: '',
@@ -45,7 +45,7 @@ export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editing
         })
       }
     }
-  }, [isOpen, editingId])
+  }, [isOpen, editingId, preSelectedOperation])
 
   useEffect(() => {
     if (isOpen && editingId && workOrders.length > 0) {
@@ -57,15 +57,39 @@ export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editing
     if (isOpen && preSelectedWorkOrderId && workOrders.length > 0 && !editingId) {
       const wo = workOrders.find(w => w.wo_id === preSelectedWorkOrderId)
       if (wo) {
-        setFormData(prev => ({
-          ...prev,
+        const baseFormData = {
           wo_id: wo.wo_id,
-          quantity: wo.quantity || wo.qty_to_manufacture || '100'
-        }))
+          quantity: wo.quantity || wo.qty_to_manufacture || '100',
+          machine_id: '',
+          operator_id: '',
+          operation: '',
+          start_date: new Date().toISOString().split('T')[0],
+          status: 'draft'
+        }
+
+        if (preSelectedOperation) {
+          const opName = preSelectedOperation.operation || preSelectedOperation.operation_name || ''
+          setFormData(prev => ({
+            ...prev,
+            ...baseFormData,
+            operation: opName,
+            machine_id: preSelectedOperation.workstation || preSelectedOperation.workstation_type || '',
+            operation_sequence: preSelectedOperation.sequence || 0,
+            operation_type: preSelectedOperation.operation_type || 'IN_HOUSE',
+            hourly_rate: preSelectedOperation.hourly_rate || 0,
+            operating_cost: preSelectedOperation.operating_cost || 0,
+            operation_time: preSelectedOperation.operation_time || preSelectedOperation.time || 0
+          }))
+        } else {
+          setFormData(prev => ({
+            ...prev,
+            ...baseFormData
+          }))
+        }
         handleSelectWorkOrder(wo)
       }
     }
-  }, [preSelectedWorkOrderId, workOrders, isOpen, editingId])
+  }, [preSelectedWorkOrderId, workOrders, isOpen, editingId, preSelectedOperation])
 
   const fetchData = async () => {
     try {
@@ -118,7 +142,11 @@ export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editing
       const ops = (woData.operations || []).map(op => ({
         label: op.operation_name || op.operation || '',
         value: op.operation_name || op.operation || '',
-        sequence: op.sequence || op.operation_sequence || 0
+        sequence: op.sequence || op.operation_sequence || 0,
+        operation_type: op.operation_type || 'IN_HOUSE',
+        hourly_rate: op.hourly_rate || 0,
+        operating_cost: op.operating_cost || 0,
+        operation_time: op.operation_time || op.time || 0
       }))
       
       setOperations(ops)
@@ -154,6 +182,10 @@ export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editing
         operator_id: formData.operator_id || null,
         operation: formData.operation || null,
         operation_sequence: formData.operation_sequence,
+        operation_type: formData.operation_type || 'IN_HOUSE',
+        hourly_rate: parseFloat(formData.hourly_rate || 0),
+        operating_cost: parseFloat(formData.operating_cost || 0),
+        operation_time: parseFloat(formData.operation_time || 0),
         planned_quantity: parseFloat(formData.quantity),
         scheduled_start_date: formData.start_date,
         scheduled_end_date: formData.end_date,
@@ -258,7 +290,11 @@ export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editing
                 setFormData(prev => ({ 
                   ...prev, 
                   operation: value,
-                  operation_sequence: selectedOp?.sequence || null
+                  operation_sequence: selectedOp?.sequence || null,
+                  operation_type: selectedOp?.operation_type || 'IN_HOUSE',
+                  hourly_rate: selectedOp?.hourly_rate || 0,
+                  operating_cost: selectedOp?.operating_cost || 0,
+                  operation_time: selectedOp?.operation_time || 0
                 }))
               }}
               options={operations.length > 0 ? operations : [{ value: '', label: 'Select Work Order first' }]}

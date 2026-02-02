@@ -269,7 +269,7 @@ export default function GRNManagement() {
             
             <button 
               onClick={fetchGRNs}
-              className="flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-4 py-2 rounded-xs text-xs font-semibold border border-neutral-200 dark:border-neutral-800 transition-all active:scale-95 shadow-sm"
+              className="flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-4 py-2 rounded-xs text-xs  border border-neutral-200 dark:border-neutral-800 transition-all active:scale-95 shadow-sm"
             >
               <RefreshCcw size={15} className={loading ? 'animate-spin' : ''} />
               Refresh

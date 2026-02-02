@@ -194,6 +194,8 @@ class ProductionController {
       }
 
       let createdJobCards = []
+      
+      // If operations are provided explicitly, use them
       if (operations && Array.isArray(operations) && operations.length > 0) {
         for (let i = 0; i < operations.length; i++) {
           await this.productionModel.addWorkOrderOperation(wo_id, { ...operations[i], sequence: i + 1 })
@@ -206,16 +208,20 @@ class ProductionController {
           const workstationType = operation.workstation_type || operation.workstation || operation.machine_id || ''
           const operationTime = operation.operation_time || operation.time || operation.proportional_time || 0
           const hourlyRate = operation.hourly_rate || 0
+          const operatingCost = operation.operating_cost || 0
           
           const jobCard = await this.productionModel.createJobCard({
             job_card_id: jc_id,
             work_order_id: wo_id,
             operation: operationName,
+            operation_sequence: operation.sequence || (i + 1),
             machine_id: workstationType,
             operator_id: '',
             planned_quantity: quantity,
             operation_time: parseFloat(operationTime) || 0,
             hourly_rate: parseFloat(hourlyRate) || 0,
+            operating_cost: parseFloat(operatingCost) || 0,
+            operation_type: operation.operation_type || 'IN_HOUSE',
             scheduled_start_date: new Date(),
             scheduled_end_date: new Date(),
             status: 'draft',
@@ -223,6 +229,18 @@ class ProductionController {
             notes: operation.notes || ''
           })
           createdJobCards.push(jobCard)
+        }
+      } else if (!operations || (Array.isArray(operations) && operations.length === 0)) {
+        // Automatically generate job cards from BOM (or default) if operations not provided in payload or empty
+        console.log(`Attempting to auto-generate job cards for work order ${wo_id}`)
+        try {
+          const generatedCards = await this.productionModel.generateJobCardsForWorkOrder(
+            wo_id,
+            req.user?.username || 'system'
+          )
+          createdJobCards = generatedCards || []
+        } catch (genErr) {
+          console.warn(`Could not auto-generate job cards for ${wo_id}:`, genErr.message)
         }
       }
 
@@ -342,6 +360,7 @@ class ProductionController {
             const wsType = operation.workstation || operation.workstation_type || ''
             const opTime = operation.time || operation.operation_time || 0
             const hRate = operation.hourly_rate || 0
+            const opCost = operation.operating_cost || 0
 
             await this.productionModel.createJobCard({
               job_card_id: jc_id,
@@ -353,6 +372,8 @@ class ProductionController {
               planned_quantity: quantity,
               operation_time: parseFloat(opTime) || 0,
               hourly_rate: parseFloat(hRate) || 0,
+              operating_cost: parseFloat(opCost) || 0,
+              operation_type: operation.operation_type || 'IN_HOUSE',
               scheduled_start_date: planned_start_date,
               scheduled_end_date: planned_end_date,
               status: 'draft',

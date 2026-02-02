@@ -93,7 +93,7 @@ const ProcessFlow = ({ stages }) => {
                       )}
                     </div>
                     
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                       <div>
                         <div className="flex items-center justify-between text-xs   text-slate-500 mb-1.5">
                           <span>PROGRESS</span>
@@ -586,7 +586,7 @@ export default function ProjectAnalysis() {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 m-0">Project Analysis</h1>
+          <h1 className="text-xl  text-slate-900 m-0">Project Analysis</h1>
           <p className="text-slate-500 font-medium text-xs mt-1">Global production tracking and performance intelligence</p>
         </div>
         <div className="flex items-center gap-3">
@@ -644,10 +644,10 @@ export default function ProjectAnalysis() {
         {/* Allocation Intel Chart */}
         <div className="lg:col-span-3 bg-white p-2 rounded border border-slate-200 flex flex-col">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-bold text-slate-900">Allocation</h3>
+            <h3 className="text-sm  text-slate-900">Allocation</h3>
             <div className="flex gap-1 p-0.5 bg-slate-50 rounded border border-slate-100">
-              <button onClick={() => setChartType('status')} className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${chartType !== 'segment' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}>STATUS</button>
-              <button onClick={() => setChartType('segment')} className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${chartType === 'segment' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}>SEGMENT</button>
+              <button onClick={() => setChartType('status')} className={`px-1.5 py-0.5 rounded text-[8px]  ${chartType !== 'segment' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}>STATUS</button>
+              <button onClick={() => setChartType('segment')} className={`px-1.5 py-0.5 rounded text-[8px]  ${chartType === 'segment' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}>SEGMENT</button>
             </div>
           </div>
           
@@ -675,7 +675,7 @@ export default function ProjectAnalysis() {
             {(chartType === 'segment' ? projectSegments : projectStatus).map((s, i) => (
               <div key={i} className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="text-[10px] text-slate-400 truncate">{s.name}: <span className="text-slate-900 font-bold">{s.value}</span></span>
+                <span className="text-[10px] text-slate-400 truncate">{s.name}: <span className="text-slate-900 ">{s.value}</span></span>
               </div>
             ))}
           </div>
@@ -729,12 +729,12 @@ export default function ProjectAnalysis() {
             <table className="w-full text-left bg-white">
               <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm">
                 <tr>
-                  <th className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Project</th>
-                  <th className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Segment</th>
-                  <th className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Progress</th>
-                  <th className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Revenue</th>
-                  <th className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
-                  <th className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
+                  <th className="p-2 text-[10px]  text-slate-400 ">Project</th>
+                  <th className="p-2 text-[10px]  text-slate-400 ">Segment</th>
+                  <th className="p-2 text-[10px]  text-slate-400 ">Progress</th>
+                  <th className="p-2 text-[10px]  text-slate-400 ">Revenue</th>
+                  <th className="p-2 text-[10px]  text-slate-400 ">Status</th>
+                  <th className="p-2 text-[10px]  text-slate-400  text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -747,7 +747,7 @@ export default function ProjectAnalysis() {
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1">
-                            <p className="text-[11px] font-bold text-slate-900 m-0 truncate">{project.name}</p>
+                            <p className="text-[11px]  text-slate-900 m-0 truncate">{project.name}</p>
                             {project.segment === 'Premium' && <Star size={10} className="text-amber-500 fill-amber-500 flex-shrink-0" />}
                           </div>
                           <p className="text-[10px] text-slate-500 m-0 truncate">{project.customer_name}</p>
@@ -755,7 +755,7 @@ export default function ProjectAnalysis() {
                       </div>
                     </td>
                     <td className="p-2">
-                      <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
+                      <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px]  ${
                         project.segment === 'Premium' ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-slate-50 text-slate-600 border border-slate-100'
                       }`}>
                         {project.segment === 'Premium' ? <Star size={8} className="fill-amber-500" /> : <Package size={8} />}
@@ -765,7 +765,7 @@ export default function ProjectAnalysis() {
                     <td className="p-2">
                       <div className="w-32">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] font-bold text-slate-600">{project.progress}%</span>
+                          <span className="text-[10px]  text-slate-600">{project.progress}%</span>
                         </div>
                         <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
                           <div className={`h-full transition-all duration-1000 ${project.progress === 100 ? 'bg-emerald-500' : 'bg-blue-600'}`} style={{ width: `${project.progress}%` }} />
@@ -773,8 +773,8 @@ export default function ProjectAnalysis() {
                       </div>
                     </td>
                     <td className="p-2">
-                      <p className="text-[11px] font-bold text-slate-900 m-0">₹{(project.revenue || 0).toLocaleString()}</p>
-                      <p className="text-[9px] text-emerald-600 font-bold">PAID</p>
+                      <p className="text-[11px]  text-slate-900 m-0">₹{(project.revenue || 0).toLocaleString()}</p>
+                      <p className="text-[9px] text-emerald-600 ">PAID</p>
                     </td>
                     <td className="p-2">
                       <StatusBadge status={project.status} />
@@ -782,7 +782,7 @@ export default function ProjectAnalysis() {
                     <td className="p-2 text-right">
                       <button 
                         onClick={() => fetchDetailedAnalysis(project)}
-                        className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 hover:bg-blue-600 hover:text-white rounded text-[10px] font-bold text-slate-700 transition-all"
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 hover:bg-blue-600 hover:text-white rounded text-[10px]  text-slate-700 transition-all"
                       >
                         <Eye size={12} /> VIEW
                       </button>
@@ -798,11 +798,11 @@ export default function ProjectAnalysis() {
       {/* Project Velocity Chart - Now at bottom */}
       <div className="bg-white p-2 rounded border border-slate-200">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-slate-900">Project Velocity (6M)</h3>
+          <h3 className="text-sm  text-slate-900">Project Velocity (6M)</h3>
           <div className="flex gap-3">
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><div className="w-2 h-2 rounded-full bg-blue-500" /> ORDERS</div>
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><div className="w-2 h-2 rounded-full bg-emerald-500" /> DONE</div>
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><div className="w-2 h-2 rounded-full bg-amber-500" /> PREMIUM</div>
+            <div className="flex items-center gap-1.5 text-[10px]  text-slate-500"><div className="w-2 h-2 rounded-full bg-blue-500" /> ORDERS</div>
+            <div className="flex items-center gap-1.5 text-[10px]  text-slate-500"><div className="w-2 h-2 rounded-full bg-emerald-500" /> DONE</div>
+            <div className="flex items-center gap-1.5 text-[10px]  text-slate-500"><div className="w-2 h-2 rounded-full bg-amber-500" /> PREMIUM</div>
           </div>
         </div>
         <div className="h-48">

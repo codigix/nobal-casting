@@ -281,7 +281,7 @@ export default function AdminPanel() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`p-2 font-semibold capitalize transition-all whitespace-nowrap rounded-t-lg text-xs ${
+              className={`p-2  capitalize transition-all whitespace-nowrap rounded-t-lg text-xs ${
                 activeTab === tab
                   ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30'
                   : 'text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
@@ -415,7 +415,7 @@ export default function AdminPanel() {
                     <p className="text-slate-400 text-xs mb-2">Uptime Status</p>
                     <p className="text-xl   text-green-400 mb-4">{systemMetrics.systemUptime}</p>
                     <div className="inline-block p-2  py-1 bg-green-500/20 border border-green-500/50 rounded-full">
-                      <p className="text-xs font-semibold text-green-300">Operational</p>
+                      <p className="text-xs  text-green-300">Operational</p>
                     </div>
                   </div>
                 </div>
@@ -495,7 +495,7 @@ export default function AdminPanel() {
                 Recent Activity Log
               </h2>
               <div className="relative rounded  bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700p-3   backdrop-blur-sm">
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {recentEvents.length > 0 ? (
                     recentEvents.slice(0, 8).map((event, idx) => (
                       <div key={event.id} className="relative flex gap-4 pb-4 last:pb-0">
@@ -557,7 +557,7 @@ export default function AdminPanel() {
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
                   <div className="relative z-10 flex items-center gap-3 justify-center">
                     <Plus size={20} className="text-white" />
-                    <span className="text-xs font-semibold text-white">Add User</span>
+                    <span className="text-xs  text-white">Add User</span>
                   </div>
                 </button>
 
@@ -569,7 +569,7 @@ export default function AdminPanel() {
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
                   <div className="relative z-10 flex items-center gap-3 justify-center">
                     <Warehouse size={20} className="text-white" />
-                    <span className="text-xs font-semibold text-white">New Warehouse</span>
+                    <span className="text-xs  text-white">New Warehouse</span>
                   </div>
                 </button>
 
@@ -581,7 +581,7 @@ export default function AdminPanel() {
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
                   <div className="relative z-10 flex items-center gap-3 justify-center">
                     <Database size={20} className="text-white" />
-                    <span className="text-xs font-semibold text-white">Master Data</span>
+                    <span className="text-xs  text-white">Master Data</span>
                   </div>
                 </button>
 
@@ -593,7 +593,7 @@ export default function AdminPanel() {
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
                   <div className="relative z-10 flex items-center gap-3 justify-center">
                     <Wrench size={20} className="text-white" />
-                    <span className="text-xs font-semibold text-white">Audit Logs</span>
+                    <span className="text-xs  text-white">Audit Logs</span>
                   </div>
                 </button>
               </div>
@@ -726,10 +726,10 @@ export default function AdminPanel() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-600">
-                    <th className="text-left p-3 font-semibold text-slate-300 text-xs">Machine ID</th>
-                    <th className="text-left p-3 font-semibold text-slate-300 text-xs">Name</th>
-                    <th className="text-left p-3 font-semibold text-slate-300 text-xs">Status</th>
-                    <th className="text-left p-3 font-semibold text-slate-300 text-xs">Days Since Maintenance</th>
+                    <th className="text-left p-3  text-slate-300 text-xs">Machine ID</th>
+                    <th className="text-left p-3  text-slate-300 text-xs">Name</th>
+                    <th className="text-left p-3  text-slate-300 text-xs">Status</th>
+                    <th className="text-left p-3  text-slate-300 text-xs">Days Since Maintenance</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -739,7 +739,7 @@ export default function AdminPanel() {
                         <td className="p-3 text-slate-200 font-medium text-xs">{machine.id}</td>
                         <td className="p-3 text-slate-200 text-xs">{machine.name}</td>
                         <td className="p-3">
-                          <span className={`inline-block p-2  py-1 rounded-full text-xs font-semibold ${
+                          <span className={`inline-block p-2  py-1 rounded-full text-xs  ${
                             machine.status === 'active' ? 'bg-green-500/20 text-green-300 border border-green-500/30' :
                             machine.status === 'maintenance' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
                             'bg-red-500/20 text-red-300 border border-red-500/30'
@@ -868,13 +868,13 @@ export default function AdminPanel() {
             {/* Running Projects */}
             <Card>
               <h3 className="text-lg  text-gray-800 mb-4">Running Projects</h3>
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {projectStats.projects.length > 0 ? (
                   projectStats.projects.map((project) => (
                     <div key={project.id} className="p-4 bg-gray-50 rounded-xs border border-gray-200">
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <p className="font-semibold text-gray-800">{project.name}</p>
+                          <p className=" text-gray-800">{project.name}</p>
                           <p className="text-xs text-gray-600">{project.id} • Status: {project.status}</p>
                         </div>
                         <Badge color={project.days_left > 5 ? 'success' : 'warning'}>
@@ -890,7 +890,7 @@ export default function AdminPanel() {
                             />
                           </div>
                         </div>
-                        <span className="text-xs font-semibold  text-gray-700">{project.progress || 0}%</span>
+                        <span className="text-xs   text-gray-700">{project.progress || 0}%</span>
                       </div>
                       <p className="text-xs text-gray-500 mt-2">Quantity: {project.quantity} units</p>
                     </div>
@@ -975,11 +975,11 @@ export default function AdminPanel() {
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Period</th>
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Produced</th>
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Rejected</th>
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Hours</th>
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Machines</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Period</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Produced</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Rejected</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Hours</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Machines</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1041,11 +1041,11 @@ export default function AdminPanel() {
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Week</th>
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Produced</th>
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Rejected</th>
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Hours</th>
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Machines</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Week</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Produced</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Rejected</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Hours</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Machines</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1107,11 +1107,11 @@ export default function AdminPanel() {
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Month</th>
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Produced</th>
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Rejected</th>
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Hours</th>
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Machines</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Month</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Produced</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Rejected</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Hours</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Machines</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1173,11 +1173,11 @@ export default function AdminPanel() {
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Month</th>
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Produced</th>
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Rejected</th>
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Hours</th>
-                            <th className="text-left py-2 p-2  font-semibold text-gray-700">Machines</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Month</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Produced</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Rejected</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Hours</th>
+                            <th className="text-left py-2 p-2   text-gray-700">Machines</th>
                           </tr>
                         </thead>
                         <tbody>

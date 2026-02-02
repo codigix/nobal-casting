@@ -380,7 +380,7 @@ export default function SalesOrder() {
 
   const columns = [
     { 
-      label: 'ID / PRODUCT', 
+      label: 'ID / Product', 
       key: 'sales_order_id',
       render: (value, row) => {
         let productName = ''
@@ -421,38 +421,38 @@ export default function SalesOrder() {
       }
     },
     { 
-      label: 'CUSTOMER ENTITY', 
+      label: 'Customers', 
       key: 'customer_name',
       render: (val, row) => (
         <div className="flex items-center gap-3 ">
-          <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-xs  text-white shadow-lg">
+          <div className="w-5 h-5 rounded-full bg-slate-900 flex items-center justify-center text-xs  text-white shadow-lg">
             {val ? val.charAt(0).toUpperCase() : 'C'}
           </div>
           <div>
             <div className="text-xs  text-slate-700 leading-none">{val}</div>
-            <div className="text-xs  text-slate-400 mt-1 ">{row.customer_id}</div>
+            <div className="text-xs  text-slate-400 leading-none mt-2 ">{row.customer_id}</div>
           </div>
         </div>
       )
     },
     { 
-      label: 'STRATEGIC STATUS', 
+      label: 'Status', 
       key: 'status',
       render: (val, row) => {
         const displayStatus = row.production_plan_status || val || 'draft'
         const config = statusConfig[displayStatus.toLowerCase()] || statusConfig.draft
         return (
-          <div className="p-2 min-w-[140px]">
+          <div className="p-2 w-fit">
             <div 
-              className="w-full flex items-center justify-between p-2 py-1.5 text-xs rounded border transition-all  "
+              className="w-fit  p-1 text-xs rounded border transition-all  "
               style={{
                 backgroundColor: config.bg,
                 borderColor: `${config.color}40`,
                 color: config.text
               }}
             >
-              <div className="flex items-center gap-2">
-                <config.icon size={12} style={{ color: config.color }} />
+              <div >
+                
                 <span className="">{config.label}</span>
               </div>
             </div>
@@ -461,7 +461,7 @@ export default function SalesOrder() {
       }
     },
     {
-      label: 'DELIVERY VECTOR',
+      label: 'Delivary Vectors',
       key: 'delivery_date',
       render: (value) => {
         const date = value ? new Date(value) : null
@@ -482,40 +482,40 @@ export default function SalesOrder() {
       }
     },
     {
-      label: 'FINANCIAL VALUE',
+      label: 'Financial Values',
       key: 'total_amount',
       render: (value, row) => (
         <div className="p-2 text-right">
-          <div className="text-sm  text-slate-900">
+          <div className="text-xs  text-slate-900">
             ₹{parseFloat(value || 0).toLocaleString('en-IN')}
           </div>
-          <div className="text-xs  text-emerald-600 bg-emerald-50 inline-block p-1 rounded">
+          <div className="text-[10px]  text-emerald-600 bg-emerald-50 inline-block p-1 rounded">
             Valuation Inc. Tax
           </div>
         </div>
       )
     },
     {
-      label: 'COMMANDS',
+      label: 'Actions',
       key: 'actions',
       render: (value, row) => row ? (
-        <div className="flex items-center justify-end gap-1 p-2">
+        <div className="flex items-center justify-end gap-1 ">
           <button
             onClick={() => navigate(`/manufacturing/sales-orders/${row.sales_order_id}?readonly=true`)}
             className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded  transition-all"
             title="Strategic View"
           >
-            <Eye size={18} />
+            <Eye size={15} />
           </button>
           
-          <div className="w-px h-4 bg-slate-100 mx-1" />
+          
           
           <button
             onClick={() => setGeneratingPlanForOrder(row.sales_order_id)}
             className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all"
             title="Production Planning"
           >
-            <Factory size={18} />
+            <Factory size={15} />
           </button>
           
           <button
@@ -523,17 +523,17 @@ export default function SalesOrder() {
             className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded  transition-all"
             title="Logistics Dispatch"
           >
-            <Truck size={18} />
+            <Truck size={15} />
           </button>
           
-          <div className="w-px h-4 bg-slate-100 mx-1" />
+          
           
           <button
             onClick={() => handleDeleteOrder(row.sales_order_id)}
             className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded  transition-all"
             title="Terminate Order"
           >
-            <Trash2 size={18} />
+            <Trash2 size={15} />
           </button>
         </div>
       ) : null
@@ -568,20 +568,20 @@ export default function SalesOrder() {
               className="p-2 rounded  bg-white text-slate-400 border border-slate-200 hover:text-blue-600 hover:border-blue-200 transition-all active:scale-95  "
               title="Refresh Data"
             >
-              <RefreshCcw size={18} className={loading ? 'animate-spin' : ''} />
+              <RefreshCcw size={15} className={loading ? 'animate-spin' : ''} />
             </button>
             <button 
               onClick={handleTruncate}
               className="inline-flex items-center gap-2 rounded  bg-white p-2.5 text-xs  text-rose-600 border border-rose-100 hover:bg-rose-50 transition-all active:scale-95  "
             >
-              <Trash2 size={18} />
+              <Trash2 size={15} />
               Reset All
             </button>
             <button 
               onClick={() => navigate('/manufacturing/sales-orders/new')}
               className="inline-flex items-center gap-2 rounded  bg-slate-900 p-2 text-xs  text-white shadow  shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95"
             >
-              <Plus size={18} />
+              <Plus size={15} />
               Initialize Order
             </button>
           </div>
@@ -724,7 +724,7 @@ export default function SalesOrder() {
             </div>
 
             <button className="p-2 rounded  bg-white border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-all  ">
-              <Download size={18} />
+              <Download size={15} />
             </button>
           </div>
         </div>
@@ -759,7 +759,7 @@ export default function SalesOrder() {
                 onClick={() => navigate('/manufacturing/sales-orders/new')}
                 className="mt-8 inline-flex items-center gap-2 rounded  bg-blue-600 p-2  text-xs  text-white shadow  shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
               >
-                <Plus size={18} />
+                <Plus size={15} />
                 Initialize New Order
               </button>
             </div>

@@ -257,7 +257,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                 <div className="bg-white rounded   border border-gray-200 overflow-hidden">
                   <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex items-center gap-2">
                     <Building size={16} className="text-blue-500" />
-                    <h3 className="text-xs font-semibold text-gray-700">General Information</h3>
+                    <h3 className="text-xs  text-gray-700">General Information</h3>
                   </div>
                   <div className="p-2 grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
@@ -371,9 +371,9 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                 <div className="bg-white rounded   border border-gray-200 overflow-hidden">
                   <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex items-center gap-2">
                     <Clock size={16} className="text-orange-500" />
-                    <h3 className="text-xs font-semibold text-gray-700">Schedule</h3>
+                    <h3 className="text-xs  text-gray-700">Schedule</h3>
                   </div>
-                  <div className="p-5 space-y-4">
+                  <div className="p-5 space-y-2">
                     <div className="space-y-1.5">
                       <label className="text-[11px]  text-gray-400   flex items-center gap-1">
                          Required By Date <span className="text-red-500">*</span>
@@ -394,9 +394,9 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                   <div className="bg-white rounded   border border-gray-200 overflow-hidden animate-in slide-in-from-right-4 duration-300">
                     <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex items-center gap-2">
                       <Warehouse size={16} className="text-purple-500" />
-                      <h3 className="text-xs font-semibold text-gray-700">Fulfillment</h3>
+                      <h3 className="text-xs  text-gray-700">Fulfillment</h3>
                     </div>
-                    <div className="p-5 space-y-4">
+                    <div className="p-5 space-y-2">
                       <div className="space-y-1.5">
                         <label className="text-[11px]  text-gray-400  ">
                           Source Warehouse <span className="text-red-500">*</span>
@@ -445,7 +445,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
               <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Package size={16} className="text-amber-500" />
-                  <h3 className="text-xs font-semibold text-gray-700">Material Items</h3>
+                  <h3 className="text-xs  text-gray-700">Material Items</h3>
                 </div>
                 <Badge color="info" className="px-3 py-1 rounded-full text-[10px] ">
                   {formData.items.length} ITEMS
@@ -531,7 +531,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                         {formData.items.map((item, index) => (
                           <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group">
                             <td className="px-6 py-4">
-                              <p className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">{item.item_code}</p>
+                              <p className=" text-gray-800 group-hover:text-blue-600 transition-colors">{item.item_code}</p>
                               <p className="text-xs text-gray-500 mt-0.5">{item.item_name}</p>
                             </td>
                             <td className="px-6 py-4 text-center font-mono  text-blue-600 bg-blue-50/20">{item.qty}</td>
@@ -562,7 +562,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                     <div className="bg-white w-8 h-8 rounded-full  flex items-center justify-center mx-auto mb-4 border border-gray-50">
                       <Package size={32} className="text-gray-200" />
                     </div>
-                    <h4 className="text-xs font-semibold text-gray-400">No items added yet</h4>
+                    <h4 className="text-xs  text-gray-400">No items added yet</h4>
                     <p className="text-xs text-gray-300 mt-1 italic">Add raw materials or components to your request</p>
                   </div>
                 )}

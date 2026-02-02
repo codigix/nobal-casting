@@ -231,7 +231,7 @@ export default function StockMovements() {
           <div className="flex items-center gap-2">
             <button 
               onClick={fetchMovements}
-              className="flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-4 py-2 rounded-xs text-xs font-semibold border border-neutral-200 dark:border-neutral-800 transition-all shadow-sm"
+              className="flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-4 py-2 rounded-xs text-xs  border border-neutral-200 dark:border-neutral-800 transition-all shadow-sm"
             >
               <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
               Refresh
@@ -239,7 +239,7 @@ export default function StockMovements() {
 
             <button
               onClick={() => { setSelectedMovement(null); setShowModal(true) }}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xs text-xs font-semibold shadow-lg shadow-blue-200 dark:shadow-none transition-all"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xs text-xs  shadow-lg shadow-blue-200 dark:shadow-none transition-all"
             >
               <Plus size={16} />
               New Movement

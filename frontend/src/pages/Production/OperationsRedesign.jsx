@@ -115,13 +115,13 @@ export default function OperationsRedesign() {
             <div className="flex bg-white p-1 rounded border border-slate-200 ">
               <button 
                 onClick={() => setViewMode('grid')}
-                className={`p-2  py-1.5 rounded text-xs font-semibold transition-all ${viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600 ' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`p-2  py-1.5 rounded text-xs  transition-all ${viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600 ' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 Grid
               </button>
               <button 
                 onClick={() => setViewMode('list')}
-                className={`p-2  py-1.5 rounded text-xs font-semibold transition-all ${viewMode === 'list' ? 'bg-indigo-50 text-indigo-600 ' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`p-2  py-1.5 rounded text-xs  transition-all ${viewMode === 'list' ? 'bg-indigo-50 text-indigo-600 ' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 List
               </button>
@@ -246,7 +246,7 @@ export default function OperationsRedesign() {
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-slate-400  ">Hourly Rate</span>
-                        <span className="text-slate-700 font-semibold">
+                        <span className="text-slate-700 ">
                           ₹{Number(op.hourly_rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </span>
                       </div>

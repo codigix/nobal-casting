@@ -9,6 +9,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
   const [formData, setFormData] = useState({
     sales_order_id: '',
     item_code: '',
+    bom_no: '',
     quantity: '',
     unit_cost: '',
     required_date: '',
@@ -46,12 +47,24 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
         throw new Error('Please fill in all required fields')
       }
 
-      await productionService.createWorkOrder(formData)
+      const response = await productionService.createWorkOrder(formData)
+      
+      // Automatically generate job cards for the new work order
+      const newWoId = response?.data?.wo_id || response?.wo_id
+      if (newWoId) {
+        console.log(`Automatically generating job cards for Work Order: ${newWoId}`)
+        try {
+          await productionService.generateJobCardsForWorkOrder(newWoId)
+        } catch (jcErr) {
+          console.warn('Failed to auto-generate job cards:', jcErr)
+        }
+      }
       
       // Reset form
       setFormData({
         sales_order_id: '',
         item_code: '',
+        bom_no: '',
         quantity: '',
         unit_cost: '',
         required_date: '',
@@ -133,6 +146,27 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
               }}
             />
           </div>
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
+            BOM No (Optional - Fallbacks to Default)
+          </label>
+          <input
+            type="text"
+            name="bom_no"
+            placeholder="BOM-XXXXX"
+            value={formData.bom_no}
+            onChange={handleInputChange}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              fontSize: '0.95rem',
+              fontFamily: 'inherit'
+            }}
+          />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>

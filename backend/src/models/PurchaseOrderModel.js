@@ -380,7 +380,7 @@ export class PurchaseOrderModel {
         ]
       )
 
-      // Create items
+      // Create items and update MR items
       for (const item of items) {
         try {
           const po_item_id = this.generateId()
@@ -413,7 +413,34 @@ export class PurchaseOrderModel {
             ]
           )
         }
+
+        // Update MR item status to completed for purchase purpose
+        await this.db.execute(
+          'UPDATE material_request_item SET status = ? WHERE mr_id = ? AND item_code = ?',
+          ['completed', mrId, item.item_code]
+        )
       }
+
+      // Check overall MR status
+      const [updatedItems] = await this.db.execute(
+        'SELECT status FROM material_request_item WHERE mr_id = ?',
+        [mrId]
+      )
+      
+      const allCompleted = updatedItems.every(i => i.status === 'completed')
+      const anyCompleted = updatedItems.some(i => i.status === 'completed')
+      
+      let mrStatus = 'approved'
+      if (allCompleted) {
+        mrStatus = 'completed'
+      } else if (anyCompleted) {
+        mrStatus = 'partial'
+      }
+
+      await this.db.execute(
+        'UPDATE material_request SET status = ?, updated_at = NOW() WHERE mr_id = ?',
+        [mrStatus, mrId]
+      )
 
       return { po_no, mr_id: mrId }
     } catch (error) {

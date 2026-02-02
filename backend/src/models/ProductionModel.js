@@ -190,21 +190,77 @@ class ProductionModel {
       if (!workOrders || workOrders.length === 0) return null
 
       const workOrder = workOrders[0]
+      let bom_id = workOrder.bom_no || workOrder.bom_id
 
-      const [operations] = await this.db.query(
+      // If no BOM is linked, try to find the default BOM for this item
+      if (!bom_id && workOrder.item_code) {
+        const [defaultBoms] = await this.db.query(
+          'SELECT bom_id FROM bom WHERE item_code = ? AND is_active = 1 ORDER BY is_default DESC, created_at DESC LIMIT 1',
+          [workOrder.item_code]
+        )
+        if (defaultBoms && defaultBoms.length > 0) {
+          bom_id = defaultBoms[0].bom_id
+          workOrder.bom_no = bom_id
+          // Optionally update the work order with this BOM if it's missing?
+          // For now, just use it for fallback logic
+        }
+      }
+
+      let [operations] = await this.db.query(
         'SELECT * FROM work_order_operation WHERE wo_id = ? ORDER BY sequence ASC',
         [wo_id]
       )
+      
+      // Fallback to BOM operations if work order operations are empty
+      if ((!operations || operations.length === 0) && bom_id) {
+        const [bomOps] = await this.db.query(
+          `SELECT 
+            operation_name,
+            operation_name as operation, 
+            workstation_type as workstation, 
+            operation_time as time, 
+            hourly_rate,
+            operating_cost,
+            operation_type,
+            0 as completed_qty, 
+            0 as process_loss_qty, 
+            sequence 
+           FROM bom_operation 
+           WHERE bom_id = ? 
+           ORDER BY sequence ASC`,
+          [bom_id]
+        )
+        operations = bomOps
+      }
       
       const [items] = await this.db.query(
         'SELECT * FROM work_order_item WHERE wo_id = ? ORDER BY sequence ASC',
         [wo_id]
       )
 
+      // If items are empty, fallback to BOM items
+      let woItems = items
+      if ((!woItems || woItems.length === 0) && bom_id) {
+        const [bomLines] = await this.db.query(
+          `SELECT 
+            component_code as item_code, 
+            quantity as required_qty, 
+            0 as transferred_qty, 
+            0 as consumed_qty, 
+            0 as returned_qty, 
+            sequence 
+           FROM bom_line 
+           WHERE bom_id = ? 
+           ORDER BY sequence ASC`,
+          [bom_id]
+        )
+        woItems = bomLines
+      }
+
       return {
         ...workOrder,
         operations: operations || [],
-        items: items || []
+        items: woItems || []
       }
     } catch (error) {
       throw error
@@ -290,9 +346,10 @@ class ProductionModel {
       const hourly_rate = operation.hourly_rate || 0
       
       await this.db.query(
-        `INSERT INTO work_order_operation (wo_id, operation, workstation, time, hourly_rate, completed_qty, process_loss_qty, sequence)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO work_order_operation (wo_id, operation, workstation, time, hourly_rate, operation_type, operating_cost, completed_qty, process_loss_qty, sequence)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [wo_id, operationName, workstation, time, hourly_rate,
+         operation.operation_type || 'IN_HOUSE', operation.operating_cost || 0,
          operation.completed_qty || 0, operation.process_loss_qty || 0, operation.sequence || 0]
       )
     } catch (error) {
@@ -1020,11 +1077,12 @@ async deleteAllBOMRawMaterials(bom_id) {
     try {
       const statusNormalized = ((data.status || 'draft').toLowerCase().replace(/\s+/g, '-')).trim()
       await this.db.query(
-        `INSERT INTO job_card (job_card_id, work_order_id, machine_id, operator_id, operation, operation_sequence, planned_quantity, produced_quantity, rejected_quantity, accepted_quantity, scrap_quantity, operation_time, hourly_rate, scheduled_start_date, scheduled_end_date, status, created_by, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO job_card (job_card_id, work_order_id, machine_id, operator_id, operation, operation_sequence, operation_type, planned_quantity, produced_quantity, rejected_quantity, accepted_quantity, scrap_quantity, operation_time, hourly_rate, operating_cost, scheduled_start_date, scheduled_end_date, status, created_by, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [data.job_card_id, data.work_order_id, data.machine_id, data.operator_id, data.operation || null, data.operation_sequence || null,
+         data.operation_type || 'IN_HOUSE',
          data.planned_quantity, data.produced_quantity || 0, data.rejected_quantity || 0, data.accepted_quantity || 0, data.scrap_quantity || 0,
-         data.operation_time || 0, data.hourly_rate || 0, data.scheduled_start_date, data.scheduled_end_date, statusNormalized, data.created_by, data.notes]
+         data.operation_time || 0, data.hourly_rate || 0, data.operating_cost || 0, data.scheduled_start_date, data.scheduled_end_date, statusNormalized, data.created_by, data.notes]
       )
       return data
     } catch (error) {
@@ -1241,21 +1299,70 @@ async deleteAllBOMRawMaterials(bom_id) {
         throw new Error('No operations found for this work order')
       }
 
+      // If work order operations table is empty, save the operations we found (likely from BOM fallback)
+      const [existingOps] = await this.db.query(
+        'SELECT operation_id FROM work_order_operation WHERE wo_id = ?',
+        [work_order_id]
+      )
+      
+      if (!existingOps || existingOps.length === 0) {
+        // Also update the work order itself with the BOM if it was found via fallback
+        const [currentWO] = await this.db.query('SELECT bom_no FROM work_order WHERE wo_id = ?', [work_order_id])
+        if (currentWO && currentWO.length > 0 && !currentWO[0].bom_no && workOrder.bom_no) {
+          await this.db.query('UPDATE work_order SET bom_no = ? WHERE wo_id = ?', [workOrder.bom_no, work_order_id])
+        }
+
+        for (let i = 0; i < workOrder.operations.length; i++) {
+          await this.addWorkOrderOperation(work_order_id, {
+            ...workOrder.operations[i],
+            sequence: workOrder.operations[i].sequence || (i + 1)
+          })
+        }
+      }
+
+      // Also save items if they are missing
+      const [existingItems] = await this.db.query(
+        'SELECT item_id FROM work_order_item WHERE wo_id = ?',
+        [work_order_id]
+      )
+
+      if ((!existingItems || existingItems.length === 0) && workOrder.items && workOrder.items.length > 0) {
+        for (let i = 0; i < workOrder.items.length; i++) {
+          await this.addWorkOrderItem(work_order_id, {
+            ...workOrder.items[i],
+            sequence: workOrder.items[i].sequence || (i + 1)
+          })
+        }
+      }
+
+      // Check if job cards already exist for this work order to avoid duplicates
+      const [existingJobCards] = await this.db.query(
+        'SELECT job_card_id FROM job_card WHERE work_order_id = ?',
+        [work_order_id]
+      )
+      
+      if (existingJobCards && existingJobCards.length > 0) {
+        console.log(`Job cards already exist for Work Order ${work_order_id}. Returning existing.`)
+        return existingJobCards
+      }
+
       const createdCards = []
       const plannedQty = parseFloat(workOrder.quantity || workOrder.qty_to_manufacture || 0)
 
       for (const operation of workOrder.operations) {
-        const job_card_id = `JC-${Date.now()}-${operation.sequence}`
+        const job_card_id = `JC-${Date.now()}-${operation.sequence || Math.floor(Math.random() * 1000)}`
         const jobCardData = {
           job_card_id,
           work_order_id,
           operation: operation.operation_name || operation.name || operation.operation || '',
           operation_sequence: operation.sequence || 0,
-          machine_id: operation.default_workstation || operation.workstation || '',
+          machine_id: operation.default_workstation || operation.workstation || operation.workstation_type || operation.machine_id || '',
           operator_id: null,
           planned_quantity: plannedQty,
-          operation_time: operation.operation_time || 0,
+          operation_time: operation.operation_time || operation.time || 0,
           hourly_rate: operation.hourly_rate || 0,
+          operating_cost: operation.operating_cost || 0,
+          operation_type: operation.operation_type || 'IN_HOUSE',
           scheduled_start_date: null,
           scheduled_end_date: null,
           status: 'draft',
@@ -1644,9 +1751,8 @@ async deleteAllBOMRawMaterials(bom_id) {
       timeLogs.forEach(log => {
         const dateStr = log.log_date instanceof Date ? log.log_date.toISOString().split('T')[0] : log.log_date;
         const key = `${dateStr}_${log.shift}`;
-        if (!shifts[key]) shifts[key] = { produced: 0, rejected: 0, scrap: 0 };
+        if (!shifts[key]) shifts[key] = { produced: 0, rejected: 0, scrap: 0, isInferred: false };
         shifts[key].produced += parseFloat(log.completed_qty) || 0;
-        // Even if frontend doesn't send them yet, schema supports them
         shifts[key].rejected += parseFloat(log.rejected_qty) || 0;
         shifts[key].scrap += parseFloat(log.scrap_qty) || 0;
       });
@@ -1654,18 +1760,20 @@ async deleteAllBOMRawMaterials(bom_id) {
       rejections.forEach(rej => {
         const dateStr = rej.log_date instanceof Date ? rej.log_date.toISOString().split('T')[0] : rej.log_date;
         const key = `${dateStr}_${rej.shift}`;
-        if (!shifts[key]) shifts[key] = { produced: 0, rejected: 0, scrap: 0 };
         
         const rQty = parseFloat(rej.rejected_qty) || 0;
         const sQty = parseFloat(rej.scrap_qty) || 0;
         const aQty = parseFloat(rej.accepted_qty) || 0;
 
-        shifts[key].rejected += rQty;
-        shifts[key].scrap += sQty;
-
-        // Inferred production logic: if no production recorded for this shift but rejection has accepted_qty
-        if (shifts[key].produced === 0 && aQty > 0) {
-          shifts[key].produced = aQty + rQty + sQty;
+        if (!shifts[key]) {
+          shifts[key] = { produced: aQty + rQty + sQty, rejected: rQty, scrap: sQty, isInferred: true };
+        } else {
+          shifts[key].rejected += rQty;
+          shifts[key].scrap += sQty;
+          // Only add to produced if it was inferred (no time_log for this shift)
+          if (shifts[key].isInferred) {
+            shifts[key].produced += aQty + rQty + sQty;
+          }
         }
       });
 
@@ -1760,11 +1868,33 @@ async deleteAllBOMRawMaterials(bom_id) {
     try {
       const maxAllowed = await this._getMaxAllowedQuantity(data.job_card_id);
       const currentJobCard = await this.getJobCardDetails(data.job_card_id);
-      const currentProduced = parseFloat(currentJobCard?.produced_quantity || 0);
+      
       const newQty = parseFloat(data.completed_qty || 0);
+      
+      // Calculate potential increase. 
+      // If this shift already had inferred production from rejections, 
+      // the new time log might replace it or add to it.
+      const [existingProduced] = await this.db.query(
+        `SELECT 
+          COALESCE((SELECT SUM(completed_qty) FROM time_log WHERE job_card_id = ? AND log_date = ? AND shift = ?), 0) as time_log_produced,
+          COALESCE((SELECT SUM(accepted_qty + rejected_qty + scrap_qty) FROM rejection_entry WHERE job_card_id = ? AND log_date = ? AND shift = ?), 0) as rejection_produced`,
+        [data.job_card_id, data.log_date, data.shift, data.job_card_id, data.log_date, data.shift]
+      );
+      
+      const prevTimeLogProduced = parseFloat(existingProduced[0].time_log_produced);
+      const prevRejectionProduced = parseFloat(existingProduced[0].rejection_produced);
+      
+      let productionIncrease = newQty;
+      if (prevTimeLogProduced === 0 && prevRejectionProduced > 0) {
+        // We are replacing inferred production with actual time log production.
+        // The increase is the difference if the new time log is larger.
+        productionIncrease = Math.max(0, newQty - prevRejectionProduced);
+      }
+      
+      const currentTotalProduced = parseFloat(currentJobCard?.produced_quantity || 0);
 
-      if (currentProduced + newQty > maxAllowed + 0.0001) {
-        throw new Error(`Quantity Validation Error: Total production (${(currentProduced + newQty).toFixed(2)}) would exceed allowed quantity (${maxAllowed.toFixed(2)}) based on previous operation or plan.`);
+      if (currentTotalProduced + productionIncrease > maxAllowed + 0.0001) {
+        throw new Error(`Quantity Validation Error: Total production (${(currentTotalProduced + productionIncrease).toFixed(2)}) would exceed allowed quantity (${maxAllowed.toFixed(2)}) based on previous operation or plan.`);
       }
 
       const timeLogId = `TL-${Date.now()}`
@@ -1830,18 +1960,38 @@ async deleteAllBOMRawMaterials(bom_id) {
       const maxAllowed = await this._getMaxAllowedQuantity(data.job_card_id);
       const currentJobCard = await this.getJobCardDetails(data.job_card_id);
       
-      // Calculate current accepted quantity excluding what we are about to add (if we were updating, but this is create)
-      const currentAccepted = parseFloat(currentJobCard?.accepted_quantity || 0);
-      const newAccepted = parseFloat(data.accepted_qty || 0);
-
-      // We should also check total production vs accepted
-      // In this system, accepted + rejected + scrap = produced (usually)
-      // Actually _syncJobCardQuantities does: 
-      // totalProduced = SUM(time_log.completed_qty)
-      // totalAccepted = SUM(rejection_entry.accepted_qty)
+      // Calculate how much this entry would increase total production
+      // We need to check what is already recorded for this shift
+      const [existingProduced] = await this.db.query(
+        `SELECT 
+          COALESCE((SELECT SUM(completed_qty) FROM time_log WHERE job_card_id = ? AND log_date = ? AND shift = ?), 0) as time_log_produced,
+          COALESCE((SELECT SUM(accepted_qty + rejected_qty + scrap_qty) FROM rejection_entry WHERE job_card_id = ? AND log_date = ? AND shift = ?), 0) as rejection_produced`,
+        [data.job_card_id, data.log_date, data.shift, data.job_card_id, data.log_date, data.shift]
+      );
       
-      if (currentAccepted + newAccepted > maxAllowed + 0.0001) {
-        throw new Error(`Quantity Validation Error: Total accepted quantity (${(currentAccepted + newAccepted).toFixed(2)}) would exceed allowed quantity (${maxAllowed.toFixed(2)}) based on previous operation or plan.`);
+      const timeLogProduced = parseFloat(existingProduced[0].time_log_produced);
+      const prevRejectionProduced = parseFloat(existingProduced[0].rejection_produced);
+      
+      const enteringProduced = (parseFloat(data.accepted_qty) || 0) + (parseFloat(data.rejected_qty) || 0) + (parseFloat(data.scrap_qty) || 0);
+      
+      let productionIncrease = 0;
+      if (timeLogProduced > 0) {
+        // If time log exists, production is already accounted for.
+        // We only increase if entering total exceeds time log total.
+        productionIncrease = Math.max(0, enteringProduced - timeLogProduced);
+      } else {
+        // If no time log, production is inferred.
+        // Increase is relative to what was already inferred for this shift.
+        productionIncrease = Math.max(0, enteringProduced + prevRejectionProduced - prevRejectionProduced); 
+        // Wait, that's just enteringProduced. 
+        // Actually, it's enteringProduced because this is a NEW entry.
+        productionIncrease = enteringProduced;
+      }
+
+      const currentTotalProduced = parseFloat(currentJobCard?.produced_quantity || 0);
+      
+      if (currentTotalProduced + productionIncrease > maxAllowed + 0.0001) {
+        throw new Error(`Quantity Validation Error: Total production (${(currentTotalProduced + productionIncrease).toFixed(2)}) would exceed allowed quantity (${maxAllowed.toFixed(2)}) based on previous operation or plan.`);
       }
 
       const rejectionId = `REJ-${Date.now()}`
@@ -2043,11 +2193,20 @@ async deleteAllBOMRawMaterials(bom_id) {
       const maxAllowed = await this._getMaxAllowedQuantity(data.job_card_id);
       const currentJobCard = await this.getJobCardDetails(data.job_card_id);
       
-      const currentAccepted = parseFloat(currentJobCard?.accepted_quantity || 0);
-      const newAccepted = parseFloat(data.quantity_accepted || 0);
+      const qReceived = parseFloat(data.quantity_received || 0);
+      const qAccepted = parseFloat(data.quantity_accepted || 0);
+      const qRejected = parseFloat(data.quantity_rejected || 0);
 
-      if (currentAccepted + newAccepted > maxAllowed + 0.0001) {
-        throw new Error(`Quantity Validation Error: Total accepted quantity from challan (${(currentAccepted + newAccepted).toFixed(2)}) would exceed allowed quantity (${maxAllowed.toFixed(2)}) based on previous operation or plan.`);
+      let productionIncrease = qReceived;
+      if (qReceived === 0 && qAccepted > 0) {
+        // Infer production if received is 0 but accepted is > 0
+        productionIncrease = qAccepted + qRejected;
+      }
+
+      const currentTotalProduced = parseFloat(currentJobCard?.produced_quantity || 0);
+
+      if (currentTotalProduced + productionIncrease > maxAllowed + 0.0001) {
+        throw new Error(`Quantity Validation Error: Total production from challan (${(currentTotalProduced + productionIncrease).toFixed(2)}) would exceed allowed quantity (${maxAllowed.toFixed(2)}) based on previous operation or plan.`);
       }
 
       const challanNumber = `IC-${Date.now()}`

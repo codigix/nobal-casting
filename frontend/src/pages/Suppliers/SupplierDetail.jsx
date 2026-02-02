@@ -149,10 +149,10 @@ export default function SupplierDetail() {
       {supplier.contacts && supplier.contacts.length > 0 && (
         <Card className="mb-8">
           <h2 className="text-xl  mb-6">Contacts</h2>
-          <div className="space-y-4">
+          <div className="space-y-2">
             {supplier.contacts.map((contact, index) => (
               <div key={index} className="border-l-4 border-primary-600 pl-4">
-                <p className="font-semibold text-[var(--text-primary)]">{contact.name}</p>
+                <p className=" text-[var(--text-primary)]">{contact.name}</p>
                 {contact.role && (
                   <p className="text-xs text-[var(--text-secondary)]">{contact.role}</p>
                 )}
@@ -172,10 +172,10 @@ export default function SupplierDetail() {
       {supplier.addresses && supplier.addresses.length > 0 && (
         <Card className="mb-8">
           <h2 className="text-xl  mb-6">Addresses</h2>
-          <div className="space-y-4">
+          <div className="space-y-2">
             {supplier.addresses.map((address, index) => (
               <div key={index} className="border-l-4 border-primary-600 pl-4">
-                <p className="font-semibold text-[var(--text-primary)]">
+                <p className=" text-[var(--text-primary)]">
                   {address.address_line1}
                 </p>
                 {address.address_line2 && (

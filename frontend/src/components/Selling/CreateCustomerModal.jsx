@@ -132,7 +132,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
 
         <div className="grid grid-cols-2 gap-5">
           <div>
-            <label className="block font-semibold text-gray-900 mb-2 text-xs">
+            <label className="block  text-gray-900 mb-2 text-xs">
               Customer Name *
             </label>
             <input
@@ -147,7 +147,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-900 mb-2 text-xs">
+            <label className="block  text-gray-900 mb-2 text-xs">
               Customer ID * <span className="text-gray-500 font-normal">(Auto-generated)</span>
             </label>
             <input
@@ -160,7 +160,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-900 mb-2 text-xs">
+            <label className="block  text-gray-900 mb-2 text-xs">
               Email *
             </label>
             <input
@@ -175,7 +175,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-900 mb-2 text-xs">
+            <label className="block  text-gray-900 mb-2 text-xs">
               Phone *
             </label>
             <input
@@ -190,7 +190,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-900 mb-2 text-xs">
+            <label className="block  text-gray-900 mb-2 text-xs">
               GST Number
             </label>
             <input
@@ -204,7 +204,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-900 mb-2 text-xs">
+            <label className="block  text-gray-900 mb-2 text-xs">
               Customer Type *
             </label>
             <select
@@ -220,7 +220,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-900 mb-2 text-xs">
+            <label className="block  text-gray-900 mb-2 text-xs">
               Credit Limit (₹)
             </label>
             <input
@@ -236,7 +236,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           <div>
-            <label className="block font-semibold text-gray-900 mb-2 text-xs">
+            <label className="block  text-gray-900 mb-2 text-xs">
               Status
             </label>
             <select
@@ -251,7 +251,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           <div className="col-span-2">
-            <label className="block font-semibold text-gray-900 mb-2 text-xs">
+            <label className="block  text-gray-900 mb-2 text-xs">
               Billing Address
             </label>
             <textarea
@@ -265,7 +265,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           <div className="col-span-2">
-            <label className="block font-semibold text-gray-900 mb-2 text-xs">
+            <label className="block  text-gray-900 mb-2 text-xs">
               Shipping Address
             </label>
             <textarea
@@ -290,7 +290,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
           <button
             type="submit"
             disabled={loading}
-            className="p-6  py-2 bg-gradient-to-r from-green-500 to-green-600 text-white border-none rounded-xs cursor-pointer text-xs font-semibold  hover:from-green-600 hover:to-green-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+            className="p-6  py-2 bg-gradient-to-r from-green-500 to-green-600 text-white border-none rounded-xs cursor-pointer text-xs   hover:from-green-600 hover:to-green-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? 'Creating...' : '✓ Create Customer'}
           </button>

@@ -1183,7 +1183,7 @@ export default function BOMForm() {
                         <div className="w-2 h-2 rounded bg-indigo-500 animate-ping absolute inset-0" />
                         <div className="w-2 h-2 rounded bg-indigo-500 relative z-10" />
                       </div>
-                      <span className="text-white text-[10px] opacity-70 font-bold tracking-[0.2em] uppercase">Neural Core</span>
+                      <span className="text-white text-[10px] opacity-70  tracking-[0.2em] uppercase">Neural Core</span>
                     </div>
                     <div className="flex -space-x-1.5">
                       {[1, 2, 3].map(i => (
@@ -1196,7 +1196,7 @@ export default function BOMForm() {
 
                   <div className="grid grid-cols-3 gap-2">
                     <div className="bg-white/5 rounded p-2 border border-white/5 backdrop-blur-md">
-                      <p className="text-slate-500 text-[8px] uppercase font-bold mb-1 tracking-widest">Protocol</p>
+                      <p className="text-slate-500 text-[8px] uppercase  mb-1 tracking-widest">Protocol</p>
                       <div className="flex items-center gap-1.5 overflow-hidden">
                         <Activity size={12} className="text-indigo-400 shrink-0" />
                         <p className="text-white text-[10px] truncate capitalize">
@@ -1206,20 +1206,20 @@ export default function BOMForm() {
                     </div>
 
                     <div className="bg-white/5 rounded-lg p-2.5 border border-white/5 backdrop-blur-sm hover:border-indigo-500/20 transition-all">
-                      <p className="text-slate-500 text-[8px] uppercase font-bold mb-1 tracking-widest">Nodes</p>
+                      <p className="text-slate-500 text-[8px] uppercase  mb-1 tracking-widest">Nodes</p>
                       <div className="flex items-center gap-1.5">
                         <Database size={12} className="text-slate-400" />
-                        <p className="text-white text-sm font-bold ">
+                        <p className="text-white text-sm  ">
                           {rawMaterials.length + bomLines.length}
                         </p>
                       </div>
                     </div>
 
                     <div className="bg-white/5 rounded-lg p-2.5 border border-white/5 backdrop-blur-sm hover:border-emerald-500/20 transition-all">
-                      <p className="text-slate-500 text-[8px] uppercase font-bold mb-1 tracking-widest">Ops</p>
+                      <p className="text-slate-500 text-[8px] uppercase  mb-1 tracking-widest">Ops</p>
                       <div className="flex items-center gap-1.5">
                         <Settings size={12} className="text-slate-400" />
-                        <p className="text-white text-sm font-bold ">
+                        <p className="text-white text-sm  ">
                           {operations.length}
                         </p>
                       </div>
@@ -1311,7 +1311,7 @@ export default function BOMForm() {
               )}
 
               {/* Formulation Cards */}
-              <div className="  space-y-4">
+              <div className="  space-y-2">
                 <Card className=" border border-slate-200/50 p-2   shadow-slate-200/40 bg-white/90 backdrop-blur-xl rounded">
                   <SectionHeader
                     id="product"
@@ -1651,7 +1651,7 @@ export default function BOMForm() {
                     themeColor="indigo"
                   />
                   {expandedSections.components && (
-                    <div className=" p-2   space-y-4">
+                    <div className=" p-2   space-y-2">
                       <div className="p-2 bg-slate-50/50 rounded border border-slate-200/50 relative  group/add">
                         <div className="absolute -right-6 -top-6 p-2 opacity-[0.03] group-hover/add:opacity-[0.08] transition-all duration-700 rotate-12">
                           <Plus size={120} className="text-indigo-600" />
@@ -1883,7 +1883,7 @@ export default function BOMForm() {
                   />
                   {expandedSections.raw_materials && (
                     <div className=" p-2">
-                      <div className="  space-y-4">
+                      <div className="  space-y-2">
                         {/* RM Consumption Preview */}
                         {rawMaterials.length > 0 && (
                           <div className="bg-amber-500/5 rounded border border-amber-200/30 p-2 relative  group">
@@ -2047,7 +2047,7 @@ export default function BOMForm() {
                               <span className=" text-xs    text-slate-400   ">{rawMaterials.length} Total Nodes</span>
                             </div>
 
-                            <div className="space-y-4">
+                            <div className="space-y-2">
                               {itemGroupsInOrder.map((groupName) => {
                                 const groupItems = groupedRawMaterials[groupName]
                                 const isExpanded = expandedItemGroups[groupName]
@@ -2215,7 +2215,7 @@ export default function BOMForm() {
                   />
                   {expandedSections.operations && (
                     <div className=" p-2">
-                      <div className="  space-y-4">
+                      <div className="  space-y-2">
                         {/* Add Operation Interface */}
                         <div className="p-2 bg-slate-50/50 rounded border border-slate-200/50 relative ">
                           <h4 className=" text-xs    text-slate-500     mb-6 flex items-center gap-3">
@@ -2396,7 +2396,7 @@ export default function BOMForm() {
                                         <div className="text-xs   text-slate-700">₹{parseFloat(op.hourly_rate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                                       </td>
                                       <td className="p-2  text-right">
-                                        <div className="text-xs   text-slate-900 font-bold bg-slate-100 rounded px-2 py-0.5 inline-block min-w-[60px]">₹{parseFloat(op.operating_cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                        <div className="text-xs   text-slate-900  bg-slate-100 rounded px-2 py-0.5 inline-block min-w-[60px]">₹{parseFloat(op.operating_cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                                       </td>
                                       <td className="p-2  text-center">
                                         <span className={`inline-flex items-center px-3 py-1 rounded text-[9px]      ${op.operation_type === 'OUTSOURCED' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
@@ -2447,7 +2447,7 @@ export default function BOMForm() {
                   />
                   {expandedSections.scrap && (
                     <div className=" p-2">
-                      <div className="  space-y-4">
+                      <div className="  space-y-2">
                         {/* Add Scrap Interface */}
                         <div className="p-2 bg-slate-50/50 rounded border border-slate-200/50 relative ">
                           <h4 className=" text-xs    text-slate-500     mb-6 flex items-center gap-3">

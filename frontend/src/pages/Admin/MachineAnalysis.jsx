@@ -64,7 +64,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
               </h2>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs    text-neutral-400">Machine ID:</span>
-                <span className="text-xs font-semibold text-neutral-600">{machine.id}</span>
+                <span className="text-xs  text-neutral-600">{machine.id}</span>
                 <span className="w-1 h-1 rounded-full bg-neutral-300 mx-1"></span>
                 <span className="text-xs font-medium text-neutral-500">{machine.workstationType}</span>
               </div>

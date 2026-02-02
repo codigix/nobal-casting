@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import * as productionService from '../../services/productionService'
 import {
   Plus,
   Edit2,
@@ -31,7 +32,7 @@ import {
   Package,
   Layers,
   BarChart3,
-  ShoppingCart
+  ClipboardList
 } from 'lucide-react'
 import { useToast } from '../../components/ToastContainer'
 import Card from '../../components/Card/Card'
@@ -271,6 +272,64 @@ const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms 
   return allRawMaterials
 }
 
+const collectAllOperations = async (bomId, token, visitedBoms = new Set(), depth = 0) => {
+  if (!bomId || visitedBoms.has(bomId)) {
+    return []
+  }
+
+  visitedBoms.add(bomId)
+  let allOperations = []
+
+  try {
+    const bomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${bomId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+
+    if (!bomRes.ok) return allOperations
+
+    const bomData = await bomRes.json()
+    const bom = bomData.data || bomData
+
+    // Add current BOM's operations
+    const operations = (bom.operations || []).map(op => ({
+      ...op,
+      bom_id: bomId,
+      item_code: bom.item_code,
+      item_name: bom.product_name || bom.item_code,
+      depth
+    }))
+    allOperations = [...allOperations, ...operations]
+
+    // Recurse into sub-assemblies
+    const materials = [...(bom.lines || []), ...(bom.bom_raw_materials || []), ...(bom.rawMaterials || [])]
+    for (const material of materials) {
+      const itemCode = material.item_code || material.component_code
+      if (!itemCode) continue
+
+      const isSubAssembly = isSubAssemblyGroup(material.item_group) ||
+        material.fg_sub_assembly === 'Sub-Assembly' ||
+        material.component_type === 'Sub-Assembly' ||
+        (itemCode && itemCode.startsWith('SA-'))
+
+      if (isSubAssembly) {
+        let subBomId = material.bom_id
+        if (!subBomId || subBomId === bomId) {
+          subBomId = await findBomForItem(itemCode, token, bomId)
+        }
+
+        if (subBomId && subBomId !== bomId) {
+          const subOps = await collectAllOperations(subBomId, token, visitedBoms, depth + 1)
+          allOperations = [...allOperations, ...subOps]
+        }
+      }
+    }
+  } catch (err) {
+    console.error(`Error fetching operations for BOM ${bomId}:`, err)
+  }
+
+  return allOperations
+}
+
 export default function ProductionPlanning() {
   const navigate = useNavigate()
   const toast = useToast()
@@ -286,7 +345,6 @@ export default function ProductionPlanning() {
   const [showMaterialRequestModal, setShowMaterialRequestModal] = useState(false)
   const [materialRequestData, setMaterialRequestData] = useState(null)
   const [sendingMaterialRequest, setSendingMaterialRequest] = useState(false)
-  const [sendingPurchaseRequest, setSendingPurchaseRequest] = useState(false)
   const [materialStockData, setMaterialStockData] = useState({})
   const [workOrderStockData, setWorkOrderStockData] = useState({})
   const [checkingStock, setCheckingStock] = useState(false)
@@ -653,35 +711,41 @@ export default function ProductionPlanning() {
 
     const fgItem = fgItems[0]
     const plannedQty = fgItem.quantity || fgItem.planned_qty || fullPlan.planned_qty || fullPlan.quantity || 1
+    const token = localStorage.getItem('token')
 
-    const rawMatsList = bomDetails?.bom_raw_materials || bomDetails?.rawMaterials || []
-    let allItems = rawMatsList.map(item => {
-      const baseQty = parseFloat(item.qty) || parseFloat(item.quantity) || parseFloat(item.bom_qty) || 1
-      return {
-        ...item,
-        qty: baseQty * plannedQty,
-        quantity: baseQty * plannedQty,
-        required_qty: baseQty * plannedQty
-      }
-    })
+    // Fetch comprehensive data recursively
+    let allMaterials = []
+    let allOperations = []
 
-    if (allItems.length > 0) {
-      const token = localStorage.getItem('token')
-      allItems = await enrichRequiredItemsWithStock(allItems, token)
+    if (plan.bom_id) {
+      const rawMaterialsMap = await collectAllRawMaterials(plan.bom_id, plannedQty, token)
+      allMaterials = Object.values(rawMaterialsMap)
+      allOperations = await collectAllOperations(plan.bom_id, token)
     }
 
-    const subAssemblies = allItems.filter(item => item.bom_id || item.is_sub_assembly)
-    const rawMaterials = allItems.filter(item => !item.bom_id && !item.is_sub_assembly)
+    if (allMaterials.length > 0) {
+      allMaterials = await enrichRequiredItemsWithStock(allMaterials, token)
+    }
+
+    const subAssemblies = allMaterials.filter(item => {
+      const isSub = isSubAssemblyGroup(item.item_group) ||
+        item.fg_sub_assembly === 'Sub-Assembly' ||
+        item.component_type === 'Sub-Assembly' ||
+        (item.item_code && item.item_code.startsWith('SA-')) ||
+        item.bom_id
+      return isSub
+    })
+    const rawMaterials = allMaterials.filter(item => !subAssemblies.find(sa => sa.item_code === item.item_code))
 
     const woData = {
       item_code: fgItem.item_code || fgItem.component_code || '',
       item_name: fgItem.item_name || fgItem.component_description || '',
-      quantity: fgItem.quantity || fgItem.qty || fgItem.planned_qty || 1,
-      bom_no: fgItem.bom_no || plan.bom_id || '',
-      planned_start_date: fgItem.planned_start_date || new Date().toISOString().split('T')[0],
+      quantity: plannedQty,
+      bom_no: plan.bom_id || '',
+      planned_start_date: (fgItem.planned_start_date ? fgItem.planned_start_date.split('T')[0] : new Date().toISOString().split('T')[0]),
       priority: 'Medium',
       notes: '',
-      operations: bomDetails?.operations || [],
+      operations: allOperations,
       sub_assemblies: subAssemblies,
       required_items: rawMaterials,
       production_plan_id: plan.plan_id
@@ -690,26 +754,76 @@ export default function ProductionPlanning() {
     setWorkOrderData(woData)
     setShowWorkOrderModal(true)
 
-    const allRequiredItems = [...subAssemblies, ...rawMaterials]
-    if (allRequiredItems.length > 0) {
-      checkItemsStock(allRequiredItems, setWorkOrderStockData)
+    if (allMaterials.length > 0) {
+      checkItemsStock(allMaterials, setWorkOrderStockData)
     }
   }
 
-  const handleCreateWorkOrderConfirm = () => {
+  const handleCreateWorkOrderConfirm = async () => {
     if (!workOrderData) return
 
-    const params = new URLSearchParams()
-    params.append('item_to_manufacture', workOrderData.item_code)
-    params.append('item_name', workOrderData.item_name)
-    params.append('qty_to_manufacture', workOrderData.quantity)
-    params.append('bom_no', workOrderData.bom_no)
-    params.append('planned_start_date', workOrderData.planned_start_date)
-    params.append('production_plan_id', workOrderData.production_plan_id)
+    try {
+      setCreatingWorkOrder(true)
 
-    setShowWorkOrderModal(false)
-    setWorkOrderData(null)
-    navigate(`/manufacturing/work-orders/new?${params.toString()}`)
+      let response;
+      if (workOrderData.production_plan_id) {
+        // Use the multi-level generation endpoint that creates separate WOs for each item
+        response = await productionService.createWorkOrdersFromPlan(workOrderData.production_plan_id)
+      } else {
+        // Fallback to single WO creation if no plan ID
+        const payload = {
+          item_code: workOrderData.item_code,
+          bom_no: workOrderData.bom_no,
+          quantity: parseFloat(workOrderData.quantity),
+          priority: workOrderData.priority || 'Medium',
+          notes: workOrderData.notes || '',
+          planned_start_date: workOrderData.planned_start_date ? workOrderData.planned_start_date.split('T')[0] : new Date().toISOString().split('T')[0],
+          production_plan_id: workOrderData.production_plan_id,
+          required_items: (workOrderData.required_items || []).map(mat => ({
+            item_code: mat.item_code,
+            source_warehouse: mat.source_warehouse || 'Stores - NC',
+            required_qty: mat.required_qty || mat.qty || 0
+          })),
+          operations: (workOrderData.operations || []).map(op => ({
+            operation_name: op.operation_name || op.operation || '',
+            workstation_type: op.workstation || op.workstation_type || '',
+            operation_time: op.operation_time || op.time || 0,
+            operating_cost: op.operating_cost || 0,
+            operation_type: op.operation_type || 'IN_HOUSE',
+            hourly_rate: op.hourly_rate || 0
+          }))
+        }
+        response = await productionService.createWorkOrder(payload)
+      }
+
+      if (response.success) {
+        const workOrders = response.data?.work_orders || []
+        const firstWoId = workOrders.length > 0 ? workOrders[0] : (response.data?.wo_id || response.wo_id)
+        
+        toast.addToast(response.message || 'Work Orders generated successfully', 'success')
+        
+        setShowWorkOrderModal(false)
+        setWorkOrderData(null)
+        
+        // Refresh plans to show updated status
+        fetchPlans()
+        
+        // Navigate to job cards page. If we have multiple, maybe just the list, 
+        // or filter by the first one (usually the FG)
+        if (firstWoId) {
+          navigate(`/manufacturing/job-cards?filter_work_order=${firstWoId}`)
+        } else {
+          navigate(`/manufacturing/job-cards`)
+        }
+      } else {
+        toast.addToast(response.message || 'Failed to create work order', 'error')
+      }
+    } catch (err) {
+      console.error('Error in work order creation:', err)
+      toast.addToast(err.message || 'Error initiating production', 'error')
+    } finally {
+      setCreatingWorkOrder(false)
+    }
   }
 
   const handleSendMaterialRequest = async (plan) => {
@@ -775,7 +889,9 @@ export default function ProductionPlanning() {
 
       const mrItems = Object.values(allRawMaterials)
       if (mrItems.length > 0) {
-        checkItemsStock(mrItems, setMaterialStockData)
+        await checkItemsStock(mrItems, (stockInfo) => {
+          setMaterialStockData(stockInfo)
+        })
       }
     } catch (err) {
       console.error('Error preparing material request:', err)
@@ -819,81 +935,6 @@ export default function ProductionPlanning() {
     }
   }
 
-  const handleSendForPurchase = async () => {
-    if (!materialRequestData) return
-
-    try {
-      setSendingPurchaseRequest(true)
-      const token = localStorage.getItem('token')
-
-      const unavailableItems = materialRequestData.items.filter(item => {
-        const stock = materialStockData[item.item_code]
-        return stock && !stock.isAvailable
-      })
-
-      if (unavailableItems.length === 0) {
-        toast.addToast('No unavailable items found to purchase', 'warning')
-        return
-      }
-
-      // First create the Material Request so the PO has a valid reference
-      const mrRes = await fetch(`${import.meta.env.VITE_API_URL}/material-requests`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(materialRequestData)
-      })
-
-      if (!mrRes.ok) {
-        const errData = await mrRes.json()
-        throw new Error(errData.error || 'Failed to create material request')
-      }
-
-      const mrResult = await mrRes.json()
-      const realMrId = mrResult.data.mr_id
-      
-      const poData = {
-        mr_id: realMrId,
-        items: unavailableItems.map(item => ({
-          ...item,
-          rate: 0 // Will be filled by purchase dept
-        })),
-        department: materialRequestData.department,
-        purpose: materialRequestData.purpose
-      }
-
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/purchase-orders/from-material-request`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(poData)
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        toast.addToast(`Material Request and Purchase Order ${data.data.po_no} created successfully`, 'success')
-        if (materialRequestData.production_plan_id) {
-          fetchPlanMRHistory(materialRequestData.production_plan_id)
-        }
-        setShowMaterialRequestModal(false)
-        setMaterialRequestData(null)
-        navigate('/buying/purchase-orders')
-      } else {
-        const errData = await res.json()
-        toast.addToast(errData.error || 'Failed to create purchase order', 'error')
-      }
-    } catch (err) {
-      console.error('Error in purchase flow:', err)
-      toast.addToast(err.message || 'Error in purchase flow', 'error')
-    } finally {
-      setSendingPurchaseRequest(false)
-    }
-  }
-
   const stats = useMemo(() => {
     const total = plans.length
     const submitted = plans.filter(p => p.status === 'submitted').length
@@ -922,7 +963,7 @@ export default function ProductionPlanning() {
     const Icon = config.icon
 
     return (
-      <span className={`inline-flex items-center gap-1.5 p-2  py-1 rounded-full text-xs    border ${config.color}`}>
+      <span className={`inline-flex items-center gap-1.5 p-2  py-1 rounded w-fit text-xs    border ${config.color}`}>
         <Icon size={12} />
         {status}
       </span>
@@ -1073,7 +1114,7 @@ export default function ProductionPlanning() {
                 <BarChart3 size={20} />
               </div>
               <div>
-                <h3 className="text-sm  text-gray-900 ">Strategy Pipeline</h3>
+                <h3 className="text-xs  text-gray-900 ">Strategy Pipeline</h3>
                 <p className="text-xs   text-gray-400">Manage and monitor manufacturing execution</p>
               </div>
             </div>
@@ -1105,7 +1146,7 @@ export default function ProductionPlanning() {
               <table className="w-full text-left border-collapse bg-white">
                 <thead>
                   <tr className="bg-gray-50/50">
-                    <th className="p-2   text-xs   text-gray-400  border-b border-gray-100">Plan Identifier</th>
+                    <th className="p-2   text-xs   text-gray-400  border-b border-gray-100">Plan ID</th>
                     <th className="p-2   text-xs   text-gray-400  border-b border-gray-100 text-center">Origin & Status</th>
                     <th className="p-2   text-xs   text-gray-400  border-b border-gray-100 text-center">Timeline</th>
                     <th className="p-2   text-xs   text-gray-400  border-b border-gray-100">Production Progress</th>
@@ -1125,14 +1166,12 @@ export default function ProductionPlanning() {
                         <td className="p-2 ">
                           <div className="flex items-center gap-4">
                             <div className="w-6 h-6 p-2  rounded  bg-slate-900 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
-                              <Package size={20} />
+                              <Package size={15} />
                             </div>
                             <div>
-                              <p className="text-sm  text-gray-900 tracking-tight">{plan.plan_id}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-xs   text-indigo-600 bg-indigo-50 p-1 rounded  er">
-                                  {plan.naming_series || 'PP'}
-                                </span>
+                              <p className="text-xs  text-gray-900">{plan.plan_id}</p>
+                              <div className="flex items-center gap-2 ">
+                                
                                 <span className="text-xs   text-gray-400 truncate max-w-[200px]">
                                   {plan.bom_id && bomCache[plan.bom_id] ? bomCache[plan.bom_id] : (plan.fg_items?.[0]?.item_name || 'Generic Production')}
                                 </span>
@@ -1142,7 +1181,7 @@ export default function ProductionPlanning() {
                         </td>
                         <td className="p-2 ">
                           <div className="flex flex-col items-center gap-2">
-                            <div className="flex items-center gap-2 text-[11px] text-gray-600  ">
+                            <div className="flex items-left gap-2 text-[11px] text-gray-600  ">
                               <Factory size={12} className="text-gray-400" />
                               <span>{plan.company || 'Global Manufacturing'}</span>
                             </div>
@@ -1159,15 +1198,15 @@ export default function ProductionPlanning() {
                               <span className={`inline-flex items-center gap-1.5 p-2  py-1 rounded-full text-[9px]   border ${isOverdue ? 'text-rose-600 bg-rose-50 border-rose-100' : 'text-emerald-600 bg-emerald-50 border-emerald-100'
                                 }`}>
                                 {isOverdue ? <AlertCircle size={15} /> : <CheckCircle2 size={15} />}
-                                {isOverdue ? 'OVERDUE' : 'ON SCHEDULE'}
+                                {isOverdue ? 'Overdue' : 'O Schedule'}
                               </span>
                             )}
                           </div>
                         </td>
                         <td className="p-2 ">
-                          <div className="space-y-3 max-w-[220px]">
+                          <div className="space-y-2">
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs   text-gray-400 ">{progressValue}% COMPLETE</span>
+                              <span className="text-xs   text-gray-400 ">{progressValue}% Complete</span>
                               <span className="text-xs   text-slate-900 bg-slate-100 px-2 py-0.5 rounded ">{opsInfo} OPS</span>
                             </div>
                             <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden shadow-inner">
@@ -1197,9 +1236,9 @@ export default function ProductionPlanning() {
                             <button
                               onClick={() => handleCreateWorkOrder(plan)}
                               className=" p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all   hover:shadow-md bg-white border border-gray-50"
-                              title="Launch Work Order"
+                              title="Configure Strategy"
                             >
-                              <Zap size={15} />
+                              <Settings size={15} />
                             </button>
                             <button
                               onClick={() => handleSendMaterialRequest(plan)}
@@ -1326,7 +1365,7 @@ export default function ProductionPlanning() {
               </div>
 
               {workOrderData.operations && workOrderData.operations.length > 0 && (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <div className="flex items-center gap-3">
                     <div className="w-1.5 h-6 bg-indigo-600 rounded-full" />
                     <h3 className="text-xs  text-gray-900 ">Operational Sequence ({workOrderData.operations.length})</h3>
@@ -1335,27 +1374,45 @@ export default function ProductionPlanning() {
                     <table className="w-full text-left bg-white border-collapse">
                       <thead>
                         <tr className="bg-gray-50 border-b border-gray-100">
-                          <th className="p-2  text-xs   text-gray-400 ">Operation</th>
+                          <th className="p-2  text-xs   text-gray-400 ">Item / Operation</th>
                           <th className="p-2  text-xs   text-gray-400 ">Workstation</th>
                           <th className="p-2  text-xs   text-gray-400  text-right">Time (hrs)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
-                        {workOrderData.operations.map((op, idx) => (
-                          <tr key={idx} className="hover:bg-indigo-50/30 transition-colors">
-                            <td className="p-2  text-xs  text-gray-900">{op.operation_name || op.operation || '-'}</td>
-                            <td className="p-2  text-xs  text-gray-500">{op.workstation_type || op.workstation || '-'}</td>
-                            <td className="p-2  text-right text-xs  text-indigo-600">{op.operation_time || op.time || 0}</td>
-                          </tr>
-                        ))}
+                        {workOrderData.operations.map((op, idx) => {
+                          const isNewGroup = idx === 0 || workOrderData.operations[idx - 1].bom_id !== op.bom_id;
+                          return (
+                            <React.Fragment key={idx}>
+                              {isNewGroup && (
+                                <tr className="bg-slate-50/50">
+                                  <td colSpan="3" className="p-2 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                    <div className={`w-2 h-2 rounded-full ${op.depth === 0 ? 'bg-indigo-500' : 'bg-amber-500'}`} />
+                                    {op.item_name || op.item_code} {op.depth === 0 ? '(Finished Good)' : '(Sub-Assembly)'}
+                                  </td>
+                                </tr>
+                              )}
+                              <tr className="hover:bg-indigo-50/30 transition-colors">
+                                <td className="p-2  text-xs  text-gray-900 flex items-center gap-2">
+                                  <div className="w-4 flex justify-center">
+                                    <div className="w-0.5 h-4 bg-gray-200" />
+                                  </div>
+                                  {op.operation_name || op.operation || '-'}
+                                </td>
+                                <td className="p-2  text-xs  text-gray-500">{op.workstation_type || op.workstation || '-'}</td>
+                                <td className="p-2  text-right text-xs  text-indigo-600">{op.operation_time || op.time || 0}</td>
+                              </tr>
+                            </React.Fragment>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
                 </div>
               )}
 
-              {(workOrderData.sub_assemblies?.length > 0 || workOrderData.required_items?.length > 0) && (
-                <div className="space-y-4">
+              {/* {(workOrderData.sub_assemblies?.length > 0 || workOrderData.required_items?.length > 0) && (
+                <div className="space-y-2">
                   <div className="flex items-center gap-3">
                     <div className="w-1.5 h-6 bg-indigo-600 rounded-full" />
                     <h3 className="text-xs  text-gray-900 ">Resource Allocation</h3>
@@ -1408,10 +1465,10 @@ export default function ProductionPlanning() {
                     </table>
                   </div>
                 </div>
-              )}
+              )} */}
             </div>
 
-            <div className="p-6 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+            <div className="p-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-3 p-2 bg-white rounded  border border-gray-100  ">
                 <div className={`w-2.5 h-2.5 rounded-full ${checkingStock ? 'bg-amber-500 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]'}`} />
                 <span className="text-xs   text-gray-900 ">{checkingStock ? 'Analyzing Inventories...' : 'All Stocks Verified'}</span>
@@ -1436,7 +1493,7 @@ export default function ProductionPlanning() {
                   ) : (
                     <Zap size={16} />
                   )}
-                  {creatingWorkOrder ? 'IMPLEMENTING...' : 'INITIATE PRODUCTION'}
+                  {creatingWorkOrder ? 'Implementing...' : 'Initiate Production'}
                 </button>
               </div>
             </div>
@@ -1446,16 +1503,16 @@ export default function ProductionPlanning() {
 
       {showMaterialRequestModal && materialRequestData && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded  shadow-2xl max-w-4xl w-full  overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300 border border-gray-100 max-h-[30pc] overflow-hidden">
+          <div className="bg-white rounded shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300 border border-gray-100 max-h-[35pc] overflow-hidden">
             <div className="p-2 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
               <div className="flex items-center gap-4">
-                <div className="bg-emerald-600 p-2 rounded  shadow-lg shadow-emerald-200">
+                <div className="bg-blue-600 p-2 rounded shadow-lg shadow-blue-200 transition-colors">
                   <Send className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl  text-gray-900 ">Material Request</h2>
-                  <p className="text-xs   text-gray-400  mt-0.5 flex items-center gap-2">
-                    <Boxes size={12} className="text-emerald-500" />
+                  <h2 className="text-xl text-gray-900 ">Material Request</h2>
+                  <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
+                    <Boxes size={12} className="text-blue-500" />
                     Resource Acquisition Phase
                   </p>
                 </div>
@@ -1465,7 +1522,7 @@ export default function ProductionPlanning() {
                   setShowMaterialRequestModal(false)
                   setMaterialRequestData(null)
                 }}
-                className=" p-2 text-gray-400 hover:text-gray-900 hover:bg-white rounded  transition-all   border border-transparent hover:border-gray-100"
+                className=" p-2 text-gray-400 hover:text-gray-900 hover:bg-white rounded transition-all border border-transparent hover:border-gray-100"
               >
                 <X size={20} />
               </button>
@@ -1473,43 +1530,45 @@ export default function ProductionPlanning() {
 
             <div className="flex-1 overflow-y-auto p-2 ">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-2 rounded   bg-gray-50 border border-gray-100">
-                  <p className="text-xs   text-gray-400  mb-1">Request Identifier</p>
-                  <p className="text-sm  text-gray-900">{materialRequestData.series_no}</p>
+                <div className="p-2 rounded bg-gray-50 border border-gray-100">
+                  <p className="text-xs text-gray-400 mb-1">Request Identifier</p>
+                  <p className="text-sm text-gray-900">{materialRequestData.series_no}</p>
                 </div>
-                <div className="p-2 rounded   bg-gray-50 border border-gray-100">
-                  <p className="text-xs   text-gray-400  mb-1">Originating Dept</p>
-                  <p className="text-sm  text-gray-900">{materialRequestData.department}</p>
+                <div className="p-2 rounded bg-gray-50 border border-gray-100">
+                  <p className="text-xs text-gray-400 mb-1">Originating Dept</p>
+                  <p className="text-sm text-gray-900">{materialRequestData.department}</p>
                 </div>
-                <div className="p-2 rounded   bg-gray-50 border border-gray-100">
-                  <p className="text-xs   text-gray-400  mb-1">SLA Target Date</p>
-                  <p className="text-sm  text-gray-900">{formatDate(materialRequestData.required_by_date)}</p>
+                <div className="p-2 rounded bg-gray-50 border border-gray-100">
+                  <p className="text-xs text-gray-400 mb-1">SLA Target Date</p>
+                  <p className="text-sm text-gray-900">{formatDate(materialRequestData.required_by_date)}</p>
                 </div>
               </div>
 
               {materialRequestData.items_notes && (
-                <div className="p-2 mt-3 rounded   bg-indigo-50/30 border border-indigo-100 border-l-4 border-l-indigo-600">
+                <div className="p-2 mt-3 rounded bg-indigo-50/30 border border-indigo-100 border-l-4 border-l-indigo-600">
                   <div className="flex items-center gap-2 mb-2">
                     <FileText size={14} className="text-indigo-600" />
-                    <p className="text-xs   text-indigo-900 ">Intelligence Strategy Notes</p>
+                    <p className="text-xs text-indigo-900 ">Intelligence Strategy Notes</p>
                   </div>
-                  <p className="text-xs  text-slate-600 leading-relaxed whitespace-pre-wrap">{materialRequestData.items_notes}</p>
+                  <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">{materialRequestData.items_notes}</p>
                 </div>
               )}
 
-              <div className="space-y-4">
+              <div className="space-y-2 mt-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-1.5 h-6 bg-emerald-600 rounded-full" />
-                  <h3 className="text-xs  text-gray-900 ">Requested Components ({materialRequestData.items?.length || 0})</h3>
+                  <div className="w-1.5 h-6 bg-blue-600 rounded-full transition-colors" />
+                  <h3 className="text-xs text-gray-900 ">
+                    Items to Request ({materialRequestData.items?.length || 0})
+                  </h3>
                 </div>
                 <div className="rounded border border-gray-100 overflow-hidden  ">
                   <table className="w-full text-left bg-white border-collapse">
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-100">
-                        <th className="p-2  text-xs   text-gray-400 ">Component Intelligence</th>
-                        <th className="p-2  text-xs   text-gray-400  text-right">Required</th>
-                        <th className="p-2  text-xs   text-gray-400  text-right">Inventory</th>
-                        <th className="p-2  text-xs   text-gray-400  text-center">Status</th>
+                        <th className="p-2 text-xs text-gray-400 ">Component Intelligence</th>
+                        <th className="p-2 text-xs text-gray-400 text-right">Required</th>
+                        <th className="p-2 text-xs text-gray-400 text-right">Inventory</th>
+                        <th className="p-2 text-xs text-gray-400 text-center">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -1517,30 +1576,30 @@ export default function ProductionPlanning() {
                         const stock = materialStockData[item.item_code]
                         const isLow = stock && !stock.isAvailable
                         return (
-                          <tr key={idx} className={`hover:bg-emerald-50/30 transition-colors ${isLow ? 'bg-rose-50/50' : ''}`}>
+                          <tr key={idx} className={`hover:bg-blue-50/30 transition-colors ${isLow ? 'bg-rose-50/50' : ''}`}>
                             <td className="p-2 ">
-                              <p className="text-xs  text-gray-900 tracking-tight">{item.item_code}</p>
-                              <p className="text-xs   text-gray-400 mt-0.5">{item.item_name}</p>
+                              <p className="text-xs text-gray-900 tracking-tight">{item.item_code}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">{item.item_name}</p>
                             </td>
-                            <td className="p-2  text-right">
-                              <span className="text-xs  text-gray-900">{item.qty || item.quantity || 0}</span>
-                              <span className="ml-1 text-xs   text-slate-400 ">{item.uom || 'pcs'}</span>
+                            <td className="p-2 text-right">
+                              <span className="text-xs text-gray-900">{item.qty || item.quantity || 0}</span>
+                              <span className="ml-1 text-xs text-slate-400 ">{item.uom || 'pcs'}</span>
                             </td>
-                            <td className="p-2  text-right text-xs  text-gray-900">
+                            <td className="p-2 text-right text-xs text-gray-900">
                               {stock ? stock.available.toFixed(2) : '-'}
                             </td>
-                            <td className="p-2  text-center">
+                            <td className="p-2 text-center">
                               {stock ? (
                                 stock.isAvailable ? (
-                                  <div className="bg-emerald-50 text-emerald-600 p-2  py-1 rounded-full text-[9px]   border border-emerald-100 inline-flex items-center gap-1">
+                                  <div className="bg-emerald-50 text-emerald-600 p-2 py-1 rounded-full text-[9px] border border-emerald-100 inline-flex items-center gap-1">
                                     <Check size={15} /> Fully Stocked
                                   </div>
                                 ) : stock.hasStock ? (
-                                  <div className="bg-amber-50 text-amber-600 p-2  py-1 rounded-full text-[9px]   border border-amber-100 inline-flex items-center gap-1">
+                                  <div className="bg-amber-50 text-amber-600 p-2 py-1 rounded-full text-[9px] border border-amber-100 inline-flex items-center gap-1">
                                     <AlertCircle size={15} /> Partial Stock
                                   </div>
                                 ) : (
-                                  <div className="bg-rose-50 text-rose-600 p-2  py-1 rounded-full text-[9px]   border border-rose-100 inline-flex items-center gap-1">
+                                  <div className="bg-rose-50 text-rose-600 p-2 py-1 rounded-full text-[9px] border border-rose-100 inline-flex items-center gap-1">
                                     <X size={15} /> Zero Stock
                                   </div>
                                 )
@@ -1563,22 +1622,14 @@ export default function ProductionPlanning() {
                   setShowMaterialRequestModal(false)
                   setMaterialRequestData(null)
                 }}
-                className="p-2 text-xs   text-gray-500 hover:text-gray-900  transition-all"
+                className="p-2 text-xs text-gray-500 hover:text-gray-900 transition-all"
               >
                 Abort Request
               </button>
               <button
-                onClick={handleSendForPurchase}
-                disabled={sendingPurchaseRequest || !materialRequestData.items.some(item => !materialStockData[item.item_code]?.isAvailable)}
-                className="flex items-center gap-2 p-2  bg-amber-600 text-white rounded  hover:bg-amber-700 shadow  shadow-amber-200 transition-all text-xs    disabled:opacity-50"
-              >
-                {sendingPurchaseRequest ? <Loader size={16} className="animate-spin" /> : <ShoppingCart size={16} />}
-                {sendingPurchaseRequest ? 'PREPARING PO...' : 'Send Request for Purchase'}
-              </button>
-              <button
                 onClick={handleSendMaterialRequestConfirm}
                 disabled={sendingMaterialRequest}
-                className="flex items-center gap-2 p-2  bg-slate-900 text-white rounded  hover:bg-slate-800 shadow  shadow-slate-200 transition-all text-xs    disabled:opacity-50"
+                className="flex items-center gap-2 p-2 bg-slate-900 text-white rounded hover:bg-slate-800 shadow shadow-slate-200 transition-all text-xs disabled:opacity-50"
               >
                 {sendingMaterialRequest ? <Loader size={16} className="animate-spin" /> : <Send size={16} />}
                 {sendingMaterialRequest ? 'SYNCHRONIZING...' : 'Material Request'}
@@ -1622,7 +1673,7 @@ export default function ProductionPlanning() {
                   <p className="text-sm text-gray-500">Retrieving historical data from vault...</p>
                 </div>
               ) : mrHistory[selectedPlanForHistory.plan_id] && mrHistory[selectedPlanForHistory.plan_id].length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {mrHistory[selectedPlanForHistory.plan_id].map((mr, idx) => (
                     <div key={mr.mr_id} className="border border-gray-100 rounded  overflow-hidden hover:shadow-md transition-shadow">
                       <div className="bg-gray-50/50 p-4 flex items-center justify-between">
@@ -1668,19 +1719,6 @@ export default function ProductionPlanning() {
                             ))}
                           </tbody>
                         </table>
-                        {mr.linked_po_no && (
-                          <div className="mt-3 pt-3 border-t border-dashed border-gray-100 flex items-center gap-2">
-                            <span className="text-xs text-gray-400   ">Linked PO:</span>
-                            <span className="text-xs bg-slate-900 text-white px-2 py-0.5 rounded font-mono">
-                              {mr.linked_po_no}
-                            </span>
-                            <span className={`text-xs ${
-                              mr.po_status === 'completed' ? 'text-emerald-500' : 'text-amber-500'
-                            }`}>
-                              ({mr.po_status})
-                            </span>
-                          </div>
-                        )}
                       </div>
                     </div>
                   ))}

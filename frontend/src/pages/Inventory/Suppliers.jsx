@@ -26,7 +26,7 @@ export default function Suppliers() {
     { 
       key: 'supplier_id', 
       label: 'ID',
-      render: (val) => <span className="text-primary-600 font-semibold">{val}</span>
+      render: (val) => <span className="text-primary-600 ">{val}</span>
     },
     { key: 'name', label: 'Supplier Name' },
     { 
@@ -303,7 +303,7 @@ export default function Suppliers() {
           </div>
           <button
             onClick={handleAddClick}
-            className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white p-2.5 rounded-xs font-semibold text-xs transition-all"
+            className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white p-2.5 rounded-xs  text-xs transition-all"
           >
             <Plus size={18} />
             Add Supplier
@@ -326,7 +326,7 @@ export default function Suppliers() {
             <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-2">Supplier Name *</label>
+                  <label className="block text-xs  text-neutral-700 dark:text-neutral-300 mb-2">Supplier Name *</label>
                   <input
                     type="text"
                     placeholder="e.g., ABC Industries"
@@ -337,7 +337,7 @@ export default function Suppliers() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-2">GSTIN *</label>
+                  <label className="block text-xs  text-neutral-700 dark:text-neutral-300 mb-2">GSTIN *</label>
                   <input
                     type="text"
                     placeholder="e.g., 27AABCT1234H1Z0"
@@ -348,7 +348,7 @@ export default function Suppliers() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-2">Supplier Group</label>
+                  <label className="block text-xs  text-neutral-700 dark:text-neutral-300 mb-2">Supplier Group</label>
                   <SearchableSelect
                     value={formData.supplier_group}
                     onChange={(val) => setFormData({ ...formData, supplier_group: val })}
@@ -358,7 +358,7 @@ export default function Suppliers() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-2">Rating (0-5)</label>
+                  <label className="block text-xs  text-neutral-700 dark:text-neutral-300 mb-2">Rating (0-5)</label>
                   <input
                     type="number"
                     min="0"
@@ -371,7 +371,7 @@ export default function Suppliers() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-2">Payment Terms (Days)</label>
+                  <label className="block text-xs  text-neutral-700 dark:text-neutral-300 mb-2">Payment Terms (Days)</label>
                   <input
                     type="number"
                     min="0"
@@ -382,7 +382,7 @@ export default function Suppliers() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-2">Lead Time (Days)</label>
+                  <label className="block text-xs  text-neutral-700 dark:text-neutral-300 mb-2">Lead Time (Days)</label>
                   <input
                     type="number"
                     min="0"
@@ -408,13 +408,13 @@ export default function Suppliers() {
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all text-xs font-semibold "
+                  className="p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-all text-xs  "
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-xs transition-all text-xs font-semibold  flex items-center gap-1"
+                  className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-xs transition-all text-xs   flex items-center gap-1"
                 >
                   <Check size={16} />
                   {editingId ? 'Update Supplier' : 'Create Supplier'}
@@ -446,7 +446,7 @@ export default function Suppliers() {
               <select 
                 value={filters.status}
                 onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                className="bg-transparent text-xs font-semibold text-indigo-600 focus:outline-none cursor-pointer"
+                className="bg-transparent text-xs  text-indigo-600 focus:outline-none cursor-pointer"
               >
                 {statusOptions.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -459,7 +459,7 @@ export default function Suppliers() {
               <select 
                 value={filters.group}
                 onChange={(e) => setFilters(prev => ({ ...prev, group: e.target.value }))}
-                className="bg-transparent text-xs font-semibold text-indigo-600 focus:outline-none cursor-pointer"
+                className="bg-transparent text-xs  text-indigo-600 focus:outline-none cursor-pointer"
               >
                 <option value="">All Groups</option>
                 {supplierGroups.map(group => (
@@ -546,7 +546,7 @@ export default function Suppliers() {
             <p className="text-xs text-neutral-600 dark:text-neutral-400 text-center max-w-md mb-4">Try adjusting your filters or create a new supplier</p>
             <button
               onClick={handleAddClick}
-              className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white p-2 rounded-xs font-semibold text-xs transition-all"
+              className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white p-2 rounded-xs  text-xs transition-all"
             >
               <Plus size={16} />
               Create First Supplier
@@ -557,25 +557,25 @@ export default function Suppliers() {
             <table className="w-full">
               <thead>
                 <tr className="bg-neutral-100 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
-                  <th className="p-2 text-left text-xs font-semibold text-neutral-700 dark:text-neutral-300">Name</th>
-                  <th className="p-2 text-left text-xs font-semibold text-neutral-700 dark:text-neutral-300">ID</th>
-                  <th className="p-2 text-left text-xs font-semibold text-neutral-700 dark:text-neutral-300">GSTIN</th>
-                  <th className="p-2 text-left text-xs font-semibold text-neutral-700 dark:text-neutral-300">Group</th>
-                  <th className="p-2 text-center text-xs text-xs font-semibold text-neutral-700 dark:text-neutral-300">Rating</th>
-                  <th className="p-2 text-center text-xs text-xs font-semibold text-neutral-700 dark:text-neutral-300">Lead Time</th>
-                  <th className="p-2 text-center text-xs text-xs font-semibold text-neutral-700 dark:text-neutral-300">Status</th>
-                  <th className="p-2 text-center text-xs text-xs font-semibold text-neutral-700 dark:text-neutral-300">Actions</th>
+                  <th className="p-2 text-left text-xs  text-neutral-700 dark:text-neutral-300">Name</th>
+                  <th className="p-2 text-left text-xs  text-neutral-700 dark:text-neutral-300">ID</th>
+                  <th className="p-2 text-left text-xs  text-neutral-700 dark:text-neutral-300">GSTIN</th>
+                  <th className="p-2 text-left text-xs  text-neutral-700 dark:text-neutral-300">Group</th>
+                  <th className="p-2 text-center text-xs text-xs  text-neutral-700 dark:text-neutral-300">Rating</th>
+                  <th className="p-2 text-center text-xs text-xs  text-neutral-700 dark:text-neutral-300">Lead Time</th>
+                  <th className="p-2 text-center text-xs text-xs  text-neutral-700 dark:text-neutral-300">Status</th>
+                  <th className="p-2 text-center text-xs text-xs  text-neutral-700 dark:text-neutral-300">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredSuppliers.map((supplier) => (
                   <tr key={supplier.supplier_id} className="border-b border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
-                    <td className="p-2 text-xs font-semibold  text-neutral-900 dark:text-white">{supplier.name}</td>
+                    <td className="p-2 text-xs   text-neutral-900 dark:text-white">{supplier.name}</td>
                     <td className="p-2 text-xs text-neutral-600 dark:text-neutral-400 font-mono">{supplier.supplier_id}</td>
                     <td className="p-2 text-xs text-neutral-600 dark:text-neutral-400 font-mono">{supplier.gstin || '-'}</td>
                     <td className="p-2 text-xs">
                       {supplier.supplier_group ? (
-                        <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${getGroupTextColor(supplier.supplier_group)}`}>
+                        <span className={`inline-block px-2 py-1 rounded text-xs  ${getGroupTextColor(supplier.supplier_group)}`}>
                           {supplier.supplier_group}
                         </span>
                       ) : (
@@ -586,7 +586,7 @@ export default function Suppliers() {
                       {supplier.rating ? (
                         <div className="flex items-center justify-center gap-1">
                           <Star size={14} className="text-amber-500 fill-amber-500" />
-                          <span className="text-neutral-900 dark:text-white font-semibold">{Number(supplier.rating).toFixed(1)}</span>
+                          <span className="text-neutral-900 dark:text-white ">{Number(supplier.rating).toFixed(1)}</span>
                         </div>
                       ) : (
                         <span className="text-neutral-400">—</span>
@@ -602,14 +602,14 @@ export default function Suppliers() {
                       <div className="flex gap-2 justify-center">
                         <button
                           onClick={() => handleEditClick(supplier)}
-                          className="px-2.5 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-semibold flex items-center gap-1 transition-all"
+                          className="px-2.5 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs  flex items-center gap-1 transition-all"
                         >
                           <Edit2 size={14} />
                           Edit
                         </button>
                         <button
                           onClick={() => handleDelete(supplier.supplier_id)}
-                          className="px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-semibold flex items-center gap-1 transition-all"
+                          className="px-2.5 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded text-xs  flex items-center gap-1 transition-all"
                         >
                           <Trash2 size={14} />
                           Delete
@@ -633,15 +633,15 @@ export default function Suppliers() {
                   <div className="p-4 space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">GSTIN</p>
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 ">GSTIN</p>
                         <p className="text-xs font-mono text-neutral-900 dark:text-white">{supplier.gstin || '-'}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Group</p>
-                        <p className={`text-xs font-semibold ${getGroupTextColor(supplier.supplier_group)}`}>{supplier.supplier_group || '-'}</p>
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 ">Group</p>
+                        <p className={`text-xs  ${getGroupTextColor(supplier.supplier_group)}`}>{supplier.supplier_group || '-'}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Rating</p>
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 ">Rating</p>
                         <div className="flex items-center gap-1">
                           {supplier.rating ? (
                             <>
@@ -654,15 +654,15 @@ export default function Suppliers() {
                         </div>
                       </div>
                       <div>
-                        <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Lead Time</p>
-                        <p className="text-xs font-semibold  text-neutral-900 dark:text-white">{supplier.lead_time_days || 0}d</p>
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 ">Lead Time</p>
+                        <p className="text-xs   text-neutral-900 dark:text-white">{supplier.lead_time_days || 0}d</p>
                       </div>
                       <div>
-                        <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Payment Terms</p>
-                        <p className="text-xs font-semibold  text-neutral-900 dark:text-white">{supplier.payment_terms_days || 0}d</p>
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 ">Payment Terms</p>
+                        <p className="text-xs   text-neutral-900 dark:text-white">{supplier.payment_terms_days || 0}d</p>
                       </div>
                       <div>
-                        <p className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">Status</p>
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 ">Status</p>
                         <div>
                           <Badge variant={supplier.is_active ? 'success' : 'warning'} className="text-xs">
                             {supplier.is_active ? 'Active' : 'Inactive'}
@@ -674,14 +674,14 @@ export default function Suppliers() {
                     <div className="flex gap-2 pt-2 border-t border-neutral-200 dark:border-neutral-700">
                       <button
                         onClick={() => handleEditClick(supplier)}
-                        className="flex-1 p-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-semibold flex items-center justify-center gap-1 transition-all"
+                        className="flex-1 p-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs  flex items-center justify-center gap-1 transition-all"
                       >
                         <Edit2 size={14} />
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete(supplier.supplier_id)}
-                        className="flex-1 p-2 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-semibold flex items-center justify-center gap-1 transition-all"
+                        className="flex-1 p-2 bg-red-500 hover:bg-red-600 text-white rounded text-xs  flex items-center justify-center gap-1 transition-all"
                       >
                         <Trash2 size={14} />
                         Delete

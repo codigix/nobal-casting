@@ -138,20 +138,6 @@ export default function MaterialRequests() {
     })
   }, [requests, searchQuery, activeFilter])
 
-  const handleApprove = async (id) => {
-    try {
-      await api.patch(`/material-requests/${id}/approve`, { approvedBy: 'User' })
-      toast.addToast('Material request approved successfully', 'success')
-      
-      // Dispatch event to notify other components (like Stock Balance) to refresh
-      window.dispatchEvent(new CustomEvent('materialRequestApproved', { detail: { mrId: id } }))
-      
-      fetchRequests()
-    } catch (err) {
-      toast.addToast(err.response?.data?.error || 'Failed to approve request', 'error')
-    }
-  }
-
   const handleSend = async (id) => {
     try {
       await api.patch(`/material-requests/${id}/submit`)
@@ -255,20 +241,6 @@ export default function MaterialRequests() {
             </button>
           )}
           {(row.status === 'draft' || row.status === 'pending') && (
-             <button
-              onClick={() => handleApprove(row.mr_id)}
-              disabled={['material_issue', 'material_transfer'].includes(row.purpose) && getItemsAvailabilityStatus(row).all !== 'available'}
-              className={`p-1.5 rounded-xs transition-colors ${
-                ['material_issue', 'material_transfer'].includes(row.purpose) && getItemsAvailabilityStatus(row).all !== 'available'
-                  ? 'text-neutral-300 cursor-not-allowed'
-                  : 'text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
-              }`}
-              title={['material_issue', 'material_transfer'].includes(row.purpose) ? "Release Materials" : "Approve"}
-            >
-              <CheckCircle size={16} />
-            </button>
-          )}
-          {(row.status === 'draft' || row.status === 'pending') && (
             <button
               onClick={() => handleDelete(row.mr_id)}
               className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xs transition-colors"
@@ -326,7 +298,7 @@ export default function MaterialRequests() {
             
             <button 
               onClick={fetchRequests}
-              className="flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-4 py-2 rounded-xs text-xs font-semibold border border-neutral-200 dark:border-neutral-800 transition-all active:scale-95 shadow-sm"
+              className="flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-4 py-2 rounded-xs text-xs  border border-neutral-200 dark:border-neutral-800 transition-all active:scale-95 shadow-sm"
             >
               <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
               Refresh
@@ -334,7 +306,7 @@ export default function MaterialRequests() {
 
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xs text-xs font-semibold shadow-lg shadow-indigo-200 dark:shadow-none transition-all active:scale-95"
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xs text-xs  shadow-lg shadow-indigo-200 dark:shadow-none transition-all active:scale-95"
             >
               <Plus size={16} />
               New Request

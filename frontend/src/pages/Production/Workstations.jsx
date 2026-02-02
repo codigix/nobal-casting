@@ -120,13 +120,13 @@ export default function Workstations() {
             <div className="flex bg-white p-1 rounded border border-slate-200 ">
               <button 
                 onClick={() => setViewMode('grid')}
-                className={`p-2  py-1.5 rounded text-xs font-semibold transition-all ${viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600 ' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`p-2  py-1.5 rounded text-xs  transition-all ${viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600 ' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 Grid
               </button>
               <button 
                 onClick={() => setViewMode('list')}
-                className={`p-2  py-1.5 rounded text-xs font-semibold transition-all ${viewMode === 'list' ? 'bg-indigo-50 text-indigo-600 ' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`p-2  py-1.5 rounded text-xs  transition-all ${viewMode === 'list' ? 'bg-indigo-50 text-indigo-600 ' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 List
               </button>

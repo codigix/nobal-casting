@@ -252,7 +252,7 @@ export class MaterialRequestModel {
   /**
    * Approve material request
    */
-  static async approve(db, mrId, approvedBy, sourceWarehouse = null) {
+  static async approve(db, mrId, approvedBy, sourceWarehouse = null, itemsToProcess = null) {
     const connection = await db.getConnection()
     try {
       await connection.beginTransaction()
@@ -262,19 +262,28 @@ export class MaterialRequestModel {
       if (!mrRows.length) throw new Error('Material request not found')
       const request = mrRows[0]
 
-      // Allow idempotent approval - if already approved or completed, just return
-      if (request.status === 'approved' || request.status === 'completed') {
+      // Allow idempotent approval - if already completed, just return
+      if (request.status === 'completed') {
         await connection.rollback()
         connection.release()
         return await this.getById(db, mrId)
       }
 
-      if (request.status !== 'draft' && request.status !== 'pending') {
-        throw new Error(`Only draft or pending material requests can be approved. Current status: ${request.status}`)
+      if (request.status !== 'draft' && request.status !== 'pending' && request.status !== 'approved' && request.status !== 'partial') {
+        throw new Error(`Only draft, pending, approved or partial material requests can be processed. Current status: ${request.status}`)
       }
 
       // Get items
-      const [items] = await connection.execute('SELECT * FROM material_request_item WHERE mr_id = ?', [mrId])
+      let [items] = await connection.execute('SELECT * FROM material_request_item WHERE mr_id = ?', [mrId])
+      
+      // If itemsToProcess is provided, filter the items to be processed
+      if (itemsToProcess && Array.isArray(itemsToProcess)) {
+        items = items.filter(item => itemsToProcess.includes(item.item_code))
+      }
+
+      if (items.length === 0 && itemsToProcess) {
+        throw new Error('No valid items selected for processing')
+      }
 
       // Check stock for Issue/Transfer
       const isStockTransaction = ['material_transfer', 'material_issue'].includes(request.purpose)
@@ -288,13 +297,22 @@ export class MaterialRequestModel {
       
       const sourceWarehouseId = isStockTransaction ? await this.getWarehouseId(connection, finalSourceWarehouse) : null
 
-      // STRICT STOCK CHECK for Issue/Transfer
+      // STOCK CHECK for Issue/Transfer
       if (isStockTransaction) {
         for (const item of items) {
+          // Calculate pending quantity for this item
+          const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
+          if (pendingQty <= 0) continue // Already issued
+
           const balance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, sourceWarehouseId, connection)
           const availableQty = balance ? Number(balance.available_qty || balance.current_qty || 0) : 0
-          if (availableQty < Number(item.qty)) {
-            throw new Error(`Insufficient stock for item ${item.item_code} in warehouse ${finalSourceWarehouse}. Required: ${item.qty}, Available: ${availableQty}`)
+          
+          if (availableQty <= 0) {
+            // If no stock at all for an item that was explicitly requested to be processed
+            if (itemsToProcess) {
+              throw new Error(`No stock available for item ${item.item_code} in warehouse ${finalSourceWarehouse}.`)
+            }
+            continue // Skip if part of a bulk approval and not available
           }
         }
       }
@@ -308,102 +326,76 @@ export class MaterialRequestModel {
         request.source_warehouse = sourceWarehouse
       }
 
-      // Update status
-      const finalStatus = isStockTransaction ? 'completed' : 'approved'
-      await connection.execute(
-        'UPDATE material_request SET status = ?, updated_at = NOW() WHERE mr_id = ?',
-        [finalStatus, mrId]
-      )
-
-      console.log(`[MR Approval] Updating production plan material status for MR ${mrId}`)
-
-      // Update Production Plan Material Status
-      // Prefer formal production_plan_id, fall back to series_no parsing
-      const plan_id = request.production_plan_id || (request.series_no && request.series_no.startsWith('PLAN-') ? request.series_no.replace('PLAN-', '') : null)
-      
-      if (plan_id) {
-        console.log(`[MR Approval] Found plan_id: ${plan_id}`)
-
-        try {
-          const pprmStatus = isStockTransaction ? 'issued' : 'approved'
-          await connection.execute(
-            `UPDATE production_plan_raw_material 
-             SET material_status = ? 
-             WHERE plan_id = ? AND mr_id = ?`,
-            [pprmStatus, plan_id, mrId]
-          )
-          console.log(`[MR Approval] Production plan material status updated to '${pprmStatus}'`)
-        } catch (error) {
-          console.error(`[MR Approval] Error updating production plan material status:`, error.message)
-        }
-      }
-
-      // Execute Stock Movements
+      // Process Stock Movements
       if (isStockTransaction) {
         // Check for period closing lock - use transition date or request date
         const lockDate = request.transition_date || request.request_date || new Date()
         await PeriodClosingModel.checkLock(connection, lockDate)
 
-        console.log(`[MR Approval] Processing stock movements for MR ${mrId}, purpose: ${request.purpose}`)
         const targetWarehouseId = request.target_warehouse ? await this.getWarehouseId(connection, request.target_warehouse) : null
         
-        console.log(`[MR Approval] Source Warehouse ID: ${sourceWarehouseId}, Target: ${targetWarehouseId}`)
-        
         for (const item of items) {
-          const qty = Number(item.qty)
+          const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
+          if (pendingQty <= 0) continue
+
+          const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, sourceWarehouseId, connection)
+          const availableQty = sourceBalance ? Number(sourceBalance.available_qty || sourceBalance.current_qty || 0) : 0
+          
+          if (availableQty <= 0) continue
+
+          const qtyToIssue = Math.min(pendingQty, availableQty)
 
           // Get current stock
-          const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, sourceWarehouseId, connection)
           const currentValuation = sourceBalance ? Number(sourceBalance.valuation_rate) : 0
           const currentQty = sourceBalance ? Number(sourceBalance.current_qty) : 0
           
-          console.log(`[MR Approval] Item ${item.item_code}: Requested ${qty}, Current Stock ${currentQty}`)
-          
           // Deduct from Source
-          console.log(`[MR Approval] Updating stock balance for ${item.item_code}`)
           await StockBalanceModel.upsert(item.item_code, sourceWarehouseId, {
-            current_qty: currentQty - qty,
+            current_qty: currentQty - qtyToIssue,
             reserved_qty: sourceBalance ? Number(sourceBalance.reserved_qty) : 0,
             valuation_rate: currentValuation,
             last_issue_date: new Date()
           }, connection)
 
           // Add Ledger Entry (OUT)
-          console.log(`[MR Approval] Creating ledger entry for ${item.item_code}`)
-          const ledgerData = {
+          await StockLedgerModel.create({
             item_code: item.item_code,
             warehouse_id: sourceWarehouseId,
             transaction_date: new Date(),
             transaction_type: request.purpose === 'material_transfer' ? 'Transfer' : 'Issue',
             qty_in: 0,
-            qty_out: qty,
+            qty_out: qtyToIssue,
             valuation_rate: currentValuation,
             reference_doctype: 'Material Request',
             reference_name: mrId,
-            remarks: `Approved Material Request ${mrId}`,
+            remarks: `Partial Release Material Request ${mrId}`,
             created_by: approvedBy
-          }
-          console.log(`[MR Approval] Ledger data:`, ledgerData)
-          await StockLedgerModel.create(ledgerData, connection)
-          console.log(`[MR Approval] Ledger entry created successfully`)
+          }, connection)
+
+          // Update issued_qty and status in material_request_item
+          const newIssuedQty = Number(item.issued_qty || 0) + qtyToIssue
+          const itemStatus = newIssuedQty >= Number(item.qty) ? 'completed' : 'partial'
+          
+          await connection.execute(
+            'UPDATE material_request_item SET issued_qty = ?, status = ? WHERE mr_item_id = ?',
+            [newIssuedQty, itemStatus, item.mr_item_id]
+          )
 
           // If Transfer, Add to Target
           if (request.purpose === 'material_transfer' && targetWarehouseId) {
-            // Add to Target using is_increment to trigger moving average valuation if needed
             await StockBalanceModel.upsert(item.item_code, targetWarehouseId, {
-              current_qty: qty,
+              current_qty: qtyToIssue,
               is_increment: true,
-              incoming_rate: currentValuation, // Transfer at source valuation
+              incoming_rate: currentValuation,
               last_receipt_date: new Date()
             }, connection)
 
-            // Add Ledger Entry (IN)
             await StockLedgerModel.create({
               item_code: item.item_code,
               warehouse_id: targetWarehouseId,
               transaction_date: new Date(),
               transaction_type: 'Transfer',
-              qty_in: qty,
+              qty_in: qtyToIssue,
               qty_out: 0,
               valuation_rate: currentValuation,
               reference_doctype: 'Material Request',
@@ -413,9 +405,50 @@ export class MaterialRequestModel {
             }, connection)
           }
         }
-        console.log(`[MR Approval] Stock movements completed for MR ${mrId}`)
+      }
+
+      // Re-fetch items to check overall MR status
+      const [updatedItems] = await connection.execute('SELECT * FROM material_request_item WHERE mr_id = ?', [mrId])
+      const allCompleted = updatedItems.every(item => item.status === 'completed')
+      const anyIssued = updatedItems.some(item => Number(item.issued_qty) > 0)
+
+      // Determine overall status
+      let finalStatus = request.status
+      if (isStockTransaction) {
+        if (allCompleted) {
+          finalStatus = 'completed'
+        } else if (anyIssued) {
+          finalStatus = 'partial'
+        } else {
+          finalStatus = 'approved'
+        }
       } else {
-        console.log(`[MR Approval] Not a stock transaction (purpose: ${request.purpose}), skipping stock movements`)
+        finalStatus = 'approved'
+      }
+
+      await connection.execute(
+        'UPDATE material_request SET status = ?, updated_at = NOW() WHERE mr_id = ?',
+        [finalStatus, mrId]
+      )
+
+      // Update Production Plan Material Status
+      const plan_id = request.production_plan_id || (request.series_no && request.series_no.startsWith('PLAN-') ? request.series_no.replace('PLAN-', '') : null)
+      if (plan_id) {
+        let pprmStatus = 'pending'
+        if (allCompleted) {
+          pprmStatus = isStockTransaction ? 'issued' : 'approved'
+        } else if (anyIssued || finalStatus === 'partial') {
+          pprmStatus = isStockTransaction ? 'partially_issued' : 'approved'
+        } else if (finalStatus === 'approved') {
+          pprmStatus = 'approved'
+        }
+
+        if (pprmStatus !== 'pending') {
+          await connection.execute(
+            'UPDATE production_plan_raw_material SET material_status = ? WHERE plan_id = ? AND mr_id = ?',
+            [pprmStatus, plan_id, mrId]
+          )
+        }
       }
 
       await connection.commit()

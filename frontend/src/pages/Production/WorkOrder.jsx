@@ -86,7 +86,7 @@ export default function WorkOrder() {
     const { color, icon: Icon } = config[s] || config.draft
 
     return (
-      <span className={`inline-flex items-center gap-1.5 p-2  py-1 rounded-full text-xs    border ${color}`}>
+      <span className={`inline-flex items-center gap-1 p-2  py-1 rounded w-fit text-xs    border ${color}`}>
         <Icon size={12} />
         {s}
       </span>
@@ -261,7 +261,7 @@ export default function WorkOrder() {
         )}
 
         {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2  mb-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2  mb-2">
           <StatCard
             label="Total Orders"
             value={stats.totalOrders}
@@ -293,7 +293,7 @@ export default function WorkOrder() {
         </div>
 
         {/* Dynamic Filter Section */}
-        <div className="bg-gray-50/50 rounded  border border-gray-100 p-4 mb-4">
+        <div className="bg-gray-50/50  ">
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex-1 min-w-[350px] relative group">
               <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
@@ -428,7 +428,7 @@ export default function WorkOrder() {
         <div className="bg-white rounded  border border-gray-100   overflow-hidden">
           <div className="p-2 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
             <div>
-              <h2 className="text-xl  text-gray-900 tracking-tight">Active Work Orders</h2>
+              <h2 className="text-lg  text-gray-900 tracking-tight">Active Work Orders</h2>
               <p className="text-xs   text-gray-400  mt-1">Real-time production tracking</p>
             </div>
             <div className="flex items-center gap-2 p-2 bg-white border border-gray-100 rounded   ">
@@ -442,9 +442,9 @@ export default function WorkOrder() {
               <thead>
                 <tr className="bg-white">
                   <th className="p-2 text-xs   text-gray-400  border-b border-gray-50">Order Identity</th>
-                  <th className="p-2 text-xs   text-gray-400  border-b border-gray-50">Item Specification</th>
+                  <th className="p-2 text-xs   text-gray-400  border-b border-gray-50">Item </th>
                   <th className="p-2 text-xs   text-gray-400  border-b border-gray-50">Status & Priority</th>
-                  <th className="p-2 text-xs   text-gray-400  border-b border-gray-50 ">Progress</th>
+                  <th className="p-2 text-xs   text-gray-400  border-b border-gray-50 w-fit ">Progress</th>
                   <th className="p-2 text-xs   text-gray-400  border-b border-gray-50 ">Actions</th>
                 </tr>
               </thead>
@@ -484,7 +484,7 @@ export default function WorkOrder() {
                             <ClipboardList size={15} />
                           </div>
                           <div>
-                            <div className=" text-gray-900 text-xs tracking-tight mb-1 group-hover:text-indigo-600 transition-colors">{order.wo_id}</div>
+                            <div className=" text-gray-900 text-xs w-fit mb-1 group-hover:text-indigo-600 transition-colors">{order.wo_id}</div>
                             <div className="flex items-center gap-2 text-xs   text-gray-400 tracking-tight">
                               <Calendar size={10} />
                               {new Date(order.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
@@ -494,21 +494,21 @@ export default function WorkOrder() {
                       </td>
                       <td className="p-2">
                         <div>
-                          <div className=" text-gray-900 text-xs tracking-tight mb-1">{order.item_name || 'N/A'}</div>
-                          <div className="flex items-center gap-2 ">
-                            <div className="flex items-center gap-1.5">
+                          <div className=" text-gray-900 text-xs w-fit">{order.item_name || 'N/A'}</div>
+                         
+                            {/* <div className="flex items-center gap-1 w-fit">
                               <Package size={12} className="text-indigo-500" />
                               <span className="text-xs   text-gray-500 ">{order.qty_to_manufacture} Units</span>
-                            </div>
-                            <div className="w-1 h-1 rounded-full bg-gray-200" />
+                            </div> */}
+                            {/* <div className="w-1 h-1 rounded-full bg-gray-200" /> */}
                             <span className="text-xs   text-gray-400">BOM: {order.bom_no || 'Standard'}</span>
-                          </div>
+                          
                         </div>
                       </td>
                       <td className="p-2">
                         <div className="flex flex-col gap-2">
                           <StatusBadge status={order.status} />
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1">
                             <span className={`w-1.5 h-1.5 rounded-full ${
                               order.priority === 'high' ? 'bg-rose-500' : 
                               order.priority === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'
@@ -517,9 +517,9 @@ export default function WorkOrder() {
                           </div>
                         </div>
                       </td>
-                      <td className="p-2 text-right">
+                      <td className="p-2 w-fit">
                         <div className="inline-block text-right">
-                          <div className="flex items-center justify-end gap-2 mb-2">
+                          <div className="flex items-center gap-2 mb-2">
                             <span className="text-xs   text-gray-900">{order.produced_qty || 0} / {order.qty_to_manufacture}</span>
                             <span className="text-xs   text-indigo-600 font-mono bg-indigo-50 px-2 py-0.5 rounded-full">
                               {Math.round(((order.produced_qty || 0) / (order.qty_to_manufacture || 1)) * 100)}%
@@ -534,27 +534,27 @@ export default function WorkOrder() {
                         </div>
                       </td>
                       <td className="p-2">
-                        <div className="flex items-center justify-end gap-2 ">
+                        <div className="flex items-center gap-2 ">
                           <button
                             onClick={() => handleTrack(order)}
                             className="p-2  bg-indigo-50 text-indigo-600 rounded  hover:bg-indigo-600 hover:text-white transition-all  "
                             title="Track Production"
                           >
-                            <Activity size={16} />
+                            <Activity size={15} />
                           </button>
                           <button
                             onClick={() => handleEdit(order)}
                             className="p-2  bg-amber-50 text-amber-600 rounded  hover:bg-amber-600 hover:text-white transition-all  "
                             title="Edit Order"
                           >
-                            <Edit2 size={16} />
+                            <Edit2 size={15} />
                           </button>
                           <button
                             onClick={() => handleDelete(order.wo_id)}
                             className="p-2  bg-rose-50 text-rose-600 rounded  hover:bg-rose-600 hover:text-white transition-all  "
                             title="Delete Order"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </td>

@@ -121,7 +121,7 @@ export default function Operations() {
         )}
 
         <div className="bg-white rounded-xs  p-3 mb-3">
-          <label className="text-xs font-semibold text-gray-700 block mb-1">Search</label>
+          <label className="text-xs  text-gray-700 block mb-1">Search</label>
           <input 
             type="text" 
             placeholder="Search name or workstation..." 
@@ -143,17 +143,17 @@ export default function Operations() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="p-2  py-2 text-left text-gray-700 font-semibold">ID</th>
-                      <th className="p-2  py-2 text-left text-gray-700 font-semibold">Operation Name</th>
-                      <th className="p-2  py-2 text-left text-gray-700 font-semibold">Default Workstation</th>
-                      <th className="p-2  py-2 text-left text-gray-700 font-semibold">Last Updated</th>
-                      <th className="p-2  py-2 text-center text-gray-700 font-semibold">Actions</th>
+                      <th className="p-2  py-2 text-left text-gray-700 ">ID</th>
+                      <th className="p-2  py-2 text-left text-gray-700 ">Operation Name</th>
+                      <th className="p-2  py-2 text-left text-gray-700 ">Default Workstation</th>
+                      <th className="p-2  py-2 text-left text-gray-700 ">Last Updated</th>
+                      <th className="p-2  py-2 text-center text-gray-700 ">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredOperations.map((op, idx) => (
                       <tr key={op.name} className={`border-b border-gray-200 hover:bg-gray-50 transition ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                        <td className="p-2  py-2 font-semibold text-gray-900">{op.name}</td>
+                        <td className="p-2  py-2  text-gray-900">{op.name}</td>
                         <td className="p-2  py-2 text-gray-700">{op.operation_name || op.name}</td>
                         <td className="p-2  py-2 text-gray-700">{op.default_workstation || '-'}</td>
                         <td className="p-2  py-2 text-gray-700">{formatDate(op.modified)}</td>
@@ -188,7 +188,7 @@ export default function Operations() {
         ) : (
           <div className="bg-white rounded-xs p-3 text-center ">
             <div className="text-xl  mb-2">📭</div>
-            <div className="text-xs font-semibold  text-gray-900">
+            <div className="text-xs   text-gray-900">
               {search ? 'No operations found' : 'No operations created yet'}
             </div>
             <div className="text-xs text-gray-600 mt-1">

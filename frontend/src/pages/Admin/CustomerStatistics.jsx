@@ -222,7 +222,7 @@ export default function CustomerStatistics() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 m-0">Customer Intelligence</h1>
+          <h1 className="text-xl  text-slate-900 m-0">Customer Intelligence</h1>
           <p className="text-slate-500 font-medium text-xs mt-1">Portfolio analysis and segmentation performance</p>
         </div>
         <div className="flex items-center gap-3">
@@ -303,11 +303,11 @@ export default function CustomerStatistics() {
             <table className="w-full text-left bg-white">
               <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm">
                 <tr>
-                  <th className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Customer Profile</th>
-                  <th className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Orders</th>
-                  <th className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Revenue</th>
-                  <th className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Segment</th>
-                  <th className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
+                  <th className="p-2 text-[10px]  text-slate-400 ">Customer Profile</th>
+                  <th className="p-2 text-[10px]  text-slate-400  text-center">Orders</th>
+                  <th className="p-2 text-[10px]  text-slate-400 ">Revenue</th>
+                  <th className="p-2 text-[10px]  text-slate-400 ">Segment</th>
+                  <th className="p-2 text-[10px]  text-slate-400  text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -319,29 +319,29 @@ export default function CustomerStatistics() {
                           <Building2 size={14} />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[11px] font-bold text-slate-900 m-0 truncate">{customer.name}</p>
+                          <p className="text-[11px]  text-slate-900 m-0 truncate">{customer.name}</p>
                           <p className="text-[9px] text-slate-400 m-0">ID: {customer.id}</p>
                         </div>
                       </div>
                     </td>
                     <td className="p-2 text-center">
-                      <span className="text-[10px] font-bold text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                      <span className="text-[10px]  text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
                         {customer.orders}
                       </span>
                     </td>
                     <td className="p-2">
-                      <p className="text-[11px] font-bold text-slate-900 m-0">₹{parseFloat(customer.revenue).toLocaleString()}</p>
-                      <p className="text-[9px] text-emerald-600 font-bold tracking-tight">VERIFIED</p>
+                      <p className="text-[11px]  text-slate-900 m-0">₹{parseFloat(customer.revenue).toLocaleString()}</p>
+                      <p className="text-[9px] text-emerald-600  tracking-tight">VERIFIED</p>
                     </td>
                     <td className="p-2">
-                      <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${customer.segment === 'Premium' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+                      <span className={`px-1.5 py-0.5 rounded-full text-[9px]  ${customer.segment === 'Premium' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
                         {customer.segment.toUpperCase()}
                       </span>
                     </td>
                     <td className="p-2 text-right">
                       <button 
                         onClick={() => fetchDetailedStats(customer)}
-                        className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 hover:bg-blue-600 hover:text-white rounded text-[10px] font-bold text-slate-700 transition-all"
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 hover:bg-blue-600 hover:text-white rounded text-[10px]  text-slate-700 transition-all"
                       >
                         <Eye size={12} /> VIEW
                       </button>
@@ -355,7 +355,7 @@ export default function CustomerStatistics() {
 
         {/* Segmentation Pie */}
         <div className="lg:col-span-3 bg-white p-2 rounded border border-slate-200 flex flex-col">
-          <h3 className="text-sm font-bold text-slate-900 mb-2">Segmentation</h3>
+          <h3 className="text-sm  text-slate-900 mb-2">Segmentation</h3>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -371,9 +371,9 @@ export default function CustomerStatistics() {
               <div key={i} className="flex items-center justify-between p-1.5 bg-slate-50 rounded border border-slate-100">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                  <span className="text-[10px] font-bold text-slate-700">{s.name}</span>
+                  <span className="text-[10px]  text-slate-700">{s.name}</span>
                 </div>
-                <span className="text-[10px] font-bold text-slate-900">{s.value}</span>
+                <span className="text-[10px]  text-slate-900">{s.value}</span>
               </div>
             ))}
           </div>
@@ -384,10 +384,10 @@ export default function CustomerStatistics() {
         {/* Main Trend Chart */}
         <div className="lg:col-span-2 bg-white p-2 rounded  border border-slate-200 ">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-slate-900">Revenue Trends: Segment Comparison</h3>
+            <h3 className="text-sm  text-slate-900">Revenue Trends: Segment Comparison</h3>
             <div className="flex gap-3">
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><div className="w-2 h-2 rounded-full bg-amber-400" /> PREMIUM</div>
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><div className="w-2 h-2 rounded-full bg-blue-500" /> REGULAR</div>
+              <div className="flex items-center gap-1.5 text-[10px]  text-slate-500"><div className="w-2 h-2 rounded-full bg-amber-400" /> PREMIUM</div>
+              <div className="flex items-center gap-1.5 text-[10px]  text-slate-500"><div className="w-2 h-2 rounded-full bg-blue-500" /> REGULAR</div>
             </div>
           </div>
           <div className="h-64">
@@ -416,7 +416,7 @@ export default function CustomerStatistics() {
 
         {/* Performance Radar */}
         <div className="bg-white p-2 rounded border border-slate-200">
-          <h3 className="text-sm font-bold text-slate-900 mb-3">Segment Capabilities</h3>
+          <h3 className="text-sm  text-slate-900 mb-3">Segment Capabilities</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data.capabilities}>
@@ -434,7 +434,7 @@ export default function CustomerStatistics() {
       <div className="grid grid-cols-1 lg:grid-cols-1 gap-4 mb-4">
         {/* Top Customers Bar */}
         <div className="bg-white p-2 rounded border border-slate-200">
-          <h3 className="text-sm font-bold text-slate-900 mb-3">Top 10 Strategic Partners</h3>
+          <h3 className="text-sm  text-slate-900 mb-3">Top 10 Strategic Partners</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={top10} layout="vertical" margin={{ left: 100 }}>

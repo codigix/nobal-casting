@@ -190,7 +190,7 @@ export default function StockBalance() {
           <button
             onClick={fetchStockBalance}
             disabled={loading}
-            className="flex items-center gap-2 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-xs transition-all shadow-sm active:transform active:scale-95 disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs  rounded-xs transition-all shadow-sm active:transform active:scale-95 disabled:opacity-50"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             Refresh
@@ -367,7 +367,7 @@ export default function StockBalance() {
                 <div className="w-12 h-12 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-4">
                   <BarChart3 size={24} className="text-neutral-400" />
                 </div>
-                <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">No stock items found</h3>
+                <h3 className="text-sm  text-neutral-900 dark:text-white">No stock items found</h3>
                 <p className="text-xs text-neutral-500 mt-1 max-w-xs">
                   {searchTerm || statusFilter || warehouseFilter 
                     ? "Try adjusting your filters to find what you're looking for." 

@@ -303,7 +303,7 @@ export default function CreateCustomersModal({ isOpen, onClose, onSuccess, editi
           {/* Location Details */}
           <section>
             <SectionLabel icon={Navigation} label="Localization" color="amber" />
-            <div className="space-y-4">
+            <div className="space-y-2">
               <FormField label="HQ Registered Address">
                 <div className="relative">
                   <MapPin className="absolute left-3 top-3 text-slate-400" size={14} />

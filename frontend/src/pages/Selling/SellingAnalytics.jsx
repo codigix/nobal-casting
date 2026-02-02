@@ -134,7 +134,7 @@ export default function SellingAnalytics() {
         {/* Top Customer */}
         <Card>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)' }}>Top Customer</h3>
+            <h3 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 'var(--)' }}>Top Customer</h3>
             <Users size={20} style={{ color: 'var(--primary-600)' }} />
           </div>
           <div style={{ padding: '16px 0' }}>
@@ -150,7 +150,7 @@ export default function SellingAnalytics() {
         {/* Top Product */}
         <Card>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)' }}>Top Product</h3>
+            <h3 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 'var(--)' }}>Top Product</h3>
             <Package size={20} style={{ color: 'var(--success-600)' }} />
           </div>
           <div style={{ padding: '16px 0' }}>
@@ -166,7 +166,7 @@ export default function SellingAnalytics() {
 
       {/* Status Breakdown Pie Chart */}
       <Card style={{ marginTop: '24px' }}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)' }}>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: 'var(--text-lg)', fontWeight: 'var(--)' }}>
           Order Status Breakdown
         </h3>
         {analyticsData.statusBreakdown && analyticsData.statusBreakdown.length > 0 ? (
@@ -199,7 +199,7 @@ export default function SellingAnalytics() {
 
       {/* Payment Status Pie Chart */}
       <Card style={{ marginTop: '24px' }}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: 'var(--text-lg)', fontWeight: 'var(--font-semibold)' }}>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: 'var(--text-lg)', fontWeight: 'var(--)' }}>
           Payment Status Distribution
         </h3>
         {analyticsData.paymentStatus && analyticsData.paymentStatus.length > 0 ? (

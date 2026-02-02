@@ -22,10 +22,10 @@ const SectionTitle = ({ title, icon: Icon, badge }) => (
       <div className="p-2 bg-indigo-50 text-indigo-600 rounded">
         <Icon size={18} />
       </div>
-      <h3 className="text-xs text-slate-900 font-semibold">{title}</h3>
+      <h3 className="text-xs text-slate-900 ">{title}</h3>
     </div>
     {badge && (
-      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded-full border border-slate-200 uppercase tracking-wider">
+      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs  rounded-full border border-slate-200 ">
         {badge}
       </span>
     )}
@@ -39,7 +39,7 @@ const FieldWrapper = ({ label, children, error, required }) => (
         {label}
         {required && <span className="text-rose-500">*</span>}
       </label>
-      {error && <span className="text-[10px] font-semibold text-rose-500 animate-pulse">{error}</span>}
+      {error && <span className="text-xs  text-rose-500 animate-pulse">{error}</span>}
     </div>
     {children}
   </div>
@@ -70,7 +70,7 @@ const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = '
       <div className={`p-1.5 rounded transition-all duration-300 ${isActive ? 'bg-white scale-110' : 'bg-slate-50 group-hover:bg-white'}`}>
         <Icon size={14} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
       </div>
-      <span className="text-xs font-semibold tracking-tight uppercase">{label}</span>
+      <span className="text-xs  tracking-tight uppercase">{label}</span>
       {isActive && <div className="w-1 h-1 rounded bg-current animate-pulse ml-0.5" />}
     </button>
   )
@@ -100,14 +100,14 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
           <Icon size={20} strokeWidth={2.5} />
         </div>
         <div>
-          <h2 className="text-sm font-bold flex items-center gap-3">
-            <span className={`${theme.text} uppercase tracking-wider`}>{title.split(' ')[0]}</span>
+          <h2 className="text-xs  flex items-center gap-3">
+            <span className={`${theme.text} `}>{title.split(' ')[0]}</span>
             <span className="text-slate-800 ">{title.split(' ').slice(1).join(' ')}</span>
           </h2>
           {subtitle && <p className="text-xs font-medium text-slate-400">{subtitle}</p>}
         </div>
         {badge && (
-          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-[10px] font-bold rounded-full border ${theme.border} uppercase tracking-widest`}>
+          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-xs  rounded-full border ${theme.border} `}>
             {badge}
           </span>
         )}
@@ -137,12 +137,12 @@ const InfoRow = ({ label, value, icon: Icon, className = "", color = "indigo" })
   return (
     <div className={`flex flex-col p-2 rounded border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 ${className}`}>
       <div className="flex items-center gap-2 mb-2">
-        <div className={`p-1.5 rounded-lg ${themeClass}`}>
+        <div className={`p-1.5 rounded ${themeClass}`}>
           {Icon && <Icon size={12} />}
         </div>
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</span>
+        <span className="text-xs  text-slate-400 ">{label}</span>
       </div>
-      <span className="text-xs font-bold text-slate-700 truncate pl-1">
+      <span className="text-xs  text-slate-700 truncate pl-1">
         {value || <span className="text-slate-300 font-normal italic">Not specified</span>}
       </span>
     </div>
@@ -419,7 +419,7 @@ export default function PurchaseOrderForm() {
             </button>
             <div className="h-8 w-[1px] bg-slate-200 hidden md:block" />
             <div>
-              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <div className="flex items-center gap-2 text-xs  text-slate-400 ">
                 <LayoutGrid size={10} />
                 <span>Buying</span>
                 <ChevronRight size={10} />
@@ -436,7 +436,7 @@ export default function PurchaseOrderForm() {
               type="button"
               variant="ghost"
               onClick={() => navigate(-1)}
-              className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
+              className="hidden sm:flex items-center gap-2 text-xs  "
             >
               <X size={14} /> Discard
             </Button>
@@ -445,7 +445,7 @@ export default function PurchaseOrderForm() {
               form="po-form"
               variant="primary"
               disabled={loading}
-              className="flex items-center gap-2 px-6 shadow-lg shadow-indigo-200 text-xs font-bold uppercase tracking-wider h-10"
+              className="flex items-center gap-2 px-6 shadow-lg shadow-indigo-200 text-xs   h-10"
             >
               {loading ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -504,19 +504,19 @@ export default function PurchaseOrderForm() {
                 themeColor="rose"
               />
 
-              <div className="mt-8 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+              <div className="mt-8 p-4 bg-white rounded border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Order Summary</span>
+                  <span className="text-xs  text-slate-400 ">Order Summary</span>
                 </div>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-500 font-medium">Items</span>
-                    <span className="font-bold text-slate-700">{po.items.length}</span>
+                    <span className=" text-slate-700">{po.items.length}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs border-t border-slate-50 pt-2">
                     <span className="text-slate-500 font-medium">Total</span>
-                    <span className="font-bold text-indigo-600">₹{calculateTotal().toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                    <span className=" text-indigo-600">₹{calculateTotal().toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                   </div>
                 </div>
               </div>
@@ -527,7 +527,7 @@ export default function PurchaseOrderForm() {
           <main className="flex-1 min-w-0 pb-24">
             <form id="po-form" onSubmit={handleSubmit} className="space-y-6">
               {/* Foundation Section */}
-              <div id="foundation" className="scroll-mt-28 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+              <div id="foundation" className="scroll-mt-28 bg-white rounded border border-slate-200  ">
                 <SectionHeader
                   title="Foundation SETTINGS"
                   subtitle="Core order parameters and identification"
@@ -537,13 +537,13 @@ export default function PurchaseOrderForm() {
                   themeColor="slate"
                 />
                 {expandedSections.foundation && (
-                  <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 bg-gradient-to-b from-slate-50/50 to-white">
+                  <div className="p-2 grid grid-cols-1 md:grid-cols-2 gap-2 bg-gradient-to-b from-slate-50/50 to-white">
                     <FieldWrapper label="Order Date" required>
                       <input
                         type="date"
                         value={po.order_date}
                         onChange={(e) => setPo({ ...po, order_date: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-slate-500/10 focus:border-slate-400 outline-none transition-all"
+                        className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-medium focus:ring-4 focus:ring-slate-500/10 focus:border-slate-400 outline-none transition-all"
                         required
                       />
                     </FieldWrapper>
@@ -552,7 +552,7 @@ export default function PurchaseOrderForm() {
                         type="date"
                         value={po.expected_date}
                         onChange={(e) => setPo({ ...po, expected_date: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-slate-500/10 focus:border-slate-400 outline-none transition-all"
+                        className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-medium focus:ring-4 focus:ring-slate-500/10 focus:border-slate-400 outline-none transition-all"
                       />
                     </FieldWrapper>
                   </div>
@@ -560,7 +560,7 @@ export default function PurchaseOrderForm() {
               </div>
 
               {/* Vendor Section */}
-              <div id="vendor" className="scroll-mt-28 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+              <div id="vendor" className="scroll-mt-28 bg-white rounded border border-slate-200  ">
                 <SectionHeader
                   title="Vendor PARTNER"
                   subtitle="Supplier selection and profile information"
@@ -613,7 +613,7 @@ export default function PurchaseOrderForm() {
               </div>
 
               {/* Items Section */}
-              <div id="items" className="scroll-mt-28 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+              <div id="items" className="scroll-mt-28 bg-white rounded border border-slate-200  ">
                 <SectionHeader
                   title="Order ITEMS"
                   subtitle="Line items and technical specifications"
@@ -626,7 +626,7 @@ export default function PurchaseOrderForm() {
                       type="button"
                       onClick={handleAddItem}
                       variant="ghost"
-                      className="text-[10px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-100 h-auto"
+                      className="text-xs   bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 rounded border border-emerald-100 h-auto"
                     >
                       <Plus size={12} className="mr-1" strokeWidth={3} /> Add Item
                     </Button>
@@ -637,10 +637,10 @@ export default function PurchaseOrderForm() {
                     <table className="w-full text-sm text-left border-collapse">
                       <thead>
                         <tr className="bg-slate-50/80 border-b border-slate-100">
-                          <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] w-[40%]">Item Specification</th>
-                          <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] text-center">Quantity</th>
-                          <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] text-right">Unit Rate</th>
-                          <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] text-right">Row Total</th>
+                          <th className="px-6 py-4 text-xs  text-slate-400  w-[40%]">Item </th>
+                          <th className="px-4 py-4 text-xs  text-slate-400  text-center">Quantity</th>
+                          <th className="px-4 py-4 text-xs  text-slate-400  text-right">Unit Rate</th>
+                          <th className="px-4 py-4 text-xs  text-slate-400  text-right">Row Total</th>
                           <th className="px-6 py-4 w-16"></th>
                         </tr>
                       </thead>
@@ -658,7 +658,7 @@ export default function PurchaseOrderForm() {
                                 placeholder="Select item..."
                                 onSearch={searchItems}
                                 isLoading={itemSearchLoading}
-                                className="text-xs font-semibold"
+                                className="text-xs "
                               />
                             </td>
                             <td className="px-4 py-4">
@@ -671,14 +671,14 @@ export default function PurchaseOrderForm() {
                                     newItems[index].qty = parseFloat(e.target.value) || 0
                                     setPo({ ...po, items: newItems })
                                   }}
-                                  className="w-24 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-center text-xs font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-400 outline-none transition-all"
+                                  className="w-24 px-3 py-1.5 bg-white border border-slate-200 rounded text-center text-xs  focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-400 outline-none transition-all"
                                 />
                               </div>
                             </td>
                             <td className="px-4 py-4">
                               <div className="flex justify-end">
                                 <div className="relative">
-                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">₹</span>
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs  text-slate-400">₹</span>
                                   <input
                                     type="number"
                                     value={item.rate}
@@ -687,7 +687,7 @@ export default function PurchaseOrderForm() {
                                       newItems[index].rate = parseFloat(e.target.value) || 0
                                       setPo({ ...po, items: newItems })
                                     }}
-                                    className="w-32 pl-7 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-right text-xs font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-400 outline-none transition-all"
+                                    className="w-32 pl-7 pr-3 py-1.5 bg-white border border-slate-200 rounded text-right text-xs  focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-400 outline-none transition-all"
                                   />
                                 </div>
                               </div>
@@ -701,7 +701,7 @@ export default function PurchaseOrderForm() {
                               <button
                                 type="button"
                                 onClick={() => handleRemoveItem(index)}
-                                className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all opacity-0 group-hover:opacity-100"
                               >
                                 <Trash2 size={16} />
                               </button>
@@ -711,12 +711,12 @@ export default function PurchaseOrderForm() {
                       </tbody>
                     </table>
                     {po.items.length === 0 && (
-                      <div className="py-20 flex flex-col items-center justify-center text-slate-400 space-y-4 bg-slate-50/30">
+                      <div className="py-20 flex flex-col items-center justify-center text-slate-400 space-y-2 bg-slate-50/30">
                         <div className="p-4 bg-white rounded-full border border-slate-100 shadow-sm">
                           <Package size={32} strokeWidth={1.5} />
                         </div>
-                        <p className="text-xs font-bold uppercase tracking-[0.2em]">No Items Configured</p>
-                        <Button type="button" onClick={handleAddItem} variant="ghost" className="text-indigo-600 font-bold uppercase text-[10px]">
+                        <p className="text-xs  uppercase tracking-[0.2em]">No Items Configured</p>
+                        <Button type="button" onClick={handleAddItem} variant="ghost" className="text-indigo-600  uppercase text-xs">
                           Click here to add items
                         </Button>
                       </div>
@@ -726,7 +726,7 @@ export default function PurchaseOrderForm() {
               </div>
 
               {/* Logistics Section */}
-              <div id="logistics" className="scroll-mt-28 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+              <div id="logistics" className="scroll-mt-28 bg-white rounded border border-slate-200  ">
                 <SectionHeader
                   title="Shipping LOGISTICS"
                   subtitle="Delivery coordinates and trade conditions"
@@ -741,14 +741,14 @@ export default function PurchaseOrderForm() {
                       <div className="space-y-6">
                         <div className="flex items-center gap-2 mb-2">
                           <MapPin size={16} className="text-amber-500" />
-                          <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Shipping Address</h4>
+                          <h4 className="text-xs font-extrabold text-slate-400 ">Shipping Address</h4>
                         </div>
                         <FieldWrapper label="Street Address">
                           <input
                             type="text"
                             value={po.shipping_address_line1}
                             onChange={(e) => setPo({ ...po, shipping_address_line1: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-400 outline-none transition-all"
+                            className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-400 outline-none transition-all"
                             placeholder="Unit / Street / Landmark"
                           />
                         </FieldWrapper>
@@ -758,7 +758,7 @@ export default function PurchaseOrderForm() {
                               type="text"
                               value={po.shipping_city}
                               onChange={(e) => setPo({ ...po, shipping_city: e.target.value })}
-                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-400 outline-none transition-all"
+                              className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-400 outline-none transition-all"
                             />
                           </FieldWrapper>
                           <FieldWrapper label="Pincode">
@@ -766,7 +766,7 @@ export default function PurchaseOrderForm() {
                               type="text"
                               value={po.shipping_pincode}
                               onChange={(e) => setPo({ ...po, shipping_pincode: e.target.value })}
-                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-400 outline-none transition-all"
+                              className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-400 outline-none transition-all"
                             />
                           </FieldWrapper>
                         </div>
@@ -775,7 +775,7 @@ export default function PurchaseOrderForm() {
                       <div className="space-y-6">
                         <div className="flex items-center gap-2 mb-2">
                           <Settings size={16} className="text-amber-500" />
-                          <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Trade Controls</h4>
+                          <h4 className="text-xs font-extrabold text-slate-400 ">Trade Controls</h4>
                         </div>
                         <FieldWrapper label="Incoterm">
                           <SearchableSelect
@@ -794,7 +794,7 @@ export default function PurchaseOrderForm() {
                             type="text"
                             value={po.shipping_rule}
                             onChange={(e) => setPo({ ...po, shipping_rule: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-400 outline-none transition-all"
+                            className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-400 outline-none transition-all"
                             placeholder="e.g. Courier, Freight Forwarder"
                           />
                         </FieldWrapper>
@@ -805,7 +805,7 @@ export default function PurchaseOrderForm() {
               </div>
 
               {/* Finance & Terms Section */}
-              <div id="finance" className="scroll-mt-28 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+              <div id="finance" className="scroll-mt-28 bg-white rounded border border-slate-200  ">
                 <SectionHeader
                   title="Revenue FINANCE"
                   subtitle="Taxation, payment terms and commercial summary"
@@ -815,13 +815,13 @@ export default function PurchaseOrderForm() {
                   themeColor="rose"
                 />
                 {expandedSections.finance && (
-                  <div className="p-8 bg-gradient-to-b from-rose-50/30 to-white">
+                  <div className="p-2 bg-gradient-to-b from-rose-50/30 to-white">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                       <div className="space-y-8">
                         <div>
                           <div className="flex items-center gap-2 mb-6">
                             <CreditCard size={16} className="text-rose-500" />
-                            <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Payment Strategy</h4>
+                            <h4 className="text-xs font-extrabold text-slate-400 ">Payment Strategy</h4>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FieldWrapper label="Payment Terms">
@@ -829,7 +829,7 @@ export default function PurchaseOrderForm() {
                                 type="text"
                                 value={po.payment_terms_description}
                                 onChange={(e) => setPo({ ...po, payment_terms_description: e.target.value })}
-                                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400 outline-none transition-all"
+                                className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-medium focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400 outline-none transition-all"
                                 placeholder="e.g. 100% Advance"
                               />
                             </FieldWrapper>
@@ -838,31 +838,31 @@ export default function PurchaseOrderForm() {
                                 type="date"
                                 value={po.due_date}
                                 onChange={(e) => setPo({ ...po, due_date: e.target.value })}
-                                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400 outline-none transition-all"
+                                className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-medium focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400 outline-none transition-all"
                               />
                             </FieldWrapper>
                           </div>
                         </div>
 
-                        <div className="p-6 bg-rose-50/50 rounded-2xl border border-rose-100/50 border-dashed">
-                          <h5 className="text-[10px] font-bold text-rose-600 uppercase tracking-widest mb-4">Financial Modifiers</h5>
+                        <div className="p-2 bg-rose-50/50 rounded border border-rose-100/50 border-dashed">
+                          <h5 className="text-xs  text-rose-600  mb-4">Financial Modifiers</h5>
                           <div className="grid grid-cols-2 gap-6">
                             <FieldWrapper label="Tax Rate (%)">
                               <input
                                 type="number"
                                 value={po.tax_rate}
                                 onChange={(e) => setPo({ ...po, tax_rate: parseFloat(e.target.value) || 0 })}
-                                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-rose-600 focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400 outline-none transition-all"
+                                className="w-full p-2 bg-white border border-slate-200 rounded text-xs  text-rose-600 focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400 outline-none transition-all"
                               />
                             </FieldWrapper>
                             <FieldWrapper label="Advance Paid">
                               <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">₹</span>
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs  text-slate-400">₹</span>
                                 <input
                                   type="number"
                                   value={po.advance_paid}
                                   onChange={(e) => setPo({ ...po, advance_paid: parseFloat(e.target.value) || 0 })}
-                                  className="w-full pl-7 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400 outline-none transition-all"
+                                  className="w-full pl-7 pr-4 p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400 outline-none transition-all"
                                 />
                               </div>
                             </FieldWrapper>
@@ -870,55 +870,55 @@ export default function PurchaseOrderForm() {
                         </div>
                       </div>
 
-                      <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden group">
+                      <div className="bg-slate-900 rounded p-2 text-white  relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-rose-500/20 transition-all duration-700" />
                         
                         <div className="relative space-y-6">
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Purchase Valuation</span>
+                            <span className="text-xs  text-slate-400 ">Purchase Valuation</span>
                             <Calculator size={20} className="text-rose-400" />
                           </div>
                           
-                          <div className="space-y-4">
-                            <div className="flex justify-between items-center text-sm font-medium text-slate-400">
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center text-xs font-medium text-slate-400">
                               <span>Subtotal</span>
                               <span>₹{calculateSubtotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                             </div>
-                            <div className="flex justify-between items-center text-sm font-medium text-rose-400">
+                            <div className="flex justify-between items-center text-xs font-medium text-rose-400">
                               <span className="flex items-center gap-2">
-                                GST Component <span className="text-[10px] px-1.5 py-0.5 bg-rose-500/20 rounded border border-rose-500/30">{po.tax_rate}%</span>
+                                GST Component <span className="text-xs p-2 bg-rose-500/20 rounded border border-rose-500/30">{po.tax_rate}%</span>
                               </span>
                               <span>+ ₹{calculateTaxAmount().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                             </div>
-                            <div className="flex justify-between items-center text-sm font-medium text-emerald-400">
+                            <div className="flex justify-between items-center text-xs font-medium text-emerald-400">
                               <span>Advance Deduction</span>
                               <span>- ₹{(po.advance_paid || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                             </div>
                           </div>
 
-                          <div className="pt-6 border-t border-white/10 mt-6">
+                          <div className="p-2 border-t border-white/10 mt-2">
                             <div className="flex justify-between items-end">
                               <div>
-                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Payable Balance</p>
-                                <p className="text-4xl font-extrabold tracking-tighter">
+                                <p className="text-xs  text-slate-500  mb-1">Payable Balance</p>
+                                <p className="text-xl ">
                                   ₹{calculateTotal().toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                                 </p>
                               </div>
                               <div className="text-right">
-                                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Currency</p>
-                                <p className="font-bold">INR (₹)</p>
+                                <p className="text-xs  text-emerald-400  mb-1">Currency</p>
+                                <p className="">INR (₹)</p>
                               </div>
                             </div>
                           </div>
 
-                          <div className="pt-8">
-                            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/10 group-hover:bg-white/10 transition-colors">
-                              <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
+                          <div className="pt-2">
+                            <div className="flex items-center gap-3 p-2 bg-white/5 rounded border border-white/10 group-hover:bg-white/10 transition-colors">
+                              <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded">
                                 <CreditCard size={16} />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Payment Channel</p>
-                                <p className="text-xs font-bold truncate">Bank Transfer / NEFT</p>
+                                <p className="text-xs  text-slate-400 ">Payment Channel</p>
+                                <p className="text-xs  truncate">Bank Transfer / NEFT</p>
                               </div>
                             </div>
                           </div>

@@ -193,7 +193,7 @@ export default function SearchableSelect({
                   className={`px-1.5 py-1.5 cursor-pointer border-b border-gray-100 text-xs transition ${
                     highlightedIndex === index ? 'bg-gray-100' : 'bg-white'
                   } ${
-                    option.value === value ? 'text-blue-600 font-semibold' : 'text-gray-900'
+                    option.value === value ? 'text-blue-600 ' : 'text-gray-900'
                   }`}
                   onMouseEnter={() => setHighlightedIndex(index)}
                 >

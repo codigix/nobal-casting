@@ -269,7 +269,7 @@ export default function LoginPage() {
           {isLogin && (
             <div className="mt-2 border-t border-slate-100">
               <div className="bg-slate-50 rounded p-2 border border-slate-100">
-                <p className="text-[11px]  text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <p className="text-[11px]  text-slate-400  mb-2 flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5" />
                   Demo Access
                 </p>

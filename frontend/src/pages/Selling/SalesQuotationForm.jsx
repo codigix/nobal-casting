@@ -23,10 +23,10 @@ const SectionTitle = ({ title, icon: Icon, badge }) => (
       <div className="p-2 bg-indigo-50 text-indigo-600 rounded">
         <Icon size={18} />
       </div>
-      <h3 className="text-xs text-slate-900 font-semibold">{title}</h3>
+      <h3 className="text-xs text-slate-900 ">{title}</h3>
     </div>
     {badge && (
-      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded-full border border-slate-200 uppercase tracking-wider">
+      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px]  rounded-full border border-slate-200 ">
         {badge}
       </span>
     )}
@@ -40,7 +40,7 @@ const FieldWrapper = ({ label, children, error, required }) => (
         {label}
         {required && <span className="text-rose-500">*</span>}
       </label>
-      {error && <span className="text-[10px] font-semibold text-rose-500 animate-pulse">{error}</span>}
+      {error && <span className="text-[10px]  text-rose-500 animate-pulse">{error}</span>}
     </div>
     {children}
   </div>
@@ -71,7 +71,7 @@ const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = '
       <div className={`p-1.5 rounded transition-all duration-300 ${isActive ? 'bg-white scale-110' : 'bg-slate-50 group-hover:bg-white'}`}>
         <Icon size={14} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
       </div>
-      <span className="text-xs font-semibold tracking-tight uppercase">{label.split(' ').slice(1).join(' ')}</span>
+      <span className="text-xs  tracking-tight uppercase">{label.split(' ').slice(1).join(' ')}</span>
       {isActive && <div className="w-1 h-1 rounded bg-current animate-pulse ml-0.5" />}
     </button>
   )
@@ -101,14 +101,14 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
           <Icon size={20} strokeWidth={2.5} />
         </div>
         <div>
-          <h2 className="text-sm font-bold flex items-center gap-3">
-            <span className={`${theme.text} uppercase tracking-wider`}>{title.split(' ')[0]}</span>
+          <h2 className="text-xs  flex items-center gap-3">
+            <span className={`${theme.text} `}>{title.split(' ')[0]}</span>
             <span className="text-slate-800 ">{title.split(' ').slice(1).join(' ')}</span>
           </h2>
           {subtitle && <p className="text-xs font-medium text-slate-400">{subtitle}</p>}
         </div>
         {badge && (
-          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-[10px] font-bold rounded-full border ${theme.border} uppercase tracking-widest`}>
+          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-[10px]  rounded-full border ${theme.border} uppercase tracking-widest`}>
             {badge}
           </span>
         )}
@@ -459,11 +459,11 @@ export default function SalesQuotationForm() {
             <div className="flex flex-col">
               <h1 className="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
                 {isEditMode ? 'EDIT' : 'CREATE'} SALES QUOTATION
-                <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded border border-blue-100 uppercase tracking-widest">
+                <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px]  rounded border border-blue-100 uppercase tracking-widest">
                   {isEditMode ? id : 'DRAFT'}
                 </span>
               </h1>
-              <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+              <div className="flex items-center gap-4 text-[10px]  text-slate-400 uppercase tracking-widest mt-0.5">
                 <span className="flex items-center gap-1"><Clock size={10} /> AUTO-SAVING...</span>
                 <span className="w-1 h-1 rounded bg-slate-300" />
                 <span className="flex items-center gap-1 text-blue-500"><Activity size={10} /> SYSTEM READY</span>
@@ -484,14 +484,14 @@ export default function SalesQuotationForm() {
             <button
               type="button"
               onClick={() => navigate('/selling/quotations')}
-              className="px-4 py-2 text-[11px] font-bold text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded uppercase tracking-widest transition-all hover:bg-slate-50 shadow-sm"
+              className="px-4 py-2 text-[11px]  text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded uppercase tracking-widest transition-all hover:bg-slate-50 shadow-sm"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded text-[11px] font-bold uppercase tracking-widest transition-all hover:bg-slate-800 shadow-lg shadow-slate-200 active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded text-[11px]  uppercase tracking-widest transition-all hover:bg-slate-800 shadow-lg shadow-slate-200 active:scale-95 disabled:opacity-50"
             >
               <Save size={14} />
               {loading ? 'PROCESSING...' : 'SAVE QUOTATION'}
@@ -552,7 +552,7 @@ export default function SalesQuotationForm() {
                           value={formData.valid_till}
                           onChange={handleChange}
                           required
-                          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                         />
                       </div>
                     </FieldWrapper>
@@ -564,7 +564,7 @@ export default function SalesQuotationForm() {
                         name="status"
                         value={formData.status}
                         onChange={handleChange}
-                        className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                        className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                       >
                         <option value="Draft">Draft</option>
                         <option value="Open">Open</option>
@@ -590,7 +590,7 @@ export default function SalesQuotationForm() {
                         name="gst_in"
                         value={formData.gst_in}
                         onChange={handleChange}
-                        className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all uppercase tracking-wider"
+                        className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all "
                       />
                     </FieldWrapper>
                   </div>
@@ -620,7 +620,7 @@ export default function SalesQuotationForm() {
                         value={formData.customer_address}
                         onChange={handleChange}
                         placeholder="ENTER BILLING ADDRESS..."
-                        className="w-full p-4 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all min-h-[100px] uppercase tracking-wider"
+                        className="w-full p-4 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all min-h-[100px] "
                       />
                     </FieldWrapper>
 
@@ -630,7 +630,7 @@ export default function SalesQuotationForm() {
                         value={formData.shipping_address}
                         onChange={handleChange}
                         placeholder="ENTER SHIPPING ADDRESS..."
-                        className="w-full p-4 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all min-h-[100px] uppercase tracking-wider"
+                        className="w-full p-4 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all min-h-[100px] "
                       />
                     </FieldWrapper>
                   </div>
@@ -641,7 +641,7 @@ export default function SalesQuotationForm() {
                         name="company_address"
                         value={formData.company_address}
                         onChange={handleChange}
-                        className="w-full p-4 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all min-h-[80px] uppercase tracking-wider"
+                        className="w-full p-4 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all min-h-[80px] "
                       />
                     </FieldWrapper>
 
@@ -651,7 +651,7 @@ export default function SalesQuotationForm() {
                         name="company_contact_person"
                         value={formData.company_contact_person}
                         onChange={handleChange}
-                        className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                        className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
                       />
                     </FieldWrapper>
                   </div>
@@ -666,7 +666,7 @@ export default function SalesQuotationForm() {
               <SectionHeader
                 title="03 QUOTATION ITEMS"
                 icon={Boxes}
-                subtitle="Line item specification and pricing"
+                subtitle="Line Item  and pricing"
                 isExpanded={expandedSections.items}
                 onToggle={() => toggleSection('items')}
                 themeColor="amber"
@@ -689,7 +689,7 @@ export default function SalesQuotationForm() {
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-slate-50/50 border-b border-slate-200">
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Item Specification</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Item </th>
                             <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[120px]">Quantity</th>
                             <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Rate (₹)</th>
                             <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Amount (₹)</th>
@@ -714,7 +714,7 @@ export default function SalesQuotationForm() {
                                     type="number"
                                     value={item.qty || ''}
                                     onChange={(e) => handleItemChange(idx, 'qty', e.target.value)}
-                                    className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all"
+                                    className="w-full p-2 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all"
                                   />
                                 </td>
                                 <td className="px-6 py-4">
@@ -722,7 +722,7 @@ export default function SalesQuotationForm() {
                                     type="number"
                                     value={item.rate || ''}
                                     onChange={(e) => handleItemChange(idx, 'rate', e.target.value)}
-                                    className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all"
+                                    className="w-full p-2 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all"
                                   />
                                 </td>
                                 <td className="px-6 py-4">
@@ -855,7 +855,7 @@ export default function SalesQuotationForm() {
                                     updated[idx].amount = (calculateTotal() * updated[idx].rate) / 100
                                     setFormData({ ...formData, taxes_charges: updated })
                                   }}
-                                  className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 outline-none transition-all"
+                                  className="w-full p-2 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 outline-none transition-all"
                                 />
                               </td>
                               <td className="px-6 py-4">
@@ -904,7 +904,7 @@ export default function SalesQuotationForm() {
                         name="apply_discount_on"
                         value={formData.apply_discount_on}
                         onChange={handleChange}
-                        className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all"
+                        className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all"
                       >
                         <option value="Grand Total">Grand Total</option>
                         <option value="Net Total">Net Total</option>
@@ -931,7 +931,7 @@ export default function SalesQuotationForm() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-slate-100">
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                       <FieldWrapper label="Additional Discount %">
                         <div className="relative group">
                           <Percent size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-500" />
@@ -940,7 +940,7 @@ export default function SalesQuotationForm() {
                             name="additional_discount_percentage"
                             value={formData.additional_discount_percentage}
                             onChange={handleChange}
-                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all"
+                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all"
                           />
                         </div>
                       </FieldWrapper>
@@ -951,12 +951,12 @@ export default function SalesQuotationForm() {
                           name="additional_discount_amount"
                           value={formData.additional_discount_amount}
                           onChange={handleChange}
-                          className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all"
+                          className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all"
                         />
                       </FieldWrapper>
                     </div>
 
-                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
+                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Net Value</span>
                         <span className="text-sm font-black text-slate-900">₹{calculateTotal().toFixed(2)}</span>
@@ -1026,7 +1026,7 @@ export default function SalesQuotationForm() {
                         name="terms_and_conditions"
                         value={formData.terms_and_conditions}
                         onChange={handleChange}
-                        className="w-full p-4 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-slate-500/10 focus:border-slate-500 outline-none transition-all min-h-[150px] uppercase tracking-wider"
+                        className="w-full p-4 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-slate-500/10 focus:border-slate-500 outline-none transition-all min-h-[150px] "
                       />
                     </FieldWrapper>
 
@@ -1036,7 +1036,7 @@ export default function SalesQuotationForm() {
                         value={formData.notes}
                         onChange={handleChange}
                         placeholder="ENTER INTERNAL SALES NOTES..."
-                        className="w-full p-4 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-slate-500/10 focus:border-slate-500 outline-none transition-all min-h-[150px] uppercase tracking-wider"
+                        className="w-full p-4 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-slate-500/10 focus:border-slate-500 outline-none transition-all min-h-[150px] "
                       />
                     </FieldWrapper>
                   </div>

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   ChevronDown, Save, X, Plus, Trash2, AlertCircle, Package, Boxes, Archive,
   Check, Factory, Zap, Layout, Info, ArrowLeft, ArrowRight, Activity, Calendar,
-  ShieldCheck, AlertTriangle, Layers, TrendingUp, Settings, ClipboardCheck, Warehouse, ShoppingCart,
+  ShieldCheck, AlertTriangle, Layers, TrendingUp, Settings, ClipboardCheck, ClipboardList, Warehouse,
   Loader, Send, FileText
 } from 'lucide-react'
 import { useAuth } from '../../hooks/AuthContext'
@@ -299,12 +299,10 @@ export default function ProductionPlanningForm() {
   const [bomOperationsData, setBomOperationsData] = useState({})
   const [creatingWorkOrders, setCreatingWorkOrders] = useState(false)
   const [creatingMaterialRequest, setCreatingMaterialRequest] = useState(false)
-  const [creatingPurchaseOrder, setCreatingPurchaseOrder] = useState(false)
   const [showMaterialRequestModal, setShowMaterialRequestModal] = useState(false)
   const [materialRequestData, setMaterialRequestData] = useState(null)
   const [materialStockData, setMaterialStockData] = useState({})
   const [checkingStock, setCheckingStock] = useState(false)
-  const [sendingPurchaseRequest, setSendingPurchaseRequest] = useState(false)
 
   const [items, setItems] = useState([])
   const [boms, setBOMs] = useState([])
@@ -520,6 +518,11 @@ export default function ProductionPlanningForm() {
           if (!selectedBom) selectedBom = bomList[0];
 
           const bomId = selectedBom.bom_id || selectedBom.id;
+          
+          // Update the item being processed with the correct BOM ID
+          item.bom_id = bomId;
+          item.bom_no = bomId;
+
           const bomDetailsRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${bomId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
@@ -532,6 +535,12 @@ export default function ProductionPlanningForm() {
           const rawMaterials = bomData.rawMaterials || bomData.bom_raw_materials || [];
           const operations = bomData.operations || bomData.bom_operations || [];
 
+          // Store base operations for this BOM
+          setBomOperationsData(prev => ({
+            ...prev,
+            [bomId]: operations
+          }));
+
           rawMaterials.forEach(mat => {
             const matQty = (mat.qty || mat.quantity || 0) * itemQty;
 
@@ -542,8 +551,8 @@ export default function ProductionPlanningForm() {
                 quantity: matQty,
                 qty: matQty,
                 planned_qty: matQty,
-                bom_no: mat.bom_no || mat.bom_id,
-                bom_id: mat.bom_no || mat.bom_id,
+                bom_no: mat.bom_no || null,
+                bom_id: mat.bom_no || null,
                 explosion_level: level + 1,
                 parent_code: itemCode
               };
@@ -580,30 +589,47 @@ export default function ProductionPlanningForm() {
         }
       }
 
-      // if (nextLevelItems.length > 0) {
-      //   await fetchSubAssemblyBomMaterials(nextLevelItems, level + 1, allSubAsmMaterials, allDiscoveredSubAsms);
-      // }
+      if (nextLevelItems.length > 0) {
+        await fetchSubAssemblyBomMaterials(nextLevelItems, level + 1, allSubAsmMaterials, allDiscoveredSubAsms);
+      }
 
       if (level === 0) {
         console.log('=== RECURSIVE EXPLOSION COMPLETE ===');
+        
         setSubAssemblyBomMaterials([...allSubAsmMaterials]);
 
         if (allDiscoveredSubAsms.length > 0) {
+          // Aggregate all discovered sub-assemblies by item_code
+          const aggregatedSubAsms = allDiscoveredSubAsms.reduce((acc, curr) => {
+            if (!acc[curr.item_code]) {
+              acc[curr.item_code] = { ...curr };
+            } else {
+              acc[curr.item_code].quantity += curr.quantity;
+              acc[curr.item_code].qty += curr.qty;
+              acc[curr.item_code].planned_qty += curr.planned_qty;
+            }
+            return acc;
+          }, {});
+
           setSubAssemblyItems(prev => {
-            const existingCodes = new Set(prev.map(i => i.item_code));
-            const newSubAsms = allDiscoveredSubAsms.filter(i => !existingCodes.has(i.item_code));
-
-            // For those that already exist, we should probably add to their quantity
-            const updated = prev.map(item => {
-              const discovered = allDiscoveredSubAsms.find(d => d.item_code === item.item_code);
-              if (discovered) {
-                const newQty = (item.quantity || 0) + (discovered.quantity || 0);
-                return { ...item, quantity: newQty, qty: newQty, planned_qty: newQty };
+            const updated = [...prev];
+            Object.values(aggregatedSubAsms).forEach(discovered => {
+              const existingIdx = updated.findIndex(i => i.item_code === discovered.item_code);
+              if (existingIdx !== -1) {
+                const newQty = (updated[existingIdx].quantity || 0) + discovered.quantity;
+                updated[existingIdx] = { 
+                  ...updated[existingIdx], 
+                  quantity: newQty, 
+                  qty: newQty, 
+                  planned_qty: newQty,
+                  bom_id: discovered.bom_id || updated[existingIdx].bom_id,
+                  bom_no: discovered.bom_no || updated[existingIdx].bom_no
+                };
+              } else {
+                updated.push(discovered);
               }
-              return item;
             });
-
-            return [...updated, ...newSubAsms];
+            return updated;
           });
         }
       }
@@ -851,8 +877,8 @@ export default function ProductionPlanningForm() {
             uom: subAsmItem.uom || 'Nos',
             warehouse: subAsmItem.warehouse || 'Work In Progress - NC',
             manufacturing_type: 'In House',
-            bom_no: subAsmItem.bom_no || subAsmItem.bom_id,
-            bom_id: subAsmItem.bom_no || subAsmItem.bom_id,
+            bom_no: subAsmItem.bom_no || null,
+            bom_id: subAsmItem.bom_no || null,
             quantity: qtyAfterScrap,
             qty_before_scrap: totalQtyBeforeScrap,
             scrap_percentage: scrapPercentage,
@@ -1195,13 +1221,16 @@ export default function ProductionPlanningForm() {
 
       console.log('=== STEP 1: Creating work orders for sub-assemblies ===')
 
-      const subAsmToProcess = subAssemblyItems.map(item => ({
-        item_code: item.item_code,
-        item_name: item.item_name,
-        quantity: item.planned_qty || item.quantity,
-        bom_id: item.bom_id || item.bom_no || (subAssemblyBomMaterials.find(m => m.sub_assembly_code === item.item_code)?.bom_id),
-        operations: bomOperationsData[item.bom_id || item.bom_no] || []
-      }))
+      const subAsmToProcess = subAssemblyItems.map(item => {
+        const bom_id = item.bom_id || item.bom_no || (subAssemblyBomMaterials.find(m => m.sub_assembly_code === item.item_code)?.bom_id)
+        return {
+          item_code: item.item_code,
+          item_name: item.item_name,
+          quantity: item.planned_qty || item.quantity,
+          bom_id: bom_id,
+          operations: bomOperationsData[bom_id] || []
+        }
+      })
 
       console.log(`Creating ${subAsmToProcess.length} sub-assembly work orders...`)
 
@@ -1257,8 +1286,8 @@ export default function ProductionPlanningForm() {
             planned_start_date: new Date().toISOString().split('T')[0],
             operations: operations.map(op => ({
               operation_name: op.operation_name || op.operation || '',
-              workstation_type: op.workstation || op.machine_id || '',
-              operation_time: op.time || op.operation_time || 0,
+              workstation_type: op.workstation_type || op.workstation || op.machine_id || '',
+              operation_time: (op.operation_time || op.time || 0) * (subAsm.quantity || 1),
               notes: op.notes || ''
             }))
           }
@@ -1277,15 +1306,34 @@ export default function ProductionPlanningForm() {
 
           if (woResponse.ok) {
             const woData = await woResponse.json()
-            const jobCardsCount = woData.jobCardsCreated || 0
+            const woId = woData.data?.wo_id || woData.wo_id
+            
+            // Automatically generate job cards for the new work order
+            console.log(`Generating job cards for work order ${woId}...`)
+            let actualJobCardsCount = woData.jobCardsCreated || 0
+            try {
+              const jcRes = await fetch(`${import.meta.env.VITE_API_URL}/production/job-cards/${woId}/generate-all`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+              })
+              if (jcRes.ok) {
+                const jcData = await jcRes.json()
+                const cards = jcData.data || jcData.jobCards || []
+                actualJobCardsCount = cards.length || actualJobCardsCount
+              }
+              console.log(`✓ Job cards generated for ${woId}`)
+            } catch (jcErr) {
+              console.warn(`Could not auto-generate job cards for ${woId}:`, jcErr)
+            }
+
             createdWorkOrders.push({
               type: 'sub-assembly',
-              work_order_id: woData.data?.wo_id,
+              work_order_id: woId,
               item_code: subAsm.item_code,
               item_name: subAsm.item_name,
-              jobCardsCreated: jobCardsCount
+              jobCardsCreated: actualJobCardsCount
             })
-            console.log(`✓ Created work order ${woData.data?.wo_id} with ${jobCardsCount} job cards`)
+            console.log(`✓ Created work order ${woId} with ${actualJobCardsCount} job cards`)
           } else {
             const errorData = await woResponse.json()
             console.error(`Failed to create work order for ${subAsm.item_code}:`, errorData)
@@ -1302,7 +1350,13 @@ export default function ProductionPlanningForm() {
         try {
           console.log(`Creating work order for finished good: ${fgItem.item_code}`)
 
-          let bomIdForFG = fgItem.bom_id || selectedBomId
+          // Only fallback to selectedBomId if it belongs to this item code
+          let bomIdForFG = fgItem.bom_id || fgItem.bom_no;
+          
+          if (!bomIdForFG && selectedSalesOrderDetails && fgItem.item_code === selectedSalesOrderDetails.item_code) {
+            bomIdForFG = selectedBomId;
+          }
+
           let fgOpsToSend = fgOperations.length > 0 ? fgOperations : operationItems
 
           if (!bomIdForFG) {
@@ -1343,12 +1397,16 @@ export default function ProductionPlanningForm() {
             notes: `Finished good for production plan ${planHeader.plan_id}`,
             sales_order_id: selectedSalesOrders[0] || null,
             planned_start_date: fgItem.planned_start_date || new Date().toISOString().split('T')[0],
-            operations: fgOpsToSend.map(op => ({
-              operation_name: op.operation_name || op.operation || '',
-              workstation_type: op.workstation || op.machine_id || op.workstation_type || '',
-              operation_time: op.time || op.operation_time || op.proportional_time || 0,
-              notes: op.notes || ''
-            }))
+            operations: fgOpsToSend.map(op => {
+              const qty = fgItem.planned_qty || fgItem.quantity || salesOrderQuantity || 1;
+              const opTime = op.proportional_time || ((op.operation_time || op.time || 0) * qty);
+              return {
+                operation_name: op.operation_name || op.operation || '',
+                workstation_type: op.workstation_type || op.workstation || op.machine_id || '',
+                operation_time: opTime,
+                notes: op.notes || ''
+              };
+            })
           }
 
           const fgWoResponse = await fetch(
@@ -1365,15 +1423,29 @@ export default function ProductionPlanningForm() {
 
           if (fgWoResponse.ok) {
             const fgWoData = await fgWoResponse.json()
+            const fgWoId = fgWoData.data?.wo_id || fgWoData.wo_id
+            
+            // Automatically generate job cards for the new finished good work order
+            console.log(`Generating job cards for finished good work order ${fgWoId}...`)
+            try {
+              await fetch(`${import.meta.env.VITE_API_URL}/production/job-cards/${fgWoId}/generate-all`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+              })
+              console.log(`✓ Job cards generated for ${fgWoId}`)
+            } catch (jcErr) {
+              console.warn(`Could not auto-generate job cards for ${fgWoId}:`, jcErr)
+            }
+
             const jobCardsCount = fgWoData.jobCardsCreated || 0
             createdWorkOrders.push({
               type: 'finished-good',
-              work_order_id: fgWoData.data?.wo_id,
+              work_order_id: fgWoId,
               item_code: fgItem.item_code,
               item_name: fgItem.item_name,
               jobCardsCreated: jobCardsCount
             })
-            console.log(`✓ Created work order ${fgWoData.data?.wo_id} with ${jobCardsCount} job cards`)
+            console.log(`✓ Created work order ${fgWoId} with ${jobCardsCount} job cards`)
           } else {
             const errorData = await fgWoResponse.json()
             console.error(`Failed to create work order for ${fgItem.item_code}:`, errorData)
@@ -1486,6 +1558,14 @@ export default function ProductionPlanningForm() {
     }
   }
 
+  // Automatically check stock when materials are calculated
+  useEffect(() => {
+    const materials = consolidateMaterials()
+    if (materials.length > 0 && planHeader.status !== 'completed' && planHeader.status !== 'cancelled') {
+      checkItemsStock(materials)
+    }
+  }, [rawMaterialItems, subAssemblyBomMaterials])
+
   const handleSendMaterialRequestConfirm = async () => {
     if (!materialRequestData) return
 
@@ -1498,7 +1578,6 @@ export default function ProductionPlanningForm() {
       const confirmProceed = window.confirm(
         `${unavailableItems.length} items have insufficient stock for immediate issue. \n\n` +
         `Proceeding with "Material Issue" may result in approval failure unless stock is added later. \n\n` +
-        `Consider using "Send Request for Purchase" instead if items need procurement. \n\n` +
         `Do you still want to create this Material Request?`
       )
       if (!confirmProceed) return
@@ -1534,92 +1613,21 @@ export default function ProductionPlanningForm() {
     }
   }
 
-  const handleSendForPurchase = async () => {
-    if (!materialRequestData) return
-
+  const createMaterialRequest = async (filterType = 'all') => {
     try {
-      setSendingPurchaseRequest(true)
-      const token = localStorage.getItem('token')
-
-      const unavailableItems = materialRequestData.items.filter(item => {
-        const stock = materialStockData[item.item_code]
-        return !stock || !stock.isAvailable
-      })
-
-      if (unavailableItems.length === 0) {
-        setError('No unavailable items found to purchase')
-        setSendingPurchaseRequest(false)
-        return
-      }
-
-      // First create the Material Request with purpose 'purchase'
-      const purchaseMRData = {
-        ...materialRequestData,
-        purpose: 'purchase',
-        items: materialRequestData.items.map(item => ({
-          ...item,
-          purpose: 'purchase'
-        }))
-      }
-
-      const mrRes = await fetch(`${import.meta.env.VITE_API_URL}/material-requests`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(purchaseMRData)
-      })
-
-      if (!mrRes.ok) {
-        const errData = await mrRes.json()
-        throw new Error(errData.error || 'Failed to create Material Request')
-      }
-
-      const mrResult = await mrRes.json()
-      const realMrId = mrResult.data.mr_id
+      const allMaterials = consolidateMaterials()
+      let materials = []
       
-      const poData = {
-        mr_id: realMrId,
-        items: unavailableItems.map(item => ({
-          ...item,
-          rate: 0
-        })),
-        department: purchaseMRData.department,
-        purpose: purchaseMRData.purpose
-      }
-
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/purchase-orders/from-material-request`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(poData)
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        setSuccess(`Material Request and Purchase Order ${data.data?.po_no || ''} created successfully`)
-        setShowMaterialRequestModal(false)
-        setMaterialRequestData(null)
+      if (filterType === 'in_stock') {
+        materials = allMaterials.filter(m => materialStockData[m.item_code]?.isAvailable)
+      } else if (filterType === 'out_of_stock') {
+        materials = allMaterials.filter(m => !materialStockData[m.item_code]?.isAvailable)
       } else {
-        const errData = await res.json()
-        setError(`Failed to create Purchase Order: ${errData.error || errData.message || res.statusText}`)
+        materials = allMaterials
       }
-    } catch (err) {
-      console.error('Error in purchase flow:', err)
-      setError(err.message || 'Error in purchase flow')
-    } finally {
-      setSendingPurchaseRequest(false)
-    }
-  }
 
-  const createMaterialRequest = async () => {
-    try {
-      const materials = consolidateMaterials()
       if (materials.length === 0) {
-        alert('No materials to request')
+        alert(`No ${filterType === 'out_of_stock' ? 'out-of-stock' : filterType === 'in_stock' ? 'in-stock' : 'matching'} materials found to process`)
         return
       }
 
@@ -1631,33 +1639,28 @@ export default function ProductionPlanningForm() {
         transition_date: new Date().toISOString().split('T')[0],
         requested_by_id: user?.employee_id || user?.user_id || user?.full_name || 'System',
         department: 'Production',
-        purpose: 'material_issue',
+        purpose: filterType === 'out_of_stock' ? 'purchase' : 'material_issue',
         required_by_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         company: planHeader.company || 'Nobal Casting',
         production_plan_id: planHeader.plan_id,
         created_by: user?.full_name || 'System',
-        items_notes: `Material request for Production Plan: ${planHeader.plan_id}\nBOM: ${selectedBomId || 'N/A'}\nItem: ${fgItem.item_code || fgItem.item_name || ''}\nPlanned Quantity: ${salesOrderQuantity}\nIncludes raw materials from all sub-assemblies`,
+        items_notes: `${filterType === 'out_of_stock' ? 'Purchase Request' : 'Material Request'} for Production Plan: ${planHeader.plan_id}\nBOM: ${selectedBomId || 'N/A'}\nItem: ${fgItem.item_code || fgItem.item_name || ''}\nPlanned Quantity: ${salesOrderQuantity}\nIncludes raw materials from all sub-assemblies`,
         items: materials.map(m => ({
           item_code: m.item_code,
           item_name: m.item_name,
           qty: m.quantity,
           uom: m.uom,
           warehouse: m.warehouse || 'Stores - NC',
-          purpose: 'material_issue'
+          purpose: filterType === 'out_of_stock' ? 'purchase' : 'material_issue'
         }))
       }
 
       setMaterialRequestData(mrData)
       setShowMaterialRequestModal(true)
-      checkItemsStock(mrData.items)
     } catch (err) {
       console.error('Error preparing material request:', err)
       setError('Error preparing material request')
     }
-  }
-
-  const createPurchaseOrder = async () => {
-    createMaterialRequest()
   }
 
   const _oldFetchSubAssemblyBomMaterials = async () => {
@@ -1901,6 +1904,7 @@ export default function ProductionPlanningForm() {
               body: JSON.stringify({
                 item_code: item.item_code,
                 item_name: item.item_name,
+                bom_no: item.bom_id || item.bom_no,
                 planned_qty: item.quantity || item.planned_qty || 1,
                 planned_start_date: item.planned_start_date,
                 planned_end_date: item.planned_end_date
@@ -1924,6 +1928,7 @@ export default function ProductionPlanningForm() {
               body: JSON.stringify({
                 item_code: item.item_code,
                 item_name: item.item_name,
+                bom_no: item.bom_id || item.bom_no,
                 planned_qty: item.quantity || item.planned_qty || 1,
                 scheduled_date: item.planned_start_date
               })
@@ -2101,10 +2106,10 @@ export default function ProductionPlanningForm() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-2/50 pb-20">
+    <div className="min-h-screen bg-slate-50 p-2 pb-3">
       {/* Sticky Header */}
       <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200">
-        <div className=" px-4 sm:p-6  lg:px-8">
+        <div className="">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
               <button
@@ -2374,13 +2379,13 @@ export default function ProductionPlanningForm() {
                         <table className="w-full text-left border-collapse">
                           <thead className="bg-slate-50 border-b border-slate-100">
                             <tr>
-                              <th className="p-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider w-8">No.</th>
-                              <th className="p-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Item Code</th>
-                              <th className="p-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-center">BOM No</th>
-                              <th className="p-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-right">Planned Qty</th>
-                              <th className="p-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-center">UOM</th>
-                              <th className="p-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Finished Goods Warehouse</th>
-                              <th className="p-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-center">Planned Start Date</th>
+                              <th className="p-2 text-[10px]  text-slate-500  w-8">No.</th>
+                              <th className="p-2 text-[10px]  text-slate-500 ">Item Code</th>
+                              <th className="p-2 text-[10px]  text-slate-500  text-center">BOM No</th>
+                              <th className="p-2 text-[10px]  text-slate-500  text-right">Planned Qty</th>
+                              <th className="p-2 text-[10px]  text-slate-500  text-center">UOM</th>
+                              <th className="p-2 text-[10px]  text-slate-500 ">Finished Goods Warehouse</th>
+                              <th className="p-2 text-[10px]  text-slate-500  text-center">Planned Start Date</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
@@ -2417,7 +2422,7 @@ export default function ProductionPlanningForm() {
                                     </div>
                                   </td>
                                   <td className="p-2 text-right">
-                                    <span className="text-sm font-semibold text-blue-600">
+                                    <span className="text-sm  text-blue-600">
                                       {item.planned_qty || item.quantity || item.qty}
                                     </span>
                                   </td>
@@ -2451,16 +2456,16 @@ export default function ProductionPlanningForm() {
                                           <div className="p-1.5 bg-blue-50 text-blue-600 rounded">
                                             <Boxes size={14} />
                                           </div>
-                                          <h4 className="text-[11px] font-bold text-slate-800 uppercase tracking-wider">Raw Materials from BOM</h4>
+                                          <h4 className="text-[11px]  text-slate-800 ">Raw Materials from BOM</h4>
                                         </div>
                                         <table className="w-full text-[10px] border-collapse">
                                           <thead>
                                             <tr className="bg-slate-50 border-b border-slate-100">
-                                              <th className="p-2 text-left font-semibold text-slate-500 uppercase w-8">No.</th>
-                                              <th className="p-2 text-left font-semibold text-slate-500 uppercase">Item</th>
-                                              <th className="p-2 text-right font-semibold text-slate-500 uppercase">Qty per Unit</th>
-                                              <th className="p-2 text-right font-semibold text-slate-500 uppercase">Total Required Qty</th>
-                                              <th className="p-2 text-center font-semibold text-slate-500 uppercase">UOM</th>
+                                              <th className="p-2 text-left  text-slate-500 uppercase w-8">No.</th>
+                                              <th className="p-2 text-left  text-slate-500 uppercase">Item</th>
+                                              <th className="p-2 text-right  text-slate-500 uppercase">Qty per Unit</th>
+                                              <th className="p-2 text-right  text-slate-500 uppercase">Total Required Qty</th>
+                                              <th className="p-2 text-center  text-slate-500 uppercase">UOM</th>
                                             </tr>
                                           </thead>
                                           <tbody className="divide-y divide-slate-50">
@@ -2476,7 +2481,7 @@ export default function ProductionPlanningForm() {
                                                     <div className="text-slate-400 text-[9px]">{m.item_name || m.description}</div>
                                                   </td>
                                                   <td className="p-2 text-right text-slate-600">{perUnitQty.toFixed(4)}</td>
-                                                  <td className="p-2 text-right font-bold text-blue-600">{totalQty.toFixed(4)}</td>
+                                                  <td className="p-2 text-right  text-blue-600">{totalQty.toFixed(4)}</td>
                                                   <td className="p-2 text-center text-slate-500">{m.uom || 'Nos'}</td>
                                                 </tr>
                                               );
@@ -2507,6 +2512,156 @@ export default function ProductionPlanningForm() {
             </div>
 
             {/* Material Requirements Section */}
+            
+
+            {/* Sub-Assembly Items Section */}
+           
+          </div>
+           <div id="subassembly" className="block bg-white">
+              {subAssemblyItems.length > 0 && (
+                <Card>
+                  <SectionHeader
+                    title="04 Sub Assemblies"
+                    icon={Activity}
+                    subtitle="Manufacturing breakdown of intermediate components"
+                    badge={`${subAssemblyItems.length} ITEMS`}
+                    isExpanded={expandedSections.subassembly}
+                    onToggle={() => toggleSection('subassembly')}
+                    themeColor="rose"
+                  />
+
+                  {expandedSections.subassembly && (
+                    <div className="p-2 animate-in fade-in duration-300">
+                      <div className="overflow-x-auto rounded border border-slate-100">
+                        <table className="w-full text-left border-collapse">
+                          <thead className="bg-slate-50 border-b border-slate-100">
+                            <tr>
+                              <th className="p-2 text-[10px]  text-slate-500  w-8">No.</th>
+                              <th className="p-2 text-[10px]  text-slate-500 ">Sub Assembly Item Code</th>
+                              <th className="p-2 text-[10px]  text-slate-500 ">Target Warehouse</th>
+                              <th className="p-2 text-[10px]  text-slate-500  text-center">Scheduled Date</th>
+                              <th className="p-2 text-[10px]  text-slate-500  text-right">Required Qty</th>
+                              <th className="p-2 text-[10px]  text-slate-500  text-center">Bom No</th>
+                              <th className="p-2 text-[10px]  text-slate-500  text-center">Manufacturing Type</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {subAssemblyItems.map((item, idx) => (
+                              <React.Fragment key={idx}>
+                                <tr 
+                                  className="hover:bg-rose-50/30 transition-colors group cursor-pointer"
+                                  onClick={() => toggleItemMaterials(item)}
+                                >
+                                  <td className="p-2 text-[10px] text-slate-400 font-medium">
+                                    {idx + 1}
+                                  </td>
+                                  <td className="p-2">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-7 h-7 rounded bg-rose-50 flex items-center justify-center text-rose-600 border border-rose-100">
+                                        <Layers size={14} />
+                                      </div>
+                                      <div>
+                                        <p className="text-xs font-medium text-slate-900 leading-tight">
+                                          {item.item_code}
+                                        </p>
+                                        <p className="text-[10px] text-slate-500 truncate max-w-[200px]">
+                                          {item.item_name}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="p-2">
+                                    <div className="flex items-center gap-1.5 text-slate-600">
+                                      <Warehouse size={12} className="text-slate-400" />
+                                      <span className="text-[10px] font-medium truncate max-w-[120px]">
+                                        {item.warehouse || 'Work In Progress - NC'}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="p-2 text-center">
+                                    <div className="flex items-center justify-center gap-1.5 text-slate-600">
+                                      <Calendar size={12} className="text-slate-400" />
+                                      <span className="text-[11px] font-medium">
+                                        {item.planned_start_date || 'TBD'}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="p-2 text-right">
+                                    <div className="flex flex-col items-end">
+                                      <span className="text-sm  text-rose-600">
+                                        {item.planned_qty || item.quantity || item.qty || '-'}
+                                      </span>
+                                      <span className="text-[9px] text-slate-400 uppercase">{item.uom || 'PCS'}</span>
+                                    </div>
+                                  </td>
+                                  <td className="p-2 text-center">
+                                    <div className="flex items-center justify-center gap-1.5 text-rose-700 bg-rose-50/50 px-2 py-0.5 rounded border border-rose-100/50 w-fit mx-auto">
+                                      <Layers size={12} className="text-rose-500" />
+                                      <span className="font-mono text-[10px]">
+                                        {item.bom_no || item.bom_id || 'N/A'}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="p-2 text-center">
+                                    <span className="text-[10px] text-rose-600 font-medium px-1.5 py-0.5 bg-rose-50 rounded border border-rose-100">
+                                      {item.manufacturing_type || 'In House'}
+                                    </span>
+                                  </td>
+                                </tr>
+                                {expandedSubAssemblyMaterials[item.item_code] && subAssemblyMaterials[item.item_code] && (
+                                  <tr>
+                                    <td colSpan="7" className="p-0 bg-rose-50/10">
+                                      <div className="p-4 border-l-4 border-rose-500 m-3 bg-white shadow-sm rounded-sm border border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="flex items-center gap-2 mb-3">
+                                          <div className="p-1.5 bg-rose-50 text-rose-600 rounded">
+                                            <Boxes size={14} />
+                                          </div>
+                                          <h4 className="text-[11px]  text-slate-800 ">Raw Materials from BOM</h4>
+                                        </div>
+                                        <table className="w-full text-[10px] border-collapse">
+                                          <thead>
+                                            <tr className="bg-slate-50 border-b border-slate-100">
+                                              <th className="p-2 text-left  text-slate-500 uppercase w-8">No.</th>
+                                              <th className="p-2 text-left  text-slate-500 uppercase">Item</th>
+                                              <th className="p-2 text-right  text-slate-500 uppercase">Qty per Unit</th>
+                                              <th className="p-2 text-right  text-slate-500 uppercase">Total Required Qty</th>
+                                              <th className="p-2 text-center  text-slate-500 uppercase">UOM</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody className="divide-y divide-slate-50">
+                                            {subAssemblyMaterials[item.item_code].map((m, mIdx) => {
+                                              const plannedQty = item.planned_qty || item.quantity || item.qty || 1;
+                                              const perUnitQty = parseFloat(m.qty || m.quantity || 0);
+                                              const totalQty = perUnitQty * plannedQty;
+                                              return (
+                                                <tr key={mIdx} className="hover:bg-slate-50 transition-colors">
+                                                  <td className="p-2 text-slate-400 font-medium">{mIdx + 1}</td>
+                                                  <td className="p-2">
+                                                    <div className="font-medium text-slate-900">{m.item_code}</div>
+                                                    <div className="text-slate-400 text-[9px]">{m.item_name || m.description}</div>
+                                                  </td>
+                                                  <td className="p-2 text-right text-slate-600">{perUnitQty.toFixed(4)}</td>
+                                                  <td className="p-2 text-right  text-rose-600">{totalQty.toFixed(4)}</td>
+                                                  <td className="p-2 text-center text-slate-500">{m.uom || 'Nos'}</td>
+                                                </tr>
+                                              );
+                                            })}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              )}
+            </div>
             <div id="requirements" className="block bg-white">
               {(rawMaterialItems.length > 0 || subAssemblyBomMaterials.length > 0) && (
                 <Card>
@@ -2526,10 +2681,10 @@ export default function ProductionPlanningForm() {
                   />
 
                   {expandedSections.requirements && (
-                    <div className="p-3 space-y-4 animate-in fade-in duration-300">
+                    <div className="p-3 space-y-2 animate-in fade-in duration-300">
                       {/* Primary Raw Materials */}
                       {rawMaterialItems.length > 0 && (
-                        <div className="space-y-4">
+                        <div className="space-y-2">
                           <h4 className="text-xs   text-amber-600 flex items-center gap-2 px-1">
                             <div className="w-1.5 h-1.5  rounded  bg-amber-500"></div>
                             CORE MATERIALS
@@ -2538,11 +2693,11 @@ export default function ProductionPlanningForm() {
                             <table className="w-full text-left border-collapse">
                               <thead className="bg-amber-50/50 border-b border-amber-100">
                                 <tr>
-                                  <th className="p-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider">Item Specification</th>
-                                  <th className="p-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider text-right">Required Qty</th>
-                                  <th className="p-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider">Warehouse</th>
-                                  <th className="p-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider text-center">BOM Ref</th>
-                                  <th className="p-2 text-[10px] font-semibold text-amber-700 uppercase tracking-wider text-center">Status</th>
+                                  <th className="p-2 text-[10px]  text-amber-700 ">Item </th>
+                                  <th className="p-2 text-[10px]  text-amber-700  text-right">Required Qty</th>
+                                  <th className="p-2 text-[10px]  text-amber-700 ">Warehouse</th>
+                                  <th className="p-2 text-[10px]  text-amber-700  text-center">BOM Ref</th>
+                                  <th className="p-2 text-[10px]  text-amber-700  text-center">Status</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-amber-50">
@@ -2558,7 +2713,7 @@ export default function ProductionPlanningForm() {
                                     </td>
                                     <td className="p-2 text-right">
                                       <div className="flex flex-col items-end">
-                                        <span className="text-xs font-semibold text-amber-600">
+                                        <span className="text-xs  text-amber-600">
                                           {item.quantity || item.qty_as_per_bom}
                                         </span>
                                         <span className="text-[9px] text-slate-400 uppercase">{item.uom || 'PCS'}</span>
@@ -2605,8 +2760,8 @@ export default function ProductionPlanningForm() {
 
                       {/* Sub-Assembly Materials */}
                       {subAssemblyBomMaterials.length > 0 && (
-                        <div className="space-y-4 pt-2">
-                          <h4 className="text-xs font-semibold text-rose-600 flex items-center gap-2 px-1">
+                        <div className="space-y-2 pt-2">
+                          <h4 className="text-xs  text-rose-600 flex items-center gap-2 px-1">
                             <div className="w-1.5 h-1.5 rounded bg-rose-500"></div>
                             EXPLODED COMPONENTS
                           </h4>
@@ -2614,10 +2769,10 @@ export default function ProductionPlanningForm() {
                             <table className="w-full text-left border-collapse">
                               <thead className="bg-rose-50/50 border-b border-rose-100">
                                 <tr>
-                                  <th className="p-2 text-[10px] font-semibold text-rose-700 uppercase tracking-wider">Component Specification</th>
-                                  <th className="p-2 text-[10px] font-semibold text-rose-700 uppercase tracking-wider text-right">Required Qty</th>
-                                  <th className="p-2 text-[10px] font-semibold text-rose-700 uppercase tracking-wider text-center">Source Assembly</th>
-                                  <th className="p-2 text-[10px] font-semibold text-rose-700 uppercase tracking-wider text-center">BOM Ref</th>
+                                  <th className="p-2 text-[10px]  text-rose-700 ">Component Specification</th>
+                                  <th className="p-2 text-[10px]  text-rose-700  text-right">Required Qty</th>
+                                  <th className="p-2 text-[10px]  text-rose-700  text-center">Source Assembly</th>
+                                  <th className="p-2 text-[10px]  text-rose-700  text-center">BOM Ref</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-rose-50">
@@ -2633,7 +2788,7 @@ export default function ProductionPlanningForm() {
                                     </td>
                                     <td className="p-2 text-right">
                                       <div className="flex flex-col items-end">
-                                        <span className="text-xs font-semibold text-rose-600">
+                                        <span className="text-xs  text-rose-600">
                                           {(item.quantity || item.qty || 0).toFixed(2)}
                                         </span>
                                         <span className="text-[9px] text-slate-400 uppercase">{item.uom || 'PCS'}</span>
@@ -2666,154 +2821,6 @@ export default function ProductionPlanningForm() {
                     </Card>
               )}
             </div>
-
-            {/* Sub-Assembly Items Section */}
-            <div id="subassembly" className="block bg-white">
-              {subAssemblyItems.length > 0 && (
-                <Card>
-                  <SectionHeader
-                    title="04 Sub Assemblies"
-                    icon={Activity}
-                    subtitle="Manufacturing breakdown of intermediate components"
-                    badge={`${subAssemblyItems.length} ITEMS`}
-                    isExpanded={expandedSections.subassembly}
-                    onToggle={() => toggleSection('subassembly')}
-                    themeColor="rose"
-                  />
-
-                  {expandedSections.subassembly && (
-                    <div className="p-2 animate-in fade-in duration-300">
-                      <div className="overflow-x-auto rounded border border-slate-100">
-                        <table className="w-full text-left border-collapse">
-                          <thead className="bg-slate-50 border-b border-slate-100">
-                            <tr>
-                              <th className="p-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider w-8">No.</th>
-                              <th className="p-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Sub Assembly Item Code</th>
-                              <th className="p-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Target Warehouse</th>
-                              <th className="p-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-center">Scheduled Date</th>
-                              <th className="p-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-right">Required Qty</th>
-                              <th className="p-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-center">Bom No</th>
-                              <th className="p-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-center">Manufacturing Type</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {subAssemblyItems.map((item, idx) => (
-                              <React.Fragment key={idx}>
-                                <tr 
-                                  className="hover:bg-rose-50/30 transition-colors group cursor-pointer"
-                                  onClick={() => toggleItemMaterials(item)}
-                                >
-                                  <td className="p-2 text-[10px] text-slate-400 font-medium">
-                                    {idx + 1}
-                                  </td>
-                                  <td className="p-2">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-7 h-7 rounded bg-rose-50 flex items-center justify-center text-rose-600 border border-rose-100">
-                                        <Layers size={14} />
-                                      </div>
-                                      <div>
-                                        <p className="text-xs font-medium text-slate-900 leading-tight">
-                                          {item.item_code}
-                                        </p>
-                                        <p className="text-[10px] text-slate-500 truncate max-w-[200px]">
-                                          {item.item_name}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td className="p-2">
-                                    <div className="flex items-center gap-1.5 text-slate-600">
-                                      <Warehouse size={12} className="text-slate-400" />
-                                      <span className="text-[10px] font-medium truncate max-w-[120px]">
-                                        {item.warehouse || 'Work In Progress - NC'}
-                                      </span>
-                                    </div>
-                                  </td>
-                                  <td className="p-2 text-center">
-                                    <div className="flex items-center justify-center gap-1.5 text-slate-600">
-                                      <Calendar size={12} className="text-slate-400" />
-                                      <span className="text-[11px] font-medium">
-                                        {item.planned_start_date || 'TBD'}
-                                      </span>
-                                    </div>
-                                  </td>
-                                  <td className="p-2 text-right">
-                                    <div className="flex flex-col items-end">
-                                      <span className="text-sm font-semibold text-rose-600">
-                                        {item.planned_qty || item.quantity || item.qty || '-'}
-                                      </span>
-                                      <span className="text-[9px] text-slate-400 uppercase">{item.uom || 'PCS'}</span>
-                                    </div>
-                                  </td>
-                                  <td className="p-2 text-center">
-                                    <div className="flex items-center justify-center gap-1.5 text-rose-700 bg-rose-50/50 px-2 py-0.5 rounded border border-rose-100/50 w-fit mx-auto">
-                                      <Layers size={12} className="text-rose-500" />
-                                      <span className="font-mono text-[10px]">
-                                        {item.bom_no || item.bom_id || 'N/A'}
-                                      </span>
-                                    </div>
-                                  </td>
-                                  <td className="p-2 text-center">
-                                    <span className="text-[10px] text-rose-600 font-medium px-1.5 py-0.5 bg-rose-50 rounded border border-rose-100">
-                                      {item.manufacturing_type || 'In House'}
-                                    </span>
-                                  </td>
-                                </tr>
-                                {expandedSubAssemblyMaterials[item.item_code] && subAssemblyMaterials[item.item_code] && (
-                                  <tr>
-                                    <td colSpan="7" className="p-0 bg-rose-50/10">
-                                      <div className="p-4 border-l-4 border-rose-500 m-3 bg-white shadow-sm rounded-sm border border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
-                                        <div className="flex items-center gap-2 mb-3">
-                                          <div className="p-1.5 bg-rose-50 text-rose-600 rounded">
-                                            <Boxes size={14} />
-                                          </div>
-                                          <h4 className="text-[11px] font-bold text-slate-800 uppercase tracking-wider">Raw Materials from BOM</h4>
-                                        </div>
-                                        <table className="w-full text-[10px] border-collapse">
-                                          <thead>
-                                            <tr className="bg-slate-50 border-b border-slate-100">
-                                              <th className="p-2 text-left font-semibold text-slate-500 uppercase w-8">No.</th>
-                                              <th className="p-2 text-left font-semibold text-slate-500 uppercase">Item</th>
-                                              <th className="p-2 text-right font-semibold text-slate-500 uppercase">Qty per Unit</th>
-                                              <th className="p-2 text-right font-semibold text-slate-500 uppercase">Total Required Qty</th>
-                                              <th className="p-2 text-center font-semibold text-slate-500 uppercase">UOM</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody className="divide-y divide-slate-50">
-                                            {subAssemblyMaterials[item.item_code].map((m, mIdx) => {
-                                              const plannedQty = item.planned_qty || item.quantity || item.qty || 1;
-                                              const perUnitQty = parseFloat(m.qty || m.quantity || 0);
-                                              const totalQty = perUnitQty * plannedQty;
-                                              return (
-                                                <tr key={mIdx} className="hover:bg-slate-50 transition-colors">
-                                                  <td className="p-2 text-slate-400 font-medium">{mIdx + 1}</td>
-                                                  <td className="p-2">
-                                                    <div className="font-medium text-slate-900">{m.item_code}</div>
-                                                    <div className="text-slate-400 text-[9px]">{m.item_name || m.description}</div>
-                                                  </td>
-                                                  <td className="p-2 text-right text-slate-600">{perUnitQty.toFixed(4)}</td>
-                                                  <td className="p-2 text-right font-bold text-rose-600">{totalQty.toFixed(4)}</td>
-                                                  <td className="p-2 text-center text-slate-500">{m.uom || 'Nos'}</td>
-                                                </tr>
-                                              );
-                                            })}
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                )}
-                              </React.Fragment>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-                </Card>
-              )}
-            </div>
-          </div>
         </div>
       </div>
 
@@ -2945,16 +2952,16 @@ export default function ProductionPlanningForm() {
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-3 bg-slate-50 rounded border border-slate-100">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Request Identifier</p>
-                  <p className="text-sm font-semibold text-slate-900">{materialRequestData.series_no}</p>
+                  <p className="text-[10px]  text-slate-400  mb-1">Request Identifier</p>
+                  <p className="text-sm  text-slate-900">{materialRequestData.series_no}</p>
                 </div>
                 <div className="p-3 bg-slate-50 rounded border border-slate-100">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Originating Dept</p>
-                  <p className="text-sm font-semibold text-slate-900">{materialRequestData.department}</p>
+                  <p className="text-[10px]  text-slate-400  mb-1">Originating Dept</p>
+                  <p className="text-sm  text-slate-900">{materialRequestData.department}</p>
                 </div>
                 <div className="p-3 bg-slate-50 rounded border border-slate-100">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">SLA Target Date</p>
-                  <p className="text-sm font-semibold text-slate-900">
+                  <p className="text-[10px]  text-slate-400  mb-1">SLA Target Date</p>
+                  <p className="text-sm  text-slate-900">
                     {new Date(materialRequestData.required_by_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </p>
                 </div>
@@ -2963,7 +2970,7 @@ export default function ProductionPlanningForm() {
               <div className="bg-indigo-50/50 border-l-4 border-indigo-500 p-4 rounded-r shadow-sm">
                 <div className="flex items-center gap-2 mb-2">
                   <FileText size={14} className="text-indigo-600" />
-                  <h3 className="text-xs font-bold text-indigo-900 uppercase tracking-wider">Intelligence Strategy Notes</h3>
+                  <h3 className="text-xs  text-indigo-900 ">Intelligence Strategy Notes</h3>
                 </div>
                 <p className="text-xs text-indigo-700 leading-relaxed whitespace-pre-line">
                   {materialRequestData.items_notes}
@@ -2973,16 +2980,16 @@ export default function ProductionPlanningForm() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-1.5 h-4 bg-emerald-500 rounded-full" />
-                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Requested Components ({materialRequestData.items.length})</h3>
+                  <h3 className="text-xs  text-slate-900 ">Requested Components ({materialRequestData.items.length})</h3>
                 </div>
                 <div className="rounded border border-slate-100 overflow-hidden shadow-sm">
                   <table className="w-full text-left">
                     <thead className="bg-slate-50 border-b border-slate-100">
                       <tr>
-                        <th className="p-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Component Intelligence</th>
-                        <th className="p-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Required</th>
-                        <th className="p-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Inventory</th>
-                        <th className="p-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                        <th className="p-3 text-xs  text-slate-500 ">Component Intelligence</th>
+                        <th className="p-3 text-right text-xs  text-slate-500 ">Required</th>
+                        <th className="p-3 text-right text-xs  text-slate-500 ">Inventory</th>
+                        <th className="p-3 text-center text-xs  text-slate-500 ">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -2992,15 +2999,15 @@ export default function ProductionPlanningForm() {
                         return (
                           <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                             <td className="p-3">
-                              <p className="text-xs font-bold text-slate-900">{item.item_code}</p>
+                              <p className="text-xs  text-slate-900">{item.item_code}</p>
                               <p className="text-[11px] text-slate-500 mt-0.5">{item.item_name}</p>
                               <div className="flex items-center gap-1 mt-1">
                                 <span className="text-[9px] text-slate-400 uppercase font-medium">Warehouse:</span>
-                                <span className="text-[9px] text-emerald-600 font-bold">{stock?.warehouse || item.warehouse || 'Stores - NC'}</span>
+                                <span className="text-[9px] text-emerald-600 ">{stock?.warehouse || item.warehouse || 'Stores - NC'}</span>
                               </div>
                             </td>
                             <td className="p-3 text-right">
-                              <span className="text-xs font-bold text-slate-900">{item.qty}</span>
+                              <span className="text-xs  text-slate-900">{item.qty}</span>
                               <span className="text-[10px] text-slate-400 ml-1 uppercase">{item.uom}</span>
                             </td>
                             <td className="p-3 text-right">
@@ -3014,7 +3021,7 @@ export default function ProductionPlanningForm() {
                               {checkingStock ? (
                                 <span className="inline-block w-16 h-4 bg-slate-100 animate-pulse rounded" />
                               ) : (
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all ${
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px]  border transition-all ${
                                   isAvailable 
                                     ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
                                     : 'bg-rose-50 text-rose-600 border-rose-100'
@@ -3044,17 +3051,9 @@ export default function ProductionPlanningForm() {
                 Abort Request
               </button>
               <button
-                onClick={handleSendForPurchase}
-                disabled={sendingPurchaseRequest || checkingStock || !materialRequestData.items.some(item => !materialStockData[item.item_code]?.isAvailable)}
-                className="flex items-center gap-2 px-6 py-2 bg-amber-600 text-white rounded font-bold shadow-lg shadow-amber-200 hover:bg-amber-700 disabled:opacity-50 transition-all text-xs"
-              >
-                {sendingPurchaseRequest ? <Loader size={16} className="animate-spin" /> : <ShoppingCart size={16} />}
-                {sendingPurchaseRequest ? 'PROCESSING...' : 'Send Request for Purchase'}
-              </button>
-              <button
                 onClick={handleSendMaterialRequestConfirm}
                 disabled={creatingMaterialRequest || checkingStock}
-                className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded font-bold shadow-lg shadow-slate-200 hover:bg-slate-800 disabled:opacity-50 transition-all text-xs"
+                className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded  shadow-lg shadow-slate-200 hover:bg-slate-800 disabled:opacity-50 transition-all text-xs"
               >
                 {creatingMaterialRequest ? <Loader size={16} className="animate-spin" /> : <Send size={16} />}
                 {creatingMaterialRequest ? 'SYNCHRONIZING...' : 'Material Request'}
@@ -3069,7 +3068,7 @@ export default function ProductionPlanningForm() {
         <div className=" flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex flex-col">
-              <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Plan Status</span>
+              <span className="text-[10px] text-slate-400 font-medium ">Plan Status</span>
               <div className="flex items-center gap-2">
                 <StatusBadge status={planHeader.status} />
                 <span className="text-xs font-mono text-slate-500">{plan_id || 'Draft'}</span>
@@ -3077,8 +3076,8 @@ export default function ProductionPlanningForm() {
             </div>
             <div className="h-8 w-px bg-slate-100 mx-2"></div>
             <div className="flex flex-col">
-              <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Materials</span>
-              <span className="text-xs font-bold text-slate-700">{rawMaterialItems.length + subAssemblyBomMaterials.length} Items Calculated</span>
+              <span className="text-[10px] text-slate-400 font-medium ">Materials</span>
+              <span className="text-xs  text-slate-700">{rawMaterialItems.length + subAssemblyBomMaterials.length} Items Calculated</span>
             </div>
           </div>
 
@@ -3090,7 +3089,7 @@ export default function ProductionPlanningForm() {
                 <button
                   onClick={createWorkOrders}
                   disabled={creatingWorkOrders}
-                  className="flex items-center gap-2 p-2 bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-all disabled:opacity-50 text-xs font-semibold border border-emerald-100"
+                  className="flex items-center gap-2 p-2 bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-all disabled:opacity-50 text-xs  border border-emerald-100"
                 >
                   <Plus size={14} />
                   {creatingWorkOrders ? 'Executing...' : 'Work Orders'}
@@ -3098,18 +3097,10 @@ export default function ProductionPlanningForm() {
                 <button
                   onClick={createMaterialRequest}
                   disabled={creatingMaterialRequest}
-                  className="flex items-center gap-2 p-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-all disabled:opacity-50 text-xs font-semibold border border-blue-100"
+                  className="flex items-center gap-2 p-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-all disabled:opacity-50 text-xs  border border-blue-100"
                 >
-                  <ShoppingCart size={14} />
+                  <ClipboardList size={14} />
                   {creatingMaterialRequest ? 'Creating...' : 'Material Request'}
-                </button>
-                <button
-                  onClick={createPurchaseOrder}
-                  disabled={creatingPurchaseOrder}
-                  className="flex items-center gap-2 p-2 bg-amber-50 text-amber-600 rounded hover:bg-amber-100 transition-all disabled:opacity-50 text-xs font-semibold border border-amber-100"
-                >
-                  <Archive size={14} />
-                  {creatingPurchaseOrder ? 'Creating...' : 'Purchase Order'}
                 </button>
               </>
             )}
@@ -3119,7 +3110,7 @@ export default function ProductionPlanningForm() {
             <button
               onClick={saveProductionPlan}
               disabled={savingPlan || !selectedSalesOrders.length}
-              className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-slate-200 font-semibold text-xs"
+              className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-slate-200  text-xs"
             >
               <Save size={16} />
               {savingPlan ? 'Saving Plan...' : 'Save Strategic Plan'}

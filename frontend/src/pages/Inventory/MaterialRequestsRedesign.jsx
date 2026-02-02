@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
-  Plus, Eye, CheckCircle, XCircle, Trash2, Search, Filter, 
+  Plus, Eye, Trash2, Search, Filter, 
   ChevronRight, ClipboardList, Clock, CheckCheck, AlertCircle,
   MoreVertical, Sliders, ArrowRight, Package, Warehouse,
   Building2, Calendar, ShoppingCart, Truck
@@ -97,39 +97,6 @@ export default function MaterialRequestsRedesign() {
     }
   }
 
-  const handleApprove = async (id) => {
-    const row = requests.find(r => r.mr_id === id)
-    if (row && ['material_issue', 'material_transfer'].includes(row.purpose) && !row.source_warehouse) {
-      // Open view modal instead to force warehouse selection
-      setSelectedMrId(id)
-      setViewModalOpen(true)
-      toast.addToast('Source warehouse is required for this request type. Please select one in the details view.', 'error')
-      return
-    }
-
-    try {
-      const response = await api.patch(`/material-requests/${id}/approve`)
-      toast.addToast(response.data.message || 'Material request approved successfully', 'success')
-      
-      // Dispatch event to notify other components (like Stock Balance) to refresh
-      window.dispatchEvent(new CustomEvent('materialRequestApproved', { detail: { mrId: id } }))
-      
-      fetchRequests()
-    } catch (err) {
-      toast.addToast(err.response?.data?.error || 'Failed to approve', 'error')
-    }
-  }
-
-  const handleReject = async (id) => {
-    try {
-      await api.patch(`/material-requests/${id}/reject`)
-      toast.addToast('Material request rejected', 'warning')
-      fetchRequests()
-    } catch (err) {
-      toast.addToast(err.response?.data?.error || 'Failed to reject', 'error')
-    }
-  }
-
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this material request?')) return
     try {
@@ -145,15 +112,17 @@ export default function MaterialRequestsRedesign() {
     const total = requests.length
     const draft = requests.filter(r => r.status === 'draft').length
     const approved = requests.filter(r => r.status === 'approved').length
+    const partial = requests.filter(r => r.status === 'partial').length
     const completed = requests.filter(r => r.status === 'completed').length
     const purchase = requests.filter(r => r.purpose === 'purchase').length
-    return { total, draft, approved, completed, purchase }
+    return { total, draft, approved, partial, completed, purchase }
   }, [requests])
 
   const getStatusStyle = (status) => {
     const styles = {
       draft: 'bg-amber-50 text-amber-600 border-amber-100',
       approved: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+      partial: 'bg-indigo-50 text-indigo-600 border-indigo-100',
       completed: 'bg-blue-50 text-blue-600 border-blue-100',
       converted: 'bg-slate-100 text-slate-600 border-slate-200',
       cancelled: 'bg-rose-50 text-rose-600 border-rose-100'
@@ -229,13 +198,13 @@ export default function MaterialRequestsRedesign() {
             <div className="flex bg-white p-1 rounded  border border-slate-200  ">
               <button 
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg text-sm font-semibold transition-all ${viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`p-2 rounded-lg text-sm  transition-all ${viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 Grid
               </button>
               <button 
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg text-sm font-semibold transition-all ${viewMode === 'list' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`p-2 rounded-lg text-sm  transition-all ${viewMode === 'list' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 List
               </button>
@@ -251,11 +220,12 @@ export default function MaterialRequestsRedesign() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
           {[
             { label: 'Total Requests', value: stats.total, icon: ClipboardList, color: 'text-indigo-600', bg: 'bg-indigo-50' },
             { label: 'Draft', value: stats.draft, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
             { label: 'Approved', value: stats.approved, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+            { label: 'Partial', value: stats.partial, icon: AlertCircle, color: 'text-indigo-600', bg: 'bg-indigo-50' },
             { label: 'Completed', value: stats.completed, icon: CheckCheck, color: 'text-blue-600', bg: 'bg-blue-50' },
             { label: 'Purchase Req', value: stats.purchase, icon: ShoppingCart, color: 'text-rose-600', bg: 'bg-rose-50' }
           ].map((stat, i) => (
@@ -292,6 +262,7 @@ export default function MaterialRequestsRedesign() {
               <option value="">All Status</option>
               <option value="draft">Draft</option>
               <option value="approved">Approved</option>
+              <option value="partial">Partial</option>
               <option value="completed">Completed</option>
               <option value="converted">Converted</option>
               <option value="cancelled">Cancelled</option>
@@ -388,37 +359,13 @@ export default function MaterialRequestsRedesign() {
                       <div className="pt-4 border-t border-slate-50 flex items-center justify-between gap-2">
                         <div className="flex gap-1">
                           {row.status === 'draft' && (
-                            <>
-                              <button 
-                                onClick={() => {
-                                  if (['material_issue', 'material_transfer'].includes(row.purpose) && !row.source_warehouse) {
-                                    setSelectedMrId(row.mr_id)
-                                    setViewModalOpen(true)
-                                    toast.addToast('Source warehouse required. Please select one.', 'warning')
-                                    return
-                                  }
-                                  handleApprove(row.mr_id)
-                                }}
-                                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                                title="Approve"
-                              >
-                                <CheckCircle size={18} />
-                              </button>
-                              <button 
-                                onClick={() => handleReject(row.mr_id)}
-                                className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                title="Reject"
-                              >
-                                <XCircle size={18} />
-                              </button>
-                              <button 
-                                onClick={() => handleDelete(row.mr_id)}
-                                className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                            </>
+                            <button 
+                              onClick={() => handleDelete(row.mr_id)}
+                              className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 size={18} />
+                            </button>
                           )}
                         </div>
                         <button 
@@ -508,20 +455,12 @@ export default function MaterialRequestsRedesign() {
                                 <Eye size={18} />
                               </button>
                               {row.status === 'draft' && (
-                                <>
-                                  <button 
-                                    onClick={() => handleApprove(row.mr_id)}
-                                    className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                                  >
-                                    <CheckCircle size={18} />
-                                  </button>
-                                  <button 
-                                    onClick={() => handleDelete(row.mr_id)}
-                                    className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                                  >
-                                    <Trash2 size={18} />
-                                  </button>
-                                </>
+                                <button 
+                                  onClick={() => handleDelete(row.mr_id)}
+                                  className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
                               )}
                             </div>
                           </td>

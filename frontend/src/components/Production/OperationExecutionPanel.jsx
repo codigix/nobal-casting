@@ -276,9 +276,9 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
 
   if (isRunning) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-2">
         <div className="bg-white rounded-xs border border-gray-200 p-2">
-          <h3 className="font-semibold text-gray-900 mb-4">Operation Execution</h3>
+          <h3 className=" text-gray-900 mb-4">Operation Execution</h3>
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xs text-red-700 text-xs">
@@ -295,31 +295,31 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="p-3 bg-gray-50 rounded-xs border border-gray-200">
               <label className="block text-xs text-gray-600 mb-1">Workstation</label>
-              <div className="text-xs font-semibold text-gray-900">{currentWorkstation}</div>
+              <div className="text-xs  text-gray-900">{currentWorkstation}</div>
             </div>
 
             <div className="p-3 bg-gray-50 rounded-xs border border-gray-200">
               <label className="block text-xs text-gray-600 mb-1">Operation</label>
-              <div className="text-xs font-semibold text-gray-900">{currentOperation}</div>
+              <div className="text-xs  text-gray-900">{currentOperation}</div>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div className="p-3 bg-gray-50 rounded-xs border border-gray-200">
               <label className="block text-xs text-gray-600 mb-1">Operator</label>
-              <div className="text-xs font-semibold text-gray-900">
+              <div className="text-xs  text-gray-900">
                 {getOperatorName(jobCard?.employee_id || jobCard?.operator_id)}
               </div>
             </div>
 
             <div className="p-3 bg-gray-50 rounded-xs border border-gray-200">
               <label className="block text-xs text-gray-600 mb-1">Quantity</label>
-              <div className="text-xs font-semibold text-gray-900">{executionData.quantity || '-'}</div>
+              <div className="text-xs  text-gray-900">{executionData.quantity || '-'}</div>
             </div>
 
             <div className="p-3 bg-gray-50 rounded-xs border border-gray-200">
               <label className="block text-xs text-gray-600 mb-1">Start Time</label>
-              <div className="text-xs font-semibold text-gray-900">
+              <div className="text-xs  text-gray-900">
                 {jobCard?.actual_start_date ? new Date(jobCard.actual_start_date).toLocaleString() : '-'}
               </div>
             </div>
@@ -362,20 +362,20 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
 
         {jobCard?.job_card_id && (
           <div className="bg-white rounded-xs border border-gray-200 p-2">
-            <h3 className="font-semibold text-gray-900 mb-3">Execution History</h3>
+            <h3 className=" text-gray-900 mb-3">Execution History</h3>
             <OperationExecutionLog jobCardId={jobCard.job_card_id} />
           </div>
         )}
 
         {inwardChallans.length > 0 && (
           <div className="bg-white rounded-xs border border-gray-20 0p-2">
-            <h3 className="font-semibold text-gray-900 mb-3">Inward Challans</h3>
+            <h3 className=" text-gray-900 mb-3">Inward Challans</h3>
             <div className="space-y-2">
               {inwardChallans.map(challan => (
                 <div key={challan.id} className="p-3 border border-gray-200 rounded-xs bg-gray-50">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <div className="font-semibold text-gray-900">{challan.challan_number}</div>
+                      <div className=" text-gray-900">{challan.challan_number}</div>
                       <div className="text-xs text-gray-600">Vendor: {challan.vendor_name}</div>
                     </div>
                     <span className={`text-xs px-2 py-1 rounded ${
@@ -407,9 +407,9 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div className="bg-white rounded-xs border border-gray-200 p-2">
-        <h3 className="font-semibold text-gray-900 mb-4">Operation Execution</h3>
+        <h3 className=" text-gray-900 mb-4">Operation Execution</h3>
 
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xs text-red-700 text-xs">
@@ -450,7 +450,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
 
           <div className="p-3 bg-gray-50 rounded-xs border border-gray-200">
             <label className="block text-xs text-gray-600 mb-1">Operation *</label>
-            <div className="text-xs font-semibold text-gray-900">{currentOperation}</div>
+            <div className="text-xs  text-gray-900">{currentOperation}</div>
           </div>
         </div>
 
@@ -534,7 +534,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
 
         {executionData.outsource && (
           <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xs">
-            <h4 className="text-xs font-semibold text-amber-900 mb-3">Outsource Challan Details</h4>
+            <h4 className="text-xs  text-amber-900 mb-3">Outsource Challan Details</h4>
             <div className="space-y-3 mb-3">
               <div>
                 <label className="block text-xs text-gray-700 mb-1">Vendor Name *</label>
@@ -575,7 +575,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
             </div>
             {outwardChallans.length > 0 && (
               <div>
-                <label className="block text-xs text-gray-700 font-semibold mb-2">Recent Outward Challans</label>
+                <label className="block text-xs text-gray-700  mb-2">Recent Outward Challans</label>
                 <div className="space-y-2">
                   {outwardChallans.slice(0, 3).map(challan => (
                     <div key={challan.id} className="p-2 bg-white border border-amber-200 rounded text-xs">
@@ -602,7 +602,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
 
       {jobCard?.job_card_id && (
         <div className="bg-white rounded-xs border border-gray-200 p-2">
-          <h3 className="font-semibold text-gray-900 mb-3">Execution History</h3>
+          <h3 className=" text-gray-900 mb-3">Execution History</h3>
           <OperationExecutionLog jobCardId={jobCard.job_card_id} />
         </div>
       )}

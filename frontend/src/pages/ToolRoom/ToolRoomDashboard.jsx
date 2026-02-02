@@ -190,7 +190,7 @@ const SummaryCard = ({ title, items }) => {
         {items.slice(0, 5).map((item, idx) => (
           <li key={idx} className="flex justify-between text-xs text-gray-600 border-b pb-2">
             <span>{item.name || item.title}</span>
-            <span className="font-semibold text-gray-900">{item.value || item.status}</span>
+            <span className=" text-gray-900">{item.value || item.status}</span>
           </li>
         ))}
       </ul>

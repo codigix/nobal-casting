@@ -512,7 +512,7 @@ export default function StockEntries() {
           </div>
           <button
             onClick={formModal.open}
-            className="flex items-center justify-center gap-2 p-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-xs shadow-lg hover: transition-all duration-300 hover:-translate-y-1 whitespace-nowrap text-xs"
+            className="flex items-center justify-center gap-2 p-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white  rounded-xs shadow-lg hover: transition-all duration-300 hover:-translate-y-1 whitespace-nowrap text-xs"
           >
             <Plus size={18} />
             Create Entry
@@ -603,7 +603,7 @@ export default function StockEntries() {
             </div>
           }
         >
-          <form id="manual-entry-form" onSubmit={handleSubmit} className="space-y-4 py-2">
+          <form id="manual-entry-form" onSubmit={handleSubmit} className="space-y-2 py-2">
             <div className="form-group">
               <label className="text-[11px]  text-neutral-500  tracking-wider mb-1 block">
                 Select GRN Request (Optional)
@@ -863,7 +863,7 @@ export default function StockEntries() {
             <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-4">
               <Package size={32} className="text-neutral-400" />
             </div>
-            <h3 className="text-base font-semibold text-neutral-900 dark:text-white">No stock entries found</h3>
+            <h3 className="text-base  text-neutral-900 dark:text-white">No stock entries found</h3>
             <p className="text-xs text-neutral-500 mt-2 max-w-xs">Start tracking your inventory movements by creating your first stock entry.</p>
             <Button
               variant="primary"
@@ -1011,7 +1011,7 @@ export default function StockEntries() {
               {filteredEntries.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
                   <Search size={40} className="text-neutral-200 mb-4" />
-                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">No matching entries</h3>
+                  <h3 className="text-sm  text-neutral-900 dark:text-white">No matching entries</h3>
                   <p className="text-xs text-neutral-500 mt-1">Try adjusting your search or filters.</p>
                 </div>
               ) : viewMode === 'table' ? (

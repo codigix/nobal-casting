@@ -488,19 +488,19 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
           <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-xs">
             <div className="grid grid-cols-4 gap-4 text-xs">
               <div>
-                <p className="text-gray-600 text-xs font-semibold">Job Card</p>
+                <p className="text-gray-600 text-xs ">Job Card</p>
                 <p className="text-gray-900 font-medium">{jobCardData.job_card_id}</p>
               </div>
               <div>
-                <p className="text-gray-600 text-xs font-semibold">Item</p>
+                <p className="text-gray-600 text-xs ">Item</p>
                 <p className="text-gray-900 font-medium">{itemName || jobCardData.item_name || 'Loading...'}</p>
               </div>
               <div>
-                <p className="text-gray-600 text-xs font-semibold">Planned Qty</p>
+                <p className="text-gray-600 text-xs ">Planned Qty</p>
                 <p className="text-gray-900 font-medium">{jobCardData.planned_quantity}</p>
               </div>
               <div>
-                <p className="text-gray-600 text-xs font-semibold">Operation</p>
+                <p className="text-gray-600 text-xs ">Operation</p>
                 <p className="text-gray-900 font-medium">{jobCardData.operation || 'N/A'}</p>
               </div>
             </div>
@@ -508,26 +508,26 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
         )}
 
         <div className="mb-6 p-3 bg-amber-50 border border-amber-200 rounded-xs">
-          <h4 className="font-semibold text-gray-900 mb-3 text-xs">Production Summary</h4>
+          <h4 className=" text-gray-900 mb-3 text-xs">Production Summary</h4>
           <div className="grid grid-cols-5 gap-3 text-xs">
             <div>
-              <p className="text-gray-600 font-semibold">Produced</p>
+              <p className="text-gray-600 ">Produced</p>
               <p className="text-xs  text-gray-900">{totalProducedQty.toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-gray-600 font-semibold">Accepted</p>
+              <p className="text-gray-600 ">Accepted</p>
               <p className="text-lg  text-green-600">{totalAcceptedQty.toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-gray-600 font-semibold">Rejected</p>
+              <p className="text-gray-600 ">Rejected</p>
               <p className="text-lg  text-red-600">{totalRejectedQty.toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-gray-600 font-semibold">Downtime</p>
+              <p className="text-gray-600 ">Downtime</p>
               <p className="text-lg  text-orange-600">{Math.round(totalDowntimeMinutes)} min</p>
             </div>
             <div>
-              <p className="text-gray-600 font-semibold">Remaining</p>
+              <p className="text-gray-600 ">Remaining</p>
               <p className="text-lg  text-blue-600">
                 {(parseFloat(jobCardData?.planned_quantity || 0) - totalProducedQty).toFixed(2)}
               </p>
@@ -553,30 +553,30 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
             <div className="mb-4 p-2 rounded-xs border-2 border-purple-300 bg-gradient-to-r from-purple-50 to-pink-50">
               <div className="grid grid-cols-2 gap-2 text-xs mb-3">
                 <div className="p-2 bg-white border border-orange-200 rounded">
-                  <p className="text-gray-600 font-semibold mb-1">Expected Duration</p>
+                  <p className="text-gray-600  mb-1">Expected Duration</p>
                   <p className=" text-orange-700">{expectedMinutes.toFixed(0)} min</p>
                 </div>
                 <div className="p-2 bg-white border border-blue-200 rounded">
-                  <p className="text-gray-600 font-semibold mb-1">Actual Duration</p>
+                  <p className="text-gray-600  mb-1">Actual Duration</p>
                   <p className=" text-blue-700">{actualMinutes.toFixed(0)} min</p>
                 </div>
               </div>
               
               <div className="grid grid-cols-3 gap-2 text-xs">
                 <div className={`p-2 rounded border ${efficiency >= 100 ? 'bg-green-50 border-green-200' : efficiency >= 80 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'}`}>
-                  <p className="text-gray-600 font-semibold mb-1">⚡ Efficiency</p>
+                  <p className="text-gray-600  mb-1">⚡ Efficiency</p>
                   <p className={` text-lg ${efficiency >= 100 ? 'text-green-600' : efficiency >= 80 ? 'text-yellow-600' : 'text-red-600'}`}>
                     {efficiency}%
                   </p>
                   {isBottleneck && <p className="text-red-600 text-xs mt-1">🚨 Bottleneck Detected</p>}
                 </div>
                 <div className="p-2 rounded bg-blue-50 border border-blue-200">
-                  <p className="text-gray-600 font-semibold mb-1">✓ Quality</p>
+                  <p className="text-gray-600  mb-1">✓ Quality</p>
                   <p className=" text-lg text-blue-600">{qualityScore}%</p>
                   <p className="text-gray-500 text-xs mt-1">Acceptance rate</p>
                 </div>
                 <div className="p-2 rounded bg-green-50 border border-green-200">
-                  <p className="text-gray-600 font-semibold mb-1">📦 Productivity</p>
+                  <p className="text-gray-600  mb-1">📦 Productivity</p>
                   <p className=" text-lg text-green-600">
                     {actualMinutes > 0 ? ((totalAcceptedQty / (actualMinutes / 60)).toFixed(1)) : '0'} units/hr
                   </p>
@@ -592,11 +592,11 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
             <h3 className="text-xs  text-gray-900 mb-4">Operation Execution</h3>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div>
-                <label className="text-xs text-gray-600 font-semibold block mb-1">Start Date</label>
+                <label className="text-xs text-gray-600  block mb-1">Start Date</label>
                 <input type="date" className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-green-500" />
               </div>
               <div>
-                <label className="text-xs text-gray-600 font-semibold block mb-1">End Date</label>
+                <label className="text-xs text-gray-600  block mb-1">End Date</label>
                 <input type="date" className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-green-500" />
               </div>
             </div>
@@ -609,7 +609,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
             </h3>
             <div>
               <form onSubmit={handleAddTimeLog} className="mb-6 p-3 bg-white border border-gray-200 rounded-xs">
-                <h3 className="mb-4 font-semibold text-gray-900 flex items-center gap-2 text-xs">
+                <h3 className="mb-4  text-gray-900 flex items-center gap-2 text-xs">
                   <Plus size={16} /> Add Time Log Entry
                 </h3>
                 
@@ -666,14 +666,14 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   <div>
                     <label className="block text-xs text-gray-700 mb-1">Operation Time per Unit (from BOM)</label>
                     <div className="p-2 border border-purple-300 rounded  text-xs bg-purple-50">
-                      <p className="font-semibold text-purple-700">{operationCycleTime.toFixed(2)} min</p>
+                      <p className=" text-purple-700">{operationCycleTime.toFixed(2)} min</p>
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-xs text-gray-700 mb-1">Expected Duration (for all {jobCardData?.planned_quantity || 0} units)</label>
                     <div className="p-2 border border-orange-300 rounded  text-xs bg-orange-50">
-                      <p className="font-semibold text-orange-700">{((operationCycleTime || 0) * (jobCardData?.planned_quantity || 1)).toFixed(0)} min</p>
+                      <p className=" text-orange-700">{((operationCycleTime || 0) * (jobCardData?.planned_quantity || 1)).toFixed(0)} min</p>
                     </div>
                   </div>
                 </div>
@@ -717,7 +717,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   <div>
                     <label className="block text-xs text-gray-700 mb-1">Expected Duration</label>
                     <div className="p-2 border border-orange-300 rounded  text-xs bg-orange-50">
-                      <p className="font-semibold text-orange-700">{((operationCycleTime || 0) * (jobCardData?.planned_quantity || 1)).toFixed(0)} min</p>
+                      <p className=" text-orange-700">{((operationCycleTime || 0) * (jobCardData?.planned_quantity || 1)).toFixed(0)} min</p>
                     </div>
                   </div>
                 </div>
@@ -726,7 +726,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   <div>
                     <label className="block text-xs text-gray-700 mb-1">Duration</label>
                     <div className="p-2 border border-blue-300 rounded  text-xs bg-blue-50">
-                      <p className="font-semibold text-blue-700">{calculateTimeDuration()} min</p>
+                      <p className=" text-blue-700">{calculateTimeDuration()} min</p>
                     </div>
                   </div>
 
@@ -795,13 +795,13 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                         ? 'bg-green-50 border-green-300 text-green-700' 
                         : 'bg-red-50 border-red-300 text-red-700'
                     }`}>
-                      <p className="font-semibold">Quality Summary</p>
+                      <p className="">Quality Summary</p>
                       <p>Accepted ({accepted.toFixed(2)}) + Rejected ({rejected.toFixed(2)}) + Scrap ({scrap.toFixed(2)}) = {total.toFixed(2)}</p>
                       {total > completed && (
-                        <p className="mt-1 font-semibold">⚠️ Total exceeds completed quantity!</p>
+                        <p className="mt-1 ">⚠️ Total exceeds completed quantity!</p>
                       )}
                       {total === 0 && completed > 0 && (
-                        <p className="mt-1 font-semibold">⚠️ Please specify accepted, rejected, or scrap quantities</p>
+                        <p className="mt-1 ">⚠️ Please specify accepted, rejected, or scrap quantities</p>
                       )}
                       {isValid && (
                         <p className="mt-1">✓ Next operation will receive {accepted.toFixed(2)} units (accepted qty)</p>
@@ -851,14 +851,14 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   <table className="w-full text-xs">
                     <thead className="bg-gray-100 border-b border-gray-200">
                       <tr>
-                        <th className="p-2  py-2 text-left font-semibold text-gray-700">Operator</th>
-                        <th className="p-2  py-2 text-left font-semibold text-gray-700">Workstation</th>
-                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Shift</th>
-                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Time</th>
-                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Completed</th>
-                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Accepted</th>
-                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Type</th>
-                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Action</th>
+                        <th className="p-2  py-2 text-left  text-gray-700">Operator</th>
+                        <th className="p-2  py-2 text-left  text-gray-700">Workstation</th>
+                        <th className="p-2  py-2 text-center  text-gray-700">Shift</th>
+                        <th className="p-2  py-2 text-center  text-gray-700">Time</th>
+                        <th className="p-2  py-2 text-center  text-gray-700">Completed</th>
+                        <th className="p-2  py-2 text-center  text-gray-700">Accepted</th>
+                        <th className="p-2  py-2 text-center  text-gray-700">Type</th>
+                        <th className="p-2  py-2 text-center  text-gray-700">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -906,7 +906,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
             {true && (
             <div>
               <form onSubmit={handleAddRejection} className="mb-6 p-3 bg-gray-50 border border-gray-200 rounded-xs">
-                <h3 className="mb-4 font-semibold text-gray-900 flex items-center gap-2 text-xs">
+                <h3 className="mb-4  text-gray-900 flex items-center gap-2 text-xs">
                   <Plus size={16} /> Add Rejection Entry
                 </h3>
 
@@ -964,11 +964,11 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   <table className="w-full text-xs">
                     <thead className="bg-gray-100 border-b border-gray-200">
                       <tr>
-                        <th className="p-2  py-2 text-left font-semibold text-gray-700">Reason</th>
-                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Qty</th>
-                        <th className="p-2  py-2 text-left font-semibold text-gray-700">Notes</th>
-                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Date</th>
-                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Action</th>
+                        <th className="p-2  py-2 text-left  text-gray-700">Reason</th>
+                        <th className="p-2  py-2 text-center  text-gray-700">Qty</th>
+                        <th className="p-2  py-2 text-left  text-gray-700">Notes</th>
+                        <th className="p-2  py-2 text-center  text-gray-700">Date</th>
+                        <th className="p-2  py-2 text-center  text-gray-700">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -1007,7 +1007,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
             {true && (
             <div>
               <form onSubmit={handleAddDowntime} className="mb-6 p-3 bg-gray-50 border border-gray-200 rounded-xs">
-                <h3 className="mb-4 font-semibold text-gray-900 flex items-center gap-2 text-xs">
+                <h3 className="mb-4  text-gray-900 flex items-center gap-2 text-xs">
                   <Plus size={16} /> Add Downtime Entry
                 </h3>
 
@@ -1087,12 +1087,12 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   <table className="w-full text-xs">
                     <thead className="bg-gray-100 border-b border-gray-200">
                       <tr>
-                        <th className="p-2  py-2 text-left font-semibold text-gray-700">Type</th>
-                        <th className="p-2  py-2 text-left font-semibold text-gray-700">Reason</th>
-                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Time</th>
-                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Duration</th>
-                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Date</th>
-                        <th className="p-2  py-2 text-center font-semibold text-gray-700">Action</th>
+                        <th className="p-2  py-2 text-left  text-gray-700">Type</th>
+                        <th className="p-2  py-2 text-left  text-gray-700">Reason</th>
+                        <th className="p-2  py-2 text-center  text-gray-700">Time</th>
+                        <th className="p-2  py-2 text-center  text-gray-700">Duration</th>
+                        <th className="p-2  py-2 text-center  text-gray-700">Date</th>
+                        <th className="p-2  py-2 text-center  text-gray-700">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -1136,7 +1136,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
 
               {totalAcceptedQty > 0 && (
                 <div className="mb-4 p-3 bg-blue-50 border border-blue-300 rounded-xs">
-                  <p className="text-xs font-semibold text-blue-900">
+                  <p className="text-xs  text-blue-900">
                     📦 Next operation will start with {totalAcceptedQty.toFixed(2)} units
                   </p>
                   <p className="text-xs text-blue-700 mt-1">
@@ -1147,7 +1147,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
               
               <div className="grid grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-2">Next Operator *</label>
+                  <label className="block text-xs  text-gray-700 mb-2">Next Operator *</label>
                   <select
                     value={nextOperationForm.next_operator_id}
                     onChange={(e) => setNextOperationForm({ ...nextOperationForm, next_operator_id: e.target.value })}
@@ -1163,7 +1163,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-2">Warehouse *</label>
+                  <label className="block text-xs  text-gray-700 mb-2">Warehouse *</label>
                   <select
                     value={nextOperationForm.next_warehouse_id}
                     onChange={(e) => setNextOperationForm({ ...nextOperationForm, next_warehouse_id: e.target.value })}
@@ -1179,7 +1179,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-2">Next Operation *</label>
+                  <label className="block text-xs  text-gray-700 mb-2">Next Operation *</label>
                   <select
                     value={nextOperationForm.next_operation_id}
                     onChange={(e) => setNextOperationForm({ ...nextOperationForm, next_operation_id: e.target.value })}
@@ -1196,7 +1196,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
               </div>
 
               <div className="mb-4 p-3 bg-white border border-purple-200 rounded-xs">
-                <label className="block text-xs font-semibold text-gray-700 mb-3">Production Type</label>
+                <label className="block text-xs  text-gray-700 mb-3">Production Type</label>
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input

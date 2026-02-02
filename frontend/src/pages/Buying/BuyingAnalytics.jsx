@@ -249,11 +249,11 @@ export default function BuyingAnalytics() {
               <table className="w-full">
                 <thead className="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
                   <tr>
-                    <th className="p-6  py-2 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">Supplier</th>
-                    <th className="p-6  py-2 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">POs</th>
-                    <th className="p-6  py-2 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">Total Value</th>
-                    <th className="p-6  py-2 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">Avg Value</th>
-                    <th className="p-6  py-2 text-left text-xs font-semibold  text-neutral-900 dark:text-neutral-100">Completion Rate</th>
+                    <th className="p-6  py-2 text-left text-xs   text-neutral-900 dark:text-neutral-100">Supplier</th>
+                    <th className="p-6  py-2 text-left text-xs   text-neutral-900 dark:text-neutral-100">POs</th>
+                    <th className="p-6  py-2 text-left text-xs   text-neutral-900 dark:text-neutral-100">Total Value</th>
+                    <th className="p-6  py-2 text-left text-xs   text-neutral-900 dark:text-neutral-100">Avg Value</th>
+                    <th className="p-6  py-2 text-left text-xs   text-neutral-900 dark:text-neutral-100">Completion Rate</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
@@ -261,10 +261,10 @@ export default function BuyingAnalytics() {
                     <tr key={supplier.supplier_id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800">
                       <td className="p-2 text-xs text-neutral-900 dark:text-neutral-100 font-medium">{supplier.supplier_name}</td>
                       <td className="p-2 text-xs text-neutral-600 dark:text-neutral-400">{supplier.po_count}</td>
-                      <td className="p-2 text-xs text-neutral-900 dark:text-neutral-100 font-semibold">₹{supplier.total_value?.toLocaleString()}</td>
+                      <td className="p-2 text-xs text-neutral-900 dark:text-neutral-100 ">₹{supplier.total_value?.toLocaleString()}</td>
                       <td className="p-2 text-xs text-neutral-600 dark:text-neutral-400">₹{supplier.avg_po_value?.toLocaleString()}</td>
                       <td className="p-2 text-xs">
-                        <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs font-semibold">
+                        <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs ">
                           {supplier.completion_rate}%
                         </span>
                       </td>
@@ -307,7 +307,7 @@ export default function BuyingAnalytics() {
                 {overduePOs.length > 0 ? (
                   overduePOs.map((po) => (
                     <div key={po.po_id} className="text-xs text-red-800 dark:text-red-200 bg-white dark:bg-neutral-800 p-2 rounded border border-red-100 dark:border-red-800">
-                      <p className="font-semibold">{po.po_number} - {po.supplier_name}</p>
+                      <p className="">{po.po_number} - {po.supplier_name}</p>
                       <p>Overdue by {po.days_overdue} days</p>
                       <p className="text-xs">Value: ₹{po.po_value?.toLocaleString()}</p>
                     </div>
@@ -327,7 +327,7 @@ export default function BuyingAnalytics() {
                 {pendingGRNs.length > 0 ? (
                   pendingGRNs.map((grn) => (
                     <div key={grn.po_id} className="text-xs text-amber-800 dark:text-amber-200 bg-white dark:bg-neutral-800 p-2 rounded border border-amber-100 dark:border-amber-800">
-                      <p className="font-semibold">{grn.po_number} - {grn.supplier_name}</p>
+                      <p className="">{grn.po_number} - {grn.supplier_name}</p>
                       <p>Pending Qty: {grn.pending_qty}</p>
                       <p className="text-xs">Value: ₹{grn.po_value?.toLocaleString()}</p>
                     </div>

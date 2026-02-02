@@ -252,7 +252,7 @@ export default function DepartmentDashboard() {
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-xs font-semibold  tracking-wide text-gray-600 mb-2">
+                      <p className="text-xs   tracking-wide text-gray-600 mb-2">
                         {stat.label}
                       </p>
                       <p className={`text-xl  ${stat.textColor}`}>
@@ -277,7 +277,7 @@ export default function DepartmentDashboard() {
                       onClick={() => setActiveTabs({ ...activeTabs, overview: tab.toLowerCase() })}
                       className={`text-xs font-medium px-0 py-2 whitespace-nowrap border-b-2 -mb-0.5 transition-colors ${
                         activeTabs.overview === tab.toLowerCase()
-                          ? 'border-blue-600 text-blue-600 font-semibold'
+                          ? 'border-blue-600 text-blue-600 '
                           : 'border-transparent text-gray-400 hover:text-gray-600'
                       }`}
                     >
@@ -389,7 +389,7 @@ export default function DepartmentDashboard() {
                           onClick={() => setActiveTabs({ ...activeTabs, warehouse: tab.toLowerCase() })}
                           className={`text-xs font-medium px-0 py-2 border-b-2 -mb-0.5 transition-colors ${
                             activeTabs.warehouse === tab.toLowerCase()
-                              ? 'border-blue-600 text-blue-600 font-semibold'
+                              ? 'border-blue-600 text-blue-600 '
                               : 'border-transparent text-gray-400 hover:text-gray-600'
                           }`}
                         >
@@ -401,7 +401,7 @@ export default function DepartmentDashboard() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => setWarehouseChartType('donut')}
-                          className={`p-2  py-1 rounded text-xs font-semibold transition-colors ${
+                          className={`p-2  py-1 rounded text-xs  transition-colors ${
                             warehouseChartType === 'donut'
                               ? 'bg-blue-600 text-white'
                               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -411,7 +411,7 @@ export default function DepartmentDashboard() {
                         </button>
                         <button
                           onClick={() => setWarehouseChartType('bar')}
-                          className={`p-2  py-1 rounded text-xs font-semibold transition-colors ${
+                          className={`p-2  py-1 rounded text-xs  transition-colors ${
                             warehouseChartType === 'bar'
                               ? 'bg-blue-600 text-white'
                               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -516,7 +516,7 @@ export default function DepartmentDashboard() {
                             <p className="text-xs  text-red-700 mb-1">
                               {Number(item.current_qty).toFixed(2)} units
                             </p>
-                            <p className="text-xs text-red-500 font-semibold">
+                            <p className="text-xs text-red-500 ">
                               ₹{(Number(item.total_value) || 0).toLocaleString()}
                             </p>
                           </div>

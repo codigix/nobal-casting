@@ -144,13 +144,13 @@ const ToolMasterList = () => {
             <table className="w-full">
               <thead className="bg-gray-100 border-b">
                 <tr>
-                  <th className="p-6  py-2 text-left text-xs font-semibold  text-gray-900">Tool Name</th>
-                  <th className="p-6  py-2 text-left text-xs font-semibold  text-gray-900">Tool Code</th>
-                  <th className="p-6  py-2 text-left text-xs font-semibold  text-gray-900">Type</th>
-                  <th className="p-6  py-2 text-left text-xs font-semibold  text-gray-900">Location</th>
-                  <th className="p-6  py-2 text-left text-xs font-semibold  text-gray-900">Status</th>
-                  <th className="p-6  py-2 text-left text-xs font-semibold  text-gray-900">Cost</th>
-                  <th className="p-6  py-2 text-center text-xs font-semibold  text-gray-900">Actions</th>
+                  <th className="p-6  py-2 text-left text-xs   text-gray-900">Tool Name</th>
+                  <th className="p-6  py-2 text-left text-xs   text-gray-900">Tool Code</th>
+                  <th className="p-6  py-2 text-left text-xs   text-gray-900">Type</th>
+                  <th className="p-6  py-2 text-left text-xs   text-gray-900">Location</th>
+                  <th className="p-6  py-2 text-left text-xs   text-gray-900">Status</th>
+                  <th className="p-6  py-2 text-left text-xs   text-gray-900">Cost</th>
+                  <th className="p-6  py-2 text-center text-xs   text-gray-900">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -210,7 +210,7 @@ const ToolMasterList = () => {
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-3 space-y-4 max-h-96 overflow-y-auto">
+            <form onSubmit={handleSubmit} className="p-3 space-y-2 max-h-96 overflow-y-auto">
               <div>
                 <label className="block text-xs  text-gray-700 mb-1">Tool Name *</label>
                 <input

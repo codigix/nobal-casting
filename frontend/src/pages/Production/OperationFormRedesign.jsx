@@ -374,7 +374,7 @@ export default function OperationFormRedesign() {
                 </div>
               </div>
               <div className="p-3">
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {subOperations.map((row, idx) => (
                     <div 
                       key={row._key} 
@@ -434,7 +434,7 @@ export default function OperationFormRedesign() {
             <div className="bg-white rounded border border-slate-200  p-3 space-y-6">
               <h3 className="text-xs  text-slate-900  border-b border-slate-50 pb-4">Options</h3>
               
-              <div className="space-y-4">
+              <div className="space-y-2">
                 <label className="flex items-start gap-3 p-2 rounded hover:bg-slate-50 transition-colors cursor-pointer group">
                   <div className="mt-0.5">
                     <input 

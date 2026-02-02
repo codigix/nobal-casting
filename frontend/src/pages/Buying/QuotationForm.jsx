@@ -257,7 +257,7 @@ export default function QuotationForm() {
               </div>
 
               {formData.items.length > 0 ? (
-                <div className="space-y-4 pt-4">
+                <div className="space-y-2 pt-4">
                   <div className="flex items-center justify-between border-b border-neutral-900 pb-2">
                     <h3 className="text-[11px] font-black text-neutral-900  tracking-[0.3em]">Quotation Items</h3>
                     <span className="text-[10px]  text-neutral-400">{formData.items.length} ITEMS</span>

@@ -1017,9 +1017,9 @@ const ChartContainer = ({ children, title, subtitle }) => (
       )}
 
       {activeTab === 'production' && (
-        <div className="space-y-4">
+        <div className="space-y-2">
           <div className="flex gap-2 items-center">
-            <span className="text-xs font-semibold text-gray-600 mr-2">Schedule:</span>
+            <span className="text-xs  text-gray-600 mr-2">Schedule:</span>
             {['weekly', 'monthly', 'yearly'].map(type => (
               <button
                 key={type}
@@ -1115,9 +1115,9 @@ const ChartContainer = ({ children, title, subtitle }) => (
 
       {activeTab === 'workorders' && (
         <div className="space-y-6">
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div className="flex gap-2 items-center">
-              <span className="text-xs font-semibold text-gray-600 mr-2">Schedule:</span>
+              <span className="text-xs  text-gray-600 mr-2">Schedule:</span>
               {['weekly', 'monthly', 'yearly'].map(type => (
                 <button
                   key={type}
@@ -1244,9 +1244,9 @@ const ChartContainer = ({ children, title, subtitle }) => (
 
       {activeTab === 'boms' && (
         <div className="space-y-6">
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div className="flex gap-2 items-center">
-              <span className="text-xs font-semibold text-gray-600 mr-2">Schedule:</span>
+              <span className="text-xs  text-gray-600 mr-2">Schedule:</span>
               {['weekly', 'monthly', 'yearly'].map(type => (
                 <button
                   key={type}
@@ -1333,9 +1333,9 @@ const ChartContainer = ({ children, title, subtitle }) => (
 
       {activeTab === 'prodplans' && (
         <div className="space-y-6">
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div className="flex gap-2 items-center">
-              <span className="text-xs font-semibold text-gray-600 mr-2">Schedule:</span>
+              <span className="text-xs  text-gray-600 mr-2">Schedule:</span>
               {['weekly', 'monthly', 'yearly'].map(type => (
                 <button
                   key={type}
@@ -1434,9 +1434,9 @@ const ChartContainer = ({ children, title, subtitle }) => (
 
       {activeTab === 'jobcards' && (
         <div className="space-y-6">
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div className="flex gap-2 items-center">
-              <span className="text-xs font-semibold text-gray-600 mr-2">Schedule:</span>
+              <span className="text-xs  text-gray-600 mr-2">Schedule:</span>
               {['weekly', 'monthly', 'yearly'].map(type => (
                 <button
                   key={type}

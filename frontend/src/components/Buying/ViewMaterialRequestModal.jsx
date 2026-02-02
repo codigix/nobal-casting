@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useAuth } from '../../hooks/AuthContext'
 import api from '../../services/api'
 import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react'
 
 export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStatusChange }) {
+  const { user } = useAuth()
   const [request, setRequest] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -119,12 +121,17 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
           }
           
           const requestedQty = parseFloat(item.qty || 0)
-          const hasRequiredQty = availableQty >= requestedQty
+          const issuedQty = parseFloat(item.issued_qty || 0)
+          const pendingQty = requestedQty - issuedQty
+          const hasRequiredQty = availableQty >= pendingQty
           
           stockInfo[item.item_code] = {
             available: availableQty,
             requested: requestedQty,
-            isAvailable: itemExists && availableQty > 0 && hasRequiredQty,
+            pending: pendingQty,
+            isAvailable: itemExists && availableQty > 0 && (pendingQty <= 0 || availableQty >= pendingQty),
+            hasStock: itemExists && availableQty > 0,
+            isPartial: itemExists && availableQty > 0 && availableQty < pendingQty,
             warehouse: warehouseName,
             breakdown: stockBreakdown,
             foundInInventory: itemExists,
@@ -134,6 +141,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
           stockInfo[item.item_code] = {
             available: 0,
             requested: parseFloat(item.qty || 0),
+            pending: parseFloat(item.qty || 0) - parseFloat(item.issued_qty || 0),
             isAvailable: false,
             warehouse: warehouseName,
             foundInInventory: false,
@@ -179,8 +187,25 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
         return
       }
 
+      // Identify available items to process if it's a stock transaction
+      let itemsToProcess = null
+      if (isTransferOrIssue) {
+        itemsToProcess = request?.items?.filter(item => {
+          const stock = stockData[item.item_code]
+          const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
+          return stock && stock.hasStock && pendingQty > 0
+        }).map(item => item.item_code)
+
+        if (!itemsToProcess || itemsToProcess.length === 0) {
+          setError('No available items to release at this moment.')
+          setLoading(false)
+          return
+        }
+      }
+
       const payload = { 
-        approvedBy: 'User'
+        approvedBy: user?.id || user?.user_id || 'User',
+        itemsToProcess // Pass the specific items to release
       }
       
       if (isTransferOrIssue) {
@@ -188,7 +213,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
       }
       
       const response = await api.patch(`/material-requests/${mrId}/approve`, payload)
-      setSuccess(response.data.message || 'Material request approved successfully')
+      setSuccess(response.data.message || 'Material request processed successfully')
       
       // Dispatch event to notify other components (like Stock Balance) to refresh
       window.dispatchEvent(new CustomEvent('materialRequestApproved', { detail: { mrId } }))
@@ -247,21 +272,35 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
       setError(null)
       const unavailableItems = request?.items?.filter(item => {
         const stock = stockData[item.item_code]
-        return stock && (!stock.foundInInventory || !stock.isAvailable)
+        const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
+        // Item is "unavailable" for PO if it's not fully in stock
+        return stock && (!stock.isAvailable || !stock.foundInInventory) && pendingQty > 0
       }) || []
 
       if (unavailableItems.length === 0) {
-        setError('No unavailable items to purchase')
+        setError('No unavailable items with pending quantity to purchase')
+        setLoading(false)
         return
       }
 
-      const itemsToOrder = unavailableItems.map(item => ({
-        item_code: item.item_code,
-        item_name: item.item_name,
-        qty: item.qty,
-        uom: item.uom || 'Kg',
-        rate: parseFloat(item.rate || 0)
-      }))
+      const itemsToOrder = unavailableItems.map(item => {
+        const stock = stockData[item.item_code]
+        const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
+        const availableQty = stock ? stock.available : 0
+        return {
+          item_code: item.item_code,
+          item_name: item.item_name,
+          qty: Math.max(0, pendingQty - availableQty), // Order only what's actually missing
+          uom: item.uom || 'Kg',
+          rate: parseFloat(item.rate || 0)
+        }
+      }).filter(i => i.qty > 0)
+
+      if (itemsToOrder.length === 0) {
+        setError('Pending quantities are already covered by available stock. Please release them instead.')
+        setLoading(false)
+        return
+      }
 
       const poData = {
         mr_id: mrId,
@@ -284,6 +323,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
     const colors = {
       draft: 'warning',
       approved: 'success',
+      partial: 'info',
       completed: 'success',
       converted: 'info',
       cancelled: 'danger',
@@ -291,6 +331,18 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
     }
     return <Badge color={colors[status] || 'secondary'} className=" text-xs p-1">{status}</Badge>
   }
+
+  const isTransferOrIssue = ['material_issue', 'material_transfer'].includes(request?.purpose)
+  const anyAvailable = request?.items?.some(item => {
+    const stock = stockData[item.item_code]
+    const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
+    return stock && stock.hasStock && pendingQty > 0
+  })
+  const anyUnavailable = request?.items?.some(item => {
+    const stock = stockData[item.item_code]
+    const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
+    return stock && (!stock.isAvailable || !stock.foundInInventory) && pendingQty > 0
+  })
 
   if (!request && loading) {
     return (
@@ -402,16 +454,29 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                       {request?.items?.map((item, idx) => {
                         const stock = stockData[item.item_code]
                         const isAvailable = stock?.isAvailable
+                        const issuedQty = Number(item.issued_qty || 0)
+                        const pendingQty = Number(item.qty) - issuedQty
+                        
                         return (
                           <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                             <td className="p-2 ">
                               <p className="  text-slate-900 leading-tight">{item.item_code}</p>
                               <p className="text-xs text-slate-500 mt-1">{item.item_name}</p>
+                              {issuedQty > 0 && (
+                                <p className="text-[10px] text-emerald-600 mt-0.5">Issued: {issuedQty} {item.uom}</p>
+                              )}
                             </td>
                             <td className="p-2  text-center">
-                              <span className="inline-flex items-center p-1 rounded text-xs font-medium bg-slate-100 text-slate-800">
-                                {item.qty} {item.uom}
-                              </span>
+                              <div className="flex flex-col items-center gap-1">
+                                <span className="inline-flex items-center p-1 rounded text-xs font-medium bg-slate-100 text-slate-800">
+                                  {item.qty} {item.uom}
+                                </span>
+                                {issuedQty > 0 && (
+                                  <span className="text-[10px] text-slate-400">
+                                    Pending: {pendingQty > 0 ? pendingQty : 0}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="p-2  text-center font-mono text-xs">
                               {stock ? (
@@ -434,13 +499,23 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                               ) : '---'}
                             </td>
                             <td className="p-2  text-right">
-                              {stock ? (
-                                <Badge color={isAvailable ? 'success' : 'danger'} className="text-xs px-2 py-1 tracking-wider">
-                                  {isAvailable ? 'In Stock' : 'Out of Stock'}
-                                </Badge>
-                              ) : (
-                                <span className="text-slate-300">--</span>
-                              )}
+                              <div className="flex flex-col items-end gap-1">
+                                {stock ? (
+                                  <Badge 
+                                    color={stock.isAvailable ? 'success' : (stock.hasStock ? 'warning' : 'danger')} 
+                                    className="text-xs px-2 py-1 tracking-wider"
+                                  >
+                                    {stock.isAvailable ? 'In Stock' : (stock.hasStock ? 'Limited Stock' : 'Out of Stock')}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-slate-300">--</span>
+                                )}
+                                {item.status && (
+                                  <Badge color={item.status === 'completed' ? 'success' : 'warning'} className="text-[9px] px-1 py-0">
+                                    {item.status.toUpperCase()}
+                                  </Badge>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         )
@@ -523,13 +598,12 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                       </div>
                     </div>
                   )}
-                  {['material_issue', 'material_transfer'].includes(request?.purpose) && 
-                    Object.values(stockData).some(s => !s.isAvailable) && (
+                  {isTransferOrIssue && anyUnavailable && (
                     <div className="p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800 flex gap-2 mb-3">
                       <AlertTriangle size={14} className="shrink-0 text-amber-600" />
                       <div>
-                        <strong>Insufficient Stock:</strong> Some items are not available in the selected warehouse. Authorize Request is disabled.
-                        <p className="mt-1  ">Use "Create Purchase Order" to buy missing items.</p>
+                        <strong>Insufficient Stock:</strong> Some items are not available in the selected warehouse.
+                        <p className="mt-1  ">You can release available items now and create a Purchase Order for the rest.</p>
                       </div>
                     </div>
                   )}
@@ -607,36 +681,38 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                 <Button
                   onClick={handleApprove}
                   variant="success"
-                  disabled={loading || (['material_issue', 'material_transfer'].includes(request?.purpose) && Object.values(stockData).some(s => !s.isAvailable))}
+                  disabled={loading || (isTransferOrIssue && !anyAvailable)}
                   className="p-2  shadow-lg shadow-emerald-600/20  text-xs rounded  flex items-center gap-2"
                 >
-                  {['material_issue', 'material_transfer'].includes(request?.purpose) ? 'Release Materials' : 'Authorize Request'} <CheckCircle size={16} />
+                  {isTransferOrIssue ? 'Release Materials' : 'Authorize Request'} <CheckCircle size={16} />
                 </Button>
               </div>
             )}
 
-            {request?.status === 'pending' && (
+            {(request?.status === 'pending' || request?.status === 'partial' || (request?.status === 'approved' && isTransferOrIssue)) && (
               <div className="flex items-center gap-3">
-                <Button
-                  onClick={handleReject}
-                  variant="outline-danger"
-                  className="p-2 text-xs border-2   tracking-wider rounded "
-                >
-                  Reject
-                </Button>
+                {request?.status === 'pending' && (
+                  <Button
+                    onClick={handleReject}
+                    variant="outline-danger"
+                    className="p-2 text-xs border-2   tracking-wider rounded "
+                  >
+                    Reject
+                  </Button>
+                )}
                 <Button
                   onClick={handleApprove}
                   variant="success"
-                  disabled={loading || (['material_issue', 'material_transfer'].includes(request?.purpose) && Object.values(stockData).some(s => !s.isAvailable))}
+                  disabled={loading || (isTransferOrIssue && !anyAvailable)}
                   className="p-2  shadow-lg shadow-emerald-600/20  text-xs rounded  flex items-center gap-2"
                 >
-                  {['material_issue', 'material_transfer'].includes(request?.purpose) ? 'Release Materials' : 'Authorize Request'} <CheckCircle size={16} />
+                  {isTransferOrIssue ? 'Release Materials' : 'Authorize Request'} <CheckCircle size={16} />
                 </Button>
               </div>
             )}
 
             {((request?.status === 'approved' && request?.purpose === 'purchase') || 
-              (request?.status === 'draft' && Object.values(stockData).some(s => !s.isAvailable))) && (
+              (['draft', 'pending', 'approved', 'partial'].includes(request?.status) && anyUnavailable)) && (
               <Button
                 onClick={handleCreatePO}
                 variant="primary"

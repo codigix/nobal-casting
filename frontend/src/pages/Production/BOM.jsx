@@ -109,7 +109,7 @@ const StatusBadge = ({ status }) => {
 const BOMTypeBadge = ({ type }) => {
   const isFG = type === 'Finished Good'
   return (
-    <span className={`inline-flex items-center gap-1.5 p-1 rounded text-xs    border   ${
+    <span className={`inline-flex items-center gap-1.5 p-1 rounded text-[10px]    border   ${
       isFG 
         ? 'bg-indigo-50 text-indigo-700 border-indigo-100' 
         : 'bg-cyan-50 text-cyan-700 border-cyan-100'
@@ -300,7 +300,7 @@ export default function BOM() {
   const columns = [
     {
       key: 'item_code',
-      label: 'Formulation Intelligence',
+      label: 'BOM ID / Names',
       render: (value, row) => (
         <div 
           onClick={() => handleEdit(row)}
@@ -308,17 +308,17 @@ export default function BOM() {
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-100 transition-all duration-300  ">
-              <Database size={20} strokeWidth={2.5} />
+              <Database size={15} strokeWidth={2.5} />
             </div>
             <div>
               <div className="text-xs text-slate-800 group-hover:text-indigo-600 transition-colors   flex items-center gap-2">
                 {row.product_name}
                 <ChevronRight size={12} className=" transition-all -translate-x-2 group-hover:translate-x-0" />
               </div>
-              <div className="flex items-center gap-2 mt-0.5">
+              <div className="grid items-center">
                 <span className="text-xs  text-slate-400 font-mono ">{row.bom_id}</span>
-                <span className="w-1 h-1 rounded bg-slate-200" />
-                <span className="text-xs  text-slate-400 ">{row.item_code}</span>
+                
+                <span className="text-xs  text-slate-400 font-mono ">{row.item_code}</span>
               </div>
             </div>
           </div>
@@ -327,27 +327,27 @@ export default function BOM() {
     },
     {
       key: 'bom_type',
-      label: 'Strategic Type',
+      label: 'BOM TYpe',
       render: (value, row) => <BOMTypeBadge type={getBOMType(row)} />
     },
-    {
-      key: 'quantity',
-      label: 'Standard Batch',
-      render: (value, row) => (
-        <div className="flex flex-col">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs  text-slate-700">
-              {parseFloat(row.quantity || 0).toLocaleString()} 
-            </span>
-            <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-xs  rounded ">{row.uom}</span>
-          </div>
-          <span className="text-xs  text-slate-400 mt-1 ">Base Unit Qty</span>
-        </div>
-      )
-    },
+    // {
+    //   key: 'quantity',
+    //   label: 'Standard Batch',
+    //   render: (value, row) => (
+    //     <div className="flex flex-col">
+    //       <div className="flex items-center gap-1.5">
+    //         <span className="text-xs  text-slate-700">
+    //           {parseFloat(row.quantity || 0).toLocaleString()} 
+    //         </span>
+    //         <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-xs  rounded ">{row.uom}</span>
+    //       </div>
+    //       <span className="text-xs  text-slate-400 mt-1 ">Base Unit Qty</span>
+    //     </div>
+    //   )
+    // },
     {
       key: 'total_cost',
-      label: 'Cost Intelligence',
+      label: 'Cost',
       render: (value, row) => {
         const cost = parseFloat(row.total_cost || 0)
         const qty = parseFloat(row.quantity || 1)
@@ -370,12 +370,12 @@ export default function BOM() {
     },
     {
       key: 'status',
-      label: 'Lifecycle',
+      label: 'Status',
       render: (value, row) => <StatusBadge status={row.status || 'draft'} />
     },
     {
       key: 'updated_at',
-      label: 'Audit Trail',
+      label: 'Updated Date',
       render: (value, row) => (
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5 text-slate-600">

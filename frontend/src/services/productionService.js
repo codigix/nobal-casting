@@ -146,12 +146,18 @@ export const generateJobCardsForWorkOrder = async (work_order_id) => {
   return response.data
 }
 
-// Production Plans (extended)
+// Production Planning (extended)
 export const getProductionPlanDetails = async (plan_id) => {
-  const response = await api.get(`/production/plans/${plan_id}`)
+  const response = await api.get(`/production-planning/${plan_id}`)
   return response.data
 }
 
+export const createWorkOrdersFromPlan = async (plan_id) => {
+  const response = await api.post(`/production-planning/${plan_id}/create-work-orders`)
+  return response.data
+}
+
+// Production Plans (extended)
 export const updateProductionPlan = async (plan_id, data) => {
   const response = await api.put(`/production/plans/${plan_id}`, data)
   return response.data

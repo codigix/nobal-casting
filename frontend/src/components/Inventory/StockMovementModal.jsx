@@ -212,10 +212,10 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
       {error && <Alert type="danger" className="mb-4">{error}</Alert>}
       {formError && <Alert type="warning" className="mb-4">{formError}</Alert>}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-2">
         {/* Purpose Selection */}
         <div>
-          <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+          <label className="block text-xs  text-neutral-900 dark:text-neutral-100 mb-2">
             Movement Purpose *
           </label>
           <select
@@ -248,7 +248,7 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
 
         {/* Movement Type Selection */}
         <div>
-          <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-3">
+          <label className="block text-xs  text-neutral-900 dark:text-neutral-100 mb-3">
             Movement Type
           </label>
           <div className="grid grid-cols-3 gap-3">
@@ -263,7 +263,7 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
             >
               <ArrowDown size={20} className="text-green-600" />
               <div className="text-left">
-                <p className="font-semibold text-neutral-900 dark:text-neutral-100">Stock IN</p>
+                <p className=" text-neutral-900 dark:text-neutral-100">Stock IN</p>
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">Add to inventory</p>
               </div>
             </button>
@@ -278,7 +278,7 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
             >
               <ArrowUp size={20} className="text-red-600" />
               <div className="text-left">
-                <p className="font-semibold text-neutral-900 dark:text-neutral-100">Stock OUT</p>
+                <p className=" text-neutral-900 dark:text-neutral-100">Stock OUT</p>
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">Remove from inventory</p>
               </div>
             </button>
@@ -293,7 +293,7 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
             >
               <ArrowDown size={20} className="text-blue-600" style={{ transform: 'rotate(-90deg)' }} />
               <div className="text-left">
-                <p className="font-semibold text-neutral-900 dark:text-neutral-100">Transfer</p>
+                <p className=" text-neutral-900 dark:text-neutral-100">Transfer</p>
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">Move between warehouses</p>
               </div>
             </button>
@@ -302,7 +302,7 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
 
         {/* Item Selection */}
         <div>
-          <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+          <label className="block text-xs  text-neutral-900 dark:text-neutral-100 mb-2">
             Item *
           </label>
           <select
@@ -329,7 +329,7 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
         {formData.movement_type === 'TRANSFER' ? (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+              <label className="block text-xs  text-neutral-900 dark:text-neutral-100 mb-2">
                 Source Warehouse *
               </label>
               <select
@@ -347,7 +347,7 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+              <label className="block text-xs  text-neutral-900 dark:text-neutral-100 mb-2">
                 Target Warehouse *
               </label>
               <select
@@ -367,7 +367,7 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
           </div>
         ) : (
           <div>
-            <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+            <label className="block text-xs  text-neutral-900 dark:text-neutral-100 mb-2">
               Warehouse *
             </label>
             <select
@@ -388,7 +388,7 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
 
         {/* Quantity */}
         <div>
-          <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+          <label className="block text-xs  text-neutral-900 dark:text-neutral-100 mb-2">
             Quantity *
           </label>
           <input
@@ -404,7 +404,7 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
 
         {/* Reference Type */}
         <div>
-          <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+          <label className="block text-xs  text-neutral-900 dark:text-neutral-100 mb-2">
             Reference Type
           </label>
           <select
@@ -423,7 +423,7 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
 
         {/* Reference Name */}
         <div>
-          <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+          <label className="block text-xs  text-neutral-900 dark:text-neutral-100 mb-2">
             Reference Name (Optional)
           </label>
           <input
@@ -438,7 +438,7 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
 
         {/* Notes */}
         <div>
-          <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+          <label className="block text-xs  text-neutral-900 dark:text-neutral-100 mb-2">
             Notes
           </label>
           <textarea

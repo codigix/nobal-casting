@@ -45,14 +45,14 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
           <Icon size={20} strokeWidth={2.5} />
         </div>
         <div>
-          <h2 className="text-sm font-bold flex items-center gap-3">
-            <span className={`${theme.text} uppercase tracking-wider`}>{title.split(' ')[0]}</span>
+          <h2 className="text-xs  flex items-center gap-3">
+            <span className={`${theme.text} `}>{title.split(' ')[0]}</span>
             <span className="text-slate-800 ">{title.split(' ').slice(1).join(' ')}</span>
           </h2>
           {subtitle && <p className="text-xs font-medium text-slate-400">{subtitle}</p>}
         </div>
         {badge && (
-          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-[10px] font-bold rounded-full border ${theme.border} uppercase tracking-widest`}>
+          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-[10px]  rounded-full border ${theme.border} uppercase tracking-widest`}>
             {badge}
           </span>
         )}
@@ -92,7 +92,7 @@ const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = '
       <div className={`p-1.5 rounded transition-all duration-300 ${isActive ? 'bg-white scale-110' : 'bg-slate-50 group-hover:bg-white'}`}>
         <Icon size={14} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
       </div>
-      <span className="text-xs font-semibold tracking-tight uppercase">{label}</span>
+      <span className="text-xs  tracking-tight uppercase">{label}</span>
       {isActive && <div className="w-1 h-1 rounded bg-current animate-pulse ml-0.5" />}
     </button>
   )
@@ -104,10 +104,10 @@ const SectionTitle = ({ title, icon: Icon, badge }) => (
       <div className="p-2 bg-indigo-50 text-indigo-600 rounded">
         <Icon size={18} />
       </div>
-      <h3 className="text-xs text-slate-900 font-semibold">{title}</h3>
+      <h3 className="text-xs text-slate-900 ">{title}</h3>
     </div>
     {badge && (
-      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded-full border border-slate-200 uppercase tracking-wider">
+      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px]  rounded-full border border-slate-200 ">
         {badge}
       </span>
     )}
@@ -121,7 +121,7 @@ const FieldWrapper = ({ label, children, error, required }) => (
         {label}
         {required && <span className="text-rose-500">*</span>}
       </label>
-      {error && <span className="text-[10px] font-semibold text-rose-500 animate-pulse">{error}</span>}
+      {error && <span className="text-[10px]  text-rose-500 animate-pulse">{error}</span>}
     </div>
     {children}
   </div>
@@ -135,7 +135,7 @@ const StatusBadge = ({ status }) => {
     cancelled: 'bg-rose-50 text-rose-600 border-rose-100'
   }
   return (
-    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider ${styles[status?.toLowerCase()] || styles.draft}`}>
+    <span className={`px-2.5 py-1 rounded-full text-[10px]  border  ${styles[status?.toLowerCase()] || styles.draft}`}>
       {status || 'DRAFT'}
     </span>
   )
@@ -159,9 +159,9 @@ const InfoRow = ({ label, value, icon: Icon, className = "", color = "indigo" })
         <div className={`p-1.5 rounded-lg ${themeClass}`}>
           {Icon && <Icon size={12} />}
         </div>
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</span>
+        <span className="text-[10px]  text-slate-400 uppercase tracking-widest">{label}</span>
       </div>
-      <span className="text-xs font-bold text-slate-700 truncate pl-1">
+      <span className="text-xs  text-slate-700 truncate pl-1">
         {value || <span className="text-slate-300 font-normal italic">Not specified</span>}
       </span>
     </div>
@@ -1109,7 +1109,7 @@ export default function SalesOrderForm() {
       <div className="0">
         {/* 1. Finished Goods Section */}
         {bomFinishedGoods.length > 0 && (
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-600 text-white rounded  shadow-lg shadow-blue-100">
@@ -1120,7 +1120,7 @@ export default function SalesOrderForm() {
                   <p className="text-xs text-slate-400 ">Output Configuration</p>
                 </div>
               </div>
-              <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs  rounded-full border border-blue-100 er">
+              <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs  rounded-full border border-blue-100">
                 {bomFinishedGoods.length} Specification
               </span>
             </div>
@@ -1199,7 +1199,7 @@ export default function SalesOrderForm() {
 
         {/* 2. Sub-Assemblies Section */}
         {bomSubAssemblies.length > 0 && (
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-amber-500 text-white rounded  shadow-lg shadow-amber-100">
@@ -1210,7 +1210,7 @@ export default function SalesOrderForm() {
                   <p className="text-xs text-slate-400 ">Intermediate Protocol</p>
                 </div>
               </div>
-              <span className="px-3 py-1 bg-amber-50 text-amber-600 text-xs  rounded-full border border-amber-100 er">
+              <span className="px-3 py-1 bg-amber-50 text-amber-600 text-xs  rounded-full border border-amber-100">
                 {bomSubAssemblies.length} NODES
               </span>
             </div>
@@ -1264,7 +1264,7 @@ export default function SalesOrderForm() {
 
         {/* 3. Raw Materials Section */}
         {bomRawMaterials.length > 0 && (
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-emerald-600 text-white rounded  shadow-lg shadow-emerald-100">
@@ -1287,7 +1287,7 @@ export default function SalesOrderForm() {
                     {refreshingBom ? 'Syncing...' : 'Sync Protocol'}
                   </button>
                 )}
-                <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-xs  rounded-full border border-emerald-100 er">
+                <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-xs  rounded-full border border-emerald-100">
                   {bomRawMaterials.length} RESOURCES
                 </span>
               </div>
@@ -1355,7 +1355,7 @@ export default function SalesOrderForm() {
 
         {/* 4. Operations Section */}
         {bomOperations.length > 0 && (
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-indigo-600 text-white rounded  shadow-lg shadow-indigo-100">
@@ -1366,7 +1366,7 @@ export default function SalesOrderForm() {
                   <p className="text-xs text-slate-400 ">Operational Sequence</p>
                 </div>
               </div>
-              <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs  rounded-full border border-indigo-100 er">
+              <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs  rounded-full border border-indigo-100">
                 {bomOperations.length} STEPS
               </span>
             </div>
@@ -1479,7 +1479,7 @@ export default function SalesOrderForm() {
             </div>
             <div className="text-right">
               <span className="text-[9px]  text-slate-400  block mb-1">Total Volume</span>
-              <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs  rounded-full border border-blue-100 er">
+              <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs  rounded-full border border-blue-100">
                 {qty} UNITS
               </span>
             </div>
@@ -1536,7 +1536,7 @@ export default function SalesOrderForm() {
                 <div className="flex flex-col">
                   <span className="text-xs  text-slate-400 mb-2">Grand Total Payable</span>
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 bg-slate-900 text-white text-[8px]  rounded er">
+                    <span className="px-2 py-0.5 bg-slate-900 text-white text-[8px]  rounded">
                       FINAL INVOICE
                     </span>
                     <div className="flex -space-x-1">
@@ -1573,7 +1573,7 @@ export default function SalesOrderForm() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-2/50 pb-20">
+    <div className="min-h-screen bg-slate-50 p-2 pb-3">
       {/* 1. Global Command Header */}
       <div className="sticky top-0 z-[40] bg-white/80 backdrop-blur-xl border-b border-slate-200/60 transition-all duration-300">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -1702,7 +1702,7 @@ export default function SalesOrderForm() {
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Order Valuation</span>
+                  <span className="text-[10px]  text-slate-400 uppercase tracking-widest">Order Valuation</span>
                 </div>
                 <div className="text-sm font-black text-white tracking-tight">
                   {formatCurrency(calculateBomGrandTotal())}

@@ -269,7 +269,7 @@ export default function InventoryDashboard() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`p-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+              className={`p-2 text-xs  border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-600 hover:text-gray-900'
@@ -580,11 +580,11 @@ export default function InventoryDashboard() {
               <h2 className="text-lg  mb-6 flex items-center gap-2 text-gray-900">
                 <Warehouse size={20} /> Warehouse Utilization
               </h2>
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {chartData.warehouseUtilization.map((wh, idx) => (
                   <div key={idx}>
                     <div className="flex justify-between mb-2">
-                      <span className="text-xs font-semibold text-gray-700">{wh.name}</span>
+                      <span className="text-xs  text-gray-700">{wh.name}</span>
                       <span className="text-xs text-gray-500">{wh.items} items</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3">

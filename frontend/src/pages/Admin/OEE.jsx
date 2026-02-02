@@ -61,11 +61,11 @@ const StatCard = ({ label, value, subValue, icon: Icon, color, trend, unit = "%"
       </div>
       <div className="flex items-baseline gap-1">
         <h3 className={`text-xl  m-0 ${color.replace('bg-', 'text-')}`}>{value}</h3>
-        {unit && <span className={`text-xl font-semibold ${color.replace('bg-', 'text-')}`}>{unit}</span>}
+        {unit && <span className={`text-xl  ${color.replace('bg-', 'text-')}`}>{unit}</span>}
       </div>
       <div className="flex items-center gap-1.5 mt-4">
         {trend === 'up' ? <TrendingUp size={14} className="text-emerald-500" /> : <TrendingUp size={14} className="text-rose-500 rotate-180" />}
-        <span className={`text-xs font-semibold ${trend === 'up' ? 'text-emerald-600' : 'text-rose-600'}`}>{subValue}</span>
+        <span className={`text-xs  ${trend === 'up' ? 'text-emerald-600' : 'text-rose-600'}`}>{subValue}</span>
       </div>
     </div>
   </div>
@@ -96,7 +96,7 @@ const MachineCard = ({ machine, onClick }) => {
             <div className="flex items-center gap-2 mt-1">
               <span className="text-xs font-medium text-slate-400 ">{machine.id}</span>
               <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-              <span className="text-xs font-semibold text-indigo-500 ">{machine.line}</span>
+              <span className="text-xs  text-indigo-500 ">{machine.line}</span>
             </div>
           </div>
         </div>
@@ -655,7 +655,7 @@ const lineMetrics = useMemo(() => {
             <span className="text-xs font-medium text-white  mb-4">Overall OEE</span>
             <div className="flex items-baseline gap-1">
               <h3 className="text-xl  text-white m-0">{Math.round(plantOEE)}</h3>
-              <span className="text-xl font-semibold text-white">%</span>
+              <span className="text-xl  text-white">%</span>
             </div>
             <div className="w-full h-2.5 bg-white/20 rounded-full mt-6 overflow-hidden">
               <div className="h-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.8)]" style={{ width: `${plantOEE}%` }}></div>
@@ -796,7 +796,7 @@ const lineMetrics = useMemo(() => {
               </div>
               <div>
                 <h3 className="text-xl  text-slate-800 tracking-tight m-0 ">Line Performance Analytics</h3>
-                <p className="text-slate-500 text-xs font-semibold m-0 mt-1 ">Granular breakdown of production line efficiency and cycle times</p>
+                <p className="text-slate-500 text-xs  m-0 mt-1 ">Granular breakdown of production line efficiency and cycle times</p>
               </div>
             </div>
             
@@ -920,14 +920,14 @@ const lineMetrics = useMemo(() => {
                 <h3 className="text-base  text-slate-800 tracking-tight m-0 ">Top Bottleneck Insights</h3>
               </div>
               
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {topLosses.map((item, i) => (
                   <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded border border-slate-100 hover:border-slate-300 transition-all">
                     <div className="flex items-center gap-4">
                       <div className={`w-2 h-12 rounded-full ${item.color}`}></div>
                       <div>
                         <h4 className="text-xs  m-0  text-slate-800 ">{item.name}</h4>
-                        <span className="text-xs  font-semibold text-slate-400  ">{item.line}</span>
+                        <span className="text-xs   text-slate-400  ">{item.line}</span>
                       </div>
                     </div>
                     <div className="text-right">
@@ -962,7 +962,7 @@ const lineMetrics = useMemo(() => {
             </div>
             <h1 className="text-xl  text-slate-800 m-0 tracking-tight ">OEE Intelligence</h1>
           </div>
-          <p className="text-slate-500 text-xs font-semibold ">Real-time manufacturing performance & optimization engine</p>
+          <p className="text-slate-500 text-xs  ">Real-time manufacturing performance & optimization engine</p>
         </div>
 
         <div className="flex items-center gap-4">
@@ -1253,7 +1253,7 @@ const lineMetrics = useMemo(() => {
                       <Layers size={16} className="text-indigo-500" />
                       Downtime Analytics
                     </h5>
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                       {selectedMachine.downtime.map((d, i) => (
                         <div key={i} className="flex items-center justify-between p-3 bg-white rounded border border-slate-100 hover:border-indigo-200 transition-all">
                           <div>

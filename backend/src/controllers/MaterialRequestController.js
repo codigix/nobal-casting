@@ -111,39 +111,41 @@ export class MaterialRequestController {
     try {
       const { db } = req.app.locals
       const { id } = req.params
-      const { approvedBy, source_warehouse } = req.body
+      const { approvedBy: approvedByFromBody, source_warehouse, itemsToProcess } = req.body
 
       const mrRequest = await MaterialRequestModel.getById(db, id)
       if (!mrRequest) {
         return res.status(404).json({ success: false, error: 'Material request not found' })
       }
 
-      if (mrRequest.department === 'Production' && !['material_issue', 'purchase', 'material_transfer'].includes(mrRequest.purpose)) {
+      const purpose = (mrRequest.purpose || '').toLowerCase().replace(/\s+/g, '_')
+      if (mrRequest.department === 'Production' && !['material_issue', 'purchase', 'material_transfer'].includes(purpose)) {
         return res.status(400).json({ 
           success: false, 
-          error: 'Production department requests must have purpose "Material Issue", "Purchase", or "Material Transfer"' 
+          error: 'Production department requests must have purpose "material_issue", "purchase", or "material_transfer"' 
         })
       }
 
-      if (mrRequest.purpose === 'material_issue' && !source_warehouse) {
+      if (purpose === 'material_issue' && !source_warehouse) {
         return res.status(400).json({ 
           success: false, 
           error: 'Source warehouse is required for Material Issue requests' 
         })
       }
 
-      if (mrRequest.purpose === 'material_transfer' && (!source_warehouse || !mrRequest.target_warehouse)) {
+      if (purpose === 'material_transfer' && (!source_warehouse || !mrRequest.target_warehouse)) {
         return res.status(400).json({ 
           success: false, 
           error: 'Both source and target warehouses are required for Material Transfer requests' 
         })
       }
 
-      const result = await MaterialRequestModel.approve(db, id, approvedBy, source_warehouse)
+      const approvedBy = req.user?.user_id || req.user?.id || approvedByFromBody
+      const result = await MaterialRequestModel.approve(db, id, approvedBy, source_warehouse, itemsToProcess)
       
       let message = 'Material request approved successfully'
 
-      if (mrRequest.purpose === 'purchase') {
+      if (purpose === 'purchase') {
         message = 'Material request approved. You can now create an RFQ for this request.'
       } else {
         const warehouse = source_warehouse || result.source_warehouse || 'warehouse'

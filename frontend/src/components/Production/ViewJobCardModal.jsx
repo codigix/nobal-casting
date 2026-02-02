@@ -217,37 +217,62 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-            <div className="bg-white rounded p-6 border border-gray-100   space-y-4">
+            <div className="bg-white rounded p-6 border border-gray-100   space-y-2">
               <div className="flex items-center gap-3 mb-2">
                 <div className="bg-indigo-50 p-2 rounded  text-indigo-600">
                   <Calendar size={18} />
                 </div>
-                <h4 className="text-sm  text-gray-900 ">Operational Timeline</h4>
+                <h4 className="text-xs  text-gray-900 ">Operational Timeline</h4>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-gray-50 rounded  border border-gray-100">
                   <p className="text-xs   text-gray-400  mb-1">Scheduled Start</p>
-                  <p className="text-sm  text-gray-900 tracking-tight">
+                  <p className="text-xs  text-gray-900 tracking-tight">
                     {jobCard?.scheduled_start_date ? new Date(jobCard.scheduled_start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
                   </p>
                 </div>
                 <div className="p-4 bg-gray-50 rounded  border border-gray-100">
                   <p className="text-xs   text-gray-400  mb-1">Estimated End</p>
-                  <p className="text-sm  text-gray-900 tracking-tight">
+                  <p className="text-xs  text-gray-900 tracking-tight">
                     {jobCard?.scheduled_end_date ? new Date(jobCard.scheduled_end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded p-6 border border-gray-100   space-y-4">
+            <div className="bg-white rounded p-6 border border-gray-100   space-y-2">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="bg-emerald-50 p-2 rounded  text-emerald-600">
+                  <TrendingUp size={18} />
+                </div>
+                <h4 className="text-xs  text-gray-900 ">Costing Details</h4>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-gray-50 rounded  border border-gray-100">
+                  <p className="text-xs   text-gray-400  mb-1">Hourly Rate</p>
+                  <p className="text-xs  text-gray-900 tracking-tight">
+                    ₹{parseFloat(jobCard?.hourly_rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded  border border-gray-100">
+                  <p className="text-xs   text-gray-400  mb-1">Planned Cost</p>
+                  <p className="text-xs  text-gray-900 tracking-tight">
+                    ₹{parseFloat(jobCard?.operating_cost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+            <div className="bg-white rounded p-6 border border-gray-100   space-y-2 col-span-2">
               <div className="flex items-center gap-3 mb-2">
                 <div className="bg-amber-50 p-2 rounded  text-amber-600">
                   <Layers size={18} />
                 </div>
-                <h4 className="text-sm  text-gray-900 ">Intelligence Notes</h4>
+                <h4 className="text-xs  text-gray-900 ">Intelligence Notes</h4>
               </div>
-              <div className="p-4 bg-amber-50/30 rounded  border border-amber-100 min-h-[92px]">
+              <div className="p-4 bg-amber-50/30 rounded  border border-amber-100">
                 <p className="text-xs  text-amber-900/70 whitespace-pre-wrap leading-relaxed">
                   {jobCard?.notes || 'No supplemental operational data recorded for this phase.'}
                 </p>
@@ -310,7 +335,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                   <div className="bg-white p-2 rounded    text-indigo-600">
                     <Activity size={20} />
                   </div>
-                  <h4 className="text-sm  text-gray-900 ">Production Intelligence Feed</h4>
+                  <h4 className="text-xs  text-gray-900 ">Production Intelligence Feed</h4>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
@@ -334,7 +359,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                       <tr key={idx} className="hover:bg-indigo-50/30 transition-all duration-300 group">
                         <td className="px-10 py-2 ">
                           <div className="flex flex-col">
-                            <span className="text-sm  text-gray-900 tracking-tight">Day {log.day_number || '-'}</span>
+                            <span className="text-xs  text-gray-900 tracking-tight">Day {log.day_number || '-'}</span>
                             <span className="text-xs   text-gray-400 ">{new Date(log.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
                           </div>
                         </td>
@@ -377,7 +402,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                   <div className="bg-white p-2 rounded    text-indigo-600">
                     <Clock size={20} />
                   </div>
-                  <h4 className="text-sm  text-gray-900 ">Temporal Intelligence Logs</h4>
+                  <h4 className="text-xs  text-gray-900 ">Temporal Intelligence Logs</h4>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -420,7 +445,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                   <div className="bg-white p-2 rounded    text-rose-600">
                     <AlertCircle size={20} />
                   </div>
-                  <h4 className="text-sm  text-gray-900  text-rose-900">Quality Deficiency Report</h4>
+                  <h4 className="text-xs  text-gray-900  text-rose-900">Quality Deficiency Report</h4>
                 </div>
               </div>
               <div className="overflow-x-auto">
