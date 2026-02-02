@@ -120,7 +120,7 @@ export default function PurchaseOrderDetail() {
 
   if (!po) return null
 
-  const subtotal = po.items?.reduce((sum, item) => sum + (item.qty * item.rate), 0) || 0
+  const subtotal = po.items?.reduce((sum, item) => sum + (Number(item.qty || 0) * Number(item.rate || 0)), 0) || 0
   const taxAmount = (subtotal * (po.tax_rate || 0)) / 100
   const total = subtotal + taxAmount
 
@@ -428,7 +428,7 @@ export default function PurchaseOrderDetail() {
                           </td>
                           <td className="p-2 text-center">
                             <div className="inline-flex gap-1 items-center justify-center min-w-[80px] items-center p-2 rounded  bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
-                              <span className="text-xs  text-neutral-900 dark:text-white leading-none">{item.qty.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                              <span className="text-xs  text-neutral-900 dark:text-white leading-none">{(item.qty || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                               <span className="text-xs text-neutral-400 dark:text-neutral-500 ">{item.uom}</span>
                             </div>
                           </td>
@@ -437,7 +437,7 @@ export default function PurchaseOrderDetail() {
                               <div className="flex justify-between items-end mb-1.5">
                                 <div className="flex flex-col">
                                   <span className={`text-[10px]  tracking-widest  ${received > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-400 dark:text-neutral-500'}`}>
-                                    {received.toLocaleString('en-IN', { minimumFractionDigits: 2 })} {item.uom}
+                                    {(received || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {item.uom}
                                   </span>
                                 </div>
                                 <span className="text-[10px]  text-neutral-900 dark:text-white bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded-md border border-neutral-200 dark:border-neutral-700">{progress}%</span>
@@ -454,10 +454,10 @@ export default function PurchaseOrderDetail() {
                             </div>
                           </td>
                           <td className="p-2 text-right">
-                            <span className="text-xs  text-neutral-600 dark:text-neutral-400">₹{item.rate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                            <span className="text-xs  text-neutral-600 dark:text-neutral-400">₹{(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                           </td>
                           <td className="p-2 text-right">
-                            <span className="text-xs text-neutral-900 dark:text-white">₹{(item.qty * item.rate).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</span>
+                            <span className="text-xs text-neutral-900 dark:text-white">₹{((item.qty || 0) * (item.rate || 0)).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</span>
                           </td>
                         </tr>
                       )
@@ -466,17 +466,17 @@ export default function PurchaseOrderDetail() {
                   <tfoot className="bg-neutral-50/50 dark:bg-neutral-800/30">
                     <tr className="border-t border-neutral-200 dark:border-neutral-800">
                       <td colSpan="4" className="p-2 text-right text-xs text-neutral-400 dark:text-neutral-500 ">Subtotal</td>
-                      <td className="p-2 text-right text-xs text-neutral-900 dark:text-white">₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 0 })}</td>
+                      <td className="p-2 text-right text-xs text-neutral-900 dark:text-white">₹{(subtotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</td>
                     </tr>
                     {po.tax_rate > 0 && (
                       <tr className="border-t border-neutral-100 dark:border-neutral-800/50">
                         <td colSpan="4" className="p-2 text-right text-xs text-neutral-400 dark:text-neutral-500 ">Tax ({po.tax_rate}%)</td>
-                        <td className="p-2 text-right text-sm  text-emerald-600 dark:text-emerald-400">+ ₹{taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 0 })}</td>
+                        <td className="p-2 text-right text-sm  text-emerald-600 dark:text-emerald-400">+ ₹{(taxAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</td>
                       </tr>
                     )}
                     <tr className="bg-indigo-600 dark:bg-indigo-600/10 border-t-2 border-indigo-200 dark:border-indigo-500/30">
                       <td colSpan="4" className="p-2 text-right text-xs  text-white dark:text-indigo-400 ">Grand Total</td>
-                      <td className="p-2 text-right text-xl  text-white dark:text-indigo-400 ">₹{total.toLocaleString('en-IN', { minimumFractionDigits: 0 })}</td>
+                      <td className="p-2 text-right text-xl  text-white dark:text-indigo-400 ">₹{(total || 0).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</td>
                     </tr>
                   </tfoot>
                 </table>

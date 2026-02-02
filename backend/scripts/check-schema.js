@@ -9,22 +9,17 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 async function check() {
-  const connection = await mysql.createConnection({
+  const db = await mysql.createConnection({
     host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 3306,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME
+    database: process.env.DB_NAME,
+    port: parseInt(process.env.DB_PORT || '3306')
   });
 
-  try {
-    const [columns] = await connection.execute('SHOW COLUMNS FROM material_request_item');
-    console.log(JSON.stringify(columns, null, 2));
-  } catch (error) {
-    console.error('Check failed:', error);
-  } finally {
-    await connection.end();
-  }
+  const [rows] = await db.query('SHOW COLUMNS FROM job_card');
+  console.log(JSON.stringify(rows, null, 2));
+  await db.end();
 }
 
 check();

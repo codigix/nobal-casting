@@ -193,7 +193,7 @@ export default function OperationsRedesign() {
               {filteredOperations.map((op) => (
                 <div 
                   key={op.name}
-                  className="bg-white rounded border border-slate-200  hover:shadow-xl hover:border-indigo-200 transition-all group overflow-hidden"
+                  className="bg-white rounded border border-slate-200  hover:shadow  hover:border-indigo-200 transition-all group overflow-hidden"
                 >
                   <div className="p-3">
                     <div className="flex justify-between items-start mb-6">
@@ -244,6 +244,12 @@ export default function OperationsRedesign() {
                           {getComplexityLabel(op.sub_operations?.length || 0)}
                         </span>
                       </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-400  ">Hourly Rate</span>
+                        <span className="text-slate-700 font-semibold">
+                          ₹{Number(op.hourly_rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="pt-3 border-t border-slate-50 flex items-center justify-between">
@@ -282,6 +288,7 @@ export default function OperationsRedesign() {
                     <th className="p-2 text-left  text-slate-400 ">Operation</th>
                     <th className="p-2 text-left  text-slate-400 ">Workstation</th>
                     <th className="p-2 text-left  text-slate-400 ">Type</th>
+                    <th className="p-2 text-left  text-slate-400 ">Rate</th>
                     <th className="p-2 text-left  text-slate-400 ">Complexity</th>
                     <th className="p-2 text-left  text-slate-400 ">Tasks</th>
                     <th className="p-2 text-left  text-slate-400 ">Actions</th>
@@ -311,6 +318,9 @@ export default function OperationsRedesign() {
                         <span className={`px-2.5 py-1 rounded-full text-xs   ${op.operation_type === 'OUTSOURCED' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
                           {op.operation_type || 'IN_HOUSE'}
                         </span>
+                      </td>
+                      <td className="p-2 font-medium">
+                        ₹{Number(op.hourly_rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="p-2 ">
                         <span className={` ${getComplexityColor(op.sub_operations?.length || 0).split(' ')[0]}`}>

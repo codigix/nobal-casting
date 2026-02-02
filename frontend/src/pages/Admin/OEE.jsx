@@ -1072,7 +1072,7 @@ const lineMetrics = useMemo(() => {
       {/* Modern High-End Detail Modal */}
       {selectedMachine && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4 lg:p-3">
-          <div className="bg-white rounded  shadow-2xl max-w-[1300px] w-full  overflow-hidden flex flex-col relative animate-in fade-in zoom-in duration-300 border border-white/20">
+          <div className="bg-white rounded  shadow-2xl max-w-[900px] w-full max-h-[30pc] overflow-hidden flex flex-col relative animate-in fade-in zoom-in duration-300 border border-white/20">
             {/* Close Button */}
             <button 
               onClick={() => setSelectedMachine(null)}

@@ -994,7 +994,7 @@ export default function ProductionPlanning() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <div className="bg-slate-900 p-2 rounded  shadow-xl shadow-slate-200">
+              <div className="bg-slate-900 p-2 rounded  shadow  shadow-slate-200">
                 <Layers className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -1024,7 +1024,7 @@ export default function ProductionPlanning() {
             </button>
             <button
               onClick={() => navigate('/manufacturing/production-planning/new')}
-              className="flex items-center gap-2 p-2  bg-slate-900 text-white rounded hover:bg-slate-800 shadow-xl shadow-slate-200 hover:shadow-2xl hover:-translate-y-1 transition-all text-xs   "
+              className="flex items-center gap-2 p-2  bg-slate-900 text-white rounded hover:bg-slate-800 shadow  shadow-slate-200 hover:shadow-2xl hover:-translate-y-1 transition-all text-xs   "
             >
               <Plus size={18} />
               New Strategic Plan
@@ -1244,7 +1244,7 @@ export default function ProductionPlanning() {
               </table>
             ) : (
               <div className="flex flex-col items-center justify-center py-22 text-center bg-gray-50/30">
-                <div className="w-24 h-24 rounded bg-white shadow-xl shadow-gray-200/50 flex items-center justify-center text-gray-200 mb-6 border border-gray-100">
+                <div className="w-24 h-24 rounded bg-white shadow  shadow-gray-200/50 flex items-center justify-center text-gray-200 mb-6 border border-gray-100">
                   <Layers size={48} />
                 </div>
                 <h3 className="text-lg  text-gray-900 ">No Strategic Plans Found</h3>
@@ -1253,7 +1253,7 @@ export default function ProductionPlanning() {
                 </p>
                 <button
                   onClick={() => navigate('/manufacturing/production-planning/new')}
-                  className="mt-8 flex items-center gap-2 p-2  bg-slate-900 text-white rounded hover:bg-slate-800 shadow-xl shadow-slate-200 transition-all text-xs   "
+                  className="mt-8 flex items-center gap-2 p-2  bg-slate-900 text-white rounded hover:bg-slate-800 shadow  shadow-slate-200 transition-all text-xs   "
                 >
                   <Plus size={18} />
                   Initiate First Strategy
@@ -1429,7 +1429,7 @@ export default function ProductionPlanning() {
                 <button
                   onClick={handleCreateWorkOrderConfirm}
                   disabled={creatingWorkOrder}
-                  className="flex items-center gap-2 p-2  bg-slate-900 text-white rounded  hover:bg-slate-800 shadow-xl shadow-slate-200 transition-all text-xs    disabled:opacity-50"
+                  className="flex items-center gap-2 p-2  bg-slate-900 text-white rounded  hover:bg-slate-800 shadow  shadow-slate-200 transition-all text-xs    disabled:opacity-50"
                 >
                   {creatingWorkOrder ? (
                     <Loader size={16} className="animate-spin" />
@@ -1570,7 +1570,7 @@ export default function ProductionPlanning() {
               <button
                 onClick={handleSendForPurchase}
                 disabled={sendingPurchaseRequest || !materialRequestData.items.some(item => !materialStockData[item.item_code]?.isAvailable)}
-                className="flex items-center gap-2 p-2  bg-amber-600 text-white rounded  hover:bg-amber-700 shadow-xl shadow-amber-200 transition-all text-xs    disabled:opacity-50"
+                className="flex items-center gap-2 p-2  bg-amber-600 text-white rounded  hover:bg-amber-700 shadow  shadow-amber-200 transition-all text-xs    disabled:opacity-50"
               >
                 {sendingPurchaseRequest ? <Loader size={16} className="animate-spin" /> : <ShoppingCart size={16} />}
                 {sendingPurchaseRequest ? 'PREPARING PO...' : 'Send Request for Purchase'}
@@ -1578,7 +1578,7 @@ export default function ProductionPlanning() {
               <button
                 onClick={handleSendMaterialRequestConfirm}
                 disabled={sendingMaterialRequest}
-                className="flex items-center gap-2 p-2  bg-slate-900 text-white rounded  hover:bg-slate-800 shadow-xl shadow-slate-200 transition-all text-xs    disabled:opacity-50"
+                className="flex items-center gap-2 p-2  bg-slate-900 text-white rounded  hover:bg-slate-800 shadow  shadow-slate-200 transition-all text-xs    disabled:opacity-50"
               >
                 {sendingMaterialRequest ? <Loader size={16} className="animate-spin" /> : <Send size={16} />}
                 {sendingMaterialRequest ? 'SYNCHRONIZING...' : 'Material Request'}

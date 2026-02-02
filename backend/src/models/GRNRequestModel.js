@@ -36,9 +36,9 @@ class GRNRequestModel {
             material_request_id, department, purpose
           ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)`,
           [
-            grn_no, po_no, supplier_id, supplier_name, receipt_date, 
+            grn_no, po_no || null, supplier_id || null, supplier_name || null, receipt_date, 
             created_by, items.length, notes,
-            material_request_id, department, purpose
+            material_request_id || null, department || null, purpose || null
           ]
         )
 

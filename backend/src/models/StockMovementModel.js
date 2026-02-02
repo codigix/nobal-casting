@@ -116,6 +116,7 @@ class StockMovementModel {
         source_warehouse_id,
         target_warehouse_id,
         movement_type,
+        purpose,
         quantity,
         reference_type,
         reference_name,
@@ -126,10 +127,10 @@ class StockMovementModel {
       const [result] = await db.query(
         `INSERT INTO stock_movements (
           transaction_no, item_code, warehouse_id, source_warehouse_id, target_warehouse_id, 
-          movement_type, quantity, reference_type, reference_name, notes, status, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?)`,
+          movement_type, purpose, quantity, reference_type, reference_name, notes, status, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?)`,
         [transaction_no, item_code, warehouse_id, source_warehouse_id, target_warehouse_id, 
-         movement_type, quantity, reference_type, reference_name, notes, created_by]
+         movement_type, purpose, quantity, reference_type, reference_name, notes, created_by]
       )
 
       return this.getById(result.insertId)

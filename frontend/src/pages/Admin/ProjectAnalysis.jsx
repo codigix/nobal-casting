@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, AreaChart, Area, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
-import { TrendingUp, Calendar, AlertCircle, Clock, CheckCircle, AlertTriangle, Target, Eye, Edit2, Truck, Package, LayoutGrid, Search, Filter, ArrowUpRight, ArrowDownRight, MoreHorizontal, Download, Share2, Layers, Zap } from 'lucide-react'
+import { TrendingUp, Calendar, AlertCircle, Clock, CheckCircle, AlertTriangle, Target, Eye, Edit2, Truck, Package, LayoutGrid, Search, Filter, ArrowUpRight, ArrowDownRight, MoreHorizontal, Download, Star, Share2, Layers, Zap } from 'lucide-react'
 import { getSalesOrdersAsProjects, getDetailedProjectAnalysis } from '../../services/adminService'
 
 const statusConfig = {
@@ -459,7 +460,9 @@ const StatCard = ({ label, value, icon: Icon, trend, trendValue, bgColor, iconCo
 );
 
 export default function ProjectAnalysis() {
+  const location = useLocation()
   const [projectStatus, setProjectStatus] = useState([])
+  const [projectSegments, setProjectSegments] = useState([])
   const [projectTimeline, setProjectTimeline] = useState([])
   const [allProjects, setAllProjects] = useState([])
   const [filteredProjects, setFilteredProjects] = useState([])
@@ -470,10 +473,21 @@ export default function ProjectAnalysis() {
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedProject, setSelectedProject] = useState(null)
   const [activeTab, setActiveTab] = useState('all')
+  const [segmentTab, setSegmentTab] = useState(location.state?.filterSegment || 'all')
+  const [chartType, setChartType] = useState(location.state?.filterSegment === 'Premium' ? 'segment' : 'status')
   const [totalRevenue, setTotalRevenue] = useState(0)
   const [completionRate, setCompletionRate] = useState(0)
   const [trends, setTrends] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
+
+  useEffect(() => {
+    if (location.state?.filterSegment) {
+      setSegmentTab(location.state.filterSegment)
+      if (location.state.filterSegment === 'Premium') {
+        setChartType('segment')
+      }
+    }
+  }, [location.state])
 
   useEffect(() => {
     fetchProjectAnalysis()
@@ -484,6 +498,9 @@ export default function ProjectAnalysis() {
     if (activeTab !== 'all') {
       filtered = filtered.filter(p => p.status?.toLowerCase() === activeTab)
     }
+    if (segmentTab !== 'all') {
+      filtered = filtered.filter(p => p.segment === segmentTab)
+    }
     if (searchTerm) {
       filtered = filtered.filter(p => 
         p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -492,7 +509,7 @@ export default function ProjectAnalysis() {
       )
     }
     setFilteredProjects(filtered)
-  }, [allProjects, activeTab, searchTerm])
+  }, [allProjects, activeTab, segmentTab, searchTerm])
 
   const fetchProjectAnalysis = async () => {
     try {
@@ -500,11 +517,12 @@ export default function ProjectAnalysis() {
       const res = await getSalesOrdersAsProjects()
       
       if (res.success && res.data) {
-        const { projects, statusCounts, monthlyTimeline, totalRevenue, completionRate, trends } = res.data
+        const { projects, statusCounts, segmentDistribution, monthlyTimeline, totalRevenue, completionRate, trends } = res.data
         setAllProjects(projects || [])
         setTotalRevenue(totalRevenue || 0)
         setCompletionRate(completionRate || 0)
         setProjectTimeline(monthlyTimeline || [])
+        setProjectSegments(segmentDistribution || [])
         setTrends(trends)
         
         const COLORS = {
@@ -564,25 +582,25 @@ export default function ProjectAnalysis() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 p-2 p-3 md:p-3">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
         <div>
-          <h1 className="text-xl  text-slate-9500 m-0">Project Analysis</h1>
+          <h1 className="text-xl font-bold text-slate-900 m-0">Project Analysis</h1>
           <p className="text-slate-500 font-medium text-xs mt-1">Global production tracking and performance intelligence</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded  text-xs  text-slate-700 hover:bg-slate-50 transition-all ">
-            <Download size={18} /> Export Data
+          <button className="flex items-center gap-2 p-1.5 bg-white border border-slate-200 rounded  text-[10px]  text-slate-700 hover:bg-slate-50 transition-all ">
+            <Download size={14} /> Export
           </button>
-          <button onClick={fetchProjectAnalysis} className="flex items-center gap-2 p-2 bg-blue-600 rounded  text-xs  text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">
-            <Zap size={18} /> Refresh Intel
+          <button onClick={fetchProjectAnalysis} className="flex items-center gap-2 p-1.5 bg-blue-600 rounded  text-[10px]  text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">
+            <Zap size={14} /> Refresh
           </button>
         </div>
       </div>
 
       {/* KPI Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <StatCard 
           label="Live Projects" 
           value={allProjects.length} 
@@ -621,146 +639,192 @@ export default function ProjectAnalysis() {
         />
       </div>
 
-      {/* Analytics Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
-        <div className="lg:col-span-1 bg-white p-2 rounded  border border-slate-200 ">
-          <h3 className="text-lg  text-slate-900 mb-3">Status Allocation</h3>
-          <div className="h-64">
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-4">
+        {/* Allocation Intel Chart */}
+        <div className="lg:col-span-3 bg-white p-2 rounded border border-slate-200 flex flex-col">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-bold text-slate-900">Allocation</h3>
+            <div className="flex gap-1 p-0.5 bg-slate-50 rounded border border-slate-100">
+              <button onClick={() => setChartType('status')} className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${chartType !== 'segment' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}>STATUS</button>
+              <button onClick={() => setChartType('segment')} className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${chartType === 'segment' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-400'}`}>SEGMENT</button>
+            </div>
+          </div>
+          
+          <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={projectStatus} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={8} dataKey="value">
-                  {projectStatus.map((entry, index) => <Cell key={index} fill={entry.color} stroke="none" />)}
+                <Pie 
+                  data={chartType === 'segment' ? projectSegments : projectStatus} 
+                  cx="50%" 
+                  cy="50%" 
+                  innerRadius={45} 
+                  outerRadius={65} 
+                  paddingAngle={5} 
+                  dataKey="value"
+                >
+                  {(chartType === 'segment' ? projectSegments : projectStatus).map((entry, index) => (
+                    <Cell key={index} fill={entry.color} stroke="none" />
+                  ))}
                 </Pie>
-                <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', fontSize: '10px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="grid grid-cols-2 gap-4 mt-8">
-            {projectStatus.map((s, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="text-xs   text-slate-400 tracking-tighter">{s.name}: <span className="text-slate-900">{s.value}</span></span>
+          <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-auto pt-2 border-t border-slate-50">
+            {(chartType === 'segment' ? projectSegments : projectStatus).map((s, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: s.color }} />
+                <span className="text-[10px] text-slate-400 truncate">{s.name}: <span className="text-slate-900 font-bold">{s.value}</span></span>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="lg:col-span-2 bg-white p-2 rounded  border border-slate-200 ">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg  text-slate-900">Project Velocity (6M)</h3>
-            <div className="flex gap-4">
-              <div className="flex items-center gap-2 text-xs  text-slate-500"><div className="w-3 h-3 rounded-full bg-blue-500" /> New Orders</div>
-              <div className="flex items-center gap-2 text-xs  text-slate-500"><div className="w-3 h-3 rounded-full bg-emerald-500" /> Completed</div>
-            </div>
-          </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={projectTimeline}>
-                <defs>
-                  <linearGradient id="colorProjects" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
-                <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                <Area type="monotone" dataKey="total_projects" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorProjects)" />
-                <Area type="monotone" dataKey="completed" stroke="#10b981" strokeWidth={3} fillOpacity={0} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Project Table Section */}
-      <div className="bg-white rounded  border border-slate-200  overflow-hidden">
-        <div className="p-3 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 my-4">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input 
-                type="text" 
-                placeholder="Search projects or customers..." 
-                className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-full md:w-80 transition-all"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex gap-1 p-1 bg-slate-50 rounded border border-slate-200">
-              {['all', 'production', 'complete', 'on_hold'].map((tab) => (
-                <button 
-                  key={tab} 
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-1.5 rounded text-xs  transition-all ${activeTab === tab ? 'bg-white text-blue-600  scale-105' : 'text-slate-400 hover:text-slate-600'}`}
-                >
-                  {tab.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
-          <p className="text-xs  text-slate-400 ">{filteredProjects.length} Projects Identified</p>
-        </div>
-
-        <div className="">
-          <table className="w-full text-left bg-white">
-            <thead>
-              <tr className="bg-slate-50/50">
-                <th className="p-2 text-xs  text-slate-400 ">Project Details</th>
-                <th className="p-2 text-xs  text-slate-400 ">Progress</th>
-                <th className="p-2 text-xs  text-slate-400 ">Revenue</th>
-                <th className="p-2 text-xs  text-slate-400 ">Status</th>
-                <th className="p-2 text-xs  text-slate-400  text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {filteredProjects.map((project, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="p-2">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-slate-100 rounded flex items-center justify-center text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                        <Package size={20} />
-                      </div>
-                      <div>
-                        <p className="text-xs  text-slate-900 m-0">{project.name}</p>
-                        <p className="text-xs text-slate-500 m-0 mt-0.5">{project.customer_name}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-2">
-                    <div className="w-48">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs  text-slate-600">{project.progress}%</span>
-                        <span className="text-xs   text-slate-400 tracking-tighter italic">Phase 1.2</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                        <div className={`h-full transition-all duration-1000 ${project.progress === 100 ? 'bg-emerald-500' : 'bg-blue-600'}`} style={{ width: `${project.progress}%` }} />
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-2">
-                    <p className="text-xs  text-slate-900 m-0">₹{(project.revenue || 0).toLocaleString()}</p>
-                    <p className="text-xs   text-emerald-600 mt-0.5">Paid</p>
-                  </td>
-                  <td className="p-2">
-                    <StatusBadge status={project.status} />
-                  </td>
-                  <td className="p-2 text-right">
+        {/* Project Table Section */}
+        <div className="lg:col-span-9 bg-white rounded border border-slate-200 overflow-hidden flex flex-col">
+          <div className="p-2 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                <input 
+                  type="text" 
+                  placeholder="Search projects..." 
+                  className="pl-7 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded text-[10px] focus:outline-none focus:ring-1 focus:ring-blue-500/20 w-full md:w-48 transition-all"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <div className="flex gap-0.5 p-0.5 bg-slate-50 rounded border border-slate-200">
+                  {['all', 'production', 'complete'].map((tab) => (
                     <button 
-                      onClick={() => fetchDetailedAnalysis(project)}
-                      className="inline-flex items-center gap-2 p-2 bg-slate-100 hover:bg-blue-600 hover:text-white rounded text-xs  text-slate-700 transition-all"
+                      key={tab} 
+                      onClick={() => setActiveTab(tab)}
+                      className={`px-2 py-1 rounded text-[10px] transition-all font-medium ${activeTab === tab ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                     >
-                      <Eye size={14} /> Full Intel
+                      {tab.toUpperCase()}
                     </button>
-                  </td>
+                  ))}
+                </div>
+
+                <div className="flex gap-0.5 p-0.5 bg-slate-50 rounded border border-slate-200">
+                  {['all', 'Premium', 'Other'].map((seg) => (
+                    <button 
+                      key={seg} 
+                      onClick={() => setSegmentTab(seg)}
+                      className={`px-2 py-1 rounded text-[10px] transition-all font-medium ${segmentTab === seg ? 'bg-amber-500 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                      {seg.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-400 font-medium">{filteredProjects.length} Projects</p>
+          </div>
+
+          <div className="overflow-x-auto max-h-[400px]">
+            <table className="w-full text-left bg-white">
+              <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm">
+                <tr>
+                  <th className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Project</th>
+                  <th className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Segment</th>
+                  <th className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Progress</th>
+                  <th className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Revenue</th>
+                  <th className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                  <th className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filteredProjects.map((project, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="p-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 bg-slate-100 rounded flex items-center justify-center text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                          <Package size={14} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1">
+                            <p className="text-[11px] font-bold text-slate-900 m-0 truncate">{project.name}</p>
+                            {project.segment === 'Premium' && <Star size={10} className="text-amber-500 fill-amber-500 flex-shrink-0" />}
+                          </div>
+                          <p className="text-[10px] text-slate-500 m-0 truncate">{project.customer_name}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-2">
+                      <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold ${
+                        project.segment === 'Premium' ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-slate-50 text-slate-600 border border-slate-100'
+                      }`}>
+                        {project.segment === 'Premium' ? <Star size={8} className="fill-amber-500" /> : <Package size={8} />}
+                        {project.segment.toUpperCase()}
+                      </div>
+                    </td>
+                    <td className="p-2">
+                      <div className="w-32">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] font-bold text-slate-600">{project.progress}%</span>
+                        </div>
+                        <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                          <div className={`h-full transition-all duration-1000 ${project.progress === 100 ? 'bg-emerald-500' : 'bg-blue-600'}`} style={{ width: `${project.progress}%` }} />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-2">
+                      <p className="text-[11px] font-bold text-slate-900 m-0">₹{(project.revenue || 0).toLocaleString()}</p>
+                      <p className="text-[9px] text-emerald-600 font-bold">PAID</p>
+                    </td>
+                    <td className="p-2">
+                      <StatusBadge status={project.status} />
+                    </td>
+                    <td className="p-2 text-right">
+                      <button 
+                        onClick={() => fetchDetailedAnalysis(project)}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 hover:bg-blue-600 hover:text-white rounded text-[10px] font-bold text-slate-700 transition-all"
+                      >
+                        <Eye size={12} /> VIEW
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
+      {/* Project Velocity Chart - Now at bottom */}
+      <div className="bg-white p-2 rounded border border-slate-200">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-slate-900">Project Velocity (6M)</h3>
+          <div className="flex gap-3">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><div className="w-2 h-2 rounded-full bg-blue-500" /> ORDERS</div>
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><div className="w-2 h-2 rounded-full bg-emerald-500" /> DONE</div>
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500"><div className="w-2 h-2 rounded-full bg-amber-500" /> PREMIUM</div>
+          </div>
+        </div>
+        <div className="h-48">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={projectTimeline}>
+              <defs>
+                <linearGradient id="colorProjects" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 700, fill: '#94a3b8' }} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 700, fill: '#94a3b8' }} />
+              <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', fontSize: '10px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+              <Area type="monotone" dataKey="total_projects" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorProjects)" />
+              <Area type="monotone" dataKey="completed" stroke="#10b981" strokeWidth={2} fillOpacity={0} />
+              <Area type="monotone" dataKey="premium_projects" stroke="#fbbf24" strokeWidth={2} strokeDasharray="3 3" fillOpacity={0} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
       <DetailModal 
         isOpen={modalOpen} 
         project={selectedProject} 

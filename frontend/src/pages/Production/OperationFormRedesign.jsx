@@ -29,7 +29,8 @@ export default function OperationFormRedesign() {
     batch_size: 1,
     quality_inspection_template: '',
     description: '',
-    operation_type: 'IN_HOUSE'
+    operation_type: 'IN_HOUSE',
+    hourly_rate: 0
   })
 
   const [subOperations, setSubOperations] = useState([
@@ -95,7 +96,8 @@ export default function OperationFormRedesign() {
       batch_size: data.batch_size || 1,
       quality_inspection_template: data.quality_inspection_template || '',
       description: data.description || '',
-      operation_type: data.operation_type || 'IN_HOUSE'
+      operation_type: data.operation_type || 'IN_HOUSE',
+      hourly_rate: data.hourly_rate || 0
     })
     
     if (data.sub_operations && data.sub_operations.length > 0) {
@@ -272,6 +274,19 @@ export default function OperationFormRedesign() {
                       <option value="OUTSOURCED">Outsourced</option>
                     </select>
                   </div>
+                  <div className="space-y-2">
+                    <label className="text-xs  text-slate-500  ml-1">Hourly Rate (₹)</label>
+                    <input 
+                      type="number"
+                      name="hourly_rate"
+                      value={formData.hourly_rate}
+                      onChange={handleInputChange}
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                      className="w-full p-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs font-medium text-slate-700"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2 relative">
@@ -296,7 +311,7 @@ export default function OperationFormRedesign() {
                     />
                     {workstationDropdownOpen && (
                       <div 
-                        className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded shadow-xl z-50 max-h-60 overflow-y-auto"
+                        className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded shadow  z-50 max-h-60 overflow-y-auto"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {workstations

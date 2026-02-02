@@ -18,7 +18,7 @@ async function check() {
   });
 
   try {
-    const [columns] = await connection.execute('SHOW COLUMNS FROM material_request_item');
+    const [columns] = await connection.execute("SHOW COLUMNS FROM material_request LIKE 'status'");
     console.log(JSON.stringify(columns, null, 2));
   } catch (error) {
     console.error('Check failed:', error);

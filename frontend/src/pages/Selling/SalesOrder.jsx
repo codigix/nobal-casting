@@ -579,7 +579,7 @@ export default function SalesOrder() {
             </button>
             <button 
               onClick={() => navigate('/manufacturing/sales-orders/new')}
-              className="inline-flex items-center gap-2 rounded  bg-slate-900 p-2 text-xs  text-white shadow-xl shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95"
+              className="inline-flex items-center gap-2 rounded  bg-slate-900 p-2 text-xs  text-white shadow  shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95"
             >
               <Plus size={18} />
               Initialize Order
@@ -741,7 +741,7 @@ export default function SalesOrder() {
           {loading ? (
             <div className="glass-card flex flex-col items-center justify-center py-22 text-slate-400 border-none">
               <div className="relative mb-6">
-                <div className="h-20 w-20 animate-spin rounded-full border-4 border-slate-100 border-t-blue-600 shadow-xl shadow-blue-50"></div>
+                <div className="h-20 w-20 animate-spin rounded-full border-4 border-slate-100 border-t-blue-600 shadow  shadow-blue-50"></div>
                 <ShoppingCart size={32} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-600" />
               </div>
               <p className="text-xs  tracking-[0.3em] animate-pulse">Syncing Operational Data...</p>
@@ -757,7 +757,7 @@ export default function SalesOrder() {
               </p>
               <button
                 onClick={() => navigate('/manufacturing/sales-orders/new')}
-                className="mt-8 inline-flex items-center gap-2 rounded  bg-blue-600 p-2  text-xs  text-white shadow-xl shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
+                className="mt-8 inline-flex items-center gap-2 rounded  bg-blue-600 p-2  text-xs  text-white shadow  shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
               >
                 <Plus size={18} />
                 Initialize New Order

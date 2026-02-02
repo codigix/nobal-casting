@@ -118,10 +118,10 @@ export class MaterialRequestController {
         return res.status(404).json({ success: false, error: 'Material request not found' })
       }
 
-      if (mrRequest.department === 'Production' && mrRequest.purpose !== 'material_issue') {
+      if (mrRequest.department === 'Production' && !['material_issue', 'purchase', 'material_transfer'].includes(mrRequest.purpose)) {
         return res.status(400).json({ 
           success: false, 
-          error: 'Production department requests must have purpose "Material Issue"' 
+          error: 'Production department requests must have purpose "Material Issue", "Purchase", or "Material Transfer"' 
         })
       }
 
@@ -142,42 +142,15 @@ export class MaterialRequestController {
       const result = await MaterialRequestModel.approve(db, id, approvedBy, source_warehouse)
       
       let message = 'Material request approved successfully'
-      let unavailableItems = []
 
       if (mrRequest.purpose === 'purchase') {
         message = 'Material request approved. You can now create an RFQ for this request.'
       } else {
         const warehouse = source_warehouse || result.source_warehouse || 'warehouse'
-        
-        for (const item of result.items || []) {
-          const balance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, warehouse)
-          
-          if (!balance) {
-            unavailableItems.push({
-              ...item,
-              reason: 'Not found in inventory stock balance'
-            })
-          } else {
-            const availableQty = Number(balance.available_qty || balance.current_qty || 0)
-            const requestedQty = Number(item.qty || 0)
-            if (availableQty < requestedQty) {
-              unavailableItems.push({
-                ...item,
-                reason: `Insufficient stock. Available: ${availableQty}, Requested: ${requestedQty}`
-              })
-            }
-          }
-        }
-        
-        if (unavailableItems.length > 0) {
-          const itemsStr = unavailableItems.map(i => `${i.item_code} (${i.reason})`).join(', ')
-          message = `Material request approved with issues. Items with problems: ${itemsStr}`
-        } else {
-          message = `Material request approved. Stock has been deducted from ${warehouse}.`
-        }
+        message = `Material request approved. Stock has been deducted from ${warehouse}.`
       }
 
-      res.json({ success: true, data: result, message: message, unavailableItems: unavailableItems })
+      res.json({ success: true, data: result, message: message })
     } catch (error) {
       res.status(400).json({ success: false, error: error.message })
     }

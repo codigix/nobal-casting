@@ -806,7 +806,7 @@ const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white/95 backdrop-blur-sm p-2 rounded border border-slate-200 shadow-xl">
+      <div className="bg-white/95 backdrop-blur-sm p-2 rounded border border-slate-200 shadow ">
         <p className="text-xs   text-slate-900  mb-2 border-b border-slate-100 pb-1">{label}</p>
         <div className=".5">
           {payload.map((entry, index) => (

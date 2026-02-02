@@ -609,42 +609,66 @@ class MastersController {
       )
       console.log('[getSalesOrdersAsProjects] StatusCounts:', statusCounts)
       
+      const revenueThreshold = 100000;
+      
       const [allProjects] = await database.query(
-        `SELECT sales_order_id as id, 
-                CONCAT(sales_order_id, ' - SO') as name, 
-                status, 
-                order_amount as revenue,
-                COALESCE(DATEDIFF(delivery_date, NOW()), 0) as daysLeft,
-                delivery_date as dueDate,
-                customer_id as customer,
-                customer_name,
-                created_at as order_date,
+        `SELECT sso.sales_order_id as id, 
+                CONCAT(sso.sales_order_id, ' - SO') as name, 
+                sso.status, 
+                sso.order_amount as revenue,
+                COALESCE(DATEDIFF(sso.delivery_date, NOW()), 0) as daysLeft,
+                sso.delivery_date as dueDate,
+                sso.customer_id as customer,
+                sso.customer_name,
+                sso.created_at as order_date,
                 CASE 
-                  WHEN status = 'delivered' THEN 100
-                  WHEN status = 'dispatched' THEN 75
-                  WHEN status = 'complete' THEN 75
-                  WHEN status = 'production' THEN 50
-                  WHEN status = 'draft' THEN 25
-                  WHEN status = 'on_hold' THEN 25
+                  WHEN sso.status = 'delivered' THEN 100
+                  WHEN sso.status = 'dispatched' THEN 75
+                  WHEN sso.status = 'complete' THEN 75
+                  WHEN sso.status = 'production' THEN 50
+                  WHEN sso.status = 'draft' THEN 25
+                  WHEN sso.status = 'on_hold' THEN 25
                   ELSE 0
-                END as progress
-         FROM selling_sales_order
-         WHERE deleted_at IS NULL
-         ORDER BY created_at DESC`
+                END as progress,
+                CASE WHEN cust_rev.total_rev >= ? THEN 'Premium' ELSE 'Other' END as segment
+         FROM selling_sales_order sso
+         LEFT JOIN (
+           SELECT customer_id, SUM(order_amount) as total_rev 
+           FROM selling_sales_order 
+           WHERE status != 'draft' AND deleted_at IS NULL
+           GROUP BY customer_id
+         ) cust_rev ON sso.customer_id = cust_rev.customer_id
+         WHERE sso.deleted_at IS NULL
+         ORDER BY sso.created_at DESC`,
+        [revenueThreshold]
       )
       console.log('[getSalesOrdersAsProjects] Projects:', allProjects?.length || 0)
       
+      const segmentDistribution = [
+        { name: 'Premium', value: allProjects.filter(p => p.segment === 'Premium').length, color: '#fbbf24' },
+        { name: 'Other', value: allProjects.filter(p => p.segment === 'Other').length, color: '#3b82f6' }
+      ]
+      
       const [monthlyTimeline] = await database.query(
-        `SELECT DATE_FORMAT(created_at, '%Y-%m') as month_key,
-                DATE_FORMAT(created_at, '%b %Y') as month, 
+        `SELECT DATE_FORMAT(sso.created_at, '%Y-%m') as month_key,
+                DATE_FORMAT(sso.created_at, '%b %Y') as month, 
                 COUNT(*) as total_projects,
-                SUM(CASE WHEN status IN ('delivered', 'complete') THEN 1 ELSE 0 END) as completed,
-                SUM(order_amount) as revenue
-         FROM selling_sales_order
-         WHERE deleted_at IS NULL AND created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-         GROUP BY DATE_FORMAT(created_at, '%Y-%m'), DATE_FORMAT(created_at, '%b %Y')
+                SUM(CASE WHEN sso.status IN ('delivered', 'complete') THEN 1 ELSE 0 END) as completed,
+                SUM(sso.order_amount) as revenue,
+                SUM(CASE WHEN cust_rev.total_rev >= ? THEN 1 ELSE 0 END) as premium_projects,
+                SUM(CASE WHEN cust_rev.total_rev < ? THEN 1 ELSE 0 END) as other_projects
+         FROM selling_sales_order sso
+         LEFT JOIN (
+           SELECT customer_id, SUM(order_amount) as total_rev 
+           FROM selling_sales_order 
+           WHERE status != 'draft' AND deleted_at IS NULL
+           GROUP BY customer_id
+         ) cust_rev ON sso.customer_id = cust_rev.customer_id
+         WHERE sso.deleted_at IS NULL AND sso.created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+         GROUP BY DATE_FORMAT(sso.created_at, '%Y-%m'), DATE_FORMAT(sso.created_at, '%b %Y')
          ORDER BY month_key DESC
-         LIMIT 6`
+         LIMIT 6`,
+        [revenueThreshold, revenueThreshold]
       )
       console.log('[getSalesOrdersAsProjects] Timeline:', monthlyTimeline?.length || 0)
       
@@ -700,6 +724,7 @@ class MastersController {
           totalRevenue: parseFloat(totalRevenue) || 0,
           completionRate: parseFloat(completionRate) || 0,
           statusCounts: statusCounts || [],
+          segmentDistribution: segmentDistribution || [],
           projects: allProjects || [],
           monthlyTimeline: monthlyTimeline || [],
           trends

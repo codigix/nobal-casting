@@ -20,11 +20,12 @@ export default function StockMovements() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
+  const [purposeFilter, setPurposeFilter] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [selectedMovement, setSelectedMovement] = useState(null)
   const [showColumnMenu, setShowColumnMenu] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState(new Set([
-    'transaction_no', 'item_code', 'movement_type', 'quantity', 'warehouse_name', 'status', 'created_at'
+    'transaction_no', 'item_code', 'movement_type', 'purpose', 'quantity', 'warehouse_name', 'status', 'created_at'
   ]))
 
   const fetchMovements = useCallback(async () => {
@@ -104,9 +105,12 @@ export default function StockMovements() {
         m.transaction_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.item_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.item_name?.toLowerCase().includes(searchTerm.toLowerCase())
-      return matchesSearch
+      
+      const matchesPurpose = !purposeFilter || m.purpose === purposeFilter
+      
+      return matchesSearch && matchesPurpose
     })
-  }, [movements, searchTerm])
+  }, [movements, searchTerm, purposeFilter])
 
   const columns = useMemo(() => [
     {
@@ -140,6 +144,11 @@ export default function StockMovements() {
           )}
         </div>
       )
+    },
+    {
+      key: 'purpose',
+      label: 'Purpose',
+      render: (val) => <span className="text-[11px] font-medium text-neutral-600 dark:text-neutral-400">{val || 'Other'}</span>
     },
     {
       key: 'quantity',
@@ -303,13 +312,33 @@ export default function StockMovements() {
                     <option value="">All Types</option>
                     <option value="IN">IN</option>
                     <option value="OUT">OUT</option>
+                    <option value="TRANSFER">TRANSFER</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs">
+                  <Activity size={14} className="text-neutral-400" />
+                  <select
+                    className="bg-transparent border-none text-[11px] font-medium text-neutral-600 dark:text-neutral-400 focus:ring-0 cursor-pointer p-0 pr-6"
+                    value={purposeFilter}
+                    onChange={(e) => setPurposeFilter(e.target.value)}
+                  >
+                    <option value="">All Purposes</option>
+                    <option value="Production Issue">Production Issue</option>
+                    <option value="Production Transfer">Production Transfer</option>
+                    <option value="Purchase Receipt">Purchase Receipt</option>
+                    <option value="Internal Transfer">Warehouse Transfer</option>
+                    <option value="Material Receipt">Material Receipt</option>
+                    <option value="Material Issue">Material Issue</option>
+                    <option value="Sales Issue">Sales Delivery</option>
+                    <option value="Stock Adjustment">Stock Adjustment</option>
                   </select>
                 </div>
               </div>
 
-              { (searchTerm || statusFilter || typeFilter) && (
+              { (searchTerm || statusFilter || typeFilter || purposeFilter) && (
                 <button
-                  onClick={() => { setSearchTerm(''); setStatusFilter(''); setTypeFilter(''); }}
+                  onClick={() => { setSearchTerm(''); setStatusFilter(''); setTypeFilter(''); setPurposeFilter(''); }}
                   className="text-[11px] font-medium text-rose-500 hover:text-rose-600 flex items-center gap-1"
                 >
                   <X size={14} />

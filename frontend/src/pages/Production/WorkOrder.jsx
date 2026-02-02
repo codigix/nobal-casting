@@ -196,7 +196,7 @@ export default function WorkOrder() {
         <div className="">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 ">
             <div className="flex items-center gap-2 ">
-              <div className="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center text-white shadow-xl shadow-indigo-100 rotate-3 hover:rotate-0 transition-transform duration-500">
+              <div className="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center text-white shadow  shadow-indigo-100 rotate-3 hover:rotate-0 transition-transform duration-500">
                 <ClipboardList size={15} />
               </div>
               <div>

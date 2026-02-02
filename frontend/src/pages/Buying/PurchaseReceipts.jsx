@@ -32,7 +32,7 @@ const StatCard = ({ label, value, icon: Icon, color, onClick, isActive, descript
   return (
     <Card
       onClick={onClick}
-      className={`bg-gradient-to-br ${colorMap[color] || colorMap.primary} p-2 overflow-hidden border-1 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 relative rounded group cursor-pointer ${isActive ? 'ring-2 ring-indigo-500 border-transparent shadow-indigo-500/20' : ''}`}
+      className={`bg-gradient-to-br ${colorMap[color] || colorMap.primary} p-2 overflow-hidden border-1 transition-all duration-300 hover:shadow  hover:-translate-y-1 relative rounded group cursor-pointer ${isActive ? 'ring-2 ring-indigo-500 border-transparent shadow-indigo-500/20' : ''}`}
     >
       <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-current opacity-5 rounded-full group-hover:scale-125 transition-transform" />
       <div className="flex items-start justify-between relative z-10">
@@ -539,7 +539,7 @@ export default function PurchaseReceipts() {
             <div className="flex bg-slate-100 dark:bg-neutral-800 p-1 rounded border border-slate-200 dark:border-neutral-700 ">
               <button 
                 onClick={() => setViewMode('kanban')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs   transition-all ${
+                className={`flex items-center gap-2 p-2 rounded text-xs   transition-all ${
                   viewMode === 'kanban' 
                     ? 'bg-white dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400 shadow-md ring-1 ring-black/5' 
                     : 'text-neutral-500 dark:text-neutral-400 hover:text-indigo-600'
@@ -550,7 +550,7 @@ export default function PurchaseReceipts() {
               </button>
               <button 
                 onClick={() => setViewMode('table')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs   transition-all ${
+                className={`flex items-center gap-2 p-2 rounded text-xs   transition-all ${
                   viewMode === 'table' 
                     ? 'bg-white dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400 shadow-md ring-1 ring-black/5' 
                     : 'text-neutral-500 dark:text-neutral-400 hover:text-indigo-600'
@@ -788,7 +788,7 @@ export default function PurchaseReceipts() {
                               <div 
                                 key={grn.grn_no} 
                                 onClick={() => handleViewGRN(grn.grn_no)}
-                                className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-xl hover:border-indigo-200 transition-all cursor-pointer group animate-in fade-in slide-in-from-bottom-2 duration-300 relative overflow-hidden"
+                                className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow  hover:border-indigo-200 transition-all cursor-pointer group animate-in fade-in slide-in-from-bottom-2 duration-300 relative overflow-hidden"
                               >
                                 <div className={`absolute top-0 left-0 w-1 h-full ${config.badge.split(' ')[0].replace('bg-', 'bg-')}`}></div>
                                 

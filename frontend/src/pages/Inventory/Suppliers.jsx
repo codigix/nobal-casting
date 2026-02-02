@@ -479,7 +479,7 @@ export default function Suppliers() {
               </button>
 
               {showColumnMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded shadow-xl z-50 py-2">
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded shadow  z-50 py-2">
                   <div className="px-3 py-1 border-b border-slate-100 flex justify-between mb-1">
                     <button 
                       onClick={() => setVisibleColumns(new Set(columns.map(c => c.key)))}

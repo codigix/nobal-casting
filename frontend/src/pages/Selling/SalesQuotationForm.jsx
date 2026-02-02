@@ -1,127 +1,126 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import axios from 'axios'
-import Button from '../../components/Button/Button'
-import Alert from '../../components/Alert/Alert'
+import {
+  Save, X, AlertCircle, CheckCircle, Package,
+  Boxes, Edit2, Settings, Calendar,
+  Database, Layers, Clock,
+  ArrowRight, ShieldCheck, Zap, Activity, Filter, Info,
+  Plus, Trash2, ChevronDown, User, Building, Landmark,
+  MapPin, Phone, CreditCard, Printer, FileText, Calculator,
+  Percent, Tag
+} from 'lucide-react'
+import SearchableSelect from '../../components/SearchableSelect'
 import Card from '../../components/Card/Card'
 import AuditTrail from '../../components/AuditTrail'
-import SearchableSelect from '../../components/SearchableSelect'
-import './Selling.css'
+import Alert from '../../components/Alert/Alert'
+import Button from '../../components/Button/Button'
 
-const styles = {
-  mainContainer: {
-    maxWidth: '100%',
-    margin: '2rem',
-    padding: '0'
-  },
-  header: {
-    marginBottom: '20px',
-    paddingBottom: '12px',
-    borderBottom: '2px solid #e5e7eb'
-  },
-  tabsContainer: {
-    marginBottom: '20px',
-    borderBottom: '2px solid #e5e7eb'
-  },
-  tabsList: {
-    display: 'flex',
-    gap: '8px',
-    overflowX: 'auto',
-    paddingBottom: '0',
-    borderBottom: 'none'
-  },
-  tab: {
-    padding: '12px 20px',
-    fontSize: '13px',
-    fontWeight: '500',
-    cursor: 'pointer',
-    border: 'none',
-    backgroundColor: 'transparent',
-    color: '#666',
-    borderBottom: '3px solid transparent',
-    transition: 'all 0.3s',
-    whiteSpace: 'nowrap'
-  },
-  tabActive: {
-    color: '#007bff',
-    borderBottomColor: '#007bff'
-  },
-  tabContent: {
-    padding: '20px 0'
-  },
-  gridRow: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '12px',
-    marginBottom: '12px'
-  },
-  formGroup: {
-    display: 'flex',
-    flexDirection: 'column'
-  },
-  label: {
-    fontSize: '13px',
-    fontWeight: '500',
-    marginBottom: '4px',
-    color: '#374151'
-  },
-  input: {
-    padding: '8px',
-    fontSize: '13px',
-    border: '1px solid #d1d5db',
-    borderRadius: '4px',
-    fontFamily: 'inherit'
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    fontSize: '13px',
-    marginTop: '8px'
-  },
-  tableHeader: {
-    backgroundColor: '#f3f4f6',
-    fontWeight: '600',
-    padding: '8px',
-    textAlign: 'left',
-    borderBottom: '2px solid #d1d5db'
-  },
-  tableCell: {
-    padding: '8px',
-    borderBottom: '1px solid #e5e7eb'
-  },
-  totalsBox: {
-    backgroundColor: '#f8fafc',
-    border: '1px solid #e5e7eb',
-    borderRadius: '4px',
-    padding: '12px',
-    marginTop: '12px'
-  },
-  wizardNav: {
-    display: 'flex',
-    gap: '10px',
-    justifyContent: 'space-between',
-    marginTop: '30px',
-    paddingTop: '20px',
-    borderTop: '1px solid #e5e7eb'
-  },
-  wizardProgress: {
-    display: 'flex',
-    gap: '4px',
-    justifyContent: 'center',
-    marginBottom: '20px'
-  },
-  progressDot: {
-    width: '8px',
-    height: '8px',
-    borderRadius: '50%',
-    backgroundColor: '#e5e7eb',
-    transition: 'all 0.3s'
-  },
-  progressDotActive: {
-    backgroundColor: '#007bff',
-    width: '24px',
-    borderRadius: '4px'
+// Helper Components for the Redesign
+const SectionTitle = ({ title, icon: Icon, badge }) => (
+  <div className="flex items-center justify-between mb-6">
+    <div className="flex items-center gap-3">
+      <div className="p-2 bg-indigo-50 text-indigo-600 rounded">
+        <Icon size={18} />
+      </div>
+      <h3 className="text-xs text-slate-900 font-semibold">{title}</h3>
+    </div>
+    {badge && (
+      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded-full border border-slate-200 uppercase tracking-wider">
+        {badge}
+      </span>
+    )}
+  </div>
+)
+
+const FieldWrapper = ({ label, children, error, required }) => (
+  <div className="space-y-1.5">
+    <div className="flex items-center justify-between">
+      <label className="text-xs  text-slate-400 flex items-center gap-1">
+        {label}
+        {required && <span className="text-rose-500">*</span>}
+      </label>
+      {error && <span className="text-[10px] font-semibold text-rose-500 animate-pulse">{error}</span>}
+    </div>
+    {children}
+  </div>
+)
+
+const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = 'indigo' }) => {
+  const themes = {
+    blue: 'text-blue-600 bg-blue-50 border-blue-100',
+    emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+    amber: 'text-amber-600 bg-amber-50 border-amber-100',
+    rose: 'text-rose-600 bg-rose-50 border-rose-100',
+    indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100',
+    slate: 'text-slate-600 bg-slate-50 border-slate-100',
+    cyan: 'text-cyan-600 bg-cyan-50 border-cyan-100'
   }
+
+  const activeTheme = themes[themeColor] || themes.indigo
+
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(section)}
+      className={`flex items-center gap-2 p-2 rounded transition-all duration-300 group ${isActive
+        ? `${activeTheme} border`
+        : 'text-slate-500 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-100'
+        }`}
+    >
+      <div className={`p-1.5 rounded transition-all duration-300 ${isActive ? 'bg-white scale-110' : 'bg-slate-50 group-hover:bg-white'}`}>
+        <Icon size={14} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
+      </div>
+      <span className="text-xs font-semibold tracking-tight uppercase">{label.split(' ').slice(1).join(' ')}</span>
+      {isActive && <div className="w-1 h-1 rounded bg-current animate-pulse ml-0.5" />}
+    </button>
+  )
+}
+
+const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, themeColor = 'indigo', id, badge, actions }) => {
+  const themes = {
+    blue: { text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', icon: 'bg-blue-600 text-white' },
+    emerald: { text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', icon: 'bg-emerald-600 text-white' },
+    amber: { text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', icon: 'bg-amber-600 text-white' },
+    rose: { text: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', icon: 'bg-rose-600 text-white' },
+    indigo: { text: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', icon: 'bg-indigo-600 text-white' },
+    slate: { text: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-100', icon: 'bg-slate-600 text-white' },
+    cyan: { text: 'text-cyan-600', bg: 'bg-cyan-50', border: 'border-cyan-100', icon: 'bg-cyan-600 text-white' }
+  }
+
+  const theme = themes[themeColor] || themes.indigo
+
+  return (
+    <div
+      id={id}
+      className={`flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50/50 transition-all border-b border-slate-100 ${isExpanded ? 'bg-slate-50/30' : ''}`}
+      onClick={onToggle}
+    >
+      <div className="flex items-center gap-4">
+        <div className={`p-2.5 rounded shadow-lg transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
+          <Icon size={20} strokeWidth={2.5} />
+        </div>
+        <div>
+          <h2 className="text-sm font-bold flex items-center gap-3">
+            <span className={`${theme.text} uppercase tracking-wider`}>{title.split(' ')[0]}</span>
+            <span className="text-slate-800 ">{title.split(' ').slice(1).join(' ')}</span>
+          </h2>
+          {subtitle && <p className="text-xs font-medium text-slate-400">{subtitle}</p>}
+        </div>
+        {badge && (
+          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-[10px] font-bold rounded-full border ${theme.border} uppercase tracking-widest`}>
+            {badge}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-4">
+        {actions && <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>{actions}</div>}
+        <div className={`p-2 rounded-full transition-all duration-300 ${isExpanded ? `${theme.bg} ${theme.text}` : 'text-slate-300'}`}>
+          <ChevronDown size={20} className={`transition-transform duration-500 ${isExpanded ? 'rotate-180' : ''}`} strokeWidth={3} />
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function SalesQuotationForm() {
@@ -130,19 +129,6 @@ export default function SalesQuotationForm() {
   const navigate = useNavigate()
   const isEditMode = id && id !== 'new'
   const bomId = searchParams.get('bom_id')
-
-  const tabs = [
-    { id: 'basicDetails', label: 'Basic Details' },
-    { id: 'items', label: 'Quotation Items' },
-    { id: 'addressContact', label: 'Address & Contact' },
-    { id: 'paymentTerms', label: 'Payment Terms' },
-    { id: 'printSettings', label: 'Print Settings' },
-    { id: 'additionalInfo', label: 'Additional Info' },
-    { id: 'taxesCharges', label: 'Taxes & Charges' },
-    { id: 'totals', label: 'Totals & Discounts' }
-  ]
-
-  const [activeTabIndex, setActiveTabIndex] = useState(0)
 
   const [formData, setFormData] = useState({
     customer_id: '',
@@ -203,13 +189,39 @@ export default function SalesQuotationForm() {
   const [success, setSuccess] = useState(null)
   const [quotation, setQuotation] = useState(null)
   const [dataLoading, setDataLoading] = useState(false)
+  const [activeSection, setActiveSection] = useState('foundation')
+  const [expandedSections, setExpandedSections] = useState({
+    foundation: true,
+    address: true,
+    items: true,
+    taxes: true,
+    totals: true,
+    terms: true
+  })
 
   useEffect(() => {
     fetchRequiredData()
     if (isEditMode) {
       fetchQuotation()
     }
-  }, [])
+
+    const handleScroll = () => {
+      const sections = ['foundation', 'address', 'items', 'taxes', 'totals', 'terms']
+      for (const section of sections) {
+        const element = document.getElementById(section)
+        if (element) {
+          const rect = element.getBoundingClientRect()
+          if (rect.top >= 0 && rect.top <= 200) {
+            setActiveSection(section)
+            break
+          }
+        }
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [id])
 
   useEffect(() => {
     if (bomId) {
@@ -230,7 +242,8 @@ export default function SalesQuotationForm() {
           qty: item.qty || 1,
           uom: item.uom || '',
           rate: item.rate || 0,
-          amount: (item.qty || 1) * (item.rate || 0)
+          amount: (item.qty || 1) * (item.rate || 0),
+          id: Date.now() + Math.random()
         }))
         
         setFormData(prev => ({
@@ -246,23 +259,24 @@ export default function SalesQuotationForm() {
   const fetchRequiredData = async () => {
     try {
       setDataLoading(true)
+      const baseUrl = 'http://localhost:5000/api'
       const [custRes, itemRes, contactRes, payRes, letterRes, campRes, terrRes, sourceRes, lostRes, taxRes, shipRes, incoRes, stRes, partRes, couponRes, accRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/customers').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/items?limit=1000').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/crm/contact-persons').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/payment-terms').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/letter-heads').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/campaigns').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/territories').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/lead-sources').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/lost-reasons').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/tax-categories').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/shipping-rules').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/incoterms').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/sales-taxes-charges-template').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/crm/sales-partners').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/selling/coupon-codes').catch(() => ({ data: { data: [] } })),
-        axios.get('/api/setup/account-heads').catch(() => ({ data: { data: [] } }))
+        axios.get(`${baseUrl}/customers`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${baseUrl}/items?limit=1000`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${baseUrl}/crm/contact-persons`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${baseUrl}/setup/payment-terms`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${baseUrl}/setup/letter-heads`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${baseUrl}/setup/campaigns`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${baseUrl}/setup/territories`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${baseUrl}/setup/lead-sources`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${baseUrl}/setup/lost-reasons`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${baseUrl}/setup/tax-categories`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${baseUrl}/setup/shipping-rules`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${baseUrl}/setup/incoterms`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${baseUrl}/setup/sales-taxes-charges-template`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${baseUrl}/crm/sales-partners`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${baseUrl}/selling/coupon-codes`).catch(() => ({ data: { data: [] } })),
+        axios.get(`${baseUrl}/setup/account-heads`).catch(() => ({ data: { data: [] } }))
       ])
 
       setCustomers(custRes.data.data || [])
@@ -297,7 +311,7 @@ export default function SalesQuotationForm() {
         customer_id: quotationData.customer_id,
         items: quotationData.items || [],
         notes: quotationData.notes || '',
-        valid_till: quotationData.validity_date || '',
+        valid_till: quotationData.validity_date?.split('T')[0] || '',
         customer_name: quotationData.customer_name || '',
         status: quotationData.status || 'Draft',
         contact_person: quotationData.contact_person || '',
@@ -340,12 +354,11 @@ export default function SalesQuotationForm() {
     setFormData({ ...formData, [name]: value })
   }
 
-  const handleCustomerChange = (e) => {
-    const customerId = e.target.value
-    const customer = customers.find(c => c.customer_id === customerId)
+  const handleCustomerChange = (val) => {
+    const customer = customers.find(c => c.customer_id === val)
     setFormData({
       ...formData,
-      customer_id: customerId,
+      customer_id: val,
       customer_name: customer?.name || ''
     })
   }
@@ -383,7 +396,7 @@ export default function SalesQuotationForm() {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    if (e) e.preventDefault()
 
     if (!formData.customer_id || formData.items.length === 0 || !formData.valid_till) {
       setError('Please fill all required fields')
@@ -393,49 +406,19 @@ export default function SalesQuotationForm() {
     try {
       setLoading(true)
       const submitData = {
-        customer_id: formData.customer_id,
-        customer_name: formData.customer_name,
-        items: formData.items.map(({ id, ...item }) => item),
-        total_value: calculateTotal(),
-        notes: formData.notes,
+        ...formData,
         validity_date: formData.valid_till,
-        status: 'draft',
-        contact_person: formData.contact_person,
-        customer_address: formData.customer_address,
-        gst_in: formData.gst_in,
-        shipping_address: formData.shipping_address,
-        company_address: formData.company_address,
-        company_contact_person: formData.company_contact_person,
-        payment_terms_template: formData.payment_terms_template,
-        terms_and_conditions: formData.terms_and_conditions,
-        term_details: formData.term_details,
-        letter_head: formData.letter_head,
-        print_heading: formData.print_heading,
-        group_same_items: formData.group_same_items,
-        campaign: formData.campaign,
-        supplier_quotation: formData.supplier_quotation,
-        territory: formData.territory,
-        source: formData.source,
-        lost_reason: formData.lost_reason,
-        tax_category: formData.tax_category,
-        shipping_rule: formData.shipping_rule,
-        incoterm: formData.incoterm,
-        sales_taxes_charges_template: formData.sales_taxes_charges_template,
-        taxes_charges: formData.taxes_charges.map(({ id, ...tax }) => tax),
-        rounding_adjustment: formData.rounding_adjustment,
-        disable_rounded_total: formData.disable_rounded_total,
-        apply_discount_on: formData.apply_discount_on,
-        coupon_code: formData.coupon_code,
-        additional_discount_percentage: formData.additional_discount_percentage,
-        additional_discount_amount: formData.additional_discount_amount,
-        referral_sales_partner: formData.referral_sales_partner
+        total_value: calculateTotal(),
+        items: formData.items.map(({ id, ...item }) => item),
+        taxes_charges: formData.taxes_charges.map(({ id, ...tax }) => tax)
       }
 
+      const baseUrl = 'http://localhost:5000/api/selling/quotations'
       if (isEditMode) {
-        await axios.put(`http://localhost:5000/api/selling/quotations/${id}`, submitData)
+        await axios.put(`${baseUrl}/${id}`, submitData)
         setSuccess('Quotation updated successfully')
       } else {
-        await axios.post('http://localhost:5000/api/selling/quotations', submitData)
+        await axios.post(baseUrl, submitData)
         setSuccess('Quotation created successfully')
       }
 
@@ -447,435 +430,622 @@ export default function SalesQuotationForm() {
     }
   }
 
-  const nextTab = () => {
-    if (activeTabIndex < tabs.length - 1) {
-      setActiveTabIndex(activeTabIndex + 1)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+  const scrollToSection = (id) => {
+    const element = document.getElementById(id)
+    if (element) {
+      const offset = 120
+      const bodyRect = document.body.getBoundingClientRect().top
+      const elementRect = element.getBoundingClientRect().top
+      const elementPosition = elementRect - bodyRect
+      const offsetPosition = elementPosition - offset
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      })
     }
   }
 
-  const prevTab = () => {
-    if (activeTabIndex > 0) {
-      setActiveTabIndex(activeTabIndex - 1)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
   }
-
-  const isLastTab = activeTabIndex === tabs.length - 1
-  const currentTab = tabs[activeTabIndex]
 
   return (
-    <div style={styles.mainContainer}>
-      <Card>
-        <div style={styles.header}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ margin: '0', fontSize: '24px', fontWeight: '700' }}>{isEditMode ? 'Edit Sales Quotation' : 'Create Sales Quotation'}</h2>
-            <Button onClick={() => navigate('/selling/quotations')} variant="secondary">Back</Button>
+    <div className="min-h-screen bg-[#f8fafc] pb-20">
+      {/* Sticky Header Nav */}
+      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm px-6 py-3">
+        <div className="flex items-center justify-between max-w-[1600px] mx-auto">
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col">
+              <h1 className="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+                {isEditMode ? 'EDIT' : 'CREATE'} SALES QUOTATION
+                <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded border border-blue-100 uppercase tracking-widest">
+                  {isEditMode ? id : 'DRAFT'}
+                </span>
+              </h1>
+              <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                <span className="flex items-center gap-1"><Clock size={10} /> AUTO-SAVING...</span>
+                <span className="w-1 h-1 rounded bg-slate-300" />
+                <span className="flex items-center gap-1 text-blue-500"><Activity size={10} /> SYSTEM READY</span>
+              </div>
+            </div>
+
+            <nav className="hidden lg:flex items-center bg-slate-50 p-1 rounded-lg border border-slate-100 ml-4 overflow-x-auto max-w-[600px] no-scrollbar">
+              <NavItem label="01 FOUNDATION" icon={Landmark} section="foundation" isActive={activeSection === 'foundation'} onClick={scrollToSection} themeColor="blue" />
+              <NavItem label="02 LOGISTICS" icon={MapPin} section="address" isActive={activeSection === 'address'} onClick={scrollToSection} themeColor="emerald" />
+              <NavItem label="03 ITEMS" icon={Boxes} section="items" isActive={activeSection === 'items'} onClick={scrollToSection} themeColor="amber" />
+              <NavItem label="04 TAXES" icon={Calculator} section="taxes" isActive={activeSection === 'taxes'} onClick={scrollToSection} themeColor="rose" />
+              <NavItem label="05 TOTALS" icon={Tag} section="totals" isActive={activeSection === 'totals'} onClick={scrollToSection} themeColor="cyan" />
+              <NavItem label="06 TERMS" icon={Settings} section="terms" isActive={activeSection === 'terms'} onClick={scrollToSection} themeColor="slate" />
+            </nav>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/selling/quotations')}
+              className="px-4 py-2 text-[11px] font-bold text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded uppercase tracking-widest transition-all hover:bg-slate-50 shadow-sm"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded text-[11px] font-bold uppercase tracking-widest transition-all hover:bg-slate-800 shadow-lg shadow-slate-200 active:scale-95 disabled:opacity-50"
+            >
+              <Save size={14} />
+              {loading ? 'PROCESSING...' : 'SAVE QUOTATION'}
+            </button>
           </div>
         </div>
+      </div>
 
-        {error && <Alert type="danger">{error}</Alert>}
-        {success && <Alert type="success">{success}</Alert>}
-
-        {isEditMode && quotation && <AuditTrail createdAt={quotation.created_at} createdBy={quotation.created_by} updatedAt={quotation.updated_at} updatedBy={quotation.updated_by} status={quotation.status} />}
-
-        <div style={styles.wizardProgress}>
-          {tabs.map((tab, idx) => (
-            <div key={tab.id} style={{...styles.progressDot, ...(idx <= activeTabIndex ? styles.progressDotActive : {})}} />
-          ))}
-        </div>
-
-        <div style={styles.tabsContainer}>
-          <div style={styles.tabsList}>
-            {tabs.map((tab, idx) => (
-              <button
-                key={tab.id}
-                style={{...styles.tab, ...(activeTabIndex === idx ? styles.tabActive : {})}}
-                onClick={() => setActiveTabIndex(idx)}
-              >
-                {tab.label}
-              </button>
-            ))}
+      <div className="max-w-[1600px] mx-auto px-6 mt-8">
+        {error && (
+          <div className="mb-6 animate-in slide-in-from-top duration-300">
+            <Alert type="danger" icon={AlertCircle}>{error}</Alert>
           </div>
-        </div>
+        )}
+        {success && (
+          <div className="mb-6 animate-in slide-in-from-top duration-300">
+            <Alert type="success" icon={CheckCircle}>{success}</Alert>
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit}>
-          <div style={styles.tabContent}>
-            {currentTab.id === 'basicDetails' && (
-              <div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Customer *</label>
-                    <select name="customer_id" value={formData.customer_id} onChange={handleCustomerChange} required style={styles.input}>
-                      <option value="">Select Customer</option>
-                      {customers.map(customer => (
-                        <option key={customer.customer_id} value={customer.customer_id}>{customer.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Valid Till *</label>
-                    <input type="date" name="valid_till" value={formData.valid_till} onChange={handleChange} required style={styles.input} />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Status</label>
-                    <select name="status" value={formData.status} onChange={handleChange} style={styles.input}>
-                      <option value="Draft">Draft</option>
-                      <option value="Sent">Sent</option>
-                      <option value="Accepted">Accepted</option>
-                      <option value="Rejected">Rejected</option>
-                      <option value="Cancelled">Cancelled</option>
-                    </select>
-                  </div>
-                </div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Notes & Comments</label>
-                    <textarea name="notes" value={formData.notes} onChange={handleChange} placeholder="Add notes..." rows="3" style={{ ...styles.input, width: '100%', minHeight: '70px' }} />
-                  </div>
-                </div>
-              </div>
-            )}
+        {isEditMode && quotation && (
+          <div className="mb-8">
+            <AuditTrail createdAt={quotation.created_at} createdBy={quotation.created_by} updatedAt={quotation.updated_at} updatedBy={quotation.updated_by} status={quotation.status} />
+          </div>
+        )}
 
-            {currentTab.id === 'items' && (
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <h3 style={{ margin: '0', fontSize: '14px', fontWeight: '600' }}>Quotation Items</h3>
-                  <Button type="button" variant="primary" onClick={handleAddItem} style={{ fontSize: '12px', padding: '6px 12px' }}>+ Add Item</Button>
-                </div>
-                {bomId && formData.items.length > 0 && (
-                  <div style={{ backgroundColor: '#e3f2fd', border: '1px solid #2196f3', color: '#1976d2', padding: '12px', borderRadius: '4px', marginBottom: '12px', fontSize: '13px' }}>
-                    ✓ BOM items have been loaded. You can modify quantities and rates as needed.
-                  </div>
-                )}
-                {formData.items.length > 0 ? (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={styles.table}>
-                      <thead>
-                        <tr>
-                          <th style={styles.tableHeader}>Item</th>
-                          <th style={styles.tableHeader}>Qty</th>
-                          <th style={styles.tableHeader}>Rate</th>
-                          <th style={styles.tableHeader}>Amount</th>
-                          <th style={{ ...styles.tableHeader, width: '60px' }}>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {formData.items.map((item, idx) => {
-                          const amount = (item.qty || 0) * (item.rate || 0)
-                          return (
-                            <tr key={idx}>
-                              <td style={styles.tableCell}>
-                                <select value={item.item_code} onChange={(e) => handleItemChange(idx, 'item_code', e.target.value)} style={{ ...styles.input, width: '100%' }}>
-                                  <option value="">Select Item</option>
-                                  {allItems.map(itm => (
-                                    <option key={itm.item_code} value={itm.item_code}>{itm.name}</option>
-                                  ))}
-                                </select>
-                              </td>
-                              <td style={styles.tableCell}>
-                                <input type="number" value={item.qty || ''} onChange={(e) => handleItemChange(idx, 'qty', e.target.value)} placeholder="0" min="0" step="0.01" style={{ ...styles.input, width: '100%' }} />
-                              </td>
-                              <td style={styles.tableCell}>
-                                <input type="number" value={item.rate || ''} onChange={(e) => handleItemChange(idx, 'rate', e.target.value)} placeholder="0.00" step="0.01" min="0" style={{ ...styles.input, width: '100%' }} />
-                              </td>
-                              <td style={styles.tableCell}>₹{amount.toFixed(2)}</td>
-                              <td style={styles.tableCell}>
-                                <Button type="button" variant="danger" onClick={() => handleRemoveItem(idx)} style={{ fontSize: '11px', padding: '4px 6px', width: '100%' }}>Remove</Button>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '24px', color: '#999', fontSize: '13px' }}>
-                    <p style={{ margin: '0' }}>No items added yet. Click "Add Item" to get started.</p>
-                  </div>
-                )}
-                {formData.items.length > 0 && (
-                  <div style={{ marginTop: '12px', textAlign: 'right' }}>
-                    <p style={{ margin: '0', fontSize: '14px', fontWeight: '600' }}>Total: <span style={{ color: '#28a745' }}>₹{calculateTotal().toFixed(2)}</span></p>
-                  </div>
-                )}
-              </div>
-            )}
+        <div className="grid grid-cols-1 gap-8">
+          {/* Foundation Section */}
+          <div id="foundation">
+            <Card className="overflow-hidden border-none shadow-xl shadow-slate-200/50">
+              <SectionHeader
+                title="01 FOUNDATION"
+                icon={Landmark}
+                subtitle="Core identity and customer parameters"
+                isExpanded={expandedSections.foundation}
+                onToggle={() => toggleSection('foundation')}
+                themeColor="blue"
+                badge="MANDATORY"
+              />
+              {expandedSections.foundation && (
+                <div className="p-6 space-y-6 animate-in fade-in duration-300">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FieldWrapper label="Customer" required>
+                      <SearchableSelect
+                        options={customers.map(c => ({ label: `${c.name} [${c.customer_id}]`, value: c.customer_id }))}
+                        value={formData.customer_id}
+                        onChange={handleCustomerChange}
+                        placeholder="SELECT CUSTOMER"
+                      />
+                    </FieldWrapper>
 
-            {currentTab.id === 'addressContact' && (
-              <div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Customer Address</label>
-                    <textarea name="customer_address" value={formData.customer_address} onChange={handleChange} placeholder="Enter customer address" rows="2" style={{ ...styles.input, width: '100%', minHeight: '60px' }} />
+                    <FieldWrapper label="Valid Till" required>
+                      <div className="relative group">
+                        <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                        <input
+                          type="date"
+                          name="valid_till"
+                          value={formData.valid_till}
+                          onChange={handleChange}
+                          required
+                          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                        />
+                      </div>
+                    </FieldWrapper>
                   </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Contact Person</label>
-                    <SearchableSelect options={contactPersons} value={formData.contact_person} onChange={(val) => setFormData({ ...formData, contact_person: val })} placeholder="Select Contact Person" />
-                  </div>
-                </div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>GST IN</label>
-                    <input type="text" name="gst_in" value={formData.gst_in} onChange={handleChange} placeholder="Enter GST IN" style={styles.input} />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Shipping Address</label>
-                    <textarea name="shipping_address" value={formData.shipping_address} onChange={handleChange} placeholder="Enter shipping address" rows="2" style={{ ...styles.input, width: '100%', minHeight: '60px' }} />
-                  </div>
-                </div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Company Address</label>
-                    <input type="text" name="company_address" value={formData.company_address} onChange={handleChange} placeholder="Enter company address" style={styles.input} />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Company Contact Person</label>
-                    <input type="text" name="company_contact_person" value={formData.company_contact_person} onChange={handleChange} placeholder="Enter company contact person" style={styles.input} />
-                  </div>
-                </div>
-              </div>
-            )}
 
-            {currentTab.id === 'paymentTerms' && (
-              <div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Payment Terms Template</label>
-                    <SearchableSelect options={paymentTermsTemplates} value={formData.payment_terms_template} onChange={(val) => setFormData({ ...formData, payment_terms_template: val })} placeholder="Select Payment Terms Template" />
-                  </div>
-                </div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Terms and Conditions</label>
-                    <textarea name="terms_and_conditions" value={formData.terms_and_conditions} onChange={handleChange} placeholder="Enter terms and conditions..." rows="2" style={{ ...styles.input, width: '100%', minHeight: '60px' }} />
-                  </div>
-                </div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Term Details</label>
-                    <textarea name="term_details" value={formData.term_details} onChange={handleChange} placeholder="Enter term details..." rows="2" style={{ ...styles.input, width: '100%', minHeight: '60px' }} />
-                  </div>
-                </div>
-              </div>
-            )}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <FieldWrapper label="Status">
+                      <select
+                        name="status"
+                        value={formData.status}
+                        onChange={handleChange}
+                        className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                      >
+                        <option value="Draft">Draft</option>
+                        <option value="Open">Open</option>
+                        <option value="Replied">Replied</option>
+                        <option value="Ordered">Ordered</option>
+                        <option value="Lost">Lost</option>
+                        <option value="Cancelled">Cancelled</option>
+                      </select>
+                    </FieldWrapper>
 
-            {currentTab.id === 'printSettings' && (
-              <div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Letter Head</label>
-                    <SearchableSelect options={letterHeads} value={formData.letter_head} onChange={(val) => setFormData({ ...formData, letter_head: val })} placeholder="Select Letter Head" />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Print Heading</label>
-                    <input type="text" name="print_heading" value={formData.print_heading} onChange={handleChange} placeholder="Enter print heading" style={styles.input} />
-                  </div>
-                </div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', ...styles.label }}>
-                      <input type="checkbox" name="group_same_items" checked={formData.group_same_items} onChange={(e) => setFormData({ ...formData, group_same_items: e.target.checked })} />
-                      Group same items
-                    </label>
-                  </div>
-                </div>
-              </div>
-            )}
+                    <FieldWrapper label="Contact Person">
+                      <SearchableSelect
+                        options={contactPersons}
+                        value={formData.contact_person}
+                        onChange={(val) => setFormData({ ...formData, contact_person: val })}
+                        placeholder="SELECT CONTACT"
+                      />
+                    </FieldWrapper>
 
-            {currentTab.id === 'additionalInfo' && (
-              <div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Campaign</label>
-                    <SearchableSelect options={campaigns} value={formData.campaign} onChange={(val) => setFormData({ ...formData, campaign: val })} placeholder="Select Campaign" />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Supplier Quotation</label>
-                    <input type="text" name="supplier_quotation" value={formData.supplier_quotation} onChange={handleChange} placeholder="Enter supplier quotation reference" style={styles.input} />
-                  </div>
-                </div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Territory</label>
-                    <SearchableSelect options={territories} value={formData.territory} onChange={(val) => setFormData({ ...formData, territory: val })} placeholder="Select Territory" />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Source</label>
-                    <SearchableSelect options={sources} value={formData.source} onChange={(val) => setFormData({ ...formData, source: val })} placeholder="Select Source" />
+                    <FieldWrapper label="GSTIN">
+                      <input
+                        type="text"
+                        name="gst_in"
+                        value={formData.gst_in}
+                        onChange={handleChange}
+                        className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all uppercase tracking-wider"
+                      />
+                    </FieldWrapper>
                   </div>
                 </div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Lost Reason</label>
-                    <SearchableSelect options={lostReasons} value={formData.lost_reason} onChange={(val) => setFormData({ ...formData, lost_reason: val })} placeholder="Select Lost Reason" />
-                  </div>
-                </div>
-              </div>
-            )}
+              )}
+            </Card>
+          </div>
 
-            {currentTab.id === 'taxesCharges' && (
-              <div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Tax Category</label>
-                    <SearchableSelect options={taxCategories} value={formData.tax_category} onChange={(val) => setFormData({ ...formData, tax_category: val })} placeholder="Select Tax Category" />
+          {/* Logistics Section */}
+          <div id="address">
+            <Card className="overflow-hidden border-none shadow-xl shadow-slate-200/50">
+              <SectionHeader
+                title="02 ADDRESS & CONTACT"
+                icon={MapPin}
+                subtitle="Shipping and billing configuration"
+                isExpanded={expandedSections.address}
+                onToggle={() => toggleSection('address')}
+                themeColor="emerald"
+                badge="LOGISTICS"
+              />
+              {expandedSections.address && (
+                <div className="p-6 space-y-6 animate-in fade-in duration-300">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FieldWrapper label="Customer Address">
+                      <textarea
+                        name="customer_address"
+                        value={formData.customer_address}
+                        onChange={handleChange}
+                        placeholder="ENTER BILLING ADDRESS..."
+                        className="w-full p-4 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all min-h-[100px] uppercase tracking-wider"
+                      />
+                    </FieldWrapper>
+
+                    <FieldWrapper label="Shipping Address">
+                      <textarea
+                        name="shipping_address"
+                        value={formData.shipping_address}
+                        onChange={handleChange}
+                        placeholder="ENTER SHIPPING ADDRESS..."
+                        className="w-full p-4 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all min-h-[100px] uppercase tracking-wider"
+                      />
+                    </FieldWrapper>
                   </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Shipping Rule</label>
-                    <SearchableSelect options={shippingRules} value={formData.shipping_rule} onChange={(val) => setFormData({ ...formData, shipping_rule: val })} placeholder="Select Shipping Rule" />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FieldWrapper label="Company Address">
+                      <textarea
+                        name="company_address"
+                        value={formData.company_address}
+                        onChange={handleChange}
+                        className="w-full p-4 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all min-h-[80px] uppercase tracking-wider"
+                      />
+                    </FieldWrapper>
+
+                    <FieldWrapper label="Company Contact Person">
+                      <input
+                        type="text"
+                        name="company_contact_person"
+                        value={formData.company_contact_person}
+                        onChange={handleChange}
+                        className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                      />
+                    </FieldWrapper>
                   </div>
                 </div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Incoterm</label>
-                    <SearchableSelect options={incoterms} value={formData.incoterm} onChange={(val) => setFormData({ ...formData, incoterm: val })} placeholder="Select Incoterm" />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Sales Taxes Template</label>
-                    <SearchableSelect options={salesTaxChargesTemplates} value={formData.sales_taxes_charges_template} onChange={(val) => setFormData({ ...formData, sales_taxes_charges_template: val })} placeholder="Select Template" />
-                  </div>
-                </div>
-                <div style={{ marginTop: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <label style={styles.label}>Sales Taxes and Charges</label>
-                    <Button type="button" variant="primary" onClick={() => setFormData({ ...formData, taxes_charges: [...formData.taxes_charges, { id: Date.now(), type: '', account_head: '', tax_rate: 0, amount: 0 }] })} style={{ fontSize: '11px', padding: '4px 10px' }}>+ Add</Button>
-                  </div>
-                  {formData.taxes_charges.length > 0 ? (
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={styles.table}>
+              )}
+            </Card>
+          </div>
+
+          {/* Items Section */}
+          <div id="items">
+            <Card className="overflow-hidden border-none shadow-xl shadow-slate-200/50">
+              <SectionHeader
+                title="03 QUOTATION ITEMS"
+                icon={Boxes}
+                subtitle="Line item specification and pricing"
+                isExpanded={expandedSections.items}
+                onToggle={() => toggleSection('items')}
+                themeColor="amber"
+                badge={`${formData.items.length} ITEMS`}
+                actions={
+                  <button
+                    type="button"
+                    onClick={handleAddItem}
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded text-[10px] font-black uppercase tracking-[0.1em] hover:bg-amber-600 transition-all shadow-lg shadow-amber-100 active:scale-95"
+                  >
+                    <Plus size={14} strokeWidth={3} />
+                    ADD ITEM
+                  </button>
+                }
+              />
+              {expandedSections.items && (
+                <div className="p-6 space-y-6 animate-in fade-in duration-300">
+                  {formData.items.length > 0 ? (
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
+                      <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr>
-                            <th style={{ ...styles.tableHeader, width: '40px' }}>No.</th>
-                            <th style={styles.tableHeader}>Type</th>
-                            <th style={styles.tableHeader}>Account Head</th>
-                            <th style={styles.tableHeader}>Tax Rate</th>
-                            <th style={styles.tableHeader}>Amount</th>
-                            <th style={styles.tableHeader}>Total</th>
-                            <th style={{ ...styles.tableHeader, width: '50px' }}>Action</th>
+                          <tr className="bg-slate-50/50 border-b border-slate-200">
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Item Specification</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[120px]">Quantity</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Rate (₹)</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Amount (₹)</th>
+                            <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[80px]">Action</th>
                           </tr>
                         </thead>
-                        <tbody>
-                          {formData.taxes_charges.map((tax, idx) => {
-                            const total = (tax.amount || 0) + ((tax.amount || 0) * (tax.tax_rate || 0) / 100)
+                        <tbody className="divide-y divide-slate-100">
+                          {formData.items.map((item, idx) => {
+                            const amount = (item.qty || 0) * (item.rate || 0)
                             return (
-                              <tr key={idx}>
-                                <td style={styles.tableCell}>{idx + 1}</td>
-                                <td style={styles.tableCell}>
-                                  <SearchableSelect options={[{ label: 'Add', value: 'Add' }, { label: 'Deduct', value: 'Deduct' }]} value={tax.type || ''} onChange={(val) => { const updated = [...formData.taxes_charges]; updated[idx].type = val; setFormData({ ...formData, taxes_charges: updated }) }} placeholder="Select Type" />
+                              <tr key={item.id || idx} className="group hover:bg-slate-50/80 transition-all duration-300">
+                                <td className="px-6 py-4">
+                                  <SearchableSelect
+                                    options={allItems.map(itm => ({ label: `${itm.name} [${itm.item_code}]`, value: itm.item_code }))}
+                                    value={item.item_code}
+                                    onChange={(val) => handleItemChange(idx, 'item_code', val)}
+                                    placeholder="SELECT ITEM"
+                                  />
                                 </td>
-                                <td style={styles.tableCell}>
-                                  <SearchableSelect options={accountHeads} value={tax.account_head || ''} onChange={(val) => { const updated = [...formData.taxes_charges]; updated[idx].account_head = val; setFormData({ ...formData, taxes_charges: updated }) }} placeholder="Select Account Head" />
+                                <td className="px-6 py-4">
+                                  <input
+                                    type="number"
+                                    value={item.qty || ''}
+                                    onChange={(e) => handleItemChange(idx, 'qty', e.target.value)}
+                                    className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all"
+                                  />
                                 </td>
-                                <td style={styles.tableCell}>
-                                  <input type="number" value={tax.tax_rate || ''} onChange={(e) => { const updated = [...formData.taxes_charges]; updated[idx].tax_rate = parseFloat(e.target.value) || 0; setFormData({ ...formData, taxes_charges: updated }) }} placeholder="0" step="0.01" style={{ ...styles.input, width: '100%' }} />
+                                <td className="px-6 py-4">
+                                  <input
+                                    type="number"
+                                    value={item.rate || ''}
+                                    onChange={(e) => handleItemChange(idx, 'rate', e.target.value)}
+                                    className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all"
+                                  />
                                 </td>
-                                <td style={styles.tableCell}>
-                                  <input type="number" value={tax.amount || ''} onChange={(e) => { const updated = [...formData.taxes_charges]; updated[idx].amount = parseFloat(e.target.value) || 0; setFormData({ ...formData, taxes_charges: updated }) }} placeholder="0.00" step="0.01" style={{ ...styles.input, width: '100%' }} />
+                                <td className="px-6 py-4">
+                                  <span className="text-xs font-black text-slate-900">₹{amount.toFixed(2)}</span>
                                 </td>
-                                <td style={styles.tableCell}>₹{total.toFixed(2)}</td>
-                                <td style={styles.tableCell}>
-                                  <Button type="button" variant="danger" onClick={() => { const updated = formData.taxes_charges.filter((_, i) => i !== idx); setFormData({ ...formData, taxes_charges: updated }) }} style={{ fontSize: '10px', padding: '2px 4px', width: '100%' }}>Remove</Button>
+                                <td className="px-6 py-4 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveItem(idx)}
+                                    className="p-2 text-rose-500 hover:bg-rose-50 rounded transition-all opacity-0 group-hover:opacity-100"
+                                  >
+                                    <Trash2 size={16} strokeWidth={2.5} />
+                                  </button>
                                 </td>
                               </tr>
                             )
                           })}
                         </tbody>
+                        <tfoot>
+                          <tr className="bg-slate-50/50 font-black">
+                            <td colSpan="3" className="px-6 py-4 text-[10px] text-slate-400 uppercase tracking-widest text-right">Net Total</td>
+                            <td className="px-6 py-4 text-xs text-emerald-600">₹{calculateTotal().toFixed(2)}</td>
+                            <td></td>
+                          </tr>
+                        </tfoot>
                       </table>
                     </div>
                   ) : (
-                    <div style={{ textAlign: 'center', padding: '12px', color: '#999', fontSize: '12px' }}>
-                      <p style={{ margin: '0' }}>No taxes/charges added yet.</p>
+                    <div className="flex flex-col items-center justify-center py-16 bg-slate-50/50 rounded-xl border-2 border-dashed border-slate-200">
+                      <div className="p-4 bg-white rounded-2xl shadow-xl shadow-slate-200/50 text-slate-200 mb-4">
+                        <Package size={40} />
+                      </div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">No Items Added</p>
                     </div>
                   )}
                 </div>
-              </div>
-            )}
-
-            {currentTab.id === 'totals' && (
-              <div>
-                <div style={styles.totalsBox}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                    <div>
-                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '2px' }}>Item Total</div>
-                      <div style={{ fontSize: '16px', fontWeight: '600' }}>₹{calculateTotal().toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '2px' }}>Taxes</div>
-                      <div style={{ fontSize: '16px', fontWeight: '600' }}>₹{formData.taxes_charges.reduce((sum, t) => sum + (t.amount || 0), 0).toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '2px' }}>Grand Total</div>
-                      <div style={{ fontSize: '16px', fontWeight: '600', color: '#28a745' }}>₹{(calculateTotal() + (formData.taxes_charges.reduce((sum, t) => sum + (t.amount || 0), 0))).toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <label style={styles.label}>Rounding Adjustment</label>
-                      <input type="number" value={formData.rounding_adjustment} onChange={(e) => setFormData({ ...formData, rounding_adjustment: parseFloat(e.target.value) || 0 })} placeholder="0.00" step="0.01" style={{ ...styles.input, width: '100%' }} />
-                    </div>
-                  </div>
-                  <div style={{ paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <label style={styles.label}>Rounded Total</label>
-                      <span style={{ fontWeight: '600', fontSize: '14px' }}>₹{(calculateTotal() + (formData.taxes_charges.reduce((sum, t) => sum + (t.amount || 0), 0)) + formData.rounding_adjustment).toFixed(2)}</span>
-                    </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
-                      <input type="checkbox" checked={formData.disable_rounded_total} onChange={(e) => setFormData({ ...formData, disable_rounded_total: e.target.checked })} />
-                      Disable Rounded Total
-                    </label>
-                  </div>
-                </div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Apply Discount On</label>
-                    <select value={formData.apply_discount_on} onChange={(e) => setFormData({ ...formData, apply_discount_on: e.target.value })} style={styles.input}>
-                      <option value="Grand Total">Grand Total</option>
-                      <option value="Net Total">Net Total</option>
-                    </select>
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Coupon Code</label>
-                    <SearchableSelect options={couponCodes} value={formData.coupon_code} onChange={(val) => setFormData({ ...formData, coupon_code: val })} placeholder="Select Coupon Code" />
-                  </div>
-                </div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Discount %</label>
-                    <input type="number" value={formData.additional_discount_percentage} onChange={(e) => setFormData({ ...formData, additional_discount_percentage: parseFloat(e.target.value) || 0 })} placeholder="0" step="0.01" min="0" style={styles.input} />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Discount Amount (₹)</label>
-                    <input type="number" value={formData.additional_discount_amount} onChange={(e) => setFormData({ ...formData, additional_discount_amount: parseFloat(e.target.value) || 0 })} placeholder="0.00" step="0.01" min="0" style={styles.input} />
-                  </div>
-                </div>
-                <div style={styles.gridRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Referral Sales Partner</label>
-                    <SearchableSelect options={salesPartners} value={formData.referral_sales_partner} onChange={(val) => setFormData({ ...formData, referral_sales_partner: val })} placeholder="Select Referral Sales Partner" />
-                  </div>
-                </div>
-              </div>
-            )}
+              )}
+            </Card>
           </div>
 
-          <div style={styles.wizardNav}>
-            <Button type="button" variant="secondary" onClick={prevTab} disabled={activeTabIndex === 0}>
-              ← Previous
-            </Button>
-            <div style={{ fontSize: '12px', color: '#666', textAlign: 'center' }}>
-              Step {activeTabIndex + 1} of {tabs.length}
-            </div>
-            {isLastTab ? (
-              <Button type="submit" variant="primary" disabled={loading}>
-                {loading ? 'Saving...' : 'Save Quotation'}
-              </Button>
-            ) : (
-              <Button type="button" variant="primary" onClick={nextTab}>
-                Next →
-              </Button>
-            )}
+          {/* Taxes Section */}
+          <div id="taxes">
+            <Card className="overflow-hidden border-none shadow-xl shadow-slate-200/50">
+              <SectionHeader
+                title="04 TAXES & CHARGES"
+                icon={Calculator}
+                subtitle="Compliance and taxation parameters"
+                isExpanded={expandedSections.taxes}
+                onToggle={() => toggleSection('taxes')}
+                themeColor="rose"
+                badge={`${formData.taxes_charges.length} ENTRIES`}
+                actions={
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, taxes_charges: [...formData.taxes_charges, { type: 'Add', account_head: '', rate: 0, amount: 0, id: Date.now() }] })}
+                    className="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded text-[10px] font-black uppercase tracking-[0.1em] hover:bg-rose-600 transition-all shadow-lg shadow-rose-100 active:scale-95"
+                  >
+                    <Plus size={14} strokeWidth={3} />
+                    ADD TAX
+                  </button>
+                }
+              />
+              {expandedSections.taxes && (
+                <div className="p-6 space-y-6 animate-in fade-in duration-300">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <FieldWrapper label="Tax Category">
+                      <SearchableSelect
+                        options={taxCategories}
+                        value={formData.tax_category}
+                        onChange={(val) => setFormData({ ...formData, tax_category: val })}
+                        placeholder="SELECT CATEGORY"
+                      />
+                    </FieldWrapper>
+
+                    <FieldWrapper label="Taxes Template">
+                      <SearchableSelect
+                        options={salesTaxChargesTemplates}
+                        value={formData.sales_taxes_charges_template}
+                        onChange={(val) => setFormData({ ...formData, sales_taxes_charges_template: val })}
+                        placeholder="SELECT TEMPLATE"
+                      />
+                    </FieldWrapper>
+                  </div>
+
+                  {formData.taxes_charges.length > 0 && (
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50/50 border-b border-slate-200">
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Type</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Account Head</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[120px]">Rate (%)</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Amount (₹)</th>
+                            <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[80px]">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {formData.taxes_charges.map((tax, idx) => (
+                            <tr key={tax.id || idx} className="group hover:bg-slate-50/80 transition-all duration-300">
+                              <td className="px-6 py-4">
+                                <SearchableSelect
+                                  options={[{ label: 'ADD', value: 'Add' }, { label: 'DEDUCT', value: 'Deduct' }]}
+                                  value={tax.type}
+                                  onChange={(val) => {
+                                    const updated = [...formData.taxes_charges]
+                                    updated[idx].type = val
+                                    setFormData({ ...formData, taxes_charges: updated })
+                                  }}
+                                />
+                              </td>
+                              <td className="px-6 py-4">
+                                <SearchableSelect
+                                  options={accountHeads}
+                                  value={tax.account_head}
+                                  onChange={(val) => {
+                                    const updated = [...formData.taxes_charges]
+                                    updated[idx].account_head = val
+                                    setFormData({ ...formData, taxes_charges: updated })
+                                  }}
+                                  placeholder="SELECT ACCOUNT"
+                                />
+                              </td>
+                              <td className="px-6 py-4">
+                                <input
+                                  type="number"
+                                  value={tax.rate || ''}
+                                  onChange={(e) => {
+                                    const updated = [...formData.taxes_charges]
+                                    updated[idx].rate = parseFloat(e.target.value) || 0
+                                    updated[idx].amount = (calculateTotal() * updated[idx].rate) / 100
+                                    setFormData({ ...formData, taxes_charges: updated })
+                                  }}
+                                  className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 outline-none transition-all"
+                                />
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="text-xs font-black text-slate-900">₹{(tax.amount || 0).toFixed(2)}</span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = formData.taxes_charges.filter((_, i) => i !== idx)
+                                    setFormData({ ...formData, taxes_charges: updated })
+                                  }}
+                                  className="p-2 text-rose-500 hover:bg-rose-50 rounded transition-all opacity-0 group-hover:opacity-100"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card>
           </div>
-        </form>
-      </Card>
+
+          {/* Totals Section */}
+          <div id="totals">
+            <Card className="overflow-hidden border-none shadow-xl shadow-slate-200/50">
+              <SectionHeader
+                title="05 TOTALS & DISCOUNTS"
+                icon={Tag}
+                subtitle="Final valuation and adjustment parameters"
+                isExpanded={expandedSections.totals}
+                onToggle={() => toggleSection('totals')}
+                themeColor="cyan"
+                badge="VALUATION"
+              />
+              {expandedSections.totals && (
+                <div className="p-6 space-y-6 animate-in fade-in duration-300">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <FieldWrapper label="Apply Discount On">
+                      <select
+                        name="apply_discount_on"
+                        value={formData.apply_discount_on}
+                        onChange={handleChange}
+                        className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all"
+                      >
+                        <option value="Grand Total">Grand Total</option>
+                        <option value="Net Total">Net Total</option>
+                      </select>
+                    </FieldWrapper>
+
+                    <FieldWrapper label="Coupon Code">
+                      <SearchableSelect
+                        options={couponCodes}
+                        value={formData.coupon_code}
+                        onChange={(val) => setFormData({ ...formData, coupon_code: val })}
+                        placeholder="SELECT COUPON"
+                      />
+                    </FieldWrapper>
+
+                    <FieldWrapper label="Referral Partner">
+                      <SearchableSelect
+                        options={salesPartners}
+                        value={formData.referral_sales_partner}
+                        onChange={(val) => setFormData({ ...formData, referral_sales_partner: val })}
+                        placeholder="SELECT PARTNER"
+                      />
+                    </FieldWrapper>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-slate-100">
+                    <div className="space-y-4">
+                      <FieldWrapper label="Additional Discount %">
+                        <div className="relative group">
+                          <Percent size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-cyan-500" />
+                          <input
+                            type="number"
+                            name="additional_discount_percentage"
+                            value={formData.additional_discount_percentage}
+                            onChange={handleChange}
+                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all"
+                          />
+                        </div>
+                      </FieldWrapper>
+
+                      <FieldWrapper label="Additional Discount Amount">
+                        <input
+                          type="number"
+                          name="additional_discount_amount"
+                          value={formData.additional_discount_amount}
+                          onChange={handleChange}
+                          className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all"
+                        />
+                      </FieldWrapper>
+                    </div>
+
+                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Net Value</span>
+                        <span className="text-sm font-black text-slate-900">₹{calculateTotal().toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-rose-500">
+                        <span className="text-[10px] font-black uppercase tracking-widest">Discount Applied</span>
+                        <span className="text-sm font-black">-₹{(formData.additional_discount_amount || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="h-px bg-slate-200 my-2"></div>
+                      <div className="flex justify-between items-center pt-2">
+                        <span className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">Grand Total</span>
+                        <span className="text-xl font-black text-cyan-600">₹{(calculateTotal() - (formData.additional_discount_amount || 0) + formData.taxes_charges.reduce((s, t) => s + (t.amount || 0), 0)).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Card>
+          </div>
+
+          {/* Terms Section */}
+          <div id="terms">
+            <Card className="overflow-hidden border-none shadow-xl shadow-slate-200/50">
+              <SectionHeader
+                title="06 TERMS & SETTINGS"
+                icon={Settings}
+                subtitle="Strategic configuration and print parameters"
+                isExpanded={expandedSections.terms}
+                onToggle={() => toggleSection('terms')}
+                themeColor="slate"
+                badge="CONFIG"
+              />
+              {expandedSections.terms && (
+                <div className="p-6 space-y-6 animate-in fade-in duration-300">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <FieldWrapper label="Payment Template">
+                      <SearchableSelect
+                        options={paymentTermsTemplates}
+                        value={formData.payment_terms_template}
+                        onChange={(val) => setFormData({ ...formData, payment_terms_template: val })}
+                        placeholder="SELECT TEMPLATE"
+                      />
+                    </FieldWrapper>
+
+                    <FieldWrapper label="Letter Head">
+                      <SearchableSelect
+                        options={letterHeads}
+                        value={formData.letter_head}
+                        onChange={(val) => setFormData({ ...formData, letter_head: val })}
+                        placeholder="SELECT LETTERHEAD"
+                      />
+                    </FieldWrapper>
+
+                    <FieldWrapper label="Shipping Rule">
+                      <SearchableSelect
+                        options={shippingRules}
+                        value={formData.shipping_rule}
+                        onChange={(val) => setFormData({ ...formData, shipping_rule: val })}
+                        placeholder="SELECT RULE"
+                      />
+                    </FieldWrapper>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FieldWrapper label="Terms and Conditions">
+                      <textarea
+                        name="terms_and_conditions"
+                        value={formData.terms_and_conditions}
+                        onChange={handleChange}
+                        className="w-full p-4 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-slate-500/10 focus:border-slate-500 outline-none transition-all min-h-[150px] uppercase tracking-wider"
+                      />
+                    </FieldWrapper>
+
+                    <FieldWrapper label="Internal Notes">
+                      <textarea
+                        name="notes"
+                        value={formData.notes}
+                        onChange={handleChange}
+                        placeholder="ENTER INTERNAL SALES NOTES..."
+                        className="w-full p-4 bg-white border border-slate-200 rounded text-xs font-bold text-slate-900 focus:ring-4 focus:ring-slate-500/10 focus:border-slate-500 outline-none transition-all min-h-[150px] uppercase tracking-wider"
+                      />
+                    </FieldWrapper>
+                  </div>
+                </div>
+              )}
+            </Card>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

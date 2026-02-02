@@ -1257,7 +1257,7 @@ export default function BOMForm() {
                     themeColor="amber"
                   />
                   <NavItem
-                    label="Protocols"
+                    label="Operations"
                     icon={Settings}
                     section="operations"
                     isActive={activeSection === 'operations'}
@@ -1273,7 +1273,7 @@ export default function BOMForm() {
                     themeColor="rose"
                   />
                   <NavItem
-                    label="Valuation"
+                    label="BOM Cost"
                     icon={TrendingDown}
                     section="costing"
                     isActive={activeSection === 'costing'}
@@ -1333,7 +1333,7 @@ export default function BOMForm() {
                             options={items
                               .filter(item => item.item_group === 'Finished Goods' || item.item_group === 'Finished Good' || item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')
                               .map(item => ({
-                                label: item.name || item.item_name,
+                                label: `${item.name || item.item_name || 'No Name'} [${item.item_code}]`,
                                 value: item.name || item.item_name
                               }))}
                             placeholder="Identify formulation target..."
@@ -1350,7 +1350,7 @@ export default function BOMForm() {
                             options={items
                               .filter(item => item.item_group === 'Finished Goods' || item.item_group === 'Finished Good' || item.item_group === 'Sub Assemblies' || item.item_group === 'Sub-assembly')
                               .map(item => ({
-                                label: item.name,
+                                label: `${item.name || item.item_name || 'No Name'} [${item.item_code}]`,
                                 value: item.item_code
                               }))}
                             placeholder="Item code identification..."
@@ -1874,9 +1874,9 @@ export default function BOMForm() {
                 <Card className=" border border-slate-200/50  p-2 shadow-slate-200/40 bg-white/90 backdrop-blur-xl rounded">
                   <SectionHeader
                     id="raw_materials"
-                    title="Strategic Consumption"
+                    title="Materials "
                     icon={Database}
-                    subtitle={`${rawMaterials.length} Neural Assets • Total Valuation: ₹${rawMaterials.reduce((sum, rm) => sum + (parseFloat(rm.amount) || 0), 0).toLocaleString()}`}
+                    subtitle={`${rawMaterials.length}  Assets • Total Material Cost: ₹${rawMaterials.reduce((sum, rm) => sum + (parseFloat(rm.amount) || 0), 0).toLocaleString()}`}
                     isExpanded={expandedSections.raw_materials}
                     onToggle={() => toggleSection('raw_materials')}
                     themeColor="amber"
@@ -1922,7 +1922,7 @@ export default function BOMForm() {
                                   value={newRawMaterial.item_code}
                                   onChange={handleRawMaterialItemChange}
                                   options={items.filter(item => item && item.item_code && item.name && item.item_group !== 'Finished Goods').map(item => ({
-                                    label: item.name,
+                                    label: `${item.name || item.item_name || 'No Name'} [${item.item_code}]`,
                                     value: item.item_code
                                   }))}
                                   placeholder="Search by name.."
@@ -2206,9 +2206,9 @@ export default function BOMForm() {
                 <Card className=" border border-slate-200/50 p-2  shadow-slate-200/40 bg-white/90 backdrop-blur-xl rounded">
                   <SectionHeader
                     id="operations"
-                    title="Process Intelligence"
+                    title="Operations "
                     icon={Settings}
-                    subtitle={`${operations.length} Strategic Protocols • Total Valuation: ₹${operations.reduce((sum, op) => sum + (parseFloat(op.operating_cost) || 0), 0).toLocaleString()}`}
+                    subtitle={`${operations.length} Operation Selected • Total Operation Cost: ₹${operations.reduce((sum, op) => sum + (parseFloat(op.operating_cost) || 0), 0).toLocaleString()}`}
                     isExpanded={expandedSections.operations}
                     onToggle={() => toggleSection('operations')}
                     themeColor="emerald"

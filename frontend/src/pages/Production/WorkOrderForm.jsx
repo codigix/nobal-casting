@@ -42,21 +42,36 @@ const FieldWrapper = ({ label, children, error, required }) => (
   </div>
 )
 
-const NavItem = ({ label, icon: Icon, section, isActive, onClick }) => (
-  <button
-    type="button"
-    onClick={() => onClick(section)}
-    className={`flex items-center gap-3 p-2 rounded transition-all duration-300 ${isActive
-      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 translate-y-[-2px]'
-      : 'text-slate-500 hover:bg-white hover:text-indigo-600 border border-transparent hover:border-slate-100'
-      }`}
-  >
-    <div className={`transition-transform duration-300 ${isActive ? 'scale-110' : ''}`}>
-      <Icon size={14} strokeWidth={isActive ? 2.5 : 2} />
-    </div>
-    <span className={`text-xs  ${isActive ? '' : 'text-slate-400'}`}>{label}</span>
-  </button>
-)
+const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = 'indigo' }) => {
+  const themes = {
+    blue: 'text-blue-600 bg-blue-50 border-blue-100',
+    emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+    amber: 'text-amber-600 bg-amber-50 border-amber-100',
+    rose: 'text-rose-600 bg-rose-50 border-rose-100',
+    indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100',
+    slate: 'text-slate-600 bg-slate-50 border-slate-100',
+    cyan: 'text-cyan-600 bg-cyan-50 border-cyan-100'
+  }
+
+  const activeTheme = themes[themeColor] || themes.indigo
+
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(section)}
+      className={`flex items-center gap-2 p-2 rounded transition-all duration-300 group ${isActive
+        ? `${activeTheme} border`
+        : 'text-slate-500 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-100'
+        }`}
+    >
+      <div className={`p-1.5 rounded transition-all duration-300 ${isActive ? 'bg-white scale-110' : 'bg-slate-50 group-hover:bg-white'}`}>
+        <Icon size={10} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
+      </div>
+      <span className="text-xs font-medium ">{label.split(' ').slice(1).join(' ')}</span>
+      {isActive && <div className="w-1 h-1 rounded bg-current animate-pulse ml-0.5" />}
+    </button>
+  )
+}
 
 export default function WorkOrderForm() {
   const navigate = useNavigate()
@@ -83,6 +98,42 @@ export default function WorkOrderForm() {
   const [isEditMode, setIsEditMode] = useState(!id)
   const [editingJobCardId, setEditingJobCardId] = useState(null)
   const [activeSection, setActiveSection] = useState('foundation')
+
+  const scrollToSection = (sectionId) => {
+    setActiveSection(sectionId)
+    const element = document.getElementById(sectionId)
+    if (element) {
+      const headerOffset = 160
+      const elementPosition = element.getBoundingClientRect().top
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      })
+    }
+  }
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = ['foundation', 'timeline', 'operations', 'inventory']
+      const scrollPosition = window.scrollY + 200
+
+      for (const section of sections) {
+        const element = document.getElementById(section)
+        if (element) {
+          const { offsetTop, offsetHeight } = element
+          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
+            setActiveSection(section)
+            break
+          }
+        }
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const [completionMetrics, setCompletionMetrics] = useState({
     totalPlanned: 0,
@@ -284,11 +335,31 @@ export default function WorkOrderForm() {
     if (isReadOnly) return
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
-    if (name === 'bom_id' && value) fetchBOMDetails(value)
+    if (name === 'bom_id') {
+      if (value) fetchBOMDetails(value)
+      else {
+        setBomOperations([])
+        setBomMaterials([])
+      }
+    }
   }
 
   const handleItemSelect = async (itemCode) => {
     if (isReadOnly) return
+    
+    if (!itemCode) {
+      setFormData(prev => ({
+        ...prev,
+        item_to_manufacture: '',
+        sales_order_id: '',
+        bom_id: ''
+      }))
+      setAvailableBoms([])
+      setBomOperations([])
+      setBomMaterials([])
+      return
+    }
+
     setLoading(true)
     try {
       const bomResponse = await productionService.getBOMs({ item_code: itemCode })
@@ -433,19 +504,19 @@ export default function WorkOrderForm() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] p-4 pb-20">
-      
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200">
-        <div className=" p-6  h-16 flex items-center justify-between">
+
+      <div className="sticky top-0 z-40 bg-white/80 ">
+        <div className="p-2 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="p-2 bg-indigo-600 rounded shadow-lg shadow-indigo-200">
               <Factory className="w-5 h-5 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg  text-slate-900 tracking-tight">
-                  {id ? (isReadOnly ? 'WORK ORDER RECORD' : 'EDIT WORK ORDER') : 'CREATE MANUFACTURING ORDER'}
+                <h1 className="text-lg  text-slate-900 ">
+                  {id ? (isReadOnly ? 'Work Order Record' : 'Edit Work Order') : 'Create Manufacturing Order'}
                 </h1>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs   text-xs border ${getStatusColor(formData.status)}`}>
+                <span className={`p-2 rounded  text-xs border ${getStatusColor(formData.status)}`}>
                   {formData.status}
                 </span>
               </div>
@@ -466,62 +537,66 @@ export default function WorkOrderForm() {
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="flex items-center gap-2 p-2  py-2 bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50  hover:shadow-lg hover:-translate-y-0.5 transition-all text-xs "
+                className="flex items-center gap-2 p-2 bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50  hover:shadow-lg hover:-translate-y-0.5 transition-all text-xs "
               >
                 {loading ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={14} />}
-                {id ? 'UPDATE ORDER' : 'RELEASE TO PRODUCTION'}
+                {id ? 'Update Order' : 'Release to Production'}
               </button>
             )}
           </div>
         </div>
       </div>
 
-      <div className="sticky top-16 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 p-6  py-2">
-        <div className="max-w-[1600px] mx-auto flex flex-wrap items-center gap-2">
+      <div className="sticky top-[80px] z-30 bg-white/80  border border-slate-200/60 rounded p-2  mt-4 flex items-center justify-between gap-4 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-2">
           <NavItem
             label="01 Foundation"
             icon={Settings}
             section="foundation"
             isActive={activeSection === 'foundation'}
-            onClick={setActiveSection}
+            onClick={scrollToSection}
+            themeColor="indigo"
           />
           <NavItem
             label="02 Timeline"
             icon={Calendar}
             section="timeline"
             isActive={activeSection === 'timeline'}
-            onClick={setActiveSection}
+            onClick={scrollToSection}
+            themeColor="blue"
           />
           <NavItem
             label="03 Operations"
             icon={Layers}
             section="operations"
             isActive={activeSection === 'operations'}
-            onClick={setActiveSection}
+            onClick={scrollToSection}
+            themeColor="emerald"
           />
           <NavItem
             label="04 Inventory"
             icon={Boxes}
             section="inventory"
             isActive={activeSection === 'inventory'}
-            onClick={setActiveSection}
+            onClick={scrollToSection}
+            themeColor="amber"
           />
+        </div>
 
-          <div className="ml-auto flex items-center gap-4 bg-slate-900 p-2 rounded text-white shadow-lg shadow-slate-200 min-w-[220px]">
-            <div className="flex-1">
-              <div className="flex items-center justify-between text-[9px]  mb-1 ">
-                <span className="opacity-60 ">Execution Pulse</span>
-                <span className="text-indigo-400">{((completionMetrics.totalCompleted / (formData.qty_to_manufacture || 1)) * 100).toFixed(0)}%</span>
-              </div>
-              <div className="w-full bg-white/10 rounded-full h-1 overflow-hidden">
-                <div
-                  className="bg-indigo-500 h-full transition-all duration-1000 shadow-[0_0_8px_rgba(99,102,241,0.6)]"
-                  style={{ width: `${Math.min(100, (completionMetrics.totalCompleted / (formData.qty_to_manufacture || 1)) * 100)}%` }}
-                />
-              </div>
+        <div className="hidden lg:flex items-center gap-4 bg-slate-900 p-2 rounded shadow-xl shrink-0">
+          <div className="flex flex-col">
+            <div className="flex items-center justify-between text-[9px] uppercase tracking-widest text-slate-400 font-bold mb-1">
+              <span className="opacity-60 ">Execution Pulse</span>
+              <span className="text-indigo-400 ml-2">{((completionMetrics.totalCompleted / (formData.qty_to_manufacture || 1)) * 100).toFixed(0)}%</span>
             </div>
-            <TrendingUp size={14} className="text-indigo-400" />
+            <div className="w-24 bg-white/10 rounded-full h-1 overflow-hidden">
+              <div
+                className="bg-indigo-500 h-full transition-all duration-1000 shadow-[0_0_8px_rgba(99,102,241,0.6)]"
+                style={{ width: `${Math.min(100, (completionMetrics.totalCompleted / (formData.qty_to_manufacture || 1)) * 100)}%` }}
+              />
+            </div>
           </div>
+          <TrendingUp size={14} className="text-indigo-400" />
         </div>
       </div>
 
@@ -542,19 +617,19 @@ export default function WorkOrderForm() {
           )}
         </div>
 
-        <div className="space-y-8 min-w-0">
+        <div className=" min-w-0">
           {/* 01 Foundation Section */}
-          <div id="foundation" className={activeSection === 'foundation' ? 'block' : 'hidden'}>
-            <div className="grid grid-cols-12 gap-8">
-              <div className="col-span-12 lg:col-span-8">
-                <Card className="p-6 border-none overflow-visible">
+          <div id="foundation" className="block">
+            <div className="grid grid-cols-12 gap-3">
+              <div className="col-span-12 lg:col-span-12">
+                <Card className="p-2 bg-white border-none overflow-visible">
                   <SectionTitle title="01 Foundation Setup" icon={Settings} />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                  <div className="grid grid-cols-3 md:grid-cols-3 gap-3 mt-2">
                     <FieldWrapper label="Target Item to Manufacture" required>
                       <SearchableSelect
                         value={formData.item_to_manufacture}
                         onChange={handleItemSelect}
-                        options={items.map(item => ({ value: item.item_code, label: `${item.item_code} - ${item.item_name || ''}` }))}
+                        options={items.map(item => ({ value: item.item_code, label: `${item.name || item.item_name || 'No Name'} [${item.item_code}]` }))}
                         placeholder="Search Products..."
                         isDisabled={isReadOnly || (id && !isEditMode)}
                       />
@@ -618,72 +693,50 @@ export default function WorkOrderForm() {
                 </Card>
               </div>
 
-              <div className="col-span-12 lg:col-span-4">
-                <div className="p-6 rounded  bg-indigo-600 text-white shadow-xl shadow-indigo-100 relative overflow-hidden group h-full">
-                  <div className="absolute -right-8 -bottom-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
-                    <Factory size={180} />
-                  </div>
-                  <div className="relative z-10 flex flex-col h-full">
-                    <div className="flex items-center gap-2 mb-6 text-indigo-100">
-                      <ShieldCheck size={20} />
-                      <h4 className="text-xs  ">Configuration Guard</h4>
-                    </div>
-                    <p className="text-sm text-indigo-50 font-medium leading-relaxed mb-8">
-                      Locking the configuration prevents accidental changes to BOM and quantities once production has been initiated.
-                    </p>
 
-                    <div className="mt-auto">
-                      {!isReadOnly && id && (
-                        <button
-                          onClick={() => setIsEditMode(!isEditMode)}
-                          className={`w-full py-2 rounded text-xs  transition-all shadow-lg ${isEditMode ? 'bg-white text-indigo-600' : 'bg-indigo-500 text-white hover:bg-indigo-400'}`}
-                        >
-                          {isEditMode ? 'COMMIT & LOCK CONFIG' : 'UNLOCK FOR REVISION'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
           {/* 02 Timeline Section */}
-          <div id="timeline" className={activeSection === 'timeline' ? 'block' : 'hidden'}>
-            <div className="grid grid-cols-12 gap-8">
-              <div className="col-span-12 lg:col-span-4">
-                <Card className="p-6 border-none">
+          <div id="timeline" className="block">
+            <div className="grid grid-cols-12 gap-2">
+              <div className="col-span-12 lg:col-span-12">
+                <Card className="p-2 bg-white border-none">
                   <SectionTitle title="02 Production Timeline" icon={Calendar} />
-                  <div className="space-y-6">
-                    <FieldWrapper label="Planned Start Date" required>
-                      <div className="relative">
-                        <input
-                          type="date"
-                          name="planned_start_date"
-                          value={formData.planned_start_date}
-                          onChange={handleInputChange}
-                          disabled={isReadOnly || (id && !isEditMode)}
-                          className="w-full pl-4 pr-10 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-medium"
-                        />
-                        <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                      </div>
-                    </FieldWrapper>
+                  <div className="grid grid-cols-12 gap-3">
+                    <div className='col-span-4'>
+                      <FieldWrapper label="Planned Start Date" required>
+                        <div className="relative">
+                          <input
+                            type="date"
+                            name="planned_start_date"
+                            value={formData.planned_start_date}
+                            onChange={handleInputChange}
+                            disabled={isReadOnly || (id && !isEditMode)}
+                            className="w-full pl-4 pr-10 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-medium"
+                          />
+                          <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        </div>
+                      </FieldWrapper>
+                    </div>
 
-                    <FieldWrapper label="Planned Completion Date" required>
-                      <div className="relative">
-                        <input
-                          type="date"
-                          name="planned_end_date"
-                          value={formData.planned_end_date}
-                          onChange={handleInputChange}
-                          disabled={isReadOnly || (id && !isEditMode)}
-                          className="w-full pl-4 pr-10 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-medium"
-                        />
-                        <Clock size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                      </div>
-                    </FieldWrapper>
+                    <div className='col-span-4'>
+                      <FieldWrapper label="Planned Completion Date" required>
+                        <div className="relative">
+                          <input
+                            type="date"
+                            name="planned_end_date"
+                            value={formData.planned_end_date}
+                            onChange={handleInputChange}
+                            disabled={isReadOnly || (id && !isEditMode)}
+                            className="w-full pl-4 pr-10 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-medium"
+                          />
+                          <Clock size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        </div>
+                      </FieldWrapper>
+                    </div>
 
-                    <div className="pt-6 mt-6 border-t border-slate-100">
+                    <div className="col-span-4 border-t border-slate-100">
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-xs  text-slate-400 ">Delivery Commitment</span>
                         <div className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded text-[9px]  border border-amber-100">TARGET</div>
@@ -694,10 +747,10 @@ export default function WorkOrderForm() {
                 </Card>
               </div>
 
-              <div className="col-span-12 lg:col-span-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2 h-full">
-                  <div className="p-6 rounded  bg-white border border-slate-200   flex flex-col">
-                    <div className="flex items-center gap-3 mb-4 text-emerald-600">
+              <div className="col-span-12">
+                <div className="grid grid-cols-12 gap-3 mt-2 h-full">
+                  <div className="p-2 rounded col-span-6  bg-white border border-slate-200   flex flex-col">
+                    <div className="flex items-center gap-3  text-emerald-600">
                       <div className="p-2 bg-emerald-50 rounded">
                         <Activity size={18} />
                       </div>
@@ -709,15 +762,15 @@ export default function WorkOrderForm() {
                     </div>
                   </div>
 
-                  <div className="p-6 rounded  bg-slate-900 text-white shadow-xl flex flex-col">
-                    <div className="flex items-center gap-3 mb-4 text-amber-400">
+                  <div className="p-2 rounded col-span-6  bg-slate-900 text-white shadow  flex flex-col">
+                    <div className="flex items-center gap-3 text-amber-400">
                       <div className="p-2 bg-white/5 rounded border border-white/10">
                         <Clock size={18} />
                       </div>
                       <h4 className="text-xs  ">Time Expenditure</h4>
                     </div>
                     <div className="flex-1 flex flex-col justify-center">
-                      <div className="text-3xl  text-white mb-1">{(completionMetrics.totalActualTime / 60).toFixed(1)}h</div>
+                      <div className="text-xl  text-white mb-1">{(completionMetrics.totalActualTime / 60).toFixed(1)}h</div>
                       <p className="text-xs text-slate-400 font-medium text-xs">Cumulative machine hours logged against this order.</p>
                     </div>
                   </div>
@@ -727,11 +780,11 @@ export default function WorkOrderForm() {
           </div>
 
           {/* 03 Operations Section */}
-          <div id="operations" className={activeSection === 'operations' ? 'block' : 'hidden'}>
-            <div className="grid grid-cols-12 gap-8">
-              <div className="col-span-12 lg:col-span-9">
-                <Card className="border-none overflow-hidden   hover:shadow-md transition-shadow">
-                  <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+          <div id="operations" className="block mt-4">
+            <div className="grid grid-cols-12 gap-3">
+              <div className="col-span-12 lg:col-span-9 ">
+                <Card className="border-none bg-white ">
+                  <div className="p-2 border-b border-slate-100 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="p-1.5 bg-white text-indigo-600 rounded border border-slate-100  ">
                         <Layers size={16} />
@@ -741,7 +794,7 @@ export default function WorkOrderForm() {
                     {jobCards.length > 0 && (
                       <div className="flex items-center gap-2 p-2  py-1 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-100">
                         <Activity size={12} className="animate-pulse" />
-                        <span className="text-xs  tracking-tighter">{jobCards.length} Tasks active</span>
+                        <span className="text-xs  er">{jobCards.length} Tasks active</span>
                       </div>
                     )}
                   </div>
@@ -803,7 +856,7 @@ export default function WorkOrderForm() {
                                       {jc.completed_quantity || 0} <span className="text-slate-400 font-medium text-xs">/ {jc.planned_quantity}</span>
                                     </span>
                                     <div className="w-24 bg-slate-100 h-1 rounded-full overflow-hidden">
-                                      <div 
+                                      <div
                                         className="bg-indigo-500 h-full transition-all duration-500"
                                         style={{ width: `${Math.min(100, ((jc.completed_quantity || 0) / jc.planned_quantity) * 100)}%` }}
                                       />
@@ -830,11 +883,11 @@ export default function WorkOrderForm() {
                       </table>
                     </div>
                   ) : (
-                    <div className="p-20 text-center">
-                      <div className="w-16 h-16 bg-slate-50 text-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-100">
-                        <Activity size={32} />
+                    <div className="p-2 text-center">
+                      <div className="w-8 h-8 bg-slate-50 text-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-100">
+                        <Activity size={16} />
                       </div>
-                      <h4 className="text-sm  text-slate-900 mb-2 tracking-tight">Production Logic Not Found</h4>
+                      <h4 className="text-sm  text-slate-900 mb-2 ">Production Logic Not Found</h4>
                       <p className="text-xs text-slate-500 font-medium max-w-[280px] mx-auto leading-relaxed">
                         Release job cards or link a BOM to define the manufacturing operations for this order.
                       </p>
@@ -844,18 +897,18 @@ export default function WorkOrderForm() {
               </div>
 
               <div className="col-span-12 lg:col-span-3 space-y-6">
-                <Card className="bg-slate-900 border-none shadow-xl overflow-hidden relative group">
+                <Card className="bg-slate-900 border-none shadow  overflow-hidden relative group">
                   <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
                     <BarChart3 size={100} className="text-white" />
                   </div>
                   <div className="p-2 relative z-10">
-                    <div className="flex items-center gap-2 mb-6">
+                    <div className="flex items-center gap-2 mb-2">
                       <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded border border-indigo-500/30">
                         <TrendingUp size={18} />
                       </div>
-                      <h3 className="text-xs  text-white tracking-[0.2em] ">Execution Health</h3>
+                      <h3 className="text-xs  text-white  ">Execution Health</h3>
                     </div>
-                    <div className="space-y-8">
+                    <div className="">
                       <div>
                         <div className="flex justify-between items-end mb-3">
                           <span className="text-xs  text-slate-400  ">Completion Rate</span>
@@ -870,58 +923,31 @@ export default function WorkOrderForm() {
                           />
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white/5 p-4 rounded  border border-white/10 hover:bg-white/[0.08] transition-colors group/card">
-                          <p className="text-[9px]  text-slate-500 mb-2  group-hover/card:text-indigo-400 transition-colors">Yield</p>
-                          <p className="text-xl  text-white">{completionMetrics.qualityScore}%</p>
+                      <div className="grid mt-2 grid-cols-2 gap-4">
+                        <div className="bg-white/5 p-2 rounded  border border-white/10 hover:bg-white/[0.08] transition-colors group/card">
+                          <p className="text-xs  text-slate-500 mb-2  group-hover/card:text-indigo-400 transition-colors">Yield</p>
+                          <p className="text-md  text-white">{completionMetrics.qualityScore}%</p>
                         </div>
-                        <div className="bg-white/5 p-4 rounded  border border-white/10 hover:bg-white/[0.08] transition-colors group/card">
-                          <p className="text-[9px]  text-slate-500 mb-2  group-hover/card:text-amber-400 transition-colors">Actual Hrs</p>
-                          <p className="text-xl  text-white">{(completionMetrics.totalActualTime / 60).toFixed(1)}h</p>
+                        <div className="bg-white/5 p-2 rounded  border border-white/10 hover:bg-white/[0.08] transition-colors group/card">
+                          <p className="text-xs  text-slate-500 mb-2  group-hover/card:text-amber-400 transition-colors">Actual Hrs</p>
+                          <p className="text-md  text-white">{(completionMetrics.totalActualTime / 60).toFixed(1)}h</p>
                         </div>
                       </div>
                     </div>
                   </div>
                 </Card>
 
-                <Card className="p-4 border-none  ">
-                  <SectionTitle title="Operational Panel" icon={Zap} />
-                  <div className="space-y-3">
-                    <button
-                      onClick={handleSubmit}
-                      disabled={loading}
-                      className="w-full flex items-center justify-between p-2  bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded  border border-indigo-100 transition-all group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Save size={16} />
-                        <span className="text-xs  ">Commit Progress</span>
-                      </div>
-                      <ArrowRight size={14} className=" group-hover:translate-x-1 transition-all" />
-                    </button>
 
-                    <button
-                      onClick={createJobCardsFromOperations}
-                      disabled={loading || jobCards.length > 0}
-                      className="w-full flex items-center justify-between p-2  bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30 rounded  transition-all group shadow-lg shadow-slate-200"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Layers size={16} />
-                        <span className="text-xs  ">Release job cards</span>
-                      </div>
-                      <Zap size={14} className="text-amber-400" />
-                    </button>
-                  </div>
-                </Card>
               </div>
             </div>
           </div>
 
           {/* 04 Inventory Section */}
-          <div id="inventory" className={activeSection === 'inventory' ? 'block' : 'hidden'}>
-            <div className="grid grid-cols-12 gap-8">
+          <div id="inventory" className="block mt-4">
+            <div className="grid grid-cols-12 gap-3">
               <div className="col-span-12 lg:col-span-9">
-                <Card className="border-none overflow-hidden   hover:shadow-md transition-shadow">
-                  <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                <Card className="border-none bg-white">
+                  <div className="p-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="p-1.5 bg-white text-emerald-600 rounded border border-slate-100  ">
                         <Boxes size={16} />
@@ -951,7 +977,7 @@ export default function WorkOrderForm() {
                           {bomMaterials.map((mat) => {
                             const loss = Math.max(0, (parseFloat(mat.transferred_qty) || 0) - (parseFloat(mat.consumed_qty) || 0) - (parseFloat(mat.returned_qty) || 0))
                             const isShortage = (parseFloat(mat.transferred_qty) || 0) < (parseFloat(mat.required_qty) || 0)
-                            
+
                             return (
                               <tr key={mat.id} className="hover:bg-slate-50/50 transition-colors group">
                                 <td className="p-2 ">
@@ -973,9 +999,8 @@ export default function WorkOrderForm() {
                                       value={mat.transferred_qty || 0}
                                       onChange={(e) => updateMaterial(mat.id, 'transferred_qty', parseFloat(e.target.value) || 0)}
                                       disabled={isReadOnly}
-                                      className={`w-24 p-2  py-1.5 rounded text-right text-xs  outline-none border transition-all ${
-                                        isShortage ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-slate-50 border-slate-200 focus:border-indigo-500'
-                                      }`}
+                                      className={`w-24 p-2  py-1.5 rounded text-right text-xs  outline-none border transition-all ${isShortage ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-slate-50 border-slate-200 focus:border-indigo-500'
+                                        }`}
                                     />
                                     {isShortage && (
                                       <div className="absolute -top-2 -right-2">
@@ -1005,9 +1030,9 @@ export default function WorkOrderForm() {
                       </table>
                     </div>
                   ) : (
-                    <div className="p-20 text-center bg-slate-50/10">
-                      <div className="w-16 h-16 bg-white border border-slate-100 text-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-6  ">
-                        <Boxes size={32} />
+                    <div className="p-2 text-center bg-slate-50/10">
+                      <div className="w-8 h-8 bg-white border border-slate-100 text-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-6  ">
+                        <Boxes size={16} />
                       </div>
                       <h4 className="text-sm  text-slate-900 mb-2">Stock Requirements Empty</h4>
                       <p className="text-xs text-slate-500 font-medium max-w-[280px] mx-auto leading-relaxed">
@@ -1017,27 +1042,54 @@ export default function WorkOrderForm() {
                   )}
                 </Card>
               </div>
+              <Card className="p-2 border-none  col-span-12 lg:col-span-3 space-y-6 ">
+                <SectionTitle title="Operational Panel" icon={Zap} />
+                <div className="space-y-3">
+                  <button
+                    onClick={handleSubmit}
+                    disabled={loading}
+                    className="w-full flex items-center justify-between p-2  bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded  border border-indigo-100 transition-all group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Save size={16} />
+                      <span className="text-xs  ">Commit Progress</span>
+                    </div>
+                    <ArrowRight size={14} className=" group-hover:translate-x-1 transition-all" />
+                  </button>
 
-              <div className="col-span-12 lg:col-span-3 space-y-6">
-                <div className="p-6 rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-100 relative overflow-hidden group">
+                  <button
+                    onClick={createJobCardsFromOperations}
+                    disabled={loading || jobCards.length > 0}
+                    className="w-full flex items-center justify-between p-2  bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30 rounded  transition-all group shadow-lg shadow-slate-200"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Layers size={16} />
+                      <span className="text-xs  ">Release job cards</span>
+                    </div>
+                    <Zap size={14} className="text-amber-400" />
+                  </button>
+                </div>
+              </Card>
+              <div className="col-span-12 lg:col-span-6 space-y-6">
+                <div className="p-2 rounded bg-indigo-600 text-white shadow  shadow-indigo-100 relative overflow-hidden group">
                   <div className="absolute -right-8 -bottom-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
                     <Database size={160} />
                   </div>
                   <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-6 text-indigo-100">
+                    <div className="flex items-center gap-2  text-indigo-100">
                       <ShieldCheck size={20} />
-                      <h4 className="text-xs  tracking-[0.2em] ">Inventory Advisory</h4>
+                      <h4 className="text-xs text-white  ">Inventory Advisory</h4>
                     </div>
-                    <p className="text-xs text-indigo-50 font-medium leading-relaxed mb-8">
+                    <p className="text-xs text-indigo-50 font-medium leading-relaxed mb-3">
                       System tracks real-time material transfers. Ensure all raw materials are transferred from "Stores" to "Production" before consumption.
                     </p>
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs   text-indigo-200">
                         <span>Transfer Status</span>
                         <span>{((bomMaterials.filter(m => (m.transferred_qty || 0) >= (m.required_qty || 0)).length / (bomMaterials.length || 1)) * 100).toFixed(0)}%</span>
                       </div>
-                      <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
-                        <div 
+                      <div className=" bg-white/20 rounded-full overflow-hidden">
+                        <div
                           className="h-full bg-white transition-all duration-1000"
                           style={{ width: `${(bomMaterials.filter(m => (m.transferred_qty || 0) >= (m.required_qty || 0)).length / (bomMaterials.length || 1)) * 100}%` }}
                         />
@@ -1046,8 +1098,11 @@ export default function WorkOrderForm() {
                   </div>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-white border border-slate-200   relative overflow-hidden group">
-                   <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform">
+               
+              </div>
+              <div className='col-span-12 lg:col-span-6 space-y-6'>
+                 <div className="p-2 rounded bg-white border border-slate-200   relative overflow-hidden group">
+                  <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform">
                     <Info size={80} className="text-slate-900" />
                   </div>
                   <div className="relative z-10">
@@ -1066,6 +1121,6 @@ export default function WorkOrderForm() {
 
         </div>
       </div>
-      </div>
-      )
+    </div>
+  )
 }

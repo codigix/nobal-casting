@@ -21,53 +21,53 @@ const isSubAssemblyType = (itemType) => {
   return normalized === 'subassemblies' || normalized === 'subassembly'
 }
 
-const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, themeColor = 'blue', id, badge, actions }) => {
+const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, themeColor = 'indigo', id, badge, actions }) => {
   const themes = {
-    blue: { text: 'text-blue-600', bg: 'bg-blue-50/50', border: 'border-blue-100/50', icon: 'bg-blue-600 text-white shadow-lg shadow-blue-100' },
-    emerald: { text: 'text-emerald-600', bg: 'bg-emerald-50/50', border: 'border-emerald-100/50', icon: 'bg-emerald-600 text-white shadow-lg shadow-emerald-100' },
-    amber: { text: 'text-amber-600', bg: 'bg-amber-50/50', border: 'border-amber-100/50', icon: 'bg-amber-600 text-white shadow-lg shadow-amber-100' },
-    rose: { text: 'text-rose-600', bg: 'bg-rose-50/50', border: 'border-rose-100/50', icon: 'bg-rose-600 text-white shadow-lg shadow-rose-100' },
-    indigo: { text: 'text-indigo-600', bg: 'bg-indigo-50/50', border: 'border-indigo-100/50', icon: 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' },
-    slate: { text: 'text-slate-600', bg: 'bg-slate-50/50', border: 'border-slate-100/50', icon: 'bg-slate-900 text-white shadow-lg shadow-slate-200' },
-    cyan: { text: 'text-cyan-600', bg: 'bg-cyan-50/50', border: 'border-cyan-100/50', icon: 'bg-cyan-600 text-white shadow-lg shadow-cyan-100' }
+    blue: { text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', icon: 'bg-blue-600 text-white' },
+    emerald: { text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', icon: 'bg-emerald-600 text-white' },
+    amber: { text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', icon: 'bg-amber-600 text-white' },
+    rose: { text: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', icon: 'bg-rose-600 text-white' },
+    indigo: { text: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', icon: 'bg-indigo-600 text-white' },
+    slate: { text: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-100', icon: 'bg-slate-600 text-white' },
+    cyan: { text: 'text-cyan-600', bg: 'bg-cyan-50', border: 'border-cyan-100', icon: 'bg-cyan-600 text-white' }
   }
 
-  const theme = themes[themeColor] || themes.blue
+  const theme = themes[themeColor] || themes.indigo
 
   return (
     <div
       id={id}
-      className={`flex items-center justify-between p-4 cursor-pointer hover:bg-white/40 transition-all border-b border-slate-100/50 backdrop-blur-sm ${isExpanded ? 'bg-white/20' : ''}`}
+      className={`flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50/50 transition-all border-b border-slate-100 ${isExpanded ? 'bg-slate-50/30' : ''}`}
       onClick={onToggle}
     >
       <div className="flex items-center gap-4">
-        <div className={`p-2 rounded  transition-all duration-500 ${theme.icon} ${isExpanded ? 'scale-110 shadow-xl' : 'scale-100 shadow-md'}`}>
+        <div className={`p-2.5 rounded shadow-lg transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
           <Icon size={20} strokeWidth={2.5} />
         </div>
         <div>
-          <h2 className="text-sm  flex items-center gap-2">
-            <span className={`${theme.text} tracking-[0.1em] text-xs`}>{title.split(' ')[0]}</span>
-            <span className="text-slate-800 tracking-tight">{title.split(' ').slice(1).join(' ')}</span>
+          <h2 className="text-sm font-bold flex items-center gap-3">
+            <span className={`${theme.text} uppercase tracking-wider`}>{title.split(' ')[0]}</span>
+            <span className="text-slate-800 ">{title.split(' ').slice(1).join(' ')}</span>
           </h2>
-          {subtitle && <p className="text-xs  text-slate-400  opacity-70">{subtitle}</p>}
+          {subtitle && <p className="text-xs font-medium text-slate-400">{subtitle}</p>}
         </div>
         {badge && (
-          <span className={`ml-2 px-2.5 py-0.5 ${theme.bg} ${theme.text} text-xs  rounded-full border ${theme.border} er`}>
+          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-[10px] font-bold rounded-full border ${theme.border} uppercase tracking-widest`}>
             {badge}
           </span>
         )}
       </div>
-      <div className="flex items-center gap-3">
-        {actions && <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>{actions}</div>}
-        <div className={`p-1.5 rounded-full transition-all duration-300 ${isExpanded ? `${theme.bg} ${theme.text}` : 'text-slate-300'}`}>
-          <ChevronDown size={20} className={`transform transition-transform duration-500 ${isExpanded ? 'rotate-180' : ''}`} />
+      <div className="flex items-center gap-4">
+        {actions && <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>{actions}</div>}
+        <div className={`p-2 rounded-full transition-all duration-300 ${isExpanded ? `${theme.bg} ${theme.text}` : 'text-slate-300'}`}>
+          <ChevronDown size={20} className={`transition-transform duration-500 ${isExpanded ? 'rotate-180' : ''}`} strokeWidth={3} />
         </div>
       </div>
     </div>
   )
 }
 
-const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = 'blue' }) => {
+const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = 'indigo' }) => {
   const themes = {
     blue: 'text-blue-600 bg-blue-50 border-blue-100',
     emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
@@ -78,37 +78,50 @@ const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = '
     cyan: 'text-cyan-600 bg-cyan-50 border-cyan-100'
   }
 
-  const activeTheme = themes[themeColor] || themes.blue
+  const activeTheme = themes[themeColor] || themes.indigo
 
   return (
     <button
       type="button"
       onClick={() => onClick(section)}
-      className={`w-full flex items-center justify-between p-2 rounded  transition-all duration-300 group ${
-        isActive 
-          ? `${activeTheme}   border  translate-x-1` 
-          : 'text-slate-500 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-100'
-      }`}
+      className={`flex items-center gap-2 p-2 rounded transition-all duration-300 group ${isActive
+        ? `${activeTheme} border`
+        : 'text-slate-500 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-100'
+        }`}
     >
-      <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-lg transition-all duration-300 ${isActive ? 'bg-white   scale-110' : 'bg-slate-50 group-hover:bg-white'}`}>
-          <Icon size={8} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
-        </div>
-        <span className="text-[11px]  ">{label}</span>
+      <div className={`p-1.5 rounded transition-all duration-300 ${isActive ? 'bg-white scale-110' : 'bg-slate-50 group-hover:bg-white'}`}>
+        <Icon size={14} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
       </div>
-      {isActive && <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />}
+      <span className="text-xs font-semibold tracking-tight uppercase">{label}</span>
+      {isActive && <div className="w-1 h-1 rounded bg-current animate-pulse ml-0.5" />}
     </button>
   )
 }
 
+const SectionTitle = ({ title, icon: Icon, badge }) => (
+  <div className="flex items-center justify-between mb-6">
+    <div className="flex items-center gap-3">
+      <div className="p-2 bg-indigo-50 text-indigo-600 rounded">
+        <Icon size={18} />
+      </div>
+      <h3 className="text-xs text-slate-900 font-semibold">{title}</h3>
+    </div>
+    {badge && (
+      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded-full border border-slate-200 uppercase tracking-wider">
+        {badge}
+      </span>
+    )}
+  </div>
+)
+
 const FieldWrapper = ({ label, children, error, required }) => (
-  <div className="">
-    <div className="flex items-center justify-between mb-1.5">
-      <label className="text-xs  text-slate-400  flex items-center gap-1">
+  <div className="space-y-1.5">
+    <div className="flex items-center justify-between">
+      <label className="text-xs  text-slate-400 flex items-center gap-1">
         {label}
         {required && <span className="text-rose-500">*</span>}
       </label>
-      {error && <span className="text-xs  text-rose-500 animate-pulse ">{error}</span>}
+      {error && <span className="text-[10px] font-semibold text-rose-500 animate-pulse">{error}</span>}
     </div>
     {children}
   </div>
@@ -122,21 +135,34 @@ const StatusBadge = ({ status }) => {
     cancelled: 'bg-rose-50 text-rose-600 border-rose-100'
   }
   return (
-    <span className={`px-2.5 py-1 rounded-full text-xs  border er ${styles[status?.toLowerCase()] || styles.draft}`}>
+    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider ${styles[status?.toLowerCase()] || styles.draft}`}>
       {status || 'DRAFT'}
     </span>
   )
 }
 
-const InfoRow = ({ label, value, icon: Icon, className = "", color = "blue" }) => {
+const InfoRow = ({ label, value, icon: Icon, className = "", color = "indigo" }) => {
+  const themes = {
+    blue: 'text-blue-600 bg-blue-50/50 border-blue-100/50',
+    emerald: 'text-emerald-600 bg-emerald-50/50 border-emerald-100/50',
+    amber: 'text-amber-600 bg-amber-50/50 border-amber-100/50',
+    rose: 'text-rose-600 bg-rose-50/50 border-rose-100/50',
+    indigo: 'text-indigo-600 bg-indigo-50/50 border-indigo-100/50',
+    slate: 'text-slate-600 bg-slate-50/50 border-slate-100/50',
+    cyan: 'text-cyan-600 bg-cyan-50/50 border-cyan-100/50'
+  }
+  const themeClass = themes[color] || themes.indigo
+
   return (
-    <div className={`flex flex-col p-2 rounded border border-slate-100 bg-white/50 backdrop-blur-sm hover:shadow-lg hover:border-blue-200 transition-all duration-300 ${className}`}>
-      <span className="text-[9px]  text-slate-400 tracking-[0.15em] mb-1.5 flex items-center gap-1.5">
-        {Icon && <Icon size={10} className="text-slate-300" />}
-        {label}
-      </span>
-      <span className="text-xs  text-slate-700 truncate">
-        {value || <span className="text-slate-300 italic font-normal">Not specified</span>}
+    <div className={`flex flex-col p-2 rounded border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 ${className}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <div className={`p-1.5 rounded-lg ${themeClass}`}>
+          {Icon && <Icon size={12} />}
+        </div>
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</span>
+      </div>
+      <span className="text-xs font-bold text-slate-700 truncate pl-1">
+        {value || <span className="text-slate-300 font-normal italic">Not specified</span>}
       </span>
     </div>
   )
@@ -211,7 +237,7 @@ export default function SalesOrderForm() {
     setTimeout(() => {
       const element = document.getElementById(sectionId)
       if (element) {
-        const headerOffset = 100
+        const headerOffset = 160
         const elementPosition = element.getBoundingClientRect().top
         const offsetPosition = elementPosition + window.pageYOffset - headerOffset
 
@@ -307,14 +333,14 @@ export default function SalesOrderForm() {
       console.log('Filtered Finished Goods BOMs:', finishedGoodsBoms)
 
       setBoms(finishedGoodsBoms.map(b => ({
-        label: b.product_name || b.name || b.bom_id || '',
+        label: `${b.product_name || b.name || b.bom_id} [${b.bom_id || b.id}]`,
         value: b.bom_id || b.id || '',
         fullData: b
       })))
 
       const itemsData = itemsRes.data.data || []
       setItemsList(itemsData.map(item => ({
-        label: item.item_code,
+        label: `${item.name || item.item_name || 'No Name'} [${item.item_code}]`,
         value: item.item_code,
         fullData: item
       })))
@@ -1067,7 +1093,7 @@ export default function SalesOrderForm() {
   const renderBOMSections = () => {
     if (bomFinishedGoods.length === 0 && bomSubAssemblies.length === 0 && bomRawMaterials.length === 0 && bomOperations.length === 0) {
       return (
-        <div className="bg-slate-50/50 border border-slate-100 rounded p-3 text-center backdrop-blur-sm">
+        <div className="bg-slate-50/50 border border-slate-100 rounded p-3 text-center ">
           <div className="w-8 h-8 bg-white rounded flex items-center justify-center mx-auto mb-4   border border-slate-100">
             <Database size={16} className="text-slate-300" />
           </div>
@@ -1095,18 +1121,18 @@ export default function SalesOrderForm() {
                 </div>
               </div>
               <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs  rounded-full border border-blue-100 er">
-                {bomFinishedGoods.length} SPECIFICATIONS
+                {bomFinishedGoods.length} Specification
               </span>
             </div>
 
-            <div className="bg-white/50 backdrop-blur-md rounded-3xl border border-slate-100 overflow-hidden   hover:shadow-md transition-all duration-500">
+            <div className="bg-white/50 backdrop-blur-md rounded border border-slate-100 overflow-hidden   hover:shadow-md transition-all duration-500">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="p-4 text-xs  text-slate-400 ">Item Intelligence</th>
-                    <th className="p-4 text-xs  text-slate-400  text-right">Target Qty</th>
-                    <th className="p-4 text-xs  text-slate-400  text-right">Unit Rate</th>
-                    <th className="p-4 text-xs  text-slate-400  text-right">Total Valuation</th>
+                    <th className="p-2 text-xs  text-slate-600  font-thin">Item Intelligence</th>
+                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Target Qty</th>
+                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Unit Rate</th>
+                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Total Valuation</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -1116,7 +1142,7 @@ export default function SalesOrderForm() {
                     const itemAmount = multipliedQty * (parseFloat(item.rate) || 0)
                     return (
                       <tr key={idx} className="group hover:bg-blue-50/30 transition-all duration-300">
-                        <td className="p-4">
+                        <td className="p-2">
                           <div className="flex flex-col">
                             <span className="text-xs  text-slate-900 group-hover:text-blue-600 transition-colors">
                               {item.component_code || item.item_code || '-'}
@@ -1126,7 +1152,7 @@ export default function SalesOrderForm() {
                             </span>
                           </div>
                         </td>
-                        <td className="p-4 text-right">
+                        <td className="p-2 text-right">
                           <div className="flex items-center justify-end gap-2">
                             {isReadOnly ? (
                               <span className="text-xs font-mono  text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">
@@ -1143,7 +1169,7 @@ export default function SalesOrderForm() {
                             )}
                           </div>
                         </td>
-                        <td className="p-4 text-right">
+                        <td className="p-2 text-right">
                           {isReadOnly ? (
                             <span className="text-xs font-mono text-slate-600">{formatCurrency(item.rate)}</span>
                           ) : (
@@ -1159,7 +1185,7 @@ export default function SalesOrderForm() {
                             </div>
                           )}
                         </td>
-                        <td className="p-4 text-right">
+                        <td className="p-2 text-right">
                           <span className="text-xs  text-blue-600">{formatCurrency(itemAmount)}</span>
                         </td>
                       </tr>
@@ -1193,10 +1219,10 @@ export default function SalesOrderForm() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="p-4 text-xs  text-slate-400 ">Assembly Identifier</th>
-                    <th className="p-4 text-xs  text-slate-400  text-right">Required Qty</th>
-                    <th className="p-4 text-xs  text-slate-400  text-right">Node Rate</th>
-                    <th className="p-4 text-xs  text-slate-400  text-right">Extension</th>
+                    <th className="p-2 text-xs  text-slate-600  font-thin">Assembly Identifier</th>
+                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Required Qty</th>
+                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Node Rate</th>
+                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Extension</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -1271,11 +1297,11 @@ export default function SalesOrderForm() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="p-4 text-xs  text-slate-400 ">Resource Matrix</th>
-                    <th className="p-4 text-xs  text-slate-400 ">Metadata</th>
-                    <th className="p-4 text-xs  text-slate-400  text-right">Consolidated Qty</th>
-                    <th className="p-4 text-xs  text-slate-400  text-right">Spot Rate</th>
-                    <th className="p-4 text-xs  text-slate-400  text-right">Cost Extension</th>
+                    <th className="p-2 text-xs  text-slate-600  font-thin">Resource Matrix</th>
+                    <th className="p-2 text-xs  text-slate-600  font-thin">Metadata</th>
+                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Consolidated Qty</th>
+                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Spot Rate</th>
+                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Cost Extension</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -1355,10 +1381,10 @@ export default function SalesOrderForm() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="p-4 text-xs  text-slate-400 ">Operation Protocol</th>
-                    <th className="p-4 text-xs  text-slate-400  text-right">Temporal Data</th>
-                    <th className="p-4 text-xs  text-slate-400  text-right">Resource Rate</th>
-                    <th className="p-4 text-xs  text-slate-400  text-right">Total Overhead</th>
+                    <th className="p-2 text-xs  text-slate-600  font-thin">Operation Protocol</th>
+                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Temporal Data</th>
+                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Resource Rate</th>
+                    <th className="p-2 text-xs  text-slate-600  font-thin text-right">Total Overhead</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -1474,7 +1500,7 @@ export default function SalesOrderForm() {
             </div>
 
             {profitMarginPct > 0 && (
-              <div className="flex justify-between items-center bg-emerald-50/50 p-4 rounded-3xl border border-emerald-100/50 group/profit transition-all hover:bg-emerald-50">
+              <div className="flex justify-between items-center bg-emerald-50/50p-2  rounded-3xl border border-emerald-100/50 group/profit transition-all hover:bg-emerald-50">
                 <div className="flex flex-col">
                   <span className="text-xs  text-emerald-600 ">Strategic Margin</span>
                   <span className="text-[9px] text-emerald-500  ">{profitMarginPct}% added to base</span>
@@ -1536,7 +1562,7 @@ export default function SalesOrderForm() {
   if (dataLoading) {
     return (
       <div className="min-h-screen bg-slate-50 p-2/50 flex flex-col items-center justify-center p-8">
-        <div className="w-8 h-8 bg-white rounded shadow-xl flex items-center justify-center mb-4 animate-bounce">
+        <div className="w-8 h-8 bg-white rounded shadow  flex items-center justify-center mb-4 animate-bounce">
           <Database size={16} className="text-blue-600" />
         </div>
         <div className="text-xs  text-slate-400 animate-pulse">
@@ -1555,7 +1581,7 @@ export default function SalesOrderForm() {
             <div className="flex items-center gap-6">
               <button
                 onClick={() => navigate('/manufacturing/sales-orders')}
-                className="group flex items-center justify-center w-12 h-12 rounded bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all duration-500   hover:shadow-xl hover:-translate-x-1"
+                className="group flex items-center justify-center w-12 h-12 rounded bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all duration-500   hover:shadow  hover:-translate-x-1"
               >
                 <ArrowLeft size={20} className="transition-transform group-hover:scale-110" />
               </button>
@@ -1591,7 +1617,7 @@ export default function SalesOrderForm() {
                   </button>
                   <button
                     onClick={() => navigate(`/manufacturing/sales-orders/${id}`)}
-                    className="flex items-center gap-2 p-2 rounded  bg-slate-900 text-white text-xs   hover:bg-slate-800 transition-all shadow-xl hover:shadow-slate-200 hover:-translate-y-0.5 active:translate-y-0"
+                    className="flex items-center gap-2 p-2 rounded  bg-slate-900 text-white text-xs   hover:bg-slate-800 transition-all shadow  hover:shadow-slate-200 hover:-translate-y-0.5 active:translate-y-0"
                   >
                     <Settings size={16} />
                     Edit Order
@@ -1601,7 +1627,7 @@ export default function SalesOrderForm() {
                 <>
                   <button
                     onClick={() => navigate(-1)}
-                    className="p-2 text-xs  text-slate-400  hover:text-slate-600 transition-colors"
+                    className="p-2 text-xs  text-slate-600  font-thin hover:text-slate-600 transition-colors"
                   >
                     Cancel
                   </button>
@@ -1624,84 +1650,76 @@ export default function SalesOrderForm() {
         </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        <div className="grid grid-cols-4">
-          {/* 2. Lateral Control Sidebar */}
-          <div className="col-span-1 sticky top-28 space-y-4">
-            <Card className="!p-3 border-slate-200/60   bg-white/50 backdrop-blur-md">
-              <div className="">
-                <NavItem 
-                  label="Foundation" 
-                  icon={Database} 
-                  section="foundation" 
-                  isActive={activeSection === 'foundation'} 
-                  onClick={scrollToSection}
-                  themeColor="blue"
-                />
-                <NavItem 
-                  label="Client Intel" 
-                  icon={Users} 
-                  section="client" 
-                  isActive={activeSection === 'client'} 
-                  onClick={scrollToSection}
-                  themeColor="indigo"
-                />
-                <NavItem 
-                  label="Operational" 
-                  icon={Activity} 
-                  section="operational" 
-                  isActive={activeSection === 'operational'} 
-                  onClick={scrollToSection}
-                  themeColor="emerald"
-                />
-                <NavItem 
-                  label="Engineering" 
-                  icon={Layers} 
-                  section="engineering" 
-                  isActive={activeSection === 'engineering'} 
-                  onClick={scrollToSection}
-                  themeColor="amber"
-                />
-                <NavItem 
-                  label="Taxation" 
-                  icon={CreditCard} 
-                  section="taxation" 
-                  isActive={activeSection === 'taxation'} 
-                  onClick={scrollToSection}
-                  themeColor="rose"
-                />
-              </div>
-            </Card>
+      <div className="w-full mt-8 px-4">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* 2. Horizontal Navigation & Metrics Bar */}
+          <div className="sticky top-[80px] z-30 bg-white/80 backdrop-blur-md border border-slate-200/60 rounded p-2  flex items-center justify-between gap-4 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-2">
+              <NavItem 
+                label="01 FOUNDATION" 
+                icon={Database} 
+                section="foundation" 
+                isActive={activeSection === 'foundation'} 
+                onClick={scrollToSection}
+                themeColor="blue"
+              />
+              <NavItem 
+                label="02 CLIENT" 
+                icon={Users} 
+                section="client" 
+                isActive={activeSection === 'client'} 
+                onClick={scrollToSection}
+                themeColor="indigo"
+              />
+              <NavItem 
+                label="03 OPS" 
+                icon={Activity} 
+                section="operational" 
+                isActive={activeSection === 'operational'} 
+                onClick={scrollToSection}
+                themeColor="emerald"
+              />
+              <NavItem 
+                label="04 ENGINEERING" 
+                icon={Layers} 
+                section="engineering" 
+                isActive={activeSection === 'engineering'} 
+                onClick={scrollToSection}
+                themeColor="amber"
+              />
+              <NavItem 
+                label="05 REVENUE" 
+                icon={CreditCard} 
+                section="taxation" 
+                isActive={activeSection === 'taxation'} 
+                onClick={scrollToSection}
+                themeColor="rose"
+              />
+            </div>
 
-            {/* Quick Metrics Card */}
-            <div className="hidden lg:block">
-              <Card className="!p-5 bg-gradient-to-br from-slate-900 to-slate-800 border-none shadow-2xl overflow-hidden relative group">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-blue-500/20 transition-all duration-1000" />
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-xs  text-slate-400">Real-time Valuation</span>
-                  </div>
-                  <div className="text-xl   text-white tracking-tighter mb-1">
-                    {formatCurrency(calculateBomGrandTotal())}
-                  </div>
-                  <div className="text-xs text-slate-500  ">
-                    Projected Gross Revenue
-                  </div>
+            {/* Quick Metrics Integrated */}
+            <div className="hidden lg:flex items-center gap-4 bg-slate-900 p-2 rounded shrink-0 shadow-lg shadow-slate-900/20">
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Order Valuation</span>
                 </div>
-              </Card>
+                <div className="text-sm font-black text-white tracking-tight">
+                  {formatCurrency(calculateBomGrandTotal())}
+                </div>
+              </div>
             </div>
           </div>
 
           {/* 3. High-Fidelity Content Area */}
-          <div className="col-span-3 space-y-6">
+          <div className="space-y-6">
             {error && <Alert variant="danger">{error}</Alert>}
             {success && <Alert variant="success">{success}</Alert>}
 
             {/* A. Order Foundation Section */}
-            <Card className="!p-0 border-slate-200/60   bg-white group">
+            <Card className="!p-0 border-slate-200/60  bg-white group overflow-hidden">
               <SectionHeader 
-                title="Order Foundation" 
+                title="01 FOUNDATION" 
                 icon={Database} 
                 subtitle="Core Identity & Scheduling" 
                 isExpanded={expandedSections.foundation}
@@ -1724,7 +1742,7 @@ export default function SalesOrderForm() {
                         <SearchableSelect
                           value={formData.customer_id}
                           onChange={handleCustomerChange}
-                          options={customers.map(c => ({ label: c.customer_name, value: c.customer_id }))}
+                          options={customers.map(c => ({ label: `${c.customer_name} [${c.customer_id}]`, value: c.customer_id }))}
                           placeholder="Choose a customer..."
                         />
                       </FieldWrapper>
@@ -1755,9 +1773,9 @@ export default function SalesOrderForm() {
             </Card>
 
             {/* B. Client Intelligence Section */}
-            <Card className="!p-0 border-slate-200/60   bg-white group">
+            <Card className="!p-0 border-slate-200/60  bg-white group overflow-hidden">
               <SectionHeader 
-                title="Client Intelligence" 
+                title="02 CLIENT INTELLIGENCE" 
                 icon={Users} 
                 subtitle="Customer Metadata & Contact" 
                 isExpanded={expandedSections.client}
@@ -1779,9 +1797,9 @@ export default function SalesOrderForm() {
             </Card>
 
             {/* C. Operational Section */}
-            <Card className="!p-0 border-slate-200/60   bg-white group">
+            <Card className="!p-0 border-slate-200/60  bg-white group overflow-hidden">
               <SectionHeader 
-                title="Operational Metadata" 
+                title="03 OPERATIONAL METADATA" 
                 icon={Activity} 
                 subtitle="Logistics & Production Metrics" 
                 isExpanded={expandedSections.operational}
@@ -1808,7 +1826,7 @@ export default function SalesOrderForm() {
                         />
                       </FieldWrapper>
 
-                      <FieldWrapper label="Logistic Source" required>
+                      <FieldWrapper label="Warehouse" required>
                         <SearchableSelect
                           value={formData.source_warehouse}
                           onChange={(val) => handleSearchableChange('source_warehouse', val)}
@@ -1829,9 +1847,9 @@ export default function SalesOrderForm() {
             </Card>
 
             {/* D. Engineering Section */}
-            <Card className="!p-0 border-slate-200/60   bg-white group">
+            <Card className="!p-0 border-slate-200/60  bg-white group overflow-hidden">
               <SectionHeader 
-                title="Product Engineering" 
+                title="04 PRODUCT ENGINEERING" 
                 icon={Layers} 
                 subtitle="BOM & Manufacturing Specs" 
                 isExpanded={expandedSections.engineering}
@@ -1859,7 +1877,7 @@ export default function SalesOrderForm() {
                     <FieldWrapper label="Production Volume" required>
                       <div className="relative group/input">
                         <input
-                          className="w-full p-2 text-lg  text-blue-600 border border-slate-200 rounded  focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 bg-white transition-all outline-none"
+                          className="w-full p-2 text-xs text-blue-600 border border-slate-200 rounded  focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 bg-white transition-all outline-none"
                           type="number"
                           name="qty"
                           value={formData.qty}
@@ -1880,9 +1898,9 @@ export default function SalesOrderForm() {
             </Card>
 
             {/* E. Taxation Section */}
-            <Card className="!p-0 border-slate-200/60   bg-white group">
+            <Card className="!p-0 border-slate-200/60  bg-white group overflow-hidden">
               <SectionHeader 
-                title="Taxation & Revenue" 
+                title="05 TAXATION & REVENUE" 
                 icon={CreditCard} 
                 subtitle="GST Configuration & Margins" 
                 isExpanded={expandedSections.taxation}

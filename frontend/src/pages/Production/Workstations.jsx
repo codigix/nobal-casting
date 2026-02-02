@@ -186,7 +186,7 @@ export default function Workstations() {
                 {paginatedWorkstations.map((ws) => (
                   <div 
                     key={ws.name}
-                    className="bg-white rounded border border-slate-200  hover:shadow-xl hover:border-indigo-200 transition-all group overflow-hidden"
+                    className="bg-white rounded border border-slate-200  hover:shadow  hover:border-indigo-200 transition-all group overflow-hidden"
                   >
                     <div className="p-3">
                       <div className="flex justify-between items-start mb-6">

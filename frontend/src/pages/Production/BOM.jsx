@@ -49,7 +49,7 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
   const colorStyle = colorMap[color] || colorMap.blue
 
   return (
-    <div className="relative group  bg-white rounded p-2 border border-slate-100   transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1">
+    <div className="relative group  bg-white rounded p-2 border border-slate-100   transition-all duration-300 hover:shadow  hover:shadow-slate-200/50 hover:-translate-y-1">
       <div className={`absolute top-0 right-0 w-32 h-32 -mr-8 -mt-8 rounded opacity-[0.03] group-hover:opacity-[0.07] transition-opacity duration-500 ${colorStyle.split(' ')[1]}`} />
       
       <div className="relative flex justify-between items-start">
@@ -432,7 +432,7 @@ export default function BOM() {
       {/* Strategic Header Section */}
       <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-7 h-7 bg-indigo-600 rounded flex items-center justify-center shadow-xl shadow-indigo-100 rotate-3 group-hover:rotate-0 transition-transform duration-500">
+          <div className="w-7 h-7 bg-indigo-600 rounded flex items-center justify-center shadow  shadow-indigo-100 rotate-3 group-hover:rotate-0 transition-transform duration-500">
             <Layers size={16} className="text-white" strokeWidth={2.5} />
           </div>
           <div>
@@ -459,7 +459,7 @@ export default function BOM() {
           
           <button 
             onClick={() => navigate('/manufacturing/bom/new')}
-            className="inline-flex items-center gap-2 rounded bg-indigo-600 p-6  py-2.5 text-xs  text-white hover:bg-indigo-700 transition-all active:scale-95 shadow-xl shadow-indigo-100"
+            className="inline-flex items-center gap-2 rounded bg-indigo-600 p-6  py-2.5 text-xs  text-white hover:bg-indigo-700 transition-all active:scale-95 shadow  shadow-indigo-100"
           >
             <Plus size={18} strokeWidth={3} />
             Initialize BOM
@@ -621,7 +621,7 @@ export default function BOM() {
         )}
       </div>
 
-      <Card className="bg-white border-slate-200 rounded-2xl overflow-hidden shadow-xl shadow-slate-200/40">
+      <Card className="bg-white border-slate-200 rounded-2xl overflow-hidden shadow  shadow-slate-200/40">
         {/* Intelligence Filter Bar */}
         <div className="p-4 border-b border-slate-100 bg-slate-50/30">
           <div className="flex flex-col lg:flex-row gap-6 items-end">

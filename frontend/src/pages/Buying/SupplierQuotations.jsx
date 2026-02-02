@@ -531,7 +531,7 @@ export default function SupplierQuotations() {
               </button>
 
               {showColumnMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-white border border-neutral-200 rounded shadow-xl z-50 py-3 overflow-hidden">
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-neutral-200 rounded shadow  z-50 py-3 overflow-hidden">
                   <div className="px-4 py-2 border-b border-neutral-100 flex justify-between bg-neutral-50 mb-2">
                     <button 
                       onClick={() => setVisibleColumns(new Set(columns.map(c => c.key)))}

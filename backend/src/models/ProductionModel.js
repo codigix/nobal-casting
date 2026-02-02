@@ -13,10 +13,10 @@ class ProductionModel {
       }
       
       await this.db.query(
-        `INSERT INTO operation (name, operation_name, default_workstation, is_corrective_operation, create_job_card_based_on_batch_size, batch_size, quality_inspection_template, description, operation_type)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO operation (name, operation_name, default_workstation, is_corrective_operation, create_job_card_based_on_batch_size, batch_size, quality_inspection_template, description, operation_type, hourly_rate)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [data.name, data.operation_name, data.default_workstation, data.is_corrective_operation, 
-         data.create_job_card_based_on_batch_size, data.batch_size, data.quality_inspection_template, data.description, data.operation_type || 'IN_HOUSE']
+         data.create_job_card_based_on_batch_size, data.batch_size, data.quality_inspection_template, data.description, data.operation_type || 'IN_HOUSE', data.hourly_rate || 0]
       )
       return data
     } catch (error) {
@@ -68,6 +68,7 @@ class ProductionModel {
       if (data.quality_inspection_template) { fields.push('quality_inspection_template = ?'); values.push(data.quality_inspection_template) }
       if (data.description) { fields.push('description = ?'); values.push(data.description) }
       if (data.operation_type) { fields.push('operation_type = ?'); values.push(data.operation_type) }
+      if (data.hourly_rate !== undefined) { fields.push('hourly_rate = ?'); values.push(data.hourly_rate) }
 
       if (fields.length === 0) return false
 
@@ -286,11 +287,12 @@ class ProductionModel {
       const operationName = operation.operation_name || operation.operation || ''
       const workstation = operation.workstation_type || operation.workstation || ''
       const time = operation.operation_time || operation.time || 0
+      const hourly_rate = operation.hourly_rate || 0
       
       await this.db.query(
-        `INSERT INTO work_order_operation (wo_id, operation, workstation, time, completed_qty, process_loss_qty, sequence)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [wo_id, operationName, workstation, time, 
+        `INSERT INTO work_order_operation (wo_id, operation, workstation, time, hourly_rate, completed_qty, process_loss_qty, sequence)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [wo_id, operationName, workstation, time, hourly_rate,
          operation.completed_qty || 0, operation.process_loss_qty || 0, operation.sequence || 0]
       )
     } catch (error) {
@@ -1018,11 +1020,11 @@ async deleteAllBOMRawMaterials(bom_id) {
     try {
       const statusNormalized = ((data.status || 'draft').toLowerCase().replace(/\s+/g, '-')).trim()
       await this.db.query(
-        `INSERT INTO job_card (job_card_id, work_order_id, machine_id, operator_id, operation, operation_sequence, planned_quantity, produced_quantity, rejected_quantity, accepted_quantity, scrap_quantity, operation_time, scheduled_start_date, scheduled_end_date, status, created_by, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO job_card (job_card_id, work_order_id, machine_id, operator_id, operation, operation_sequence, planned_quantity, produced_quantity, rejected_quantity, accepted_quantity, scrap_quantity, operation_time, hourly_rate, scheduled_start_date, scheduled_end_date, status, created_by, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [data.job_card_id, data.work_order_id, data.machine_id, data.operator_id, data.operation || null, data.operation_sequence || null,
          data.planned_quantity, data.produced_quantity || 0, data.rejected_quantity || 0, data.accepted_quantity || 0, data.scrap_quantity || 0,
-         data.operation_time || 0, data.scheduled_start_date, data.scheduled_end_date, statusNormalized, data.created_by, data.notes]
+         data.operation_time || 0, data.hourly_rate || 0, data.scheduled_start_date, data.scheduled_end_date, statusNormalized, data.created_by, data.notes]
       )
       return data
     } catch (error) {
@@ -1057,6 +1059,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       if (data.actual_start_date) { fields.push('actual_start_date = ?'); values.push(data.actual_start_date) }
       if (data.actual_end_date) { fields.push('actual_end_date = ?'); values.push(data.actual_end_date) }
       if (data.notes) { fields.push('notes = ?'); values.push(data.notes) }
+      if (data.hourly_rate !== undefined && data.hourly_rate !== null) { fields.push('hourly_rate = ?'); values.push(data.hourly_rate) }
 
       if (fields.length === 0) return false
 
@@ -1252,6 +1255,7 @@ async deleteAllBOMRawMaterials(bom_id) {
           operator_id: null,
           planned_quantity: plannedQty,
           operation_time: operation.operation_time || 0,
+          hourly_rate: operation.hourly_rate || 0,
           scheduled_start_date: null,
           scheduled_end_date: null,
           status: 'draft',

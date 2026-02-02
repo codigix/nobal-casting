@@ -369,11 +369,11 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
     try {
       const payload = {
         grn_no: formData.grn_no,
-        po_no: formData.po_no || '',
-        material_request_id: formData.mr_id || '',
-        department: formData.department || '',
-        purpose: formData.purpose || '',
-        supplier_id: formData.supplier_id,
+        po_no: formData.po_no || null,
+        material_request_id: formData.mr_id || null,
+        department: formData.department || null,
+        purpose: formData.purpose || null,
+        supplier_id: formData.supplier_id || null,
         supplier_name: formData.supplier_name,
         receipt_date: formData.receipt_date,
         items: grnItems.filter(item => item.item_code),

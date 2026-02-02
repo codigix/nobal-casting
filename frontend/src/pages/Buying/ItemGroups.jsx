@@ -199,7 +199,7 @@ export default function ItemGroups() {
             <Button 
               onClick={() => handleOpenForm()}
               variant="primary"
-              className="flex items-center gap-2 px-6 py-2.5 rounded  text-xs font-black shadow-xl shadow-indigo-600/20 transition-all bg-indigo-600 hover:bg-indigo-700 border-none"
+              className="flex items-center gap-2 px-6 py-2.5 rounded  text-xs font-black shadow  shadow-indigo-600/20 transition-all bg-indigo-600 hover:bg-indigo-700 border-none"
             >
               <Plus size={18} strokeWidth={3} /> NEW GROUP
             </Button>

@@ -8,7 +8,7 @@ class ProductionController {
   // Create operation
   async createOperation(req, res) {
     try {
-      const { name, operation_name, default_workstation, is_corrective_operation, create_job_card_based_on_batch_size, batch_size, quality_inspection_template, description, operation_type, sub_operations } = req.body
+      const { name, operation_name, default_workstation, is_corrective_operation, create_job_card_based_on_batch_size, batch_size, quality_inspection_template, description, operation_type, hourly_rate, sub_operations } = req.body
 
       if (!name) {
         return res.status(400).json({
@@ -26,7 +26,8 @@ class ProductionController {
         batch_size,
         quality_inspection_template,
         description,
-        operation_type
+        operation_type,
+        hourly_rate
       })
 
       if (sub_operations && Array.isArray(sub_operations)) {
@@ -204,6 +205,7 @@ class ProductionController {
           const operationName = operation.operation_name || operation.operation || ''
           const workstationType = operation.workstation_type || operation.workstation || operation.machine_id || ''
           const operationTime = operation.operation_time || operation.time || operation.proportional_time || 0
+          const hourlyRate = operation.hourly_rate || 0
           
           const jobCard = await this.productionModel.createJobCard({
             job_card_id: jc_id,
@@ -213,6 +215,7 @@ class ProductionController {
             operator_id: '',
             planned_quantity: quantity,
             operation_time: parseFloat(operationTime) || 0,
+            hourly_rate: parseFloat(hourlyRate) || 0,
             scheduled_start_date: new Date(),
             scheduled_end_date: new Date(),
             status: 'draft',
@@ -335,13 +338,21 @@ class ProductionController {
           for (let i = 0; i < operations.length; i++) {
             const operation = operations[i]
             const jc_id = `JC-${Date.now()}-${i + 1}`
+            const opName = operation.operation || operation.operation_name || ''
+            const wsType = operation.workstation || operation.workstation_type || ''
+            const opTime = operation.time || operation.operation_time || 0
+            const hRate = operation.hourly_rate || 0
+
             await this.productionModel.createJobCard({
               job_card_id: jc_id,
               work_order_id: wo_id,
-              operation: operation.operation || '',
-              machine_id: operation.workstation || '',
+              operation: opName,
+              operation_sequence: operation.sequence || (i + 1),
+              machine_id: wsType,
               operator_id: '',
               planned_quantity: quantity,
+              operation_time: parseFloat(opTime) || 0,
+              hourly_rate: parseFloat(hRate) || 0,
               scheduled_start_date: planned_start_date,
               scheduled_end_date: planned_end_date,
               status: 'draft',
@@ -1170,7 +1181,7 @@ class ProductionController {
 
   async createJobCard(req, res) {
     try {
-      const { work_order_id, machine_id, operator_id, operation, operation_sequence, planned_quantity, scheduled_start_date, scheduled_end_date, status, notes } = req.body
+      const { work_order_id, machine_id, operator_id, operation, operation_sequence, planned_quantity, operation_time, hourly_rate, scheduled_start_date, scheduled_end_date, status, notes } = req.body
 
       if (!work_order_id || !machine_id || !planned_quantity) {
         return res.status(400).json({
@@ -1188,6 +1199,8 @@ class ProductionController {
         operation,
         operation_sequence,
         planned_quantity,
+        operation_time: parseFloat(operation_time) || 0,
+        hourly_rate: parseFloat(hourly_rate) || 0,
         scheduled_start_date,
         scheduled_end_date,
         status: status || 'draft',
@@ -1242,7 +1255,7 @@ class ProductionController {
   async updateJobCard(req, res) {
     try {
       const { job_card_id } = req.params
-      const { machine_id, operator_id, operation, operation_sequence, planned_quantity, produced_quantity, rejected_quantity, scheduled_start_date, scheduled_end_date, actual_start_date, actual_end_date, status, notes } = req.body
+      const { machine_id, operator_id, operation, operation_sequence, planned_quantity, produced_quantity, rejected_quantity, operation_time, hourly_rate, scheduled_start_date, scheduled_end_date, actual_start_date, actual_end_date, status, notes } = req.body
 
       if (status) {
         await this.productionModel.validateJobCardStatusTransition(job_card_id, status)
@@ -1256,6 +1269,8 @@ class ProductionController {
         planned_quantity,
         produced_quantity,
         rejected_quantity,
+        operation_time: operation_time !== undefined ? parseFloat(operation_time) : undefined,
+        hourly_rate: hourly_rate !== undefined ? parseFloat(hourly_rate) : undefined,
         scheduled_start_date,
         scheduled_end_date,
         actual_start_date,

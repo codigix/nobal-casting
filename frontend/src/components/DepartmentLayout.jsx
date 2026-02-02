@@ -29,7 +29,8 @@ import {
   Grid3x3,
   Award,
   Zap,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Star 
 } from 'lucide-react'
 
 /**
@@ -166,25 +167,19 @@ export default function DepartmentLayout({ children }) {
     if (userDept === 'admin') {
       return [
         dashboardItem,
-        {
-          id: 'masters',
-          label: 'Masters',
-          icon: Settings,
-          section: 'APPS',
-          submenu: [
-            { label: 'Employees & Designations', path: '/admin/employees-designations', icon: Users }
-          ]
-        },
+      
         {
           id: 'analytics',
           label: 'Analytics',
           icon: BarChart3,
           section: 'APPS',
           submenu: [
-            { label: 'Project Analysis', path: '/admin/project-analysis', icon: TrendingUp },
+            { label: 'Project Analysis', path: '/admin/project-analysis', icon: TrendingUp, state: { filterSegment: 'all' } },
+            { label: 'Premium Projects', path: '/admin/project-analysis', icon: Star, state: { filterSegment: 'Premium' } },
             { label: 'Machine Analysis', path: '/admin/machine-analysis', icon: TrendingUp },
             { label: 'OEE Analysis', path: '/admin/oee', icon: TrendingUp },
-            { label: 'Customer Statistics', path: '/admin/customer-statistics', icon: Award }
+            { label: 'Customer Statistics', path: '/admin/customer-statistics', icon: Award },
+            { label: 'Employees & Designations', path: '/admin/employees-designations', icon: Users }
           ]
         }
       ]
@@ -232,7 +227,7 @@ export default function DepartmentLayout({ children }) {
             <>
               {Array.from(new Set(menuItems.map(item => item.section))).map((section) => (
                 <div key={section}>
-                  <div className="nav-section-label mt-4">{section}</div>
+                  <div className="nav-section-label">{section}</div>
                   {menuItems.filter(item => item.section === section).map((item) => {
                     const IconComponent = item.icon
                     return (
@@ -254,9 +249,10 @@ export default function DepartmentLayout({ children }) {
                                   const SubIconComponent = subitem.icon
                                   return (
                                     <Link
-                                      key={subitem.path}
+                                      key={subitem.id || subitem.path + (subitem.state?.filterSegment || '')}
                                       to={subitem.path}
-                                      className={`nav-subitem ${isActive(subitem.path) ? 'active' : ''}`}
+                                      state={subitem.state}
+                                      className={`nav-subitem ${isActive(subitem.path) && (!subitem.state || location.state?.filterSegment === subitem.state.filterSegment) ? 'active' : ''}`}
                                       onClick={handleLinkClick}
                                     >
                                       <SubIconComponent className="nav-icon-lucide" size={18} />
@@ -337,9 +333,10 @@ export default function DepartmentLayout({ children }) {
               const SubIconComponent = subitem.icon
               return (
                 <Link
-                  key={subitem.path}
+                  key={subitem.id || subitem.path + (subitem.state?.filterSegment || '')}
                   to={subitem.path}
-                  className={`popover-item ${isActive(subitem.path) ? 'active' : ''}`}
+                  state={subitem.state}
+                  className={`popover-item ${isActive(subitem.path) && (!subitem.state || location.state?.filterSegment === subitem.state.filterSegment) ? 'active' : ''}`}
                   onClick={handleLinkClick}
                 >
                   <SubIconComponent className="nav-icon-lucide" size={18} />

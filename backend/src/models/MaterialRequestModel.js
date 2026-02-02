@@ -301,7 +301,7 @@ export class MaterialRequestModel {
 
       // Update source warehouse if provided and different
       if (sourceWarehouse && sourceWarehouse !== request.source_warehouse) {
-        await db.execute(
+        await connection.execute(
           'UPDATE material_request SET source_warehouse = ? WHERE mr_id = ?',
           [sourceWarehouse, mrId]
         )
@@ -310,7 +310,7 @@ export class MaterialRequestModel {
 
       // Update status
       const finalStatus = isStockTransaction ? 'completed' : 'approved'
-      await db.execute(
+      await connection.execute(
         'UPDATE material_request SET status = ?, updated_at = NOW() WHERE mr_id = ?',
         [finalStatus, mrId]
       )
@@ -326,7 +326,7 @@ export class MaterialRequestModel {
 
         try {
           const pprmStatus = isStockTransaction ? 'issued' : 'approved'
-          await db.execute(
+          await connection.execute(
             `UPDATE production_plan_raw_material 
              SET material_status = ? 
              WHERE plan_id = ? AND mr_id = ?`,
@@ -342,10 +342,10 @@ export class MaterialRequestModel {
       if (isStockTransaction) {
         // Check for period closing lock - use transition date or request date
         const lockDate = request.transition_date || request.request_date || new Date()
-        await PeriodClosingModel.checkLock(db, lockDate)
+        await PeriodClosingModel.checkLock(connection, lockDate)
 
         console.log(`[MR Approval] Processing stock movements for MR ${mrId}, purpose: ${request.purpose}`)
-        const targetWarehouseId = request.target_warehouse ? await this.getWarehouseId(db, request.target_warehouse) : null
+        const targetWarehouseId = request.target_warehouse ? await this.getWarehouseId(connection, request.target_warehouse) : null
         
         console.log(`[MR Approval] Source Warehouse ID: ${sourceWarehouseId}, Target: ${targetWarehouseId}`)
         
@@ -353,7 +353,7 @@ export class MaterialRequestModel {
           const qty = Number(item.qty)
 
           // Get current stock
-          const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, sourceWarehouseId, db)
+          const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, sourceWarehouseId, connection)
           const currentValuation = sourceBalance ? Number(sourceBalance.valuation_rate) : 0
           const currentQty = sourceBalance ? Number(sourceBalance.current_qty) : 0
           
@@ -366,7 +366,7 @@ export class MaterialRequestModel {
             reserved_qty: sourceBalance ? Number(sourceBalance.reserved_qty) : 0,
             valuation_rate: currentValuation,
             last_issue_date: new Date()
-          }, db)
+          }, connection)
 
           // Add Ledger Entry (OUT)
           console.log(`[MR Approval] Creating ledger entry for ${item.item_code}`)
@@ -384,7 +384,7 @@ export class MaterialRequestModel {
             created_by: approvedBy
           }
           console.log(`[MR Approval] Ledger data:`, ledgerData)
-          await StockLedgerModel.create(ledgerData, db)
+          await StockLedgerModel.create(ledgerData, connection)
           console.log(`[MR Approval] Ledger entry created successfully`)
 
           // If Transfer, Add to Target
@@ -395,7 +395,7 @@ export class MaterialRequestModel {
               is_increment: true,
               incoming_rate: currentValuation, // Transfer at source valuation
               last_receipt_date: new Date()
-            }, db)
+            }, connection)
 
             // Add Ledger Entry (IN)
             await StockLedgerModel.create({
@@ -410,7 +410,7 @@ export class MaterialRequestModel {
               reference_name: mrId,
               remarks: `Incoming Transfer from MR ${mrId}`,
               created_by: approvedBy
-            }, db)
+            }, connection)
           }
         }
         console.log(`[MR Approval] Stock movements completed for MR ${mrId}`)
@@ -418,17 +418,21 @@ export class MaterialRequestModel {
         console.log(`[MR Approval] Not a stock transaction (purpose: ${request.purpose}), skipping stock movements`)
       }
 
+      await connection.commit()
       const approvedMR = await this.getById(db, mrId)
 
       try {
-        await this.createNotifications(db, approvedMR, 'MATERIAL_REQUEST_APPROVED', request.department)
+        await this.createNotifications(connection, approvedMR, 'MATERIAL_REQUEST_APPROVED', request.department)
       } catch (notifError) {
         console.log('Notification creation failed (non-critical):', notifError.message)
       }
 
       return approvedMR
     } catch (error) {
+      await connection.rollback()
       throw new Error('Failed to approve material request: ' + error.message)
+    } finally {
+      connection.release()
     }
   }
 

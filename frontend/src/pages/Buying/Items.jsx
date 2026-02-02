@@ -187,7 +187,7 @@ export default function Items() {
     return (
       <Card
         onClick={onClick}
-        className={`bg-gradient-to-br ${colorMap[color] || colorMap.primary} p-2 border-1 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 relative overflow-hidden group cursor-pointer ${isActive ? 'ring-2 ring-blue-500 border-transparent shadow-blue-500/20' : ''}`}
+        className={`bg-gradient-to-br ${colorMap[color] || colorMap.primary} p-2 border-1 transition-all duration-300 hover:shadow  hover:-translate-y-1 relative overflow-hidden group cursor-pointer ${isActive ? 'ring-2 ring-blue-500 border-transparent shadow-blue-500/20' : ''}`}
       >
         <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-current opacity-5 rounded-full group-hover:scale-125 transition-transform" />
         <div className="flex items-start justify-between relative z-10">
@@ -251,7 +251,7 @@ export default function Items() {
             <Button 
               onClick={() => navigate('/manufacturing/items/new')}
               variant="primary"
-              className="flex items-center gap-2 p-2 rounded  text-xs font-black shadow-xl shadow-blue-600/20 active:scale-95 transition-all"
+              className="flex items-center gap-2 p-2 rounded  text-xs font-black shadow  shadow-blue-600/20 active:scale-95 transition-all"
             >
               <Plus size={18} strokeWidth={3} /> New Item
             </Button>
@@ -305,7 +305,7 @@ export default function Items() {
                   <button
                     key={group}
                     onClick={() => setActiveGroup(group)}
-                    className={`px-4 py-2 rounded-lg text-[10px] font-black tracking-widest transition-all whitespace-nowrap ${
+                    className={`p-2 rounded text-[10px] font-black tracking-widest transition-all whitespace-nowrap ${
                       activeGroup === group
                         ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
                         : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'

@@ -8,7 +8,7 @@ import {
   AlertTriangle, Zap, Eye, X, Factory, BarChart3, 
   TrendingUp, Clipboard, Rocket, Wrench, Calendar, 
   ChevronLeft, ChevronRight, Activity, Clock, 
-  CheckCircle2, Monitor, RefreshCw, ArrowUpRight, ArrowDownRight,
+  CheckCircle2, Monitor, RefreshCw, ArrowUpRight,Search ,Filter , ArrowDownRight, XCircle,
   PieChart as PieIcon
 } from 'lucide-react'
 import { getOEEDashboardData, getMachineHistoricalMetrics } from '../../services/productionService'
@@ -50,97 +50,129 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
   if (!isOpen || !machine) return null
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-      <div className="bg-white rounded shadow-2xl max-w-5xl w-full  overflow-hidden flex flex-col">
-        <div className="bg-slate-900 p-2 flex items-center justify-between text-white">
-          <div>
-            <h2 className="text-xl  m-0 flex items-center gap-2">
-              <Monitor size={20} className="text-blue-400" />
-              {machine.name}
-            </h2>
-            <p className="text-slate-400 text-xs mt-1 m-0">Machine ID: {machine.id} • {machine.workstationType}</p>
+    <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-neutral-200">
+        {/* Modal Header */}
+        <div className="p-2 border-b border-neutral-100 flex items-center justify-between bg-white">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded bg-blue-50 flex items-center justify-center text-blue-600">
+              <Monitor size={24} />
+            </div>
+            <div>
+              <h2 className="text-xl  text-neutral-900 m-0">
+                {machine.name}
+              </h2>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs    text-neutral-400">Machine ID:</span>
+                <span className="text-xs font-semibold text-neutral-600">{machine.id}</span>
+                <span className="w-1 h-1 rounded-full bg-neutral-300 mx-1"></span>
+                <span className="text-xs font-medium text-neutral-500">{machine.workstationType}</span>
+              </div>
+            </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded transition-colors">
-            <X size={24} />
+          <button 
+            onClick={onClose} 
+            className="w-10 h-10 flex items-center justify-center text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 rounded-full transition-all"
+          >
+            <X size={20} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3">
-          {/* Machine KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
+        <div className="flex-1 overflow-y-auto p-6 bg-neutral-50/30">
+          {/* Main KPI Section */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             {[
-              { label: 'Availability', value: machine.availability, color: 'indigo' },
-              { label: 'Performance', value: machine.performance, color: 'blue' },
-              { label: 'Quality', value: machine.quality, color: 'emerald' },
-              { label: 'OEE', value: machine.oee, color: 'orange' }
+              { label: 'Availability', value: machine.availability, color: '#3b82f6', icon: Clock },
+              { label: 'Performance', value: machine.performance, color: '#f59e0b', icon: Activity },
+              { label: 'Quality', value: machine.quality, color: '#10b981', icon: CheckCircle2 },
+              { label: 'Overall OEE', value: machine.oee, color: '#6366f1', icon: BarChart3 }
             ].map((kpi) => (
-              <div key={kpi.label} className={`bg-${kpi.color}-50 rounded p-4 border border-${kpi.color}-100`}>
-                <p className="text-xs   text-slate-500  mb-1 m-0">{kpi.label}</p>
-                <p className={`text-xl   text-${kpi.color}-700 m-0`}>{kpi.value}%</p>
-                <div className="w-full h-1.5 bg-white rounded-full mt-3 overflow-hidden">
-                  <div 
-                    className={`h-full bg-${kpi.color}-500 rounded-full transition-all duration-1000`} 
-                    style={{ width: `${kpi.value}%` }} 
-                  />
+              <div key={kpi.label} className="bg-white rounded-xl p-2 border border-neutral-200  relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: kpi.color }}></div>
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <p className="text-xs  text-neutral-400   mb-1 m-0">{kpi.label}</p>
+                    <p className="text-xl  text-neutral-900 m-0">{kpi.value}%</p>
+                  </div>
+                  <div className="p-2 rounded" style={{ backgroundColor: `${kpi.color}10`, color: kpi.color }}>
+                    <kpi.icon size={18} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs  text-neutral-400  ">
+                    <span>Efficiency</span>
+                    <span>{kpi.value}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full rounded-full transition-all duration-1000" 
+                      style={{ width: `${kpi.value}%`, backgroundColor: kpi.color }} 
+                    />
+                  </div>
                 </div>
               </div>
             ))}
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-            <div className="bg-slate-50 rounded p-4 border border-slate-200">
-              <p className="text-xs   text-slate-500  mb-1 m-0">Uptime</p>
-              <p className="text-xl  text-slate-900 m-0">{machine.uptimeHours}h</p>
-            </div>
-            <div className="bg-slate-50 rounded p-4 border border-slate-200">
-              <p className="text-xs   text-slate-500  mb-1 m-0">Allocation</p>
-              <p className="text-xl  text-slate-900 m-0">{machine.allocation}h</p>
-            </div>
-            <div className="bg-amber-50 rounded p-4 border border-amber-200">
-              <p className="text-xs   text-amber-900  mb-1 m-0">Downtime</p>
-              <p className="text-xl  text-amber-700 m-0">{machine.downtime}h</p>
-            </div>
-            <div className="bg-rose-50 rounded p-4 border border-rose-200">
-              <p className="text-xs   text-rose-900  mb-1 m-0">Rejection</p>
-              <p className="text-xl  text-rose-700 m-0">{machine.rejectionRate}%</p>
-            </div>
+          {/* Secondary Stats Section */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            {[
+              { label: 'Uptime', value: `${machine.uptimeHours}h`, icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
+              { label: 'Allocation', value: `${machine.allocation}h`, icon: Calendar, color: 'text-neutral-600', bg: 'bg-neutral-100' },
+              { label: 'Downtime', value: `${machine.downtime}h`, icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-50' },
+              { label: 'Rejection', value: `${machine.rejectionRate}%`, icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50' }
+            ].map((stat) => (
+              <div key={stat.label} className="bg-white rounded-xl p-4 border border-neutral-200  flex items-center gap-4 transition-all hover:border-neutral-300">
+                <div className={`w-10 h-10 rounded ${stat.bg} ${stat.color} flex items-center justify-center shrink-0`}>
+                  <stat.icon size={20} />
+                </div>
+                <div>
+                  <p className="text-xs  text-neutral-400   mb-0.5 m-0">{stat.label}</p>
+                  <p className="text-lg  text-neutral-900 m-0">{stat.value}</p>
+                </div>
+              </div>
+            ))}
           </div>
 
-          <div className="bg-white rounded border border-slate-200 overflow-hidden ">
-            <div className="bg-slate-50 p-2 border-b border-slate-200 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calendar size={18} className="text-slate-500" />
-                <h3 className="text-xs  text-slate-900 m-0">Historical Performance</h3>
+          {/* Historical Performance Chart Section */}
+          <div className="bg-white rounded border border-neutral-200  overflow-hidden">
+            <div className="p-2 border-b border-neutral-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded bg-indigo-50 flex items-center justify-center text-indigo-600">
+                  <TrendingUp size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm  text-neutral-900 m-0">Historical Performance</h3>
+                  <p className="text-xs text-neutral-500 m-0   font-medium">Trends and analytics across periods</p>
+                </div>
               </div>
-              <div className="flex bg-white rounded p-1 border border-slate-200 gap-1">
+              <div className="flex bg-neutral-100 p-1 rounded gap-1">
                 {['daily', 'weekly', 'monthly'].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`p-2  py-1.5 rounded  text-xs    transition-all ${
+                    className={`px-4 py-1.5 rounded-md text-xs  transition-all ${
                       activeTab === tab
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'text-slate-600 hover:bg-slate-50'
+                        ? 'bg-white text-blue-600 '
+                        : 'text-neutral-500 hover:text-neutral-700 hover:bg-neutral-200/50'
                     }`}
                   >
-                    {tab}
+                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="p-3 h-[400px]">
+            <div className="p-6 h-[350px]">
               {error ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <AlertTriangle size={32} className="text-amber-500 mb-2" />
-                  <p className="text-slate-600 text-xs">{error}</p>
+                  <p className="text-neutral-600 text-xs font-medium">{error}</p>
                 </div>
               ) : historyLoading ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
-                  <div className="animate-spin mb-4">
-                    <RefreshCw size={32} className="text-blue-600" />
-                  </div>
-                  <p className="text-slate-600 text-xs">Synchronizing historical metrics...</p>
+                  <RefreshCw size={32} className="text-blue-500 animate-spin mb-4" />
+                  <p className="text-neutral-600 text-xs font-medium  ">Analyzing historical metrics...</p>
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
@@ -148,35 +180,75 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
                     <AreaChart data={historyData.daily}>
                       <defs>
                         <linearGradient id="colorOEE" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
                           <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="date" hide />
-                      <YAxis domain={[0, 100]} />
-                      <Tooltip />
-                      <Area type="monotone" dataKey="oee" stroke="#3b82f6" fillOpacity={1} fill="url(#colorOEE)" name="OEE %" />
-                      <Line type="monotone" dataKey="performance" stroke="#f59e0b" strokeWidth={2} dot={false} name="Performance %" />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                      <XAxis 
+                        dataKey="date" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{fontSize: 10, fill: '#9ca3af', fontWeight: 600}}
+                        dy={10}
+                      />
+                      <YAxis 
+                        domain={[0, 100]} 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{fontSize: 10, fill: '#9ca3af', fontWeight: 600}}
+                      />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', padding: '12px' }}
+                      />
+                      <Area type="monotone" dataKey="oee" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorOEE)" name="OEE %" />
+                      <Area type="monotone" dataKey="performance" stroke="#f59e0b" strokeWidth={2} fill="transparent" name="Performance %" />
                     </AreaChart>
                   ) : activeTab === 'weekly' ? (
                     <BarChart data={historyData.weekly}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="week" />
-                      <YAxis domain={[0, 100]} />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="avg_performance" fill="#3b82f6" name="Avg Performance %" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="avg_efficiency" fill="#10b981" name="Avg Efficiency %" radius={[4, 4, 0, 0]} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                      <XAxis 
+                        dataKey="week" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{fontSize: 10, fill: '#9ca3af', fontWeight: 600}}
+                        dy={10}
+                      />
+                      <YAxis 
+                        domain={[0, 100]} 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{fontSize: 10, fill: '#9ca3af', fontWeight: 600}}
+                      />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                      />
+                      <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 700, textTransform: '' }} />
+                      <Bar dataKey="avg_performance" fill="#3b82f6" name="Avg Performance %" radius={[4, 4, 0, 0]} barSize={30} />
+                      <Bar dataKey="avg_efficiency" fill="#10b981" name="Avg Efficiency %" radius={[4, 4, 0, 0]} barSize={30} />
                     </BarChart>
                   ) : (
                     <LineChart data={historyData.monthly}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="month" />
-                      <YAxis domain={[0, 100]} />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="avg_performance_percentage" stroke="#8b5cf6" strokeWidth={3} dot={{r: 4, fill: '#8b5cf6'}} name="Avg Performance %" />
-                      <Line type="monotone" dataKey="avg_efficiency_percentage" stroke="#10b981" strokeWidth={3} dot={{r: 4, fill: '#10b981'}} name="Avg OEE %" />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                      <XAxis 
+                        dataKey="month" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{fontSize: 10, fill: '#9ca3af', fontWeight: 600}}
+                        dy={10}
+                      />
+                      <YAxis 
+                        domain={[0, 100]} 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{fontSize: 10, fill: '#9ca3af', fontWeight: 600}}
+                      />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                      />
+                      <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 700, textTransform: '' }} />
+                      <Line type="monotone" dataKey="avg_performance_percentage" stroke="#8b5cf6" strokeWidth={4} dot={{r: 6, fill: '#8b5cf6', strokeWidth: 2, stroke: '#fff'}} activeDot={{r: 8}} name="Avg Performance %" />
+                      <Line type="monotone" dataKey="avg_efficiency_percentage" stroke="#10b981" strokeWidth={4} dot={{r: 6, fill: '#10b981', strokeWidth: 2, stroke: '#fff'}} activeDot={{r: 8}} name="Avg OEE %" />
                     </LineChart>
                   )}
                 </ResponsiveContainer>
@@ -189,24 +261,21 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
   )
 }
 
-const StatCard = ({ label, value, icon: Icon, color, trend, trendValue, trendDirection }) => (
-  <div className={`bg-gradient-to-br ${color} p-5 rounded border border-white/20  transition-all duration-300 hover:shadow-md hover:-translate-y-1 relative overflow-hidden group`}>
-    <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-white/10 rounded-full group-hover:scale-110 transition-transform" />
-    <div className="flex items-start justify-between mb-2">
-      <span className="text-xs    text-slate-500 ">{label}</span>
-      <div className="p-2 bg-white/60 rounded ">
-        <Icon size={18} className="text-slate-700" />
+const StatCard = ({ label, value, icon: Icon, color, accentColor, trend }) => (
+  <div className="bg-white p-2 rounded border border-neutral-200  transition-all duration-300 hover:shadow-md hover:-translate-y-1 relative overflow-hidden group">
+    <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: accentColor }} />
+    <div className="flex items-start justify-between mb-4">
+      <div className="p-2.5 rounded" style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
+        <Icon size={20} />
       </div>
     </div>
-    <p className="text-xl   text-slate-900 mb-2">{value}</p>
-    <div className="flex items-center justify-between">
-      <p className="text-xs  text-slate-500  tracking-tighter">{trend}</p>
-      {trendValue && (
-        <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs   ${trendDirection === 'up' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-          {trendDirection === 'up' ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
-          {trendValue}
-        </div>
-      )}
+    <div>
+      <p className="text-xs  text-neutral-400   mb-1 m-0">{label}</p>
+      <h3 className="text-xl  text-neutral-900 m-0">{value}</h3>
+    </div>
+    <div className="mt-4 flex items-center gap-1.5">
+      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accentColor }} />
+      <p className="text-xs  text-neutral-500   m-0">{trend}</p>
     </div>
   </div>
 )
@@ -382,27 +451,30 @@ const MachineAnalysis = () => {
   }
 
   return (
-    <div className="w-full bg-slate-50 min-h-screen p-4 md:p-3">
-      <div className="max-w-5xl mx-auto">
+    <div className="w-full bg-neutral-50/50 min-h-screen p-2">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 my-4 mb-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-4">
           <div>
-            <h1 className="text-xl  text-slate-900 flex items-center gap-2">
-              <Monitor className="text-blue-600" /> Machine Analysis
+            <h1 className="text-xl  text-neutral-900 flex items-center gap-3 m-0">
+              <div className="w-10 h-10 rounded bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
+                <Monitor size={15} />
+              </div>
+              Machine Analysis
             </h1>
-            <p className="text-slate-500 text-xs   mt-1">
+            <p className="text-xs font-medium text-neutral-500 mt-2">
               Live Factory Performance & Intelligence
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <div className="hidden sm:block text-right">
-              <p className="text-xs   text-slate-400 ">Last Synchronized</p>
-              <p className="text-xs  text-slate-700">{refreshTime.toLocaleTimeString()}</p>
+              <p className="text-xs  text-neutral-400  tracking-widest m-0">Last Synchronized</p>
+              <p className="text-xs  text-neutral-700 m-0">{refreshTime.toLocaleTimeString()}</p>
             </div>
             <button
               onClick={() => fetchData(true)}
               disabled={syncLoading}
-              className={`flex items-center gap-2 p-2.5 bg-slate-900 text-white rounded hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 text-xs ${syncLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className={`flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded hover:bg-neutral-800 transition-all shadow-xl shadow-neutral-900/10 text-xs  ${syncLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               <RefreshCw size={14} className={syncLoading ? 'animate-spin' : ''} /> 
               {syncLoading ? 'Syncing...' : 'Refresh Data'}
@@ -416,52 +488,55 @@ const MachineAnalysis = () => {
             label="Overall OEE" 
             value={`${averageOEE}%`}
             icon={Activity}
-            color="from-blue-50 to-blue-100"
+            accentColor="#6366f1"
             trend="Efficiency Rating"
           />
           <StatCard 
             label="Avg Performance" 
             value={`${averagePerformance}%`}
             icon={TrendingUp}
-            color="from-emerald-50 to-emerald-100"
+            accentColor="#f59e0b"
             trend="Production Output"
           />
           <StatCard 
             label="Avg Availability" 
             value={`${averageUtilization}%`}
             icon={Clock}
-            color="from-amber-50 to-amber-100"
+            accentColor="#3b82f6"
             trend="Machine Uptime"
           />
           <StatCard 
             label="Avg Quality" 
             value={`${averageQuality}%`}
             icon={CheckCircle2}
-            color="from-indigo-50 to-indigo-100"
+            accentColor="#10b981"
             trend="Good Units %"
           />
           <StatCard 
             label="Active Units" 
             value={machineDetails.filter(m => m.status === 'Operational').length}
             icon={Zap}
-            color="from-purple-50 to-purple-100"
+            accentColor="#8b5cf6"
             trend="Operational Status"
           />
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-slate-200">
+        <div className="flex gap-8 mb-8 border-b border-neutral-200">
           {['overview', 'machines', 'efficiency'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`p-6  py-2 text-xs   border-b-2 transition-all ${
+              className={`pb-4 text-xs   tracking-widest transition-all relative ${
                 activeTab === tab
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-900'
+                  ? 'text-blue-600'
+                  : 'text-neutral-400 hover:text-neutral-600'
               }`}
             >
               {tab}
+              {activeTab === tab && (
+                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 rounded-full" />
+              )}
             </button>
           ))}
         </div>
@@ -469,11 +544,11 @@ const MachineAnalysis = () => {
         {/* Overview Content */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Status Distribution */}
-              <div className="bg-white rounded border border-slate-200 p-3 ">
-                <h3 className="text-xs  text-slate-900 mb-6  flex items-center gap-2">
-                  <PieIcon size={18} className="text-slate-400" /> Status Distribution
+              <div className="bg-white rounded-xl border border-neutral-200 p-2 ">
+                <h3 className="text-xs  text-neutral-400  tracking-widest mb-6 flex items-center gap-2">
+                  <PieIcon size={16} className="text-neutral-400" /> Status Distribution
                 </h3>
                 <div className="h-[250px]">
                   <ResponsiveContainer width="100%" height="100%">
@@ -491,28 +566,32 @@ const MachineAnalysis = () => {
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip />
-                      <Legend verticalAlign="bottom" height={36} />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                      />
+                      <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 600, textTransform: '' }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               {/* Work Time vs Downtime */}
-              <div className="lg:col-span-2 bg-white rounded border border-slate-200 p-3 ">
-                <h3 className="text-xs  text-slate-900 mb-6  flex items-center gap-2">
-                  <BarChart3 size={18} className="text-slate-400" /> Work Time vs Downtime (h)
+              <div className="lg:col-span-2 bg-white rounded-xl border border-neutral-200 p-2 ">
+                <h3 className="text-xs  text-neutral-400  tracking-widest mb-6 flex items-center gap-2">
+                  <BarChart3 size={16} className="text-neutral-400" /> Work Time vs Downtime (h)
                 </h3>
                 <div className="h-[250px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={machineDetails.slice(0, 10)}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="name" tick={{fontSize: 10}} />
-                      <YAxis tick={{fontSize: 10}} />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="uptimeHours" name="Work Time" fill="#10b981" stackId="a" radius={[0, 0, 0, 0]} />
-                      <Bar dataKey="downtime" name="Downtime" fill="#ef4444" stackId="a" radius={[4, 4, 0, 0]} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af', fontWeight: 600}} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af', fontWeight: 600}} />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                      />
+                      <Legend verticalAlign="top" align="right" wrapperStyle={{ fontSize: '10px', fontWeight: 600, textTransform: '', paddingBottom: '20px' }} />
+                      <Bar dataKey="uptimeHours" name="Work Time" fill="#3b82f6" stackId="a" radius={[0, 0, 0, 0]} barSize={20} />
+                      <Bar dataKey="downtime" name="Downtime" fill="#f59e0b" stackId="a" radius={[4, 4, 0, 0]} barSize={20} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -520,24 +599,26 @@ const MachineAnalysis = () => {
             </div>
 
             {/* Overall Efficiency Area Chart */}
-            <div className="bg-white rounded border border-slate-200 p-3 ">
-              <h3 className="text-xs  text-slate-900 mb-6  flex items-center gap-2">
-                <TrendingUp size={18} className="text-slate-400" /> Factory Efficiency Trend
+            <div className="bg-white rounded-xl border border-neutral-200 p-2 ">
+              <h3 className="text-xs  text-neutral-400  tracking-widest mb-6 flex items-center gap-2">
+                <TrendingUp size={16} className="text-neutral-400" /> Factory Efficiency Trend
               </h3>
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={machineEfficiency}>
                     <defs>
                       <linearGradient id="colorEff" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                     <XAxis dataKey="period" hide />
-                    <YAxis />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="efficiency" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorEff)" name="OEE %" />
+                    <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af', fontWeight: 600}} />
+                    <Tooltip 
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                      />
+                    <Area type="monotone" dataKey="efficiency" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorEff)" name="OEE %" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -547,77 +628,75 @@ const MachineAnalysis = () => {
 
         {/* Machines Tab */}
         {activeTab === 'machines' && (
-          <div className="bg-white rounded border border-slate-200  overflow-hidden">
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex flex-1 max-w-md gap-2">
-                <Monitor className="text-slate-400 mt-2" size={20} />
+          <div className="bg-white rounded border border-neutral-200  overflow-hidden">
+            <div className="p-2 bg-neutral-50/50 border-b border-neutral-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex flex-1 max-w-md relative group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-blue-600 transition-colors" size={16} />
                 <input 
                   type="text" 
-                  placeholder="Search by Machine Code or Name..."
-                  className="w-full bg-white border border-slate-200 rounded  p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="Search machines..."
+                  className="w-full bg-white border border-neutral-200 rounded pl-10 pr-4 py-2 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <select 
-                className="bg-white border border-slate-200 rounded  p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-              >
-                {workstationTypes.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <div className="flex items-center gap-2">
+                <Filter size={14} className="text-neutral-400" />
+                <select 
+                  className="bg-white border border-neutral-200 rounded px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all appearance-none pr-8 cursor-pointer"
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                >
+                  {workstationTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
             </div>
 
-            <div className="">
-              <table className="w-full text-left bg-white border-collapse bg-white">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="p-2 text-xs   text-slate-500 ">Identification</th>
-                    <th className="p-2 text-xs   text-slate-500 ">Status</th>
-                    <th className="p-2 text-xs   text-slate-500 ">OEE %</th>
-                    <th className="p-2 text-xs   text-slate-500 ">Availability</th>
-                    <th className="p-2 text-xs   text-slate-500 ">Utilization</th>
-                    <th className="p-2 text-xs   text-slate-500 ">Performance</th>
-                    <th className="p-2 text-xs   text-slate-500  text-center">Action</th>
+                  <tr className="bg-neutral-50/50 border-b border-neutral-200">
+                    <th className="p-2 text-xs  text-neutral-400  ">Identification</th>
+                    <th className="p-2 text-xs  text-neutral-400  ">Status</th>
+                    <th className="p-2 text-xs  text-neutral-400  ">OEE Performance</th>
+                    <th className="p-2 text-xs  text-neutral-400   text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-neutral-100">
                   {paginatedMachines.map((m) => (
-                    <tr key={m.id} className="hover:bg-slate-50 transition-colors group">
+                    <tr key={m.id} className="hover:bg-neutral-50/50 transition-colors group">
                       <td className="p-2">
-                        <p className="text-xs  text-slate-900 m-0">{m.name}</p>
-                        <p className="text-xs   text-slate-400 m-0">{m.id} • {m.workstationType}</p>
+                        <p className="text-xs  text-neutral-900 m-0">{m.name}</p>
+                        <p className="text-xs  text-neutral-400   m-0 mt-0.5">{m.id} • {m.workstationType}</p>
                       </td>
                       <td className="p-2">
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs   tracking-tighter ${
-                          m.status === 'Operational' ? 'bg-emerald-100 text-emerald-700' : 
-                          m.status === 'Maintenance' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs    ${
+                          m.status === 'Operational' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 
+                          m.status === 'Maintenance' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-neutral-50 text-neutral-600 border border-neutral-100'
                         }`}>
-                          <div className={`w-1.5 h-1.5 rounded-full ${
+                          <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${
                             m.status === 'Operational' ? 'bg-emerald-500' : 
-                            m.status === 'Maintenance' ? 'bg-amber-500' : 'bg-slate-400'
+                            m.status === 'Maintenance' ? 'bg-amber-500' : 'bg-neutral-400'
                           }`} />
                           {m.status}
                         </span>
                       </td>
                       <td className="p-2">
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs  text-slate-900 w-10">{m.oee}%</span>
-                          <div className="flex-1 h-1.5 bg-slate-100 rounded-full w-24 overflow-hidden hidden sm:block">
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm  text-neutral-900 w-10">{m.oee}%</span>
+                          <div className="flex-1 h-2 bg-neutral-100 rounded-full w-32 overflow-hidden hidden sm:block">
                             <div 
-                              className={`h-full rounded-full ${m.oee > 85 ? 'bg-emerald-500' : m.oee > 70 ? 'bg-amber-500' : 'bg-rose-500'}`} 
+                              className={`h-full rounded-full transition-all duration-500 ${m.oee > 85 ? 'bg-emerald-500' : m.oee > 70 ? 'bg-amber-500' : 'bg-rose-500'}`} 
                               style={{ width: `${m.oee}%` }} 
                             />
                           </div>
                         </div>
                       </td>
-                      <td className="p-2 text-xs  text-slate-600">{m.availability}%</td>
-                      <td className="p-2 text-xs  text-slate-600">{m.utilization}%</td>
-                      <td className="p-2 text-xs  text-slate-600">{m.performance}%</td>
                       <td className="p-2 text-center">
                         <button 
                           onClick={() => { setSelectedMachine(m); setModalOpen(true); }}
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
+                          className="w-8 h-8 flex items-center justify-center text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
+                          title="View Details"
                         >
                           <Eye size={18} />
                         </button>
@@ -629,22 +708,22 @@ const MachineAnalysis = () => {
             </div>
 
             {/* Pagination */}
-            <div className="p-2 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-              <p className="text-xs   text-slate-500 ">
+            <div className="p-2 bg-neutral-50/30 border-t border-neutral-200 flex items-center justify-between">
+              <p className="text-xs  text-neutral-400  tracking-widest">
                 Showing {(currentMachinePage-1)*itemsPerPage + 1} - {Math.min(currentMachinePage*itemsPerPage, filteredMachines.length)} of {filteredMachines.length}
               </p>
               <div className="flex gap-2">
                 <button 
                   onClick={() => setCurrentMachinePage(p => Math.max(1, p-1))}
                   disabled={currentMachinePage === 1}
-                  className="p-2 border border-slate-200 rounded hover:bg-white disabled:opacity-50 transition-all"
+                  className="p-2 text-neutral-500 border border-neutral-200 rounded hover:bg-white hover:text-blue-600 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
                 >
                   <ChevronLeft size={16} />
                 </button>
                 <button 
                   onClick={() => setCurrentMachinePage(p => Math.min(Math.ceil(filteredMachines.length/itemsPerPage), p+1))}
                   disabled={currentMachinePage >= Math.ceil(filteredMachines.length/itemsPerPage)}
-                  className="p-2 border border-slate-200 rounded hover:bg-white disabled:opacity-50 transition-all"
+                  className="p-2 text-neutral-500 border border-neutral-200 rounded hover:bg-white hover:text-blue-600 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
                 >
                   <ChevronRight size={16} />
                 </button>
@@ -655,19 +734,21 @@ const MachineAnalysis = () => {
 
         {/* Efficiency Tab Content */}
         {activeTab === 'efficiency' && (
-          <div className="bg-white rounded border border-slate-200 p-3 ">
-            <h3 className="text-xs  text-slate-900 mb-3  flex items-center gap-2">
-              <Activity size={18} className="text-slate-400" /> Multi-Metric Performance Analysis
+          <div className="bg-white rounded-xl border border-neutral-200 p-6 ">
+            <h3 className="text-xs  text-neutral-400  tracking-widest mb-6 flex items-center gap-2">
+              <Activity size={16} className="text-neutral-400" /> Multi-Metric Performance Analysis
             </h3>
             <div className="h-[450px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={machineEfficiency}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="period" tick={{fontSize: 10}} />
-                  <YAxis domain={[0, 100]} tick={{fontSize: 10}} />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="efficiency" stroke="#3b82f6" strokeWidth={3} name="OEE %" dot={{r: 4}} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                  <XAxis dataKey="period" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af', fontWeight: 600}} dy={10} />
+                  <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af', fontWeight: 600}} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 700, textTransform: '' }} />
+                  <Line type="monotone" dataKey="efficiency" stroke="#3b82f6" strokeWidth={4} name="OEE %" dot={{r: 6, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff'}} activeDot={{r: 8}} />
                   <Line type="monotone" dataKey="availability" stroke="#10b981" strokeWidth={2} name="Availability %" strokeDasharray="5 5" dot={false} />
                   <Line type="monotone" dataKey="performance" stroke="#f59e0b" strokeWidth={2} name="Performance %" strokeDasharray="5 5" dot={false} />
                 </LineChart>

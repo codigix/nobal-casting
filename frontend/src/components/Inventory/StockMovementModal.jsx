@@ -12,6 +12,7 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
     target_warehouse_id: initialItem?.target_warehouse_id || '',
     warehouse_id: initialItem?.warehouse_id || '',
     movement_type: initialItem?.movement_type || 'OUT',
+    purpose: initialItem?.purpose || '',
     quantity: '',
     reference_type: 'Manual',
     reference_name: '',
@@ -73,16 +74,48 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+    
+    // Auto-set movement type and reference based on purpose for common tasks
+    if (name === 'purpose') {
+      let movementType = formData.movement_type;
+      let referenceType = formData.reference_type;
+      
+      if (value === 'Production Issue' || value === 'Material Issue' || value === 'Sales Issue') {
+        movementType = 'OUT';
+        if (value === 'Production Issue') referenceType = 'Production Request';
+        if (value === 'Sales Issue') referenceType = 'Sales Order';
+      } else if (value === 'Material Receipt' || value === 'Purchase Receipt') {
+        movementType = 'IN';
+        if (value === 'Purchase Receipt') referenceType = 'Manual'; // Or could be Purchase Order if we had it
+      } else if (value === 'Internal Transfer' || value === 'Production Transfer') {
+        movementType = 'TRANSFER';
+        if (value === 'Production Transfer') referenceType = 'Production Request';
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        movement_type: movementType,
+        reference_type: referenceType
+      }))
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }))
+    }
+    
     setFormError(null)
   }
 
   const validateForm = () => {
     if (!formData.item_code) {
       setFormError('Please select an item')
+      return false
+    }
+
+    if (!formData.purpose) {
+      setFormError('Please select a purpose for this movement')
       return false
     }
     
@@ -122,6 +155,7 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
       const payload = {
         item_code: formData.item_code,
         movement_type: formData.movement_type,
+        purpose: formData.purpose,
         quantity: parseFloat(formData.quantity),
         reference_type: formData.reference_type,
         reference_name: formData.reference_name,
@@ -178,7 +212,40 @@ export default function StockMovementModal({ onClose, onSuccess, initialItem = n
       {error && <Alert type="danger" className="mb-4">{error}</Alert>}
       {formError && <Alert type="warning" className="mb-4">{formError}</Alert>}
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Purpose Selection */}
+        <div>
+          <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+            Movement Purpose *
+          </label>
+          <select
+            name="purpose"
+            value={formData.purpose}
+            onChange={handleChange}
+            className="w-full p-2 border border-neutral-300 dark:border-neutral-700 rounded-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs bg-white dark:bg-neutral-800"
+          >
+            <option value="">Select Purpose</option>
+            <optgroup label="Production">
+              <option value="Production Issue">Send to Production (Issue)</option>
+              <option value="Production Transfer">Transfer to Production Warehouse</option>
+            </optgroup>
+            <optgroup label="Procurement & Sales">
+              <option value="Purchase Receipt">Purchase Receipt (Material IN)</option>
+              <option value="Material Receipt">General Material Receipt</option>
+              <option value="Sales Issue">Sales Delivery (OUT)</option>
+            </optgroup>
+            <optgroup label="Internal">
+              <option value="Internal Transfer">Warehouse Transfer</option>
+              <option value="Material Issue">General Material Issue</option>
+              <option value="Stock Adjustment">Inventory Adjustment</option>
+              <option value="Other">Other</option>
+            </optgroup>
+          </select>
+          <p className="text-[10px] text-neutral-500 mt-1">
+            Selecting a purpose will automatically suggest the best movement type below.
+          </p>
+        </div>
+
         {/* Movement Type Selection */}
         <div>
           <label className="block text-xs font-semibold text-neutral-900 dark:text-neutral-100 mb-3">

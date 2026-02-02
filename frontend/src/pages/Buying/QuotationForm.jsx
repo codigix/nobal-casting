@@ -371,7 +371,7 @@ export default function QuotationForm() {
                   type="submit"
                   variant="primary"
                   disabled={loading}
-                  className="bg-neutral-900 hover:bg-neutral-800 text-white px-12 py-3 rounded-none font-black text-[10px] tracking-widest  h-12 shadow-xl shadow-neutral-900/20"
+                  className="bg-neutral-900 hover:bg-neutral-800 text-white px-12 py-3 rounded-none font-black text-[10px] tracking-widest  h-12 shadow  shadow-neutral-900/20"
                 >
                   {loading ? 'PROCESSING...' : 'SAVE QUOTATION'}
                 </Button>

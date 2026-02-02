@@ -20,7 +20,7 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
-      <div className={`bg-white rounded-lg shadow-xl max-h-[90vh] overflow-hidden ${sizes[size] || sizes.md} w-full flex flex-col `}>
+      <div className={`bg-white rounded-lg shadow  max-h-[90vh] overflow-hidden ${sizes[size] || sizes.md} w-full flex flex-col `}>
         {/* Header */}
         <div className="flex-shrink-0 flex items-center justify-between p-2 border-b border-neutral-200">
           <h3 className="text-lg ">{title}</h3>

@@ -444,6 +444,7 @@ export class ProductionPlanningService {
                   operation_name: op.operation_name,
                   workstation: op.workstation_type,
                   operation_time: op.operation_time,
+                  hourly_rate: op.hourly_rate,
                   sequence: op.sequence
                 })
               }
@@ -504,6 +505,7 @@ export class ProductionPlanningService {
                   operation_name: op.operation_name,
                   workstation: op.workstation_type,
                   operation_time: op.operation_time,
+                  hourly_rate: op.hourly_rate,
                   sequence: op.sequence
                 })
               }

@@ -671,7 +671,7 @@ export default function JobCard() {
                   className={`group bg-white rounded border transition-all duration-500  ${
                     isExpanded 
                       ? 'border-indigo-200 shadow-2xl shadow-indigo-100 -translate-y-2' 
-                      : 'border-gray-100 hover:border-indigo-100 hover:shadow-xl hover:shadow-gray-100'
+                      : 'border-gray-100 hover:border-indigo-100 hover:shadow  hover:shadow-gray-100'
                   }`}
                 >
                   <div

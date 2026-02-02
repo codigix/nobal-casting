@@ -327,7 +327,7 @@ export default function StockLedger() {
                 {showColumnMenu && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setShowColumnMenu(false)} />
-                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs shadow-xl z-20 py-2">
+                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs shadow  z-20 py-2">
                       <div className="px-3 py-1 text-[10px]  text-neutral-400  tracking-wider border-b border-neutral-100 dark:border-neutral-700 mb-1">
                         Visible Columns
                       </div>

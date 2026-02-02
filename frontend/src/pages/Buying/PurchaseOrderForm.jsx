@@ -10,15 +10,192 @@ import { useToast } from '../../components/ToastContainer'
 import { 
   Trash2, Plus, ArrowLeft, Save, X, Package, 
   Truck, IndianRupee, CreditCard, Info, Calendar,
-  Building2, MapPin, Calculator, FileText, CheckCircle, ChevronRight
+  Building2, MapPin, Calculator, FileText, CheckCircle, ChevronRight,
+  ChevronDown, LayoutGrid, User, Settings, CreditCard as PaymentIcon
 } from 'lucide-react'
 import './Buying.css'
+
+// Helper Components for the Redesign
+const SectionTitle = ({ title, icon: Icon, badge }) => (
+  <div className="flex items-center justify-between mb-6">
+    <div className="flex items-center gap-3">
+      <div className="p-2 bg-indigo-50 text-indigo-600 rounded">
+        <Icon size={18} />
+      </div>
+      <h3 className="text-xs text-slate-900 font-semibold">{title}</h3>
+    </div>
+    {badge && (
+      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded-full border border-slate-200 uppercase tracking-wider">
+        {badge}
+      </span>
+    )}
+  </div>
+)
+
+const FieldWrapper = ({ label, children, error, required }) => (
+  <div className="space-y-1.5">
+    <div className="flex items-center justify-between">
+      <label className="text-xs  text-slate-400 flex items-center gap-1">
+        {label}
+        {required && <span className="text-rose-500">*</span>}
+      </label>
+      {error && <span className="text-[10px] font-semibold text-rose-500 animate-pulse">{error}</span>}
+    </div>
+    {children}
+  </div>
+)
+
+const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = 'indigo' }) => {
+  const themes = {
+    blue: 'text-blue-600 bg-blue-50 border-blue-100',
+    emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+    amber: 'text-amber-600 bg-amber-50 border-amber-100',
+    rose: 'text-rose-600 bg-rose-50 border-rose-100',
+    indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100',
+    slate: 'text-slate-600 bg-slate-50 border-slate-100',
+    cyan: 'text-cyan-600 bg-cyan-50 border-cyan-100'
+  }
+
+  const activeTheme = themes[themeColor] || themes.indigo
+
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(section)}
+      className={`flex items-center gap-2 p-2 rounded transition-all duration-300 group ${isActive
+        ? `${activeTheme} border`
+        : 'text-slate-500 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-100'
+        }`}
+    >
+      <div className={`p-1.5 rounded transition-all duration-300 ${isActive ? 'bg-white scale-110' : 'bg-slate-50 group-hover:bg-white'}`}>
+        <Icon size={14} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
+      </div>
+      <span className="text-xs font-semibold tracking-tight uppercase">{label}</span>
+      {isActive && <div className="w-1 h-1 rounded bg-current animate-pulse ml-0.5" />}
+    </button>
+  )
+}
+
+const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, themeColor = 'indigo', id, badge, actions }) => {
+  const themes = {
+    blue: { text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', icon: 'bg-blue-600 text-white' },
+    emerald: { text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', icon: 'bg-emerald-600 text-white' },
+    amber: { text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', icon: 'bg-amber-600 text-white' },
+    rose: { text: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', icon: 'bg-rose-600 text-white' },
+    indigo: { text: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', icon: 'bg-indigo-600 text-white' },
+    slate: { text: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-100', icon: 'bg-slate-600 text-white' },
+    cyan: { text: 'text-cyan-600', bg: 'bg-cyan-50', border: 'border-cyan-100', icon: 'bg-cyan-600 text-white' }
+  }
+
+  const theme = themes[themeColor] || themes.indigo
+
+  return (
+    <div
+      id={id}
+      className={`flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50/50 transition-all border-b border-slate-100 ${isExpanded ? 'bg-slate-50/30' : ''}`}
+      onClick={onToggle}
+    >
+      <div className="flex items-center gap-4">
+        <div className={`p-2.5 rounded shadow-lg transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
+          <Icon size={20} strokeWidth={2.5} />
+        </div>
+        <div>
+          <h2 className="text-sm font-bold flex items-center gap-3">
+            <span className={`${theme.text} uppercase tracking-wider`}>{title.split(' ')[0]}</span>
+            <span className="text-slate-800 ">{title.split(' ').slice(1).join(' ')}</span>
+          </h2>
+          {subtitle && <p className="text-xs font-medium text-slate-400">{subtitle}</p>}
+        </div>
+        {badge && (
+          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-[10px] font-bold rounded-full border ${theme.border} uppercase tracking-widest`}>
+            {badge}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-4">
+        {actions && <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>{actions}</div>}
+        <div className={`p-2 rounded-full transition-all duration-300 ${isExpanded ? `${theme.bg} ${theme.text}` : 'text-slate-300'}`}>
+          <ChevronDown size={20} className={`transition-transform duration-500 ${isExpanded ? 'rotate-180' : ''}`} strokeWidth={3} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const InfoRow = ({ label, value, icon: Icon, className = "", color = "indigo" }) => {
+  const themes = {
+    blue: 'text-blue-600 bg-blue-50/50 border-blue-100/50',
+    emerald: 'text-emerald-600 bg-emerald-50/50 border-emerald-100/50',
+    amber: 'text-amber-600 bg-amber-50/50 border-amber-100/50',
+    rose: 'text-rose-600 bg-rose-50/50 border-rose-100/50',
+    indigo: 'text-indigo-600 bg-indigo-50/50 border-indigo-100/50',
+    slate: 'text-slate-600 bg-slate-50/50 border-slate-100/50',
+    cyan: 'text-cyan-600 bg-cyan-50/50 border-cyan-100/50'
+  }
+  const themeClass = themes[color] || themes.indigo
+
+  return (
+    <div className={`flex flex-col p-2 rounded border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 ${className}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <div className={`p-1.5 rounded-lg ${themeClass}`}>
+          {Icon && <Icon size={12} />}
+        </div>
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</span>
+      </div>
+      <span className="text-xs font-bold text-slate-700 truncate pl-1">
+        {value || <span className="text-slate-300 font-normal italic">Not specified</span>}
+      </span>
+    </div>
+  )
+}
 
 export default function PurchaseOrderForm() {
   const { po_no } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
   const searchTimeoutRef = useRef(null)
+  
+  const [activeSection, setActiveSection] = useState('foundation')
+  const [expandedSections, setExpandedSections] = useState({
+    foundation: true,
+    vendor: true,
+    items: true,
+    logistics: true,
+    finance: true
+  })
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
+  }
+
+  const scrollToSection = (sectionId) => {
+    const element = document.getElementById(sectionId)
+    if (element) {
+      const offset = 100
+      const elementPosition = element.getBoundingClientRect().top
+      const offsetPosition = elementPosition + window.pageYOffset - offset
+      window.scrollTo({ top: offsetPosition, behavior: 'smooth' })
+      setActiveSection(sectionId)
+    }
+  }
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = ['foundation', 'vendor', 'items', 'logistics', 'finance']
+      const currentSection = sections.find(section => {
+        const element = document.getElementById(section)
+        if (element) {
+          const rect = element.getBoundingClientRect()
+          return rect.top <= 150 && rect.bottom >= 150
+        }
+        return false
+      })
+      if (currentSection) setActiveSection(currentSection)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   const [suppliers, setSuppliers] = useState([])
   const [items, setItems] = useState([])
   const [itemSearchResults, setItemSearchResults] = useState([])
@@ -228,333 +405,533 @@ export default function PurchaseOrderForm() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-2 p-4 md:p-6">
-      <form onSubmit={handleSubmit} className="max-w-[1400px] mx-auto space-y-6">
-        {/* Modern Header */}
-        <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
+    <div className="min-h-screen bg-slate-50/50 pb-20">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button
+            <button
               type="button"
-              variant="icon"
               onClick={() => navigate(-1)}
-              className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all  "
+              className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
             >
-              <ArrowLeft size={20} className="text-slate-600" />
-            </Button>
+              <ArrowLeft size={20} />
+            </button>
+            <div className="h-8 w-[1px] bg-slate-200 hidden md:block" />
             <div>
-              <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
+              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <LayoutGrid size={10} />
                 <span>Buying</span>
-                <ChevronRight size={14} />
-                <span>Purchase Orders</span>
-                <ChevronRight size={14} />
-                <span className="font-semibold text-indigo-600">{isEdit ? 'Edit Order' : 'New Order'}</span>
+                <ChevronRight size={10} />
+                <span>Purchase Order</span>
               </div>
-              <h1 className="text-2xl   text-slate-900">
-                {isEdit ? `Edit ${po_no}` : 'Create Purchase Order'}
+              <h1 className="text-sm font-extrabold text-slate-900 uppercase tracking-tight">
+                {isEdit ? po_no : 'Draft Purchase Order'}
               </h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button 
+          <div className="flex items-center gap-3">
+            <Button
               type="button"
-              variant="ghost" 
-              className="gap-2" 
+              variant="ghost"
               onClick={() => navigate(-1)}
+              className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
             >
-              <X size={16} /> Cancel
+              <X size={14} /> Discard
             </Button>
-            <Button 
-              type="submit" 
-              variant="primary" 
-              className="gap-2 shadow-lg shadow-indigo-100"
-              loading={loading}
+            <Button
+              type="submit"
+              form="po-form"
+              variant="primary"
+              disabled={loading}
+              className="flex items-center gap-2 px-6 shadow-lg shadow-indigo-200 text-xs font-bold uppercase tracking-wider h-10"
             >
-              <Save size={16} /> {isEdit ? 'Update Order' : 'Create Order'}
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Form Area */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Items Section */}
-            <Card className="overflow-hidden">
-              <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
-                <h2 className="text-base   text-slate-900 flex items-center gap-2">
-                  <Package size={18} className="text-indigo-600" /> Order Items
-                </h2>
-                <Button
-                  type="button"
-                  onClick={handleAddItem}
-                  variant="ghost"
-                  className="gap-2 text-indigo-600 hover:bg-indigo-50 border-indigo-100 p-2"
-                >
-                  <Plus size={16} /> Add Item
-                </Button>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
-                    <tr>
-                      <th className="px-6 py-2 font-semibold tracking-wider text-[11px] w-1/2">Item</th>
-                      <th className="p-2  font-semibold tracking-wider text-[11px] text-center">Qty</th>
-                      <th className="p-2  font-semibold tracking-wider text-[11px] text-right">Rate</th>
-                      <th className="p-2  font-semibold tracking-wider text-[11px] text-right">Total</th>
-                      <th className="p-2  text-center"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {po.items.map((item, index) => (
-                      <tr key={index} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4">
-                          <SearchableSelect
-                            value={item.item_code}
-                            onChange={(value) => handleItemChange(value, index)}
-                            options={itemSearchResults.map(itm => ({ value: itm.item_code, label: `${itm.item_code} - ${itm.name}` }))}
-                            placeholder="Select item..."
-                            onSearch={searchItems}
-                            isLoading={itemSearchLoading}
-                            className="text-xs"
-                          />
-                        </td>
-                        <td className="px-4 py-4">
-                          <input
-                            type="number"
-                            value={item.qty}
-                            onChange={(e) => {
-                              const newItems = [...po.items]
-                              newItems[index].qty = parseFloat(e.target.value) || 0
-                              setPo({ ...po, items: newItems })
-                            }}
-                            className="w-20 mx-auto px-2 py-1.5 border border-slate-200 rounded text-center text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
-                          />
-                        </td>
-                        <td className="px-4 py-4">
-                          <input
-                            type="number"
-                            value={item.rate}
-                            onChange={(e) => {
-                              const newItems = [...po.items]
-                              newItems[index].rate = parseFloat(e.target.value) || 0
-                              setPo({ ...po, items: newItems })
-                            }}
-                            className="w-24 ml-auto px-2 py-1.5 border border-slate-200 rounded text-right text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
-                          />
-                        </td>
-                        <td className="px-4 py-4 text-right   text-slate-900">
-                          ₹{(item.qty * item.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveItem(index)}
-                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              
-              {po.items.length === 0 && (
-                <div className="py-12 text-center text-slate-500 italic text-sm">
-                  No items added to this order yet.
-                </div>
+              {loading ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Save size={14} />
               )}
-            </Card>
-
-            {/* Logistics & Address */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-              <Card className="p-0 overflow-hidden">
-                <div className="bg-slate-50 p-2  border-b border-slate-200">
-                  <h3 className="text-xs   text-slate-900 flex items-center gap-2">
-                    <MapPin size={14} className="text-indigo-600" /> Shipping Address
-                  </h3>
-                </div>
-                <div className="p-2 space-y-2">
-                  <Input
-                    label="Address Line 1"
-                    placeholder="Street address"
-                    value={po.shipping_address_line1}
-                    onChange={(e) => setPo({ ...po, shipping_address_line1: e.target.value })}
-                    className="text-xs"
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <Input
-                      label="City"
-                      placeholder="City"
-                      value={po.shipping_city}
-                      onChange={(e) => setPo({ ...po, shipping_city: e.target.value })}
-                      className="text-xs"
-                    />
-                    <Input
-                      label="Pincode"
-                      placeholder="Pincode"
-                      value={po.shipping_pincode}
-                      onChange={(e) => setPo({ ...po, shipping_pincode: e.target.value })}
-                      className="text-xs"
-                    />
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-0 overflow-hidden">
-                <div className="bg-slate-50 p-2  border-b border-slate-200">
-                  <h3 className="text-xs   text-slate-900 flex items-center gap-2">
-                    <Truck size={14} className="text-indigo-600" /> Logistics Details
-                  </h3>
-                </div>
-                <div className="p-2 space-y-2">
-                  <SearchableSelect
-                    label="Incoterm"
-                    value={po.incoterm}
-                    onChange={(val) => setPo({ ...po, incoterm: val })}
-                    options={[
-                      { value: 'EXW', label: 'EXW - Ex Works' },
-                      { value: 'FOB', label: 'FOB - Free on Board' },
-                      { value: 'CIF', label: 'CIF - Cost, Insurance & Freight' },
-                      { value: 'DDP', label: 'DDP - Delivered Duty Paid' }
-                    ]}
-                    className="text-xs"
-                  />
-                  <Input
-                    label="Shipping Rule"
-                    placeholder="e.g., Courier, Freight"
-                    value={po.shipping_rule}
-                    onChange={(e) => setPo({ ...po, shipping_rule: e.target.value })}
-                    className="text-xs"
-                  />
-                </div>
-              </Card>
-            </div>
-          </div>
-
-          {/* Sidebar / Meta Information */}
-          <div className="space-y-6">
-            {/* General Info */}
-            <Card className="p-2 ">
-              <div className="flex items-center gap-2 text-indigo-600 mb-2 border-b border-indigo-50 pb-3">
-                <Info size={18} />
-                <h3 className="text-sm  ">General Info</h3>
-              </div>
-              
-              <div className="space-y-4">
-                <SearchableSelect
-                  label="Supplier *"
-                  value={po.supplier_id}
-                  onChange={handleSupplierChange}
-                  options={suppliers.map(sup => ({ value: sup.supplier_id, label: sup.name }))}
-                  placeholder="Select supplier..."
-                  required
-                />
-
-                <div>
-                  <label className="block text-[11px]   text-slate-500 tracking-wider mb-1.5">Order Date *</label>
-                  <input
-                    type="date"
-                    value={po.order_date}
-                    onChange={(e) => setPo({ ...po, order_date: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px]   text-slate-500 tracking-wider mb-1.5">Expected Delivery</label>
-                  <input
-                    type="date"
-                    value={po.expected_date}
-                    onChange={(e) => setPo({ ...po, expected_date: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
-                  />
-                </div>
-              </div>
-            </Card>
-
-            {/* Financial Summary */}
-            <Card className="p-0 overflow-hidden border-indigo-100 bg-indigo-50/30">
-              <div className="bg-indigo-600 p-2 ">
-                <h3 className="text-sm   text-white flex items-center gap-2">
-                  <Calculator size={18} /> Financial Summary
-                </h3>
-              </div>
-              <div className="p-5 space-y-4">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500">Subtotal</span>
-                  <span className="  text-slate-900">₹{calculateSubtotal().toLocaleString('en-IN')}</span>
-                </div>
-                
-                <div className="space-y-2 pt-2 border-t border-indigo-100">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500">Tax Rate (%)</span>
-                    <input
-                      type="number"
-                      value={po.tax_rate}
-                      onChange={(e) => setPo({ ...po, tax_rate: parseFloat(e.target.value) || 0 })}
-                      className="w-16 px-2 py-1 border border-indigo-200 rounded text-right bg-white outline-none"
-                    />
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500">Tax Amount</span>
-                    <span className="  text-amber-600">+ ₹{calculateTaxAmount().toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-2 border-t border-indigo-100">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500">Advance Paid</span>
-                    <input
-                      type="number"
-                      value={po.advance_paid}
-                      onChange={(e) => setPo({ ...po, advance_paid: parseFloat(e.target.value) || 0 })}
-                      className="w-24 px-2 py-1 border border-indigo-200 rounded text-right bg-white outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t-2 border-indigo-200">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs  text-indigo-600 ">Grand Total</span>
-                    <span className="text-xl  text-indigo-700">₹{calculateTotal().toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Payment Terms */}
-            <Card className="p-0 overflow-hidden">
-              <div className="bg-slate-50 p-2  border-b border-slate-200">
-                <h3 className="text-xs   text-slate-900 flex items-center gap-2">
-                  <CreditCard size={14} className="text-indigo-600" /> Payment Terms
-                </h3>
-              </div>
-              <div className="p-2 space-y-2">
-                <Input
-                  label="Description"
-                  placeholder="e.g., Net 30"
-                  value={po.payment_terms_description}
-                  onChange={(e) => setPo({ ...po, payment_terms_description: e.target.value })}
-                  className="text-xs"
-                />
-                <div>
-                  <label className="block text-xs   text-slate-500 mb-1">Due Date</label>
-                  <input
-                    type="date"
-                    value={po.due_date}
-                    onChange={(e) => setPo({ ...po, due_date: e.target.value })}
-                    className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-            </Card>
+              {isEdit ? 'Update Order' : 'Complete Order'}
+            </Button>
           </div>
         </div>
-      </form>
+      </div>
+
+      <div className="max-w-[1600px] mx-auto px-4 mt-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Navigation Sidebar */}
+          <aside className="lg:w-64 flex-shrink-0">
+            <div className="sticky top-28 space-y-1">
+              <NavItem
+                label="Foundation"
+                icon={Settings}
+                section="foundation"
+                isActive={activeSection === 'foundation'}
+                onClick={scrollToSection}
+                themeColor="slate"
+              />
+              <NavItem
+                label="Vendor"
+                icon={User}
+                section="vendor"
+                isActive={activeSection === 'vendor'}
+                onClick={scrollToSection}
+                themeColor="indigo"
+              />
+              <NavItem
+                label="Order Items"
+                icon={Package}
+                section="items"
+                isActive={activeSection === 'items'}
+                onClick={scrollToSection}
+                themeColor="emerald"
+              />
+              <NavItem
+                label="Logistics"
+                icon={Truck}
+                section="logistics"
+                isActive={activeSection === 'logistics'}
+                onClick={scrollToSection}
+                themeColor="amber"
+              />
+              <NavItem
+                label="Finance & Terms"
+                icon={PaymentIcon}
+                section="finance"
+                isActive={activeSection === 'finance'}
+                onClick={scrollToSection}
+                themeColor="rose"
+              />
+
+              <div className="mt-8 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Order Summary</span>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500 font-medium">Items</span>
+                    <span className="font-bold text-slate-700">{po.items.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs border-t border-slate-50 pt-2">
+                    <span className="text-slate-500 font-medium">Total</span>
+                    <span className="font-bold text-indigo-600">₹{calculateTotal().toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          {/* Form Content */}
+          <main className="flex-1 min-w-0 pb-24">
+            <form id="po-form" onSubmit={handleSubmit} className="space-y-6">
+              {/* Foundation Section */}
+              <div id="foundation" className="scroll-mt-28 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <SectionHeader
+                  title="Foundation SETTINGS"
+                  subtitle="Core order parameters and identification"
+                  icon={Settings}
+                  isExpanded={expandedSections.foundation}
+                  onToggle={() => toggleSection('foundation')}
+                  themeColor="slate"
+                />
+                {expandedSections.foundation && (
+                  <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 bg-gradient-to-b from-slate-50/50 to-white">
+                    <FieldWrapper label="Order Date" required>
+                      <input
+                        type="date"
+                        value={po.order_date}
+                        onChange={(e) => setPo({ ...po, order_date: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-slate-500/10 focus:border-slate-400 outline-none transition-all"
+                        required
+                      />
+                    </FieldWrapper>
+                    <FieldWrapper label="Expected Delivery Date">
+                      <input
+                        type="date"
+                        value={po.expected_date}
+                        onChange={(e) => setPo({ ...po, expected_date: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-slate-500/10 focus:border-slate-400 outline-none transition-all"
+                      />
+                    </FieldWrapper>
+                  </div>
+                )}
+              </div>
+
+              {/* Vendor Section */}
+              <div id="vendor" className="scroll-mt-28 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <SectionHeader
+                  title="Vendor PARTNER"
+                  subtitle="Supplier selection and profile information"
+                  icon={User}
+                  isExpanded={expandedSections.vendor}
+                  onToggle={() => toggleSection('vendor')}
+                  themeColor="indigo"
+                />
+                {expandedSections.vendor && (
+                  <div className="p-8 bg-gradient-to-b from-indigo-50/30 to-white">
+                    <div className="max-w-xl">
+                      <FieldWrapper label="Select Supplier" required>
+                        <SearchableSelect
+                          value={po.supplier_id}
+                          onChange={handleSupplierChange}
+                          options={suppliers.map(sup => ({ 
+                            value: sup.supplier_id, 
+                            label: `${sup.name} [${sup.supplier_id}]` 
+                          }))}
+                          placeholder="Search by name or code..."
+                          required
+                        />
+                      </FieldWrapper>
+                    </div>
+
+                    {po.supplier_id && (
+                      <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                        <InfoRow 
+                          label="Supplier Name" 
+                          value={po.supplier_name} 
+                          icon={User} 
+                          color="indigo" 
+                        />
+                        <InfoRow 
+                          label="Supplier ID" 
+                          value={po.supplier_id} 
+                          icon={FileText} 
+                          color="indigo" 
+                        />
+                        <InfoRow 
+                          label="Type" 
+                          value="Standard Vendor" 
+                          icon={CheckCircle} 
+                          color="indigo" 
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Items Section */}
+              <div id="items" className="scroll-mt-28 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <SectionHeader
+                  title="Order ITEMS"
+                  subtitle="Line items and technical specifications"
+                  icon={Package}
+                  isExpanded={expandedSections.items}
+                  onToggle={() => toggleSection('items')}
+                  themeColor="emerald"
+                  actions={
+                    <Button
+                      type="button"
+                      onClick={handleAddItem}
+                      variant="ghost"
+                      className="text-[10px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-100 h-auto"
+                    >
+                      <Plus size={12} className="mr-1" strokeWidth={3} /> Add Item
+                    </Button>
+                  }
+                />
+                {expandedSections.items && (
+                  <div className="overflow-x-auto bg-white">
+                    <table className="w-full text-sm text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50/80 border-b border-slate-100">
+                          <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] w-[40%]">Item Specification</th>
+                          <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] text-center">Quantity</th>
+                          <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] text-right">Unit Rate</th>
+                          <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] text-right">Row Total</th>
+                          <th className="px-6 py-4 w-16"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {po.items.map((item, index) => (
+                          <tr key={index} className="group hover:bg-emerald-50/30 transition-colors">
+                            <td className="px-6 py-4">
+                              <SearchableSelect
+                                value={item.item_code}
+                                onChange={(value) => handleItemChange(value, index)}
+                                options={itemSearchResults.map(itm => ({ 
+                                  value: itm.item_code, 
+                                  label: `${itm.name} [${itm.item_code}]` 
+                                }))}
+                                placeholder="Select item..."
+                                onSearch={searchItems}
+                                isLoading={itemSearchLoading}
+                                className="text-xs font-semibold"
+                              />
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="flex justify-center">
+                                <input
+                                  type="number"
+                                  value={item.qty}
+                                  onChange={(e) => {
+                                    const newItems = [...po.items]
+                                    newItems[index].qty = parseFloat(e.target.value) || 0
+                                    setPo({ ...po, items: newItems })
+                                  }}
+                                  className="w-24 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-center text-xs font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-400 outline-none transition-all"
+                                />
+                              </div>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="flex justify-end">
+                                <div className="relative">
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">₹</span>
+                                  <input
+                                    type="number"
+                                    value={item.rate}
+                                    onChange={(e) => {
+                                      const newItems = [...po.items]
+                                      newItems[index].rate = parseFloat(e.target.value) || 0
+                                      setPo({ ...po, items: newItems })
+                                    }}
+                                    className="w-32 pl-7 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-right text-xs font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-400 outline-none transition-all"
+                                  />
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 text-right">
+                              <span className="text-xs font-extrabold text-slate-700 tracking-tight">
+                                ₹{(item.qty * item.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveItem(index)}
+                                className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {po.items.length === 0 && (
+                      <div className="py-20 flex flex-col items-center justify-center text-slate-400 space-y-4 bg-slate-50/30">
+                        <div className="p-4 bg-white rounded-full border border-slate-100 shadow-sm">
+                          <Package size={32} strokeWidth={1.5} />
+                        </div>
+                        <p className="text-xs font-bold uppercase tracking-[0.2em]">No Items Configured</p>
+                        <Button type="button" onClick={handleAddItem} variant="ghost" className="text-indigo-600 font-bold uppercase text-[10px]">
+                          Click here to add items
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Logistics Section */}
+              <div id="logistics" className="scroll-mt-28 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <SectionHeader
+                  title="Shipping LOGISTICS"
+                  subtitle="Delivery coordinates and trade conditions"
+                  icon={Truck}
+                  isExpanded={expandedSections.logistics}
+                  onToggle={() => toggleSection('logistics')}
+                  themeColor="amber"
+                />
+                {expandedSections.logistics && (
+                  <div className="p-8 space-y-8 bg-gradient-to-b from-amber-50/30 to-white">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <MapPin size={16} className="text-amber-500" />
+                          <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Shipping Address</h4>
+                        </div>
+                        <FieldWrapper label="Street Address">
+                          <input
+                            type="text"
+                            value={po.shipping_address_line1}
+                            onChange={(e) => setPo({ ...po, shipping_address_line1: e.target.value })}
+                            className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-400 outline-none transition-all"
+                            placeholder="Unit / Street / Landmark"
+                          />
+                        </FieldWrapper>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FieldWrapper label="City">
+                            <input
+                              type="text"
+                              value={po.shipping_city}
+                              onChange={(e) => setPo({ ...po, shipping_city: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-400 outline-none transition-all"
+                            />
+                          </FieldWrapper>
+                          <FieldWrapper label="Pincode">
+                            <input
+                              type="text"
+                              value={po.shipping_pincode}
+                              onChange={(e) => setPo({ ...po, shipping_pincode: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-400 outline-none transition-all"
+                            />
+                          </FieldWrapper>
+                        </div>
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Settings size={16} className="text-amber-500" />
+                          <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Trade Controls</h4>
+                        </div>
+                        <FieldWrapper label="Incoterm">
+                          <SearchableSelect
+                            value={po.incoterm}
+                            onChange={(val) => setPo({ ...po, incoterm: val })}
+                            options={[
+                              { value: 'EXW', label: 'EXW - Ex Works' },
+                              { value: 'FOB', label: 'FOB - Free on Board' },
+                              { value: 'CIF', label: 'CIF - Cost, Insurance & Freight' },
+                              { value: 'DDP', label: 'DDP - Delivered Duty Paid' }
+                            ]}
+                          />
+                        </FieldWrapper>
+                        <FieldWrapper label="Shipping Rule">
+                          <input
+                            type="text"
+                            value={po.shipping_rule}
+                            onChange={(e) => setPo({ ...po, shipping_rule: e.target.value })}
+                            className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-amber-500/10 focus:border-amber-400 outline-none transition-all"
+                            placeholder="e.g. Courier, Freight Forwarder"
+                          />
+                        </FieldWrapper>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Finance & Terms Section */}
+              <div id="finance" className="scroll-mt-28 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                <SectionHeader
+                  title="Revenue FINANCE"
+                  subtitle="Taxation, payment terms and commercial summary"
+                  icon={PaymentIcon}
+                  isExpanded={expandedSections.finance}
+                  onToggle={() => toggleSection('finance')}
+                  themeColor="rose"
+                />
+                {expandedSections.finance && (
+                  <div className="p-8 bg-gradient-to-b from-rose-50/30 to-white">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                      <div className="space-y-8">
+                        <div>
+                          <div className="flex items-center gap-2 mb-6">
+                            <CreditCard size={16} className="text-rose-500" />
+                            <h4 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Payment Strategy</h4>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <FieldWrapper label="Payment Terms">
+                              <input
+                                type="text"
+                                value={po.payment_terms_description}
+                                onChange={(e) => setPo({ ...po, payment_terms_description: e.target.value })}
+                                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400 outline-none transition-all"
+                                placeholder="e.g. 100% Advance"
+                              />
+                            </FieldWrapper>
+                            <FieldWrapper label="Payment Due Date">
+                              <input
+                                type="date"
+                                value={po.due_date}
+                                onChange={(e) => setPo({ ...po, due_date: e.target.value })}
+                                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400 outline-none transition-all"
+                              />
+                            </FieldWrapper>
+                          </div>
+                        </div>
+
+                        <div className="p-6 bg-rose-50/50 rounded-2xl border border-rose-100/50 border-dashed">
+                          <h5 className="text-[10px] font-bold text-rose-600 uppercase tracking-widest mb-4">Financial Modifiers</h5>
+                          <div className="grid grid-cols-2 gap-6">
+                            <FieldWrapper label="Tax Rate (%)">
+                              <input
+                                type="number"
+                                value={po.tax_rate}
+                                onChange={(e) => setPo({ ...po, tax_rate: parseFloat(e.target.value) || 0 })}
+                                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-rose-600 focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400 outline-none transition-all"
+                              />
+                            </FieldWrapper>
+                            <FieldWrapper label="Advance Paid">
+                              <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">₹</span>
+                                <input
+                                  type="number"
+                                  value={po.advance_paid}
+                                  onChange={(e) => setPo({ ...po, advance_paid: parseFloat(e.target.value) || 0 })}
+                                  className="w-full pl-7 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400 outline-none transition-all"
+                                />
+                              </div>
+                            </FieldWrapper>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-rose-500/20 transition-all duration-700" />
+                        
+                        <div className="relative space-y-6">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Purchase Valuation</span>
+                            <Calculator size={20} className="text-rose-400" />
+                          </div>
+                          
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-center text-sm font-medium text-slate-400">
+                              <span>Subtotal</span>
+                              <span>₹{calculateSubtotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm font-medium text-rose-400">
+                              <span className="flex items-center gap-2">
+                                GST Component <span className="text-[10px] px-1.5 py-0.5 bg-rose-500/20 rounded border border-rose-500/30">{po.tax_rate}%</span>
+                              </span>
+                              <span>+ ₹{calculateTaxAmount().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm font-medium text-emerald-400">
+                              <span>Advance Deduction</span>
+                              <span>- ₹{(po.advance_paid || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                          </div>
+
+                          <div className="pt-6 border-t border-white/10 mt-6">
+                            <div className="flex justify-between items-end">
+                              <div>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Payable Balance</p>
+                                <p className="text-4xl font-extrabold tracking-tighter">
+                                  ₹{calculateTotal().toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Currency</p>
+                                <p className="font-bold">INR (₹)</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="pt-8">
+                            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/10 group-hover:bg-white/10 transition-colors">
+                              <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
+                                <CreditCard size={16} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Payment Channel</p>
+                                <p className="text-xs font-bold truncate">Bank Transfer / NEFT</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </form>
+          </main>
+        </div>
+      </div>
     </div>
   )
 }

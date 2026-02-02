@@ -322,7 +322,7 @@ export default function MaterialRequestsRedesign() {
                 return (
                   <div 
                     key={row.mr_id}
-                    className="bg-white rounded border border-slate-200  hover:shadow-xl hover:border-indigo-200 transition-all group "
+                    className="bg-white rounded border border-slate-200  hover:shadow  hover:border-indigo-200 transition-all group "
                   >
                     <div className="p-5">
                       <div className="flex justify-between items-start mb-4">

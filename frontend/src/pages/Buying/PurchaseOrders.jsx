@@ -33,7 +33,7 @@ const StatCard = ({ label, value, icon: Icon, color, onClick, isActive, descript
   return (
     <Card
       onClick={onClick}
-      className={`bg-gradient-to-br ${colorMap[color] || colorMap.primary} p-2 border-1 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 relative overflow-hidden group cursor-pointer ${isActive ? 'ring-2 ring-blue-500 border-transparent shadow-blue-500/20' : ''}`}
+      className={`bg-gradient-to-br ${colorMap[color] || colorMap.primary} p-2 border-1 transition-all duration-300 hover:shadow  hover:-translate-y-1 relative overflow-hidden group cursor-pointer ${isActive ? 'ring-2 ring-blue-500 border-transparent shadow-blue-500/20' : ''}`}
     >
       <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-current opacity-5 rounded-full group-hover:scale-125 transition-transform" />
         <div className="flex items-start justify-between relative z-10">
@@ -632,7 +632,7 @@ export default function PurchaseOrders() {
                   <div
                     key={order.id}
                     onClick={() => navigate(`/buying/purchase-orders/${order.po_no}`)}
-                    className="group bg-white dark:bg-neutral-900 p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden"
+                    className="group bg-white dark:bg-neutral-900 p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 hover:shadow  hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden"
                   >
                     <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${config.color.replace('from-', 'bg-').split(' ')[0]}`}></div>
 

@@ -32,8 +32,11 @@ export default function CreateGRNRequestModal({ purchaseReceipt, onClose, onSucc
     try {
       const grnData = {
         grn_no: purchaseReceipt.grn_no,
-        po_no: purchaseReceipt.po_no,
-        supplier_id: purchaseReceipt.supplier_id,
+        po_no: purchaseReceipt.po_no || null,
+        material_request_id: purchaseReceipt.material_request_id || null,
+        department: purchaseReceipt.department || null,
+        purpose: purchaseReceipt.purpose || null,
+        supplier_id: purchaseReceipt.supplier_id || null,
         supplier_name: purchaseReceipt.supplier_name,
         receipt_date: purchaseReceipt.receipt_date,
         items: selectedItems.map(item => ({

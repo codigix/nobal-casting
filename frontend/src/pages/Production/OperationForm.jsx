@@ -22,7 +22,8 @@ export default function OperationForm() {
     create_job_card_based_on_batch_size: false,
     batch_size: 1,
     quality_inspection_template: '',
-    description: ''
+    description: '',
+    hourly_rate: 0
   })
 
   const [subOperations, setSubOperations] = useState([
@@ -296,6 +297,24 @@ export default function OperationForm() {
                     <span className="text-xs font-medium text-gray-700 group-hover:text-gray-900">Corrective Operation</span>
                   </label>
                   <p className="text-xs text-gray-500 ml-8 mt-1">Mark if this is a corrective/rework operation</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-2">Hourly Rate</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-gray-500">₹</span>
+                    <input
+                      type="number"
+                      name="hourly_rate"
+                      value={formData.hourly_rate}
+                      onChange={handleInputChange}
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                      className="w-full p-2.5 pl-8 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Cost per hour for this operation</p>
                 </div>
               </div>
             </div>
