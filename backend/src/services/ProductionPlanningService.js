@@ -381,8 +381,8 @@ export class ProductionPlanningService {
         }
 
         await this.db.execute(
-          'INSERT INTO production_plan_sub_assembly (plan_id, item_code, item_name, planned_qty, planned_qty_before_scrap, scrap_percentage, bom_no) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [planId, sa.item_code, sa.item_name, sa.planned_qty, sa.planned_qty_before_scrap, sa.scrap_percentage, saBomNo]
+          'INSERT INTO production_plan_sub_assembly (plan_id, item_code, item_name, required_qty, planned_qty, planned_qty_before_scrap, scrap_percentage, bom_no, schedule_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [planId, sa.item_code, sa.item_name, sa.planned_qty, sa.planned_qty, sa.planned_qty_before_scrap, sa.scrap_percentage, saBomNo, sa.schedule_date || null]
         )
       }
 
@@ -411,18 +411,30 @@ export class ProductionPlanningService {
       const plan = await productionPlanningModel.getPlanById(planId)
       if (!plan) throw new Error('Plan not found')
 
+      // Check for existing work orders to prevent duplicates
+      const [existingWOs] = await this.db.execute(
+        'SELECT COUNT(*) as count FROM work_order WHERE production_plan_id = ?',
+        [planId]
+      )
+      
+      if (existingWOs && existingWOs[0].count > 0) {
+        throw new Error(`Work orders already exist for production plan ${planId}`)
+      }
+
       const createdWorkOrders = []
 
       // 1. Create Work Orders for Finished Goods
       if (plan.fg_items && plan.fg_items.length > 0) {
         for (const item of plan.fg_items) {
           const wo_id = `WO-FG-${Date.now()}-${item.item_code}`
+          const plannedQty = parseFloat(item.planned_qty || 0)
           const woData = {
             wo_id,
             item_code: item.item_code,
-            quantity: item.planned_qty,
+            quantity: plannedQty,
             status: 'draft',
             sales_order_id: plan.sales_order_id,
+            production_plan_id: planId,
             bom_no: item.bom_no,
             planned_start_date: item.planned_start_date || plan.plan_date,
             notes: `Created from Production Plan: ${planId}`
@@ -439,7 +451,7 @@ export class ProductionPlanningService {
               for (const rm of bomDetails.rawMaterials) {
                 await productionModel.addWorkOrderItem(wo_id, {
                   item_code: rm.item_code,
-                  required_qty: rm.qty * item.planned_qty,
+                  required_qty: rm.qty * plannedQty,
                   source_warehouse: rm.source_warehouse,
                   sequence: rm.sequence
                 })
@@ -448,7 +460,7 @@ export class ProductionPlanningService {
               for (const line of bomDetails.lines) {
                 await productionModel.addWorkOrderItem(wo_id, {
                   item_code: line.component_code,
-                  required_qty: line.quantity * item.planned_qty,
+                  required_qty: line.quantity * plannedQty,
                   sequence: line.sequence
                 })
               }
@@ -481,13 +493,15 @@ export class ProductionPlanningService {
           if (plan.sub_assemblies && plan.sub_assemblies.length > 0) {
             for (const item of plan.sub_assemblies) {
               const wo_id = `WO-SA-${Date.now()}-${item.item_code}`
+              const plannedQty = parseFloat(item.planned_qty || item.required_qty || 0)
               const woData = {
                 wo_id,
                 item_code: item.item_code,
-                quantity: item.planned_qty,
+                quantity: plannedQty,
                 status: 'draft',
-                bom_no: item.bom_no, // Now this will be populated correctly
-                planned_start_date: item.schedule_date || plan.plan_date,
+                production_plan_id: planId,
+                bom_no: item.bom_no,
+                planned_start_date: item.schedule_date || item.scheduled_date || plan.plan_date,
                 notes: `Created from Production Plan: ${planId} (Sub-Assembly)`
               }
 
@@ -502,7 +516,7 @@ export class ProductionPlanningService {
                   for (const rm of bomDetails.rawMaterials) {
                     await productionModel.addWorkOrderItem(wo_id, {
                       item_code: rm.item_code,
-                      required_qty: rm.qty * item.planned_qty,
+                      required_qty: rm.qty * plannedQty,
                       source_warehouse: rm.source_warehouse,
                       sequence: rm.sequence
                     })
@@ -511,7 +525,7 @@ export class ProductionPlanningService {
                   for (const line of bomDetails.lines) {
                     await productionModel.addWorkOrderItem(wo_id, {
                       item_code: line.component_code,
-                      required_qty: line.quantity * item.planned_qty,
+                      required_qty: line.quantity * plannedQty,
                       sequence: line.sequence
                     })
                   }

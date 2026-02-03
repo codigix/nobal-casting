@@ -78,7 +78,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 bg-neutral-50/30">
+        <div className="flex-1 overflow-y-auto p-2 bg-neutral-50/30">
           {/* Main KPI Section */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             {[

@@ -501,7 +501,7 @@ export default function WorkOrder() {
                               <span className="text-xs   text-gray-500 ">{order.qty_to_manufacture} Units</span>
                             </div> */}
                             {/* <div className="w-1 h-1 rounded-full bg-gray-200" /> */}
-                            <span className="text-xs   text-gray-400">BOM: {order.bom_no || 'Standard'}</span>
+                            <span className="text-xs   text-gray-400"> {order.bom_no || 'Standard'}</span>
                           
                         </div>
                       </td>

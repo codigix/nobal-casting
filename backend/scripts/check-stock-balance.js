@@ -8,7 +8,7 @@ const __dirname = dirname(__filename);
 
 dotenv.config({ path: join(__dirname, '../.env') });
 
-async function checkStockLedger() {
+async function checkStockBalance() {
   const connection = await mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
@@ -17,15 +17,15 @@ async function checkStockLedger() {
   });
 
   try {
-    const [cols] = await connection.query('DESCRIBE stock_ledger');
-    console.log('Columns in stock_ledger:');
+    const [cols] = await connection.query('DESCRIBE stock_balance');
+    console.log('Columns in stock_balance:');
     console.table(cols);
 
   } catch (error) {
-    console.error('Error checking stock_ledger:', error);
+    console.error('Error checking stock_balance:', error);
   } finally {
     await connection.end();
   }
 }
 
-checkStockLedger();
+checkStockBalance();

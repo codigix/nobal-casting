@@ -215,8 +215,8 @@
           i.name as item_name,
           w.warehouse_code,
           w.warehouse_name,
-          SUM(CASE WHEN sl.transaction_type IN ('Purchase Receipt', 'Manufacturing Return') THEN sl.qty_in ELSE 0 END) as total_received,
-          SUM(CASE WHEN sl.transaction_type IN ('Issue', 'Transfer') THEN sl.qty_out ELSE 0 END) as total_issued,
+          SUM(CASE WHEN sl.transaction_type IN ('Purchase Receipt', 'Manufacturing Return', 'Production', 'Production Receipt', 'Rejection', 'Scrap') THEN sl.qty_in ELSE 0 END) as total_received,
+          SUM(CASE WHEN sl.transaction_type IN ('Issue', 'Transfer', 'Consumption', 'Manufacturing Issue') THEN sl.qty_out ELSE 0 END) as total_issued,
           AVG(sl.valuation_rate) as avg_rate,
           SUM(sl.transaction_value) as total_value
         FROM stock_ledger sl

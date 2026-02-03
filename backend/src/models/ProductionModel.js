@@ -3,6 +3,13 @@ class ProductionModel {
     this.db = db
   }
 
+  _formatMySQLDate(date) {
+    if (!date) return null;
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString().slice(0, 19).replace('T', ' ');
+  }
+
   // ============= OPERATIONS =============
 
   async createOperation(data) {
@@ -116,9 +123,14 @@ class ProductionModel {
   async createWorkOrder(data) {
     try {
       await this.db.query(
-        `INSERT INTO work_order (wo_id, item_code, quantity, priority, notes, status, sales_order_id, bom_no, planned_start_date, planned_end_date, actual_start_date, actual_end_date, expected_delivery_date)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [data.wo_id, data.item_code, data.quantity, data.priority || 'medium', data.notes || '', data.status, data.sales_order_id || null, data.bom_no || null, data.planned_start_date || null, data.planned_end_date || null, data.actual_start_date || null, data.actual_end_date || null, data.expected_delivery_date || null]
+        `INSERT INTO work_order (wo_id, item_code, quantity, priority, notes, status, sales_order_id, production_plan_id, bom_no, planned_start_date, planned_end_date, actual_start_date, actual_end_date, expected_delivery_date)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [data.wo_id, data.item_code, data.quantity, data.priority || 'medium', data.notes || '', data.status, data.sales_order_id || null, data.production_plan_id || data.plan_id || null, data.bom_no || null, 
+         this._formatMySQLDate(data.planned_start_date), 
+         this._formatMySQLDate(data.planned_end_date), 
+         this._formatMySQLDate(data.actual_start_date), 
+         this._formatMySQLDate(data.actual_end_date), 
+         this._formatMySQLDate(data.expected_delivery_date)]
       )
       return { wo_id: data.wo_id, ...data }
     } catch (error) {
@@ -152,6 +164,10 @@ class ProductionModel {
       if (filters.assigned_to_id) {
         query += ' AND wo.assigned_to_id = ?'
         params.push(filters.assigned_to_id)
+      }
+      if (filters.production_plan_id) {
+        query += ' AND wo.production_plan_id = ?'
+        params.push(filters.production_plan_id)
       }
       if (filters.day) {
         query += ' AND DAY(wo.planned_start_date) = ?'
@@ -279,11 +295,11 @@ class ProductionModel {
       if (data.priority) { fields.push('priority = ?'); values.push(data.priority) }
       if (data.notes !== undefined) { fields.push('notes = ?'); values.push(data.notes) }
       if (data.sales_order_id !== undefined) { fields.push('sales_order_id = ?'); values.push(data.sales_order_id) }
-      if (data.planned_start_date !== undefined) { fields.push('planned_start_date = ?'); values.push(data.planned_start_date) }
-      if (data.planned_end_date !== undefined) { fields.push('planned_end_date = ?'); values.push(data.planned_end_date) }
-      if (data.actual_start_date !== undefined) { fields.push('actual_start_date = ?'); values.push(data.actual_start_date) }
-      if (data.actual_end_date !== undefined) { fields.push('actual_end_date = ?'); values.push(data.actual_end_date) }
-      if (data.expected_delivery_date !== undefined) { fields.push('expected_delivery_date = ?'); values.push(data.expected_delivery_date) }
+      if (data.planned_start_date !== undefined) { fields.push('planned_start_date = ?'); values.push(this._formatMySQLDate(data.planned_start_date)) }
+      if (data.planned_end_date !== undefined) { fields.push('planned_end_date = ?'); values.push(this._formatMySQLDate(data.planned_end_date)) }
+      if (data.actual_start_date !== undefined) { fields.push('actual_start_date = ?'); values.push(this._formatMySQLDate(data.actual_start_date)) }
+      if (data.actual_end_date !== undefined) { fields.push('actual_end_date = ?'); values.push(this._formatMySQLDate(data.actual_end_date)) }
+      if (data.expected_delivery_date !== undefined) { fields.push('expected_delivery_date = ?'); values.push(this._formatMySQLDate(data.expected_delivery_date)) }
 
       if (fields.length === 0) return false
 
@@ -1077,12 +1093,17 @@ async deleteAllBOMRawMaterials(bom_id) {
     try {
       const statusNormalized = ((data.status || 'draft').toLowerCase().replace(/\s+/g, '-')).trim()
       await this.db.query(
-        `INSERT INTO job_card (job_card_id, work_order_id, machine_id, operator_id, operation, operation_sequence, operation_type, planned_quantity, produced_quantity, rejected_quantity, accepted_quantity, scrap_quantity, operation_time, hourly_rate, operating_cost, scheduled_start_date, scheduled_end_date, status, created_by, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO job_card (job_card_id, work_order_id, machine_id, operator_id, operation, operation_sequence, operation_type, planned_quantity, produced_quantity, rejected_quantity, accepted_quantity, scrap_quantity, operation_time, hourly_rate, operating_cost, scheduled_start_date, scheduled_end_date, actual_start_date, actual_end_date, status, created_by, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [data.job_card_id, data.work_order_id, data.machine_id, data.operator_id, data.operation || null, data.operation_sequence || null,
          data.operation_type || 'IN_HOUSE',
          data.planned_quantity, data.produced_quantity || 0, data.rejected_quantity || 0, data.accepted_quantity || 0, data.scrap_quantity || 0,
-         data.operation_time || 0, data.hourly_rate || 0, data.operating_cost || 0, data.scheduled_start_date, data.scheduled_end_date, statusNormalized, data.created_by, data.notes]
+         data.operation_time || 0, data.hourly_rate || 0, data.operating_cost || 0, 
+         this._formatMySQLDate(data.scheduled_start_date), 
+         this._formatMySQLDate(data.scheduled_end_date),
+         this._formatMySQLDate(data.actual_start_date),
+         this._formatMySQLDate(data.actual_end_date),
+         statusNormalized, data.created_by, data.notes]
       )
       return data
     } catch (error) {
@@ -1112,10 +1133,10 @@ async deleteAllBOMRawMaterials(bom_id) {
       if (data.rejected_quantity !== undefined && data.rejected_quantity !== null) { fields.push('rejected_quantity = ?'); values.push(data.rejected_quantity) }
       if (data.accepted_quantity !== undefined && data.accepted_quantity !== null) { fields.push('accepted_quantity = ?'); values.push(data.accepted_quantity) }
       if (data.scrap_quantity !== undefined && data.scrap_quantity !== null) { fields.push('scrap_quantity = ?'); values.push(data.scrap_quantity) }
-      if (data.scheduled_start_date) { fields.push('scheduled_start_date = ?'); values.push(data.scheduled_start_date) }
-      if (data.scheduled_end_date) { fields.push('scheduled_end_date = ?'); values.push(data.scheduled_end_date) }
-      if (data.actual_start_date) { fields.push('actual_start_date = ?'); values.push(data.actual_start_date) }
-      if (data.actual_end_date) { fields.push('actual_end_date = ?'); values.push(data.actual_end_date) }
+      if (data.scheduled_start_date) { fields.push('scheduled_start_date = ?'); values.push(this._formatMySQLDate(data.scheduled_start_date)) }
+      if (data.scheduled_end_date) { fields.push('scheduled_end_date = ?'); values.push(this._formatMySQLDate(data.scheduled_end_date)) }
+      if (data.actual_start_date) { fields.push('actual_start_date = ?'); values.push(this._formatMySQLDate(data.actual_start_date)) }
+      if (data.actual_end_date) { fields.push('actual_end_date = ?'); values.push(this._formatMySQLDate(data.actual_end_date)) }
       if (data.notes) { fields.push('notes = ?'); values.push(data.notes) }
       if (data.hourly_rate !== undefined && data.hourly_rate !== null) { fields.push('hourly_rate = ?'); values.push(data.hourly_rate) }
 
@@ -1186,8 +1207,17 @@ async deleteAllBOMRawMaterials(bom_id) {
       if (allCompleted) {
         await this.updateWorkOrder(work_order_id, { status: 'completed' })
         
-        // Sync Sales Order status
+        // NEW: Backflush inventory when work order is completed
         const workOrder = await this.getWorkOrderById(work_order_id)
+        if (workOrder) {
+          try {
+            await this.backflushInventory(work_order_id, workOrder.quantity, 'system')
+          } catch (backflushError) {
+            console.error(`Backflushing failed for Work Order ${work_order_id}:`, backflushError.message)
+          }
+        }
+        
+        // Sync Sales Order status
         if (workOrder && workOrder.sales_order_id) {
           await this.syncSalesOrderStatus(workOrder.sales_order_id)
         }
@@ -1725,8 +1755,188 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
+  /**
+   * Backflush Inventory for a Work Order
+   * Deducts raw materials from BOM and adds finished goods to stock
+   * 
+   * @param {string} workOrderId - The Work Order ID
+   * @param {number} producedQty - Quantity of finished goods produced
+   * @param {string} createdBy - User who performed the action
+   * @returns {Promise<Object>} Results of backflushing
+   */
+  async backflushInventory(workOrderId, producedQty, createdBy = 'system') {
+    try {
+      const StockBalanceModel = (await import('./StockBalanceModel.js')).default;
+      const StockLedgerModel = (await import('./StockLedgerModel.js')).default;
+
+      // 1. Get Work Order and BOM details
+      const workOrder = await this.getWorkOrderById(workOrderId);
+      if (!workOrder) {
+        throw new Error(`Work Order ${workOrderId} not found`);
+      }
+
+      const fgItemCode = workOrder.item_code;
+      const bomId = workOrder.bom_no || workOrder.bom_id;
+      const woTotalQty = parseFloat(workOrder.quantity) || 1;
+
+      if (!bomId) {
+        console.warn(`No BOM linked to Work Order ${workOrderId}. Backflushing raw materials skipped.`);
+      }
+
+      const results = {
+        componentsDeducted: [],
+        fgAdded: null,
+        errors: [],
+        allocationFinalized: false
+      };
+
+      // 1.5 Check if Material Allocation exists (Step 1 of Documented Flow)
+      const [allocations] = await this.db.query(
+        'SELECT * FROM material_allocation WHERE work_order_id = ?',
+        [workOrderId]
+      );
+
+      if (allocations && allocations.length > 0) {
+        // If allocations exist, we use the InventoryModel logic to finalize them
+        try {
+          const InventoryModel = (await import('./InventoryModel.js')).default;
+          const inventoryModel = new InventoryModel(this.db);
+          
+          // Before finalizing, we might want to auto-track consumption if it hasn't been done
+          // This bridges the gap between manual tracking and backflushing
+          for (const alloc of allocations) {
+            if (parseFloat(alloc.consumed_qty) === 0 && parseFloat(alloc.wasted_qty) === 0) {
+              const [bomLine] = await this.db.query(
+                'SELECT quantity FROM bom_line WHERE bom_id = ? AND component_code = ?',
+                [bomId, alloc.item_code]
+              );
+              const qtyPerUnit = bomLine.length > 0 ? parseFloat(bomLine[0].quantity) : (parseFloat(alloc.allocated_qty) / woTotalQty);
+              const autoConsumedQty = qtyPerUnit * producedQty;
+              
+              await this.db.query(
+                'UPDATE material_allocation SET consumed_qty = ? WHERE allocation_id = ?',
+                [autoConsumedQty, alloc.allocation_id]
+              );
+            }
+          }
+
+          const finalized = await inventoryModel.finalizeWorkOrderMaterials(workOrderId, createdBy);
+          results.allocationFinalized = true;
+          results.componentsDeducted = finalized;
+        } catch (finalizeErr) {
+          console.error(`Failed to finalize allocations for ${workOrderId}:`, finalizeErr.message);
+          results.errors.push(`Allocation Finalization: ${finalizeErr.message}`);
+          // Fallback to direct deduction if finalization fails? 
+          // Better not to risk double deduction, so we continue to direct deduction ONLY if results.componentsDeducted is empty
+        }
+      }
+
+      // 2. Deduct Raw Materials (Components) - ONLY if not already handled by allocation finalization
+      if (bomId && producedQty > 0 && results.componentsDeducted.length === 0) {
+        const [bomLines] = await this.db.query(
+          `SELECT 
+            component_code as item_code, 
+            quantity as qty_per_unit,
+            source_warehouse_id,
+            source_warehouse
+           FROM bom_line 
+           WHERE bom_id = ?`,
+          [bomId]
+        );
+
+        for (const line of bomLines) {
+          try {
+            const requiredQty = (parseFloat(line.qty_per_unit) || 0) * producedQty;
+            if (requiredQty <= 0) continue;
+
+            // Use provided warehouse ID or fallback to main (1)
+            const warehouseId = line.source_warehouse_id || 1;
+
+            // Deduct from stock_balance
+            await StockBalanceModel.upsert(line.item_code, warehouseId, {
+              current_qty: -requiredQty,
+              is_increment: true,
+              last_issue_date: new Date()
+            }, this.db);
+
+            // Log in stock_ledger
+            await StockLedgerModel.create({
+              item_code: line.item_code,
+              warehouse_id: warehouseId,
+              transaction_date: new Date(),
+              transaction_type: 'Manufacturing Issue',
+              qty_in: 0,
+              qty_out: requiredQty,
+              reference_doctype: 'Work Order',
+              reference_name: workOrderId,
+              remarks: `Backflush deduction for ${producedQty} units of ${fgItemCode}`,
+              created_by: createdBy
+            }, this.db);
+
+            results.componentsDeducted.push({
+              item_code: line.item_code,
+              qty: requiredQty,
+              warehouse_id: warehouseId
+            });
+          } catch (err) {
+            console.error(`Failed to backflush component ${line.item_code}:`, err.message);
+            results.errors.push(`Component ${line.item_code}: ${err.message}`);
+          }
+        }
+      }
+
+      // 3. Add Finished Good (FG) to Stock
+      if (producedQty > 0) {
+        try {
+          const fgWarehouseId = 5; // Default FG warehouse based on _handleStockUpdates
+
+          await StockBalanceModel.upsert(fgItemCode, fgWarehouseId, {
+            current_qty: producedQty,
+            is_increment: true,
+            last_receipt_date: new Date()
+          }, this.db);
+
+          await StockLedgerModel.create({
+            item_code: fgItemCode,
+            warehouse_id: fgWarehouseId,
+            transaction_date: new Date(),
+            transaction_type: 'Production Receipt',
+            qty_in: producedQty,
+            qty_out: 0,
+            reference_doctype: 'Work Order',
+            reference_name: workOrderId,
+            remarks: `Production receipt for ${workOrderId}`,
+            created_by: createdBy
+          }, this.db);
+
+          results.fgAdded = {
+            item_code: fgItemCode,
+            qty: producedQty,
+            warehouse_id: fgWarehouseId
+          };
+        } catch (err) {
+          console.error(`Failed to add FG ${fgItemCode} to stock:`, err.message);
+          results.errors.push(`FG ${fgItemCode}: ${err.message}`);
+        }
+      }
+
+      return results;
+    } catch (error) {
+      console.error('Error in backflushInventory:', error);
+      throw error;
+    }
+  }
+
   async _syncJobCardQuantities(jobCardId) {
     try {
+      // 0. Get current job card details for stock delta calculation
+      const [currentJC] = await this.db.query(
+        'SELECT job_card_id, work_order_id, operation, operation_sequence, produced_quantity, accepted_quantity, rejected_quantity, scrap_quantity FROM job_card WHERE job_card_id = ?',
+        [jobCardId]
+      );
+      if (currentJC.length === 0) return;
+      const jcDetails = currentJC[0];
+
       // 1. Get all time logs for this job card
       const [timeLogs] = await this.db.query(
         'SELECT completed_qty, rejected_qty, scrap_qty, shift, log_date FROM time_log WHERE job_card_id = ?',
@@ -1751,7 +1961,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       timeLogs.forEach(log => {
         const dateStr = log.log_date instanceof Date ? log.log_date.toISOString().split('T')[0] : log.log_date;
         const key = `${dateStr}_${log.shift}`;
-        if (!shifts[key]) shifts[key] = { produced: 0, rejected: 0, scrap: 0, isInferred: false };
+        if (!shifts[key]) shifts[key] = { produced: 0, rejected: 0, scrap: 0, rejectionProduced: 0, isInferred: false };
         shifts[key].produced += parseFloat(log.completed_qty) || 0;
         shifts[key].rejected += parseFloat(log.rejected_qty) || 0;
         shifts[key].scrap += parseFloat(log.scrap_qty) || 0;
@@ -1766,15 +1976,12 @@ async deleteAllBOMRawMaterials(bom_id) {
         const aQty = parseFloat(rej.accepted_qty) || 0;
 
         if (!shifts[key]) {
-          shifts[key] = { produced: aQty + rQty + sQty, rejected: rQty, scrap: sQty, isInferred: true };
-        } else {
-          shifts[key].rejected += rQty;
-          shifts[key].scrap += sQty;
-          // Only add to produced if it was inferred (no time_log for this shift)
-          if (shifts[key].isInferred) {
-            shifts[key].produced += aQty + rQty + sQty;
-          }
+          shifts[key] = { produced: 0, rejected: 0, scrap: 0, rejectionProduced: 0, isInferred: true };
         }
+        
+        shifts[key].rejected += rQty;
+        shifts[key].scrap += sQty;
+        shifts[key].rejectionProduced += (aQty + rQty + sQty);
       });
 
       let totalProduced = 0;
@@ -1782,7 +1989,9 @@ async deleteAllBOMRawMaterials(bom_id) {
       let totalScrap = 0;
 
       Object.values(shifts).forEach(s => {
-        totalProduced += s.produced;
+        // Final produced for this shift is the maximum of time logs and rejections
+        const finalProduced = Math.max(s.produced, s.rejectionProduced);
+        totalProduced += finalProduced;
         totalRejected += s.rejected;
         totalScrap += s.scrap;
       });
@@ -1835,9 +2044,149 @@ async deleteAllBOMRawMaterials(bom_id) {
         await this.checkAndUpdateWorkOrderCompletion(jc.work_order_id);
       }
 
+      // 5. Automatic Inventory Updates
+      const deltaProduced = totalProduced - (parseFloat(jcDetails.produced_quantity) || 0);
+      const deltaAccepted = totalAccepted - (parseFloat(jcDetails.accepted_quantity) || 0);
+      const deltaRejected = totalRejected - (parseFloat(jcDetails.rejected_quantity) || 0);
+      const deltaScrap = totalScrap - (parseFloat(jcDetails.scrap_quantity) || 0);
+
+      if (deltaProduced !== 0 || deltaAccepted !== 0 || deltaRejected !== 0 || deltaScrap !== 0) {
+        await this._handleStockUpdates(jcDetails, deltaProduced, deltaAccepted, deltaRejected, deltaScrap);
+      }
+
       return { totalProduced, totalRejected, totalAccepted, totalScrap };
     } catch (error) {
       console.error('Error in _syncJobCardQuantities:', error);
+      throw error;
+    }
+  }
+
+  async _handleStockUpdates(jc, deltaProduced, deltaAccepted, deltaRejected, deltaScrap) {
+    try {
+      const StockBalanceModel = (await import('./StockBalanceModel.js')).default;
+      const StockLedgerModel = (await import('./StockLedgerModel.js')).default;
+      const wo_id = jc.work_order_id;
+
+      // 1. Get Work Order Details
+      const [woRows] = await this.db.query('SELECT item_code, quantity FROM work_order WHERE wo_id = ?', [wo_id]);
+      if (woRows.length === 0) return;
+      const wo = woRows[0];
+      const woTotalQty = parseFloat(wo.quantity) || 1;
+
+      // 2. Identify if it's first or last operation
+      const [opRows] = await this.db.query(
+        'SELECT MIN(sequence) as first_seq, MAX(sequence) as last_seq FROM work_order_operation WHERE wo_id = ?',
+        [wo_id]
+      );
+      
+      const isFirstOp = jc.operation_sequence === opRows[0].first_seq || (!jc.operation_sequence && !opRows[0].first_seq);
+      const isLastOp = jc.operation_sequence === opRows[0].last_seq || (!jc.operation_sequence && !opRows[0].last_seq);
+
+      // 3. Handle Raw Material Consumption (on First Operation)
+      if (isFirstOp && deltaProduced !== 0) {
+        const [items] = await this.db.query('SELECT * FROM work_order_item WHERE wo_id = ?', [wo_id]);
+        for (const item of items) {
+          const consumptionQty = (deltaProduced / woTotalQty) * (parseFloat(item.required_qty) || 0);
+          if (consumptionQty === 0) continue;
+
+          const warehouse = item.source_warehouse || 1; // Default to main (id 1)
+
+          await StockBalanceModel.upsert(item.item_code, warehouse, {
+            current_qty: -consumptionQty,
+            is_increment: true,
+            last_issue_date: new Date()
+          }, this.db);
+
+          await StockLedgerModel.create({
+            item_code: item.item_code,
+            warehouse_id: warehouse,
+            transaction_date: new Date(),
+            transaction_type: 'Consumption',
+            qty_in: consumptionQty < 0 ? Math.abs(consumptionQty) : 0, // Handle reversal
+            qty_out: consumptionQty > 0 ? consumptionQty : 0,
+            reference_doctype: 'Job Card',
+            reference_name: jc.job_card_id,
+            remarks: `Consumption for ${wo_id} (Operation: ${jc.operation})`,
+            created_by: 'system'
+          }, this.db);
+          
+          // Re-adjusting the Ledger create to be clearer for reversals
+          // Actually StockLedgerModel.create expects {qty_in, qty_out}
+        }
+      }
+
+      // 4. Handle Finished Goods Production (on Last Operation)
+      if (isLastOp && deltaAccepted !== 0) {
+        const targetWarehouse = 5; // FGS
+        
+        await StockBalanceModel.upsert(wo.item_code, targetWarehouse, {
+          current_qty: deltaAccepted,
+          is_increment: true,
+          last_receipt_date: new Date()
+        }, this.db);
+
+        await StockLedgerModel.create({
+          item_code: wo.item_code,
+          warehouse_id: targetWarehouse,
+          transaction_date: new Date(),
+          transaction_type: 'Production',
+          qty_in: deltaAccepted > 0 ? deltaAccepted : 0,
+          qty_out: deltaAccepted < 0 ? Math.abs(deltaAccepted) : 0,
+          reference_doctype: 'Job Card',
+          reference_name: jc.job_card_id,
+          remarks: `Production from ${wo_id}`,
+          created_by: 'system'
+        }, this.db);
+      }
+
+      // 5. Handle Rejections (Move to FIGR)
+      if (deltaRejected !== 0) {
+        const rejectWarehouse = 6; // FIGR
+        await StockBalanceModel.upsert(wo.item_code, rejectWarehouse, {
+          current_qty: deltaRejected,
+          is_increment: true,
+          last_receipt_date: new Date()
+        }, this.db);
+
+        await StockLedgerModel.create({
+          item_code: wo.item_code,
+          warehouse_id: rejectWarehouse,
+          transaction_date: new Date(),
+          transaction_type: 'Rejection',
+          qty_in: deltaRejected > 0 ? deltaRejected : 0,
+          qty_out: deltaRejected < 0 ? Math.abs(deltaRejected) : 0,
+          reference_doctype: 'Job Card',
+          reference_name: jc.job_card_id,
+          remarks: `Rejected items from ${wo_id}`,
+          created_by: 'system'
+        }, this.db);
+      }
+
+      // 6. Handle Scrap (Move to SCRAPY)
+      if (deltaScrap !== 0) {
+        const scrapWarehouse = 7; // SCRAPY
+        await StockBalanceModel.upsert(wo.item_code, scrapWarehouse, {
+          current_qty: deltaScrap,
+          is_increment: true,
+          last_receipt_date: new Date()
+        }, this.db);
+
+        await StockLedgerModel.create({
+          item_code: wo.item_code,
+          warehouse_id: scrapWarehouse,
+          transaction_date: new Date(),
+          transaction_type: 'Scrap',
+          qty_in: deltaScrap > 0 ? deltaScrap : 0,
+          qty_out: deltaScrap < 0 ? Math.abs(deltaScrap) : 0,
+          reference_doctype: 'Job Card',
+          reference_name: jc.job_card_id,
+          remarks: `Scrap from ${wo_id}`,
+          created_by: 'system'
+        }, this.db);
+      }
+
+    } catch (error) {
+      console.error('Error in _handleStockUpdates:', error);
       throw error;
     }
   }
@@ -1884,12 +2233,9 @@ async deleteAllBOMRawMaterials(bom_id) {
       const prevTimeLogProduced = parseFloat(existingProduced[0].time_log_produced);
       const prevRejectionProduced = parseFloat(existingProduced[0].rejection_produced);
       
-      let productionIncrease = newQty;
-      if (prevTimeLogProduced === 0 && prevRejectionProduced > 0) {
-        // We are replacing inferred production with actual time log production.
-        // The increase is the difference if the new time log is larger.
-        productionIncrease = Math.max(0, newQty - prevRejectionProduced);
-      }
+      const prevTotalForShift = Math.max(prevTimeLogProduced, prevRejectionProduced);
+      const newTotalForShift = Math.max(prevTimeLogProduced + newQty, prevRejectionProduced);
+      const productionIncrease = newTotalForShift - prevTotalForShift;
       
       const currentTotalProduced = parseFloat(currentJobCard?.produced_quantity || 0);
 
@@ -1974,19 +2320,9 @@ async deleteAllBOMRawMaterials(bom_id) {
       
       const enteringProduced = (parseFloat(data.accepted_qty) || 0) + (parseFloat(data.rejected_qty) || 0) + (parseFloat(data.scrap_qty) || 0);
       
-      let productionIncrease = 0;
-      if (timeLogProduced > 0) {
-        // If time log exists, production is already accounted for.
-        // We only increase if entering total exceeds time log total.
-        productionIncrease = Math.max(0, enteringProduced - timeLogProduced);
-      } else {
-        // If no time log, production is inferred.
-        // Increase is relative to what was already inferred for this shift.
-        productionIncrease = Math.max(0, enteringProduced + prevRejectionProduced - prevRejectionProduced); 
-        // Wait, that's just enteringProduced. 
-        // Actually, it's enteringProduced because this is a NEW entry.
-        productionIncrease = enteringProduced;
-      }
+      const prevTotalForShift = Math.max(timeLogProduced, prevRejectionProduced);
+      const newTotalForShift = Math.max(timeLogProduced, prevRejectionProduced + enteringProduced);
+      const productionIncrease = newTotalForShift - prevTotalForShift;
 
       const currentTotalProduced = parseFloat(currentJobCard?.produced_quantity || 0);
       
@@ -2246,6 +2582,29 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async updateInwardChallan(id, data) {
     try {
+      // Get old values first to calculate delta
+      const [oldRows] = await this.db.query('SELECT * FROM inward_challan WHERE id = ?', [id]);
+      if (oldRows.length === 0) throw new Error('Inward challan not found');
+      const old = oldRows[0];
+
+      const newReceived = data.quantity_received !== undefined ? parseFloat(data.quantity_received) : parseFloat(old.quantity_received || 0);
+      const newAccepted = data.quantity_accepted !== undefined ? parseFloat(data.quantity_accepted) : parseFloat(old.quantity_accepted || 0);
+      const newRejected = data.quantity_rejected !== undefined ? parseFloat(data.quantity_rejected) : parseFloat(old.quantity_rejected || 0);
+
+      const oldProduced = parseFloat(old.quantity_received) || (parseFloat(old.quantity_accepted || 0) + parseFloat(old.quantity_rejected || 0));
+      const newProduced = newReceived || (newAccepted + newRejected);
+      const productionIncrease = newProduced - oldProduced;
+
+      if (productionIncrease > 0) {
+        const maxAllowed = await this._getMaxAllowedQuantity(old.job_card_id);
+        const currentJobCard = await this.getJobCardDetails(old.job_card_id);
+        const currentTotalProduced = parseFloat(currentJobCard?.produced_quantity || 0);
+
+        if (currentTotalProduced + productionIncrease > maxAllowed + 0.0001) {
+          throw new Error(`Quantity Validation Error: Update would exceed allowed quantity (${maxAllowed.toFixed(2)}) based on previous operation or plan.`);
+        }
+      }
+
       const updateFields = []
       const values = []
       

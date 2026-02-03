@@ -91,8 +91,8 @@ export default function JobCard() {
     }
 
     return (
-      <div className="bg-white p-2 rounded border border-gray-100  hover:shadow-md transition-all group  relative">
-        <div className="absolute -right-4 -top-4 w-24 h-24 bg-gray-50 rounded-full opacity-50 group-hover:scale-110 transition-transform" />
+      <div className="bg-slate-50/50 p-2 rounded border border-gray-100  hover:shadow-md transition-all group  relative">
+        <div className="absolute -right-4 -top-4 w-24 h-24 bg-white rounded-full opacity-50 group-hover:scale-110 transition-transform" />
         <div className="relative flex justify-between items-start">
           <div className="">
             <p className="text-xs  text-gray-400 ">{label}</p>
@@ -563,7 +563,7 @@ export default function JobCard() {
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100">
         <div className="">
           <div className="flex items-center justify-between h-24">
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
               <div className=" bg-gray-900 p-2 rounded shadow-lg shadow-gray-200 group transition-all hover:scale-105">
                 <ClipboardList className="w-4 h-4 text-white group-hover:rotate-12 transition-transform" />
               </div>
@@ -586,8 +586,8 @@ export default function JobCard() {
               <div className="hidden lg:flex flex-col items-end mr-6 border-r border-gray-100 pr-6">
                 <p className="text-xs  text-gray-400  mb-1">System Status</p>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                  <span className="text-sm  text-gray-900 ">
+                  <div className="w-2 h-2 bg-emerald-500 rounded animate-pulse" />
+                  <span className="text-xs  text-gray-900 ">
                     {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                   </span>
                 </div>
@@ -613,7 +613,7 @@ export default function JobCard() {
 
       <div className=" ">
         {/* Intelligence Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6   mb-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6   my-3">
           <StatCard
             label="Total Operations"
             value={stats.totalJobs}
@@ -647,7 +647,7 @@ export default function JobCard() {
         </div>
 
         {/* Search & Intelligence Filters */}
-        <div className="  mb-3 flex flex-col md:flex-row items-center gap-6">
+        <div className="  my-3 flex flex-col md:flex-row items-center gap-6">
           <div className="flex-1 relative w-full group">
             <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
               <Search className="text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
@@ -702,18 +702,18 @@ export default function JobCard() {
               return (
                 <div 
                   key={wo.wo_id} 
-                  className={`group bg-white rounded border transition-all duration-500  ${
+                  className={`group bg-slate-50/50 rounded border transition-all duration-500  ${
                     isExpanded 
                       ? 'border-indigo-200 shadow-2xl shadow-indigo-100 -translate-y-2' 
                       : 'border-gray-100 hover:border-indigo-100 hover:shadow  hover:shadow-gray-100'
                   }`}
                 >
                   <div
-                    className={`p-2 cursor-pointer transition-colors ${isExpanded ? 'bg-indigo-50/20' : ''}`}
+                    className={`p-2 cursor-pointer transition-colors ${isExpanded ? 'bg-white' : ''}`}
                     onClick={() => fetchJobCardsForWO(wo.wo_id)}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-2">
                         <div className={`w-8 h-8 rounded flex items-center justify-center transition-all duration-500 ${
                           isExpanded ? 'bg-indigo-600 text-white rotate-6 shadow-lg shadow-indigo-200' : 'bg-gray-50 text-gray-400'
                         }`}>
@@ -721,11 +721,13 @@ export default function JobCard() {
                         </div>
                         <div>
                           <div className="flex items-center gap-3 mb-1">
-                            <span className="text-sm  text-gray-900 ">{wo.wo_id}</span>
+                            <span className="text-xs  text-gray-900 ">
+                              {wo.item_name || wo.item_code || 'Generic Work Order'}
+                              </span>
                             <StatusBadge status={wo.status} />
                           </div>
-                          <p className="text-base  text-gray-500  max-w-[400px] truncate">
-                            {wo.item_name || wo.item_code || 'Generic Work Order'}
+                          <p className="text-xs  text-gray-500  max-w-[250px] truncate">
+                            {wo.wo_id}
                           </p>
                         </div>
                       </div>
@@ -743,7 +745,7 @@ export default function JobCard() {
                         </div>
                         <div>
                           <p className="text-xs  text-gray-400  mb-1.5">Total Quantity</p>
-                          <p className="text-sm  text-gray-900 ">
+                          <p className="text-xs  text-gray-900 ">
                             {wo.quantity || wo.qty_to_manufacture || 0} <span className="text-xs  text-gray-400">Units</span>
                           </p>
                         </div>
@@ -784,18 +786,18 @@ export default function JobCard() {
                               {jobCardsByWO[wo.wo_id].map((card, idx) => (
                                 inlineEditingId === card.job_card_id ? (
                                   <tr key={card.job_card_id} className="bg-indigo-50/50 border-y-2 border-indigo-200">
-                                    <td colSpan="5" className="px-8 py-8">
-                                      <div className="flex items-center gap-4 mb-6">
+                                    <td colSpan="5" className="p-2 ">
+                                      <div className="flex items-center gap-2 mb-2">
                                         <div className="bg-indigo-600 p-2 rounded  text-white">
                                           <Edit2 size={16} />
                                         </div>
                                         <div>
-                                          <h4 className="text-sm  text-gray-900 ">Modify Operational Step</h4>
+                                          <h4 className="text-xs  text-gray-900 ">Modify Operational Step</h4>
                                           <p className="text-xs  text-gray-500 ">{card.job_card_id}</p>
                                         </div>
                                       </div>
                                       
-                                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
                                         <div className="space-y-2">
                                           <label className="text-xs  text-gray-400  ml-1">Operation</label>
                                           <SearchableSelect
@@ -912,7 +914,7 @@ export default function JobCard() {
                                           />
                                         </div>
                                       </div>
-                                      <div className="flex gap-4 justify-end mt-8 pt-6 border-t border-indigo-100">
+                                      <div className="flex gap-2 justify-end mt-2 pt-2 border-t border-indigo-100">
                                         <button 
                                           className="p-2  text-xs   bg-gray-50 text-gray-500 hover:bg-gray-100 rounded  transition-all"
                                           onClick={handleInlineCancel}
@@ -936,7 +938,7 @@ export default function JobCard() {
                                           <Activity size={16} />
                                         </div>
                                         <div>
-                                          <p className="text-sm  text-gray-900 ">{card.operation || 'N/A'}</p>
+                                          <p className="text-xs  text-gray-900 ">{card.operation || 'N/A'}</p>
                                           <p className="text-xs  text-gray-400 ">{card.job_card_id}</p>
                                         </div>
                                       </div>
@@ -1035,7 +1037,7 @@ export default function JobCard() {
                           <div className="w-8 h-8 bg-white rounded  flex items-center justify-center mx-auto mb-4 ">
                             <Layers className="text-indigo-400" size={32} />
                           </div>
-                          <h4 className="text-sm  text-gray-900  mb-1">No Operations Defined</h4>
+                          <h4 className="text-xs  text-gray-900  mb-1">No Operations Defined</h4>
                           <p className="text-xs  text-gray-500">Job cards could not be generated because no operations were found in the Work Order or BOM.</p>
                         </div>
                       )}

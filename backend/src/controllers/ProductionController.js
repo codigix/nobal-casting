@@ -187,6 +187,22 @@ class ProductionController {
         status: 'Draft'
       })
 
+      // NEW: Automatically allocate materials for the work order based on BOM
+      if (required_items && Array.isArray(required_items) && required_items.length > 0) {
+        try {
+          const InventoryModel = (await import('../models/InventoryModel.js')).default;
+          const inventoryModel = new InventoryModel(this.productionModel.db);
+          await inventoryModel.allocateMaterialsForWorkOrder(
+            wo_id,
+            required_items,
+            req.user?.username || 'system'
+          );
+        } catch (allocError) {
+          console.error(`Material allocation failed for Work Order ${wo_id}:`, allocError.message);
+          // We don't throw here to avoid failing WO creation, but we log it
+        }
+      }
+
       if (required_items && Array.isArray(required_items) && required_items.length > 0) {
         for (let i = 0; i < required_items.length; i++) {
           await this.productionModel.addWorkOrderItem(wo_id, { ...required_items[i], sequence: i + 1 })
@@ -1683,7 +1699,8 @@ class ProductionController {
         data: timeLog
       })
     } catch (error) {
-      res.status(500).json({
+      const statusCode = error.message.includes('Quantity Validation Error') ? 400 : 500;
+      res.status(statusCode).json({
         success: false,
         message: 'Error creating time log',
         error: error.message
@@ -1757,7 +1774,8 @@ class ProductionController {
         data: rejection
       })
     } catch (error) {
-      res.status(500).json({
+      const statusCode = error.message.includes('Quantity Validation Error') ? 400 : 500;
+      res.status(statusCode).json({
         success: false,
         message: 'Error creating rejection',
         error: error.message

@@ -13,15 +13,23 @@ import Card from '../../components/Card/Card'
 
 const normalizeStatus = (status) => String(status || '').toLowerCase().trim()
 
+const getShiftTimings = (shift) => {
+  const shiftTimings = {
+    'A': { from_time: '10:00', from_period: 'AM', to_time: '06:00', to_period: 'PM' },
+    'B': { from_time: '06:00', from_period: 'PM', to_time: '03:00', to_period: 'AM' }
+  }
+  return shiftTimings[shift] || shiftTimings['A']
+}
+
 // Helper Components for the Redesign
 const SectionTitle = ({ title, icon: Icon, badge, subtitle }) => (
-  <div className="mb-6">
+  <div className="mb-2">
     <div className="flex items-center justify-between mb-1">
       <div className="flex items-center gap-3">
-        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-          <Icon size={18} />
+        <div className="p-2 bg-indigo-50 text-indigo-600 rounded">
+          <Icon size={15} />
         </div>
-        <h3 className="text-sm  text-slate-900 tracking-tight">{title}</h3>
+        <h3 className="text-xs  text-slate-900 tracking-tight">{title}</h3>
       </div>
       {badge && (
         <span className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px]  uppercase rounded-full border border-slate-200">
@@ -64,7 +72,7 @@ export default function ProductionEntry() {
   const [rejections, setRejections] = useState([])
   const [downtimes, setDowntimes] = useState([])
 
-  const [shifts] = useState(['A', 'B', 'C'])
+  const [shifts] = useState(['A', 'B'])
   const [warehouses, setWarehouses] = useState([])
   const [workstations, setWorkstations] = useState([])
   const [operators, setOperators] = useState([])
@@ -80,13 +88,15 @@ export default function ProductionEntry() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formLoading, setFormLoading] = useState(false)
 
-  const totalProducedQty = timeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0)
-  const totalAcceptedQty = rejections.reduce((sum, r) => sum + (parseFloat(r.accepted_qty) || 0), 0)
-  const totalRejectedQty = rejections.reduce((sum, r) => sum + (parseFloat(r.rejected_qty) || 0), 0)
-  const totalScrapQty = rejections.reduce((sum, r) => sum + (parseFloat(r.scrap_qty) || 0), 0)
+  const totalProducedQty = parseFloat(jobCardData?.produced_quantity || 0)
+  const totalAcceptedQty = parseFloat(jobCardData?.accepted_quantity || 0)
+  const totalRejectedQty = parseFloat(jobCardData?.rejected_quantity || 0)
+  const totalScrapQty = parseFloat(jobCardData?.scrap_quantity || 0)
   const totalDowntimeMinutes = downtimes.reduce((sum, d) => sum + (parseFloat(d.duration_minutes) || 0), 0)
 
-  const maxAllowedQty = previousOperationData 
+  const isOperationFinished = (totalAcceptedQty + totalRejectedQty + totalScrapQty) >= (parseFloat(jobCardData?.planned_quantity || 0) - 0.0001);
+
+  const maxAllowedQty = previousOperationData
     ? (parseFloat(previousOperationData.accepted_quantity) || (parseFloat(previousOperationData.produced_quantity) || 0) - (parseFloat(previousOperationData.rejected_quantity) || 0))
     : parseFloat(jobCardData?.planned_quantity || 0);
 
@@ -113,10 +123,10 @@ export default function ProductionEntry() {
     shift: 'A',
     day_number: '',
     log_date: new Date().toISOString().split('T')[0],
-    from_time: '',
+    from_time: '10:00',
     from_period: 'AM',
-    to_time: '',
-    to_period: 'AM',
+    to_time: '06:00',
+    to_period: 'PM',
     completed_qty: 0,
     inhouse: false,
     outsource: false
@@ -134,15 +144,15 @@ export default function ProductionEntry() {
   })
 
   const [downtimeForm, setDowntimeForm] = useState({
-    type: '',
-    reason: '',
+    downtime_type: '',
+    downtime_reason: '',
     day_number: '',
     log_date: new Date().toISOString().split('T')[0],
     shift: 'A',
-    from_time: '',
+    from_time: '10:00',
     from_period: 'AM',
-    to_time: '',
-    to_period: 'AM'
+    to_time: '06:00',
+    to_period: 'PM'
   })
 
   useEffect(() => {
@@ -229,14 +239,13 @@ export default function ProductionEntry() {
     return (
       <button
         onClick={() => onClick(section)}
-        className={`flex items-center gap-3 w-full p-2 rounded transition-all duration-200 border ${
-          isActive 
-            ? `${colors[color]} shadow-sm translate-x-1` 
-            : 'text-slate-500 hover:bg-slate-50 border-transparent'
-        }`}
+        className={`flex items-center gap-3 w-full p-2 rounded transition-all duration-200 border ${isActive
+          ? `${colors[color]}  translate-x-1`
+          : 'text-slate-500 hover:bg-slate-50 border-transparent'
+          }`}
       >
-        <div className={`p-1.5 rounded ${isActive ? 'bg-white shadow-sm' : 'bg-slate-100'}`}>
-          <Icon size={16} />
+        <div className={`p-1.5 rounded ${isActive ? 'bg-white ' : 'bg-slate-100'}`}>
+          <Icon size={15} />
         </div>
         <span className="text-xs font-medium">{label}</span>
       </button>
@@ -308,14 +317,34 @@ export default function ProductionEntry() {
     }
   }, [jobCardData, operations, warehouses])
 
+  // Automatically fetch produce quantity from time logs and pre-fill accepted quantity
+  useEffect(() => {
+    if (rejectionForm.log_date && rejectionForm.shift) {
+      const stats = getShiftStats(rejectionForm.log_date, rejectionForm.shift);
+      const produced = stats.produced;
+      
+      if (produced > 0) {
+        setRejectionForm(prev => {
+          const rejected = parseFloat(prev.rejected_qty) || 0;
+          const scrap = parseFloat(prev.scrap_qty) || 0;
+          return {
+            ...prev,
+            accepted_qty: Math.max(0, produced - rejected - scrap)
+          };
+        });
+      }
+    }
+  }, [rejectionForm.log_date, rejectionForm.shift, rejectionForm.rejected_qty, rejectionForm.scrap_qty, timeLogs]);
+
   const fetchAllData = async () => {
     try {
       setLoading(true)
-      const [jobCardRes, wsRes, empRes, opsRes] = await Promise.all([
+      const [jobCardRes, wsRes, empRes, opsRes, whRes] = await Promise.all([
         productionService.getJobCardDetails(jobCardId),
         productionService.getWorkstationsList(),
         productionService.getEmployees(),
-        productionService.getOperationsList()
+        productionService.getOperationsList(),
+        productionService.getWarehouses()
       ])
 
       let jobCard = jobCardRes.data || jobCardRes
@@ -339,7 +368,25 @@ export default function ProductionEntry() {
 
       setWorkstations(wsRes.data || [])
       setOperators(empRes.data || [])
+      setWarehouses(whRes.data || [])
       setJobCardData(jobCard)
+
+      const woId = jobCard.work_order_id
+      const currentSequence = parseInt(jobCard.operation_sequence || 0)
+      let jobCards = []
+
+      if (woId) {
+        const jcResponse = await productionService.getJobCards({ work_order_id: woId })
+        jobCards = jcResponse.data || []
+        setAllJobCards(jobCards)
+
+        if (currentSequence > 0) {
+          const prevCard = jobCards.find(c => parseInt(c.operation_sequence || 0) === currentSequence - 1)
+          if (prevCard) {
+            setPreviousOperationData(prevCard)
+          }
+        }
+      }
 
       let allOperations = []
       let woData = null
@@ -377,15 +424,27 @@ export default function ProductionEntry() {
       const globalOps = opsRes.data || []
 
       const enrichedOperations = allOperations.map(op => {
-        if (!op.name && !op.operation_name && op.operation_id) {
-          const globalOp = globalOps.find(g => g.operation_id === op.operation_id || g.id === op.operation_id)
-          return {
-            ...op,
-            name: globalOp?.name || globalOp?.operation_name || `Operation ${op.operation_id}`,
-            operation_name: globalOp?.operation_name || globalOp?.name || `Operation ${op.operation_id}`
-          }
+        // Try to find the name from job cards first
+        const matchingJobCard = jobCards.find(jc => 
+          String(jc.operation_id) === String(op.operation_id || op.id) || 
+          parseInt(jc.operation_sequence) === parseInt(op.sequence || op.seq || op.operation_seq)
+        )
+
+        let opName = op.operation_name || op.name || matchingJobCard?.operation
+
+        if (!opName && (op.operation_id || op.id)) {
+          const globalOp = globalOps.find(g => 
+            String(g.operation_id) === String(op.operation_id || op.id) || 
+            String(g.id) === String(op.operation_id || op.id)
+          )
+          opName = globalOp?.name || globalOp?.operation_name
         }
-        return op
+
+        return {
+          ...op,
+          name: opName || `Operation ${op.operation_id || op.id}`,
+          operation_name: opName || `Operation ${op.operation_id || op.id}`
+        }
       })
 
       const sortedOperations = enrichedOperations.sort((a, b) => {
@@ -398,304 +457,167 @@ export default function ProductionEntry() {
 
       if (jobCard?.work_order_id) {
         fetchItemName(jobCard.work_order_id)
-        fetchOperationCycleTime(jobCard, woData)
-        fetchPreviousOperationData(jobCard)
       }
 
-      await Promise.all([
-        fetchWarehouses(),
-        fetchTimeLogs(),
-        fetchRejections(),
-        fetchDowntimes()
+      const [logsRes, rejsRes, downRes] = await Promise.all([
+        productionService.getTimeLogs({ job_card_id: jobCardId }),
+        productionService.getRejections({ job_card_id: jobCardId }),
+        productionService.getDowntimes({ job_card_id: jobCardId })
       ])
+
+      setTimeLogs(logsRes.data || logsRes)
+      setRejections(rejsRes.data || rejsRes)
+      setDowntimes(downRes.data || downRes)
     } catch (err) {
-      console.error('Failed to fetch data:', err)
-      toast.addToast('Failed to load production entry data', 'error')
+      toast.addToast(err.message || 'Failed to load operational data', 'error')
     } finally {
       setLoading(false)
     }
   }
 
-  const fetchItemName = async (workOrderId) => {
+  const fetchItemName = async (woId) => {
     try {
-      const response = await productionService.getWorkOrder(workOrderId)
-      if (response?.data?.item_code) {
-        const itemCode = response.data.item_code
-        try {
-          const itemResponse = await api.get(`/items/${itemCode}`)
-          if (itemResponse.data?.data?.item_name) {
-            setItemName(itemResponse.data.data.item_name)
-          } else {
-            setItemName(itemCode)
+      const response = await productionService.getWorkOrder(woId)
+      const data = response.data || response
+      setItemName(data.item_name || '')
+
+      if (data.item_code) {
+        const bomRes = await productionService.getBOMs({ item_code: data.item_code })
+        const boms = bomRes.data || []
+        if (boms.length > 0) {
+          const details = await productionService.getBOMDetails(boms[0].bom_id)
+          const bom = details.data || details
+
+          const currentOp = bom.operations?.find(op =>
+            op.operation_name === jobCardData?.operation ||
+            op.name === jobCardData?.operation
+          )
+
+          if (currentOp) {
+            setOperationCycleTime(parseFloat(currentOp.operation_time || 0))
           }
-        } catch (err) {
-          setItemName(itemCode)
         }
       }
     } catch (err) {
       console.error('Failed to fetch item name:', err)
-      setItemName(jobCardData?.item_name || 'N/A')
     }
   }
 
-  const fetchOperationCycleTime = async (jobCard, woData) => {
-    try {
-      if (!jobCard?.work_order_id) return
-
-      let bomId = woData?.bom_id
-      let bomData = null
-
-      if (bomId) {
-        const bomResponse = await productionService.getBOMDetails(bomId)
-        bomData = bomResponse?.data || bomResponse
-      }
-
-      if (!bomData && woData?.item_code) {
-        const bomResponse = await productionService.getBOMs({ item_code: woData.item_code })
-        const boms = bomResponse.data || []
-
-        if (boms.length > 0) {
-          const bomDetails = await productionService.getBOMDetails(boms[0].bom_id || boms[0].id)
-          bomData = bomDetails.data || bomDetails
-        }
-      }
-
-      if (bomData) {
-        const operations = bomData?.bom_operations || bomData?.operations || []
-        const jobCardOp = (jobCard.operation || '').toLowerCase().trim()
-
-        const operation = operations.find(op => {
-          const opName = (op.name || op.operation_name || '').toLowerCase().trim()
-          return opName === jobCardOp
-        })
-
-        if (operation) {
-          console.log('Found operation:', operation)
-          const cycleTime =
-            parseFloat(operation.operation_time) ||
-            parseFloat(operation.cycle_time) ||
-            parseFloat(operation.cycle) ||
-            parseFloat(operation.operation_time_per_unit) ||
-            parseFloat(operation.time_per_unit) ||
-            parseFloat(operation.time) ||
-            0
-
-          console.log('Cycle time extracted:', cycleTime, 'from field operation_time')
-          if (cycleTime > 0) {
-            setOperationCycleTime(cycleTime)
-          } else {
-            console.warn('Operation found but no valid cycle time. Operation data:', operation)
-            setOperationCycleTime(0)
-          }
-        } else {
-          console.warn('Operation not found in BOM. JobCard op:', jobCardOp, 'Available ops:', operations.map(op => op.operation_name))
-          setOperationCycleTime(0)
-        }
-      } else {
-        console.warn('BOM data not found')
-        setOperationCycleTime(0)
-      }
-    } catch (err) {
-      console.error('Failed to fetch operation cycle time:', err)
-      setOperationCycleTime(0)
-    }
+  const handleDayChange = (val, formType) => {
+    if (formType === 'timeLog') setTimeLogForm({ ...timeLogForm, day_number: val })
+    else if (formType === 'rejection') setRejectionForm({ ...rejectionForm, day_number: val })
+    else if (formType === 'downtime') setDowntimeForm({ ...downtimeForm, day_number: val })
   }
 
-  const fetchPreviousOperationData = async (currentJobCard) => {
-    try {
-      if (!currentJobCard?.work_order_id) return
+  const handleDateChange = (val, formType) => {
+    if (formType === 'timeLog') setTimeLogForm({ ...timeLogForm, log_date: val })
+    else if (formType === 'rejection') setRejectionForm({ ...rejectionForm, log_date: val })
+    else if (formType === 'downtime') setDowntimeForm({ ...downtimeForm, log_date: val })
+  }
 
-      const response = await productionService.getJobCards({
-        work_order_id: currentJobCard.work_order_id
+  const handleShiftChange = (val, formType) => {
+    const timings = getShiftTimings(val)
+
+    if (formType === 'timeLog') {
+      setTimeLogForm({
+        ...timeLogForm,
+        shift: val,
+        ...timings
       })
-      const cards = response.data || []
-      setAllJobCards(cards)
-
-      // Sort job cards by sequence (handling nulls/strings)
-      const sortedJobCards = [...cards].sort((a, b) => {
-        const seqA = parseInt(a.operation_sequence) || 0
-        const seqB = parseInt(b.operation_sequence) || 0
-        if (seqA !== seqB) return seqA - seqB
-        // Fallback to ID if sequence is same/null
-        return (a.job_card_id || '').localeCompare(b.job_card_id || '')
+    }
+    else if (formType === 'rejection') setRejectionForm({ ...rejectionForm, shift: val })
+    else if (formType === 'downtime') {
+      setDowntimeForm({
+        ...downtimeForm,
+        shift: val,
+        ...timings
       })
-
-      // Find current job card index in sorted list
-      const currentIndex = sortedJobCards.findIndex(jc => jc.job_card_id === currentJobCard.job_card_id)
-
-      if (currentIndex > 0) {
-        setPreviousOperationData(sortedJobCards[currentIndex - 1])
-      }
-    } catch (err) {
-      console.error('Failed to fetch previous operation data:', err)
     }
   }
 
-  const fetchWarehouses = async () => {
-    try {
-      const response = await productionService.getWarehouses()
-      setWarehouses(response.data || response || [])
-    } catch (err) {
-      console.error('Failed to fetch warehouses:', err)
-    }
+  const handleOperatorChange = (val) => {
+    const op = operators.find(o => o.employee_id === val)
+    setTimeLogForm({
+      ...timeLogForm,
+      employee_id: val,
+      operator_name: op ? `${op.first_name} ${op.last_name}` : ''
+    })
   }
 
-  const fetchTimeLogs = async () => {
-    try {
-      const response = await productionService.getTimeLogs({ job_card_id: jobCardId })
-      setTimeLogs(response.data || [])
-    } catch (err) {
-      console.error('Failed to fetch time logs:', err)
-    }
-  }
+  const calculatePotentialIncrease = (formType, formData) => {
+    const { log_date, shift } = formData;
+    const dateStr = log_date;
 
-  const fetchRejections = async () => {
-    try {
-      const response = await productionService.getRejections({ job_card_id: jobCardId })
-      setRejections(response.data || [])
-    } catch (err) {
-      console.error('Failed to fetch rejections:', err)
-    }
-  }
+    // Find existing logs for this date/shift
+    const shiftTimeLogs = timeLogs.filter(log =>
+      (log.log_date?.split('T')[0] === dateStr) &&
+      log.shift === shift
+    );
+    const shiftRejections = rejections.filter(rej =>
+      (rej.log_date?.split('T')[0] === dateStr) &&
+      rej.shift === shift
+    );
 
-  const fetchDowntimes = async () => {
-    try {
-      const response = await productionService.getDowntimes({ job_card_id: jobCardId })
-      setDowntimes(response.data || [])
-    } catch (err) {
-      console.error('Failed to fetch downtimes:', err)
-    }
-  }
+    const timeLogProduced = shiftTimeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0);
+    const prevRejectionProduced = shiftRejections.reduce((sum, rej) => sum + (parseFloat(rej.accepted_qty) || 0) + (parseFloat(rej.rejected_qty) || 0) + (parseFloat(rej.scrap_qty) || 0), 0);
 
-  const formatTo24h = (time, period) => {
-    if (!time) return '';
-    let [hours, minutes] = time.split(':').map(Number);
-    hours = hours % 12;
-    if (period === 'PM') hours += 12;
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    const prevTotalForShift = Math.max(timeLogProduced, prevRejectionProduced);
+
+    let newTotalForShift = prevTotalForShift;
+    if (formType === 'timeLog') {
+      const newQty = parseFloat(formData.completed_qty) || 0;
+      newTotalForShift = Math.max(timeLogProduced + newQty, prevRejectionProduced);
+    } else if (formType === 'rejection') {
+      const enteringProduced = (parseFloat(formData.accepted_qty) || 0) + (parseFloat(formData.rejected_qty) || 0) + (parseFloat(formData.scrap_qty) || 0);
+      newTotalForShift = Math.max(timeLogProduced, prevRejectionProduced + enteringProduced);
+    }
+
+    return newTotalForShift - prevTotalForShift;
   };
 
-  const calculateTimeDuration = () => {
-    if (timeLogForm.from_time && timeLogForm.to_time) {
-      let [fromHour, fromMin] = timeLogForm.from_time.split(':').map(Number)
-      let [toHour, toMin] = timeLogForm.to_time.split(':').map(Number)
+  const getShiftStats = (date, shift) => {
+    const shiftTimeLogs = timeLogs.filter(log =>
+      (log.log_date?.split('T')[0] === date) &&
+      log.shift === shift
+    );
+    const shiftRejections = rejections.filter(rej =>
+      (rej.log_date?.split('T')[0] === date) &&
+      rej.shift === shift
+    );
 
-      // Convert to 24h
-      fromHour = fromHour % 12;
-      if (timeLogForm.from_period === 'PM') fromHour += 12;
+    const produced = shiftTimeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0);
+    const rejectionProduced = shiftRejections.reduce((sum, rej) => sum + (parseFloat(rej.accepted_qty) || 0) + (parseFloat(rej.rejected_qty) || 0) + (parseFloat(rej.scrap_qty) || 0), 0);
 
-      toHour = toHour % 12;
-      if (timeLogForm.to_period === 'PM') toHour += 12;
-
-      const fromTotal = fromHour * 60 + fromMin
-      const toTotal = toHour * 60 + toMin
-      let diff = toTotal - fromTotal
-      if (diff < 0) diff += 1440 // Handle midnight crossing
-      return diff
-    }
-    return 0
-  }
-
-  const calculateDowntimeDuration = (fromTime, toTime, fromPeriod, toPeriod) => {
-    if (!fromTime || !toTime) return 0
-    let [fromHour, fromMin] = fromTime.split(':').map(Number)
-    let [toHour, toMin] = toTime.split(':').map(Number)
-
-    // Convert to 24h
-    fromHour = fromHour % 12;
-    if (fromPeriod === 'PM') fromHour += 12;
-
-    toHour = toHour % 12;
-    if (toPeriod === 'PM') toHour += 12;
-
-    const fromTotal = fromHour * 60 + fromMin
-    const toTotal = toHour * 60 + toMin
-    let diff = toTotal - fromTotal
-    if (diff < 0) diff += 1440 // Handle midnight crossing
-    return diff
-  }
-
-  const format12h = (time24) => {
-    if (!time24) return '';
-    const [hours, minutes] = time24.split(':');
-    let h = parseInt(hours);
-    const m = minutes;
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12;
-    h = h ? h : 12;
-    return `${h.toString().padStart(2, '0')}:${m} ${ampm}`;
+    return {
+      produced,
+      rejectionProduced,
+      maxProduced: Math.max(produced, rejectionProduced)
+    };
   };
-
-  const handleOperatorChange = (value) => {
-    const operator = operators.find(op => op.employee_id === value)
-    setTimeLogForm(prev => ({
-      ...prev,
-      employee_id: value,
-      operator_name: operator ? `${operator.first_name} ${operator.last_name}` : ''
-    }))
-  }
 
   const handleAddTimeLog = async (e) => {
     e.preventDefault()
+    
+    // Frontend validation
+    const increase = calculatePotentialIncrease('timeLog', timeLogForm);
+    if (totalProducedQty + increase > maxAllowedQty + 0.0001) {
+      toast.addToast(`Quantity exceeds limit. Current: ${totalProducedQty.toFixed(2)}, Increase: ${increase.toFixed(2)}, Allowed: ${maxAllowedQty.toFixed(2)}`, 'error');
+      return;
+    }
+
     try {
-      if (!timeLogForm.employee_id) {
-        toast.addToast('Please select an operator', 'error')
-        return
-      }
-      if (!timeLogForm.machine_id) {
-        toast.addToast('Please select a workstation', 'error')
-        return
-      }
-
-      const newQty = parseFloat(timeLogForm.completed_qty) || 0;
-      if (totalProducedQty + newQty > maxAllowedQty + 0.0001) {
-        toast.addToast(`Total completed quantity (${(totalProducedQty + newQty).toFixed(2)}) cannot exceed allowed quantity (${maxAllowedQty.toFixed(2)}). Previous operation output/planned quantity is the limit.`, 'error');
-        return;
-      }
-
       setFormLoading(true)
-      const payload = {
-        job_card_id: jobCardId,
-        day_number: parseInt(timeLogForm.day_number) || 1,
-        log_date: timeLogForm.log_date,
-        employee_id: timeLogForm.employee_id,
-        operator_name: timeLogForm.operator_name,
-        workstation_name: timeLogForm.machine_id,
-        shift: timeLogForm.shift,
-        from_time: formatTo24h(timeLogForm.from_time, timeLogForm.from_period),
-        to_time: formatTo24h(timeLogForm.to_time, timeLogForm.to_period),
-        completed_qty: parseFloat(timeLogForm.completed_qty) || 0,
-        inhouse: timeLogForm.inhouse ? 1 : 0,
-        outsource: timeLogForm.outsource ? 1 : 0,
-        time_in_minutes: calculateTimeDuration()
-      }
-
-      await productionService.createTimeLog(payload)
-      toast.addToast('Time log added successfully', 'success')
-
-      const currentDayNumber = timeLogForm.day_number;
-      const currentLogDate = timeLogForm.log_date;
-
-      const defaultWorkstation = jobCardData?.assigned_workstation_id || workstations[0]?.name || ''
-      setTimeLogForm({
-        employee_id: '',
-        operator_name: '',
-        machine_id: defaultWorkstation,
-        shift: 'A',
-        day_number: currentDayNumber,
-        log_date: currentLogDate,
-        from_time: '',
-        from_period: 'AM',
-        to_time: '',
-        to_period: 'AM',
-        completed_qty: 0,
-        inhouse: jobCardData?.inhouse || false,
-        outsource: jobCardData?.outsource || false
+      const response = await productionService.createTimeLog({
+        ...timeLogForm,
+        job_card_id: jobCardId
       })
-
-      setTimeout(() => {
-        fetchTimeLogs()
-      }, 300)
+      toast.addToast('Time log added successfully', 'success')
+      setTimeLogForm({
+        ...timeLogForm,
+        completed_qty: 0,
+        ...getShiftTimings(timeLogForm.shift)
+      })
+      fetchAllData()
     } catch (err) {
       toast.addToast(err.message || 'Failed to add time log', 'error')
     } finally {
@@ -703,197 +625,88 @@ export default function ProductionEntry() {
     }
   }
 
-  const calculateDayNumber = (logDate) => {
-    if (!logDate || !jobCardData?.created_at) return 1;
-    const start = new Date(jobCardData.created_at);
-    start.setHours(0, 0, 0, 0);
-    const current = new Date(logDate);
-    current.setHours(0, 0, 0, 0);
-    const diffTime = current - start;
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays > 0 ? diffDays : 1;
-  }
-
-  const calculateDateFromDay = (dayNum) => {
-    if (!dayNum || isNaN(dayNum)) return new Date().toISOString().split('T')[0];
-    if (!jobCardData?.created_at) return new Date().toISOString().split('T')[0];
-    const start = new Date(jobCardData.created_at);
-    start.setHours(0, 0, 0, 0);
-    const target = new Date(start);
-    target.setDate(start.getDate() + (parseInt(dayNum) - 1));
-    return target.toISOString().split('T')[0];
-  }
-
-  useEffect(() => {
-    if (jobCardData?.created_at) {
-      const today = new Date().toISOString().split('T')[0];
-      setTimeLogForm(prev => ({ ...prev, log_date: today }));
-      setRejectionForm(prev => ({ ...prev, log_date: today }));
-      setDowntimeForm(prev => ({ ...prev, log_date: today }));
-    }
-  }, [jobCardData])
-
-  const handleDayChange = (dayNum, formType) => {
-    const newDate = dayNum ? calculateDateFromDay(dayNum) : (jobCardData?.created_at ? new Date().toISOString().split('T')[0] : '');
-    // Sync across all forms
-    setTimeLogForm(prev => ({ ...prev, day_number: dayNum, ...(dayNum && { log_date: newDate }) }));
-    setRejectionForm(prev => ({ ...prev, day_number: dayNum, ...(dayNum && { log_date: newDate }) }));
-    setDowntimeForm(prev => ({ ...prev, day_number: dayNum, ...(dayNum && { log_date: newDate }) }));
-  }
-
-  const handleDateChange = (date, formType) => {
-    const dayNum = calculateDayNumber(date);
-    // Sync across all forms
-    setTimeLogForm(prev => ({ ...prev, log_date: date, day_number: dayNum }));
-    setRejectionForm(prev => ({ ...prev, log_date: date, day_number: dayNum }));
-    setDowntimeForm(prev => ({ ...prev, log_date: date, day_number: dayNum }));
-  }
-
-  const handleDeleteTimeLog = async (logId) => {
-    if (!window.confirm('Delete this time log?')) return
-    try {
-      await productionService.deleteTimeLog(logId)
-      toast.addToast('Time log deleted', 'success')
-      fetchTimeLogs()
-    } catch (err) {
-      toast.addToast('Failed to delete time log', 'error')
-    }
-  }
-
   const handleAddRejection = async (e) => {
     e.preventDefault()
 
-    if (rejectionForm.accepted_qty <= 0 && rejectionForm.rejected_qty <= 0 && rejectionForm.scrap_qty <= 0) {
-      toast.addToast('Please enter at least one quantity', 'error')
-      return
-    }
-
-    if (rejectionForm.rejected_qty > 0 && !rejectionForm.reason) {
-      toast.addToast('Please select a reason for rejection', 'error')
-      return
-    }
-
-    const newAcceptedQty = parseFloat(rejectionForm.accepted_qty) || 0;
-    if (totalAcceptedQty + newAcceptedQty > maxAllowedQty + 0.0001) {
-      toast.addToast(`Total accepted quantity (${(totalAcceptedQty + newAcceptedQty).toFixed(2)}) cannot exceed allowed quantity (${maxAllowedQty.toFixed(2)}). Previous operation output/planned quantity is the limit.`, 'error');
+    // Frontend validation
+    const increase = calculatePotentialIncrease('rejection', rejectionForm);
+    if (totalProducedQty + increase > maxAllowedQty + 0.0001) {
+      toast.addToast(`Quantity exceeds limit. Current: ${totalProducedQty.toFixed(2)}, Increase: ${increase.toFixed(2)}, Allowed: ${maxAllowedQty.toFixed(2)}`, 'error');
       return;
     }
 
     try {
       setFormLoading(true)
-      const payload = {
+      await productionService.createRejection({
+        ...rejectionForm,
         job_card_id: jobCardId,
-        day_number: parseInt(rejectionForm.day_number) || 1,
-        log_date: rejectionForm.log_date,
-        shift: rejectionForm.shift || 'A',
-        accepted_qty: parseFloat(rejectionForm.accepted_qty) || 0,
-        rejection_reason: rejectionForm.reason,
-        rejected_qty: parseFloat(rejectionForm.rejected_qty) || 0,
-        scrap_qty: parseFloat(rejectionForm.scrap_qty) || 0,
-        notes: rejectionForm.notes
-      }
-
-      await productionService.createRejection(payload)
-      toast.addToast('Quality record added successfully', 'success')
-
-      const currentDayNumber = rejectionForm.day_number;
-      const currentLogDate = rejectionForm.log_date;
-
-      setRejectionForm({
-        reason: '',
-        day_number: currentDayNumber,
-        log_date: currentLogDate,
-        accepted_qty: 0,
-        rejected_qty: 0,
-        scrap_qty: 0,
-        notes: ''
+        rejection_reason: rejectionForm.reason
       })
-
-      setTimeout(() => {
-        fetchRejections()
-      }, 300)
+      toast.addToast('Quality entry added successfully', 'success')
+      setRejectionForm({ ...rejectionForm, accepted_qty: 0, rejected_qty: 0, scrap_qty: 0, reason: '' })
+      fetchAllData()
     } catch (err) {
-      toast.addToast(err.message || 'Failed to add rejection', 'error')
+      toast.addToast(err.message || 'Failed to add quality entry', 'error')
     } finally {
       setFormLoading(false)
-    }
-  }
-
-  const handleDeleteRejection = async (rejectionId) => {
-    if (!window.confirm('Delete this rejection entry?')) return
-    try {
-      await productionService.deleteRejection(rejectionId)
-      toast.addToast('Rejection entry deleted', 'success')
-      fetchRejections()
-    } catch (err) {
-      toast.addToast('Failed to delete rejection', 'error')
     }
   }
 
   const handleAddDowntime = async (e) => {
     e.preventDefault()
-
-    if (!downtimeForm.type || !downtimeForm.from_time || !downtimeForm.to_time) {
-      toast.addToast('Please fill all required fields', 'error')
-      return
-    }
-
     try {
       setFormLoading(true)
-      const durationMinutes = calculateDowntimeDuration(
-        downtimeForm.from_time,
-        downtimeForm.to_time,
-        downtimeForm.from_period,
-        downtimeForm.to_period
-      )
-
-      const payload = {
-        job_card_id: jobCardId,
-        day_number: parseInt(downtimeForm.day_number) || 1,
-        log_date: downtimeForm.log_date,
-        shift: downtimeForm.shift || 'A',
-        downtime_type: downtimeForm.type,
-        downtime_reason: downtimeForm.reason,
-        from_time: formatTo24h(downtimeForm.from_time, downtimeForm.from_period),
-        to_time: formatTo24h(downtimeForm.to_time, downtimeForm.to_period),
-        duration_minutes: durationMinutes
-      }
-
-      await productionService.createDowntime(payload)
-      toast.addToast('Downtime entry recorded', 'success')
-
-      const currentDayNumber = downtimeForm.day_number;
-      const currentLogDate = downtimeForm.log_date;
-
-      setDowntimeForm({
-        type: '',
-        reason: '',
-        day_number: currentDayNumber,
-        log_date: currentLogDate,
-        from_time: '',
-        from_period: 'AM',
-        to_time: '',
-        to_period: 'AM'
+      await productionService.createDowntime({
+        ...downtimeForm,
+        job_card_id: jobCardId
       })
-
-      setTimeout(() => {
-        fetchDowntimes()
-      }, 300)
+      toast.addToast('Downtime entry added successfully', 'success')
+      setDowntimeForm({ 
+        ...downtimeForm, 
+        downtime_reason: '',
+        ...getShiftTimings(downtimeForm.shift)
+      })
+      fetchAllData()
     } catch (err) {
-      toast.addToast(err.message || 'Failed to add downtime', 'error')
+      toast.addToast(err.message || 'Failed to add downtime entry', 'error')
     } finally {
       setFormLoading(false)
     }
   }
 
-  const handleDeleteDowntime = async (downtimeId) => {
-    if (!window.confirm('Delete this downtime entry?')) return
-    try {
-      await productionService.deleteDowntime(downtimeId)
-      toast.addToast('Downtime entry deleted', 'success')
-      fetchDowntimes()
-    } catch (err) {
-      toast.addToast('Failed to delete downtime', 'error')
+  const handleDeleteTimeLog = async (id) => {
+    if (window.confirm('Remove this time log?')) {
+      try {
+        await productionService.deleteTimeLog(id)
+        toast.addToast('Entry removed', 'success')
+        fetchAllData()
+      } catch (err) {
+        toast.addToast(err.message || 'Failed to remove entry', 'error')
+      }
+    }
+  }
+
+  const handleDeleteRejection = async (id) => {
+    if (window.confirm('Remove this quality entry?')) {
+      try {
+        await productionService.deleteRejection(id)
+        toast.addToast('Entry removed', 'success')
+        fetchAllData()
+      } catch (err) {
+        toast.addToast(err.message || 'Failed to remove entry', 'error')
+      }
+    }
+  }
+
+  const handleDeleteDowntime = async (id) => {
+    if (window.confirm('Remove this downtime entry?')) {
+      try {
+        await productionService.deleteDowntime(id)
+        toast.addToast('Entry removed', 'success')
+        fetchAllData()
+      } catch (err) {
+        toast.addToast(err.message || 'Failed to remove entry', 'error')
+      }
     }
   }
 
@@ -901,110 +714,172 @@ export default function ProductionEntry() {
     try {
       setIsSubmitting(true)
 
-      const plannedQty = parseFloat(jobCardData?.planned_quantity || 0)
+      const totalAccepted = totalAcceptedQty
 
-      if (totalProducedQty > maxAllowedQty + 0.0001) {
-        toast.addToast(`Validation Error: Total produced quantity (${totalProducedQty.toFixed(2)}) exceeds allowed quantity (${maxAllowedQty.toFixed(2)}).`, 'error');
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (totalAcceptedQty > maxAllowedQty + 0.0001) {
-        toast.addToast(`Validation Error: Total accepted quantity (${totalAcceptedQty.toFixed(2)}) exceeds allowed quantity (${maxAllowedQty.toFixed(2)}).`, 'error');
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (totalProducedQty < plannedQty) {
-        const shortfall = (plannedQty - totalProducedQty).toFixed(2)
-        if (!window.confirm(`Warning: Produced quantity (${totalProducedQty.toFixed(2)}) is less than planned (${plannedQty.toFixed(2)}). Shortfall: ${shortfall} units. Continue anyway?`)) {
-          return
-        }
-      }
-
-      const updatePayload = {
+      await productionService.updateJobCard(jobCardId, {
         status: 'completed',
-        produced_quantity: totalProducedQty,
-        accepted_quantity: totalAcceptedQty,
-        rejected_quantity: totalRejectedQty,
-        scrap_quantity: totalScrapQty
-      }
+        actual_end_date: new Date().toISOString()
+      })
 
-      await productionService.updateJobCard(jobCardData.job_card_id, updatePayload)
+      if (nextOperationForm.next_operation_id) {
+        // Find the selected operation's details to get its sequence
+        const selectedOp = operations.find(op => 
+          (op.operation_id || op.id || op.operation_name || op.name) === nextOperationForm.next_operation_id
+        );
+        
+        const selectedSeq = selectedOp ? parseInt(selectedOp.sequence || selectedOp.seq || selectedOp.operation_seq || 0) : 0;
 
-      let successMessage = 'Production completed successfully'
-
-      if (nextOperationForm.next_operation_id && nextOperationForm.next_warehouse_id) {
-        const selectedOp = operations.find(op =>
-          (op.operation_id || op.id) === nextOperationForm.next_operation_id ||
-          (op.operation_name || op.name) === nextOperationForm.next_operation_id
+        const nextJobCard = allJobCards.find(c =>
+          (c.operation_id === nextOperationForm.next_operation_id ||
+            c.operation === nextOperationForm.next_operation_id) &&
+          parseInt(c.operation_sequence) === selectedSeq
         )
 
-        const nextSequence = (parseInt(jobCardData.operation_sequence) || 0) + 1
-        const existingNextJobCard = allJobCards.find(jc => 
-          parseInt(jc.operation_sequence) === nextSequence
-        )
-
-        if (existingNextJobCard) {
-          const updatePayload = {
-            planned_quantity: totalAcceptedQty,
-            ...(nextOperationForm.next_operator_id && { operator_id: nextOperationForm.next_operator_id }),
-            machine_id: selectedOp?.workstation_type || selectedOp?.workstation_name || jobCardData.machine_id || jobCardData.assigned_workstation_id
-          }
-          await productionService.updateJobCard(existingNextJobCard.job_card_id, updatePayload)
-        } else {
-          const nextJobCard = {
-            work_order_id: jobCardData.work_order_id,
-            operation: selectedOp?.operation_name || selectedOp?.name,
-            machine_id: selectedOp?.workstation_type || selectedOp?.workstation_name || jobCardData.machine_id || jobCardData.assigned_workstation_id,
-            ...(nextOperationForm.next_operator_id && { operator_id: nextOperationForm.next_operator_id }),
-            planned_quantity: totalAcceptedQty,
-            operation_sequence: nextSequence,
+        if (nextJobCard) {
+          await productionService.updateJobCard(nextJobCard.job_card_id, {
+            planned_quantity: totalAccepted,
+            operator_id: nextOperationForm.next_operator_id,
+            machine_id: nextOperationForm.next_machine_id,
             status: 'draft'
-          }
-          await productionService.createJobCard(nextJobCard)
+          })
         }
-
-        successMessage = 'Production completed and next operation updated successfully'
       }
 
-      toast.addToast(successMessage, 'success')
-
-      setTimeout(() => {
-        navigate('/manufacturing/job-cards')
-      }, 1500)
+      toast.addToast('Production stage completed successfully', 'success')
+      navigate('/manufacturing/job-cards')
     } catch (err) {
-      toast.addToast(err.message || 'Failed to assign next operation', 'error')
+      toast.addToast(err.message || 'Failed to complete production', 'error')
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  const generateDailyReport = () => {
+    const reportData = {};
+
+    // Process time logs for produced quantity
+    timeLogs.forEach(log => {
+      const dateKey = new Date(log.log_date).toISOString().split('T')[0];
+      const shiftKey = log.shift;
+      const key = `${dateKey}_${shiftKey}`;
+
+      if (!reportData[key]) {
+        reportData[key] = {
+          date: dateKey,
+          shift: shiftKey,
+          operator: log.operator_name,
+          produced: 0,
+          accepted: 0,
+          rejected: 0,
+          scrap: 0,
+          downtime: 0
+        };
+      }
+      reportData[key].produced += parseFloat(log.completed_qty || 0);
+    });
+
+    // Process rejections for quality data
+    rejections.forEach(rej => {
+      const dateKey = new Date(rej.log_date).toISOString().split('T')[0];
+      const shiftKey = rej.shift;
+      const key = `${dateKey}_${shiftKey}`;
+
+      if (!reportData[key]) {
+        reportData[key] = {
+          date: dateKey,
+          shift: shiftKey,
+          operator: 'N/A',
+          produced: 0,
+          accepted: 0,
+          rejected: 0,
+          scrap: 0,
+          downtime: 0
+        };
+      }
+      reportData[key].accepted += parseFloat(rej.accepted_qty || 0);
+      reportData[key].rejected += parseFloat(rej.rejected_qty || 0);
+      reportData[key].scrap += parseFloat(rej.scrap_qty || 0);
+    });
+
+    // Process downtimes
+    downtimes.forEach(down => {
+      const dateKey = new Date(down.log_date).toISOString().split('T')[0];
+      const shiftKey = down.shift;
+      const key = `${dateKey}_${shiftKey}`;
+
+      if (!reportData[key]) {
+        reportData[key] = {
+          date: dateKey,
+          shift: shiftKey,
+          operator: 'N/A',
+          produced: 0,
+          accepted: 0,
+          rejected: 0,
+          scrap: 0,
+          downtime: 0
+        };
+      }
+      reportData[key].downtime += parseFloat(down.duration_minutes || 0);
+    });
+
+    return Object.values(reportData).sort((a, b) => new Date(b.date) - new Date(a.date) || b.shift.localeCompare(a.shift));
+  };
+
+  const downloadReport = () => {
+    const data = generateDailyReport();
+    const headers = ['Date', 'Shift', 'Operator', 'Produced', 'Accepted', 'Rejected', 'Scrap', 'Downtime (min)'];
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => [
+        row.date,
+        row.shift,
+        `"${row.operator || 'N/A'}"`,
+        row.produced.toFixed(2),
+        row.accepted.toFixed(2),
+        row.rejected.toFixed(2),
+        row.scrap.toFixed(2),
+        row.downtime.toFixed(0)
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Daily_Production_Report_${jobCardId}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-gray-600">Loading production entry data...</div>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-4">
+        <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
+        <p className="text-slate-500 font-medium animate-pulse">Syncing Production Environment...</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-4 pb-20">
-      <div className="max-w-[1600px] mx-auto space-y-6">
-        {/* Unified Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-2 rounded border border-slate-200">
+    <div className="min-h-screen bg-slate-50/50 p-2 font-sans antialiased text-slate-900">
+
+      <div className="w-full mx-auto">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-100">
-              <Activity className="w-6 h-6 text-white" />
+            <div className="w-8 h-8 bg-slate-900 rounded flex items-center justify-center shadow-lg shadow-slate-200">
+              <Activity className="text-white" size={24} />
             </div>
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-xl  text-slate-900 tracking-tight">
+                <h1 className="text-xl  text-slate-900 ">
                   Production Entry
                 </h1>
                 <StatusBadge status={jobCardData?.status} />
               </div>
-              <p className="text-sm text-slate-500 flex items-center gap-2">
+              <p className="text-xs text-slate-500 flex items-center gap-2">
                 <span className="font-medium text-slate-700">{jobCardData?.job_card_id || 'LOADING...'}</span>
                 <span className="text-slate-300">•</span>
                 <span>{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
@@ -1013,154 +888,75 @@ export default function ProductionEntry() {
           </div>
 
           <div className="flex items-center gap-3">
-             <button
+            <button
               onClick={() => navigate('/manufacturing/job-cards')}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-lg transition-all"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-slate-50 hover:bg-slate-100 rounded transition-all"
             >
-              <ArrowLeft size={16} />
+              <ArrowLeft size={15} />
               Back
             </button>
-            <button
-              onClick={handleSubmitProduction}
-              disabled={isSubmitting}
-              className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 shadow-lg shadow-slate-200 transition-all text-sm font-medium"
-            >
-              {isSubmitting ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <CheckCircle size={18} />
-              )}
-              COMPLETE PRODUCTION
-            </button>
+            {isOperationFinished && normalizeStatus(jobCardData?.status) !== 'completed' && (
+              <button
+                onClick={handleSubmitProduction}
+                disabled={isSubmitting}
+                className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50 shadow-lg shadow-emerald-200 transition-all text-sm font-medium animate-bounce"
+              >
+                {isSubmitting ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <CheckCircle size={15} />
+                )}
+                Complete Production
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-6">
-          {/* Left Column: Context & Navigation */}
-          <div className="col-span-12 lg:col-span-3 space-y-6">
-            {/* Quick Navigation Card */}
-            <Card className="p-4 border-slate-200 shadow-sm bg-white rounded-xl">
-              <h3 className="text-xs  text-slate-400  mb-4 px-2">
-                Navigation
-              </h3>
-              <div className="space-y-1">
-                <NavItem 
-                  label="Time Logs" 
-                  icon={Clock} 
-                  section="time-logs" 
-                  isActive={activeSection === 'time-logs'} 
-                  onClick={scrollToSection}
-                />
-                <NavItem 
-                  label="Quality Check" 
-                  icon={ShieldCheck} 
-                  section="quality-entry" 
-                  isActive={activeSection === 'quality-entry'} 
-                  onClick={scrollToSection}
-                  color="emerald"
-                />
-                <NavItem 
-                  label="Downtime Logs" 
-                  icon={AlertTriangle} 
-                  section="downtime" 
-                  isActive={activeSection === 'downtime'} 
-                  onClick={scrollToSection}
-                  color="amber"
-                />
-                <NavItem 
-                  label="Next Operation" 
-                  icon={ArrowRight} 
-                  section="next-operation" 
-                  isActive={activeSection === 'next-operation'} 
-                  onClick={scrollToSection}
-                  color="indigo"
-                />
+        {/* New Horizontal Context & Stats Bar */}
+        <div className="grid grid-cols-12 gap-4 mb28">
+          {/* Target Item Card - Horizontal Layout */}
+          <Card className="col-span-12 xl:col-span-6 border-slate-100 bg-white p-4 flex flex-col md:flex-row items-start md:items-center gap-6 ">
+            <div className="flex items-center gap-4 flex-1">
+              <div className="w-12 h-12 bg-slate-50 rounded flex items-center justify-center border border-slate-100 shrink-0">
+                <Package className="text-slate-400" size={24} />
               </div>
-            </Card>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Target Item</p>
+                <h2 className="text-base text-slate-900 truncate font-medium" title={itemName || jobCardData?.item_name}>
+                  {itemName || jobCardData?.item_name || 'N/A'}
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">{jobCardData?.item_code || '---'}</p>
+              </div>
+            </div>
 
-            <Card className=" border-none bg-white rounded ">
-              <div className="p-2 bg-slate-900 text-white flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/10 rounded-lg">
-                    <Layout size={18} className="text-white" />
-                  </div>
-                  <h3 className="text-xs ">Context</h3>
-                </div>
-                <div className="p-2 bg-white/10 rounded text-xs border border-white/10">
-                  {jobCardData?.status || 'Draft'}
+            <div className="h-10 w-px bg-slate-100 hidden md:block" />
+
+            <div className="flex items-center gap-8 px-2">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Planned</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg text-slate-900 font-bold">
+                    {parseFloat(jobCardData?.planned_quantity || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                  </span>
+                  <span className="text-xs text-slate-400">Units</span>
                 </div>
               </div>
-
-              <div className="p-2 ">
-                <div>
-                  <p className="text-xs  text-slate-400  mb-3">Target Item</p>
-                  <div className="p-2 bg-slate-50 border border-slate-100 rounded">
-                    <p className="text-sm  text-slate-900 leading-tight">
-                      {itemName || jobCardData?.item_name || 'N/A'}
-                    </p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Package size={12} className="text-slate-400" />
-                      <p className="text-xs  text-slate-500 tracking-tight">
-                        {jobCardData?.item_code || '---'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-xs  text-slate-400  mb-1">Planned</p>
-                    <div className="flex items-baseline gap-1">
-                      <p className="text-lg text-slate-900">
-                        {parseFloat(jobCardData?.planned_quantity || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                      </p>
-                      <span className="text-xs  text-slate-400 ">Units</span>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs  text-slate-400  mb-1">Current Op</p>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                      <p className="text-[11px]  text-indigo-600  truncate" title={jobCardData?.operation}>
-                        {jobCardData?.operation || 'N/A'}
-                      </p>
-                    </div>
-                  </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Current Op</p>
+                <div className="flex items-center gap-2 text-indigo-600">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                  <span className="text-sm font-bold truncate max-w-[120px]" title={jobCardData?.operation}>
+                    {jobCardData?.operation || 'N/A'}
+                  </span>
                 </div>
               </div>
-            </Card>
+            </div>
+          </Card>
 
-            {previousOperationData && (
-              <Card className="p-0 border-none bg-emerald-50/20 rounded-2xl overflow-hidden border border-emerald-100/50">
-                <div className="p-3 bg-emerald-600 text-white flex items-center gap-2">
-                  <CheckCircle size={14} />
-                  <h3 className="text-xs  tracking-[0.2em] text-white/90">Previous Phase</h3>
-                </div>
-                <div className="p-2 space-y-2">
-                  <div>
-                    <p className="text-[9px]  text-emerald-600/70  mb-1">Operation</p>
-                    <p className="text-[11px]  text-slate-900 ">{previousOperationData.operation}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-[9px]  text-slate-400  mb-1">Accepted</p>
-                      <p className="text-sm  text-emerald-600">
-                        {parseFloat(parseFloat(previousOperationData.accepted_quantity) || ((parseFloat(previousOperationData.produced_quantity) || 0) - (parseFloat(previousOperationData.rejected_quantity) || 0))).toLocaleString()}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[9px]  text-slate-400  mb-1">Rejected</p>
-                      <p className="text-sm  text-rose-500">
-                        {parseFloat(previousOperationData.rejected_quantity || 0).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            )}
-
+          {/* Stats Section - Horizontal Layout */}
+          <div className="col-span-12 xl:col-span-6">
             {(() => {
-              const expectedMinutes = (operationCycleTime || 0) * (salesOrderQuantity || 1)
+              const expectedMinutes = (operationCycleTime || 0) * (totalProducedQty || 0)
               const actualMinutes = timeLogs.reduce((sum, log) => {
                 if (log.from_time && log.to_time) {
                   const [fh, fm] = log.from_time.split(':').map(Number)
@@ -1174,7 +970,7 @@ export default function ProductionEntry() {
               const qualityScore = totalProducedQty > 0 ? ((totalAcceptedQty / totalProducedQty) * 100).toFixed(1) : 0
 
               return (
-                <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-4 h-full">
                   <StatCard
                     label="Efficiency"
                     value={`${efficiency}%`}
@@ -1185,7 +981,7 @@ export default function ProductionEntry() {
                   <StatCard
                     label="Quality"
                     value={`${qualityScore}%`}
-                    icon={CheckCircle2}
+                    icon={ShieldCheck}
                     color={qualityScore >= 98 ? 'emerald' : 'amber'}
                     subtitle="ACCEPTANCE RATE"
                   />
@@ -1200,72 +996,185 @@ export default function ProductionEntry() {
               )
             })()}
           </div>
+        </div>
+        <Card className="p-2  border-slate-200 bg-white rounded">
 
-          <div className="col-span-12 lg:col-span-9 space-y-8">
-            {/* Time Logs Section */}
-            <div id="time-logs" className="animate-in fade-in slide-in-from-bottom-2 bg-white duration-300">
-              <Card className="p-3 border-none  overflow-visible">
-                <SectionTitle title="Add Time Log" icon={Plus} />
-                <form onSubmit={handleAddTimeLog} className="flex flex-wrap gap-2 ">
-                  <FieldWrapper label="Day & Date" required>
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        min="1"
-                        value={timeLogForm.day_number}
-                        onChange={(e) => handleDayChange(e.target.value, 'timeLog')}
-                        className="w-14 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                        required
-                      />
-                      <input
-                        type="date"
-                        value={timeLogForm.log_date}
-                        onChange={(e) => handleDateChange(e.target.value, 'timeLog')}
-                        className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                        required
-                      />
+          <div className="space-y-1 flex">
+            <NavItem
+              label="Time Logs"
+              icon={Clock}
+              section="time-logs"
+              isActive={activeSection === 'time-logs'}
+              onClick={scrollToSection}
+            />
+            <NavItem
+              label="Quality Check"
+              icon={ShieldCheck}
+              section="quality-entry"
+              isActive={activeSection === 'quality-entry'}
+              onClick={scrollToSection}
+              color="emerald"
+            />
+            <NavItem
+              label="Downtime Logs"
+              icon={AlertTriangle}
+              section="downtime"
+              isActive={activeSection === 'downtime'}
+              onClick={scrollToSection}
+              color="amber"
+            />
+            <NavItem
+              label="Next Operation"
+              icon={ArrowRight}
+              section="next-operation"
+              isActive={activeSection === 'next-operation'}
+              onClick={scrollToSection}
+              color="indigo"
+            />
+            <NavItem
+              label="Daily Report"
+              icon={FileText}
+              section="daily-report"
+              isActive={activeSection === 'daily-report'}
+              onClick={scrollToSection}
+              color="rose"
+            />
+          </div>
+        </Card>
+        <div className="grid grid-cols-12 gap-2">
+          {/* Left Column: Navigation Only */}
+          <div className="col-span-12 lg:col-span-2">
+            <div className="sticky top-8 space-y-6">
+              {/* Quick Navigation Card */}
+
+
+              {previousOperationData && (
+                <Card className="p-0 border-none bg-emerald-50/20 rounded-xl overflow-hidden border border-emerald-100/50 ">
+                  <div className="p-3 bg-emerald-600 text-white flex items-center gap-2">
+                    <CheckCircle size={14} />
+                    <h3 className="text-[10px] uppercase tracking-wider font-bold text-white/90">Previous Phase</h3>
+                  </div>
+                  <div className="p-3 space-y-3">
+                    <div>
+                      <p className="text-[9px] uppercase tracking-wider text-emerald-600/70 mb-1 font-semibold">Operation</p>
+                      <p className="text-xs text-slate-900 font-medium">{previousOperationData.operation}</p>
                     </div>
-                  </FieldWrapper>
+                    <div className="grid grid-cols-2 gap-4 pt-2 border-t border-emerald-100">
+                      <div>
+                        <p className="text-[9px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Accepted</p>
+                        <p className="text-sm text-emerald-600 font-bold">
+                          {parseFloat(parseFloat(previousOperationData.accepted_quantity) || ((parseFloat(previousOperationData.produced_quantity) || 0) - (parseFloat(previousOperationData.rejected_quantity) || 0))).toLocaleString()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Rejected</p>
+                        <p className="text-sm text-rose-500 font-bold">
+                          {parseFloat(previousOperationData.rejected_quantity || 0).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              )}
+            </div>
+          </div>
 
-                  <FieldWrapper label="Operator" required>
-                    <SearchableSelect
-                      value={timeLogForm.employee_id}
-                      onChange={handleOperatorChange}
-                      options={operators.map(op => ({
-                        value: op.employee_id,
-                        label: `${op.first_name} ${op.last_name}`
-                      }))}
-                      placeholder="Select Operator"
-                      containerClassName=" rounded bg-slate-50 border-slate-200 transition-all"
-                    />
-                  </FieldWrapper>
+          <div className="col-span-12 lg:col-span-12 ">
+            {/* Time Logs Section */}
+            <div id="time-logs" className="animate-in fade-in slide-in-from-bottom-2 bg-blue-50/50 duration-300 rounded-xl p-4">
+              <Card className="p-2 border-none bg-white/80 overflow-visible">
+                <SectionTitle title="Add Time Log" icon={Plus} />
+                <form onSubmit={handleAddTimeLog} className="grid grid-cols-12 gap-2  items-end items-end">
+                  <div className='col-span-3'>
+                    <FieldWrapper label="Day & Date" required >
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder='1'
+                          value={timeLogForm.day_number}
+                          onChange={(e) => handleDayChange(e.target.value, 'timeLog')}
+                          className="w-14 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                          required
+                        />
+                        <input
+                          type="date"
+                          value={timeLogForm.log_date}
+                          onChange={(e) => handleDateChange(e.target.value, 'timeLog')}
+                          className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                          required
+                        />
+                      </div>
+                      {(() => {
+                        const stats = getShiftStats(timeLogForm.log_date, timeLogForm.shift);
+                        return stats.maxProduced > 0 ? (
+                          <p className="text-[9px] text-indigo-600 mt-1 font-medium italic">
+                            Already logged in this shift: {stats.maxProduced.toFixed(0)} units
+                          </p>
+                        ) : null;
+                      })()}
+                    </FieldWrapper>
+                  </div>
 
-                  <FieldWrapper label="Workstation" required>
-                    <SearchableSelect
-                      value={timeLogForm.machine_id}
-                      onChange={(value) => setTimeLogForm({ ...timeLogForm, machine_id: value })}
-                      options={workstations.map(ws => ({
-                        value: ws.name || ws.workstation_name || ws.id,
-                        label: ws.workstation_name || ws.name || ws.id
-                      }))}
-                      placeholder="Select Machine"
-                      containerClassName=" rounded bg-slate-50 border-slate-200 transition-all"
-                    />
-                  </FieldWrapper>
+                  <div className='col-span-3'>
+                    <FieldWrapper label="Operator" required>
+                      <SearchableSelect
+                        value={timeLogForm.employee_id}
+                        onChange={handleOperatorChange}
+                        options={operators.map(op => ({
+                          value: op.employee_id,
+                          label: `${op.first_name} ${op.last_name}`
+                        }))}
+                        placeholder="Select Operator"
+                        containerClassName=" rounded bg-slate-50 border-slate-200 transition-all"
+                      />
+                    </FieldWrapper>
+                  </div>
+                  <div className='col-span-3'>
+                    <FieldWrapper label="Workstation" required>
+                      <SearchableSelect
+                        value={timeLogForm.machine_id}
+                        onChange={(value) => setTimeLogForm({ ...timeLogForm, machine_id: value })}
+                        options={workstations.map(ws => ({
+                          value: ws.name || ws.workstation_name || ws.id,
+                          label: ws.workstation_name || ws.name || ws.id
+                        }))}
+                        placeholder="Select Machine"
+                        containerClassName=" rounded bg-slate-50 border-slate-200 transition-all"
+                      />
+                    </FieldWrapper>
+                  </div>
+                  <div className='col-span-1'>
+                    <FieldWrapper label="Shift" required>
+                      <select
+                        value={timeLogForm.shift}
+                        onChange={(e) => handleShiftChange(e.target.value, 'timeLog')}
+                        className="w-full p-2  bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
+                      >
+                        {shifts.map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </FieldWrapper>
+                  </div>
 
-                  <FieldWrapper label="Shift" required>
-                    <select
-                      value={timeLogForm.shift}
-                      onChange={(e) => setTimeLogForm({ ...timeLogForm, shift: e.target.value })}
-                      className="w-full p-2  bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
-                    >
-                      {shifts.map(s => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </FieldWrapper>
+                  <div className='col-span-2'>
+                    <FieldWrapper label="Produce Qty" required>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={timeLogForm.completed_qty}
+                          onChange={(e) => setTimeLogForm({ ...timeLogForm, completed_qty: e.target.value })}
+                          className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                          required
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px]  text-slate-400 ">UNITS</span>
+                      </div>
+                    </FieldWrapper>
+                  </div>
 
-                  <div className="md:col-span-2">
+                  <div className="col-span-4">
                     <FieldWrapper label="Production Period" required>
                       <div className="flex gap-2 items-center">
                         <div className="flex flex-1 gap-1">
@@ -1307,563 +1216,646 @@ export default function ProductionEntry() {
                     </FieldWrapper>
                   </div>
 
-                  <FieldWrapper label="Completed Qty" required>
-                    <div className="relative">
+
+
+                  <div className="flex items-end flex-1 col-span-3">
+                    <button
+                      type="submit"
+                      disabled={formLoading}
+                      className="w-full p-2 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
+                    >
+                      {formLoading ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={14} />}
+                      Record Time
+                    </button>
+                  </div>
+                </form>
+
+                {/* Logs Table */}
+                <div className="mt-8 overflow-hidden rounded-xl border border-slate-100">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100">
+                        <th className="p-2  text-slate-400 ">Date / Shift</th>
+                        <th className="p-2  text-slate-400 ">Operator</th>
+                        <th className="p-2  text-slate-400 ">Time Interval</th>
+                        <th className="p-2  text-slate-400  text-right">Produced Qty</th>
+                        <th className="p-2  text-slate-400  text-center w-20">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {timeLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="p-8 text-center text-slate-400 italic">No production time recorded for this job card yet</td>
+                        </tr>
+                      ) : (
+                        timeLogs.map((log) => (
+                          <tr key={log.time_log_id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="p-3">
+                              <p className="font-medium text-slate-900">{new Date(log.log_date).toLocaleDateString()}</p>
+                              <p className="text-[10px] text-slate-400">Shift {log.shift}</p>
+                            </td>
+                            <td className="p-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-500 uppercase">
+                                  {log.operator_name?.charAt(0) || 'U'}
+                                </div>
+                                <span>{log.operator_name || 'N/A'}</span>
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <div className="flex items-center gap-2 text-slate-600">
+                                <Clock size={12} className="text-slate-300" />
+                                <span>{log.from_time} {log.from_period} - {log.to_time} {log.to_period}</span>
+                              </div>
+                            </td>
+                            <td className="p-3 text-right">
+                              <span className="font-bold text-indigo-600">{parseFloat(log.completed_qty).toLocaleString()}</span>
+                              <span className="ml-1 text-[10px] text-slate-400 uppercase tracking-wider">Units</span>
+                            </td>
+                            <td className="p-3 text-center">
+                              <button
+                                onClick={() => handleDeleteTimeLog(log.time_log_id)}
+                                className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
+
+            {/* Quality Check Section */}
+            <div id="quality-entry" className="animate-in fade-in slide-in-from-bottom-2 bg-emerald-50/50 duration-300 rounded-xl p-4">
+              <Card className="p-3 border-none bg-white/80">
+                <SectionTitle title="Quality & Rejection Entry" icon={ShieldCheck} />
+                <form onSubmit={handleAddRejection} className="grid grid-cols-12 gap-2  items-end">
+                  <div className='col-span-3'>
+                    <FieldWrapper label="Day & Date" required>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          min="1"
+                          value={rejectionForm.day_number}
+                          onChange={(e) => handleDayChange(e.target.value, 'rejection')}
+                          className="w-14 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                          required
+                        />
+                        <input
+                          type="date"
+                          value={rejectionForm.log_date}
+                          onChange={(e) => handleDateChange(e.target.value, 'rejection')}
+                          className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                          required
+                        />
+                      </div>
+                      {(() => {
+                        const stats = getShiftStats(rejectionForm.log_date, rejectionForm.shift);
+                        return stats.maxProduced > 0 ? (
+                          <p className="text-[9px] text-indigo-600 mt-1 font-medium italic">
+                            Already logged in this shift: {stats.maxProduced.toFixed(0)} units
+                          </p>
+                        ) : null;
+                      })()}
+                    </FieldWrapper>
+                  </div>
+
+                  <div className='col-span-1'>
+                    <FieldWrapper label="Shift" required>
+                      <select
+                        value={rejectionForm.shift}
+                        onChange={(e) => handleShiftChange(e.target.value, 'rejection')}
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
+                      >
+                        {shifts.map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </FieldWrapper>
+                  </div>
+
+                  <div className='col-span-1'>
+                    <FieldWrapper label="Produce Qty">
+                      <div className="p-2 bg-indigo-50 border border-indigo-100 rounded text-xs text-indigo-700 font-bold h-[34px] flex items-center justify-center">
+                        {(() => {
+                          const stats = getShiftStats(rejectionForm.log_date, rejectionForm.shift);
+                          return stats.produced.toFixed(0);
+                        })()}
+                      </div>
+                    </FieldWrapper>
+                  </div>
+
+                  <div className='col-span-2'>
+                    <FieldWrapper label="Rejection Reason">
+                      <select
+                        value={rejectionForm.reason}
+                        onChange={(e) => setRejectionForm({ ...rejectionForm, reason: e.target.value })}
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
+                      >
+                        <option value="">Select Reason</option>
+                        {rejectionReasons.map(r => (
+                          <option key={r} value={r}>{r}</option>
+                        ))}
+                      </select>
+                    </FieldWrapper>
+                  </div>
+
+
+                  <div className='col-span-1'>
+                    <FieldWrapper label="Accepted" required>
                       <input
                         type="number"
                         step="0.01"
-                        value={timeLogForm.completed_qty}
-                        onChange={(e) => setTimeLogForm({ ...timeLogForm, completed_qty: e.target.value })}
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        value={rejectionForm.accepted_qty}
+                        onChange={(e) => setRejectionForm({ ...rejectionForm, accepted_qty: e.target.value })}
+                        className="w-full p-2 bg-emerald-50/50 border border-emerald-100 rounded text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-emerald-700 font-bold"
                         required
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px]  text-slate-400 ">UNITS</span>
-                    </div>
-                  </FieldWrapper>
-
-                  <div className="flex items-end ">
-                    <button
-                      type="submit"
-                      disabled={formLoading}
-                      className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 shadow-md shadow-indigo-100 hover:shadow-lg transition-all text-xs p-2"
-                    >
-                      {formLoading ? (
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <Plus size={16} />
-                      )}
-                      Log Production
-                    </button>
+                    </FieldWrapper>
                   </div>
-                </form>
-              </Card>
-              <Card className="border-none  overflow-hidden">
-                <div className="p-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-1.5 bg-white text-indigo-600 rounded  border border-slate-100">
-                      <Clock size={16} />
-                    </div>
-                    <h3 className="text-[11px]  text-slate-900 text-xs ">Time Log History</h3>
-                  </div>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left bg-white">
-                    <thead>
-                      <tr className="bg-slate-50/50 border-b border-slate-100">
-                        <th className="p-2 text-xs text-slate-400 ">Operator</th>
-                        <th className="p-2 text-xs text-slate-400 ">Workstation</th>
-                        <th className="p-2 text-xs text-slate-400  text-center">Timing</th>
-                        <th className="p-2 text-xs text-slate-400  text-right">Qty</th>
-                        <th className="p-4 w-16"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {timeLogs.map((log) => (
-                        <tr key={log.id || log.time_log_id} className="group hover:bg-slate-50/50 transition-colors">
-                          <td className="p-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xs  text-slate-600 border border-slate-200">
-                                {log.operator_name?.split(' ').map(n => n[0]).join('')}
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium text-slate-900">{log.operator_name}</p>
-                                <p className="text-xs text-slate-400 ">Day {log.day_number}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            <span className="text-xs font-medium text-slate-600">{log.workstation_name}</span>
-                          </td>
-                          <td className="p-4 text-center">
-                            <div className="inline-flex items-center gap-3 p-2  py-1.5 bg-slate-50 rounded border border-slate-100">
-                              <span className="text-xs  text-slate-700">{format12h(log.from_time)}</span>
-                              <ArrowRight size={12} className="text-slate-300" />
-                              <span className="text-xs  text-slate-700">{format12h(log.to_time)}</span>
-                            </div>
-                          </td>
-                          <td className="p-4 text-right">
-                            <span className="text-sm  text-slate-900">{log.completed_qty}</span>
-                          </td>
-                          <td className="p-4 text-center">
-                            <button
-                              onClick={() => handleDeleteTimeLog(log.id || log.time_log_id)}
-                              className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all "
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            </div>
-            <div id="quality-entry" className=" animate-in fade-in slide-in-from-bottom-2 duration-300 bg-white">
-              <Card className="p-3 border-none ">
-                <SectionTitle title="Record Quality Entry" icon={ShieldCheck} />
-                <form onSubmit={handleAddRejection} className="flex flex-wrap gap-2">
-                  <FieldWrapper label="Day & Date" required>
-                    <div className="flex gap-2">
+                  <div className='col-span-1'>
+                    <FieldWrapper label="Rejected" required>
                       <input
                         type="number"
-                        min="1"
-                        value={rejectionForm.day_number}
-                        onChange={(e) => handleDayChange(e.target.value, 'rejection')}
-                        className="w-14 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        step="0.01"
+                        value={rejectionForm.rejected_qty}
+                        onChange={(e) => setRejectionForm({ ...rejectionForm, rejected_qty: e.target.value })}
+                        className="w-full p-2 bg-rose-50/50 border border-rose-100 rounded text-xs outline-none focus:ring-2 focus:ring-rose-500/20 transition-all text-rose-700 font-bold"
                         required
                       />
+                    </FieldWrapper>
+                  </div>
+                  <div className='col-span-1'>
+                    <FieldWrapper label="Scrap" required>
                       <input
-                        type="date"
-                        value={rejectionForm.log_date}
-                        onChange={(e) => handleDateChange(e.target.value, 'rejection')}
-                        className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        type="number"
+                        step="0.01"
+                        value={rejectionForm.scrap_qty}
+                        onChange={(e) => setRejectionForm({ ...rejectionForm, scrap_qty: e.target.value })}
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-slate-500/20 transition-all font-bold"
                         required
                       />
-                    </div>
-                  </FieldWrapper>
+                    </FieldWrapper>
+                  </div>
 
-                  <FieldWrapper label="Shift" required>
-                    <select
-                      value={rejectionForm.shift}
-                      onChange={(e) => setRejectionForm({ ...rejectionForm, shift: e.target.value })}
-                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
-                    >
-                      {shifts.map(s => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </FieldWrapper>
 
-                  <FieldWrapper label="Accepted Qty">
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={rejectionForm.accepted_qty}
-                      onChange={(e) => setRejectionForm({ ...rejectionForm, accepted_qty: e.target.value })}
-                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                    />
-                  </FieldWrapper>
-
-                  <FieldWrapper label="Rejected Qty">
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={rejectionForm.rejected_qty}
-                      onChange={(e) => setRejectionForm({ ...rejectionForm, rejected_qty: e.target.value })}
-                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                    />
-                  </FieldWrapper>
-
-                  <FieldWrapper label="Scrap Qty">
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={rejectionForm.scrap_qty}
-                      onChange={(e) => setRejectionForm({ ...rejectionForm, scrap_qty: e.target.value })}
-                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                    />
-                  </FieldWrapper>
-
-                  <FieldWrapper label="Reason">
-                    <SearchableSelect
-                      value={rejectionForm.reason}
-                      onChange={(value) => setRejectionForm({ ...rejectionForm, reason: value })}
-                      options={rejectionReasons.map(r => ({ value: r, label: r }))}
-                      placeholder="Select Reason"
-                      containerClassName=" rounded bg-slate-50 border-slate-200 transition-all"
-                    />
-                  </FieldWrapper>
-
-                  <FieldWrapper label="Notes">
-                    <input
-                      type="text"
-                      value={rejectionForm.notes}
-                      onChange={(e) => setRejectionForm({ ...rejectionForm, notes: e.target.value })}
-                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                      placeholder="Optional notes"
-                    />
-                  </FieldWrapper>
-
-                  <div className="flex items-end pb-0.5">
+                  <div className="col-span-2 ">
                     <button
                       type="submit"
                       disabled={formLoading}
-                      className="w-full p-2 flex items-center justify-center gap-2 bg-rose-600 text-white rounded hover:bg-rose-700 disabled:opacity-50 shadow-md shadow-rose-100 hover:shadow-lg transition-all text-xs "
+                      className="w-full p-2 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2"
                     >
-                      {formLoading ? (
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <ShieldCheck size={16} />
-                      )}
-                      Log Quality
+                      {formLoading ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={14} />}
+                      Save Entry
                     </button>
                   </div>
                 </form>
-              </Card>
 
-              <Card className="border-none  overflow-hidden">
-                <div className="p-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-1.5 bg-white text-rose-600 rounded  border border-slate-100">
-                      <ShieldCheck size={16} />
-                    </div>
-                    <h3 className="text-[11px]  text-slate-900 text-xs ">Quality History</h3>
-                  </div>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left bg-white">
+                <div className="mt-2  border border-slate-100">
+                  <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="bg-slate-50/50 border-b border-slate-100">
-                        <th className="p-2 text-xs text-slate-400 ">Date/Day</th>
-                        <th className="p-2 text-xs text-slate-400 ">Reason</th>
-                        <th className="p-2 text-xs text-slate-400  text-right">Accepted</th>
-                        <th className="p-2 text-xs text-slate-400  text-right">Rejected</th>
-                        <th className="p-4 w-16"></th>
+                      <tr className="bg-slate-50 border-b border-slate-100">
+                        <th className="p-2 text-slate-400">Date / Shift</th>
+                        <th className="p-2 text-slate-400">Status / Reason</th>
+                        <th className="p-2 text-slate-400 text-center">Accepted</th>
+                        <th className="p-2 text-slate-400 text-center">Rejected</th>
+                        <th className="p-2 text-slate-400 text-center">Scrap</th>
+                        <th className="p-2 text-slate-400 text-center w-20">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {rejections.map((rej) => (
-                        <tr key={rej.rejection_id} className="group hover:bg-slate-50/50 transition-colors">
-                          <td className="p-4">
-                            <p className="text-sm font-medium text-slate-900">{new Date(rej.log_date).toLocaleDateString()}</p>
-                            <p className="text-xs text-slate-400 ">Day {rej.day_number}</p>
-                          </td>
-                          <td className="p-4">
-                            <span className="text-xs font-medium text-slate-600">{rej.reason || rej.rejection_reason || 'N/A'}</span>
-                          </td>
-                          <td className="p-4 text-right">
-                            <span className="text-sm  text-emerald-600">{rej.accepted_qty}</span>
-                          </td>
-                          <td className="p-4 text-right">
-                            <span className="text-sm  text-rose-600">{rej.rejected_qty}</span>
-                          </td>
-                          <td className="p-4 text-center">
-                            <button
-                              onClick={() => handleDeleteRejection(rej.rejection_id)}
-                              className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all "
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </td>
+                    <tbody className="divide-y divide-slate-50">
+                      {rejections.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" className="p-8 text-center text-slate-400 italic">No quality inspection records found</td>
                         </tr>
-                      ))}
+                      ) : (
+                        rejections.map((rej) => (
+                          <tr key={rej.rejection_id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="p-3">
+                              <p className="font-medium text-slate-900">{new Date(rej.log_date).toLocaleDateString()}</p>
+                              <p className="text-[10px] text-slate-400 uppercase">Shift {rej.shift}</p>
+                            </td>
+                            <td className="p-3">
+                              <div className="flex flex-col gap-1">
+                                {parseFloat(rej.rejected_qty) > 0 ? (
+                                  <span className="p-1 bg-rose-50 text-rose-600 rounded text-[10px] font-bold w-fit uppercase">Defect Found</span>
+                                ) : (
+                                  <span className="p-1 bg-emerald-50 text-emerald-600 rounded text-[10px] font-bold w-fit uppercase">Passed</span>
+                                )}
+                                <span className="text-slate-500">{rej.rejection_reason || 'Standard Inspection'}</span>
+                              </div>
+                            </td>
+                            <td className="p-3 text-center">
+                              <span className="text-emerald-600 font-bold">{parseFloat(rej.accepted_qty).toLocaleString()}</span>
+                            </td>
+                            <td className="p-3 text-center">
+                              <span className="text-rose-500 font-bold">{parseFloat(rej.rejected_qty).toLocaleString()}</span>
+                            </td>
+                            <td className="p-3 text-center">
+                              <span className="text-slate-600 font-bold">{parseFloat(rej.scrap_qty).toLocaleString()}</span>
+                            </td>
+                            <td className="p-3 text-center">
+                              <button
+                                onClick={() => handleDeleteRejection(rej.rejection_id)}
+                                className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
               </Card>
             </div>
 
-<div id="downtime" className=" animate-in fade-in slide-in-from-bottom-2 duration-300 bg-white">
-          <Card className="p-3 border-none  overflow-visible">
-            <SectionTitle title="Record Downtime" icon={AlertTriangle} />
-            <form onSubmit={handleAddDowntime} className="flex flex-wrap gap-2">
-              <FieldWrapper label="Day & Date" required>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    min="1"
-                    value={downtimeForm.day_number}
-                    onChange={(e) => handleDayChange(e.target.value, 'downtime')}
-                    className="w-14 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                    required
-                  />
-                  <input
-                    type="date"
-                    value={downtimeForm.log_date}
-                    onChange={(e) => handleDateChange(e.target.value, 'downtime')}
-                    className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                    required
-                  />
-                </div>
-              </FieldWrapper>
-
-              <FieldWrapper label="Shift" required>
-                <select
-                  value={downtimeForm.shift}
-                  onChange={(e) => setDowntimeForm({ ...downtimeForm, shift: e.target.value })}
-                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
-                >
-                  {shifts.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </FieldWrapper>
-
-              <FieldWrapper label="Type" required>
-                <select
-                  value={downtimeForm.type}
-                  onChange={(e) => setDowntimeForm({ ...downtimeForm, type: e.target.value })}
-                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
-                  required
-                >
-                  <option value="">Select Type</option>
-                  {downtimeTypes.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </FieldWrapper>
-
-              <div className="md:col-span-2">
-                <FieldWrapper label="Timing" required>
-                  <div className="flex gap-2 items-center">
-                    <div className="flex flex-1 gap-1">
-                      <input
-                        type="time"
-                        value={downtimeForm.from_time}
-                        onChange={(e) => setDowntimeForm({ ...downtimeForm, from_time: e.target.value })}
-                        className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                        required
-                      />
-                      <select
-                        value={downtimeForm.from_period}
-                        onChange={(e) => setDowntimeForm({ ...downtimeForm, from_period: e.target.value })}
-                        className="p-2 bg-slate-100 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
-                      >
-                        <option value="AM">AM</option>
-                        <option value="PM">PM</option>
-                      </select>
-                    </div>
-                    <ArrowRight size={14} className="text-slate-300 shrink-0" />
-                    <div className="flex flex-1 gap-1">
-                      <input
-                        type="time"
-                        value={downtimeForm.to_time}
-                        onChange={(e) => setDowntimeForm({ ...downtimeForm, to_time: e.target.value })}
-                        className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                        required
-                      />
-                      <select
-                        value={downtimeForm.to_period}
-                        onChange={(e) => setDowntimeForm({ ...downtimeForm, to_period: e.target.value })}
-                        className="p-2 bg-slate-100 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
-                      >
-                        <option value="AM">AM</option>
-                        <option value="PM">PM</option>
-                      </select>
-                    </div>
+            {/* Downtime Section */}
+            <div id="downtime" className="animate-in fade-in slide-in-from-bottom-2 bg-rose-50/50 duration-300 rounded-xl p-4">
+              <Card className="p-3 border-none bg-white/80">
+                <SectionTitle title="Operational Downtime" icon={AlertTriangle} />
+                <form onSubmit={handleAddDowntime} className="grid grid-cols-12 gap-2">
+                  <div className='col-span-3'>
+                    <FieldWrapper label="Day & Date" required>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          min="1"
+                          value={downtimeForm.day_number}
+                          onChange={(e) => handleDayChange(e.target.value, 'downtime')}
+                          className="w-14 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                          required
+                        />
+                        <input
+                          type="date"
+                          value={downtimeForm.log_date}
+                          onChange={(e) => handleDateChange(e.target.value, 'downtime')}
+                          className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                          required
+                        />
+                      </div>
+                    </FieldWrapper>
                   </div>
-                </FieldWrapper>
-              </div>
 
-              <FieldWrapper label="Reason">
-                <input
-                  type="text"
-                  value={downtimeForm.reason}
-                  onChange={(e) => setDowntimeForm({ ...downtimeForm, reason: e.target.value })}
-                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                  placeholder="Optional reason"
-                />
-              </FieldWrapper>
+                  <div className='col-span-1'>
+                    <FieldWrapper label="Shift" required>
+                      <select
+                        value={downtimeForm.shift}
+                        onChange={(e) => handleShiftChange(e.target.value, 'downtime')}
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
+                      >
+                        {shifts.map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </FieldWrapper>
+                  </div>
 
-              <div className="flex items-end pb-0.5">
-                <button
-                  type="submit"
-                  disabled={formLoading}
-                  className="w-full p-2 flex items-center justify-center gap-2 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 shadow-md shadow-amber-100 hover:shadow-lg transition-all text-xs  "
-                >
-                  {formLoading ? (
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <AlertTriangle size={16} />
-                  )}
-                  Log Downtime
-                </button>
-              </div>
-            </form>
-          </Card>
+                  <div className='col-span-2'>
+                    <FieldWrapper label="Downtime Type" required>
+                      <select
+                        value={downtimeForm.downtime_type}
+                        onChange={(e) => setDowntimeForm({ ...downtimeForm, downtime_type: e.target.value })}
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
+                        required
+                      >
+                        <option value="">Select Type</option>
+                        {downtimeTypes.map(t => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
+                    </FieldWrapper>
+                  </div>
 
-          <Card className="border-none  overflow-hidden">
-            <div className="p-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-1.5 bg-white text-amber-600 rounded  border border-slate-100">
-                  <AlertTriangle size={16} />
-                </div>
-                <h3 className="text-[11px]  text-slate-900 text-xs ">Downtime History</h3>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left bg-white">
-                <thead>
-                  <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="p-2 text-xs text-slate-400 ">Type/Reason</th>
-                    <th className="p-2 text-xs text-slate-400  text-center">Timing</th>
-                    <th className="p-2 text-xs text-slate-400  text-right">Duration</th>
-                    <th className="p-4 w-16"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {downtimes.map((dt) => (
-                    <tr key={dt.downtime_id} className="group hover:bg-slate-50/50 transition-colors">
-                      <td className="p-4">
-                        <p className="text-sm font-medium text-slate-900">{dt.type || dt.downtime_type}</p>
-                        <p className="text-xs text-slate-400 ">{dt.reason || dt.downtime_reason || 'No reason'}</p>
-                      </td>
-                      <td className="p-4 text-center">
-                        <div className="inline-flex items-center gap-3 p-2  py-1.5 bg-slate-50 rounded border border-slate-100">
-                          <span className="text-xs  text-slate-700">{format12h(dt.from_time)}</span>
-                          <ArrowRight size={12} className="text-slate-300" />
-                          <span className="text-xs  text-slate-700">{format12h(dt.to_time)}</span>
-                        </div>
-                      </td>
-                      <td className="p-4 text-right">
-                        <span className="text-sm  text-slate-900">{dt.duration_minutes || calculateDowntimeDuration(dt.from_time, dt.to_time, dt.from_period, dt.to_period)} min</span>
-                      </td>
-                      <td className="p-4 text-center">
-                        <button
-                          onClick={() => handleDeleteDowntime(dt.downtime_id)}
-                          className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all "
+                  <div className="col-span-4 flex flex-1 gap-2 ">
+                    <FieldWrapper label="Start Time" required>
+                      <div className="flex gap-1">
+                        <input
+                          type="time"
+                          value={downtimeForm.from_time}
+                          onChange={(e) => setDowntimeForm({ ...downtimeForm, from_time: e.target.value })}
+                          className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none"
+                          required
+                        />
+                        <select
+                          value={downtimeForm.from_period}
+                          onChange={(e) => setDowntimeForm({ ...downtimeForm, from_period: e.target.value })}
+                          className="p-2 bg-slate-100 border border-slate-200 rounded text-xs"
                         >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </div>
-          </div>
-
-          {/* Quality Control Section */}
-
-        </div>
-
-        {/* Downtime Log Section */}
-        
-      </div>
-
-      {/* Next Operation/Finalize Section */}
-      <div id="next-operation" className="mt-12 pt-8 border-t border-slate-200">
-        <Card className="p-0 border-none  overflow-visible relative bg-white">
-          <div className="flex flex-col md:flex-row">
-            {/* Left branding/info strip */}
-            <div className=" w-10 bg-emerald-600 rounded flex items-center justify-center p-4">
-              <div className="rotate-0 md:-rotate-90 whitespace-nowrap text-white  text-xs tracking-[0.3em] flex items-center gap-3">
-                <CheckCircle2 size={16} />
-                PHASE ASSIGNMENT
-              </div>
-            </div>
-
-            <div className="flex-1 p-2">
-              <div className="flex items-center justify-between mb-8">
-                <div>
-                  <h3 className="text-md  text-slate-900 flex items-center gap-2">
-                    Next Stage Configuration
-                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-xs rounded border border-emerald-100 ">Active</span>
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">Specify destination and operational parameters for the next manufacturing phase</p>
-                </div>
-                <div className="hidden sm:flex items-center gap-2 text-emerald-600 bg-emerald-50 p-2  py-1.5 rounded border border-emerald-100">
-                  <Activity size={14} className="animate-pulse" />
-                  <span className="text-xs ">READY TO DISPATCH</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <FieldWrapper label="NEXT OPERATION" required>
-                  <div className="group relative">
-                    <SearchableSelect
-                      value={nextOperationForm.next_operation_id}
-                      onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_operation_id: val })}
-                      options={operations.map(op => ({
-                        value: op.operation_id || op.id || op.operation_name || op.name,
-                        label: op.operation_name || op.name
-                      }))}
-                      placeholder="Select Next Op"
-                      containerClassName="p-2  rounded bg-slate-50 border-slate-200 transition-all"
-                    />
-                    <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-0 group-focus-within:h-6 bg-emerald-500 rounded-full transition-all duration-300"></div>
-                  </div>
-                </FieldWrapper>
-
-                <FieldWrapper label="ASSIGN OPERATOR">
-                  <div className="group relative">
-                    <SearchableSelect
-                      value={nextOperationForm.next_operator_id}
-                      onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_operator_id: val })}
-                      options={operators.map(op => ({
-                        value: op.employee_id,
-                        label: `${op.first_name} ${op.last_name}`
-                      }))}
-                      placeholder="Search Operator..."
-                      containerClassName="p-2  rounded bg-slate-50 border-slate-200 transition-all"
-                    />
-                    <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-0 group-focus-within:h-6 bg-indigo-500 rounded-full transition-all duration-300"></div>
-                  </div>
-                </FieldWrapper>
-
-                <FieldWrapper label="TARGET WAREHOUSE" required>
-                  <div className="group relative">
-                    <SearchableSelect
-                      value={nextOperationForm.next_warehouse_id}
-                      onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_warehouse_id: val })}
-                      options={warehouses.map(w => ({
-                        value: w.warehouse_id || w.id || w.name,
-                        label: w.warehouse_name || w.name
-                      }))}
-                      placeholder="Select Destination"
-                      containerClassName="p-2  rounded bg-slate-50 border-slate-200 transition-all"
-                    />
-                    <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-0 group-focus-within:h-6 bg-amber-500 rounded-full transition-all duration-300"></div>
-                  </div>
-                </FieldWrapper>
-              </div>
-
-              <div className="mt-2 border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                <div className=" items-center gap-6">
-                  <p className="text-xs text-slate-400 ">Execution Mode:</p>
-                  <div className="flex items-center gap-4">
-                    <button
-                      type="button"
-                      onClick={() => setNextOperationForm({ ...nextOperationForm, inhouse: !nextOperationForm.inhouse, outsource: false })}
-                      className={`flex items-center gap-3 p-2 rounded border-2 transition-all duration-300 ${nextOperationForm.inhouse ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-md shadow-emerald-100' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
-                    >
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${nextOperationForm.inhouse ? 'border-emerald-500 bg-white' : 'border-slate-300'}`}>
-                        {nextOperationForm.inhouse && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                          <option value="AM">AM</option>
+                          <option value="PM">PM</option>
+                        </select>
                       </div>
-                      <span className="text-xs ">IN-HOUSE</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setNextOperationForm({ ...nextOperationForm, outsource: !nextOperationForm.outsource, inhouse: false })}
-                      className={`flex items-center gap-3 p-2 rounded border-2 transition-all duration-300 ${nextOperationForm.outsource ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-md shadow-indigo-100' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
-                    >
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${nextOperationForm.outsource ? 'border-indigo-500 bg-white' : 'border-slate-300'}`}>
-                        {nextOperationForm.outsource && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+                    </FieldWrapper>
+                    <FieldWrapper label="End Time" required>
+                      <div className="flex gap-1">
+                        <input
+                          type="time"
+                          value={downtimeForm.to_time}
+                          onChange={(e) => setDowntimeForm({ ...downtimeForm, to_time: e.target.value })}
+                          className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none"
+                          required
+                        />
+                        <select
+                          value={downtimeForm.to_period}
+                          onChange={(e) => setDowntimeForm({ ...downtimeForm, to_period: e.target.value })}
+                          className="p-2 bg-slate-100 border border-slate-200 rounded text-xs"
+                        >
+                          <option value="AM">AM</option>
+                          <option value="PM">PM</option>
+                        </select>
                       </div>
-                      <span className="text-xs ">OUTSOURCE</span>
+                    </FieldWrapper>
+                  </div>
+
+
+
+                  <div className="flex items-end col-span-2 ">
+                    <button
+                      type="submit"
+                      disabled={formLoading}
+                      className="w-full p-2 bg-amber-600 text-white rounded text-xs hover:bg-amber-700 disabled:opacity-50 transition-all shadow-lg shadow-amber-100 flex items-center justify-center gap-2"
+                    >
+                      {formLoading ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={14} />}
+                      Record Downtime
                     </button>
                   </div>
-                </div>
+                </form>
 
-                <button
-                  onClick={handleSubmitProduction}
-                  disabled={isSubmitting}
-                  className="relative group overflow-hidden p-2 bg-slate-900 text-white rounded hover:shadow-2xl hover:shadow-emerald-200 transition-all duration-500 disabled:opacity-50 flex items-center justify-center gap-4 active:scale-95"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-emerald-400 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500"></div>
-                  <div className="relative flex items-center gap-4">
-                    {isSubmitting ? (
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <div className="p-1.5 bg-white/10 rounded group-hover:bg-white/20 transition-colors">
-                        <FileText size={10} />
-                      </div>
-                    )}
-                    <div className="text-left">
-                      <p className="text-xs text-white/50  leading-none">Finalize & Dispatch</p>
-                      <p className="text-xs ">Move to Next Stage</p>
+                <div className="mt-8 overflow-hidden rounded-xl border border-slate-100">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100">
+                        <th className="p-2 text-slate-400">Date / Shift</th>
+                        <th className="p-2 text-slate-400">Category / Reason</th>
+                        <th className="p-2 text-slate-400">Interval</th>
+                        <th className="p-2 text-slate-400 text-right">Duration</th>
+                        <th className="p-2 text-slate-400 text-center w-20">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {downtimes.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="p-8 text-center text-slate-400 italic">No operational downtime logs found</td>
+                        </tr>
+                      ) : (
+                        downtimes.map((down) => (
+                          <tr key={down.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="p-3">
+                              <p className="font-medium text-slate-900">{new Date(down.log_date).toLocaleDateString()}</p>
+                              <p className="text-[10px] text-slate-400 uppercase">Shift {down.shift}</p>
+                            </td>
+                            <td className="p-3">
+                              <p className="font-medium text-slate-900">{down.downtime_type}</p>
+                              <p className="text-slate-500">{down.downtime_reason}</p>
+                            </td>
+                            <td className="p-3 text-slate-600">
+                              {down.from_time} - {down.to_time}
+                            </td>
+                            <td className="p-3 text-right">
+                              <span className="font-bold text-amber-600">{down.duration_minutes}</span>
+                              <span className="ml-1 text-[10px] text-slate-400 uppercase tracking-wider">Mins</span>
+                            </td>
+                            <td className="p-3 text-center">
+                              <button
+                                onClick={() => handleDeleteDowntime(down.id)}
+                                className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
+
+            {/* Next Operation Section */}
+            <div id="next-operation" className="animate-in fade-in slide-in-from-bottom-2 bg-amber-50/50 duration-300 rounded-xl p-4">
+              <Card className="p-0 border-none overflow-hidden bg-white/80 relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
+                <div className="p-2 relative">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <h3 className="text-md  text-slate-900 flex items-center gap-2">
+                        Next Stage Configuration
+                        <span className="p-1 bg-emerald-50 text-emerald-600 text-xs rounded border border-emerald-100 ">Active</span>
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-1">Specify destination and operational parameters for the next manufacturing phase</p>
                     </div>
-                    <ChevronRight size={10} className="group-hover:translate-x-1 transition-transform" />
+                    <div className="hidden sm:flex items-center gap-2 text-emerald-600 bg-emerald-50 p-2  py-1.5 rounded border border-emerald-100">
+                      <Activity size={14} className="animate-pulse" />
+                      <span className="text-xs ">Ready to Dispatched</span>
+                    </div>
                   </div>
-                </button>
-              </div>
+
+                  {(() => {
+                    const currentSequence = parseInt(jobCardData?.operation_sequence || 0);
+                    const nextOps = operations.filter(op => {
+                      const opSeq = parseInt(op.sequence || op.seq || op.operation_seq || 0);
+                      // Only show subsequent operations
+                      if (opSeq <= currentSequence) return false;
+                      
+                      // Filter out already completed operations from allJobCards
+                      const isCompleted = allJobCards.some(jc => 
+                        (jc.operation_id === op.operation_id || jc.operation === op.operation_name || jc.operation === op.name) && 
+                        normalizeStatus(jc.status) === 'completed'
+                      );
+                      
+                      return !isCompleted;
+                    });
+
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                        <div className='col-span-3'>
+                          <FieldWrapper label="Next Operation" required>
+                            <div className="group relative">
+                              <SearchableSelect
+                                value={nextOperationForm.next_operation_id}
+                                onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_operation_id: val })}
+                                options={nextOps.map(op => ({
+                                  value: op.operation_id || op.id || op.operation_name || op.name,
+                                  label: op.operation_name || op.name
+                                }))}
+                                placeholder="Select Next Op"
+                                containerClassName="  rounded bg-slate-50 border-slate-200 transition-all"
+                              />
+                              <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-0 group-focus-within:h-6 bg-emerald-500 rounded-full transition-all duration-300"></div>
+                            </div>
+                          </FieldWrapper>
+                        </div>
+
+                        <div className='col-span-3'>
+                          <FieldWrapper label="Assign Operator">
+                            <div className="group relative">
+                              <SearchableSelect
+                                value={nextOperationForm.next_operator_id}
+                                onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_operator_id: val })}
+                                options={operators.map(op => ({
+                                  value: op.employee_id,
+                                  label: `${op.first_name} ${op.last_name}`
+                                }))}
+                                placeholder="Search Operator..."
+                                containerClassName="  rounded bg-slate-50 border-slate-200 transition-all"
+                              />
+                              <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-0 group-focus-within:h-6 bg-indigo-500 rounded-full transition-all duration-300"></div>
+                            </div>
+                          </FieldWrapper>
+                        </div>
+
+                        <div className='col-span-3'>
+                          <FieldWrapper label="Target Warehouse" required>
+                            <div className="group relative">
+                              <SearchableSelect
+                                value={nextOperationForm.next_warehouse_id}
+                                onChange={(val) => setNextOperationForm({ ...nextOperationForm, next_warehouse_id: val })}
+                                options={warehouses.map(w => ({
+                                  value: w.warehouse_id || w.id || w.name,
+                                  label: w.warehouse_name || w.name
+                                }))}
+                                placeholder="Select Destination"
+                                containerClassName="  rounded bg-slate-50 border-slate-200 transition-all"
+                              />
+                              <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-0 group-focus-within:h-6 bg-amber-500 rounded-full transition-all duration-300"></div>
+                            </div>
+                          </FieldWrapper>
+                        </div>
+                        <div className=" items-center gap-6 col-span-3">
+                          <p className="text-xs text-slate-400 ">Execution Mode:</p>
+                          <div className="flex items-center gap-4">
+                            <button
+                              type="button"
+                              onClick={() => setNextOperationForm({ ...nextOperationForm, inhouse: !nextOperationForm.inhouse, outsource: false })}
+                              className={`flex items-center gap-2 p-2 rounded border-2 transition-all duration-300 ${nextOperationForm.inhouse ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-md shadow-emerald-100' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
+                            >
+                              <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${nextOperationForm.inhouse ? 'border-emerald-500 bg-white' : 'border-slate-300'}`}>
+                                {nextOperationForm.inhouse && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                              </div>
+                              <span className="text-xs ">In-house</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setNextOperationForm({ ...nextOperationForm, outsource: !nextOperationForm.outsource, inhouse: false })}
+                              className={`flex items-center gap-2 p-2 rounded border-2 transition-all duration-300 ${nextOperationForm.outsource ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-md shadow-indigo-100' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
+                            >
+                              <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${nextOperationForm.outsource ? 'border-indigo-500 bg-white' : 'border-slate-300'}`}>
+                                {nextOperationForm.outsource && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+                              </div>
+                              <span className="text-xs ">Outsource</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <div className="mt-2 border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+
+
+                    {isOperationFinished && normalizeStatus(jobCardData?.status) !== 'completed' && (
+                      <button
+                        onClick={handleSubmitProduction}
+                        disabled={isSubmitting}
+                        className="relative group overflow-hidden p-2 bg-emerald-600 text-white rounded hover:shadow-emerald-200 transition-all duration-500 disabled:opacity-50 flex items-center justify-center gap-4 active:scale-95 animate-pulse"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-emerald-400 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500"></div>
+                        <div className="relative flex items-center gap-4">
+                          {isSubmitting ? (
+                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded animate-spin" />
+                          ) : (
+                            <div className="p-1.5 bg-white/10 rounded group-hover:bg-white/20 transition-colors">
+                              <CheckCircle size={10} />
+                            </div>
+                          )}
+                          <div className="text-left">
+                            <p className="text-xs text-white/50 leading-none">Finalize & Dispatch</p>
+                            <p className="text-xs">Complete Production</p>
+                          </div>
+                          <ChevronRight size={10} className="group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Daily Production Report Section */}
+            <div id="daily-report" className="mt-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <Card className="p-4 border-slate-200 bg-white rounded-xl shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <SectionTitle 
+                    title="Daily Production Report" 
+                    icon={FileText} 
+                    subtitle="Consolidated daily and shift-wise production metrics"
+                  />
+                  <button
+                    onClick={downloadReport}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-all text-sm font-medium border border-indigo-100"
+                  >
+                    <FileText size={16} />
+                    Download CSV
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-slate-100">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100">
+                        <th className="p-3 font-semibold text-slate-600">Date</th>
+                        <th className="p-3 font-semibold text-slate-600">Shift</th>
+                        <th className="p-3 font-semibold text-slate-600">Operator</th>
+                        <th className="p-3 font-semibold text-slate-600 text-right">Produced</th>
+                        <th className="p-3 font-semibold text-slate-600 text-right">Accepted</th>
+                        <th className="p-3 font-semibold text-slate-600 text-right text-rose-500">Rejected</th>
+                        <th className="p-3 font-semibold text-slate-600 text-right">Scrap</th>
+                        <th className="p-3 font-semibold text-slate-600 text-right">Downtime</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {generateDailyReport().length === 0 ? (
+                        <tr>
+                          <td colSpan="8" className="p-10 text-center text-slate-400 italic bg-slate-50/30">
+                            No production data available to generate report
+                          </td>
+                        </tr>
+                      ) : (
+                        generateDailyReport().map((row, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="p-3 font-medium text-slate-900">{new Date(row.date).toLocaleDateString()}</td>
+                            <td className="p-3">
+                              <span className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded uppercase">
+                                Shift {row.shift}
+                              </span>
+                            </td>
+                            <td className="p-3 text-slate-600">{row.operator || 'N/A'}</td>
+                            <td className="p-3 text-right font-semibold text-slate-900">{row.produced.toLocaleString()}</td>
+                            <td className="p-3 text-right font-bold text-emerald-600">{row.accepted.toLocaleString()}</td>
+                            <td className="p-3 text-right font-bold text-rose-500">{row.rejected.toLocaleString()}</td>
+                            <td className="p-3 text-right font-medium text-slate-500">{row.scrap.toLocaleString()}</td>
+                            <td className="p-3 text-right">
+                              <span className="text-amber-600 font-medium">{row.downtime}</span>
+                              <span className="ml-1 text-[10px] text-slate-400 uppercase">min</span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
             </div>
           </div>
-        </Card>
+        </div>
       </div>
 
     </div>

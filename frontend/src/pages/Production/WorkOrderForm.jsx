@@ -5,7 +5,7 @@ import {
   Boxes, Edit2, Settings, Calendar,
   Database, Layers, Clock,
   ArrowRight, ShieldCheck, Zap, Activity, Filter, Info,
-  BarChart3, TrendingUp
+  BarChart3, TrendingUp, FileText, ChevronRight
 } from 'lucide-react'
 import SearchableSelect from '../../components/SearchableSelect'
 import * as productionService from '../../services/productionService'
@@ -144,6 +144,10 @@ export default function WorkOrderForm() {
     qualityScore: 0
   })
 
+  const [allTimeLogs, setAllTimeLogs] = useState([])
+  const [allRejections, setAllRejections] = useState([])
+  const [allDowntimes, setAllDowntimes] = useState([])
+
   const [formData, setFormData] = useState({
     work_order_id: '',
     naming_series: 'MFG-WO-.YYYY.-',
@@ -239,17 +243,39 @@ export default function WorkOrderForm() {
 
       let totalActualTime = 0
       let totalAccepted = 0
+      
+      const combinedTimeLogs = []
+      const combinedRejections = []
+      const combinedDowntimes = []
 
       for (const jc of cards) {
         try {
-          const timeLogs = await productionService.getTimeLogs({ job_card_id: jc.job_card_id || jc.id })
-          const logs = timeLogs.data || []
+          const jcId = jc.job_card_id || jc.id
+          
+          // Fetch Time Logs
+          const timeLogsRes = await productionService.getTimeLogs({ job_card_id: jcId })
+          const logs = timeLogsRes.data || []
+          combinedTimeLogs.push(...logs)
+          
           logs.forEach(log => {
             if (log.from_time && log.to_time) totalActualTime += log.time_in_minutes || 0
             totalAccepted += parseFloat(log.accepted_qty) || 0
           })
-        } catch (err) { console.error('Failed to fetch time logs for job card:', jc.job_card_id || jc.id) }
+
+          // Fetch Rejections
+          const rejectionsRes = await productionService.getRejections({ job_card_id: jcId })
+          combinedRejections.push(...(rejectionsRes.data || []))
+
+          // Fetch Downtimes
+          const downtimesRes = await productionService.getDowntimes({ job_card_id: jcId })
+          combinedDowntimes.push(...(downtimesRes.data || []))
+
+        } catch (err) { console.error('Failed to fetch logs for job card:', jc.job_card_id || jc.id) }
       }
+
+      setAllTimeLogs(combinedTimeLogs)
+      setAllRejections(combinedRejections)
+      setAllDowntimes(combinedDowntimes)
 
       const expectedTime = (bomOperations || []).reduce((sum, op) => sum + (parseFloat(op.operation_time) || 0), 0) * 60
       const efficiency = expectedTime > 0 && totalActualTime > 0 ? ((expectedTime / totalActualTime) * 100).toFixed(0) : 0
@@ -258,6 +284,105 @@ export default function WorkOrderForm() {
       setCompletionMetrics({ totalPlanned, totalCompleted, allCompleted, efficiency, totalActualTime, qualityScore })
     } catch (err) { console.error('Failed to calculate metrics:', err) }
   }
+
+  const generateDailyReport = () => {
+    const reportData = {};
+
+    // Process time logs for produced quantity
+    allTimeLogs.forEach(log => {
+      const dateKey = new Date(log.log_date || log.from_time).toISOString().split('T')[0];
+      const shiftKey = log.shift || 'A';
+      const key = `${dateKey}_${shiftKey}`;
+
+      if (!reportData[key]) {
+        reportData[key] = {
+          date: dateKey,
+          shift: shiftKey,
+          operator: log.operator_name || log.operator_id,
+          produced: 0,
+          accepted: 0,
+          rejected: 0,
+          scrap: 0,
+          downtime: 0
+        };
+      }
+      reportData[key].produced += parseFloat(log.completed_qty || 0);
+    });
+
+    // Process rejections for quality data
+    allRejections.forEach(rej => {
+      const dateKey = new Date(rej.log_date || rej.created_at).toISOString().split('T')[0];
+      const shiftKey = rej.shift || '1';
+      const key = `${dateKey}_${shiftKey}`;
+
+      if (!reportData[key]) {
+        reportData[key] = {
+          date: dateKey,
+          shift: shiftKey,
+          operator: 'N/A',
+          produced: 0,
+          accepted: 0,
+          rejected: 0,
+          scrap: 0,
+          downtime: 0
+        };
+      }
+      reportData[key].accepted += parseFloat(rej.accepted_qty || 0);
+      reportData[key].rejected += parseFloat(rej.rejected_qty || 0);
+      reportData[key].scrap += parseFloat(rej.scrap_qty || 0);
+    });
+
+    // Process downtimes
+    allDowntimes.forEach(down => {
+      const dateKey = new Date(down.log_date || down.start_time).toISOString().split('T')[0];
+      const shiftKey = down.shift || '1';
+      const key = `${dateKey}_${shiftKey}`;
+
+      if (!reportData[key]) {
+        reportData[key] = {
+          date: dateKey,
+          shift: shiftKey,
+          operator: 'N/A',
+          produced: 0,
+          accepted: 0,
+          rejected: 0,
+          scrap: 0,
+          downtime: 0
+        };
+      }
+      reportData[key].downtime += parseFloat(down.duration_minutes || 0);
+    });
+
+    return Object.values(reportData).sort((a, b) => new Date(b.date) - new Date(a.date) || b.shift.localeCompare(a.shift));
+  };
+
+  const downloadReport = () => {
+    const data = generateDailyReport();
+    const headers = ['Date', 'Shift', 'Operator', 'Produced', 'Accepted', 'Rejected', 'Scrap', 'Downtime (min)'];
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => [
+        row.date,
+        row.shift,
+        `"${row.operator || 'N/A'}"`,
+        row.produced.toFixed(2),
+        row.accepted.toFixed(2),
+        row.rejected.toFixed(2),
+        row.scrap.toFixed(2),
+        row.downtime.toFixed(0)
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Daily_Production_Report_${id || 'New'}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const fetchItems = async () => {
     try {
@@ -636,6 +761,14 @@ export default function WorkOrderForm() {
             isActive={activeSection === 'inventory'}
             onClick={scrollToSection}
             themeColor="amber"
+          />
+          <NavItem
+            label="05 Daily Report"
+            icon={FileText}
+            section="daily-report"
+            isActive={activeSection === 'daily-report'}
+            onClick={scrollToSection}
+            themeColor="cyan"
           />
         </div>
 
@@ -1209,6 +1342,70 @@ export default function WorkOrderForm() {
                     </p>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 05 Daily Report Section */}
+          <div id="daily-report" className="block mt-4">
+            <div className="grid grid-cols-12 gap-3">
+              <div className="col-span-12">
+                <Card className="border-none bg-white">
+                  <div className="p-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-white text-cyan-600 rounded border border-slate-100">
+                        <FileText size={16} />
+                      </div>
+                      <h3 className="text-xs text-slate-900">05 Daily Production History</h3>
+                    </div>
+                    <button
+                      onClick={downloadReport}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all text-xs font-medium shadow-sm"
+                    >
+                      <FileText size={14} />
+                      Export CSV
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left bg-white">
+                      <thead>
+                        <tr className="bg-slate-50/30">
+                          <th className="p-2 text-xs text-slate-400">Date</th>
+                          <th className="p-2 text-xs text-slate-400">Shift</th>
+                          <th className="p-2 text-xs text-slate-400">Operator</th>
+                          <th className="p-2 text-xs text-slate-400 text-right">Produced</th>
+                          <th className="p-2 text-xs text-slate-400 text-right">Accepted</th>
+                          <th className="p-2 text-xs text-slate-400 text-right">Rejected</th>
+                          <th className="p-2 text-xs text-slate-400 text-right">Scrap</th>
+                          <th className="p-2 text-xs text-slate-400 text-right">Downtime</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {generateDailyReport().length > 0 ? (
+                          generateDailyReport().map((row, idx) => (
+                            <tr key={`${row.date}-${row.shift}-${idx}`} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="p-2 text-xs text-slate-900 font-medium">{row.date}</td>
+                              <td className="p-2 text-xs text-slate-600">Shift {row.shift}</td>
+                              <td className="p-2 text-xs text-slate-600">{row.operator || 'N/A'}</td>
+                              <td className="p-2 text-xs text-slate-900 text-right">{row.produced.toFixed(2)}</td>
+                              <td className="p-2 text-xs text-emerald-600 text-right font-medium">{row.accepted.toFixed(2)}</td>
+                              <td className="p-2 text-xs text-rose-500 text-right">{row.rejected.toFixed(2)}</td>
+                              <td className="p-2 text-xs text-amber-600 text-right">{row.scrap.toFixed(2)}</td>
+                              <td className="p-2 text-xs text-slate-500 text-right">{row.downtime} min</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="8" className="p-8 text-center text-slate-400 text-xs">
+                              No production logs found for this work order yet.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
               </div>
             </div>
           </div>

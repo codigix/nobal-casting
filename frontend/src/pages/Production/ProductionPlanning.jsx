@@ -49,8 +49,8 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
   }
 
   return (
-    <div className="bg-white p-2 rounded  border border-gray-100   hover:shadow-md transition-all group  relative">
-      <div className="absolute -right-4 -top-4 w-24 h-24 bg-gray-50 rounded-full opacity-50 group-hover:scale-110 transition-transform" />
+    <div className="bg-slate-50/50 p-2 rounded  border border-gray-100   hover:shadow-md transition-all group  relative">
+      <div className="absolute -right-4 -top-4 w-24 h-24 bg-white rounded-full opacity-50 group-hover:scale-110 transition-transform" />
       <div className="relative flex justify-between items-start">
         <div className="">
           <p className="text-xs   text-gray-400 ">{label}</p>
@@ -393,7 +393,7 @@ export default function ProductionPlanning() {
       if (workOrders.length === 0) {
         setPlanProgress(prev => ({
           ...prev,
-          [planId]: { progress: 0, currentOp: 'No work orders', totalOps: 0, completedOps: 0 }
+          [planId]: { progress: 0, currentOp: 'No work orders', totalOps: 0, completedOps: 0, woCount: 0 }
         }))
         return
       }
@@ -430,7 +430,8 @@ export default function ProductionPlanning() {
           progress,
           currentOp: lastInProgressOp,
           totalOps,
-          completedOps
+          completedOps,
+          woCount: workOrders.length
         }
       }))
     } catch (err) {
@@ -630,6 +631,13 @@ export default function ProductionPlanning() {
   }
 
   const handleCreateWorkOrder = async (plan) => {
+    // Check if work orders already exist for this plan
+    const existingProgress = planProgress[plan.plan_id];
+    if (existingProgress && existingProgress.woCount > 0) {
+      toast.addToast(`Work orders already exist for plan ${plan.plan_id}. You can manage them in the Work Orders page.`, 'warning');
+      return;
+    }
+
     let fgItems = plan.fg_items
     let bomDetails = null
     let fullPlan = plan
@@ -1227,6 +1235,13 @@ export default function ProductionPlanning() {
                         <td className="p-2  text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button
+                              onClick={() => navigate(`/manufacturing/production-planning/${plan.plan_id}`)}
+                              className=" p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all   hover:shadow-md bg-white border border-gray-50"
+                              title="View Strategy"
+                            >
+                              <Eye size={15} />
+                            </button>
+                            <button
                               onClick={() => fetchPlanOperationProgress(plan.plan_id)}
                               className=" p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded  transition-all   hover:shadow-md bg-white border border-gray-50"
                               title="Sync Progress"
@@ -1235,8 +1250,12 @@ export default function ProductionPlanning() {
                             </button>
                             <button
                               onClick={() => handleCreateWorkOrder(plan)}
-                              className=" p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all   hover:shadow-md bg-white border border-gray-50"
-                              title="Configure Strategy"
+                              disabled={planProgress[plan.plan_id]?.woCount > 0}
+                              className={`p-2 rounded transition-all hover:shadow-md bg-white border border-gray-50 ${planProgress[plan.plan_id]?.woCount > 0
+                                  ? 'text-gray-200 cursor-not-allowed opacity-50'
+                                  : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'
+                                }`}
+                              title={planProgress[plan.plan_id]?.woCount > 0 ? "Work Order Already Created" : "Configure Strategy"}
                             >
                               <Settings size={15} />
                             </button>
@@ -1666,7 +1685,7 @@ export default function ProductionPlanning() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-2">
               {loadingHistory ? (
                 <div className="flex flex-col items-center justify-center py-20">
                   <Loader size={48} className="text-indigo-500 animate-spin mb-4" />
@@ -1676,7 +1695,7 @@ export default function ProductionPlanning() {
                 <div className="space-y-2">
                   {mrHistory[selectedPlanForHistory.plan_id].map((mr, idx) => (
                     <div key={mr.mr_id} className="border border-gray-100 rounded  overflow-hidden hover:shadow-md transition-shadow">
-                      <div className="bg-gray-50/50 p-4 flex items-center justify-between">
+                      <div className="bg-gray-50/50 p-2 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center border border-gray-200 text-indigo-600   text-xs">
                             {idx + 1}
@@ -1734,7 +1753,7 @@ export default function ProductionPlanning() {
               )}
             </div>
 
-            <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+            <div className="p-2 bg-gray-50 border-t border-gray-100 flex justify-end">
               <button
                 onClick={() => {
                   setShowHistoryModal(false)

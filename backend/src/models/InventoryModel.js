@@ -227,15 +227,20 @@ class InventoryModel {
             finalized_by
           )
 
-          // If there's return quantity, track it
+          // If there's return quantity, we log it for audit but don't call returnMaterialToInventory
+          // as we only deducted the finalDeductionQty from current_qty.
+          // The reservation (allocated_qty) is already fully cleared above.
           if (returnQty > 0) {
-            await this.returnMaterialToInventory(
+            await this.logMaterialDeduction(
               work_order_id,
               null,
               alloc.item_code,
               alloc.warehouse_id,
+              'return',
               returnQty,
-              'Unused material return',
+              stock.current_qty - finalDeductionQty,
+              stock.current_qty - finalDeductionQty + returnQty, // This is just for log
+              `Unused material released: ${returnQty}`,
               finalized_by
             )
           }

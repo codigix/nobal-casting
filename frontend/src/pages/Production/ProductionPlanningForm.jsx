@@ -7,6 +7,7 @@ import {
   Loader, Send, FileText
 } from 'lucide-react'
 import { useAuth } from '../../hooks/AuthContext'
+import { useToast } from '../../components/ToastContainer'
 import SearchableSelect from '../../components/SearchableSelect'
 import Card from '../../components/Card/Card'
 
@@ -174,6 +175,7 @@ const isSubAssemblyGroup = (itemGroup) => {
 
 export default function ProductionPlanningForm() {
   const { user } = useAuth()
+  const toast = useToast()
   const navigate = useNavigate()
   const { plan_id } = useParams()
   const [activeSection, setActiveSection] = useState('parameters')
@@ -315,6 +317,7 @@ export default function ProductionPlanningForm() {
   const [creatingWorkOrder, setCreatingWorkOrder] = useState(false)
   const [workOrderData, setWorkOrderData] = useState(null)
   const [savingPlan, setSavingPlan] = useState(false)
+  const [existingWorkOrders, setExistingWorkOrders] = useState([])
 
   const fetchProductionPlan = async (planId) => {
     try {
@@ -355,6 +358,20 @@ export default function ProductionPlanningForm() {
           if (plan.sales_order_id) {
             setSelectedSalesOrders([plan.sales_order_id])
             await processSalesOrderData(plan.sales_order_id, planQty)
+          }
+
+          // Fetch existing work orders for this plan
+          try {
+            const woRes = await fetch(`${import.meta.env.VITE_API_URL}/production/work-orders?production_plan_id=${planId}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            })
+            if (woRes.ok) {
+              const woData = await woRes.json()
+              const workOrders = woData.data || woData || []
+              setExistingWorkOrders(Array.isArray(workOrders) ? workOrders : [])
+            }
+          } catch (woErr) {
+            console.error('Error fetching existing work orders:', woErr)
           }
         } else {
           setError('Production plan not found')
@@ -649,7 +666,7 @@ export default function ProductionPlanningForm() {
       (item.fg_sub_assembly || item.component_type || '').toLowerCase().includes('sub')
     )
     if (subAsmFromRawMaterials.length === 0) {
-      alert('No sub-assemblies found in raw materials')
+      toast.addToast('No sub-assemblies found in raw materials', 'info')
       return
     }
     setFetchingSubAssemblyBoms(true)
@@ -770,7 +787,7 @@ export default function ProductionPlanningForm() {
     setSelectedSalesOrders([soId])
   }
 
-  const processSalesOrderData = async (soId, salesOrderQty = 1) => {
+  const processSalesOrderData = async (soId, salesOrderQty = null) => {
     const soDetails = await fetchSalesOrderDetails(soId)
     if (!soDetails) return
 
@@ -796,14 +813,14 @@ export default function ProductionPlanningForm() {
     if (!itemCode) itemCode = 'FG Item'
     if (!itemName) itemName = 'Finished Good'
 
-    let quantity = salesOrderQty || 1
-    if (!quantity || quantity === 1) {
-      const firstItemQty = items.length > 0 ? (items[0].qty || items[0].quantity || items[0].ordered_qty) : undefined
-      if (firstItemQty) {
-        quantity = parseFloat(firstItemQty) || 1
-      }
+    // Prioritize passed qty, then SO item qty, then SO header qty, then default to 1
+    let quantity = salesOrderQty
+    if (quantity === null || quantity === undefined) {
+      const firstItemQty = items.length > 0 ? (items[0].qty || items[0].quantity || items[0].ordered_qty) : null
+      quantity = firstItemQty || soDetails.qty || 1
     }
-
+    
+    quantity = parseFloat(quantity) || 1
     setSalesOrderQuantity(quantity)
 
     const enrichedDetails = {
@@ -1161,7 +1178,7 @@ export default function ProductionPlanningForm() {
       }))
     } catch (err) {
       console.error(`Error fetching operations for material ${materialItemCode}:`, err)
-      alert('Failed to fetch material operations')
+      toast.addToast('Failed to fetch material operations', 'error')
     }
   }
 
@@ -1203,17 +1220,22 @@ export default function ProductionPlanningForm() {
       }))
     } catch (err) {
       console.error(`Error fetching operations for BOM ${bomId}:`, err)
-      alert('Failed to fetch BOM operations')
+      toast.addToast('Failed to fetch BOM operations', 'error')
     }
   }
 
   const createWorkOrders = async () => {
+    if (existingWorkOrders && existingWorkOrders.length > 0) {
+      toast.addToast(`Work orders already exist for this plan (${plan_id}). Duplicate creation is not allowed.`, 'warning')
+      return
+    }
+
     try {
       setCreatingWorkOrders(true)
       const token = localStorage.getItem('token')
 
       if (subAssemblyBomMaterials.length === 0 && fgItems.length === 0) {
-        alert('Please fetch sub-assembly materials and add finished goods first')
+        toast.addToast('Please fetch sub-assembly materials and add finished goods first', 'warning')
         return
       }
 
@@ -1282,6 +1304,7 @@ export default function ProductionPlanningForm() {
             bom_no: finalBomId,
             priority: 'medium',
             notes: `Sub-assembly for production plan ${planHeader.plan_id}`,
+            production_plan_id: plan_id,
             sales_order_id: selectedSalesOrders[0] || null,
             planned_start_date: new Date().toISOString().split('T')[0],
             operations: operations.map(op => ({
@@ -1395,6 +1418,7 @@ export default function ProductionPlanningForm() {
             bom_no: bomIdForFG || null,
             priority: 'high',
             notes: `Finished good for production plan ${planHeader.plan_id}`,
+            production_plan_id: plan_id,
             sales_order_id: selectedSalesOrders[0] || null,
             planned_start_date: fgItem.planned_start_date || new Date().toISOString().split('T')[0],
             operations: fgOpsToSend.map(op => {
@@ -1466,6 +1490,20 @@ export default function ProductionPlanningForm() {
       console.log(`✓ Total job cards created: ${totalJobCards}`)
 
       setSuccess(`Created ${subAsmCount} sub-assembly + ${fgCount} finished goods = ${createdWorkOrders.length} work orders with ${totalJobCards} job cards`)
+
+      // Update plan status to in-progress
+      try {
+        await fetch(`${import.meta.env.VITE_API_URL}/production-planning/${plan_id}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ status: 'in-progress' })
+        })
+      } catch (statusErr) {
+        console.warn('Failed to update plan status:', statusErr)
+      }
 
       setTimeout(() => {
         navigate('/manufacturing/work-orders')
@@ -1627,7 +1665,7 @@ export default function ProductionPlanningForm() {
       }
 
       if (materials.length === 0) {
-        alert(`No ${filterType === 'out_of_stock' ? 'out-of-stock' : filterType === 'in_stock' ? 'in-stock' : 'matching'} materials found to process`)
+        toast.addToast(`No ${filterType === 'out_of_stock' ? 'out-of-stock' : filterType === 'in_stock' ? 'in-stock' : 'matching'} materials found to process`, 'info')
         return
       }
 
@@ -1674,7 +1712,7 @@ export default function ProductionPlanningForm() {
 
       if (rawMaterialItems.length === 0) {
         console.warn('No raw material items found, returning early')
-        alert('No raw material items found')
+        toast.addToast('No raw material items found', 'info')
         return
       }
 
@@ -1814,7 +1852,7 @@ export default function ProductionPlanningForm() {
       console.error('Error details:', err)
       console.error('Error message:', err.message)
       console.error('Error stack:', err.stack)
-      alert('Failed to fetch sub-assembly BOM materials: ' + err.message)
+      toast.addToast('Failed to fetch sub-assembly BOM materials: ' + err.message, 'error')
     } finally {
       console.log('=== fetchSubAssemblyBomMaterials COMPLETED ===')
       setFetchingSubAssemblyBoms(false)
@@ -2949,7 +2987,7 @@ export default function ProductionPlanningForm() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-2 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-3 bg-slate-50 rounded border border-slate-100">
                   <p className="text-[10px]  text-slate-400  mb-1">Request Identifier</p>
@@ -3088,11 +3126,16 @@ export default function ProductionPlanningForm() {
               <>
                 <button
                   onClick={createWorkOrders}
-                  disabled={creatingWorkOrders}
-                  className="flex items-center gap-2 p-2 bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-all disabled:opacity-50 text-xs  border border-emerald-100"
+                  disabled={creatingWorkOrders || (existingWorkOrders && existingWorkOrders.length > 0)}
+                  className={`flex items-center gap-2 p-2 rounded transition-all text-xs border ${
+                    existingWorkOrders && existingWorkOrders.length > 0
+                      ? 'bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed opacity-70'
+                      : 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'
+                  }`}
+                  title={existingWorkOrders && existingWorkOrders.length > 0 ? `Work orders already exist for this plan (${plan_id})` : "Generate Work Orders"}
                 >
                   <Plus size={14} />
-                  {creatingWorkOrders ? 'Executing...' : 'Work Orders'}
+                  {creatingWorkOrders ? 'Executing...' : (existingWorkOrders && existingWorkOrders.length > 0 ? 'Work Orders Created' : 'Work Orders')}
                 </button>
                 <button
                   onClick={createMaterialRequest}

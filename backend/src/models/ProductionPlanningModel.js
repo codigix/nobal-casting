@@ -409,14 +409,17 @@ export class ProductionPlanningModel {
       `)
       
       const scheduleDate = item.scheduled_date || item.schedule_date || null
-      const requiredQty = item.required_qty || item.qty || 0
+      const requiredQty = item.required_qty || item.qty || item.quantity || 0
+      const plannedQty = item.planned_qty || requiredQty
+      const plannedQtyBeforeScrap = item.planned_qty_before_scrap || requiredQty
+      const scrapPercentage = item.scrap_percentage || 0
       
       await this.db.execute(
         `INSERT INTO production_plan_sub_assembly 
-         (plan_id, item_code, item_name, target_warehouse, schedule_date, required_qty, manufacturing_type, bom_no, revision, material_grade, drawing_no, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (plan_id, item_code, item_name, target_warehouse, schedule_date, required_qty, planned_qty, planned_qty_before_scrap, scrap_percentage, manufacturing_type, bom_no, revision, material_grade, drawing_no, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [plan_id, item.item_code || null, item.item_name || null, item.target_warehouse || null, scheduleDate, 
-         requiredQty, item.manufacturing_type || null, item.bom_no || null, item.revision || null, item.material_grade || null, item.drawing_no || null, item.notes || null]
+         requiredQty, plannedQty, plannedQtyBeforeScrap, scrapPercentage, item.manufacturing_type || null, item.bom_no || null, item.revision || null, item.material_grade || null, item.drawing_no || null, item.notes || null]
       )
     } catch (error) {
       throw error
