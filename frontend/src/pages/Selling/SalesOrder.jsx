@@ -607,7 +607,7 @@ export default function SalesOrder() {
                 <span className="text-xs text-slate-400 font-medium text-xs">INR</span>
               </div>
               <div className=" flex items-center justify-between border-t border-slate-100/50 mt-2">
-                <div className="text-xs text-slate-400  ">Efficiency</div>
+                <div className="text-xs text-slate-400  ">Fulfillment Rate</div>
                 <div className="text-xs text-blue-600 ">{stats.fulfillment_rate}% Fulfillment</div>
               </div>
             </div>

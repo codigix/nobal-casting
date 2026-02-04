@@ -638,11 +638,11 @@ export default function JobCard() {
             trend={5}
           />
           <StatCard
-            label="Efficiency"
+            label="Completion Rate"
             value={`${stats.efficiency}%`}
             icon={TrendingUp}
             color="violet"
-            subtitle="Completion Rate"
+            subtitle="Work Order Progress"
           />
         </div>
 
@@ -961,7 +961,7 @@ export default function JobCard() {
                                     <td className="p-2  text-right">
                                       <div className="flex flex-col items-end gap-1">
                                         <div className="flex items-center gap-2">
-                                          <span className="text-xs  text-gray-400 ">Efficiency</span>
+                                          <span className="text-xs  text-gray-400 ">Quality Yield</span>
                                           <span className="text-xs  text-gray-900 font-medium">
                                             {card.produced_quantity > 0 
                                               ? `${Math.round((card.accepted_quantity / card.produced_quantity) * 100)}%` 
