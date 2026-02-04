@@ -100,7 +100,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs  text-neutral-400  ">
-                    <span>Efficiency</span>
+                    <span>{kpi.label}</span>
                     <span>{kpi.value}%</span>
                   </div>
                   <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">

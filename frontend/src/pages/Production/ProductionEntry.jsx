@@ -123,11 +123,11 @@ export default function ProductionEntry() {
   const totalScrapQty = parseFloat(jobCardData?.scrap_quantity || 0)
   const totalDowntimeMinutes = downtimes.reduce((sum, d) => sum + (parseFloat(d.duration_minutes) || 0), 0)
 
-  const isOperationFinished = totalProducedQty >= (parseFloat(jobCardData?.planned_quantity || 0) - 0.0001);
-
   const maxAllowedQty = previousOperationData
     ? (parseFloat(previousOperationData.accepted_quantity) || (parseFloat(previousOperationData.produced_quantity) || 0) - (parseFloat(previousOperationData.rejected_quantity) || 0))
     : parseFloat(jobCardData?.planned_quantity || 0);
+
+  const isOperationFinished = totalProducedQty >= (maxAllowedQty - 0.1);
 
   const rejectionReasons = [
     'Size/Dimension Error',
@@ -1020,7 +1020,7 @@ export default function ProductionEntry() {
                 ) : (
                   <CheckCircle size={15} />
                 )}
-                Complete Production
+                {normalizeStatus(jobCardData?.status) === 'completed' ? 'Update & Sync Stage' : 'Complete Production'}
               </button>
             )}
           </div>
@@ -1029,7 +1029,7 @@ export default function ProductionEntry() {
         {/* New Horizontal Context & Stats Bar */}
         <div className="grid grid-cols-12 gap-4 mb28">
           {/* Target Item Card - Horizontal Layout */}
-          <Card className="col-span-12 xl:col-span-6 border-slate-100 bg-white p-4 flex flex-col md:flex-row items-start md:items-center gap-6 ">
+          <Card className="col-span-12  border-slate-100 bg-white p-2 flex flex-col md:flex-row items-start md:items-center gap-6 ">
             <div className="flex items-center gap-4 flex-1">
               <div className="w-12 h-12 bg-slate-50 rounded flex items-center justify-center border border-slate-100 shrink-0">
                 <Package className="text-slate-400" size={24} />
@@ -1049,8 +1049,8 @@ export default function ProductionEntry() {
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Planned</p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-lg text-slate-900 font-bold">
-                    {parseFloat(jobCardData?.planned_quantity || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                  <span className="text-md text-slate-900 ">
+                    {parseFloat(maxAllowedQty || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                   </span>
                   <span className="text-xs text-slate-400">Units</span>
                 </div>
@@ -1058,7 +1058,7 @@ export default function ProductionEntry() {
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Produced</p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-lg text-slate-900 font-bold">
+                  <span className="text-lg text-slate-900 ">
                     {totalProducedQty.toLocaleString()}
                   </span>
                   <span className="text-xs text-slate-400">Units</span>
@@ -1067,7 +1067,7 @@ export default function ProductionEntry() {
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Accepted</p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-lg text-emerald-600 font-bold">
+                  <span className="text-lg text-emerald-600 ">
                     {totalAcceptedQty.toLocaleString()}
                   </span>
                   <span className="text-xs text-emerald-400">Units</span>
@@ -1077,7 +1077,7 @@ export default function ProductionEntry() {
                 <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Current Op</p>
                 <div className="flex items-center gap-2 text-indigo-600">
                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                  <span className="text-sm font-bold truncate max-w-[120px]" title={jobCardData?.operation}>
+                  <span className="text-sm  truncate max-w-[120px]" title={jobCardData?.operation}>
                     {jobCardData?.operation || 'N/A'}
                   </span>
                 </div>
@@ -1128,6 +1128,7 @@ export default function ProductionEntry() {
               )
             })()}
           </div>
+          
         </div>
         <Card className="p-2  border-slate-200 bg-white rounded">
 
@@ -1184,7 +1185,7 @@ export default function ProductionEntry() {
                 <Card className="p-0 border-none bg-emerald-50/20 rounded-xl overflow-hidden border border-emerald-100/50 ">
                   <div className="p-3 bg-emerald-600 text-white flex items-center gap-2">
                     <CheckCircle size={14} />
-                    <h3 className="text-[10px] uppercase tracking-wider font-bold text-white/90">Previous Phase</h3>
+                    <h3 className="text-[10px] uppercase tracking-wider  text-white/90">Previous Phase</h3>
                   </div>
                   <div className="p-3 space-y-3">
                     <div>
@@ -1194,13 +1195,13 @@ export default function ProductionEntry() {
                     <div className="grid grid-cols-2 gap-4 pt-2 border-t border-emerald-100">
                       <div>
                         <p className="text-[9px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Accepted</p>
-                        <p className="text-sm text-emerald-600 font-bold">
+                        <p className="text-sm text-emerald-600 ">
                           {parseFloat(parseFloat(previousOperationData.accepted_quantity) || ((parseFloat(previousOperationData.produced_quantity) || 0) - (parseFloat(previousOperationData.rejected_quantity) || 0))).toLocaleString()}
                         </p>
                       </div>
                       <div>
                         <p className="text-[9px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Rejected</p>
-                        <p className="text-sm text-rose-500 font-bold">
+                        <p className="text-sm text-rose-500 ">
                           {parseFloat(previousOperationData.rejected_quantity || 0).toLocaleString()}
                         </p>
                       </div>
@@ -1384,7 +1385,7 @@ export default function ProductionEntry() {
                         timeLogs.map((log) => (
                           <tr key={log.time_log_id} className="hover:bg-slate-50/50 transition-colors">
                             <td className="p-3 text-center">
-                              <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-bold">
+                              <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md ">
                                 {log.day_number || '-'}
                               </span>
                             </td>
@@ -1394,7 +1395,7 @@ export default function ProductionEntry() {
                             </td>
                             <td className="p-3">
                               <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-500 uppercase">
+                                <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px]  text-slate-500 uppercase">
                                   {log.operator_name?.charAt(0) || 'U'}
                                 </div>
                                 <span>{log.operator_name || 'N/A'}</span>
@@ -1407,7 +1408,7 @@ export default function ProductionEntry() {
                               </div>
                             </td>
                             <td className="p-3 text-right">
-                              <span className="font-bold text-indigo-600">{parseFloat(log.completed_qty).toLocaleString()}</span>
+                              <span className=" text-indigo-600">{parseFloat(log.completed_qty).toLocaleString()}</span>
                               <span className="ml-1 text-[10px] text-slate-400 uppercase tracking-wider">Units</span>
                             </td>
                             <td className="p-3 text-center">
@@ -1478,7 +1479,7 @@ export default function ProductionEntry() {
 
                   <div className='col-span-1'>
                     <FieldWrapper label="Produce Qty">
-                      <div className="p-2 bg-indigo-50 border border-indigo-100 rounded text-xs text-indigo-700 font-bold h-[34px] flex items-center justify-center">
+                      <div className="p-2 bg-indigo-50 border border-indigo-100 rounded text-xs text-indigo-700  h-[34px] flex items-center justify-center">
                         {rejectionForm.produce_qty || 0}
                       </div>
                     </FieldWrapper>
@@ -1507,7 +1508,7 @@ export default function ProductionEntry() {
                         step="0.01"
                         value={rejectionForm.accepted_qty}
                         onChange={(e) => setRejectionForm({ ...rejectionForm, accepted_qty: parseFloat(e.target.value) || 0 })}
-                        className="w-full p-2 bg-emerald-50/50 border border-emerald-100 rounded text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-emerald-700 font-bold"
+                        className="w-full p-2 bg-emerald-50/50 border border-emerald-100 rounded text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-emerald-700 "
                         required
                       />
                     </FieldWrapper>
@@ -1519,7 +1520,7 @@ export default function ProductionEntry() {
                         step="0.01"
                         value={rejectionForm.rejected_qty}
                         onChange={(e) => setRejectionForm({ ...rejectionForm, rejected_qty: parseFloat(e.target.value) || 0 })}
-                        className="w-full p-2 bg-rose-50/50 border border-rose-100 rounded text-xs outline-none focus:ring-2 focus:ring-rose-500/20 transition-all text-rose-700 font-bold"
+                        className="w-full p-2 bg-rose-50/50 border border-rose-100 rounded text-xs outline-none focus:ring-2 focus:ring-rose-500/20 transition-all text-rose-700 "
                         required
                       />
                     </FieldWrapper>
@@ -1531,7 +1532,7 @@ export default function ProductionEntry() {
                         step="0.01"
                         value={rejectionForm.scrap_qty}
                         onChange={(e) => setRejectionForm({ ...rejectionForm, scrap_qty: parseFloat(e.target.value) || 0 })}
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-slate-500/20 transition-all font-bold"
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-slate-500/20 transition-all "
                         required
                       />
                     </FieldWrapper>
@@ -1572,7 +1573,7 @@ export default function ProductionEntry() {
                         rejections.map((rej) => (
                           <tr key={rej.rejection_id} className="hover:bg-slate-50/50 transition-colors">
                             <td className="p-3 text-center">
-                              <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-bold">
+                              <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md ">
                                 {rej.day_number || '-'}
                               </span>
                             </td>
@@ -1583,21 +1584,21 @@ export default function ProductionEntry() {
                             <td className="p-3">
                               <div className="flex flex-col gap-1">
                                 {parseFloat(rej.rejected_qty) > 0 ? (
-                                  <span className="p-1 bg-rose-50 text-rose-600 rounded text-[10px] font-bold w-fit uppercase">Defect Found</span>
+                                  <span className="p-1 bg-rose-50 text-rose-600 rounded text-[10px]  w-fit uppercase">Defect Found</span>
                                 ) : (
-                                  <span className="p-1 bg-emerald-50 text-emerald-600 rounded text-[10px] font-bold w-fit uppercase">Passed</span>
+                                  <span className="p-1 bg-emerald-50 text-emerald-600 rounded text-[10px]  w-fit uppercase">Passed</span>
                                 )}
                                 <span className="text-slate-500">{rej.rejection_reason || 'Standard Inspection'}</span>
                               </div>
                             </td>
                             <td className="p-3 text-center">
-                              <span className="text-emerald-600 font-bold">{parseFloat(rej.accepted_qty).toLocaleString()}</span>
+                              <span className="text-emerald-600 ">{parseFloat(rej.accepted_qty).toLocaleString()}</span>
                             </td>
                             <td className="p-3 text-center">
-                              <span className="text-rose-500 font-bold">{parseFloat(rej.rejected_qty).toLocaleString()}</span>
+                              <span className="text-rose-500 ">{parseFloat(rej.rejected_qty).toLocaleString()}</span>
                             </td>
                             <td className="p-3 text-center">
-                              <span className="text-slate-600 font-bold">{parseFloat(rej.scrap_qty).toLocaleString()}</span>
+                              <span className="text-slate-600 ">{parseFloat(rej.scrap_qty).toLocaleString()}</span>
                             </td>
                             <td className="p-3 text-center">
                               <button
@@ -1749,7 +1750,7 @@ export default function ProductionEntry() {
                         downtimes.map((down) => (
                           <tr key={down.downtime_id} className="hover:bg-slate-50/50 transition-colors">
                             <td className="p-3 text-center">
-                              <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-bold">
+                              <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md ">
                                 {down.day_number || '-'}
                               </span>
                             </td>
@@ -1765,7 +1766,7 @@ export default function ProductionEntry() {
                               {down.from_time} - {down.to_time}
                             </td>
                             <td className="p-3 text-right">
-                              <span className="font-bold text-amber-600">{down.duration_minutes}</span>
+                              <span className=" text-amber-600">{down.duration_minutes}</span>
                               <span className="ml-1 text-[10px] text-slate-400 uppercase tracking-wider">Mins</span>
                             </td>
                             <td className="p-3 text-center">
@@ -1800,7 +1801,7 @@ export default function ProductionEntry() {
                     </div>
                     <div className="hidden sm:flex items-center gap-2 text-emerald-600 bg-emerald-50 p-2  py-1.5 rounded border border-emerald-100">
                       <Activity size={14} className="animate-pulse" />
-                      <span className="text-xs ">Ready to Dispatched</span>
+                      <span className="text-xs ">Ready for Dispatch</span>
                     </div>
                   </div>
 
@@ -1908,7 +1909,7 @@ export default function ProductionEntry() {
                   <div className="mt-2 border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
 
 
-                    {isOperationFinished && normalizeStatus(jobCardData?.status) !== 'completed' && (
+                    {isOperationFinished && (
                       <button
                         onClick={handleSubmitProduction}
                         disabled={isSubmitting}
@@ -1924,8 +1925,12 @@ export default function ProductionEntry() {
                             </div>
                           )}
                           <div className="text-left">
-                            <p className="text-xs text-white/50 leading-none">Finalize & Dispatch</p>
-                            <p className="text-xs">Complete Production</p>
+                            <p className="text-xs text-white/50 leading-none">
+                              {normalizeStatus(jobCardData?.status) === 'completed' ? 'Synchronize Next Stage' : 'Finalize & Dispatch'}
+                            </p>
+                            <p className="text-xs">
+                              {normalizeStatus(jobCardData?.status) === 'completed' ? 'Update Stage' : 'Complete Production'}
+                            </p>
                           </div>
                           <ChevronRight size={10} className="group-hover:translate-x-1 transition-transform" />
                         </div>
@@ -1980,14 +1985,14 @@ export default function ProductionEntry() {
                           <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                             <td className="p-2 font-medium text-slate-900">{new Date(row.date).toLocaleDateString()}</td>
                             <td className="p-2">
-                              <span className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded uppercase">
+                              <span className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px]  rounded uppercase">
                                 Shift {row.shift}
                               </span>
                             </td>
                             <td className="p-2 text-slate-600">{row.operator || 'N/A'}</td>
                             <td className="p-2 text-right font-semibold text-slate-900">{row.produced.toLocaleString()}</td>
-                            <td className="p-2 text-right font-bold text-emerald-600">{row.accepted.toLocaleString()}</td>
-                            <td className="p-2 text-right font-bold text-rose-500">{row.rejected.toLocaleString()}</td>
+                            <td className="p-2 text-right  text-emerald-600">{row.accepted.toLocaleString()}</td>
+                            <td className="p-2 text-right  text-rose-500">{row.rejected.toLocaleString()}</td>
                             <td className="p-2 text-right font-medium text-slate-500">{row.scrap.toLocaleString()}</td>
                             <td className="p-2 text-right">
                               <span className="text-amber-600 font-medium">{row.downtime}</span>

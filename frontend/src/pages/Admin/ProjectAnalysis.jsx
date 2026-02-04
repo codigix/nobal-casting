@@ -151,7 +151,7 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
     { subject: 'Progress', A: progress, B: 80, fullMark: 100 },
     { subject: 'Yield', A: yieldRate, B: 95, fullMark: 100 },
     { subject: 'Timeline', A: timelinePerformance, B: 90, fullMark: 100 },
-    { subject: 'Quality', A: qualityRate, B: 98, fullMark: 100 },
+    { subject: 'Quality Yield', A: qualityRate, B: 98, fullMark: 100 },
     { subject: 'Efficiency', A: efficiency, B: 85, fullMark: 100 }
   ];
 
@@ -226,7 +226,7 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
                       </div>
 
                       <div className="bg-white p-2 rounded  border border-slate-200 ">
-                        <p className="text-xs  text-slate-400 mb-4">Time Efficiency</p>
+                        <p className="text-xs  text-slate-400 mb-4">Timeline Performance</p>
                         <h3 className="text-xl  text-slate-900">{project.daysLeft} Days</h3>
                         <p className="text-slate-500 text-xs  mt-2">Remaining to delivery</p>
                       </div>

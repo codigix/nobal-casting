@@ -18,7 +18,8 @@ export default function WorkOrder() {
     totalOrders: 0,
     inProgress: 0,
     completed: 0,
-    pending: 0
+    pending: 0,
+    completionRate: 0
   })
   const [filters, setFilters] = useState({
     status: '',
@@ -117,8 +118,9 @@ export default function WorkOrder() {
     const inProgress = ordersData.filter(o => o.status === 'in-progress').length
     const completed = ordersData.filter(o => o.status === 'completed').length
     const pending = ordersData.filter(o => ['draft', 'planned'].includes(o.status)).length
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0
 
-    setStats({ totalOrders: total, inProgress, completed, pending })
+    setStats({ totalOrders: total, inProgress, completed, pending, completionRate })
   }
 
   const handleFilterChange = (e) => {
@@ -403,10 +405,10 @@ export default function WorkOrder() {
                 </div>
 
                 <div className="bg-white/5 backdrop-blur-md border border-white/10 p-2  rounded hover:bg-white/10 transition-colors">
-                  <p className="text-gray-400 text-xs    mb-2">Efficiency Rate</p>
-                  <p className="text-xl  text-white">88<span className="text-lg text-indigo-400">%</span></p>
+                  <p className="text-gray-400 text-xs    mb-2">Completion Rate</p>
+                  <p className="text-xl  text-white">{stats.completionRate}<span className="text-lg text-indigo-400">%</span></p>
                   <div className="mt-4 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" style={{ width: '88%' }} />
+                    <div className="h-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" style={{ width: `${stats.completionRate}%` }} />
                   </div>
                 </div>
 

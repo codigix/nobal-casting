@@ -581,7 +581,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   {isBottleneck && <p className="text-red-600 text-xs mt-1">🚨 Bottleneck Detected</p>}
                 </div>
                 <div className="p-2 rounded bg-blue-50 border border-blue-200">
-                  <p className="text-gray-600  mb-1">✓ Quality</p>
+                  <p className="text-gray-600  mb-1">✓ Quality Yield</p>
                   <p className=" text-lg text-blue-600">{qualityScore}%</p>
                   <p className="text-gray-500 text-xs mt-1">Acceptance rate</p>
                 </div>
