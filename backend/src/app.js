@@ -61,7 +61,20 @@ async function initializeDatabase() {
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
-      charset: 'utf8mb4'
+      charset: 'utf8mb4',
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 10000,
+      connectTimeout: 10000,
+      acquireTimeout: 10000
+    })
+
+    // Add error handler to the pool
+    db.on('error', (err) => {
+      console.error('Unexpected error on idle database connection:', err)
+      if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+        console.error('Database connection was closed. Attempting to reconnect...')
+        // The pool handles individual connection drops, but if the whole pool is bad, we might need more
+      }
     })
 
     await db.execute('SELECT 1')
@@ -478,6 +491,8 @@ async function enhanceJobCardTable() {
 async function enhanceTimeLogTable() {
   try {
     const columnsToAdd = [
+      { name: 'log_date', sql: 'log_date DATE' },
+      { name: 'day_number', sql: 'day_number INT DEFAULT 1' },
       { name: 'workstation_name', sql: 'workstation_name VARCHAR(100) DEFAULT NULL' },
       { name: 'inhouse', sql: 'inhouse TINYINT(1) DEFAULT 0' },
       { name: 'outsource', sql: 'outsource TINYINT(1) DEFAULT 0' }
@@ -590,8 +605,13 @@ async function createRejectionEntryTable() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         rejection_id VARCHAR(50) UNIQUE NOT NULL,
         job_card_id VARCHAR(50) NOT NULL,
+        day_number INT DEFAULT 1,
+        log_date DATE,
+        shift VARCHAR(20),
+        accepted_qty DECIMAL(18,6) DEFAULT 0,
         rejection_reason VARCHAR(255),
         rejected_qty DECIMAL(18,6) DEFAULT 0,
+        scrap_qty DECIMAL(18,6) DEFAULT 0,
         notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

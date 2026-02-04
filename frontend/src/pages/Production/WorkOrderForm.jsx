@@ -1272,29 +1272,39 @@ export default function WorkOrderForm() {
               <Card className="p-2 border-none  col-span-12 lg:col-span-3 space-y-6 ">
                 <SectionTitle title="Operational Panel" icon={Zap} />
                 <div className="space-y-3">
-                  <button
-                    onClick={handleSubmit}
-                    disabled={loading}
-                    className="w-full flex items-center justify-between p-2  bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded  border border-indigo-100 transition-all group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Save size={16} />
-                      <span className="text-xs  ">Commit Progress</span>
-                    </div>
-                    <ArrowRight size={14} className=" group-hover:translate-x-1 transition-all" />
-                  </button>
+                  {!isReadOnly && (
+                    <>
+                      <button
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="w-full flex items-center justify-between p-2  bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded  border border-indigo-100 transition-all group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Save size={16} />
+                          <span className="text-xs  ">Commit Progress</span>
+                        </div>
+                        <ArrowRight size={14} className=" group-hover:translate-x-1 transition-all" />
+                      </button>
 
-                  <button
-                    onClick={createJobCardsFromOperations}
-                    disabled={loading || jobCards.length > 0}
-                    className="w-full flex items-center justify-between p-2  bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30 rounded  transition-all group shadow-lg shadow-slate-200"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Layers size={16} />
-                      <span className="text-xs  ">Release job cards</span>
+                      <button
+                        onClick={createJobCardsFromOperations}
+                        disabled={loading || jobCards.length > 0}
+                        className="w-full flex items-center justify-between p-2  bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30 rounded  transition-all group shadow-lg shadow-slate-200"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Layers size={16} />
+                          <span className="text-xs  ">Release job cards</span>
+                        </div>
+                        <Zap size={14} className="text-amber-400" />
+                      </button>
+                    </>
+                  )}
+                  {isReadOnly && (
+                    <div className="p-4 bg-slate-50 border border-slate-100 rounded text-center">
+                      <p className="text-xs text-slate-500 font-medium">Read-only Mode</p>
+                      <p className="text-[10px] text-slate-400 mt-1">Actions are disabled in view mode</p>
                     </div>
-                    <Zap size={14} className="text-amber-400" />
-                  </button>
+                  )}
                 </div>
               </Card>
               <div className="col-span-12 lg:col-span-6 space-y-6">

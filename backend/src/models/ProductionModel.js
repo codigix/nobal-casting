@@ -138,6 +138,135 @@ class ProductionModel {
     }
   }
 
+  async createWorkOrderRecursive(data, createdBy = 'system') {
+    try {
+      const { item_code, quantity, bom_no, priority, notes, sales_order_id, production_plan_id, planned_start_date, planned_end_date, expected_delivery_date } = data;
+      
+      // 1. Determine actual BOM
+      let actualBomNo = bom_no;
+      if (!actualBomNo) {
+        const [boms] = await this.db.query(
+          'SELECT bom_id FROM bom WHERE item_code = ? AND is_active = 1 ORDER BY is_default DESC, created_at DESC LIMIT 1',
+          [item_code]
+        );
+        if (boms && boms.length > 0) {
+          actualBomNo = boms[0].bom_id;
+        }
+      }
+
+      const createdWorkOrderIds = [];
+
+      // 2. EXPLODE BOM to find and create sub-assemblies FIRST
+      if (actualBomNo) {
+        const bomDetails = await this.getBOMDetails(actualBomNo);
+        const lines = bomDetails?.lines || [];
+        
+        for (const line of lines) {
+          const componentCode = line.component_code;
+          
+          // Check if this component has its own BOM (is a sub-assembly)
+          const [compBoms] = await this.db.query(
+            'SELECT bom_id FROM bom WHERE item_code = ? AND is_active = 1 LIMIT 1',
+            [componentCode]
+          );
+          
+          if (compBoms && compBoms.length > 0) {
+            // It's a sub-assembly - Recursively create its Work Order first
+            const subAsmQty = (parseFloat(line.quantity) || 1) * quantity;
+            
+            console.log(`Creating recursive Sub-Assembly WO for ${componentCode} (Parent: ${item_code})`);
+            const subWOs = await this.createWorkOrderRecursive({
+              item_code: componentCode,
+              quantity: subAsmQty,
+              bom_no: compBoms[0].bom_id,
+              priority: priority || 'medium',
+              notes: `Auto-generated sub-assembly for parent: ${item_code}`,
+              sales_order_id,
+              production_plan_id,
+              planned_start_date,
+              planned_end_date,
+              expected_delivery_date
+            }, createdBy);
+            
+            createdWorkOrderIds.push(...subWOs);
+          }
+        }
+      }
+
+      // 3. Create the Work Order for the item itself
+      const wo_id = `WO-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const workOrderData = {
+        ...data,
+        wo_id,
+        bom_no: actualBomNo,
+        status: 'Draft'
+      };
+
+      await this.createWorkOrder(workOrderData);
+      
+      // 4. Automatically populate items and operations from BOM if not provided
+      const bomDetails = actualBomNo ? await this.getBOMDetails(actualBomNo) : null;
+      
+      // Add items from BOM
+      if (bomDetails && bomDetails.lines) {
+        for (let i = 0; i < bomDetails.lines.length; i++) {
+          const line = bomDetails.lines[i];
+          await this.addWorkOrderItem(wo_id, {
+            item_code: line.component_code,
+            required_qty: (parseFloat(line.quantity) || 0) * quantity,
+            sequence: i + 1
+          });
+        }
+      }
+
+      // Add operations from BOM
+      if (bomDetails && bomDetails.operations) {
+        for (let i = 0; i < bomDetails.operations.length; i++) {
+          const op = bomDetails.operations[i];
+          await this.addWorkOrderOperation(wo_id, {
+            operation_name: op.operation_name,
+            workstation: op.workstation_type,
+            operation_time: op.operation_time,
+            hourly_rate: op.hourly_rate,
+            operating_cost: op.operating_cost || 0,
+            operation_type: op.operation_type || 'IN_HOUSE',
+            sequence: i + 1
+          });
+        }
+      }
+
+      // 5. Generate Job Cards
+      await this.generateJobCardsForWorkOrder(wo_id, createdBy);
+
+      // 6. Material Allocation (Optional but good for consistency)
+      try {
+        if (bomDetails && bomDetails.lines) {
+          const InventoryModel = (await import('./InventoryModel.js')).default;
+          const inventoryModel = new InventoryModel(this.db);
+          
+          const allocationItems = bomDetails.lines.map(line => ({
+            item_code: line.component_code,
+            required_qty: (parseFloat(line.quantity) || 0) * quantity,
+            source_warehouse: line.source_warehouse || 'Main'
+          }));
+          
+          // Only attempt if we have items
+          if (allocationItems.length > 0) {
+            await inventoryModel.allocateMaterialsForWorkOrder(wo_id, allocationItems, createdBy);
+          }
+        }
+      } catch (allocError) {
+        console.warn(`Material allocation skipped/failed for ${wo_id}:`, allocError.message);
+      }
+
+      createdWorkOrderIds.push(wo_id);
+      return createdWorkOrderIds;
+    } catch (error) {
+      console.error('Error in createWorkOrderRecursive:', error);
+      throw error;
+    }
+  }
+
   async getWorkOrders(filters = {}) {
     try {
       let query = `
@@ -183,7 +312,13 @@ class ProductionModel {
       }
 
       const [workOrders] = await this.db.query(query, params)
-      return workOrders
+      return (workOrders || []).map(wo => ({
+        ...wo,
+        quantity: parseFloat(wo.quantity) || 0,
+        unit_cost: parseFloat(wo.unit_cost) || 0,
+        total_cost: parseFloat(wo.total_cost) || 0,
+        valuation_rate: parseFloat(wo.valuation_rate) || 0
+      }))
     } catch (error) {
       throw error
     }
@@ -205,7 +340,13 @@ class ProductionModel {
       )
       if (!workOrders || workOrders.length === 0) return null
 
-      const workOrder = workOrders[0]
+      const workOrder = {
+        ...workOrders[0],
+        quantity: parseFloat(workOrders[0].quantity) || 0,
+        unit_cost: parseFloat(workOrders[0].unit_cost) || 0,
+        total_cost: parseFloat(workOrders[0].total_cost) || 0,
+        valuation_rate: parseFloat(workOrders[0].valuation_rate) || 0
+      }
       let bom_id = workOrder.bom_no || workOrder.bom_id
 
       // If no BOM is linked, try to find the default BOM for this item
@@ -273,10 +414,27 @@ class ProductionModel {
         woItems = bomLines
       }
 
+      const mappedOperations = (operations || []).map(op => ({
+        ...op,
+        time: parseFloat(op.time) || parseFloat(op.operation_time) || 0,
+        hourly_rate: parseFloat(op.hourly_rate) || 0,
+        operating_cost: parseFloat(op.operating_cost) || 0,
+        completed_qty: parseFloat(op.completed_qty) || 0,
+        process_loss_qty: parseFloat(op.process_loss_qty) || 0
+      }))
+
+      const mappedItems = (woItems || []).map(item => ({
+        ...item,
+        required_qty: parseFloat(item.required_qty) || 0,
+        transferred_qty: parseFloat(item.transferred_qty) || 0,
+        consumed_qty: parseFloat(item.consumed_qty) || 0,
+        returned_qty: parseFloat(item.returned_qty) || 0
+      }))
+
       return {
         ...workOrder,
-        operations: operations || [],
-        items: woItems || []
+        operations: mappedOperations,
+        items: mappedItems
       }
     } catch (error) {
       throw error
@@ -323,7 +481,52 @@ class ProductionModel {
 
   async deleteWorkOrder(wo_id) {
     try {
+      // 0. Reverse Material Allocations
+      const [allocations] = await this.db.query(
+        'SELECT item_code, warehouse_id, allocated_qty FROM material_allocation WHERE work_order_id = ?',
+        [wo_id]
+      )
+      
+      for (const alloc of allocations) {
+        await this.db.query(
+          'UPDATE stock_balance SET reserved_qty = GREATEST(0, reserved_qty - ?) WHERE item_code = ? AND warehouse_id = ?',
+          [parseFloat(alloc.allocated_qty) || 0, alloc.item_code, alloc.warehouse_id]
+        )
+      }
+      
+      await this.db.query('DELETE FROM material_allocation WHERE work_order_id = ?', [wo_id])
+
+      // 1. Delete Rejections via Production Entries
+      const [prodEntries] = await this.db.query(
+        'SELECT entry_id FROM production_entry WHERE work_order_id = ?',
+        [wo_id]
+      )
+
+      if (prodEntries && prodEntries.length > 0) {
+        const entryIds = prodEntries.map(pe => pe.entry_id)
+        const entryPlaceholders = entryIds.map(() => '?').join(',')
+        
+        await this.db.query(
+          `DELETE FROM rejection WHERE production_entry_id IN (${entryPlaceholders})`,
+          entryIds
+        )
+        
+        await this.db.query(
+          'DELETE FROM production_entry WHERE work_order_id = ?',
+          [wo_id]
+        )
+      }
+
+      // 2. Delete Job Cards (with thorough cleanup)
+      await this.deleteJobCardsByWorkOrder(wo_id)
+
+      // 3. Delete Work Order Items and Operations
+      await this.db.query('DELETE FROM work_order_item WHERE wo_id = ?', [wo_id])
+      await this.db.query('DELETE FROM work_order_operation WHERE wo_id = ?', [wo_id])
+
+      // 4. Delete the Work Order itself
       await this.db.query('DELETE FROM work_order WHERE wo_id = ?', [wo_id])
+      
       return true
     } catch (error) {
       throw error
@@ -332,13 +535,13 @@ class ProductionModel {
 
   async addWorkOrderItem(wo_id, item) {
     try {
-      const requiredQty = item.required_qty || item.required_quantity || item.qty || item.quantity || 0
+      const requiredQty = parseFloat(item.required_qty) || parseFloat(item.required_quantity) || parseFloat(item.qty) || parseFloat(item.quantity) || 0
       
       await this.db.query(
         `INSERT INTO work_order_item (wo_id, item_code, source_warehouse, required_qty, transferred_qty, consumed_qty, returned_qty, sequence)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [wo_id, item.item_code, item.source_warehouse || '', requiredQty, 
-         item.transferred_qty || 0, item.consumed_qty || 0, item.returned_qty || 0, item.sequence || 0]
+         parseFloat(item.transferred_qty) || 0, parseFloat(item.consumed_qty) || 0, parseFloat(item.returned_qty) || 0, item.sequence || 0]
       )
     } catch (error) {
       throw error
@@ -358,15 +561,15 @@ class ProductionModel {
     try {
       const operationName = operation.operation_name || operation.operation || ''
       const workstation = operation.workstation_type || operation.workstation || ''
-      const time = operation.operation_time || operation.time || 0
-      const hourly_rate = operation.hourly_rate || 0
+      const time = parseFloat(operation.operation_time) || parseFloat(operation.time) || 0
+      const hourly_rate = parseFloat(operation.hourly_rate) || 0
       
       await this.db.query(
         `INSERT INTO work_order_operation (wo_id, operation, workstation, time, hourly_rate, operation_type, operating_cost, completed_qty, process_loss_qty, sequence)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [wo_id, operationName, workstation, time, hourly_rate,
-         operation.operation_type || 'IN_HOUSE', operation.operating_cost || 0,
-         operation.completed_qty || 0, operation.process_loss_qty || 0, operation.sequence || 0]
+         operation.operation_type || 'IN_HOUSE', parseFloat(operation.operating_cost) || 0,
+         parseFloat(operation.completed_qty) || 0, parseFloat(operation.process_loss_qty) || 0, operation.sequence || 0]
       )
     } catch (error) {
       throw error
@@ -495,7 +698,7 @@ class ProductionModel {
         `INSERT INTO production_entry (entry_id, work_order_id, machine_id, operator_id, entry_date, shift_no, quantity_produced, quantity_rejected, hours_worked, remarks)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [entry_id, data.work_order_id, data.machine_id, data.operator_id, data.entry_date, data.shift_no, 
-         data.quantity_produced, data.quantity_rejected, data.hours_worked, data.remarks]
+         parseFloat(data.quantity_produced) || 0, parseFloat(data.quantity_rejected) || 0, parseFloat(data.hours_worked) || 0, data.remarks]
       )
       return { entry_id, ...data }
     } catch (error) {
@@ -535,7 +738,12 @@ class ProductionModel {
       }
 
       const [entries] = await this.db.query(query, params)
-      return entries
+      return (entries || []).map(entry => ({
+        ...entry,
+        quantity_produced: parseFloat(entry.quantity_produced) || 0,
+        quantity_rejected: parseFloat(entry.quantity_rejected) || 0,
+        hours_worked: parseFloat(entry.hours_worked) || 0
+      }))
     } catch (error) {
       throw error
     }
@@ -549,7 +757,7 @@ class ProductionModel {
       await this.db.query(
         `INSERT INTO rejection (rejection_id, production_entry_id, rejection_reason, rejection_count, root_cause, corrective_action, reported_by_id)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [rejection_id, data.production_entry_id, data.rejection_reason, data.rejection_count, 
+        [rejection_id, data.production_entry_id, data.rejection_reason, parseFloat(data.rejection_count) || 0, 
          data.root_cause, data.corrective_action, data.reported_by_id]
       )
       return { rejection_id, ...data }
@@ -1302,6 +1510,14 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async deleteJobCard(job_card_id) {
     try {
+      // 1. Delete associated logs and entries
+      await this.db.query('DELETE FROM time_log WHERE job_card_id = ?', [job_card_id])
+      await this.db.query('DELETE FROM rejection_entry WHERE job_card_id = ?', [job_card_id])
+      await this.db.query('DELETE FROM inward_challan WHERE job_card_id = ?', [job_card_id])
+      await this.db.query('DELETE FROM downtime_entry WHERE job_card_id = ?', [job_card_id])
+      await this.db.query("DELETE FROM inspection_result WHERE reference_type = 'Job Card' AND reference_id = ?", [job_card_id])
+      
+      // 2. Delete the Job Card itself
       await this.db.query('DELETE FROM job_card WHERE job_card_id = ?', [job_card_id])
       return true
     } catch (error) {
@@ -1311,7 +1527,13 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async deleteJobCardsByWorkOrder(work_order_id) {
     try {
-      await this.db.query('DELETE FROM job_card WHERE work_order_id = ?', [work_order_id])
+      // Get all job card IDs for this work order to clean up children
+      const [jobCards] = await this.db.query('SELECT job_card_id FROM job_card WHERE work_order_id = ?', [work_order_id])
+      
+      for (const jc of jobCards) {
+        await this.deleteJobCard(jc.job_card_id)
+      }
+      
       return true
     } catch (error) {
       throw error
@@ -1377,7 +1599,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       }
 
       const createdCards = []
-      const plannedQty = parseFloat(workOrder.quantity || workOrder.qty_to_manufacture || 0)
+      const plannedQty = parseFloat(workOrder.quantity) || parseFloat(workOrder.qty_to_manufacture) || 0
 
       for (const operation of workOrder.operations) {
         const job_card_id = `JC-${Date.now()}-${operation.sequence || Math.floor(Math.random() * 1000)}`
@@ -1927,8 +2149,27 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
+  _formatDate(dateInput) {
+    if (!dateInput) return null;
+    
+    // If it's already a simple YYYY-MM-DD string, return it
+    if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+      return dateInput;
+    }
+    
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return dateInput;
+    
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   async _syncJobCardQuantities(jobCardId) {
     try {
+      const normShift = (s) => String(s || '').trim().toUpperCase().replace(/^SHIFT\s+/, '');
+
       // 0. Get current job card details for stock delta calculation
       const [currentJC] = await this.db.query(
         'SELECT job_card_id, work_order_id, operation, operation_sequence, produced_quantity, accepted_quantity, rejected_quantity, scrap_quantity FROM job_card WHERE job_card_id = ?',
@@ -1959,60 +2200,72 @@ async deleteAllBOMRawMaterials(bom_id) {
       const shifts = {};
 
       timeLogs.forEach(log => {
-        const dateStr = log.log_date instanceof Date ? log.log_date.toISOString().split('T')[0] : log.log_date;
-        const key = `${dateStr}_${log.shift}`;
-        if (!shifts[key]) shifts[key] = { produced: 0, rejected: 0, scrap: 0, rejectionProduced: 0, isInferred: false };
+        const dateStr = this._formatDate(log.log_date);
+        const key = `${dateStr}_${normShift(log.shift)}`;
+        if (!shifts[key]) shifts[key] = { produced: 0, rejected: 0, scrap: 0, rejectionProduced: 0, rejectionRejected: 0, rejectionScrap: 0, isInferred: false };
         shifts[key].produced += parseFloat(log.completed_qty) || 0;
         shifts[key].rejected += parseFloat(log.rejected_qty) || 0;
         shifts[key].scrap += parseFloat(log.scrap_qty) || 0;
       });
 
       rejections.forEach(rej => {
-        const dateStr = rej.log_date instanceof Date ? rej.log_date.toISOString().split('T')[0] : rej.log_date;
-        const key = `${dateStr}_${rej.shift}`;
+        const dateStr = this._formatDate(rej.log_date);
+        const key = `${dateStr}_${normShift(rej.shift)}`;
         
         const rQty = parseFloat(rej.rejected_qty) || 0;
         const sQty = parseFloat(rej.scrap_qty) || 0;
         const aQty = parseFloat(rej.accepted_qty) || 0;
 
         if (!shifts[key]) {
-          shifts[key] = { produced: 0, rejected: 0, scrap: 0, rejectionProduced: 0, isInferred: true };
+          shifts[key] = { produced: 0, rejected: 0, scrap: 0, rejectionProduced: 0, rejectionRejected: 0, rejectionScrap: 0, isInferred: true };
         }
         
-        shifts[key].rejected += rQty;
-        shifts[key].scrap += sQty;
-        shifts[key].rejectionProduced += (aQty + rQty + sQty);
+        shifts[key].rejectionRejected += rQty;
+        shifts[key].rejectionScrap += sQty;
+        // In this workflow, Rejected and Scrap represent the same units
+        shifts[key].rejectionProduced += (aQty + Math.max(rQty, sQty));
       });
 
-      let totalProduced = 0;
-      let totalRejected = 0;
-      let totalScrap = 0;
+      // --- IMPROVED AGGREGATION LOGIC TO PREVENT DOUBLE COUNTING ---
+      // We calculate totals from all sources and take the maximum at the Job Card level
+      // This handles cases where rejections are recorded in a different shift/date than production
+      
+      const totalTimeLogProduced = Object.values(shifts).reduce((sum, s) => sum + s.produced, 0);
+      const totalRejectionProduced = Object.values(shifts).reduce((sum, s) => sum + s.rejectionProduced, 0);
+      
+      const totalTimeLogRejected = Object.values(shifts).reduce((sum, s) => sum + s.rejected, 0);
+      const totalRejectionRejected = Object.values(shifts).reduce((sum, s) => sum + s.rejectionRejected, 0);
+      
+      const totalTimeLogScrap = Object.values(shifts).reduce((sum, s) => sum + s.scrap, 0);
+      const totalRejectionScrap = Object.values(shifts).reduce((sum, s) => sum + s.rejectionScrap, 0);
 
-      Object.values(shifts).forEach(s => {
-        // Final produced for this shift is the maximum of time logs and rejections
-        const finalProduced = Math.max(s.produced, s.rejectionProduced);
-        totalProduced += finalProduced;
-        totalRejected += s.rejected;
-        totalScrap += s.scrap;
-      });
-
-      // Add challan quantities
+      // Add challan quantities (usually for outsourced operations)
+      let totalChallanProduced = 0;
+      let totalChallanRejected = 0;
+      
       challans.forEach(challan => {
         const qReceived = parseFloat(challan.quantity_received) || 0;
         const qAccepted = parseFloat(challan.quantity_accepted) || 0;
         const qRejected = parseFloat(challan.quantity_rejected) || 0;
 
-        // For challans, we treat quantity_received as production
-        totalProduced += qReceived;
-        totalRejected += qRejected;
+        totalChallanProduced += qReceived;
+        totalChallanRejected += qRejected;
         
-        // If qReceived is 0 but qAccepted is > 0, infer production
         if (qReceived === 0 && qAccepted > 0) {
-          totalProduced += qAccepted + qRejected;
+          totalChallanProduced += qAccepted + qRejected;
         }
       });
 
-      const totalAccepted = Math.max(0, totalProduced - totalRejected - totalScrap);
+      // Final Aggregation: Max of sources for each category
+      // This prevents double counting if multiple sources reported on the same units
+      const totalProduced = Math.max(totalTimeLogProduced + totalChallanProduced, totalRejectionProduced);
+      const totalRejected = Math.max(totalTimeLogRejected + totalChallanRejected, totalRejectionRejected);
+      const totalScrap = Math.max(totalTimeLogScrap, totalRejectionScrap);
+
+      // In this workflow, Rejected and Scrap represent the same lost units
+      // We take the maximum of both to calculate the total loss and accepted quantity
+      const totalLoss = Math.max(totalRejected, totalScrap);
+      const totalAccepted = Math.max(0, totalProduced - totalLoss);
 
       // 3. Update Job Card
       await this.db.query(
@@ -2036,7 +2289,7 @@ async deleteAllBOMRawMaterials(bom_id) {
             completed_qty = ?, 
             process_loss_qty = ?
            WHERE wo_id = ? AND operation = ? AND sequence = ?`,
-          [totalAccepted, totalRejected + totalScrap, jc.work_order_id, jc.operation, jc.operation_sequence]
+          [totalAccepted, totalLoss, jc.work_order_id, jc.operation, jc.operation_sequence]
         );
 
         // Also update work order progress if needed
@@ -2215,32 +2468,30 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async createTimeLog(data) {
     try {
+      data.log_date = this._formatDate(data.log_date || new Date());
       const maxAllowed = await this._getMaxAllowedQuantity(data.job_card_id);
       const currentJobCard = await this.getJobCardDetails(data.job_card_id);
       
       const newQty = parseFloat(data.completed_qty || 0);
       
       // Calculate potential increase. 
-      // If this shift already had inferred production from rejections, 
-      // the new time log might replace it or add to it.
-      const [existingProduced] = await this.db.query(
+      const [existingTotals] = await this.db.query(
         `SELECT 
-          COALESCE((SELECT SUM(completed_qty) FROM time_log WHERE job_card_id = ? AND log_date = ? AND shift = ?), 0) as time_log_produced,
-          COALESCE((SELECT SUM(accepted_qty + rejected_qty + scrap_qty) FROM rejection_entry WHERE job_card_id = ? AND log_date = ? AND shift = ?), 0) as rejection_produced`,
-        [data.job_card_id, data.log_date, data.shift, data.job_card_id, data.log_date, data.shift]
+          COALESCE((SELECT SUM(completed_qty) FROM time_log WHERE job_card_id = ?), 0) as total_time_log_produced,
+          COALESCE((SELECT SUM(accepted_qty + GREATEST(rejected_qty, scrap_qty)) FROM rejection_entry WHERE job_card_id = ?), 0) as total_rejection_produced,
+          COALESCE((SELECT SUM(quantity_received) FROM inward_challan WHERE job_card_id = ?), 0) as total_challan_produced`,
+        [data.job_card_id, data.job_card_id, data.job_card_id]
       );
       
-      const prevTimeLogProduced = parseFloat(existingProduced[0].time_log_produced);
-      const prevRejectionProduced = parseFloat(existingProduced[0].rejection_produced);
+      const totalTimeLogProduced = parseFloat(existingTotals[0].total_time_log_produced);
+      const totalRejectionProduced = parseFloat(existingTotals[0].total_rejection_produced);
+      const totalChallanProduced = parseFloat(existingTotals[0].total_challan_produced);
       
-      const prevTotalForShift = Math.max(prevTimeLogProduced, prevRejectionProduced);
-      const newTotalForShift = Math.max(prevTimeLogProduced + newQty, prevRejectionProduced);
-      const productionIncrease = newTotalForShift - prevTotalForShift;
+      const currentTotalProduced = Math.max(totalTimeLogProduced + totalChallanProduced, totalRejectionProduced);
+      const newTotalProduced = Math.max(totalTimeLogProduced + totalChallanProduced + newQty, totalRejectionProduced);
       
-      const currentTotalProduced = parseFloat(currentJobCard?.produced_quantity || 0);
-
-      if (currentTotalProduced + productionIncrease > maxAllowed + 0.0001) {
-        throw new Error(`Quantity Validation Error: Total production (${(currentTotalProduced + productionIncrease).toFixed(2)}) would exceed allowed quantity (${maxAllowed.toFixed(2)}) based on previous operation or plan.`);
+      if (newTotalProduced > maxAllowed + 0.0001) {
+        throw new Error(`Quantity Validation Error: Total production (${newTotalProduced.toFixed(2)}) would exceed allowed quantity (${maxAllowed.toFixed(2)}) based on previous operation or plan.`);
       }
 
       const timeLogId = `TL-${Date.now()}`
@@ -2250,7 +2501,7 @@ async deleteAllBOMRawMaterials(bom_id) {
         timeLogId,
         data.job_card_id,
         data.day_number || 1,
-        data.log_date || new Date().toISOString().split('T')[0],
+        data.log_date || this._formatDate(new Date()),
         data.employee_id || null,
         data.operator_name || null,
         data.workstation_name || null,
@@ -2303,31 +2554,30 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async createRejection(data) {
     try {
+      data.log_date = this._formatDate(data.log_date || new Date());
       const maxAllowed = await this._getMaxAllowedQuantity(data.job_card_id);
       const currentJobCard = await this.getJobCardDetails(data.job_card_id);
       
       // Calculate how much this entry would increase total production
-      // We need to check what is already recorded for this shift
-      const [existingProduced] = await this.db.query(
+      const [existingTotals] = await this.db.query(
         `SELECT 
-          COALESCE((SELECT SUM(completed_qty) FROM time_log WHERE job_card_id = ? AND log_date = ? AND shift = ?), 0) as time_log_produced,
-          COALESCE((SELECT SUM(accepted_qty + rejected_qty + scrap_qty) FROM rejection_entry WHERE job_card_id = ? AND log_date = ? AND shift = ?), 0) as rejection_produced`,
-        [data.job_card_id, data.log_date, data.shift, data.job_card_id, data.log_date, data.shift]
+          COALESCE((SELECT SUM(completed_qty) FROM time_log WHERE job_card_id = ?), 0) as total_time_log_produced,
+          COALESCE((SELECT SUM(accepted_qty + GREATEST(rejected_qty, scrap_qty)) FROM rejection_entry WHERE job_card_id = ?), 0) as total_rejection_produced,
+          COALESCE((SELECT SUM(quantity_received) FROM inward_challan WHERE job_card_id = ?), 0) as total_challan_produced`,
+        [data.job_card_id, data.job_card_id, data.job_card_id]
       );
       
-      const timeLogProduced = parseFloat(existingProduced[0].time_log_produced);
-      const prevRejectionProduced = parseFloat(existingProduced[0].rejection_produced);
+      const totalTimeLogProduced = parseFloat(existingTotals[0].total_time_log_produced);
+      const totalRejectionProduced = parseFloat(existingTotals[0].total_rejection_produced);
+      const totalChallanProduced = parseFloat(existingTotals[0].total_challan_produced);
       
-      const enteringProduced = (parseFloat(data.accepted_qty) || 0) + (parseFloat(data.rejected_qty) || 0) + (parseFloat(data.scrap_qty) || 0);
+      const enteringProduced = (parseFloat(data.accepted_qty) || 0) + Math.max(parseFloat(data.rejected_qty) || 0, parseFloat(data.scrap_qty) || 0);
       
-      const prevTotalForShift = Math.max(timeLogProduced, prevRejectionProduced);
-      const newTotalForShift = Math.max(timeLogProduced, prevRejectionProduced + enteringProduced);
-      const productionIncrease = newTotalForShift - prevTotalForShift;
-
-      const currentTotalProduced = parseFloat(currentJobCard?.produced_quantity || 0);
+      const currentTotalProduced = Math.max(totalTimeLogProduced + totalChallanProduced, totalRejectionProduced);
+      const newTotalProduced = Math.max(totalTimeLogProduced + totalChallanProduced, totalRejectionProduced + enteringProduced);
       
-      if (currentTotalProduced + productionIncrease > maxAllowed + 0.0001) {
-        throw new Error(`Quantity Validation Error: Total production (${(currentTotalProduced + productionIncrease).toFixed(2)}) would exceed allowed quantity (${maxAllowed.toFixed(2)}) based on previous operation or plan.`);
+      if (newTotalProduced > maxAllowed + 0.0001) {
+        throw new Error(`Quantity Validation Error: Total production (${newTotalProduced.toFixed(2)}) would exceed allowed quantity (${maxAllowed.toFixed(2)}) based on previous operation or plan.`);
       }
 
       const rejectionId = `REJ-${Date.now()}`
@@ -2337,7 +2587,7 @@ async deleteAllBOMRawMaterials(bom_id) {
         rejectionId,
         data.job_card_id,
         data.day_number || 1,
-        data.log_date || new Date().toISOString().split('T')[0],
+        data.log_date || this._formatDate(new Date()),
         data.shift || 'A',
         data.accepted_qty || 0,
         data.rejection_reason || null,
@@ -2390,7 +2640,7 @@ async deleteAllBOMRawMaterials(bom_id) {
         downtimeId,
         data.job_card_id,
         data.day_number || 1,
-        data.log_date || new Date().toISOString().split('T')[0],
+        data.log_date || this._formatDate(new Date()),
         data.shift || 'A',
         data.downtime_type || null,
         data.downtime_reason || null,

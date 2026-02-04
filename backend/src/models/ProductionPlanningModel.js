@@ -47,7 +47,8 @@ export class ProductionPlanningModel {
         `SELECT psa.*, i.name as item_name, psa.bom_no 
          FROM production_plan_sub_assembly psa 
          LEFT JOIN item i ON psa.item_code = i.item_code 
-         WHERE psa.plan_id = ?`,
+         WHERE psa.plan_id = ?
+         ORDER BY psa.id ASC`,
         [plan_id]
       ).catch(() => [])
 
@@ -68,12 +69,19 @@ export class ProductionPlanningModel {
 
       const mappedSubAssemblies = subAssemblies.map(item => ({
         ...item,
+        planned_qty: parseFloat(item.planned_qty) || parseFloat(item.required_qty) || 0,
+        required_qty: parseFloat(item.required_qty) || parseFloat(item.planned_qty) || 0,
         scheduled_date: item.schedule_date
+      }))
+
+      const mappedFGItems = fgItems.map(item => ({
+        ...item,
+        planned_qty: parseFloat(item.planned_qty) || 0
       }))
 
       const mappedRawMaterials = rawMaterials.map(item => ({
         ...item,
-        qty: item.plan_to_request_qty || item.qty
+        qty: parseFloat(item.plan_to_request_qty) || parseFloat(item.qty) || 0
       }))
 
       let salesOrderId = plan.sales_order_id
@@ -96,7 +104,7 @@ export class ProductionPlanningModel {
 
       return {
         ...plan,
-        fg_items: fgItems,
+        fg_items: mappedFGItems,
         sub_assemblies: mappedSubAssemblies,
         raw_materials: mappedRawMaterials,
         operations: operations
@@ -169,12 +177,17 @@ export class ProductionPlanningModel {
           
           const mappedRawMaterials = rawMaterials.map(item => ({
             ...item,
-            qty: item.plan_to_request_qty || item.qty
+            qty: parseFloat(item.plan_to_request_qty) || parseFloat(item.qty) || 0
+          }))
+          
+          const mappedFGItems = fgItems.map(item => ({
+            ...item,
+            planned_qty: parseFloat(item.planned_qty) || 0
           }))
           
           let salesOrderId = plan.sales_order_id
-          if (!salesOrderId && fgItems && fgItems.length > 0) {
-            salesOrderId = await this.findMatchingSalesOrder(fgItems)
+          if (!salesOrderId && mappedFGItems.length > 0) {
+            salesOrderId = await this.findMatchingSalesOrder(mappedFGItems)
             if (salesOrderId) {
               plan.sales_order_id = salesOrderId
             }
@@ -182,8 +195,8 @@ export class ProductionPlanningModel {
           
           plansWithItems.push({
             ...plan,
-            fg_items: fgItems || [],
-            raw_materials: mappedRawMaterials || []
+            fg_items: mappedFGItems,
+            raw_materials: mappedRawMaterials
           })
         } catch (err) {
           console.error(`Error fetching items for plan ${plan.plan_id}:`, err)
@@ -236,7 +249,7 @@ export class ProductionPlanningModel {
           item_code: fgItem.item_code,
           item_name: fgItem.item_name,
           bom_no: fgItem.bom_no,
-          planned_qty: fgItem.planned_qty,
+          planned_qty: parseFloat(fgItem.planned_qty) || 0,
           uom: fgItem.uom
         }
       }
@@ -513,10 +526,114 @@ export class ProductionPlanningModel {
 
   async deletePlan(plan_id) {
     try {
+      // 1. Get all Work Orders associated with this plan
+      const [workOrders] = await this.db.execute(
+        `SELECT wo_id FROM work_order WHERE production_plan_id = ?`,
+        [plan_id]
+      )
+
+      if (workOrders && workOrders.length > 0) {
+        const woIds = workOrders.map(wo => wo.wo_id)
+        const woPlaceholders = woIds.map(() => '?').join(',')
+        
+        // 1.5 Reverse Material Allocations for all Work Orders in plan
+        const [allocations] = await this.db.execute(
+          `SELECT item_code, warehouse_id, allocated_qty FROM material_allocation WHERE work_order_id IN (${woPlaceholders})`,
+          woIds
+        )
+        
+        for (const alloc of allocations) {
+          await this.db.execute(
+            'UPDATE stock_balance SET reserved_qty = GREATEST(0, reserved_qty - ?) WHERE item_code = ? AND warehouse_id = ?',
+            [parseFloat(alloc.allocated_qty) || 0, alloc.item_code, alloc.warehouse_id]
+          )
+        }
+        
+        await this.db.execute(
+          `DELETE FROM material_allocation WHERE work_order_id IN (${woPlaceholders})`,
+          woIds
+        )
+
+        // 2. Delete Rejections and Production Entries
+        const [prodEntries] = await this.db.execute(
+          `SELECT entry_id FROM production_entry WHERE work_order_id IN (${woPlaceholders})`,
+          woIds
+        )
+
+        if (prodEntries && prodEntries.length > 0) {
+          const entryIds = prodEntries.map(pe => pe.entry_id)
+          const entryPlaceholders = entryIds.map(() => '?').join(',')
+          
+          await this.db.execute(
+            `DELETE FROM rejection WHERE production_entry_id IN (${entryPlaceholders})`,
+            entryIds
+          )
+          
+          await this.db.execute(
+            `DELETE FROM production_entry WHERE work_order_id IN (${woPlaceholders})`,
+            woIds
+          )
+        }
+
+        // 3. Delete Job Cards and their associated logs
+        const [jobCards] = await this.db.execute(
+          `SELECT job_card_id FROM job_card WHERE work_order_id IN (${woPlaceholders})`,
+          woIds
+        )
+
+        if (jobCards && jobCards.length > 0) {
+          const jcIds = jobCards.map(jc => jc.job_card_id)
+          const jcPlaceholders = jcIds.map(() => '?').join(',')
+
+          await this.db.execute(`DELETE FROM time_log WHERE job_card_id IN (${jcPlaceholders})`, jcIds)
+          await this.db.execute(`DELETE FROM rejection_entry WHERE job_card_id IN (${jcPlaceholders})`, jcIds)
+          await this.db.execute(`DELETE FROM inward_challan WHERE job_card_id IN (${jcPlaceholders})`, jcIds)
+          await this.db.execute(`DELETE FROM downtime_entry WHERE job_card_id IN (${jcPlaceholders})`, jcIds)
+          await this.db.execute(`DELETE FROM inspection_result WHERE reference_type = 'Job Card' AND reference_id IN (${jcPlaceholders})`, jcIds)
+          await this.db.execute(`DELETE FROM job_card WHERE work_order_id IN (${woPlaceholders})`, woIds)
+        }
+
+        // 4. Delete Work Order Items and Operations
+        await this.db.execute(
+          `DELETE FROM work_order_item WHERE wo_id IN (${woPlaceholders})`,
+          woIds
+        )
+        await this.db.execute(
+          `DELETE FROM work_order_operation WHERE wo_id IN (${woPlaceholders})`,
+          woIds
+        )
+
+        // 5. Delete the Work Orders themselves
+        await this.db.execute(
+          `DELETE FROM work_order WHERE production_plan_id = ?`,
+          [plan_id]
+        )
+      }
+
+      // 6. Delete Material Requests associated with this plan
+      // Delete items first
+      await this.db.execute(
+        `DELETE FROM material_request_item WHERE mr_id IN (SELECT mr_id FROM material_request WHERE production_plan_id = ? OR series_no = ?)`,
+        [plan_id, `PLAN-${plan_id}`]
+      )
+      // Then delete the MRs
+      await this.db.execute(
+        `DELETE FROM material_request WHERE production_plan_id = ? OR series_no = ?`,
+        [plan_id, `PLAN-${plan_id}`]
+      )
+
+      // 7. Delete the plan items and the plan itself
+      await this.db.execute(`DELETE FROM production_plan_fg WHERE plan_id = ?`, [plan_id])
+      await this.db.execute(`DELETE FROM production_plan_sub_assembly WHERE plan_id = ?`, [plan_id])
+      await this.db.execute(`DELETE FROM production_plan_raw_material WHERE plan_id = ?`, [plan_id])
+      await this.db.execute(`DELETE FROM production_plan_operations WHERE plan_id = ?`, [plan_id])
+      
       await this.db.execute(
         `DELETE FROM production_plan WHERE plan_id = ?`,
         [plan_id]
       )
+      
+      return true
     } catch (error) {
       throw error
     }
@@ -546,10 +663,10 @@ export class ProductionPlanningModel {
       await this.db.execute(
         `INSERT INTO material_request 
          (mr_id, series_no, transition_date, requested_by_id, department, purpose, 
-          request_date, required_by_date, target_warehouse, source_warehouse, items_notes, status) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          request_date, required_by_date, target_warehouse, source_warehouse, items_notes, status, production_plan_id) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [mr_id, `PLAN-${plan_id}`, null, 'system', 'Production', 'material_issue', 
-         request_date, null, null, null, `Auto-created from Production Plan: ${plan_id}`, 'draft']
+         request_date, null, null, null, `Auto-created from Production Plan: ${plan_id}`, 'draft', plan_id]
       )
 
       for (const material of rawMaterials) {

@@ -18,6 +18,7 @@ import './Selling.css'
 const isSubAssemblyType = (itemType) => {
   if (!itemType) return false
   const normalized = itemType.toLowerCase().replace(/[-\s]/g, '').trim()
+  if (normalized === 'consumable') return false
   return normalized === 'subassemblies' || normalized === 'subassembly'
 }
 
@@ -41,8 +42,8 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
       onClick={onToggle}
     >
       <div className="flex items-center gap-4">
-        <div className={`p-2.5 rounded shadow-lg transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
-          <Icon size={20} strokeWidth={2.5} />
+        <div className={`p-2 rounded shadow-lg transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
+          <Icon size={15} strokeWidth={2.5} />
         </div>
         <div>
           <h2 className="text-xs  flex items-center gap-3">
@@ -1154,24 +1155,14 @@ export default function SalesOrderForm() {
                         </td>
                         <td className="p-2 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            {isReadOnly ? (
-                              <span className="text-xs font-mono  text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">
-                                {formatQty(multipliedQty)}
-                              </span>
-                            ) : (
-                              <input
-                                type="number"
-                                step="0.001"
-                                value={multipliedQty}
-                                onChange={(e) => handleBomFinishedGoodEdit(idx, 'qty', e.target.value)}
-                                className="w-24 px-3 py-1.5 text-xs font-mono  text-right border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-                              />
-                            )}
+                            <span className="text-xs   text-slate-700 bg-slate-50/50 px-3 py-1.5 border border-slate-100 rounded min-w-[6rem] inline-block text-right">
+                              {multipliedQty}
+                            </span>
                           </div>
                         </td>
                         <td className="p-2 text-right">
                           {isReadOnly ? (
-                            <span className="text-xs font-mono text-slate-600">{formatCurrency(item.rate)}</span>
+                            <span className="text-xs  text-slate-600">{formatCurrency(item.rate)}</span>
                           ) : (
                             <div className="flex items-center justify-end gap-2">
                               <span className="text-xs  text-slate-300">₹</span>
@@ -1180,7 +1171,7 @@ export default function SalesOrderForm() {
                                 step="0.01"
                                 value={item.rate || 0}
                                 onChange={(e) => handleBomFinishedGoodEdit(idx, 'rate', e.target.value)}
-                                className="w-24 px-3 py-1.5 text-xs font-mono  text-right border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                className="w-24 px-3 py-1.5 text-xs   text-right border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                               />
                             </div>
                           )}
@@ -1243,12 +1234,12 @@ export default function SalesOrderForm() {
                           </div>
                         </td>
                         <td className="p-4 text-right">
-                          <span className="text-xs font-mono  text-slate-700 bg-amber-50/50 px-2 py-1 rounded-lg border border-amber-100/50">
+                          <span className="text-xs   text-slate-700 bg-amber-50/50 px-2 py-1 rounded-lg border border-amber-100/50">
                             {formatQty(multipliedQty)}
                           </span>
                         </td>
                         <td className="p-4 text-right">
-                          <span className="text-xs font-mono text-slate-600">{formatCurrency(item.rate)}</span>
+                          <span className="text-xs  text-slate-600">{formatCurrency(item.rate)}</span>
                         </td>
                         <td className="p-4 text-right">
                           <span className="text-xs  text-amber-600">{formatCurrency(itemAmount)}</span>
@@ -1324,7 +1315,7 @@ export default function SalesOrderForm() {
                           <div className="flex flex-col gap-1">
                             <span className="text-[9px]  text-slate-400 ">{material.item_group || '-'}</span>
                             {material.bom_id && (
-                              <span className="text-[8px] font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200 w-fit">
+                              <span className="text-[8px]  bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200 w-fit">
                                 {material.bom_id}
                               </span>
                             )}
@@ -1332,14 +1323,14 @@ export default function SalesOrderForm() {
                         </td>
                         <td className="p-4 text-right">
                           <div className="flex flex-col items-end">
-                            <span className="text-xs font-mono  text-slate-700 bg-emerald-50/50 px-2 py-1 rounded-lg border border-emerald-100/50">
+                            <span className="text-xs   text-slate-700 bg-emerald-50/50 px-2 py-1 rounded-lg border border-emerald-100/50">
                               {formatQty(itemQty)}
                             </span>
                             <span className="text-[9px]  text-emerald-600  mt-1">{material.uom || material.unit || '-'}</span>
                           </div>
                         </td>
                         <td className="p-4 text-right">
-                          <span className="text-xs font-mono text-slate-600">{formatCurrency(material.rate)}</span>
+                          <span className="text-xs  text-slate-600">{formatCurrency(material.rate)}</span>
                         </td>
                         <td className="p-4 text-right">
                           <span className="text-xs  text-emerald-700">{formatCurrency(itemAmount)}</span>
@@ -1407,7 +1398,7 @@ export default function SalesOrderForm() {
                         </td>
                         <td className="p-4 text-right">
                           <div className="flex flex-col items-end">
-                            <span className="text-xs font-mono  text-slate-700 bg-indigo-50/50 px-2 py-1 rounded-lg border border-indigo-100/50">
+                            <span className="text-xs   text-slate-700 bg-indigo-50/50 px-2 py-1 rounded-lg border border-indigo-100/50">
                               {totalTimeHours.toFixed(2)} HRS
                             </span>
                             <span className="text-[9px]  text-indigo-400  mt-1">
@@ -1417,7 +1408,7 @@ export default function SalesOrderForm() {
                         </td>
                         <td className="p-4 text-right">
                           {isReadOnly ? (
-                            <span className="text-xs font-mono text-slate-600">{formatCurrency(hourlyRate)}/hr</span>
+                            <span className="text-xs  text-slate-600">{formatCurrency(hourlyRate)}/hr</span>
                           ) : (
                             <div className="flex items-center justify-end gap-2">
                               <span className="text-xs  text-slate-300">₹</span>
@@ -1426,7 +1417,7 @@ export default function SalesOrderForm() {
                                 step="0.01"
                                 value={op.hourly_rate || 0}
                                 onChange={(e) => handleBomOperationEdit(idx, 'hourly_rate', e.target.value)}
-                                className="w-24 px-3 py-1.5 text-xs font-mono  text-right border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                className="w-24 px-3 py-1.5 text-xs   text-right border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                               />
                             </div>
                           )}
@@ -1469,8 +1460,8 @@ export default function SalesOrderForm() {
           
           <div className="flex items-center justify-between mb-4 border-b border-slate-100/50 pb-3">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-slate-900 text-white rounded shadow-lg">
-                <FileText size={20} />
+              <div className="p-2 bg-slate-900 text-white rounded ">
+                <FileText size={15} />
               </div>
               <div>
                 <h4 className="text-xs  text-slate-900 ">Financial Summary</h4>
@@ -1479,24 +1470,24 @@ export default function SalesOrderForm() {
             </div>
             <div className="text-right">
               <span className="text-[9px]  text-slate-400  block mb-1">Total Volume</span>
-              <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs  rounded-full border border-blue-100">
+              <span className="p-1 bg-blue-50 text-blue-600 text-xs  rounded border border-blue-100">
                 {qty} UNITS
               </span>
             </div>
           </div>
 
-          <div className="space-y-5">
+          <div className="space-y-2">
             <div className="flex justify-between items-center group/row">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-slate-200 group-hover/row:bg-blue-400 transition-all"></div>
                 <span className="text-[11px]  text-slate-500  group-hover/row:text-slate-700 transition-colors">Unit Manufacturing Cost</span>
               </div>
-              <span className="text-xs font-mono  text-slate-600">{formatCurrency(fgUnitCost)}</span>
+              <span className="text-xs   text-slate-600">{formatCurrency(fgUnitCost)}</span>
             </div>
 
             <div className="flex justify-between items-center p-2 border-y border-dashed border-slate-100">
               <span className="text-xs  text-slate-900 ">Production Subtotal</span>
-              <span className="text-sm font-mono  text-slate-900">{formatCurrency(baseCost)}</span>
+              <span className="text-sm   text-slate-900">{formatCurrency(baseCost)}</span>
             </div>
 
             {profitMarginPct > 0 && (
@@ -1507,14 +1498,14 @@ export default function SalesOrderForm() {
                 </div>
                 <div className="flex items-center gap-3">
                   <TrendingDown size={14} className="text-emerald-400 rotate-180" />
-                  <span className="text-xs font-mono  text-emerald-700">+{formatCurrency(profitAmount)}</span>
+                  <span className="text-xs   text-emerald-700">+{formatCurrency(profitAmount)}</span>
                 </div>
               </div>
             )}
 
             <div className="flex justify-between items-center pt-2">
               <span className="text-[11px]  text-slate-500  text-right">Taxable Protocol Value</span>
-              <span className="text-xs font-mono  text-slate-900">{formatCurrency(costWithProfit)}</span>
+              <span className="text-xs   text-slate-900">{formatCurrency(costWithProfit)}</span>
             </div>
 
             {(cgstRate + sgstRate) > 0 && (
@@ -1525,7 +1516,7 @@ export default function SalesOrderForm() {
                 </div>
                 <div className="flex items-center gap-3">
                   <CreditCard size={14} className="text-blue-400" />
-                  <span className="text-xs font-mono  text-blue-700">+{formatCurrency(gstAmount)}</span>
+                  <span className="text-xs   text-blue-700">+{formatCurrency(gstAmount)}</span>
                 </div>
               </div>
             )}
@@ -1717,7 +1708,7 @@ export default function SalesOrderForm() {
             {success && <Alert variant="success">{success}</Alert>}
 
             {/* A. Order Foundation Section */}
-            <Card className="!p-0 border-slate-200/60  bg-white group overflow-hidden">
+            <Card className="!p-0 border-slate-200/60  bg-white group ">
               <SectionHeader 
                 title="01 FOUNDATION" 
                 icon={Database} 
@@ -1773,7 +1764,7 @@ export default function SalesOrderForm() {
             </Card>
 
             {/* B. Client Intelligence Section */}
-            <Card className="!p-0 border-slate-200/60  bg-white group overflow-hidden">
+            <Card className="!p-0 border-slate-200/60  bg-white group ">
               <SectionHeader 
                 title="02 CLIENT INTELLIGENCE" 
                 icon={Users} 
@@ -1797,7 +1788,7 @@ export default function SalesOrderForm() {
             </Card>
 
             {/* C. Operational Section */}
-            <Card className="!p-0 border-slate-200/60  bg-white group overflow-hidden">
+            <Card className="!p-0 border-slate-200/60  bg-white group ">
               <SectionHeader 
                 title="03 OPERATIONAL METADATA" 
                 icon={Activity} 
@@ -1847,7 +1838,7 @@ export default function SalesOrderForm() {
             </Card>
 
             {/* D. Engineering Section */}
-            <Card className="!p-0 border-slate-200/60  bg-white group overflow-hidden">
+            <Card className="!p-0 border-slate-200/60  bg-white group ">
               <SectionHeader 
                 title="04 PRODUCT ENGINEERING" 
                 icon={Layers} 
@@ -1898,7 +1889,7 @@ export default function SalesOrderForm() {
             </Card>
 
             {/* E. Taxation Section */}
-            <Card className="!p-0 border-slate-200/60  bg-white group overflow-hidden">
+            <Card className="!p-0 border-slate-200/60  bg-white group ">
               <SectionHeader 
                 title="05 TAXATION & REVENUE" 
                 icon={CreditCard} 

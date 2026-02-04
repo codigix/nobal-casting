@@ -189,14 +189,14 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
               </thead>
               <tbody>
                 {rejections.map(rejection => (
-                  <tr key={rejection.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                  <tr key={rejection.rejection_id} style={{ borderBottom: '1px solid #e5e7eb' }}>
                     <td style={{ padding: '10px' }}>{rejection.rejection_reason}</td>
                     <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: '#dc2626' }}>{rejection.rejected_qty}</td>
                     <td style={{ padding: '10px', fontSize: '0.85rem' }}>{rejection.notes || '-'}</td>
                     <td style={{ padding: '10px', fontSize: '0.85rem' }}>{rejection.created_at ? new Date(rejection.created_at).toLocaleDateString() : '-'}</td>
                     <td style={{ padding: '10px', textAlign: 'center' }}>
                       <button
-                        onClick={() => handleDeleteRejection(rejection.id)}
+                        onClick={() => handleDeleteRejection(rejection.rejection_id)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}
                         title="Delete"
                       >

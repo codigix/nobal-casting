@@ -962,21 +962,28 @@ export default function JobCard() {
                                       <div className="flex flex-col items-end gap-1">
                                         <div className="flex items-center gap-2">
                                           <span className="text-xs  text-gray-400 ">Efficiency</span>
-                                          <span className="text-xs  text-gray-900">
-                                            {card.planned_quantity > 0 
-                                              ? `${Math.round((card.produced_quantity / card.planned_quantity) * 100)}%` 
+                                          <span className="text-xs  text-gray-900 font-medium">
+                                            {card.produced_quantity > 0 
+                                              ? `${Math.round((card.accepted_quantity / card.produced_quantity) * 100)}%` 
                                               : '0%'}
                                           </span>
                                         </div>
                                         <div className="w-24 h-1.5 bg-gray-100 rounded-full ">
                                           <div 
                                             className="h-full bg-indigo-500 rounded-full transition-all duration-500"
-                                            style={{ width: `${Math.min(100, (card.produced_quantity / (card.planned_quantity || 1)) * 100)}%` }}
+                                            style={{ width: `${Math.min(100, (card.accepted_quantity / (card.planned_quantity || 1)) * 100)}%` }}
                                           />
                                         </div>
-                                        <p className="text-xs  text-gray-500">
-                                          {formatQuantity(card.produced_quantity)} / {formatQuantity(card.planned_quantity)}
-                                        </p>
+                                        <div className="flex flex-col items-end">
+                                          <p className="text-[10px]  text-gray-500 leading-none">
+                                            {formatQuantity(card.accepted_quantity)} / {formatQuantity(card.planned_quantity)}
+                                          </p>
+                                          {card.produced_quantity > card.accepted_quantity && (
+                                            <p className="text-[9px] text-amber-500 mt-0.5">
+                                              Total Produced: {formatQuantity(card.produced_quantity)}
+                                            </p>
+                                          )}
+                                        </div>
                                       </div>
                                     </td>
                                     <td className="p-2  text-right">

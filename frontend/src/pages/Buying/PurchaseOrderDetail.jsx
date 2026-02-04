@@ -287,9 +287,9 @@ export default function PurchaseOrderDetail() {
             <div className="p-2 relative z-10">
               <p className="text-xs text-neutral-400 dark:text-neutral-500  mb-2">Supplier</p>
               <h3 className="text-xl text-neutral-900 dark:text-white ">{po.supplier_name}</h3>
-              <div className="mt-4 flex items-center gap-2 text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 w-fit p-1 rounded border border-indigo-100 dark:border-indigo-900/50 ">
+              <div className="mt-2 flex items-center gap-2 text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 w-fit p-1 rounded border border-indigo-100 dark:border-indigo-900/50 ">
                 <MapPin size={12} />
-                SHIPS TO MAIN WAREHOUSE
+                Ship to Main Warehouse
               </div>
             </div>
           </Card>
@@ -301,7 +301,7 @@ export default function PurchaseOrderDetail() {
             <div className="p-2 relative z-10">
               <p className="text-xs text-neutral-400 dark:text-neutral-500  mb-2">Total Value</p>
               <h3 className="text-xl  text-neutral-900 dark:text-white ">₹{total.toLocaleString('en-IN')}</h3>
-              <p className="text-[10px]  text-emerald-600 dark:text-emerald-400 mt-4 flex items-center gap-2 ">
+              <p className="text-xs  text-emerald-600 dark:text-emerald-400 mt-2 flex items-center gap-2 ">
                 <CheckCircle size={12} /> INCL. ALL TAXES
               </p>
             </div>
@@ -316,7 +316,7 @@ export default function PurchaseOrderDetail() {
               <h3 className="text-lg  text-neutral-900 dark:text-white ">
                 {po.expected_date ? new Date(po.expected_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not Specified'}
               </h3>
-              <div className={`mt-4 flex items-center gap-2 text-[10px]  w-fit px-3 py-1 rounded-lg border  ${
+              <div className={`mt-2 flex items-center gap-2 text-xs  w-fit p-1 rounded border  ${
                 po.expected_date && (new Date(po.expected_date) - new Date()) < 0 
                   ? 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border-rose-100 dark:border-rose-900/50'
                   : 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border-amber-100 dark:border-amber-900/50'
@@ -325,14 +325,14 @@ export default function PurchaseOrderDetail() {
                 {po.expected_date 
                   ? (new Date(po.expected_date) - new Date()) < 0 
                     ? 'OVERDUE' 
-                    : `${Math.ceil((new Date(po.expected_date) - new Date()) / (1000 * 60 * 60 * 24))} DAYS LEFT` 
+                    : `${Math.ceil((new Date(po.expected_date) - new Date()) / (1000 * 60 * 60 * 24))} Days Left` 
                   : 'TBD'}
               </div>
             </div>
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Additional Info Cards */}

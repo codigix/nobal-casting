@@ -188,9 +188,9 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                   <p className="text-gray-400   text-xs  mt-1">Work Order: {jobCard?.work_order_id}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs   text-gray-500  mb-1">Yield Efficiency</p>
+                  <p className="text-xs   text-gray-500  mb-1">Quality Yield</p>
                   <div className="text-xl  tracking-tighter text-indigo-400">
-                    {jobCard?.planned_quantity > 0 ? Math.round(((jobCard?.produced_quantity || 0) / jobCard?.planned_quantity) * 100) : 0}%
+                    {jobCard?.produced_quantity > 0 ? Math.round(((jobCard?.accepted_quantity || 0) / jobCard?.produced_quantity) * 100) : 0}%
                   </div>
                 </div>
               </div>
@@ -201,8 +201,9 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                   <p className="text-sm  tracking-tight">{jobCard?.planned_quantity} <span className="text-xs text-gray-500">Units</span></p>
                 </div>
                 <div className="">
-                  <p className="text-xs   text-gray-500 ">Actual Output</p>
-                  <p className="text-sm  tracking-tight text-emerald-400">{jobCard?.produced_quantity || 0} <span className="text-xs text-emerald-500/50">Units</span></p>
+                  <p className="text-xs   text-gray-500 ">Accepted Output</p>
+                  <p className="text-sm  tracking-tight text-emerald-400">{jobCard?.accepted_quantity || 0} <span className="text-xs text-emerald-500/50">Units</span></p>
+                  <p className="text-[10px] text-gray-500">Total Produced: {jobCard?.produced_quantity || 0}</p>
                 </div>
                 <div className="">
                   <p className="text-xs   text-gray-500 ">Assigned Unit</p>

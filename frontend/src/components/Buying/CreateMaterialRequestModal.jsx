@@ -251,7 +251,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
           <form id="mr-form" onSubmit={handleSubmit}>
             
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
               {/* Left Column: General Info */}
               <div className="lg:col-span-2 space-y-6">
                 <div className="bg-white rounded   border border-gray-200 overflow-hidden">

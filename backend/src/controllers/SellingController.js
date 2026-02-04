@@ -294,6 +294,7 @@ export class SellingController {
   static isSubAssemblyType(itemType) {
     if (!itemType) return false
     const normalized = String(itemType).toLowerCase().replace(/[-\s]/g, '').trim()
+    if (normalized === 'consumable') return false
     return normalized === 'subassemblies' || normalized === 'subassembly'
   }
 
@@ -572,7 +573,7 @@ export class SellingController {
 
     try {
       const [orders] = await db.execute(
-        `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.profit_margin_percentage, sso.cgst_rate, sso.sgst_rate, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.qty, sso.source_warehouse, sso.order_type, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
+        `SELECT sso.sales_order_id, sso.customer_id, sso.quotation_id, sso.order_amount, sso.profit_margin_percentage, sso.cgst_rate, sso.sgst_rate, sso.delivery_date, sso.order_terms, sso.status, sso.created_by, sso.updated_by, sso.created_at, sso.updated_at, sso.confirmed_at, sso.deleted_at, sso.items, sso.bom_id, sso.bom_name, sso.qty, sso.quantity, sso.source_warehouse, sso.order_type, sso.bom_finished_goods, sso.bom_raw_materials, sso.bom_operations,
                 sso.order_amount as total_amount,
                 sso.order_amount as total_value,
                 sso.customer_name,

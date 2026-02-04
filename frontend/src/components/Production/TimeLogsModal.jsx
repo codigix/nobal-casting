@@ -108,9 +108,14 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
     if (formData.from_time && formData.to_time) {
       const [fromHour, fromMin] = formData.from_time.split(':').map(Number)
       const [toHour, toMin] = formData.to_time.split(':').map(Number)
-      const fromTotal = fromHour * 60 + fromMin
-      const toTotal = toHour * 60 + toMin
-      return Math.max(0, toTotal - fromTotal)
+      let fromTotal = fromHour * 60 + fromMin
+      let toTotal = toHour * 60 + toMin
+      
+      if (toTotal < fromTotal) {
+        toTotal += 24 * 60;
+      }
+      
+      return toTotal - fromTotal
     }
     return 0
   }
@@ -479,6 +484,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
               <table className="w-full text-xs">
                 <thead className="bg-gray-100 border-b border-gray-200">
                   <tr>
+                    <th className="p-2 text-center  text-gray-700 w-10">Day</th>
                     <th className="p-2 text-left  text-gray-700">Operator</th>
                     <th className="p-2 text-left  text-gray-700">Workstation</th>
                     <th className="p-2 text-center  text-gray-700">Shift</th>
@@ -493,7 +499,10 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {timeLogs.map(log => (
-                    <tr key={log.id} className="hover:bg-gray-50 transition">
+                    <tr key={log.time_log_id} className="hover:bg-gray-50 transition">
+                      <td className="p-2 text-center text-gray-900 font-bold bg-gray-50/50">
+                        {log.day_number || '-'}
+                      </td>
                       <td className="p-2 text-gray-900">{log.operator_name}</td>
                       <td className="p-2 text-gray-900">{log.workstation_name || 'N/A'}</td>
                       <td className="p-2 text-center text-gray-900">{log.shift}</td>
@@ -514,7 +523,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
                       </td>
                       <td className="p-2 text-center">
                         <button
-                          onClick={() => handleDeleteTimeLog(log.id)}
+                          onClick={() => handleDeleteTimeLog(log.time_log_id)}
                           className="text-red-600 hover:text-red-900 transition"
                           title="Delete"
                         >

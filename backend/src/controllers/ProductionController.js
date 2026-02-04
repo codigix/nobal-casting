@@ -23,11 +23,11 @@ class ProductionController {
         default_workstation,
         is_corrective_operation,
         create_job_card_based_on_batch_size,
-        batch_size,
+        batch_size: parseFloat(batch_size) || 0,
         quality_inspection_template,
         description,
         operation_type,
-        hourly_rate
+        hourly_rate: parseFloat(hourly_rate) || 0
       })
 
       if (sub_operations && Array.isArray(sub_operations)) {
@@ -98,7 +98,10 @@ class ProductionController {
   async updateOperation(req, res) {
     try {
       const { operation_id } = req.params
-      const data = req.body
+      const data = { ...req.body }
+
+      if (data.batch_size !== undefined) data.batch_size = parseFloat(data.batch_size) || 0
+      if (data.hourly_rate !== undefined) data.hourly_rate = parseFloat(data.hourly_rate) || 0
 
       const success = await this.productionModel.updateOperation(operation_id, data)
 
@@ -175,7 +178,7 @@ class ProductionController {
         wo_id,
         item_code,
         bom_no: bom_no || null,
-        quantity,
+        quantity: parseFloat(quantity) || 0,
         priority: priority || 'medium',
         notes: notes || '',
         sales_order_id: sales_order_id || null,
@@ -233,7 +236,7 @@ class ProductionController {
             operation_sequence: operation.sequence || (i + 1),
             machine_id: workstationType,
             operator_id: '',
-            planned_quantity: quantity,
+            planned_quantity: parseFloat(quantity) || 0,
             operation_time: parseFloat(operationTime) || 0,
             hourly_rate: parseFloat(hourlyRate) || 0,
             operating_cost: parseFloat(operatingCost) || 0,
@@ -330,7 +333,7 @@ class ProductionController {
       const success = await this.productionModel.updateWorkOrder(wo_id, {
         item_code,
         bom_no,
-        quantity,
+        quantity: parseFloat(quantity) || 0,
         priority,
         notes,
         sales_order_id,
@@ -385,7 +388,7 @@ class ProductionController {
               operation_sequence: operation.sequence || (i + 1),
               machine_id: wsType,
               operator_id: '',
-              planned_quantity: quantity,
+              planned_quantity: parseFloat(quantity) || 0,
               operation_time: parseFloat(opTime) || 0,
               hourly_rate: parseFloat(hRate) || 0,
               operating_cost: parseFloat(opCost) || 0,
@@ -605,9 +608,9 @@ class ProductionController {
         operator_id,
         entry_date,
         shift_no,
-        quantity_produced,
-        quantity_rejected: quantity_rejected || 0,
-        hours_worked: hours_worked || 0,
+        quantity_produced: parseFloat(quantity_produced) || 0,
+        quantity_rejected: parseFloat(quantity_rejected) || 0,
+        hours_worked: parseFloat(hours_worked) || 0,
         remarks
       })
 
@@ -667,7 +670,7 @@ class ProductionController {
       const rejection = await this.productionModel.recordRejection({
         production_entry_id,
         rejection_reason,
-        rejection_count,
+        rejection_count: parseFloat(rejection_count) || 0,
         root_cause,
         corrective_action,
         reported_by_id

@@ -1459,3 +1459,44 @@ node scripts/seed-test-customers.js
 4. **Cost Tracking**: Calculate production cost from aggregated materials & operations
 5. **Stock Reservation**: Reserve raw materials based on aggregated quantities
 6. **WIP Tracking**: Track work-in-progress by sub-assembly
+
+---
+
+# Phase 22: Consumable Exclusion from Production Planning ✅
+
+## Overview
+Excluded items belonging to the **'Consumable'** item group from the production planning workflow. This prevents consumables from being treated as sub-assemblies or primary raw materials, ensuring that production plans focus only on core manufacturing requirements.
+
+## Features Implemented
+
+### 1. Backend Logic Updates
+- **ProductionPlanningService.js**:
+    - Modified `isSubAssembly` to explicitly return `false` for items in the 'Consumable' group.
+    - Updated `addRawMaterialToPlan` to ignore items tagged as 'Consumable', preventing them from being added to the plan's raw material requirements.
+
+### 2. Frontend Logic Updates
+- **ProductionPlanningForm.jsx**:
+    - Updated `isSubAssemblyGroup` helper to exclude 'Consumable'.
+    - Modified `processSalesOrderData` to filter out consumables when extracting sub-assemblies and raw materials from BOM lines.
+    - Adjusted `handleExplodeBoms` to ignore consumable items when scanning for potential sub-assemblies.
+    - Updated recursive BOM explosion in `fetchSubAssemblyBomMaterials` to skip consumables.
+    - Enhanced `loadSubAssemblyMaterials` and `toggleItemMaterials` to consistently hide consumable components.
+- **ProductionPlanning.jsx**:
+    - Updated `collectAllRawMaterials` and `collectAllOperations` to skip items tagged as 'Consumable' during plan aggregation.
+
+### 3. Cross-Component Consistency
+- Verified and ensured consistent 'Consumable' exclusion in `SalesOrderForm.jsx` and `SellingController.js` to maintain data integrity across the selling and production modules.
+
+## Files Modified
+- `backend/src/services/ProductionPlanningService.js`
+- `frontend/src/pages/Production/ProductionPlanningForm.jsx`
+- `frontend/src/pages/Production/ProductionPlanning.jsx`
+- `frontend/src/pages/Selling/SalesOrderForm.jsx`
+- `backend/src/controllers/SellingController.js`
+
+## Test Results
+- ✅ Consumable items are correctly identified and skipped during BOM explosion.
+- ✅ Production plans no longer include consumable items in raw material or sub-assembly lists.
+- ✅ Existing plans load correctly without displaying filtered consumables.
+- ✅ Backend validation prevents consumables from triggering sub-assembly processing.
+

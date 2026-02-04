@@ -46,9 +46,14 @@ export default function DowntimeEntryModal({ isOpen, onClose, jobCardId, jobCard
     if (!fromTime || !toTime) return 0
     const [fromHour, fromMin] = fromTime.split(':').map(Number)
     const [toHour, toMin] = toTime.split(':').map(Number)
-    const fromTotal = fromHour * 60 + fromMin
-    const toTotal = toHour * 60 + toMin
-    return Math.max(0, toTotal - fromTotal)
+    let fromTotal = fromHour * 60 + fromMin
+    let toTotal = toHour * 60 + toMin
+    
+    if (toTotal < fromTotal) {
+      toTotal += 24 * 60;
+    }
+    
+    return toTotal - fromTotal
   }
 
   const handleChange = (e) => {
@@ -228,14 +233,14 @@ export default function DowntimeEntryModal({ isOpen, onClose, jobCardId, jobCard
               </thead>
               <tbody>
                 {downtimes.map(downtime => (
-                  <tr key={downtime.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                  <tr key={downtime.downtime_id} style={{ borderBottom: '1px solid #e5e7eb' }}>
                     <td style={{ padding: '10px' }}>{downtime.downtime_type}</td>
                     <td style={{ padding: '10px' }}>{downtime.downtime_reason}</td>
                     <td style={{ padding: '10px', fontSize: '0.85rem' }}>{downtime.from_time} - {downtime.to_time}</td>
                     <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold' }}>{downtime.duration_minutes || 0}</td>
                     <td style={{ padding: '10px', textAlign: 'center' }}>
                       <button
-                        onClick={() => handleDeleteDowntime(downtime.id)}
+                        onClick={() => handleDeleteDowntime(downtime.downtime_id)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}
                         title="Delete"
                       >

@@ -7,10 +7,18 @@ import { BookOpen, Download, X, Grid3x3, List, TrendingDown, TrendingUp, Refresh
 import Button from '../../components/Button/Button'
 import './Inventory.css'
 
+const TABS = [
+  { id: 'all', label: 'All Transactions', types: [] },
+  { id: 'issue', label: 'Material Issue', types: ['Issue', 'Consumption', 'Manufacturing Issue'] },
+  { id: 'transfer', label: 'Material Transfer', types: ['Transfer'] },
+  { id: 'purchase', label: 'Purchase', types: ['Purchase Receipt'] },
+]
+
 export default function StockLedger() {
   const [ledgers, setLedgers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [activeTab, setActiveTab] = useState('all')
   const [filters, setFilters] = useState({
     warehouse_id: '',
     item_code: '',
@@ -23,7 +31,7 @@ export default function StockLedger() {
   const [viewMode, setViewMode] = useState('table')
   const [showColumnMenu, setShowColumnMenu] = useState(false)
 
-  const [visibleColumns, setVisibleColumns] = useState(new Set(['item_code', 'item_name', 'warehouse_name', 'posting_date', 'transaction_type', 'qty_in', 'balance_qty', 'valuation_rate']))
+  const [visibleColumns, setVisibleColumns] = useState(new Set(['item_code', 'item_name', 'warehouse_name', 'posting_date', 'transaction_type', 'qty_in', 'balance_qty', 'reference_name']))
 
   useEffect(() => {
     fetchWarehouses()
@@ -97,31 +105,41 @@ export default function StockLedger() {
   }
 
   const filteredLedgers = useMemo(() => {
-    if (!filters.search) return ledgers
+    let result = ledgers
+    
+    // Tab filtering
+    const currentTab = TABS.find(t => t.id === activeTab)
+    if (currentTab && currentTab.types.length > 0) {
+      result = result.filter(l => currentTab.types.includes(l.transaction_type))
+    }
+
+    if (!filters.search) return result
     const searchLower = filters.search.toLowerCase()
-    return ledgers.filter(ledger => (
+    return result.filter(ledger => (
       ledger.item_code?.toLowerCase().includes(searchLower) ||
       ledger.item_name?.toLowerCase().includes(searchLower) ||
       ledger.warehouse_name?.toLowerCase().includes(searchLower) ||
-      ledger.transaction_type?.toLowerCase().includes(searchLower)
+      ledger.transaction_type?.toLowerCase().includes(searchLower) ||
+      ledger.reference_name?.toLowerCase().includes(searchLower)
     ))
-  }, [ledgers, filters.search])
+  }, [ledgers, filters.search, activeTab])
 
   const handleDownload = () => {
-    const headers = ['Item Code', 'Warehouse', 'Date', 'Transaction Type', 'Qty In', 'Qty Out', 'Balance', 'Rate', 'Value']
+    const headers = ['Item Code', 'Item Name', 'Warehouse', 'Date', 'Transaction Type', 'Reference', 'Qty In', 'Qty Out', 'Balance', 'Rate', 'Value']
     const csvContent = [
       headers.join(','),
       ...filteredLedgers.map(row => {
         const balance = row.balance_qty || 0
         const rate = row.valuation_rate || 0
         const value = Number(row.transaction_value) || 0
-        return `${row.item_code},${row.warehouse_name},${row.posting_date},${row.transaction_type},${row.qty_in || 0},${row.qty_out || 0},${balance},${rate},${value.toFixed(2)}`
+        const reference = row.reference_name ? `${row.reference_doctype}: ${row.reference_name}` : '-'
+        return `"${row.item_code}","${row.item_name}","${row.warehouse_name}",${row.posting_date},"${row.transaction_type}","${reference}",${row.qty_in || 0},${row.qty_out || 0},${balance},${rate},${value.toFixed(2)}`
       })
     ].join('\n')
 
     const link = document.createElement('a')
     link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent)
-    link.download = `stock_ledger_${new Date().toISOString().split('T')[0]}.csv`
+    link.download = `stock_ledger_${activeTab}_${new Date().toISOString().split('T')[0]}.csv`
     link.click()
   }
 
@@ -138,6 +156,16 @@ export default function StockLedger() {
       key: 'transaction_type',
       label: 'Type',
       render: (value) => value ? <Badge variant="secondary" className="capitalize">{value}</Badge> : '-'
+    },
+    {
+      key: 'reference_name',
+      label: 'Reference',
+      render: (value, row) => row.reference_name ? (
+        <div className="flex flex-col">
+          <span className="text-xs font-medium">{row.reference_name}</span>
+          <span className="text-[10px] text-neutral-500">{row.reference_doctype}</span>
+        </div>
+      ) : '-'
     },
     {
       key: 'qty_in',
@@ -183,7 +211,7 @@ export default function StockLedger() {
       label: 'Rate',
       render: (value) => value ? `₹${Number(value).toFixed(2)}` : '-'
     }
-  ], [])
+  ], [activeTab])
 
   const toggleColumn = (key) => {
     setVisibleColumns(prev => {
@@ -228,6 +256,22 @@ export default function StockLedger() {
         </div>
 
         {error && <Alert type="danger" className="mb-4">{error}</Alert>}
+
+        <div className="flex border-b border-neutral-200 dark:border-neutral-800 mb-4 overflow-x-auto no-scrollbar">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
+                activeTab === tab.id
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
         <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs overflow-hidden">
           <div className="p-3 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
@@ -360,11 +404,15 @@ export default function StockLedger() {
                 <div className="w-12 h-12 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-4">
                   <BookOpen size={24} className="text-neutral-400" />
                 </div>
-                <h3 className="text-sm  text-neutral-900 dark:text-white">No ledger entries found</h3>
+                <h3 className="text-sm  text-neutral-900 dark:text-white">
+                  {activeTab !== 'all' ? `No ${TABS.find(t => t.id === activeTab).label} entries found` : 'No ledger entries found'}
+                </h3>
                 <p className="text-xs text-neutral-500 mt-1 max-w-xs">
                   {filters.search || filters.warehouse_id || filters.item_code 
                     ? "Try adjusting your filters to find what you're looking for." 
-                    : "Stock movements will appear here once transactions are recorded."}
+                    : activeTab !== 'all' 
+                      ? `There are no ${TABS.find(t => t.id === activeTab).label.toLowerCase()} movements recorded.`
+                      : "Stock movements will appear here once transactions are recorded."}
                 </p>
                 {(filters.search || filters.warehouse_id || filters.item_code) && (
                   <button
@@ -414,6 +462,15 @@ export default function StockLedger() {
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-1">
                           {entry.item_name}
                         </p>
+                        
+                        {entry.reference_name && (
+                          <div className="flex items-center gap-1.5">
+                            <BookOpen size={12} className="text-blue-500" />
+                            <span className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300 truncate">
+                              {entry.reference_name}
+                            </span>
+                          </div>
+                        )}
                         
                         <div className="flex items-center gap-1.5">
                           <LayoutGrid size={12} className="text-neutral-400" />

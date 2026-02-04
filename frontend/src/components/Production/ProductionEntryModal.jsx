@@ -210,9 +210,14 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
     if (timeLogForm.from_time && timeLogForm.to_time) {
       const [fromHour, fromMin] = timeLogForm.from_time.split(':').map(Number)
       const [toHour, toMin] = timeLogForm.to_time.split(':').map(Number)
-      const fromTotal = fromHour * 60 + fromMin
-      const toTotal = toHour * 60 + toMin
-      return Math.max(0, toTotal - fromTotal)
+      let fromTotal = fromHour * 60 + fromMin
+      let toTotal = toHour * 60 + toMin
+      
+      if (toTotal < fromTotal) {
+        toTotal += 24 * 60;
+      }
+      
+      return toTotal - fromTotal
     }
     return 0
   }
@@ -221,9 +226,14 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
     if (!fromTime || !toTime) return 0
     const [fromHour, fromMin] = fromTime.split(':').map(Number)
     const [toHour, toMin] = toTime.split(':').map(Number)
-    const fromTotal = fromHour * 60 + fromMin
-    const toTotal = toHour * 60 + toMin
-    return Math.max(0, toTotal - fromTotal)
+    let fromTotal = fromHour * 60 + fromMin
+    let toTotal = toHour * 60 + toMin
+    
+    if (toTotal < fromTotal) {
+      toTotal += 24 * 60;
+    }
+    
+    return toTotal - fromTotal
   }
 
   const handleTimeLogChange = (e) => {
@@ -851,6 +861,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   <table className="w-full text-xs">
                     <thead className="bg-gray-100 border-b border-gray-200">
                       <tr>
+                        <th className="p-2  py-2 text-center text-gray-700 w-10">Day</th>
                         <th className="p-2  py-2 text-left  text-gray-700">Operator</th>
                         <th className="p-2  py-2 text-left  text-gray-700">Workstation</th>
                         <th className="p-2  py-2 text-center  text-gray-700">Shift</th>
@@ -863,7 +874,10 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {timeLogs.map(log => (
-                        <tr key={log.id} className="hover:bg-gray-50 transition">
+                        <tr key={log.time_log_id} className="hover:bg-gray-50 transition">
+                          <td className="p-2  py-2 text-center text-gray-900 font-bold bg-gray-50/50">
+                            {log.day_number || '-'}
+                          </td>
                           <td className="p-2  py-2 text-gray-900">{log.operator_name}</td>
                           <td className="p-2  py-2 text-gray-900">{log.machine_id || 'N/A'}</td>
                           <td className="p-2  py-2 text-center text-gray-900">{log.shift}</td>
@@ -880,7 +894,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                           </td>
                           <td className="p-2  py-2 text-center">
                             <button
-                              onClick={() => handleDeleteTimeLog(log.id)}
+                              onClick={() => handleDeleteTimeLog(log.time_log_id)}
                               className="text-red-600 hover:text-red-900 transition"
                             >
                               <Trash2 size={14} />
@@ -964,6 +978,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   <table className="w-full text-xs">
                     <thead className="bg-gray-100 border-b border-gray-200">
                       <tr>
+                        <th className="p-2  py-2 text-center text-gray-700 w-10">Day</th>
                         <th className="p-2  py-2 text-left  text-gray-700">Reason</th>
                         <th className="p-2  py-2 text-center  text-gray-700">Qty</th>
                         <th className="p-2  py-2 text-left  text-gray-700">Notes</th>
@@ -973,14 +988,17 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {rejections.map(r => (
-                        <tr key={r.id} className="hover:bg-gray-50 transition">
+                        <tr key={r.rejection_id} className="hover:bg-gray-50 transition">
+                          <td className="p-2  py-2 text-center text-gray-900 font-bold bg-gray-50/50">
+                            {r.day_number || '-'}
+                          </td>
                           <td className="p-2  py-2 text-gray-900">{r.rejection_reason}</td>
                           <td className="p-2  py-2 text-center font-medium text-red-600">{r.rejected_qty}</td>
                           <td className="p-2  py-2 text-gray-600 text-xs">{r.notes || '-'}</td>
                           <td className="p-2  py-2 text-center text-gray-500 text-xs">{r.created_at ? new Date(r.created_at).toLocaleDateString() : '-'}</td>
                           <td className="p-2  py-2 text-center">
                             <button
-                              onClick={() => handleDeleteRejection(r.id)}
+                              onClick={() => handleDeleteRejection(r.rejection_id)}
                               className="text-red-600 hover:text-red-900 transition"
                             >
                               <Trash2 size={14} />
@@ -1087,6 +1105,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   <table className="w-full text-xs">
                     <thead className="bg-gray-100 border-b border-gray-200">
                       <tr>
+                        <th className="p-2  py-2 text-center text-gray-700 w-10">Day</th>
                         <th className="p-2  py-2 text-left  text-gray-700">Type</th>
                         <th className="p-2  py-2 text-left  text-gray-700">Reason</th>
                         <th className="p-2  py-2 text-center  text-gray-700">Time</th>
@@ -1097,7 +1116,10 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {downtimes.map(d => (
-                        <tr key={d.id} className="hover:bg-gray-50 transition">
+                        <tr key={d.downtime_id} className="hover:bg-gray-50 transition">
+                          <td className="p-2  py-2 text-center text-gray-900 font-bold bg-gray-50/50">
+                            {d.day_number || '-'}
+                          </td>
                           <td className="p-2  py-2 text-gray-900">{d.downtime_type}</td>
                           <td className="p-2  py-2 text-gray-600 text-xs">{d.downtime_reason || '-'}</td>
                           <td className="p-2  py-2 text-center text-gray-600 text-xs">
@@ -1107,7 +1129,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                           <td className="p-2  py-2 text-center text-gray-500 text-xs">{d.created_at ? new Date(d.created_at).toLocaleDateString() : '-'}</td>
                           <td className="p-2  py-2 text-center">
                             <button
-                              onClick={() => handleDeleteDowntime(d.id)}
+                              onClick={() => handleDeleteDowntime(d.downtime_id)}
                               className="text-red-600 hover:text-red-900 transition"
                             >
                               <Trash2 size={14} />

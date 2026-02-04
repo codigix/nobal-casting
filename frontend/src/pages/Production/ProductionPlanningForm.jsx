@@ -170,6 +170,7 @@ const StatusBadge = ({ status }) => {
 const isSubAssemblyGroup = (itemGroup) => {
   if (!itemGroup) return false
   const normalized = itemGroup.toLowerCase().replace(/[-\s]/g, '').trim()
+  if (normalized === 'consumable') return false
   return normalized === 'subassemblies' || normalized === 'subassembly'
 }
 
@@ -191,6 +192,7 @@ export default function ProductionPlanningForm() {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [fetchingBom, setFetchingBom] = useState(false)
+  const [isReadOnly, setIsReadOnly] = useState(false)
 
   const toggleSection = (section) => {
     setExpandedSections(prev => ({
@@ -351,6 +353,7 @@ export default function ProductionPlanningForm() {
           setRawMaterialItems(plan.raw_materials || [])
           setFGOperations(plan.fg_operations || [])
           setOperationItems(plan.operations || [])
+          setIsReadOnly(true)
 
           const planQty = plan.fg_items?.[0]?.planned_qty || plan.fg_items?.[0]?.quantity || 1
           setSalesOrderQuantity(planQty)
@@ -560,6 +563,7 @@ export default function ProductionPlanningForm() {
 
           rawMaterials.forEach(mat => {
             const matQty = (mat.qty || mat.quantity || 0) * itemQty;
+            const group = (mat.item_group || '').toLowerCase();
 
             if (isSubAssemblyGroup(mat.item_group)) {
               const subAsmEntry = {
@@ -661,10 +665,10 @@ export default function ProductionPlanningForm() {
   };
 
   const handleExplodeBoms = () => {
-    const subAsmFromRawMaterials = rawMaterialItems.filter(item =>
-      (item.item_code || '').startsWith('SA-') ||
-      (item.fg_sub_assembly || item.component_type || '').toLowerCase().includes('sub')
-    )
+    const subAsmFromRawMaterials = rawMaterialItems.filter(item => {
+      return (item.item_code || '').startsWith('SA-') ||
+        (item.fg_sub_assembly || item.component_type || '').toLowerCase().includes('sub')
+    })
     if (subAsmFromRawMaterials.length === 0) {
       toast.addToast('No sub-assemblies found in raw materials', 'info')
       return
@@ -813,11 +817,11 @@ export default function ProductionPlanningForm() {
     if (!itemCode) itemCode = 'FG Item'
     if (!itemName) itemName = 'Finished Good'
 
-    // Prioritize passed qty, then SO item qty, then SO header qty, then default to 1
+    // Prioritize passed qty, then SO header qty, then SO item qty, then default to 1
     let quantity = salesOrderQty
     if (quantity === null || quantity === undefined) {
       const firstItemQty = items.length > 0 ? (items[0].qty || items[0].quantity || items[0].ordered_qty) : null
-      quantity = firstItemQty || soDetails.qty || 1
+      quantity = soDetails.qty || soDetails.quantity || firstItemQty || 1
     }
     
     quantity = parseFloat(quantity) || 1
@@ -880,9 +884,14 @@ export default function ProductionPlanningForm() {
       setFGItems([fgFromBOM])
       console.log('✓ Finished Good set:', fgFromBOM)
 
-      // All lines in a FG BOM are Sub-Assemblies
-      if (bomLines.length > 0) {
-        const subAsmItemsFromBOM = bomLines.map(subAsmItem => {
+      // Split BOM lines into sub-assemblies and consumables
+      const trueSubAsmLines = bomLines.filter(line => isSubAssemblyGroup(line.item_group) || (line.component_type || '').toLowerCase().includes('sub'))
+      const consumableLinesFromBOM = bomLines.filter(line => !isSubAssemblyGroup(line.item_group) && !(line.component_type || '').toLowerCase().includes('sub'))
+
+      // All lines in a FG BOM that are sub-assemblies
+      if (trueSubAsmLines.length > 0) {
+        const subAsmItemsFromBOM = trueSubAsmLines
+          .map(subAsmItem => {
           const baseQty = subAsmItem.quantity || subAsmItem.qty || subAsmItem.bom_qty || 1
           const totalQtyBeforeScrap = baseQty * quantity
           const scrapPercentage = parseFloat(subAsmItem.loss_percentage || subAsmItem.item_loss_percentage || 0)
@@ -905,6 +914,7 @@ export default function ProductionPlanningForm() {
             sales_order_quantity: quantity,
             fg_sub_assembly: 'Sub-Assembly',
             component_type: subAsmItem.component_type || 'Sub-Assembly',
+            item_group: subAsmItem.item_group,
             planned_start_date: new Date().toISOString().split('T')[0],
             planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
           }
@@ -924,8 +934,11 @@ export default function ProductionPlanningForm() {
       }
 
       const allMaterials = bomRawMaterialsFromSO.length > 0 ? bomRawMaterialsFromSO : (bomData?.rawMaterials || bomData?.bom_raw_materials || [])
-      const proportionalMaterials = allMaterials
-        .filter(mat => mat.item_group !== 'Consumable')
+      
+      // Combine with consumables found in BOM lines
+      const combinedMaterials = [...allMaterials, ...consumableLinesFromBOM]
+      
+      const proportionalMaterials = combinedMaterials
         .map(mat => ({
           ...mat,
           quantity: (mat.qty || mat.quantity || 0) * quantity,
@@ -1073,8 +1086,6 @@ export default function ProductionPlanningForm() {
           const operations = subBom.operations || subBom.bom_operations || []
 
           subMaterials.forEach(subMat => {
-            if (subMat.item_group === 'Consumable') return
-
             const subBomQty = subMat.qty || subMat.quantity || 1
             const parentBomQty = material.qty || material.quantity || 1
             const actualQty = subBomQty * parentBomQty * salesOrderQuantity
@@ -1779,11 +1790,6 @@ export default function ProductionPlanningForm() {
             const actualBomId = bom.bom_id || bomId
 
             materials.forEach(material => {
-              if (material.item_group === 'Consumable') {
-                console.log(`Skipping consumable: ${material.item_code}`)
-                return
-              }
-
               const bomQty = material.qty || material.quantity || 1
               const actualQty = bomQty * salesOrderQuantity
               console.log(`Adding material: ${material.item_code}, BOM qty: ${bomQty}, Actual qty: ${actualQty}`)
@@ -2185,22 +2191,34 @@ export default function ProductionPlanningForm() {
             </div>
 
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate('/manufacturing/production-planning')}
-                className="p-2 text-xs   text-slate-500  text-xs   hover:bg-slate-100 rounded transition-all"
-              >
-                Discard Changes
-              </button>
-              <button
-                onClick={saveProductionPlan}
-                disabled={savingPlan || !selectedSalesOrders.length}
-                className="flex items-center gap-2 p-2  py-2 bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all "
-              >
-                <Save size={16} />
-                <span className="text-xs    text-xs  ">
-                  {savingPlan ? 'Saving Plan...' : 'Save Strategic Plan'}
-                </span>
-              </button>
+              {!isReadOnly && (
+                <button
+                  onClick={() => navigate('/manufacturing/production-planning')}
+                  className="p-2 text-xs   text-slate-500  text-xs   hover:bg-slate-100 rounded transition-all"
+                >
+                  Discard Changes
+                </button>
+              )}
+              {isReadOnly ? (
+                <button
+                  onClick={() => setIsReadOnly(false)}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all text-xs font-medium"
+                >
+                  <FileText size={16} />
+                  <span>Edit Plan</span>
+                </button>
+              ) : (
+                <button
+                  onClick={saveProductionPlan}
+                  disabled={savingPlan || !selectedSalesOrders.length}
+                  className="flex items-center gap-2 p-2  py-2 bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all "
+                >
+                  <Save size={16} />
+                  <span className="text-xs    text-xs  ">
+                    {savingPlan ? 'Saving Plan...' : 'Save Strategic Plan'}
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -2333,16 +2351,18 @@ export default function ProductionPlanningForm() {
                         <input
                           type="text"
                           value={planHeader.naming_series}
+                          disabled={isReadOnly}
                           onChange={(e) => setPlanHeader(prev => ({ ...prev, naming_series: e.target.value }))}
-                          className="w-full p-2  border border-slate-200 rounded text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all  font-medium"
+                          className={`w-full p-2 border border-slate-200 rounded text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-medium ${isReadOnly ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : 'text-slate-900 bg-white'}`}
                         />
                       </FieldWrapper>
                       <FieldWrapper label="Operational Status">
                         <div className="relative">
                           <select
                             value={planHeader.status}
+                            disabled={isReadOnly}
                             onChange={(e) => setPlanHeader(prev => ({ ...prev, status: e.target.value }))}
-                            className="w-full p-2  border border-slate-200 rounded text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all  appearance-none font-medium bg-white"
+                            className={`w-full p-2 border border-slate-200 rounded text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all appearance-none font-medium ${isReadOnly ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : 'text-slate-900 bg-white'}`}
                           >
                             <option value="draft">Draft</option>
                             <option value="planned">Planned</option>
@@ -2360,6 +2380,7 @@ export default function ProductionPlanningForm() {
                             label: `${so.customer_name || 'N/A'} [${so.sales_order_id || so.name}]`
                           }))}
                           value={selectedSalesOrders[0] || ''}
+                          isDisabled={isReadOnly}
                           onChange={(value) => {
                             setSelectedSalesOrders([value])
                             handleSalesOrderSelect(value)
@@ -2374,6 +2395,7 @@ export default function ProductionPlanningForm() {
                           <input
                             type="number"
                             value={salesOrderQuantity}
+                            disabled={isReadOnly}
                             onChange={(e) => {
                               const qty = parseInt(e.target.value) || 1
                               setSalesOrderQuantity(qty)
@@ -2382,7 +2404,7 @@ export default function ProductionPlanningForm() {
                               }
                             }}
                             min="1"
-                            className="w-full pl-4 pr-12 py-2.5 border border-slate-200 rounded text-xs text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-medium"
+                            className={`w-full pl-4 pr-12 py-2.5 border border-slate-200 rounded text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-medium ${isReadOnly ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : 'text-slate-900 bg-white'}`}
                           />
                           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs    text-slate-400 ">UNIT</div>
                         </div>
@@ -3126,21 +3148,25 @@ export default function ProductionPlanningForm() {
               <>
                 <button
                   onClick={createWorkOrders}
-                  disabled={creatingWorkOrders || (existingWorkOrders && existingWorkOrders.length > 0)}
+                  disabled={creatingWorkOrders || (existingWorkOrders && existingWorkOrders.length > 0) || isReadOnly}
                   className={`flex items-center gap-2 p-2 rounded transition-all text-xs border ${
-                    existingWorkOrders && existingWorkOrders.length > 0
+                    (existingWorkOrders && existingWorkOrders.length > 0) || isReadOnly
                       ? 'bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed opacity-70'
                       : 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'
                   }`}
-                  title={existingWorkOrders && existingWorkOrders.length > 0 ? `Work orders already exist for this plan (${plan_id})` : "Generate Work Orders"}
+                  title={existingWorkOrders && existingWorkOrders.length > 0 ? `Work orders already exist for this plan (${plan_id})` : isReadOnly ? "Switch to Edit mode to generate Work Orders" : "Generate Work Orders"}
                 >
                   <Plus size={14} />
                   {creatingWorkOrders ? 'Executing...' : (existingWorkOrders && existingWorkOrders.length > 0 ? 'Work Orders Created' : 'Work Orders')}
                 </button>
                 <button
                   onClick={createMaterialRequest}
-                  disabled={creatingMaterialRequest}
-                  className="flex items-center gap-2 p-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-all disabled:opacity-50 text-xs  border border-blue-100"
+                  disabled={creatingMaterialRequest || isReadOnly}
+                  className={`flex items-center gap-2 p-2 rounded transition-all text-xs border ${
+                    isReadOnly
+                      ? 'bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed opacity-70'
+                      : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100'
+                  }`}
                 >
                   <ClipboardList size={14} />
                   {creatingMaterialRequest ? 'Creating...' : 'Material Request'}
@@ -3150,14 +3176,24 @@ export default function ProductionPlanningForm() {
 
             <div className="h-8 w-px bg-slate-100 mx-2"></div>
 
-            <button
-              onClick={saveProductionPlan}
-              disabled={savingPlan || !selectedSalesOrders.length}
-              className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-slate-200  text-xs"
-            >
-              <Save size={16} />
-              {savingPlan ? 'Saving Plan...' : 'Save Strategic Plan'}
-            </button>
+            {isReadOnly ? (
+              <button
+                onClick={() => setIsReadOnly(false)}
+                className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 text-xs font-medium"
+              >
+                <FileText size={16} />
+                <span>Edit Strategic Plan</span>
+              </button>
+            ) : (
+              <button
+                onClick={saveProductionPlan}
+                disabled={savingPlan || !selectedSalesOrders.length}
+                className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-slate-200  text-xs"
+              >
+                <Save size={16} />
+                {savingPlan ? 'Saving Plan...' : 'Save Strategic Plan'}
+              </button>
+            )}
           </div>
         </div>
       </div>

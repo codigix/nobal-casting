@@ -12,6 +12,15 @@ import { useToast } from '../../components/ToastContainer'
 import Card from '../../components/Card/Card'
 
 const normalizeStatus = (status) => String(status || '').toLowerCase().trim()
+const normalizeShift = (s) => String(s || '').trim().toUpperCase().replace(/^SHIFT\s+/, '');
+
+const getLocalDate = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const getShiftTimings = (shift) => {
   const shiftTimings = {
@@ -20,6 +29,26 @@ const getShiftTimings = (shift) => {
   }
   return shiftTimings[shift] || shiftTimings['A']
 }
+
+const calculateDurationMinutes = (fromTime, fromPeriod, toTime, toPeriod) => {
+  const parseTime = (time, period) => {
+    if (!time) return 0;
+    let [hours, minutes] = time.split(':').map(Number);
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  };
+
+  let start = parseTime(fromTime, fromPeriod);
+  let end = parseTime(toTime, toPeriod);
+
+  if (end < start) {
+    // Spans across midnight
+    end += 24 * 60;
+  }
+
+  return end - start;
+};
 
 // Helper Components for the Redesign
 const SectionTitle = ({ title, icon: Icon, badge, subtitle }) => (
@@ -94,7 +123,7 @@ export default function ProductionEntry() {
   const totalScrapQty = parseFloat(jobCardData?.scrap_quantity || 0)
   const totalDowntimeMinutes = downtimes.reduce((sum, d) => sum + (parseFloat(d.duration_minutes) || 0), 0)
 
-  const isOperationFinished = (totalAcceptedQty + totalRejectedQty + totalScrapQty) >= (parseFloat(jobCardData?.planned_quantity || 0) - 0.0001);
+  const isOperationFinished = totalProducedQty >= (parseFloat(jobCardData?.planned_quantity || 0) - 0.0001);
 
   const maxAllowedQty = previousOperationData
     ? (parseFloat(previousOperationData.accepted_quantity) || (parseFloat(previousOperationData.produced_quantity) || 0) - (parseFloat(previousOperationData.rejected_quantity) || 0))
@@ -122,7 +151,7 @@ export default function ProductionEntry() {
     machine_id: '',
     shift: 'A',
     day_number: '',
-    log_date: new Date().toISOString().split('T')[0],
+    log_date: getLocalDate(),
     from_time: '10:00',
     from_period: 'AM',
     to_time: '06:00',
@@ -135,8 +164,9 @@ export default function ProductionEntry() {
   const [rejectionForm, setRejectionForm] = useState({
     reason: '',
     day_number: '',
-    log_date: new Date().toISOString().split('T')[0],
+    log_date: getLocalDate(),
     shift: 'A',
+    produce_qty: 0,
     accepted_qty: 0,
     rejected_qty: 0,
     scrap_qty: 0,
@@ -147,7 +177,7 @@ export default function ProductionEntry() {
     downtime_type: '',
     downtime_reason: '',
     day_number: '',
-    log_date: new Date().toISOString().split('T')[0],
+    log_date: getLocalDate(),
     shift: 'A',
     from_time: '10:00',
     from_period: 'AM',
@@ -163,6 +193,43 @@ export default function ProductionEntry() {
   useEffect(() => {
     fetchAllData()
   }, [jobCardId])
+  
+  useEffect(() => {
+    const stats = getShiftStats(rejectionForm.log_date, rejectionForm.shift);
+    const produceQty = stats.produced; 
+    const rejected = parseFloat(rejectionForm.rejected_qty) || 0;
+    
+    // Automatically sync scrap_qty with rejected_qty as requested
+    const scrap = rejected;
+    
+    setRejectionForm(prev => {
+      const hasProduceQtyChanged = prev.produce_qty !== produceQty;
+      const hasRejectedQtyChanged = prev.rejected_qty !== rejected;
+      const hasScrapQtyChanged = prev.scrap_qty !== scrap;
+      
+      if (hasProduceQtyChanged || hasRejectedQtyChanged || hasScrapQtyChanged) {
+        // If produce_qty changed (shift/date changed), auto-calculate accepted
+        // If rejected_qty changed, auto-calculate accepted if it was previously 
+        // linked to produce_qty (i.e., produceQty > 0)
+        let newAccepted = prev.accepted_qty;
+        
+        if (hasProduceQtyChanged && produceQty > 0) {
+          newAccepted = Math.max(0, produceQty - rejected);
+        } else if (hasRejectedQtyChanged && produceQty > 0) {
+          newAccepted = Math.max(0, produceQty - rejected);
+        }
+
+        return {
+          ...prev,
+          produce_qty: produceQty,
+          scrap_qty: scrap,
+          accepted_qty: newAccepted
+        };
+      }
+
+      return prev;
+    });
+  }, [rejectionForm.log_date, rejectionForm.shift, rejectionForm.rejected_qty, timeLogs]);
 
   const StatCard = ({ label, value, icon: Icon, color, subtitle }) => {
     const colorMap = {
@@ -317,25 +384,6 @@ export default function ProductionEntry() {
     }
   }, [jobCardData, operations, warehouses])
 
-  // Automatically fetch produce quantity from time logs and pre-fill accepted quantity
-  useEffect(() => {
-    if (rejectionForm.log_date && rejectionForm.shift) {
-      const stats = getShiftStats(rejectionForm.log_date, rejectionForm.shift);
-      const produced = stats.produced;
-      
-      if (produced > 0) {
-        setRejectionForm(prev => {
-          const rejected = parseFloat(prev.rejected_qty) || 0;
-          const scrap = parseFloat(prev.scrap_qty) || 0;
-          return {
-            ...prev,
-            accepted_qty: Math.max(0, produced - rejected - scrap)
-          };
-        });
-      }
-    }
-  }, [rejectionForm.log_date, rejectionForm.shift, rejectionForm.rejected_qty, rejectionForm.scrap_qty, timeLogs]);
-
   const fetchAllData = async () => {
     try {
       setLoading(true)
@@ -465,9 +513,13 @@ export default function ProductionEntry() {
         productionService.getDowntimes({ job_card_id: jobCardId })
       ])
 
-      setTimeLogs(logsRes.data || logsRes)
-      setRejections(rejsRes.data || rejsRes)
-      setDowntimes(downRes.data || downRes)
+      const logs = logsRes.data || logsRes || []
+      const rejs = rejsRes.data || rejsRes || []
+      const down = downRes.data || downRes || []
+
+      setTimeLogs(Array.isArray(logs) ? logs : [])
+      setRejections(Array.isArray(rejs) ? rejs : [])
+      setDowntimes(Array.isArray(down) ? down : [])
     } catch (err) {
       toast.addToast(err.message || 'Failed to load operational data', 'error')
     } finally {
@@ -544,22 +596,59 @@ export default function ProductionEntry() {
     })
   }
 
+  const formatDateForMatch = (dateInput) => {
+    if (!dateInput) return null;
+    
+    let d;
+    if (dateInput instanceof Date) {
+      d = dateInput;
+    } else if (typeof dateInput === 'string') {
+      // 1. Handle DD-MM-YYYY or D-M-YYYY (manually to avoid timezone issues)
+      const dmyMatch = dateInput.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+      if (dmyMatch) {
+        return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
+      }
+
+      // 2. Handle pure YYYY-MM-DD (manually to avoid UTC interpretation)
+      const ymdMatch = dateInput.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (ymdMatch) {
+        return `${ymdMatch[1]}-${ymdMatch[2]}-${ymdMatch[3]}`;
+      }
+
+      // 3. Fallback to Date object for ISO strings etc.
+      d = new Date(dateInput);
+    } else {
+      d = new Date(dateInput);
+    }
+
+    if (isNaN(d.getTime())) return null;
+    
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const calculatePotentialIncrease = (formType, formData) => {
     const { log_date, shift } = formData;
     const dateStr = log_date;
+    const formDate = formatDateForMatch(log_date);
+    const formShift = normalizeShift(shift);
 
     // Find existing logs for this date/shift
-    const shiftTimeLogs = timeLogs.filter(log =>
-      (log.log_date?.split('T')[0] === dateStr) &&
-      log.shift === shift
-    );
-    const shiftRejections = rejections.filter(rej =>
-      (rej.log_date?.split('T')[0] === dateStr) &&
-      rej.shift === shift
-    );
+    const shiftTimeLogs = timeLogs.filter(log => {
+      const logDate = formatDateForMatch(log.log_date);
+      const logShift = normalizeShift(log.shift);
+      return logDate === formDate && logShift === formShift;
+    });
+    const shiftRejections = rejections.filter(rej => {
+      const rejDate = formatDateForMatch(rej.log_date);
+      const rejShift = normalizeShift(rej.shift);
+      return rejDate === formDate && rejShift === formShift;
+    });
 
     const timeLogProduced = shiftTimeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0);
-    const prevRejectionProduced = shiftRejections.reduce((sum, rej) => sum + (parseFloat(rej.accepted_qty) || 0) + (parseFloat(rej.rejected_qty) || 0) + (parseFloat(rej.scrap_qty) || 0), 0);
+    const prevRejectionProduced = shiftRejections.reduce((sum, rej) => sum + (parseFloat(rej.accepted_qty) || 0) + Math.max(parseFloat(rej.rejected_qty) || 0, parseFloat(rej.scrap_qty) || 0), 0);
 
     const prevTotalForShift = Math.max(timeLogProduced, prevRejectionProduced);
 
@@ -568,25 +657,32 @@ export default function ProductionEntry() {
       const newQty = parseFloat(formData.completed_qty) || 0;
       newTotalForShift = Math.max(timeLogProduced + newQty, prevRejectionProduced);
     } else if (formType === 'rejection') {
-      const enteringProduced = (parseFloat(formData.accepted_qty) || 0) + (parseFloat(formData.rejected_qty) || 0) + (parseFloat(formData.scrap_qty) || 0);
+      const enteringProduced = (parseFloat(formData.accepted_qty) || 0) + Math.max(parseFloat(formData.rejected_qty) || 0, parseFloat(formData.scrap_qty) || 0);
       newTotalForShift = Math.max(timeLogProduced, prevRejectionProduced + enteringProduced);
     }
 
-    return newTotalForShift - prevTotalForShift;
+    const remainingTotalFromOtherShifts = Math.max(0, totalProducedQty - prevTotalForShift);
+    return (remainingTotalFromOtherShifts + newTotalForShift) - totalProducedQty;
   };
 
   const getShiftStats = (date, shift) => {
-    const shiftTimeLogs = timeLogs.filter(log =>
-      (log.log_date?.split('T')[0] === date) &&
-      log.shift === shift
-    );
-    const shiftRejections = rejections.filter(rej =>
-      (rej.log_date?.split('T')[0] === date) &&
-      rej.shift === shift
-    );
+    const targetDate = formatDateForMatch(date);
+    const targetShift = normalizeShift(shift);
+
+    const shiftTimeLogs = timeLogs.filter(log => {
+      const logDate = formatDateForMatch(log.log_date);
+      const logShift = normalizeShift(log.shift);
+      return logDate === targetDate && logShift === targetShift;
+    });
+
+    const shiftRejections = rejections.filter(rej => {
+      const rejDate = formatDateForMatch(rej.log_date);
+      const rejShift = normalizeShift(rej.shift);
+      return rejDate === targetDate && rejShift === targetShift;
+    });
 
     const produced = shiftTimeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0);
-    const rejectionProduced = shiftRejections.reduce((sum, rej) => sum + (parseFloat(rej.accepted_qty) || 0) + (parseFloat(rej.rejected_qty) || 0) + (parseFloat(rej.scrap_qty) || 0), 0);
+    const rejectionProduced = shiftRejections.reduce((sum, rej) => sum + (parseFloat(rej.accepted_qty) || 0) + Math.max(parseFloat(rej.rejected_qty) || 0, parseFloat(rej.scrap_qty) || 0), 0);
 
     return {
       produced,
@@ -607,8 +703,17 @@ export default function ProductionEntry() {
 
     try {
       setFormLoading(true)
+      
+      const time_in_minutes = calculateDurationMinutes(
+        timeLogForm.from_time,
+        timeLogForm.from_period,
+        timeLogForm.to_time,
+        timeLogForm.to_period
+      );
+
       const response = await productionService.createTimeLog({
         ...timeLogForm,
+        time_in_minutes,
         job_card_id: jobCardId
       })
       toast.addToast('Time log added successfully', 'success')
@@ -656,8 +761,17 @@ export default function ProductionEntry() {
     e.preventDefault()
     try {
       setFormLoading(true)
+      
+      const duration_minutes = calculateDurationMinutes(
+        downtimeForm.from_time,
+        downtimeForm.from_period,
+        downtimeForm.to_time,
+        downtimeForm.to_period
+      );
+
       await productionService.createDowntime({
         ...downtimeForm,
+        duration_minutes,
         job_card_id: jobCardId
       })
       toast.addToast('Downtime entry added successfully', 'success')
@@ -760,7 +874,7 @@ export default function ProductionEntry() {
     // Process time logs for produced quantity
     timeLogs.forEach(log => {
       const dateKey = new Date(log.log_date).toISOString().split('T')[0];
-      const shiftKey = log.shift;
+      const shiftKey = normalizeShift(log.shift);
       const key = `${dateKey}_${shiftKey}`;
 
       if (!reportData[key]) {
@@ -781,7 +895,7 @@ export default function ProductionEntry() {
     // Process rejections for quality data
     rejections.forEach(rej => {
       const dateKey = new Date(rej.log_date).toISOString().split('T')[0];
-      const shiftKey = rej.shift;
+      const shiftKey = normalizeShift(rej.shift);
       const key = `${dateKey}_${shiftKey}`;
 
       if (!reportData[key]) {
@@ -804,7 +918,7 @@ export default function ProductionEntry() {
     // Process downtimes
     downtimes.forEach(down => {
       const dateKey = new Date(down.log_date).toISOString().split('T')[0];
-      const shiftKey = down.shift;
+      const shiftKey = normalizeShift(down.shift);
       const key = `${dateKey}_${shiftKey}`;
 
       if (!reportData[key]) {
@@ -942,6 +1056,24 @@ export default function ProductionEntry() {
                 </div>
               </div>
               <div>
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Produced</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg text-slate-900 font-bold">
+                    {totalProducedQty.toLocaleString()}
+                  </span>
+                  <span className="text-xs text-slate-400">Units</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Accepted</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg text-emerald-600 font-bold">
+                    {totalAcceptedQty.toLocaleString()}
+                  </span>
+                  <span className="text-xs text-emerald-400">Units</span>
+                </div>
+              </div>
+              <div>
                 <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Current Op</p>
                 <div className="flex items-center gap-2 text-indigo-600">
                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
@@ -979,7 +1111,7 @@ export default function ProductionEntry() {
                     subtitle={`${actualMinutes.toFixed(0)} / ${expectedMinutes.toFixed(0)} MIN`}
                   />
                   <StatCard
-                    label="Quality"
+                    label="Quality Yield"
                     value={`${qualityScore}%`}
                     icon={ShieldCheck}
                     color={qualityScore >= 98 ? 'emerald' : 'amber'}
@@ -1235,6 +1367,7 @@ export default function ProductionEntry() {
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-100">
+                        <th className="p-2  text-slate-400 w-12 text-center">Day</th>
                         <th className="p-2  text-slate-400 ">Date / Shift</th>
                         <th className="p-2  text-slate-400 ">Operator</th>
                         <th className="p-2  text-slate-400 ">Time Interval</th>
@@ -1245,14 +1378,19 @@ export default function ProductionEntry() {
                     <tbody className="divide-y divide-slate-50">
                       {timeLogs.length === 0 ? (
                         <tr>
-                          <td colSpan="5" className="p-8 text-center text-slate-400 italic">No production time recorded for this job card yet</td>
+                          <td colSpan="6" className="p-8 text-center text-slate-400 italic">No production time recorded for this job card yet</td>
                         </tr>
                       ) : (
                         timeLogs.map((log) => (
                           <tr key={log.time_log_id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="p-3 text-center">
+                              <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-bold">
+                                {log.day_number || '-'}
+                              </span>
+                            </td>
                             <td className="p-3">
                               <p className="font-medium text-slate-900">{new Date(log.log_date).toLocaleDateString()}</p>
-                              <p className="text-[10px] text-slate-400">Shift {log.shift}</p>
+                              <p className="text-[10px] text-slate-400">Shift {normalizeShift(log.shift)}</p>
                             </td>
                             <td className="p-3">
                               <div className="flex items-center gap-2">
@@ -1315,9 +1453,9 @@ export default function ProductionEntry() {
                       </div>
                       {(() => {
                         const stats = getShiftStats(rejectionForm.log_date, rejectionForm.shift);
-                        return stats.maxProduced > 0 ? (
+                        return stats.produced > 0 ? (
                           <p className="text-[9px] text-indigo-600 mt-1 font-medium italic">
-                            Already logged in this shift: {stats.maxProduced.toFixed(0)} units
+                            Produced units in this shift: {stats.produced.toFixed(0)} units
                           </p>
                         ) : null;
                       })()}
@@ -1341,10 +1479,7 @@ export default function ProductionEntry() {
                   <div className='col-span-1'>
                     <FieldWrapper label="Produce Qty">
                       <div className="p-2 bg-indigo-50 border border-indigo-100 rounded text-xs text-indigo-700 font-bold h-[34px] flex items-center justify-center">
-                        {(() => {
-                          const stats = getShiftStats(rejectionForm.log_date, rejectionForm.shift);
-                          return stats.produced.toFixed(0);
-                        })()}
+                        {rejectionForm.produce_qty || 0}
                       </div>
                     </FieldWrapper>
                   </div>
@@ -1371,7 +1506,7 @@ export default function ProductionEntry() {
                         type="number"
                         step="0.01"
                         value={rejectionForm.accepted_qty}
-                        onChange={(e) => setRejectionForm({ ...rejectionForm, accepted_qty: e.target.value })}
+                        onChange={(e) => setRejectionForm({ ...rejectionForm, accepted_qty: parseFloat(e.target.value) || 0 })}
                         className="w-full p-2 bg-emerald-50/50 border border-emerald-100 rounded text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-emerald-700 font-bold"
                         required
                       />
@@ -1383,7 +1518,7 @@ export default function ProductionEntry() {
                         type="number"
                         step="0.01"
                         value={rejectionForm.rejected_qty}
-                        onChange={(e) => setRejectionForm({ ...rejectionForm, rejected_qty: e.target.value })}
+                        onChange={(e) => setRejectionForm({ ...rejectionForm, rejected_qty: parseFloat(e.target.value) || 0 })}
                         className="w-full p-2 bg-rose-50/50 border border-rose-100 rounded text-xs outline-none focus:ring-2 focus:ring-rose-500/20 transition-all text-rose-700 font-bold"
                         required
                       />
@@ -1395,7 +1530,7 @@ export default function ProductionEntry() {
                         type="number"
                         step="0.01"
                         value={rejectionForm.scrap_qty}
-                        onChange={(e) => setRejectionForm({ ...rejectionForm, scrap_qty: e.target.value })}
+                        onChange={(e) => setRejectionForm({ ...rejectionForm, scrap_qty: parseFloat(e.target.value) || 0 })}
                         className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-slate-500/20 transition-all font-bold"
                         required
                       />
@@ -1419,6 +1554,7 @@ export default function ProductionEntry() {
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-100">
+                        <th className="p-2 text-slate-400 w-12 text-center">Day</th>
                         <th className="p-2 text-slate-400">Date / Shift</th>
                         <th className="p-2 text-slate-400">Status / Reason</th>
                         <th className="p-2 text-slate-400 text-center">Accepted</th>
@@ -1430,14 +1566,19 @@ export default function ProductionEntry() {
                     <tbody className="divide-y divide-slate-50">
                       {rejections.length === 0 ? (
                         <tr>
-                          <td colSpan="6" className="p-8 text-center text-slate-400 italic">No quality inspection records found</td>
+                          <td colSpan="7" className="p-8 text-center text-slate-400 italic">No quality inspection records found</td>
                         </tr>
                       ) : (
                         rejections.map((rej) => (
                           <tr key={rej.rejection_id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="p-3 text-center">
+                              <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-bold">
+                                {rej.day_number || '-'}
+                              </span>
+                            </td>
                             <td className="p-3">
                               <p className="font-medium text-slate-900">{new Date(rej.log_date).toLocaleDateString()}</p>
-                              <p className="text-[10px] text-slate-400 uppercase">Shift {rej.shift}</p>
+                              <p className="text-[10px] text-slate-400 uppercase">Shift {normalizeShift(rej.shift)}</p>
                             </td>
                             <td className="p-3">
                               <div className="flex flex-col gap-1">
@@ -1591,6 +1732,7 @@ export default function ProductionEntry() {
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-100">
+                        <th className="p-2 text-slate-400 w-12 text-center">Day</th>
                         <th className="p-2 text-slate-400">Date / Shift</th>
                         <th className="p-2 text-slate-400">Category / Reason</th>
                         <th className="p-2 text-slate-400">Interval</th>
@@ -1601,14 +1743,19 @@ export default function ProductionEntry() {
                     <tbody className="divide-y divide-slate-50">
                       {downtimes.length === 0 ? (
                         <tr>
-                          <td colSpan="5" className="p-8 text-center text-slate-400 italic">No operational downtime logs found</td>
+                          <td colSpan="6" className="p-8 text-center text-slate-400 italic">No operational downtime logs found</td>
                         </tr>
                       ) : (
                         downtimes.map((down) => (
-                          <tr key={down.id} className="hover:bg-slate-50/50 transition-colors">
+                          <tr key={down.downtime_id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="p-3 text-center">
+                              <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-bold">
+                                {down.day_number || '-'}
+                              </span>
+                            </td>
                             <td className="p-3">
                               <p className="font-medium text-slate-900">{new Date(down.log_date).toLocaleDateString()}</p>
-                              <p className="text-[10px] text-slate-400 uppercase">Shift {down.shift}</p>
+                              <p className="text-[10px] text-slate-400 uppercase">Shift {normalizeShift(down.shift)}</p>
                             </td>
                             <td className="p-3">
                               <p className="font-medium text-slate-900">{down.downtime_type}</p>
@@ -1623,7 +1770,7 @@ export default function ProductionEntry() {
                             </td>
                             <td className="p-3 text-center">
                               <button
-                                onClick={() => handleDeleteDowntime(down.id)}
+                                onClick={() => handleDeleteDowntime(down.downtime_id)}
                                 className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all"
                               >
                                 <Trash2 size={14} />
@@ -1807,18 +1954,18 @@ export default function ProductionEntry() {
                   </button>
                 </div>
 
-                <div className="overflow-x-auto rounded-xl border border-slate-100">
-                  <table className="w-full text-left text-sm">
+                <div className="overflow-x-auto rounded border border-slate-100">
+                  <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-100">
-                        <th className="p-3 font-semibold text-slate-600">Date</th>
-                        <th className="p-3 font-semibold text-slate-600">Shift</th>
-                        <th className="p-3 font-semibold text-slate-600">Operator</th>
-                        <th className="p-3 font-semibold text-slate-600 text-right">Produced</th>
-                        <th className="p-3 font-semibold text-slate-600 text-right">Accepted</th>
-                        <th className="p-3 font-semibold text-slate-600 text-right text-rose-500">Rejected</th>
-                        <th className="p-3 font-semibold text-slate-600 text-right">Scrap</th>
-                        <th className="p-3 font-semibold text-slate-600 text-right">Downtime</th>
+                        <th className="p-2  text-slate-600">Date</th>
+                        <th className="p-2  text-slate-600">Shift</th>
+                        <th className="p-2  text-slate-600">Operator</th>
+                        <th className="p-2  text-slate-600 text-right">Produced</th>
+                        <th className="p-2  text-slate-600 text-right">Accepted</th>
+                        <th className="p-2  text-slate-600 text-right text-rose-500">Rejected</th>
+                        <th className="p-2  text-slate-600 text-right">Scrap</th>
+                        <th className="p-2  text-slate-600 text-right">Downtime</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
@@ -1831,18 +1978,18 @@ export default function ProductionEntry() {
                       ) : (
                         generateDailyReport().map((row, idx) => (
                           <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="p-3 font-medium text-slate-900">{new Date(row.date).toLocaleDateString()}</td>
-                            <td className="p-3">
+                            <td className="p-2 font-medium text-slate-900">{new Date(row.date).toLocaleDateString()}</td>
+                            <td className="p-2">
                               <span className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded uppercase">
                                 Shift {row.shift}
                               </span>
                             </td>
-                            <td className="p-3 text-slate-600">{row.operator || 'N/A'}</td>
-                            <td className="p-3 text-right font-semibold text-slate-900">{row.produced.toLocaleString()}</td>
-                            <td className="p-3 text-right font-bold text-emerald-600">{row.accepted.toLocaleString()}</td>
-                            <td className="p-3 text-right font-bold text-rose-500">{row.rejected.toLocaleString()}</td>
-                            <td className="p-3 text-right font-medium text-slate-500">{row.scrap.toLocaleString()}</td>
-                            <td className="p-3 text-right">
+                            <td className="p-2 text-slate-600">{row.operator || 'N/A'}</td>
+                            <td className="p-2 text-right font-semibold text-slate-900">{row.produced.toLocaleString()}</td>
+                            <td className="p-2 text-right font-bold text-emerald-600">{row.accepted.toLocaleString()}</td>
+                            <td className="p-2 text-right font-bold text-rose-500">{row.rejected.toLocaleString()}</td>
+                            <td className="p-2 text-right font-medium text-slate-500">{row.scrap.toLocaleString()}</td>
+                            <td className="p-2 text-right">
                               <span className="text-amber-600 font-medium">{row.downtime}</span>
                               <span className="ml-1 text-[10px] text-slate-400 uppercase">min</span>
                             </td>

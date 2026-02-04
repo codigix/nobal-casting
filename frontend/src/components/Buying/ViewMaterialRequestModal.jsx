@@ -422,7 +422,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
             {/* Left Column: Line Items */}
             <div className="lg:col-span-2 space-y-6">
               <div className="bg-white rounded  border border-slate-200   overflow-hidden">
@@ -487,7 +487,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                                   {stock.warehouse === 'All Warehouses' && stock.breakdown?.length > 0 ? (
                                     <div className="mt-1 flex flex-col gap-0.5 max-h-16 overflow-y-auto w-full">
                                       {stock.breakdown.map((b, i) => (
-                                        <span key={i} className="text-[10px] text-indigo-500 bg-indigo-50 px-1 rounded truncate" title={`${b.warehouse}: ${b.qty}`}>
+                                        <span key={i} className="text-xs text-indigo-500 bg-indigo-50 px-1 rounded truncate w-fit" title={`${b.warehouse}: ${b.qty}`}>
                                           {b.warehouse}: {b.qty}
                                         </span>
                                       ))}
@@ -531,7 +531,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
             {/* Right Column: Sidebar */}
             <div className="space-y-6">
               {/* Source Configuration */}
-              {(request?.status === 'draft' || request?.status === 'pending') && ['material_issue', 'material_transfer'].includes(request?.purpose) && (
+              {['draft', 'pending', 'partial', 'approved'].includes(request?.status) && ['material_issue', 'material_transfer'].includes(request?.purpose) && (
                 <div className="bg-white rounded  border border-amber-200   overflow-hidden">
                   <div className="px-5 py-2 border-b border-amber-50 bg-amber-50 flex items-center gap-2 text-amber-800">
                     <Warehouse size={16} />

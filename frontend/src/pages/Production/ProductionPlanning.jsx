@@ -77,6 +77,7 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
 const isSubAssemblyGroup = (itemGroup) => {
   if (!itemGroup) return false
   const normalized = itemGroup.toLowerCase().replace(/[-\s]/g, '').trim()
+  if (normalized === 'consumable') return false
   return normalized === 'subassemblies' || normalized === 'subassembly'
 }
 

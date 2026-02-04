@@ -130,9 +130,10 @@ export class ProductionPlanningService {
   isSubAssembly(line) {
     if (!line) return false
 
-    const fgType = (line.component_type || line.fg_sub_assembly || '').toLowerCase()
     const itemGroup = (line.item_group || '').toLowerCase()
+    if (itemGroup === 'consumable') return false
 
+    const fgType = (line.component_type || line.fg_sub_assembly || '').toLowerCase()
     const subAsmPatterns = ['subassembly', 'sub-assembly', 'subassemblies', 'assembly']
     
     return subAsmPatterns.some(pattern => 
@@ -141,7 +142,7 @@ export class ProductionPlanningService {
   }
 
   async processFinishedGoodsBOM(bomData, fgQuantity, plan) {
-    const { lines = [], operations = [] } = bomData
+    const { lines = [], operations = [], raw_materials = [] } = bomData
 
     plan.finished_goods.push({
       item_code: bomData.item_code,
@@ -153,7 +154,13 @@ export class ProductionPlanningService {
     for (const line of lines) {
       if (this.isSubAssembly(line)) {
         await this.processSubAssembly(line, fgQuantity, plan)
+      } else {
+        this.addRawMaterialToPlan(line, fgQuantity, plan, bomData.item_code)
       }
+    }
+
+    for (const rawMaterial of raw_materials) {
+      this.addRawMaterialToPlan(rawMaterial, fgQuantity, plan, bomData.item_code)
     }
 
     for (const operation of operations) {
@@ -171,6 +178,46 @@ export class ProductionPlanningService {
         total_cost: totalHours * parseFloat(operation.hourly_rate || 0),
         operation_type: operation.operation_type || 'FG',
         notes: operation.notes || ''
+      })
+    }
+  }
+
+  addRawMaterialToPlan(item, plannedQty, plan, sourceBomCode) {
+    const itemCode = item.item_code || item.component_code
+    const itemName = item.item_name || item.component_description || item.description || itemCode
+    const itemGroup = item.item_group || ''
+    const qtyPerUnit = parseFloat(item.qty || item.quantity || 0)
+    const totalRmQty = qtyPerUnit * plannedQty
+    const rate = parseFloat(item.rate || 0)
+    const uom = item.uom
+
+    const existingRm = plan.raw_materials.find(
+      rm => rm.item_code === itemCode
+    )
+
+    if (existingRm) {
+      existingRm.total_qty += totalRmQty
+      existingRm.total_amount = existingRm.total_qty * existingRm.rate
+      existingRm.sources.push({
+        source_bom: sourceBomCode,
+        qty_per_unit: qtyPerUnit,
+        planned_qty: plannedQty
+      })
+    } else {
+      plan.raw_materials.push({
+        item_code: itemCode,
+        item_name: itemName,
+        item_group: itemGroup,
+        uom: uom,
+        qty_per_unit: qtyPerUnit,
+        total_qty: totalRmQty,
+        rate: rate,
+        total_amount: totalRmQty * rate,
+        sources: [{
+          source_bom: sourceBomCode,
+          qty_per_unit: qtyPerUnit,
+          planned_qty: plannedQty
+        }]
       })
     }
   }
@@ -279,43 +326,13 @@ export class ProductionPlanningService {
         if (nestedBomData) {
           await this.processSubAssemblyBOM(nestedBomData, nestedPlannedQty, plan)
         }
+      } else {
+        this.addRawMaterialToPlan(line, plannedQty, plan, bomData.item_code)
       }
     }
 
     for (const rawMaterial of raw_materials) {
-      if (rawMaterial.item_group === 'Consumable') continue
-
-      const rmQtyPerUnit = parseFloat(rawMaterial.qty || rawMaterial.quantity || 0)
-      const totalRmQty = rmQtyPerUnit * plannedQty
-
-      const existingRm = plan.raw_materials.find(
-        rm => rm.item_code === rawMaterial.item_code
-      )
-
-      if (existingRm) {
-        existingRm.total_qty += totalRmQty
-        existingRm.sources.push({
-          source_bom: bomData.item_code,
-          qty_per_unit: rmQtyPerUnit,
-          planned_qty: plannedQty
-        })
-      } else {
-        plan.raw_materials.push({
-          item_code: rawMaterial.item_code,
-          item_name: rawMaterial.item_name,
-          item_group: rawMaterial.item_group,
-          uom: rawMaterial.uom,
-          qty_per_unit: rmQtyPerUnit,
-          total_qty: totalRmQty,
-          rate: parseFloat(rawMaterial.rate || 0),
-          total_amount: totalRmQty * parseFloat(rawMaterial.rate || 0),
-          sources: [{
-            source_bom: bomData.item_code,
-            qty_per_unit: rmQtyPerUnit,
-            planned_qty: plannedQty
-          }]
-        })
-      }
+      this.addRawMaterialToPlan(rawMaterial, plannedQty, plan, bomData.item_code)
     }
 
     for (const operation of operations) {
@@ -423,11 +440,79 @@ export class ProductionPlanningService {
 
       const createdWorkOrders = []
 
-      // 1. Create Work Orders for Finished Goods
+      // 1. Create Work Orders for Sub-Assemblies
+      if (plan.sub_assemblies && plan.sub_assemblies.length > 0) {
+        for (const item of plan.sub_assemblies) {
+          // Use a strictly chronological ID format similar to ProductionController
+          const wo_id = `WO-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+          const plannedQty = parseFloat(item.planned_qty) || parseFloat(item.required_qty) || 0
+          const woData = {
+            wo_id,
+            item_code: item.item_code,
+            quantity: plannedQty,
+            status: 'draft',
+            production_plan_id: planId,
+            bom_no: item.bom_no,
+            planned_start_date: item.schedule_date || item.scheduled_date || plan.plan_date,
+            notes: `Created from Production Plan: ${planId} (Sub-Assembly)`
+          }
+
+          await productionModel.createWorkOrder(woData)
+          
+          // Add items and operations from BOM
+          if (item.bom_no) {
+            const bomDetails = await productionModel.getBOMDetails(item.bom_no)
+            
+            // Add items
+            if (bomDetails && bomDetails.rawMaterials && bomDetails.rawMaterials.length > 0) {
+              for (const rm of bomDetails.rawMaterials) {
+                await productionModel.addWorkOrderItem(wo_id, {
+                  item_code: rm.item_code,
+                  required_qty: (parseFloat(rm.qty) || 0) * plannedQty,
+                  source_warehouse: rm.source_warehouse,
+                  sequence: rm.sequence
+                })
+              }
+            } else if (bomDetails && bomDetails.lines && bomDetails.lines.length > 0) {
+              for (const line of bomDetails.lines) {
+                await productionModel.addWorkOrderItem(wo_id, {
+                  item_code: line.component_code,
+                  required_qty: (parseFloat(line.quantity) || 0) * plannedQty,
+                  sequence: line.sequence
+                })
+              }
+            }
+
+            // Add operations
+            if (bomDetails && bomDetails.operations && bomDetails.operations.length > 0) {
+              for (const op of bomDetails.operations) {
+                await productionModel.addWorkOrderOperation(wo_id, {
+                  operation_name: op.operation_name,
+                  workstation: op.workstation_type,
+                  operation_time: (parseFloat(op.operation_time) || 0) * plannedQty,
+                  hourly_rate: op.hourly_rate,
+                  operation_type: op.operation_type || 'SA',
+                  operating_cost: op.operating_cost || 0,
+                  sequence: op.sequence
+                })
+              }
+            }
+          }
+
+          // Generate Job Cards
+          await productionModel.generateJobCardsForWorkOrder(wo_id)
+          
+          createdWorkOrders.push(wo_id)
+          // Add a tiny delay to ensure timestamps are unique for sorting
+          await new Promise(resolve => setTimeout(resolve, 1))
+        }
+      }
+
+      // 2. Create Work Orders for Finished Goods
       if (plan.fg_items && plan.fg_items.length > 0) {
         for (const item of plan.fg_items) {
-          const wo_id = `WO-FG-${Date.now()}-${item.item_code}`
-          const plannedQty = parseFloat(item.planned_qty || 0)
+          const wo_id = `WO-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+          const plannedQty = parseFloat(item.planned_qty) || parseFloat(item.qty) || parseFloat(item.quantity) || 0
           const woData = {
             wo_id,
             item_code: item.item_code,
@@ -451,7 +536,7 @@ export class ProductionPlanningService {
               for (const rm of bomDetails.rawMaterials) {
                 await productionModel.addWorkOrderItem(wo_id, {
                   item_code: rm.item_code,
-                  required_qty: rm.qty * plannedQty,
+                  required_qty: (parseFloat(rm.qty) || 0) * plannedQty,
                   source_warehouse: rm.source_warehouse,
                   sequence: rm.sequence
                 })
@@ -460,7 +545,7 @@ export class ProductionPlanningService {
               for (const line of bomDetails.lines) {
                 await productionModel.addWorkOrderItem(wo_id, {
                   item_code: line.component_code,
-                  required_qty: line.quantity * plannedQty,
+                  required_qty: (parseFloat(line.quantity) || 0) * plannedQty,
                   sequence: line.sequence
                 })
               }
@@ -472,7 +557,7 @@ export class ProductionPlanningService {
                 await productionModel.addWorkOrderOperation(wo_id, {
                   operation_name: op.operation_name,
                   workstation: op.workstation_type,
-                  operation_time: op.operation_time,
+                  operation_time: (parseFloat(op.operation_time) || 0) * plannedQty,
                   hourly_rate: op.hourly_rate,
                   operation_type: op.operation_type || 'FG',
                   operating_cost: op.operating_cost || 0,
@@ -486,71 +571,7 @@ export class ProductionPlanningService {
           await productionModel.generateJobCardsForWorkOrder(wo_id)
           
           createdWorkOrders.push(wo_id)
-        }
-      }
-
-          // 2. Create Work Orders for Sub-Assemblies
-          if (plan.sub_assemblies && plan.sub_assemblies.length > 0) {
-            for (const item of plan.sub_assemblies) {
-              const wo_id = `WO-SA-${Date.now()}-${item.item_code}`
-              const plannedQty = parseFloat(item.planned_qty || item.required_qty || 0)
-              const woData = {
-                wo_id,
-                item_code: item.item_code,
-                quantity: plannedQty,
-                status: 'draft',
-                production_plan_id: planId,
-                bom_no: item.bom_no,
-                planned_start_date: item.schedule_date || item.scheduled_date || plan.plan_date,
-                notes: `Created from Production Plan: ${planId} (Sub-Assembly)`
-              }
-
-              await productionModel.createWorkOrder(woData)
-              
-              // Add items and operations from BOM
-              if (item.bom_no) {
-                const bomDetails = await productionModel.getBOMDetails(item.bom_no)
-                
-                // Add items
-                if (bomDetails && bomDetails.rawMaterials && bomDetails.rawMaterials.length > 0) {
-                  for (const rm of bomDetails.rawMaterials) {
-                    await productionModel.addWorkOrderItem(wo_id, {
-                      item_code: rm.item_code,
-                      required_qty: rm.qty * plannedQty,
-                      source_warehouse: rm.source_warehouse,
-                      sequence: rm.sequence
-                    })
-                  }
-                } else if (bomDetails && bomDetails.lines && bomDetails.lines.length > 0) {
-                  for (const line of bomDetails.lines) {
-                    await productionModel.addWorkOrderItem(wo_id, {
-                      item_code: line.component_code,
-                      required_qty: line.quantity * plannedQty,
-                      sequence: line.sequence
-                    })
-                  }
-                }
-
-                // Add operations
-                if (bomDetails && bomDetails.operations && bomDetails.operations.length > 0) {
-                  for (const op of bomDetails.operations) {
-                    await productionModel.addWorkOrderOperation(wo_id, {
-                      operation_name: op.operation_name,
-                      workstation: op.workstation_type,
-                      operation_time: op.operation_time,
-                      hourly_rate: op.hourly_rate,
-                      operation_type: op.operation_type || 'SA',
-                      operating_cost: op.operating_cost || 0,
-                      sequence: op.sequence
-                    })
-                  }
-                }
-              }
-
-          // Generate Job Cards
-          await productionModel.generateJobCardsForWorkOrder(wo_id)
-          
-          createdWorkOrders.push(wo_id)
+          await new Promise(resolve => setTimeout(resolve, 1))
         }
       }
 

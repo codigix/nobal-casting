@@ -536,6 +536,13 @@ export default function WorkOrder() {
                       <td className="p-2">
                         <div className="flex items-center gap-2 ">
                           <button
+                            onClick={() => handleView(order)}
+                            className="p-2  bg-slate-50 text-slate-600 rounded  hover:bg-slate-900 hover:text-white transition-all  "
+                            title="View Order"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          <button
                             onClick={() => handleTrack(order)}
                             className="p-2  bg-indigo-50 text-indigo-600 rounded  hover:bg-indigo-600 hover:text-white transition-all  "
                             title="Track Production"
