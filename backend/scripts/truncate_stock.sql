@@ -1,0 +1,6 @@
+SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE TABLE stock_balance;
+TRUNCATE TABLE stock_ledger;
+TRUNCATE TABLE stock_entries;
+TRUNCATE TABLE stock_entry_items;
+SET FOREIGN_KEY_CHECKS = 1;

@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS supplier_quotation (
   supplier_quotation_id VARCHAR(50) PRIMARY KEY,
   supplier_id VARCHAR(50) NOT NULL,
   rfq_id VARCHAR(50),
-  quote_date DATE DEFAULT CURDATE(),
+  quote_date DATE,
   status ENUM('draft', 'received', 'evaluated', 'accepted', 'rejected') DEFAULT 'draft',
   total_value DECIMAL(15,2),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -327,7 +327,7 @@ CREATE TABLE IF NOT EXISTS stock (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_supplier_active ON supplier(is_active);
-CREATE INDEX idx_po_status ON purchase_order(status);
-CREATE INDEX idx_grn_status ON purchase_receipt(status);
-CREATE INDEX idx_stock_item ON stock(item_code);
+-- CREATE INDEX idx_supplier_active ON supplier(is_active);
+-- CREATE INDEX idx_po_status ON purchase_order(status);
+-- CREATE INDEX idx_grn_status ON purchase_receipt(status);
+-- CREATE INDEX idx_stock_item ON stock(item_code);

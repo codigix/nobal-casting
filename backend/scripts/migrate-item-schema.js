@@ -1,13 +1,14 @@
 import mysql from 'mysql2/promise'
 import dotenv from 'dotenv'
 
-dotenv.config({ path: '.env' })
+dotenv.config({ path: 'backend/.env' })
 
 const conn = await mysql.createConnection({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'nobalcasting',
+  port: process.env.DB_PORT || 3306,
 })
 
 const columns = [
@@ -49,6 +50,15 @@ const columns = [
   { name: 'no_of_cavities', type: 'INT DEFAULT 1' },
   { name: 'family_mould', type: 'BOOLEAN DEFAULT FALSE' },
   { name: 'mould_number', type: 'VARCHAR(100)' },
+  { name: 'item_group', type: "ENUM('Raw Material', 'Finished Goods', 'Consumable', 'Scrap') DEFAULT 'Raw Material'" },
+  { name: 'default_warehouse_id', type: 'INT' },
+  { name: 'reorder_level', type: 'DECIMAL(12, 2) DEFAULT 0' },
+  { name: 'reorder_qty', type: 'DECIMAL(12, 2) DEFAULT 0' },
+  { name: 'item_status', type: "ENUM('Active', 'Inactive') DEFAULT 'Active'" },
+  { name: 'is_purchasable', type: 'BOOLEAN DEFAULT TRUE' },
+  { name: 'is_manufacturable', type: 'BOOLEAN DEFAULT FALSE' },
+  { name: 'is_sellable', type: 'BOOLEAN DEFAULT FALSE' },
+  { name: 'sac_code', type: 'VARCHAR(50)' },
 ]
 
 const createTableQueries = [
