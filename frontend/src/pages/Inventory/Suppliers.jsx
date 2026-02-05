@@ -311,7 +311,7 @@ export default function Suppliers() {
         </div>
 
         {showAddForm && (
-          <div className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800p-3   mb-6">
+          <div className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800 p-2 mb-6">
             <div className="flex justify-between items-center mb-5">
               <h3 className="text-lg  text-neutral-900 dark:text-white">
                 {editingId ? 'Edit Supplier' : 'Add New Supplier'}
@@ -324,7 +324,7 @@ export default function Suppliers() {
             {formError && <Alert variant="danger" className="mb-4">{formError}</Alert>}
 
             <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                 <div>
                   <label className="block text-xs  text-neutral-700 dark:text-neutral-300 mb-2">Supplier Name *</label>
                   <input

@@ -102,7 +102,11 @@ export class ProductionPlanningService {
       const bom = boms[0]
 
       const [bomLines] = await this.db.execute(
-        'SELECT * FROM bom_line WHERE bom_id = ? ORDER BY sequence',
+        `SELECT bl.*, i.item_group 
+         FROM bom_line bl 
+         LEFT JOIN item i ON bl.component_code = i.item_code 
+         WHERE bl.bom_id = ? 
+         ORDER BY bl.sequence`,
         [bomId]
       )
 
@@ -112,7 +116,11 @@ export class ProductionPlanningService {
       )
 
       const [bomRawMaterials] = await this.db.execute(
-        'SELECT * FROM bom_raw_material WHERE bom_id = ? ORDER BY sequence',
+        `SELECT brm.*, i.item_group 
+         FROM bom_raw_material brm 
+         LEFT JOIN item i ON brm.item_code = i.item_code 
+         WHERE brm.bom_id = ? 
+         ORDER BY brm.sequence`,
         [bomId]
       )
 
@@ -127,13 +135,19 @@ export class ProductionPlanningService {
     }
   }
 
+  isConsumable(line) {
+    if (!line) return false
+    const itemGroup = (line.item_group || '').toLowerCase()
+    return itemGroup === 'consumable'
+  }
+
   isSubAssembly(line) {
     if (!line) return false
 
-    const itemGroup = (line.item_group || '').toLowerCase()
-    if (itemGroup === 'consumable') return false
+    if (this.isConsumable(line)) return false
 
     const fgType = (line.component_type || line.fg_sub_assembly || '').toLowerCase()
+    const itemGroup = (line.item_group || '').toLowerCase()
     const subAsmPatterns = ['subassembly', 'sub-assembly', 'subassemblies', 'assembly']
     
     return subAsmPatterns.some(pattern => 

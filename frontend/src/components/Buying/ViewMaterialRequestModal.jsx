@@ -228,6 +228,39 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
     }
   }
 
+  const handleReleaseSingleItem = async (itemCode) => {
+    try {
+      setLoading(true)
+      setError(null)
+      const finalWarehouse = selectedSourceWarehouse || request?.source_warehouse
+      
+      if (!finalWarehouse) {
+        setError('Source warehouse is required. Please select one.')
+        setLoading(false)
+        return
+      }
+
+      const payload = { 
+        approvedBy: user?.id || user?.user_id || 'User',
+        itemsToProcess: [itemCode],
+        source_warehouse: finalWarehouse
+      }
+      
+      const response = await api.patch(`/material-requests/${mrId}/approve`, payload)
+      setSuccess(`Released ${itemCode} successfully`)
+      
+      window.dispatchEvent(new CustomEvent('materialRequestApproved', { detail: { mrId, itemCode } }))
+      
+      fetchRequestDetails()
+      if (onStatusChange) onStatusChange()
+      setTimeout(() => setSuccess(null), 4000)
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to release item')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleReject = async () => {
     const reason = prompt('Please enter rejection reason:')
     if (reason === null) return
@@ -460,8 +493,8 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                         return (
                           <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                             <td className="p-2 ">
-                              <p className="  text-slate-900 leading-tight">{item.item_code}</p>
-                              <p className="text-xs text-slate-500 mt-1">{item.item_name}</p>
+                              <p className="  text-slate-900 leading-tight">{item.item_name}</p>
+                              <p className="text-xs text-slate-500 mt-1">{item.item_code}</p>
                               {issuedQty > 0 && (
                                 <p className="text-[10px] text-emerald-600 mt-0.5">Issued: {issuedQty} {item.uom}</p>
                               )}
@@ -514,6 +547,20 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                                   <Badge color={item.status === 'completed' ? 'success' : 'warning'} className="text-[9px] px-1 py-0">
                                     {item.status.toUpperCase()}
                                   </Badge>
+                                )}
+                                
+                                {/* Individual Release Button */}
+                                {isTransferOrIssue && 
+                                 ['pending', 'partial', 'approved'].includes(request?.status) && 
+                                 item.status !== 'completed' && 
+                                 stock?.hasStock && (
+                                  <button
+                                    onClick={() => handleReleaseSingleItem(item.item_code)}
+                                    disabled={loading}
+                                    className="mt-1 flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded text-[10px] hover:bg-emerald-100 transition-colors"
+                                  >
+                                    <CheckCircle size={10} /> Release
+                                  </button>
                                 )}
                               </div>
                             </td>
@@ -684,7 +731,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                   disabled={loading || (isTransferOrIssue && !anyAvailable)}
                   className="p-2  shadow-lg shadow-emerald-600/20  text-xs rounded  flex items-center gap-2"
                 >
-                  {isTransferOrIssue ? 'Release Materials' : 'Authorize Request'} <CheckCircle size={16} />
+                  {isTransferOrIssue ? (request?.department === 'Production' ? 'Release to Production' : 'Release Materials') : 'Authorize Request'} <CheckCircle size={16} />
                 </Button>
               </div>
             )}
@@ -706,7 +753,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                   disabled={loading || (isTransferOrIssue && !anyAvailable)}
                   className="p-2  shadow-lg shadow-emerald-600/20  text-xs rounded  flex items-center gap-2"
                 >
-                  {isTransferOrIssue ? 'Release Materials' : 'Authorize Request'} <CheckCircle size={16} />
+                  {isTransferOrIssue ? (request?.department === 'Production' ? 'Release to Production' : 'Release Materials') : 'Authorize Request'} <CheckCircle size={16} />
                 </Button>
               </div>
             )}

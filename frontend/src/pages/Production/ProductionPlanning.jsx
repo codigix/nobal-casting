@@ -291,17 +291,7 @@ const collectAllOperations = async (bomId, token, visitedBoms = new Set(), depth
     const bomData = await bomRes.json()
     const bom = bomData.data || bomData
 
-    // Add current BOM's operations
-    const operations = (bom.operations || []).map(op => ({
-      ...op,
-      bom_id: bomId,
-      item_code: bom.item_code,
-      item_name: bom.product_name || bom.item_code,
-      depth
-    }))
-    allOperations = [...allOperations, ...operations]
-
-    // Recurse into sub-assemblies
+    // Collect sub-assembly operations first
     const materials = [...(bom.lines || []), ...(bom.bom_raw_materials || []), ...(bom.rawMaterials || [])]
     for (const material of materials) {
       const itemCode = material.item_code || material.component_code
@@ -324,6 +314,16 @@ const collectAllOperations = async (bomId, token, visitedBoms = new Set(), depth
         }
       }
     }
+
+    // Add current BOM's operations last (Finished Goods will be at the very end)
+    const operations = (bom.operations || []).map(op => ({
+      ...op,
+      bom_id: bomId,
+      item_code: bom.item_code,
+      item_name: bom.product_name || bom.item_code,
+      depth
+    }))
+    allOperations = [...allOperations, ...operations]
   } catch (err) {
     console.error(`Error fetching operations for BOM ${bomId}:`, err)
   }

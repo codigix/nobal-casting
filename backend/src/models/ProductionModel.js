@@ -1297,8 +1297,37 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
+  async getNextJobCardId() {
+    try {
+      const [rows] = await this.db.query(
+        "SELECT job_card_id FROM job_card WHERE job_card_id LIKE 'JC-%'"
+      )
+      
+      let maxNum = 0
+      rows.forEach(row => {
+        const parts = row.job_card_id.split('-')
+        if (parts.length >= 2) {
+          const num = parseInt(parts[1])
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num
+          }
+        }
+      })
+      
+      return `JC-${maxNum + 1}`
+    } catch (error) {
+      console.error('Error generating next job card ID:', error)
+      return `JC-${Date.now()}` // Fallback
+    }
+  }
+
   async createJobCard(data) {
     try {
+      // If job_card_id is not provided or is a temporary one, generate a sequential one
+      if (!data.job_card_id || data.job_card_id.includes(Date.now().toString().substring(0, 5))) {
+        data.job_card_id = await this.getNextJobCardId()
+      }
+      
       const statusNormalized = ((data.status || 'draft').toLowerCase().replace(/\s+/g, '-')).trim()
       await this.db.query(
         `INSERT INTO job_card (job_card_id, work_order_id, machine_id, operator_id, operation, operation_sequence, operation_type, planned_quantity, produced_quantity, rejected_quantity, accepted_quantity, scrap_quantity, operation_time, hourly_rate, operating_cost, scheduled_start_date, scheduled_end_date, actual_start_date, actual_end_date, status, created_by, notes)
@@ -1601,8 +1630,26 @@ async deleteAllBOMRawMaterials(bom_id) {
       const createdCards = []
       const plannedQty = parseFloat(workOrder.quantity) || parseFloat(workOrder.qty_to_manufacture) || 0
 
+      // Get starting sequence number
+      const [rows] = await this.db.query(
+        "SELECT job_card_id FROM job_card WHERE job_card_id LIKE 'JC-%'"
+      )
+      
+      let maxNum = 0
+      rows.forEach(row => {
+        const parts = row.job_card_id.split('-')
+        if (parts.length >= 2) {
+          const num = parseInt(parts[1])
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num
+          }
+        }
+      })
+
+      let currentSeq = maxNum + 1
+
       for (const operation of workOrder.operations) {
-        const job_card_id = `JC-${Date.now()}-${operation.sequence || Math.floor(Math.random() * 1000)}`
+        const job_card_id = `JC-${currentSeq++}`
         const jobCardData = {
           job_card_id,
           work_order_id,

@@ -1086,7 +1086,7 @@ export default function ProductionEntry() {
           </Card>
 
           {/* Stats Section - Horizontal Layout */}
-          <div className="col-span-12 xl:col-span-6">
+          <div className="col-span-12">
             {(() => {
               const expectedMinutes = (operationCycleTime || 0) * (totalProducedQty || 0)
               const actualMinutes = timeLogs.reduce((sum, log) => {

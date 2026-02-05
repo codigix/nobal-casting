@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise'
 import dotenv from 'dotenv'
+import bcrypt from 'bcryptjs'
 
 dotenv.config({ path: 'backend/.env' })
 
@@ -14,6 +15,36 @@ async function seedMasterData() {
 
   try {
     console.log('Seeding master data...')
+
+    // 0. Seed Admin User
+    const adminPassword = await bcrypt.hash('admin123', 10)
+    await conn.execute(
+      `INSERT INTO users (full_name, email, password, department, role) 
+       VALUES (?, ?, ?, ?, ?) 
+       ON DUPLICATE KEY UPDATE password = VALUES(password)`,
+      ['Administrator', 'admin@nobalcasting.com', adminPassword, 'admin', 'admin']
+    )
+    console.log('✓ Admin user seeded (admin@nobalcasting.com / admin123)')
+
+    // 0.1 Seed Item Groups (Table-based)
+    try {
+      const itemGroups = [
+        ['Raw Material', 'Raw casting materials'],
+        ['Finished Goods', 'Final manufactured products'],
+        ['Consumable', 'Workshop consumables'],
+        ['Scrap', 'Process waste and scrap'],
+        ['Sub Assemblies', 'Intermediate manufactured components']
+      ]
+      for (const [name, desc] of itemGroups) {
+        await conn.execute(
+          'INSERT IGNORE INTO item_group (name, description) VALUES (?, ?)',
+          [name, desc]
+        )
+      }
+      console.log('✓ Item Groups seeded')
+    } catch (e) {
+      console.log('- Skipping Item Groups table seed:', e.message)
+    }
 
     // 1. Seed Warehouses
     const warehouses = [

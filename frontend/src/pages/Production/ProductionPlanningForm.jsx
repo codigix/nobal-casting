@@ -167,6 +167,32 @@ const StatusBadge = ({ status }) => {
   )
 }
 
+const GroupBadge = ({ group }) => {
+  const normalizedGroup = (group || 'Raw Material').toLowerCase().replace(/[-\s]/g, '').trim()
+  
+  const styles = {
+    consumable: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+    subassembly: 'bg-rose-50 text-rose-700 border-rose-200',
+    subassemblies: 'bg-rose-50 text-rose-700 border-rose-200',
+    rawmaterial: 'bg-amber-50 text-amber-700 border-amber-200',
+    default: 'bg-slate-50 text-slate-600 border-slate-200'
+  }
+
+  const style = styles[normalizedGroup] || styles.default
+
+  return (
+    <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium border ${style}`}>
+      {group || 'Raw Material'}
+    </span>
+  )
+}
+
+const isConsumableGroup = (itemGroup) => {
+  if (!itemGroup) return false
+  const normalized = itemGroup.toLowerCase().replace(/[-\s]/g, '').trim()
+  return normalized === 'consumable'
+}
+
 const isSubAssemblyGroup = (itemGroup) => {
   if (!itemGroup) return false
   const normalized = itemGroup.toLowerCase().replace(/[-\s]/g, '').trim()
@@ -884,9 +910,9 @@ export default function ProductionPlanningForm() {
       setFGItems([fgFromBOM])
       console.log('✓ Finished Good set:', fgFromBOM)
 
-      // Split BOM lines into sub-assemblies and consumables
+      // Split BOM lines into sub-assemblies and materials
       const trueSubAsmLines = bomLines.filter(line => isSubAssemblyGroup(line.item_group) || (line.component_type || '').toLowerCase().includes('sub'))
-      const consumableLinesFromBOM = bomLines.filter(line => !isSubAssemblyGroup(line.item_group) && !(line.component_type || '').toLowerCase().includes('sub'))
+      const materialLinesFromBOM = bomLines.filter(line => !isSubAssemblyGroup(line.item_group) && !(line.component_type || '').toLowerCase().includes('sub'))
 
       // All lines in a FG BOM that are sub-assemblies
       if (trueSubAsmLines.length > 0) {
@@ -935,8 +961,8 @@ export default function ProductionPlanningForm() {
 
       const allMaterials = bomRawMaterialsFromSO.length > 0 ? bomRawMaterialsFromSO : (bomData?.rawMaterials || bomData?.bom_raw_materials || [])
       
-      // Combine with consumables found in BOM lines
-      const combinedMaterials = [...allMaterials, ...consumableLinesFromBOM]
+      // Combine with material lines found in BOM lines
+      const combinedMaterials = [...allMaterials, ...materialLinesFromBOM]
       
       const proportionalMaterials = combinedMaterials
         .map(mat => ({
@@ -2523,6 +2549,7 @@ export default function ProductionPlanningForm() {
                                             <tr className="bg-slate-50 border-b border-slate-100">
                                               <th className="p-2 text-left  text-slate-500 uppercase w-8">No.</th>
                                               <th className="p-2 text-left  text-slate-500 uppercase">Item</th>
+                                              <th className="p-2 text-left  text-slate-500 uppercase">Group</th>
                                               <th className="p-2 text-right  text-slate-500 uppercase">Qty per Unit</th>
                                               <th className="p-2 text-right  text-slate-500 uppercase">Total Required Qty</th>
                                               <th className="p-2 text-center  text-slate-500 uppercase">UOM</th>
@@ -2539,6 +2566,9 @@ export default function ProductionPlanningForm() {
                                                   <td className="p-2">
                                                     <div className="font-medium text-slate-900">{m.item_code}</div>
                                                     <div className="text-slate-400 text-[9px]">{m.item_name || m.description}</div>
+                                                  </td>
+                                                  <td className="p-2">
+                                                    <GroupBadge group={m.item_group} />
                                                   </td>
                                                   <td className="p-2 text-right text-slate-600">{perUnitQty.toFixed(4)}</td>
                                                   <td className="p-2 text-right  text-blue-600">{totalQty.toFixed(4)}</td>
@@ -2598,6 +2628,7 @@ export default function ProductionPlanningForm() {
                             <tr>
                               <th className="p-2 text-[10px]  text-slate-500  w-8">No.</th>
                               <th className="p-2 text-[10px]  text-slate-500 ">Sub Assembly Item Code</th>
+                              <th className="p-2 text-[10px]  text-slate-500 ">Group</th>
                               <th className="p-2 text-[10px]  text-slate-500 ">Target Warehouse</th>
                               <th className="p-2 text-[10px]  text-slate-500  text-center">Scheduled Date</th>
                               <th className="p-2 text-[10px]  text-slate-500  text-right">Required Qty</th>
@@ -2629,6 +2660,9 @@ export default function ProductionPlanningForm() {
                                         </p>
                                       </div>
                                     </div>
+                                  </td>
+                                  <td className="p-2">
+                                    <GroupBadge group={item.item_group || 'Sub Assembly'} />
                                   </td>
                                   <td className="p-2">
                                     <div className="flex items-center gap-1.5 text-slate-600">
@@ -2683,6 +2717,7 @@ export default function ProductionPlanningForm() {
                                             <tr className="bg-slate-50 border-b border-slate-100">
                                               <th className="p-2 text-left  text-slate-500 uppercase w-8">No.</th>
                                               <th className="p-2 text-left  text-slate-500 uppercase">Item</th>
+                                              <th className="p-2 text-left  text-slate-500 uppercase">Group</th>
                                               <th className="p-2 text-right  text-slate-500 uppercase">Qty per Unit</th>
                                               <th className="p-2 text-right  text-slate-500 uppercase">Total Required Qty</th>
                                               <th className="p-2 text-center  text-slate-500 uppercase">UOM</th>
@@ -2699,6 +2734,9 @@ export default function ProductionPlanningForm() {
                                                   <td className="p-2">
                                                     <div className="font-medium text-slate-900">{m.item_code}</div>
                                                     <div className="text-slate-400 text-[9px]">{m.item_name || m.description}</div>
+                                                  </td>
+                                                  <td className="p-2">
+                                                    <GroupBadge group={m.item_group} />
                                                   </td>
                                                   <td className="p-2 text-right text-slate-600">{perUnitQty.toFixed(4)}</td>
                                                   <td className="p-2 text-right  text-rose-600">{totalQty.toFixed(4)}</td>
@@ -2754,6 +2792,7 @@ export default function ProductionPlanningForm() {
                               <thead className="bg-amber-50/50 border-b border-amber-100">
                                 <tr>
                                   <th className="p-2 text-[10px]  text-amber-700 ">Item </th>
+                                  <th className="p-2 text-[10px]  text-amber-700 ">Group</th>
                                   <th className="p-2 text-[10px]  text-amber-700  text-right">Required Qty</th>
                                   <th className="p-2 text-[10px]  text-amber-700 ">Warehouse</th>
                                   <th className="p-2 text-[10px]  text-amber-700  text-center">BOM Ref</th>
@@ -2770,6 +2809,9 @@ export default function ProductionPlanningForm() {
                                       <p className="text-[10px] text-slate-500 truncate max-w-[200px]">
                                         {item.item_name}
                                       </p>
+                                    </td>
+                                    <td className="p-2">
+                                      <GroupBadge group={item.item_group || 'Raw Material'} />
                                     </td>
                                     <td className="p-2 text-right">
                                       <div className="flex flex-col items-end">
@@ -2830,6 +2872,7 @@ export default function ProductionPlanningForm() {
                               <thead className="bg-rose-50/50 border-b border-rose-100">
                                 <tr>
                                   <th className="p-2 text-[10px]  text-rose-700 ">Component Specification</th>
+                                  <th className="p-2 text-[10px]  text-rose-700 ">Group</th>
                                   <th className="p-2 text-[10px]  text-rose-700  text-right">Required Qty</th>
                                   <th className="p-2 text-[10px]  text-rose-700  text-center">Source Assembly</th>
                                   <th className="p-2 text-[10px]  text-rose-700  text-center">BOM Ref</th>
@@ -2845,6 +2888,9 @@ export default function ProductionPlanningForm() {
                                       <p className="text-[10px] text-slate-500 truncate max-w-[200px]">
                                         {item.item_name || item.component_description}
                                       </p>
+                                    </td>
+                                    <td className="p-2">
+                                      <GroupBadge group={item.item_group || 'Raw Material'} />
                                     </td>
                                     <td className="p-2 text-right">
                                       <div className="flex flex-col items-end">

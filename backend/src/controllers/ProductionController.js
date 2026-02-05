@@ -1230,9 +1230,7 @@ class ProductionController {
         })
       }
 
-      const job_card_id = `JC-${Date.now()}`
       const jobCard = await this.productionModel.createJobCard({
-        job_card_id,
         work_order_id,
         machine_id,
         operator_id,
