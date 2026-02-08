@@ -466,7 +466,17 @@ class MastersController {
       
       // 1. Fetch Sales Order Details
       const [orderRows] = await database.query(
-        `SELECT sso.*, c.name as customer_name, c.email as customer_email, c.phone as customer_phone
+        `SELECT sso.sales_order_id as id,
+                CONCAT(sso.sales_order_id, ' - SO') as name,
+                sso.status,
+                sso.order_amount as revenue,
+                COALESCE(DATEDIFF(sso.delivery_date, NOW()), 0) as daysLeft,
+                sso.delivery_date as dueDate,
+                sso.customer_id as customer,
+                COALESCE(c.name, sso.customer_name) as customer_name,
+                c.email as customer_email,
+                c.phone as customer_phone,
+                sso.created_at as order_date
          FROM selling_sales_order sso
          LEFT JOIN selling_customer c ON sso.customer_id = c.customer_id
          WHERE sso.sales_order_id = ? AND sso.deleted_at IS NULL`,
@@ -509,6 +519,7 @@ class MastersController {
               produced_qty: 0,
               accepted_qty: 0,
               rejected_qty: 0,
+              scrap_qty: 0,
               status: 'pending',
               job_cards_count: 0,
               planned_time: 0,
@@ -521,6 +532,7 @@ class MastersController {
           stage.produced_qty += parseFloat(jc.produced_quantity || 0)
           stage.accepted_qty += parseFloat(jc.accepted_quantity || 0)
           stage.rejected_qty += parseFloat(jc.rejected_quantity || 0)
+          stage.scrap_qty += parseFloat(jc.scrap_quantity || 0)
           stage.job_cards_count += 1
           
           stage.planned_time = (stage.planned_time || 0) + parseFloat(jc.operation_time || 0)
@@ -547,6 +559,47 @@ class MastersController {
           [id]
         )
         entries = productionEntries
+
+        // 4.5 Fetch Machine Analysis (Time Logs & Downtime)
+        const [machineStats] = await database.query(
+          `SELECT 
+            jc.machine_id, 
+            mm.name as machine_name,
+            (
+              SELECT COALESCE(SUM(tl.time_in_minutes), 0)
+              FROM time_log tl
+              JOIN job_card jc2 ON tl.job_card_id = jc2.job_card_id
+              JOIN work_order wo2 ON jc2.work_order_id = wo2.wo_id
+              WHERE jc2.machine_id = jc.machine_id AND wo2.sales_order_id = ?
+            ) as total_working_minutes,
+            (
+              SELECT COALESCE(SUM(de.duration_minutes), 0)
+              FROM downtime_entry de
+              JOIN job_card jc3 ON de.job_card_id = jc3.job_card_id
+              JOIN work_order wo3 ON jc3.work_order_id = wo3.wo_id
+              WHERE jc3.machine_id = jc.machine_id AND wo3.sales_order_id = ?
+            ) as downtime_minutes
+           FROM job_card jc
+           JOIN work_order wo ON jc.work_order_id = wo.wo_id
+           LEFT JOIN machine_master mm ON jc.machine_id = mm.machine_id
+           WHERE wo.sales_order_id = ? AND jc.machine_id IS NOT NULL
+           GROUP BY jc.machine_id, mm.name`,
+          [id, id, id]
+        )
+        
+        project.machine_stats = machineStats.map(row => {
+          const working_time = parseFloat(row.total_working_minutes || 0);
+          const downtime = parseFloat(row.downtime_minutes || 0);
+          return {
+            machine_id: row.machine_id,
+            machine_name: row.machine_name || 'Manual / Unassigned',
+            working_time,
+            downtime,
+            efficiency: (working_time + downtime) > 0 
+              ? Math.round((working_time / (working_time + downtime)) * 100) 
+              : 100
+          };
+        });
       }
       
       // 5. Fetch Material Readiness (from material_allocation)
@@ -567,6 +620,16 @@ class MastersController {
       const totalActualTime = stages.reduce((acc, s) => acc + (parseFloat(s.actual_time) || 0), 0);
       const efficiency = totalActualTime > 0 ? Math.round((totalPlannedTime / totalActualTime) * 100) : 100;
 
+      // Calculate progress based on average completion of stages
+      const totalPlannedQty = stages.reduce((acc, s) => acc + (parseFloat(s.planned_qty) || 0), 0);
+      const totalProducedQty = stages.reduce((acc, s) => acc + (parseFloat(s.produced_qty) || 0), 0);
+      
+      let calculatedProgress = 0;
+      if (stages.length > 0) {
+        const stageProgresses = stages.map(s => Math.min(1, (parseFloat(s.produced_qty) || 0) / (parseFloat(s.planned_qty) || 1)));
+        calculatedProgress = Math.round((stageProgresses.reduce((acc, p) => acc + p, 0) / stages.length) * 100);
+      }
+
       // 7. For now, return what we have
       res.json({
         success: true,
@@ -574,9 +637,9 @@ class MastersController {
           project: {
             ...project,
             progress: project.status === 'delivered' ? 100 : 
-                     project.status === 'dispatched' ? 75 :
-                     project.status === 'complete' ? 75 :
-                     project.status === 'production' ? 50 : 25,
+                     project.status === 'dispatched' ? 100 :
+                     project.status === 'complete' ? 100 :
+                     Math.max(calculatedProgress, (project.status === 'production' ? 25 : 10)),
             efficiency: Math.min(100, Math.max(0, efficiency))
           },
           stages,
@@ -621,15 +684,25 @@ class MastersController {
                 sso.customer_id as customer,
                 sso.customer_name,
                 sso.created_at as order_date,
-                CASE 
-                  WHEN sso.status = 'delivered' THEN 100
-                  WHEN sso.status = 'dispatched' THEN 75
-                  WHEN sso.status = 'complete' THEN 75
-                  WHEN sso.status = 'production' THEN 50
-                  WHEN sso.status = 'draft' THEN 25
-                  WHEN sso.status = 'on_hold' THEN 25
-                  ELSE 0
-                END as progress,
+                COALESCE(
+                  (SELECT ROUND(SUM(produced_qty) / SUM(ordered_qty) * 100, 0)
+                   FROM (
+                     SELECT wo.quantity as ordered_qty, 
+                            COALESCE((SELECT SUM(pe.quantity_produced) FROM production_entry pe WHERE pe.work_order_id = wo.wo_id), 0) as produced_qty
+                     FROM work_order wo
+                     WHERE wo.sales_order_id = sso.sales_order_id
+                   ) as wo_progress
+                   WHERE ordered_qty > 0),
+                  CASE 
+                    WHEN sso.status = 'delivered' THEN 100
+                    WHEN sso.status = 'dispatched' THEN 75
+                    WHEN sso.status = 'complete' THEN 75
+                    WHEN sso.status = 'production' THEN 50
+                    WHEN sso.status = 'draft' THEN 25
+                    WHEN sso.status = 'on_hold' THEN 25
+                    ELSE 0
+                  END
+                ) as progress,
                 CASE WHEN cust_rev.total_rev >= ? THEN 'Premium' ELSE 'Other' END as segment
          FROM selling_sales_order sso
          LEFT JOIN (

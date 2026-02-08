@@ -38,7 +38,9 @@ dotenv.config()
 const app = express()
 
 const corsOptions = {
-  origin: ['http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:5174', 'http://127.0.0.1:5175'],
+  origin: process.env.CORS_ORIGIN 
+    ? process.env.CORS_ORIGIN.split(',').map(item => item.trim())
+    : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:5174', 'http://127.0.0.1:5175'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -57,7 +59,7 @@ async function initializeDatabase() {
       user: process.env.DB_USER || 'root',
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME || 'nobalcasting',
-      port: process.env.DB_PORT || 3306,
+      port: parseInt(process.env.DB_PORT || '3306'),
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,

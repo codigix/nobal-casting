@@ -87,6 +87,38 @@ export default function PurchaseReceipts() {
     }
   }, [location.search])
 
+  // Pre-populate valuation rates when approval form opens
+  useEffect(() => {
+    if (showApprovalForm && selectedGRN?.items?.length > 0) {
+      const fetchValuationRates = async () => {
+        try {
+          const itemCodes = selectedGRN.items.map(i => i.item_code).join(',')
+          const response = await api.get(`/items?item_codes=${itemCodes}`)
+          if (response.data.success) {
+            const itemDetails = response.data.data
+            setStorageData(prev => {
+              const updated = { ...prev }
+              selectedGRN.items.forEach(item => {
+                const details = itemDetails.find(d => d.item_code === item.item_code)
+                if (details) {
+                  updated[item.id] = {
+                    ...updated[item.id],
+                    valuation_rate: details.valuation_rate || 0,
+                    batch_no: updated[item.id]?.batch_no || item.batch_no || ''
+                  }
+                }
+              })
+              return updated
+            })
+          }
+        } catch (err) {
+          console.error('Error fetching valuation rates:', err)
+        }
+      }
+      fetchValuationRates()
+    }
+  }, [showApprovalForm, selectedGRN])
+
   const fetchGRNRequests = async () => {
     try {
       setLoading(true)
@@ -362,7 +394,7 @@ export default function PurchaseReceipts() {
     const config = getStatusConfig(status)
     const Icon = config.icon
     return (
-      <Badge variant="solid" className={`flex items-center gap-1.5 text-xs   py-1 px-2.5 rounded-lg ${config.badge}`}>
+      <Badge variant="solid" className={`flex items-center gap-1.5 text-xs   py-1 px-2.5 rounded  ${config.badge}`}>
         <Icon size={12} />
         {config.label}
       </Badge>
@@ -437,7 +469,7 @@ export default function PurchaseReceipts() {
       key: 'warehouse_name',
       label: 'Location',
       render: (value) => (
-        <div className="flex items-center gap-2 text-xs  text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700  ">
+        <div className="flex items-center gap-2 text-xs  text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded  border border-neutral-200 dark:border-neutral-700  ">
           <MapPin size={12} className="text-indigo-500" />
           {value || 'Unassigned'}
         </div>
@@ -735,7 +767,7 @@ export default function PurchaseReceipts() {
                       </div>
                       <div className="space-y-1">
                         {columns.map(col => (
-                          <label key={col.key} className="flex items-center gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg cursor-pointer transition-colors">
+                          <label key={col.key} className="flex items-center gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded  cursor-pointer transition-colors">
                             <input
                               type="checkbox"
                               checked={visibleColumns?.has(col.key) ?? true}
@@ -769,7 +801,7 @@ export default function PurchaseReceipts() {
                     <div key={column.status} className="flex flex-col gap-4">
                       <div className={`flex items-center justify-between p-3 rounded  bg-white border border-slate-200   border-b-4 ${config.border.replace('border-', 'border-b-')}`}>
                         <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-lg ${config.badge.split(' ')[0]} ${config.badge.split(' ')[1]} flex items-center justify-center`}>
+                          <div className={`w-8 h-8 rounded  ${config.badge.split(' ')[0]} ${config.badge.split(' ')[1]} flex items-center justify-center`}>
                             <Icon size={18} />
                           </div>
                           <h2 className=" text-slate-800 text-sm">{column.title}</h2>
@@ -1144,7 +1176,7 @@ export default function PurchaseReceipts() {
                               max={item.received_qty}
                               value={approvalItem.accepted_qty || 0}
                               onChange={(e) => handleApprovalItemChange(item.id, 'accepted_qty', e.target.value)}
-                              className="w-20 mx-auto block px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-center  text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
+                              className="w-20 mx-auto block px-3 py-1.5 bg-white border border-slate-200 rounded  text-center  text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
                             />
                           </td>
                           <td className="px-4 py-4">
@@ -1154,14 +1186,14 @@ export default function PurchaseReceipts() {
                               max={item.received_qty}
                               value={approvalItem.rejected_qty || 0}
                               onChange={(e) => handleApprovalItemChange(item.id, 'rejected_qty', e.target.value)}
-                              className="w-20 mx-auto block px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-center  text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
+                              className="w-20 mx-auto block px-3 py-1.5 bg-white border border-slate-200 rounded  text-center  text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
                             />
                           </td>
                           <td className="px-4 py-4">
                             <select
                               value={approvalItem.qc_status || 'pass'}
                               onChange={(e) => handleApprovalItemChange(item.id, 'qc_status', e.target.value)}
-                              className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg  text-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
+                              className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded   text-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
                             >
                               <option value="pass">Pass</option>
                               <option value="fail">Fail</option>
@@ -1205,7 +1237,7 @@ export default function PurchaseReceipts() {
                             <select
                               value={storage.warehouse_id || ''}
                               onChange={(e) => handleStorageDataChange(item.id, 'warehouse_id', e.target.value)}
-                              className={`w-full px-3 py-1.5 border rounded-lg  text-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition-all ${hasWarehouse ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200'}`}
+                              className={`w-full px-3 py-1.5 border rounded   text-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition-all ${hasWarehouse ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200'}`}
                             >
                               <option value="">Select Location</option>
                               {warehouses.map(wh => (
@@ -1219,7 +1251,7 @@ export default function PurchaseReceipts() {
                               placeholder="e.g. A-102"
                               value={storage.bin_rack || ''}
                               onChange={(e) => handleStorageDataChange(item.id, 'bin_rack', e.target.value)}
-                              className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
+                              className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded  font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
                             />
                           </td>
                           <td className="px-4 py-4">
@@ -1228,7 +1260,7 @@ export default function PurchaseReceipts() {
                               placeholder="Batch #"
                               value={storage.batch_no || item.batch_no || ''}
                               onChange={(e) => handleStorageDataChange(item.id, 'batch_no', e.target.value)}
-                              className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
+                              className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded  font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
                             />
                           </td>
                           <td className="px-4 py-4 text-right">
@@ -1237,7 +1269,7 @@ export default function PurchaseReceipts() {
                               placeholder="0.00"
                               value={storage.valuation_rate || ''}
                               onChange={(e) => handleStorageDataChange(item.id, 'valuation_rate', e.target.value)}
-                              className="w-24 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-right  text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
+                              className="w-24 px-3 py-1.5 bg-white border border-slate-200 rounded  text-right  text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
                             />
                           </td>
                         </tr>

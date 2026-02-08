@@ -32,7 +32,8 @@ import {
   Package,
   Layers,
   BarChart3,
-  ClipboardList
+  ClipboardList,
+  Download
 } from 'lucide-react'
 import { useToast } from '../../components/ToastContainer'
 import Card from '../../components/Card/Card'
@@ -74,11 +75,16 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
   )
 }
 
-const isSubAssemblyGroup = (itemGroup) => {
-  if (!itemGroup) return false
-  const normalized = itemGroup.toLowerCase().replace(/[-\s]/g, '').trim()
-  if (normalized === 'consumable') return false
-  return normalized === 'subassemblies' || normalized === 'subassembly'
+const isSubAssemblyGroup = (itemGroup, itemCode = '') => {
+  if (!itemGroup && !itemCode) return false
+  
+  const normalizedGroup = (itemGroup || '').toLowerCase().replace(/[-\s]/g, '').trim()
+  if (normalizedGroup === 'consumable') return false
+  
+  const isSAGroup = normalizedGroup === 'subassemblies' || normalizedGroup === 'subassembly' || normalizedGroup === 'intermediates'
+  const isSACode = (itemCode || '').toUpperCase().startsWith('SA-') || (itemCode || '').toUpperCase().startsWith('SA')
+  
+  return isSAGroup || isSACode
 }
 
 const enrichRequiredItemsWithStock = async (items, token) => {
@@ -124,29 +130,20 @@ const enrichRequiredItemsWithStock = async (items, token) => {
 
 const findBomForItem = async (itemCode, token, excludeBomId = null) => {
   try {
-    console.log(`Fetching all BOMs to search for item: ${itemCode}`)
     const searchRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
     if (searchRes.ok) {
       const data = await searchRes.json()
       const bomList = Array.isArray(data) ? data : (data.data || [])
-      console.log(`Found ${bomList.length} BOMs in system:`, bomList.map(b => ({ bom_id: b.bom_id, item_code: b.item_code })))
 
       const matchingBom = bomList.find(bom => {
         const bomItemCode = bom.item_code || bom.product_code || ''
-        const isMatch = bomItemCode.trim() === itemCode.trim() && bom.bom_id !== excludeBomId
-        if (isMatch) {
-          console.log(`MATCH FOUND: BOM ${bom.bom_id} for item ${itemCode}`)
-        }
-        return isMatch
+        return bomItemCode.trim() === itemCode.trim() && bom.bom_id !== excludeBomId
       })
 
       if (matchingBom) {
-        console.log(`Returning BOM ID: ${matchingBom.bom_id}`)
         return matchingBom.bom_id || matchingBom.id
-      } else {
-        console.log(`NO MATCH found for ${itemCode} (excluding ${excludeBomId})`)
       }
     }
   } catch (err) {
@@ -169,34 +166,22 @@ const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms 
     })
 
     if (!bomRes.ok) {
-      console.warn(`BOM ${bomId} not found`)
       return allRawMaterials
     }
 
     const bomData = await bomRes.json()
     const bom = bomData.data || bomData
 
-    console.log(`\n========== Processing BOM ${bomId} ==========`)
-    console.log(`BOM Data:`, bom)
-
     let materialsToProcess = []
     const bomLines = bom.lines || bom.items || []
     const rawMaterials = bom.bom_raw_materials || bom.rawMaterials || []
     const consumables = bom.bom_consumables || bom.consumables || []
 
-    console.log(`BOM Lines (potential sub-assemblies): ${bomLines.length}`)
-    console.log(`Raw Materials: ${rawMaterials.length}`)
-    console.log(`Consumables: ${consumables.length}`)
-
     if (bomLines.length > 0) {
       materialsToProcess = [...bomLines, ...rawMaterials, ...consumables]
-      console.log(`FG BOM detected with ${bomLines.length} sub-assemblies`)
     } else {
       materialsToProcess = [...rawMaterials, ...consumables]
-      console.log(`Regular BOM with direct raw materials`)
     }
-
-    console.log(`Total items to process: ${materialsToProcess.length}`)
 
     for (const material of materialsToProcess) {
       const itemCode = material.item_code || material.component_code
@@ -205,26 +190,19 @@ const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms 
       const baseQty = parseFloat(material.qty) || parseFloat(material.quantity) || parseFloat(material.bom_qty) || 1
       const totalQty = baseQty * plannedQty
 
-      const isSubAssembly = isSubAssemblyGroup(material.item_group) ||
+      const isSubAssembly = isSubAssemblyGroup(material.item_group, material.item_code) ||
         material.fg_sub_assembly === 'Sub-Assembly' ||
         material.component_type === 'Sub-Assembly' ||
         (itemCode && itemCode.startsWith('SA-'))
 
       if (isSubAssembly) {
-        console.log(`\n=== SUB-ASSEMBLY: ${itemCode} ===`)
-
         let subBomId = material.bom_id
-        if (subBomId && subBomId !== bomId) {
-          console.log(`Using existing bom_id: ${subBomId}`)
-        } else {
-          console.log(`Searching for BOM of sub-assembly: ${itemCode}`)
+        if (!subBomId || subBomId === bomId) {
           subBomId = await findBomForItem(itemCode, token, bomId)
         }
 
         if (subBomId && subBomId !== bomId) {
-          console.log(`Found BOM ${subBomId} for sub-assembly ${itemCode}, fetching its materials...`)
           const subMaterials = await collectAllRawMaterials(subBomId, totalQty, token, visitedBoms)
-          console.log(`Sub-assembly ${itemCode} returned ${Object.keys(subMaterials).length} aggregated materials`)
           for (const [subItemCode, subMaterial] of Object.entries(subMaterials)) {
             if (allRawMaterials[subItemCode]) {
               allRawMaterials[subItemCode].qty += subMaterial.qty
@@ -234,7 +212,6 @@ const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms 
             }
           }
         } else {
-          console.log(`No BOM found for sub-assembly ${itemCode}, treating as raw material`)
           if (allRawMaterials[itemCode]) {
             allRawMaterials[itemCode].qty += totalQty
             allRawMaterials[itemCode].quantity += totalQty
@@ -249,7 +226,6 @@ const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms 
           }
         }
       } else {
-        console.log(`Adding raw material: ${itemCode} with qty ${totalQty}`)
         if (allRawMaterials[itemCode]) {
           allRawMaterials[itemCode].qty += totalQty
           allRawMaterials[itemCode].quantity += totalQty
@@ -264,8 +240,6 @@ const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms 
         }
       }
     }
-    console.log(`BOM ${bomId} processing complete, total raw materials: ${Object.keys(allRawMaterials).length}`)
-    console.log(`Raw Materials collected:`, allRawMaterials)
   } catch (err) {
     console.error(`Error fetching BOM ${bomId}:`, err)
   }
@@ -297,7 +271,7 @@ const collectAllOperations = async (bomId, token, visitedBoms = new Set(), depth
       const itemCode = material.item_code || material.component_code
       if (!itemCode) continue
 
-      const isSubAssembly = isSubAssemblyGroup(material.item_group) ||
+      const isSubAssembly = isSubAssemblyGroup(material.item_group, material.item_code) ||
         material.fg_sub_assembly === 'Sub-Assembly' ||
         material.component_type === 'Sub-Assembly' ||
         (itemCode && itemCode.startsWith('SA-'))
@@ -523,7 +497,6 @@ export default function ProductionPlanning() {
       if (response.ok) {
         const data = await response.json()
         let plansData = data.data || []
-        console.log('Fetched production plans:', plansData)
 
         const newBomCache = { ...bomCache }
 
@@ -627,6 +600,75 @@ export default function ProductionPlanning() {
     }
   }
 
+  const handleDownloadReport = async (plan) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/production-planning/${plan.plan_id}/report`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) throw new Error('Failed to fetch report data');
+
+      const result = await response.json();
+      const { workOrders, jobCards, productionEntries } = result.data;
+      const progressData = planProgress[plan.plan_id] || { progress: 0 };
+
+      // Create a comprehensive CSV
+      let csvContent = "data:text/csv;charset=utf-8,";
+      
+      // 1. Report Header
+      csvContent += `PRODUCTION PERFORMANCE REPORT: ${plan.plan_id}\n`;
+      csvContent += `Company,${plan.company || 'N/A'},Date,${new Date().toLocaleDateString()}\n`;
+      csvContent += `Status,${plan.status || 'draft'},Total Progress,${progressData.progress}%\n\n`;
+
+      // 2. Work Order Summary Section
+      csvContent += "SECTION 1: WORK ORDER SUMMARY\n";
+      csvContent += "Work Order ID,Item Code,Item Name,Planned Qty,Produced Qty,Scrap Qty,Rejected Qty,Status,Completion %\n";
+      
+      workOrders.forEach(wo => {
+        const completionPct = wo.quantity > 0 ? Math.round((wo.produced_qty / wo.quantity) * 100) : 0;
+        csvContent += `${wo.wo_id},${wo.item_code},"${wo.item_name || ''}",${wo.quantity},${wo.produced_qty},${wo.scrap_qty || 0},${wo.rejected_qty || 0},${wo.status},${completionPct}%\n`;
+      });
+      csvContent += "\n";
+
+      // 3. Operational Details Section
+      if (jobCards && jobCards.length > 0) {
+        csvContent += "SECTION 2: OPERATIONAL BREAKDOWN (JOB CARDS)\n";
+        csvContent += "Job Card ID,Work Order ID,Sequence,Operation,Workstation,Status,Accepted Qty,Rejected Qty\n";
+        
+        jobCards.forEach(jc => {
+          csvContent += `${jc.job_card_id},${jc.work_order_id},${jc.operation_sequence},"${jc.operation_name || jc.operation}",${jc.workstation || ''},${jc.status},${jc.accepted_quantity || 0},${jc.rejected_quantity || 0}\n`;
+        });
+        csvContent += "\n";
+      }
+
+      // 4. Production Entries Log Section
+      if (productionEntries && productionEntries.length > 0) {
+        csvContent += "SECTION 3: PRODUCTION ENTRIES LOG\n";
+        csvContent += "Entry ID,Work Order ID,Quantity Produced,Posting Date,Posting Time,Created At\n";
+        
+        productionEntries.forEach(pe => {
+          const postingDate = pe.posting_date ? new Date(pe.posting_date).toLocaleDateString() : '';
+          const createdAt = pe.created_at ? new Date(pe.created_at).toLocaleString() : '';
+          csvContent += `${pe.entry_id},${pe.work_order_id},${pe.quantity_produced},${postingDate},${pe.posting_time || ''},${createdAt}\n`;
+        });
+      }
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `Production_Report_${plan.plan_id}_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.addToast('Comprehensive report generated successfully', 'success');
+    } catch (err) {
+      console.error('Error downloading report:', err);
+      toast.addToast('Failed to generate report', 'error');
+    }
+  }
+
   const handleEdit = (plan) => {
     navigate(`/manufacturing/production-planning/${plan.plan_id}`)
   }
@@ -675,8 +717,6 @@ export default function ProductionPlanning() {
                     bom_no: plan.bom_id
                   }]
                 }
-              } else {
-                console.warn(`BOM ${plan.bom_id} not found (404). Will use plan item details as fallback.`)
               }
             } catch (bomErr) {
               console.error('Error fetching BOM details:', bomErr)
@@ -737,7 +777,7 @@ export default function ProductionPlanning() {
     }
 
     const subAssemblies = allMaterials.filter(item => {
-      const isSub = isSubAssemblyGroup(item.item_group) ||
+      const isSub = isSubAssemblyGroup(item.item_group, item.item_code) ||
         item.fg_sub_assembly === 'Sub-Assembly' ||
         item.component_type === 'Sub-Assembly' ||
         (item.item_code && item.item_code.startsWith('SA-')) ||
@@ -972,7 +1012,7 @@ export default function ProductionPlanning() {
     const Icon = config.icon
 
     return (
-      <span className={`inline-flex items-center gap-1.5 p-2  py-1 rounded w-fit text-xs    border ${config.color}`}>
+      <span className={`inline-flex items-center gap-1.5 p-1 rounded w-fit text-[8px]    border ${config.color}`}>
         <Icon size={12} />
         {status}
       </span>
@@ -1117,7 +1157,7 @@ export default function ProductionPlanning() {
         {/* Main Content Board */}
         <div className="bg-white rounded  border border-gray-100   overflow-hidden">
           {/* Dashboard Control Bar */}
-          <div className="p-6 border-b border-gray-50 bg-gray-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4 my-4">
+          <div className="p-2 border-b border-gray-50 bg-gray-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4 ">
             <div className="flex items-center gap-4">
               <div className="bg-white p-2 rounded    border border-gray-100 text-indigo-600">
                 <BarChart3 size={20} />
@@ -1130,10 +1170,10 @@ export default function ProductionPlanning() {
 
             <div className="flex items-center gap-4">
               <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={15} />
                 <input
                   type="text"
-                  placeholder="SEARCH STRATEGIES..."
+                  placeholder="Search Production Plannings..."
                   className="pl-12 pr-6 py-2 bg-white border border-gray-100 rounded  text-xs    focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all w-full md:w-80"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -1168,7 +1208,8 @@ export default function ProductionPlanning() {
                     const progressValue = progressData.progress
                     const currentOp = progressData.currentOp
                     const opsInfo = `${progressData.completedOps}/${progressData.totalOps}`
-                    const isOverdue = plan.expected_completion_date && new Date(plan.expected_completion_date) < new Date() && plan.status !== 'completed'
+                    const isEffectiveCompleted = plan.status === 'completed' || (progressValue === 100 && progressData.totalOps > 0)
+                    const isOverdue = plan.expected_completion_date && new Date(plan.expected_completion_date) < new Date() && !isEffectiveCompleted
 
                     return (
                       <tr key={plan.plan_id} className="hover:bg-indigo-50/30 transition-colors group">
@@ -1194,7 +1235,7 @@ export default function ProductionPlanning() {
                               <Factory size={12} className="text-gray-400" />
                               <span>{plan.company || 'Global Manufacturing'}</span>
                             </div>
-                            {getStatusBadge(plan.status || 'draft')}
+                            {getStatusBadge(isEffectiveCompleted ? 'completed' : (plan.status || 'draft'))}
                           </div>
                         </td>
                         <td className="p-2  text-center">
@@ -1229,7 +1270,7 @@ export default function ProductionPlanning() {
                               />
                             </div>
                             <p className="text-xs   text-gray-500 truncate flex items-center gap-1.5">
-                              <Clock size={15} className="text-indigo-500" /> {currentOp}
+                              <Clock size={15} className="text-indigo-500" /> {isEffectiveCompleted ? 'Production Completed' : currentOp}
                             </p>
                           </div>
                         </td>
@@ -1242,39 +1283,52 @@ export default function ProductionPlanning() {
                             >
                               <Eye size={15} />
                             </button>
-                            <button
-                              onClick={() => fetchPlanOperationProgress(plan.plan_id)}
-                              className=" p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded  transition-all   hover:shadow-md bg-white border border-gray-50"
-                              title="Sync Progress"
-                            >
-                              <TrendingUp size={15} />
-                            </button>
-                            <button
-                              onClick={() => handleCreateWorkOrder(plan)}
-                              disabled={planProgress[plan.plan_id]?.woCount > 0}
-                              className={`p-2 rounded transition-all hover:shadow-md bg-white border border-gray-50 ${planProgress[plan.plan_id]?.woCount > 0
-                                  ? 'text-gray-200 cursor-not-allowed opacity-50'
-                                  : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'
-                                }`}
-                              title={planProgress[plan.plan_id]?.woCount > 0 ? "Work Order Already Created" : "Configure Strategy"}
-                            >
-                              <Settings size={15} />
-                            </button>
-                            <button
-                              onClick={() => handleSendMaterialRequest(plan)}
-                              disabled={sendingMaterialRequest}
-                              className=" p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded  transition-all   hover:shadow-md bg-white border border-gray-50 disabled:opacity-50"
-                              title="Request Materials"
-                            >
-                              {sendingMaterialRequest ? <Loader size={15} className="animate-spin" /> : <Send size={15} />}
-                            </button>
-                            <button
-                              onClick={() => handleEdit(plan)}
-                              className=" p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded  transition-all   hover:shadow-md bg-white border border-gray-50"
-                              title="Modify Strategy"
-                            >
-                              <Edit2 size={15} />
-                            </button>
+                            {isEffectiveCompleted && (
+                              <button
+                                onClick={() => handleDownloadReport(plan)}
+                                className=" p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded  transition-all   hover:shadow-md bg-white border border-gray-50"
+                                title="Download Production Report"
+                              >
+                                <Download size={15} />
+                              </button>
+                            )}
+                            {!isEffectiveCompleted && (
+                              <button
+                                onClick={() => fetchPlanOperationProgress(plan.plan_id)}
+                                className="p-2 rounded transition-all hover:shadow-md bg-white border border-gray-50 text-gray-400 hover:text-amber-600 hover:bg-amber-50"
+                                title="Sync Progress"
+                              >
+                                <TrendingUp size={15} />
+                              </button>
+                            )}
+                            {!isEffectiveCompleted && planProgress[plan.plan_id]?.woCount === 0 && (
+                              <button
+                                onClick={() => handleCreateWorkOrder(plan)}
+                                className="p-2 rounded transition-all hover:shadow-md bg-white border border-gray-50 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"
+                                title="Configure Strategy"
+                              >
+                                <Settings size={15} />
+                              </button>
+                            )}
+                            {!isEffectiveCompleted && (
+                              <button
+                                onClick={() => handleSendMaterialRequest(plan)}
+                                disabled={sendingMaterialRequest}
+                                className="p-2 rounded transition-all hover:shadow-md bg-white border border-gray-50 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
+                                title="Request Materials"
+                              >
+                                {sendingMaterialRequest ? <Loader size={15} className="animate-spin" /> : <Send size={15} />}
+                              </button>
+                            )}
+                            {!isEffectiveCompleted && (
+                              <button
+                                onClick={() => handleEdit(plan)}
+                                className="p-2 rounded transition-all hover:shadow-md bg-white border border-gray-50 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                                title="Modify Strategy"
+                              >
+                                <Edit2 size={15} />
+                              </button>
+                            )}
                             <button
                               onClick={() => handleShowHistory(plan)}
                               className=" p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all   hover:shadow-md bg-white border border-gray-50 relative"
@@ -1287,13 +1341,15 @@ export default function ProductionPlanning() {
                                 </span>
                               )}
                             </button>
-                            <button
-                              onClick={() => handleDelete(plan.plan_id)}
-                              className=" p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded  transition-all   hover:shadow-md bg-white border border-gray-50"
-                              title="Discard Plan"
-                            >
-                              <Trash2 size={15} />
-                            </button>
+                            {!isEffectiveCompleted && (
+                              <button
+                                onClick={() => handleDelete(plan.plan_id)}
+                                className="p-2 rounded transition-all hover:shadow-md bg-white border border-gray-50 text-gray-400 hover:text-rose-600 hover:bg-rose-50"
+                                title="Discard Plan"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

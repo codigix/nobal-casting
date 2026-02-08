@@ -18,7 +18,14 @@ export class MaterialRequestModel {
       [warehouseIdentifier, warehouseIdentifier]
     )
     
-    return rows.length ? rows[0].id : warehouseIdentifier
+    if (rows.length) return rows[0].id
+    
+    // If we can't find it and it's not a numeric ID, throw a clear error
+    if (!Number.isInteger(Number(warehouseIdentifier))) {
+      throw new Error(`Warehouse '${warehouseIdentifier}' not found. Please ensure the warehouse name or code is correct.`)
+    }
+    
+    return Number(warehouseIdentifier)
   }
 
   /**
@@ -262,15 +269,8 @@ export class MaterialRequestModel {
       if (!mrRows.length) throw new Error('Material request not found')
       const request = mrRows[0]
 
-      // Allow idempotent approval - if already completed, just return
-      if (request.status === 'completed') {
-        await connection.rollback()
-        connection.release()
-        return await this.getById(db, mrId)
-      }
-
-      if (request.status !== 'draft' && request.status !== 'pending' && request.status !== 'approved' && request.status !== 'partial') {
-        throw new Error(`Only draft, pending, approved or partial material requests can be processed. Current status: ${request.status}`)
+      if (request.status !== 'draft' && request.status !== 'pending' && request.status !== 'approved' && request.status !== 'partial' && request.status !== 'completed') {
+        throw new Error(`Only draft, pending, approved, partial or completed material requests can be processed. Current status: ${request.status}`)
       }
 
       // Get items
@@ -286,7 +286,7 @@ export class MaterialRequestModel {
       }
 
       // Check stock for Issue/Transfer
-      const isStockTransaction = ['material_transfer', 'material_issue'].includes(request.purpose)
+      const isStockTransaction = ['material_transfer', 'material_issue'].includes(request.purpose?.toLowerCase())
       
       // Use provided source warehouse or fall back to existing one
       const finalSourceWarehouse = sourceWarehouse || request.source_warehouse
@@ -362,7 +362,7 @@ export class MaterialRequestModel {
             item_code: item.item_code,
             warehouse_id: sourceWarehouseId,
             transaction_date: new Date(),
-            transaction_type: request.purpose === 'material_transfer' ? 'Transfer' : 'Issue',
+            transaction_type: request.purpose?.toLowerCase() === 'material_transfer' ? 'Transfer' : 'Issue',
             qty_in: 0,
             qty_out: qtyToIssue,
             valuation_rate: currentValuation,
@@ -382,7 +382,7 @@ export class MaterialRequestModel {
           )
 
           // If Transfer, Add to Target
-          if (request.purpose === 'material_transfer' && targetWarehouseId) {
+          if (request.purpose?.toLowerCase() === 'material_transfer' && targetWarehouseId) {
             await StockBalanceModel.upsert(item.item_code, targetWarehouseId, {
               current_qty: qtyToIssue,
               is_increment: true,

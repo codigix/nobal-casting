@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, AreaChart, Area, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
-import { TrendingUp, Calendar, AlertCircle, Clock, CheckCircle, AlertTriangle, Target, Eye, Edit2, Truck, Package, LayoutGrid, Search, Filter, ArrowUpRight, ArrowDownRight, MoreHorizontal, Download, Star, Share2, Layers, Zap } from 'lucide-react'
+import { TrendingUp, Calendar, AlertCircle, Clock, CheckCircle, AlertTriangle, Target, Eye, Edit2, Truck, Package, LayoutGrid, Search, Filter, ArrowUpRight, ArrowDownRight, MoreHorizontal, Download, Star, Share2, Layers, Zap, Cpu } from 'lucide-react'
 import { getSalesOrdersAsProjects, getDetailedProjectAnalysis } from '../../services/adminService'
 
 const statusConfig = {
@@ -107,15 +107,16 @@ const ProcessFlow = ({ stages }) => {
                         </div>
                       </div>
                       
-                      <div className="flex items-center justify-between pt-3 border-t border-slate-50">
+                      <div className="flex items-center gap-3 pt-3 border-t border-slate-50">
                         <div className="flex items-center gap-1.5 text-xs   text-slate-500">
                           <Package size={12} className="text-slate-400" />
                           {stage.job_cards_count} Active Jobs
                         </div>
-                        {column.status === 'in_progress' && rawProgress < 10 && (
-                          <span className="flex items-center gap-1 text-xs   text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100 animate-pulse">
-                            <Zap size={10} /> Bottleneck
-                          </span>
+                        {(parseFloat(stage.rejected_qty) > 0 || parseFloat(stage.scrap_qty) > 0) && (
+                          <div className="flex items-center gap-1.5 text-xs text-rose-500 font-medium ml-auto">
+                            <AlertCircle size={12} />
+                            {parseFloat(stage.rejected_qty) + parseFloat(stage.scrap_qty)} Loss
+                          </div>
                         )}
                       </div>
                     </div>
@@ -130,10 +131,11 @@ const ProcessFlow = ({ stages }) => {
   );
 };
 
-const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }) => {
+const DetailModal = ({ isOpen, project: initialProject, onClose, detailedData, detailedLoading }) => {
   const [activeTab, setActiveTab] = useState('overview');
-  if (!isOpen || !project) return null
+  if (!isOpen || !initialProject) return null
 
+  const project = detailedData?.project || initialProject;
   const progress = project.progress || 0;
   
   // Calculate real metrics from detailed data
@@ -141,11 +143,24 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
   const totalProduced = stages.reduce((acc, s) => acc + (parseFloat(s.produced_qty) || 0), 0);
   const totalAccepted = stages.reduce((acc, s) => acc + (parseFloat(s.accepted_qty) || 0), 0);
   const totalRejected = stages.reduce((acc, s) => acc + (parseFloat(s.rejected_qty) || 0), 0);
+  const totalScrap = stages.reduce((acc, s) => acc + (parseFloat(s.scrap_qty) || 0), 0);
+  const totalLoss = totalRejected + totalScrap;
   
   const yieldRate = totalProduced > 0 ? Math.round((totalAccepted / totalProduced) * 100) : 100;
-  const qualityRate = totalProduced > 0 ? Math.round(((totalProduced - totalRejected) / totalProduced) * 100) : 100;
-  const timelinePerformance = Math.max(0, Math.min(100, 100 - (project.daysLeft > 0 ? (project.daysLeft / 30) * 100 : 0)));
+  const qualityRate = totalProduced > 0 ? Math.round(((totalProduced - totalLoss) / totalProduced) * 100) : 100;
+  
+  const dueDate = project.dueDate ? new Date(project.dueDate) : null;
+  const orderDate = project.order_date ? new Date(project.order_date) : new Date();
+  
+  const totalDuration = dueDate && orderDate ? Math.max(1, (dueDate - orderDate) / (1000 * 60 * 60 * 24)) : 30;
+  const elapsed = orderDate ? (new Date() - orderDate) / (1000 * 60 * 60 * 24) : 15;
+  const timeProgress = Math.min(100, Math.max(1, (elapsed / totalDuration) * 100));
+  
+  // Timeline performance is how much progress we have made relative to time elapsed
+  const timelinePerformance = Math.round(Math.min(100, (progress / timeProgress) * 100));
   const efficiency = project.efficiency || 85;
+
+  const isAtRisk = progress < timeProgress && project.status !== 'delivered';
 
   const radarData = [
     { subject: 'Progress', A: progress, B: 80, fullMark: 100 },
@@ -165,10 +180,13 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
             </div>
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <h2 className="text-xl text-white  m-0">{project.name}</h2>
+                <h2 className="text-xl text-white  m-0">{project.name || 'Untitled Project'}</h2>
                 <StatusBadge status={project.status} />
               </div>
-              <p className="text-slate-400 text-xs m-0">Customer: <span className="text-white font-medium">{project.customer_name}</span> | ID: {project.id}</p>
+              <p className="text-slate-400 text-xs m-0">
+                Customer: <span className="text-white font-medium">{project.customer_name || 'Generic Customer'}</span> | 
+                ID: <span className="text-white font-medium">{project.id || 'N/A'}</span>
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="w-5 h-5 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-all text-xs p-2">✕</button>
@@ -180,7 +198,7 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
               { id: 'overview', label: 'Overview', icon: LayoutGrid },
               { id: 'stages', label: 'Production Flow', icon: TrendingUp },
               { id: 'history', label: 'Production History', icon: Clock },
-              { id: 'materials', label: 'Resource Analysis', icon: Layers }
+              { id: 'materials', label: 'Resource & Machine Efficiency', icon: Layers }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -219,7 +237,7 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
                       
                       <div className="bg-white p-2 rounded  border border-slate-200 ">
                         <p className="text-xs  text-slate-400 mb-4">Total Revenue</p>
-                        <h3 className="text-xl  text-slate-900">₹{(project.revenue || 0).toLocaleString()}</h3>
+                        <h3 className="text-xl  text-slate-900">₹{parseFloat(project.revenue || 0).toLocaleString()}</h3>
                         <p className="text-emerald-600 text-xs  mt-2 flex items-center gap-1">
                           <ArrowUpRight size={14} /> Full Payment Confirmed
                         </p>
@@ -227,7 +245,7 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
 
                       <div className="bg-white p-2 rounded  border border-slate-200 ">
                         <p className="text-xs  text-slate-400 mb-4">Timeline Performance</p>
-                        <h3 className="text-xl  text-slate-900">{project.daysLeft} Days</h3>
+                        <h3 className="text-xl  text-slate-900">{project.daysLeft || 0} Days</h3>
                         <p className="text-slate-500 text-xs  mt-2">Remaining to delivery</p>
                       </div>
                     </div>
@@ -262,14 +280,28 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
                       <div className="space-y-6">
                         <div>
                           <p className="text-slate-400 text-xs  mb-1">Estimated Delivery</p>
-                          <p className="text-xl  ">{new Date(project.dueDate).toLocaleDateString('en-IN', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                          <p className="text-xl  ">
+                            {dueDate 
+                              ? dueDate.toLocaleDateString('en-IN', { month: 'long', day: 'numeric', year: 'numeric' })
+                              : 'Not Scheduled'}
+                          </p>
                         </div>
                         <div className="p-4 bg-white/5 rounded border border-white/10">
                           <div className="flex items-center gap-3 mb-3">
-                            <div className="w-8 h-8 rounded bg-emerald-500/20 text-emerald-500 flex items-center justify-center"><CheckCircle size={18} /></div>
-                            <span className="text-xs  text-emerald-500 ">On Track</span>
+                            <div className={`w-8 h-8 rounded flex items-center justify-center ${
+                              isAtRisk ? 'bg-rose-500/20 text-rose-500' : 'bg-emerald-500/20 text-emerald-500'
+                            }`}>
+                              {isAtRisk ? <AlertTriangle size={18} /> : <CheckCircle size={18} />}
+                            </div>
+                            <span className={`text-xs ${isAtRisk ? 'text-rose-500' : 'text-emerald-500'}`}>
+                              {isAtRisk ? 'At Risk' : 'On Track'}
+                            </span>
                           </div>
-                          <p className="text-xs text-slate-300 m-0 leading-relaxed">Production velocity is currently optimal. No scheduling conflicts detected for the upcoming stages.</p>
+                          <p className="text-xs text-slate-300 m-0 leading-relaxed">
+                            {isAtRisk 
+                              ? `Project is currently behind schedule. Progress (${progress}%) is lower than expected time elapsed (${Math.round(timeProgress)}%).` 
+                              : 'Production velocity is currently optimal. No scheduling conflicts detected for the upcoming stages.'}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -279,26 +311,25 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
                         <Target size={18} className="text-blue-600" /> Key Milestones
                       </h4>
                       <div className="space-y-6">
-                        {[
-                          { label: 'BOM Validation', date: 'Jan 12', status: 'completed' },
-                          { label: 'Raw Material Procurement', date: 'Jan 15', status: 'completed' },
-                          { label: 'Phase 1 Production', date: 'Jan 22', status: 'in_progress' },
-                          { label: 'Quality Assurance', date: 'Feb 02', status: 'pending' }
-                        ].map((m, i) => (
-                          <div key={i} className="flex items-start gap-4">
-                            <div className={`mt-1.5 w-2 h-2 rounded-full ring-4 ${
-                              m.status === 'completed' ? 'bg-emerald-500 ring-emerald-50' : 
-                              m.status === 'in_progress' ? 'bg-blue-500 ring-blue-50' : 'bg-slate-300 ring-slate-50'
-                            }`} />
-                            <div className="flex-1">
-                              <div className="flex justify-between items-center mb-0.5">
-                                <span className={`text-xs  ${m.status === 'completed' ? 'text-slate-900' : 'text-slate-500'}`}>{m.label}</span>
-                                <span className="text-xs   text-slate-400">{m.date}</span>
+                        {stages.length > 0 ? (
+                          stages.slice(0, 4).map((stage, i) => (
+                            <div key={i} className="flex items-start gap-4">
+                              <div className={`mt-1.5 w-2 h-2 rounded-full ring-4 ${
+                                stage.status === 'completed' ? 'bg-emerald-500 ring-emerald-50' : 
+                                stage.status === 'in_progress' ? 'bg-blue-500 ring-blue-50' : 'bg-slate-300 ring-slate-50'
+                              }`} />
+                              <div className="flex-1">
+                                <div className="flex justify-between items-center mb-0.5">
+                                  <span className={`text-xs  ${stage.status === 'completed' ? 'text-slate-900' : 'text-slate-500'}`}>{stage.stage_name}</span>
+                                  <span className="text-xs   text-slate-400">{stage.produced_qty} / {stage.planned_qty}</span>
+                                </div>
+                                <span className="text-xs    text-slate-400">{stage.status.replace('_', ' ')}</span>
                               </div>
-                              <span className="text-xs    text-slate-400">{m.status.replace('_', ' ')}</span>
                             </div>
-                          </div>
-                        ))}
+                          ))
+                        ) : (
+                          <p className="text-xs text-slate-400 italic py-4">No production milestones detected</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -328,20 +359,18 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
                           detailedData.entries.map((entry, idx) => (
                             <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                               <td className="p-2">
-                                <p className="text-xs  text-slate-900 m-0">{new Date(entry.posting_date).toLocaleDateString()}</p>
-                                <p className="text-xs  text-slate-500 m-0 ">{entry.name}</p>
+                                <p className="text-xs  text-slate-900 m-0">{new Date(entry.entry_date).toLocaleDateString()}</p>
+                                <p className="text-xs  text-slate-500 m-0 ">{entry.entry_id}</p>
                               </td>
                               <td className="p-2">
                                 <span className="text-xs font-medium text-slate-700">{entry.item_code}</span>
                               </td>
                               <td className="p-2 text-right">
-                                <span className="text-xs  text-slate-900">{entry.fg_completed_qty}</span>
+                                <span className="text-xs  text-slate-900">{entry.quantity_produced}</span>
                               </td>
                               <td className="p-2">
-                                <span className={`px-2 py-1 rounded text-xs   ${
-                                  entry.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
-                                }`}>
-                                  {entry.status}
+                                <span className="px-2 py-1 rounded text-xs bg-emerald-50 text-emerald-600">
+                                  Submitted
                                 </span>
                               </td>
                             </tr>
@@ -363,71 +392,143 @@ const DetailModal = ({ isOpen, project, onClose, detailedData, detailedLoading }
               )}
               
               {activeTab === 'materials' && (
-                <div className="bg-white rounded   border border-slate-200  p-3">
-                  <div className="flex items-center gap-4 mb-3">
-                    <div className="w-6 h-6  bg-amber-100 rounded flex items-center justify-center text-amber-600">
-                      <Layers />
+                <div className="space-y-6">
+                  <div className="bg-white rounded   border border-slate-200  p-3">
+                    <div className="flex items-center gap-4 mb-3">
+                      <div className="w-6 h-6  bg-amber-100 rounded flex items-center justify-center text-amber-600">
+                        <Layers />
+                      </div>
+                      <div>
+                        <h4 className="text-lg  text-slate-900 m-0">Resource & Component Readiness</h4>
+                        <p className="text-xs text-slate-500 m-0">Tracking inventory requirements across all production stages</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="text-lg  text-slate-900 m-0">Resource & Component Readiness</h4>
-                      <p className="text-xs text-slate-500 m-0">Tracking inventory requirements across all production stages</p>
-                    </div>
+                    
+                    {detailedData?.materials?.length > 0 ? (
+                      <div className="">
+                        <table className="w-full text-left bg-white">
+                          <thead>
+                            <tr className="bg-slate-50/50">
+                              <th className="p-2 text-xs  text-slate-400 ">Item Details</th>
+                              <th className="p-2 text-xs  text-slate-400  text-right">Required</th>
+                              <th className="p-2 text-xs  text-slate-400  text-right">Consumed</th>
+                              <th className="p-2 text-xs  text-slate-400  text-right">Stock Available</th>
+                              <th className="p-2 text-xs  text-slate-400  text-center">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50">
+                            {detailedData.materials.map((mat, idx) => {
+                              const stockStatus = parseFloat(mat.stock_qty) >= (parseFloat(mat.required_qty) - parseFloat(mat.consumed_qty)) ? 'Ready' : 'Shortage';
+                              return (
+                                <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="p-2">
+                                    <p className="text-xs  text-slate-900 m-0">{mat.item_name || mat.item_code}</p>
+                                    <p className="text-xs  text-slate-500 m-0 ">{mat.item_code}</p>
+                                  </td>
+                                  <td className="p-2 text-right">
+                                    <p className="text-xs  text-slate-900 m-0">{parseFloat(mat.required_qty).toLocaleString()} {mat.uom}</p>
+                                  </td>
+                                  <td className="p-2 text-right">
+                                    <p className="text-xs font-medium text-slate-600 m-0">{parseFloat(mat.consumed_qty).toLocaleString()} {mat.uom}</p>
+                                  </td>
+                                  <td className="p-2 text-right">
+                                    <p className={`text-xs  m-0 ${stockStatus === 'Ready' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                      {parseFloat(mat.stock_qty).toLocaleString()} {mat.uom}
+                                    </p>
+                                  </td>
+                                  <td className="p-2 text-center">
+                                    <span className={`px-2 py-1 rounded text-xs    ${
+                                      stockStatus === 'Ready' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600 border border-rose-100'
+                                    }`}>
+                                      {stockStatus}
+                                    </span>
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div className="p-12 bg-slate-50 rounded   border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center col-span-full">
+                          <Zap size={32} className="text-slate-300 mb-4" />
+                          <p className="text-slate-600 ">No Materials Allocated</p>
+                          <p className="text-slate-400 text-xs mt-1">Material requirements are generated when Work Orders are approved.</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  
-                  {detailedData?.materials?.length > 0 ? (
-                    <div className="">
-                      <table className="w-full text-left bg-white">
-                        <thead>
-                          <tr className="bg-slate-50/50">
-                            <th className="p-2 text-xs  text-slate-400 ">Item Details</th>
-                            <th className="p-2 text-xs  text-slate-400  text-right">Required</th>
-                            <th className="p-2 text-xs  text-slate-400  text-right">Consumed</th>
-                            <th className="p-2 text-xs  text-slate-400  text-right">Stock Available</th>
-                            <th className="p-2 text-xs  text-slate-400  text-center">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                          {detailedData.materials.map((mat, idx) => {
-                            const stockStatus = parseFloat(mat.stock_qty) >= (parseFloat(mat.required_qty) - parseFloat(mat.consumed_qty)) ? 'Ready' : 'Shortage';
-                            return (
+
+                  <div className="bg-white rounded   border border-slate-200  p-3">
+                    <div className="flex items-center gap-4 mb-3">
+                      <div className="w-6 h-6  bg-blue-100 rounded flex items-center justify-center text-blue-600">
+                        <Cpu />
+                      </div>
+                      <div>
+                        <h4 className="text-lg  text-slate-900 m-0">Machine & Workstation Efficiency</h4>
+                        <p className="text-xs text-slate-500 m-0">Real-time utilization and downtime analysis per allocated resource</p>
+                      </div>
+                    </div>
+
+                    {project?.machine_stats?.length > 0 ? (
+                      <div className="">
+                        <table className="w-full text-left bg-white">
+                          <thead>
+                            <tr className="bg-slate-50/50">
+                              <th className="p-2 text-xs  text-slate-400 ">Machine Name</th>
+                              <th className="p-2 text-xs  text-slate-400  text-right">Working Time</th>
+                              <th className="p-2 text-xs  text-slate-400  text-right">Downtime</th>
+                              <th className="p-2 text-xs  text-slate-400  text-right">Efficiency</th>
+                              <th className="p-2 text-xs  text-slate-400 ">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50">
+                            {project.machine_stats.map((machine, idx) => (
                               <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                                 <td className="p-2">
-                                  <p className="text-xs  text-slate-900 m-0">{mat.item_name || mat.item_code}</p>
-                                  <p className="text-xs  text-slate-500 m-0 ">{mat.item_code}</p>
+                                  <p className="text-xs  text-slate-900 m-0">{machine.machine_name}</p>
+                                  <p className="text-xs  text-slate-500 m-0 ">{machine.machine_id}</p>
                                 </td>
                                 <td className="p-2 text-right">
-                                  <p className="text-xs  text-slate-900 m-0">{parseFloat(mat.required_qty).toLocaleString()} {mat.uom}</p>
+                                  <p className="text-xs  text-slate-900 m-0">{(machine.working_time / 60).toFixed(1)} hrs</p>
                                 </td>
                                 <td className="p-2 text-right">
-                                  <p className="text-xs font-medium text-slate-600 m-0">{parseFloat(mat.consumed_qty).toLocaleString()} {mat.uom}</p>
+                                  <p className="text-xs  text-slate-900 m-0">{(machine.downtime / 60).toFixed(1)} hrs</p>
                                 </td>
                                 <td className="p-2 text-right">
-                                  <p className={`text-xs  m-0 ${stockStatus === 'Ready' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                    {parseFloat(mat.stock_qty).toLocaleString()} {mat.uom}
-                                  </p>
+                                  <div className="flex flex-col items-end gap-1">
+                                    <span className={`text-xs font-bold ${machine.efficiency >= 85 ? 'text-emerald-600' : machine.efficiency >= 70 ? 'text-amber-600' : 'text-rose-600'}`}>
+                                      {machine.efficiency}%
+                                    </span>
+                                    <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                      <div 
+                                        className={`h-full ${machine.efficiency >= 85 ? 'bg-emerald-500' : machine.efficiency >= 70 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                                        style={{ width: `${machine.efficiency}%` }}
+                                      />
+                                    </div>
+                                  </div>
                                 </td>
-                                <td className="p-2 text-center">
+                                <td className="p-2">
                                   <span className={`px-2 py-1 rounded text-xs    ${
-                                    stockStatus === 'Ready' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600 border border-rose-100'
+                                    machine.efficiency >= 85 ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
                                   }`}>
-                                    {stockStatus}
+                                    {machine.efficiency >= 85 ? 'Optimal' : 'Underperforming'}
                                   </span>
                                 </td>
                               </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      <div className="p-12 bg-slate-50 rounded   border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center col-span-full">
-                        <Zap size={32} className="text-slate-300 mb-4" />
-                        <p className="text-slate-600 ">No Materials Allocated</p>
-                        <p className="text-slate-400 text-xs mt-1">Material requirements are generated when Work Orders are approved.</p>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="p-12 bg-slate-50 rounded   border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center">
+                        <Cpu size={32} className="text-slate-300 mb-4" />
+                        <p className="text-slate-600 ">No Machine Data Available</p>
+                        <p className="text-slate-400 text-xs mt-1">Machine utilization is tracked via Job Card time logs.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

@@ -14,6 +14,7 @@ export function createProductionPlanningRoutes(db) {
   router.delete('/truncate/all', authMiddleware, controller.truncatePlans.bind(controller))
   router.get('/item/:itemCode', authMiddleware, controller.getByItemCode.bind(controller))
   router.get('/:plan_id', authMiddleware, controller.getPlan.bind(controller))
+  router.get('/:plan_id/report', authMiddleware, controller.getProductionReport.bind(controller))
   router.patch('/:plan_id', authMiddleware, controller.updatePlan.bind(controller))
 
   router.post('/:plan_id/fg-items', authMiddleware, controller.addFGItems.bind(controller))

@@ -196,7 +196,7 @@ export default function Items() {
             <p className="text-2xl font-black mt-1 text-slate-900 dark:text-white">{value}</p>
             {description && <p className="text-[10px] mt-1 text-slate-400 dark:text-slate-500">{description}</p>}
           </div>
-          <div className={`p-2 rounded-lg bg-white dark:bg-slate-900 shadow-sm border border-inherit transition-transform group-hover:rotate-12`}>
+          <div className={`p-2 rounded  bg-white dark:bg-slate-900 shadow-sm border border-inherit transition-transform group-hover:rotate-12`}>
             <Icon size={20} className="text-inherit" />
           </div>
         </div>
@@ -346,7 +346,7 @@ export default function Items() {
                     </div>
                     <div className="space-y-1">
                       {['item_details', 'item_group', 'stock', 'valuation_rate', 'gst_rate'].map(col => (
-                        <label key={col} className="flex items-center gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg cursor-pointer transition-colors">
+                        <label key={col} className="flex items-center gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded  cursor-pointer transition-colors">
                           <input
                             type="checkbox"
                             checked={visibleColumns.has(col)}
@@ -382,7 +382,7 @@ export default function Items() {
                     size="sm" 
                     variant="secondary" 
                     onClick={() => navigate(`/manufacturing/items/${row.item_code}`)}
-                    className="p-2 rounded-lg border shadow-sm bg-white dark:bg-slate-800"
+                    className="p-2 rounded  border shadow-sm bg-white dark:bg-slate-800"
                   >
                     <Edit2 size={14} className="text-slate-600 dark:text-slate-400" />
                   </Button>
@@ -390,7 +390,7 @@ export default function Items() {
                     size="sm" 
                     variant="secondary" 
                     onClick={() => navigate(`/manufacturing/items/${row.item_code}`)}
-                    className="p-2 rounded-lg border shadow-sm bg-white dark:bg-slate-800"
+                    className="p-2 rounded  border shadow-sm bg-white dark:bg-slate-800"
                   >
                     <ArrowUpRight size={14} className="text-blue-600" />
                   </Button>
@@ -401,7 +401,7 @@ export default function Items() {
                       e.stopPropagation()
                       handleDelete(row.item_code)
                     }}
-                    className="p-2 rounded-lg border-2 shadow-sm"
+                    className="p-2 rounded  border-2 shadow-sm"
                   >
                     <Trash2 size={14} />
                   </Button>

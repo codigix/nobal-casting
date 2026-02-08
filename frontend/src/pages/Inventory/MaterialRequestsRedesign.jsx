@@ -198,13 +198,13 @@ export default function MaterialRequestsRedesign() {
             <div className="flex bg-white p-1 rounded  border border-slate-200  ">
               <button 
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg text-sm  transition-all ${viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`p-2 rounded  text-sm  transition-all ${viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 Grid
               </button>
               <button 
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg text-sm  transition-all ${viewMode === 'list' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`p-2 rounded  text-sm  transition-all ${viewMode === 'list' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 List
               </button>
@@ -361,7 +361,7 @@ export default function MaterialRequestsRedesign() {
                           {row.status === 'draft' && (
                             <button 
                               onClick={() => handleDelete(row.mr_id)}
-                              className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                              className="p-2 text-rose-600 hover:bg-rose-50 rounded  transition-colors"
                               title="Delete"
                             >
                               <Trash2 size={18} />
@@ -373,7 +373,7 @@ export default function MaterialRequestsRedesign() {
                             setSelectedMrId(row.mr_id)
                             setViewModalOpen(true)
                           }}
-                          className="p-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm  flex items-center gap-2 hover:bg-indigo-100 transition-all"
+                          className="p-2 bg-indigo-50 text-indigo-600 rounded  text-sm  flex items-center gap-2 hover:bg-indigo-100 transition-all"
                         >
                           Details <ArrowRight size={16} />
                         </button>
@@ -404,7 +404,7 @@ export default function MaterialRequestsRedesign() {
                         <tr key={row.mr_id} className="hover:bg-slate-50/50 transition-colors group">
                           <td className="p-2 whitespace-nowrap">
                             <div className="flex items-center gap-3">
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${getStatusStyle(row.status)}`}>
+                              <div className={`w-8 h-8 rounded  flex items-center justify-center ${getStatusStyle(row.status)}`}>
                                 {getPurposeIcon(row.purpose)}
                               </div>
                               <div>
@@ -450,14 +450,14 @@ export default function MaterialRequestsRedesign() {
                                   setSelectedMrId(row.mr_id)
                                   setViewModalOpen(true)
                                 }}
-                                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-colors"
                               >
                                 <Eye size={18} />
                               </button>
                               {row.status === 'draft' && (
                                 <button 
                                   onClick={() => handleDelete(row.mr_id)}
-                                  className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                  className="p-2 text-rose-600 hover:bg-rose-50 rounded  transition-colors"
                                 >
                                   <Trash2 size={18} />
                                 </button>

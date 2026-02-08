@@ -10,6 +10,7 @@ import { useAuth } from '../../hooks/AuthContext'
 import { useToast } from '../../components/ToastContainer'
 import SearchableSelect from '../../components/SearchableSelect'
 import Card from '../../components/Card/Card'
+import * as productionService from '../../services/productionService'
 
 const SectionTitle = ({ title, icon: Icon, badge }) => (
   <div className="flex items-center justify-between mb-6">
@@ -193,11 +194,16 @@ const isConsumableGroup = (itemGroup) => {
   return normalized === 'consumable'
 }
 
-const isSubAssemblyGroup = (itemGroup) => {
-  if (!itemGroup) return false
-  const normalized = itemGroup.toLowerCase().replace(/[-\s]/g, '').trim()
-  if (normalized === 'consumable') return false
-  return normalized === 'subassemblies' || normalized === 'subassembly'
+const isSubAssemblyGroup = (itemGroup, itemCode = '') => {
+  if (!itemGroup && !itemCode) return false
+  
+  const normalizedGroup = (itemGroup || '').toLowerCase().replace(/[-\s]/g, '').trim()
+  if (normalizedGroup === 'consumable') return false
+  
+  const isSAGroup = normalizedGroup === 'subassemblies' || normalizedGroup === 'subassembly' || normalizedGroup === 'intermediates'
+  const isSACode = (itemCode || '').toUpperCase().startsWith('SA-') || (itemCode || '').toUpperCase().startsWith('SA')
+  
+  return isSAGroup || isSACode
 }
 
 export default function ProductionPlanningForm() {
@@ -214,6 +220,7 @@ export default function ProductionPlanningForm() {
     rawmaterials: true
   })
   const [expandedItemGroups, setExpandedItemGroups] = useState({})
+  const [expandedSubAsms, setExpandedSubAsms] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
@@ -289,6 +296,40 @@ export default function ProductionPlanningForm() {
     })
     return grouped
   }
+
+  const buildSubAssemblyTree = (items) => {
+    if (!items || items.length === 0) return [];
+    
+    // Create map for easy lookup
+    const itemMap = {};
+    items.forEach((item, index) => {
+      const key = `${item.item_code}-${item.parent_item_code || item.parent_code || 'root'}`;
+      itemMap[key] = { ...item, children: [], id: index };
+    });
+
+    const tree = [];
+    Object.values(itemMap).forEach(item => {
+      const parentCode = item.parent_item_code || item.parent_code;
+      if (!parentCode || parentCode === 'top' || parentCode === 'root') {
+        tree.push(item);
+      } else {
+        // Try to find parent. Since we don't have parent's parent, 
+        // we might have multiple items with same item_code but different parents.
+        // We look for any item that matches the parentCode
+        const parents = Object.values(itemMap).filter(i => i.item_code === parentCode);
+        if (parents.length > 0) {
+          // If multiple potential parents (same item code in different branches), 
+          // we'd need more data to be perfect. For now, add to all or first.
+          parents[0].children.push(item);
+        } else {
+          // Orphan - add to root
+          tree.push(item);
+        }
+      }
+    });
+
+    return tree;
+  };
 
   const [planHeader, setPlanHeader] = useState({
     plan_id: '',
@@ -578,7 +619,11 @@ export default function ProductionPlanningForm() {
           const bomDetailsData = await bomDetailsRes.json();
           const bomData = bomDetailsData.data || bomDetailsData;
 
-          const rawMaterials = bomData.rawMaterials || bomData.bom_raw_materials || [];
+          const rawMaterials = [
+            ...(bomData.rawMaterials || []),
+            ...(bomData.bom_raw_materials || []),
+            ...(bomData.lines || [])
+          ];
           const operations = bomData.operations || bomData.bom_operations || [];
 
           // Store base operations for this BOM
@@ -590,8 +635,9 @@ export default function ProductionPlanningForm() {
           rawMaterials.forEach(mat => {
             const matQty = (mat.qty || mat.quantity || 0) * itemQty;
             const group = (mat.item_group || '').toLowerCase();
+            const matCode = mat.item_code || mat.component_code;
 
-            if (isSubAssemblyGroup(mat.item_group)) {
+            if (isSubAssemblyGroup(mat.item_group, matCode)) {
               const subAsmEntry = {
                 item_code: mat.item_code || mat.component_code,
                 item_name: mat.item_name || mat.component_description,
@@ -646,14 +692,15 @@ export default function ProductionPlanningForm() {
         setSubAssemblyBomMaterials([...allSubAsmMaterials]);
 
         if (allDiscoveredSubAsms.length > 0) {
-          // Aggregate all discovered sub-assemblies by item_code
+          // Aggregate all discovered sub-assemblies by item_code AND parent_code to preserve hierarchy
           const aggregatedSubAsms = allDiscoveredSubAsms.reduce((acc, curr) => {
-            if (!acc[curr.item_code]) {
-              acc[curr.item_code] = { ...curr };
+            const key = `${curr.item_code}-${curr.parent_code || 'top'}`;
+            if (!acc[key]) {
+              acc[key] = { ...curr };
             } else {
-              acc[curr.item_code].quantity += curr.quantity;
-              acc[curr.item_code].qty += curr.qty;
-              acc[curr.item_code].planned_qty += curr.planned_qty;
+              acc[key].quantity += curr.quantity;
+              acc[key].qty += curr.qty;
+              acc[key].planned_qty += curr.planned_qty;
             }
             return acc;
           }, {});
@@ -661,7 +708,10 @@ export default function ProductionPlanningForm() {
           setSubAssemblyItems(prev => {
             const updated = [...prev];
             Object.values(aggregatedSubAsms).forEach(discovered => {
-              const existingIdx = updated.findIndex(i => i.item_code === discovered.item_code);
+              const existingIdx = updated.findIndex(i => 
+                i.item_code === discovered.item_code && 
+                (i.parent_code === discovered.parent_code || i.parent_item_code === discovered.parent_code)
+              );
               if (existingIdx !== -1) {
                 const newQty = (updated[existingIdx].quantity || 0) + discovered.quantity;
                 updated[existingIdx] = { 
@@ -726,10 +776,12 @@ export default function ProductionPlanningForm() {
 
       const data = await response.json()
       const bomData = data.data || data
-      const materials = (bomData.rawMaterials || bomData.bom_raw_materials || []).filter(m => {
-        const group = m.item_group || m.group || ''
-        return !isSubAssemblyGroup(group)
-      })
+      // Show all components including sub-assemblies
+      const materials = [
+        ...(bomData.rawMaterials || []),
+        ...(bomData.bom_raw_materials || []),
+        ...(bomData.lines || [])
+      ]
 
       setSubAssemblyMaterials(prev => ({ ...prev, [subAssemblySku]: materials }))
       return materials
@@ -771,10 +823,12 @@ export default function ProductionPlanningForm() {
       if (response.ok) {
         const data = await response.json()
         const bomData = data.data || data
-        const materials = (bomData.rawMaterials || bomData.bom_raw_materials || []).filter(m => {
-          const group = m.item_group || m.group || ''
-          return !isSubAssemblyGroup(group)
-        })
+        // Show all components including sub-assemblies
+        const materials = [
+          ...(bomData.rawMaterials || []),
+          ...(bomData.bom_raw_materials || []),
+          ...(bomData.lines || [])
+        ]
 
         setSubAssemblyMaterials(prev => ({ ...prev, [itemSku]: materials }))
         setExpandedSubAssemblyMaterials(prev => ({ ...prev, [itemSku]: true }))
@@ -911,8 +965,8 @@ export default function ProductionPlanningForm() {
       console.log('✓ Finished Good set:', fgFromBOM)
 
       // Split BOM lines into sub-assemblies and materials
-      const trueSubAsmLines = bomLines.filter(line => isSubAssemblyGroup(line.item_group) || (line.component_type || '').toLowerCase().includes('sub'))
-      const materialLinesFromBOM = bomLines.filter(line => !isSubAssemblyGroup(line.item_group) && !(line.component_type || '').toLowerCase().includes('sub'))
+      const trueSubAsmLines = bomLines.filter(line => isSubAssemblyGroup(line.item_group, line.component_code || line.item_code) || (line.component_type || '').toLowerCase().includes('sub'))
+      const materialLinesFromBOM = bomLines.filter(line => !isSubAssemblyGroup(line.item_group, line.component_code || line.item_code) && !(line.component_type || '').toLowerCase().includes('sub'))
 
       // All lines in a FG BOM that are sub-assemblies
       if (trueSubAsmLines.length > 0) {
@@ -959,7 +1013,10 @@ export default function ProductionPlanningForm() {
         setSubAssemblyBomMaterials([])
       }
 
-      const allMaterials = bomRawMaterialsFromSO.length > 0 ? bomRawMaterialsFromSO : (bomData?.rawMaterials || bomData?.bom_raw_materials || [])
+      const allMaterials = bomRawMaterialsFromSO.length > 0 ? bomRawMaterialsFromSO : [
+        ...(bomData?.rawMaterials || []),
+        ...(bomData?.bom_raw_materials || [])
+      ]
       
       // Combine with material lines found in BOM lines
       const combinedMaterials = [...allMaterials, ...materialLinesFromBOM]
@@ -1063,7 +1120,11 @@ export default function ProductionPlanningForm() {
       }
       console.log('BOM data fetched:', bom)
 
-      const bomLines = bom.rawMaterials || bom.lines || bom.bom_raw_materials || []
+      const bomLines = [
+        ...(bom.rawMaterials || []),
+        ...(bom.bom_raw_materials || []),
+        ...(bom.lines || [])
+      ]
       console.log('BOM raw materials:', bomLines)
 
       let bomList = boms && boms.length > 0 ? boms : []
@@ -1108,7 +1169,11 @@ export default function ProductionPlanningForm() {
           const subBom = subBomDetails.data || subBomDetails
           console.log(`Sub-BOM details for ${itemCode}:`, subBom)
 
-          const subMaterials = subBom.rawMaterials || subBom.bom_raw_materials || []
+          const subMaterials = [
+            ...(subBom.rawMaterials || []),
+            ...(subBom.bom_raw_materials || []),
+            ...(subBom.lines || [])
+          ]
           const operations = subBom.operations || subBom.bom_operations || []
 
           subMaterials.forEach(subMat => {
@@ -1269,285 +1334,27 @@ export default function ProductionPlanningForm() {
 
     try {
       setCreatingWorkOrders(true)
-      const token = localStorage.getItem('token')
+      setError(null)
 
-      if (subAssemblyBomMaterials.length === 0 && fgItems.length === 0) {
-        toast.addToast('Please fetch sub-assembly materials and add finished goods first', 'warning')
-        return
+      const response = await productionService.createWorkOrdersFromPlan(plan_id)
+      
+      if (response.success) {
+        const workOrderIds = response.data?.work_orders || []
+        setSuccess(`Successfully generated ${workOrderIds.length} work orders from production plan.`)
+        toast.addToast(`Generated ${workOrderIds.length} work orders successfully`, 'success')
+        
+        // Refresh local state
+        setPlanHeader(prev => ({ ...prev, status: 'in-progress' }))
+        
+        setTimeout(() => {
+          navigate('/manufacturing/work-orders')
+        }, 2000)
+      } else {
+        setError(response.message || 'Failed to create work orders from plan')
       }
-
-      const createdWorkOrders = []
-
-      console.log('=== STEP 1: Creating work orders for sub-assemblies ===')
-
-      const subAsmToProcess = subAssemblyItems.map(item => {
-        const bom_id = item.bom_id || item.bom_no || (subAssemblyBomMaterials.find(m => m.sub_assembly_code === item.item_code)?.bom_id)
-        return {
-          item_code: item.item_code,
-          item_name: item.item_name,
-          quantity: item.planned_qty || item.quantity,
-          bom_id: bom_id,
-          operations: bomOperationsData[bom_id] || []
-        }
-      })
-
-      console.log(`Creating ${subAsmToProcess.length} sub-assembly work orders...`)
-
-      for (const subAsm of subAsmToProcess) {
-        try {
-          console.log(`Creating work order for sub-assembly: ${subAsm.item_code} with quantity ${subAsm.quantity}`)
-
-          let operations = subAsm.operations || []
-          let finalBomId = subAsm.bom_id
-
-          if (!finalBomId) {
-            console.log(`No BOM ID found for sub-assembly ${subAsm.item_code}, fetching...`)
-            try {
-              const bomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms?item_code=${subAsm.item_code}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-              })
-              if (bomRes.ok) {
-                const bomData = await bomRes.json()
-                const boms = bomData.data || []
-                if (boms.length > 0) {
-                  finalBomId = boms[0].bom_id || boms[0].id
-                }
-              }
-            } catch (err) {
-              console.warn(`Could not fetch BOM for sub-assembly ${subAsm.item_code}:`, err)
-            }
-          }
-
-          if (operations.length === 0 && finalBomId) {
-            console.log(`No operations found for BOM ${finalBomId}, fetching from API...`)
-            try {
-              const bomDetailsResponse = await fetch(
-                `${import.meta.env.VITE_API_URL}/production/boms/${finalBomId}`,
-                { headers: { 'Authorization': `Bearer ${token}` } }
-              )
-              if (bomDetailsResponse.ok) {
-                const bomDetails = await bomDetailsResponse.json()
-                const bom = bomDetails.data || bomDetails
-                operations = bom.bom_operations || bom.operations || []
-              }
-            } catch (err) {
-              console.warn(`Could not fetch operations for BOM ${finalBomId}:`, err)
-            }
-          }
-
-          const woPayload = {
-            item_code: subAsm.item_code,
-            quantity: subAsm.quantity,
-            bom_no: finalBomId,
-            priority: 'medium',
-            notes: `Sub-assembly for production plan ${planHeader.plan_id}`,
-            production_plan_id: plan_id,
-            sales_order_id: selectedSalesOrders[0] || null,
-            planned_start_date: new Date().toISOString().split('T')[0],
-            operations: operations.map(op => ({
-              operation_name: op.operation_name || op.operation || '',
-              workstation_type: op.workstation_type || op.workstation || op.machine_id || '',
-              operation_time: (op.operation_time || op.time || 0) * (subAsm.quantity || 1),
-              notes: op.notes || ''
-            }))
-          }
-
-          const woResponse = await fetch(
-            `${import.meta.env.VITE_API_URL}/production/work-orders`,
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(woPayload)
-            }
-          )
-
-          if (woResponse.ok) {
-            const woData = await woResponse.json()
-            const woId = woData.data?.wo_id || woData.wo_id
-            
-            // Automatically generate job cards for the new work order
-            console.log(`Generating job cards for work order ${woId}...`)
-            let actualJobCardsCount = woData.jobCardsCreated || 0
-            try {
-              const jcRes = await fetch(`${import.meta.env.VITE_API_URL}/production/job-cards/${woId}/generate-all`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-              })
-              if (jcRes.ok) {
-                const jcData = await jcRes.json()
-                const cards = jcData.data || jcData.jobCards || []
-                actualJobCardsCount = cards.length || actualJobCardsCount
-              }
-              console.log(`✓ Job cards generated for ${woId}`)
-            } catch (jcErr) {
-              console.warn(`Could not auto-generate job cards for ${woId}:`, jcErr)
-            }
-
-            createdWorkOrders.push({
-              type: 'sub-assembly',
-              work_order_id: woId,
-              item_code: subAsm.item_code,
-              item_name: subAsm.item_name,
-              jobCardsCreated: actualJobCardsCount
-            })
-            console.log(`✓ Created work order ${woId} with ${actualJobCardsCount} job cards`)
-          } else {
-            const errorData = await woResponse.json()
-            console.error(`Failed to create work order for ${subAsm.item_code}:`, errorData)
-          }
-        } catch (err) {
-          console.error(`Error creating work order for sub-assembly ${subAsm.item_code}:`, err)
-        }
-      }
-
-      console.log('=== STEP 2: Creating work orders for finished goods ===')
-      console.log(`Creating ${fgItems.length} finished goods work orders...`)
-
-      for (const fgItem of fgItems) {
-        try {
-          console.log(`Creating work order for finished good: ${fgItem.item_code}`)
-
-          // Only fallback to selectedBomId if it belongs to this item code
-          let bomIdForFG = fgItem.bom_id || fgItem.bom_no;
-          
-          if (!bomIdForFG && selectedSalesOrderDetails && fgItem.item_code === selectedSalesOrderDetails.item_code) {
-            bomIdForFG = selectedBomId;
-          }
-
-          let fgOpsToSend = fgOperations.length > 0 ? fgOperations : operationItems
-
-          if (!bomIdForFG) {
-            console.log(`No BOM ID found for ${fgItem.item_code}, attempting to fetch BOM...`)
-            try {
-              const bomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms?item_code=${fgItem.item_code}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-              })
-              if (bomRes.ok) {
-                const bomData = await bomRes.json()
-                const boms = bomData.data || []
-                if (boms.length > 0) {
-                  bomIdForFG = boms[0].bom_id || boms[0].id
-                  console.log(`Found BOM for ${fgItem.item_code}: ${bomIdForFG}`)
-
-                  const bomDetailsResponse = await fetch(
-                    `${import.meta.env.VITE_API_URL}/production/boms/${bomIdForFG}`,
-                    { headers: { 'Authorization': `Bearer ${token}` } }
-                  )
-                  if (bomDetailsResponse.ok) {
-                    const bomDetails = await bomDetailsResponse.json()
-                    const bom = bomDetails.data || bomDetails
-                    const allOps = bom.bom_operations || bom.operations || []
-                    fgOpsToSend = allOps
-                  }
-                }
-              }
-            } catch (err) {
-              console.warn(`Could not fetch BOM for ${fgItem.item_code}:`, err)
-            }
-          }
-
-          const fgWoPayload = {
-            item_code: fgItem.item_code,
-            quantity: fgItem.planned_qty || fgItem.quantity || salesOrderQuantity,
-            bom_no: bomIdForFG || null,
-            priority: 'high',
-            notes: `Finished good for production plan ${planHeader.plan_id}`,
-            production_plan_id: plan_id,
-            sales_order_id: selectedSalesOrders[0] || null,
-            planned_start_date: fgItem.planned_start_date || new Date().toISOString().split('T')[0],
-            operations: fgOpsToSend.map(op => {
-              const qty = fgItem.planned_qty || fgItem.quantity || salesOrderQuantity || 1;
-              const opTime = op.proportional_time || ((op.operation_time || op.time || 0) * qty);
-              return {
-                operation_name: op.operation_name || op.operation || '',
-                workstation_type: op.workstation_type || op.workstation || op.machine_id || '',
-                operation_time: opTime,
-                notes: op.notes || ''
-              };
-            })
-          }
-
-          const fgWoResponse = await fetch(
-            `${import.meta.env.VITE_API_URL}/production/work-orders`,
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(fgWoPayload)
-            }
-          )
-
-          if (fgWoResponse.ok) {
-            const fgWoData = await fgWoResponse.json()
-            const fgWoId = fgWoData.data?.wo_id || fgWoData.wo_id
-            
-            // Automatically generate job cards for the new finished good work order
-            console.log(`Generating job cards for finished good work order ${fgWoId}...`)
-            try {
-              await fetch(`${import.meta.env.VITE_API_URL}/production/job-cards/${fgWoId}/generate-all`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-              })
-              console.log(`✓ Job cards generated for ${fgWoId}`)
-            } catch (jcErr) {
-              console.warn(`Could not auto-generate job cards for ${fgWoId}:`, jcErr)
-            }
-
-            const jobCardsCount = fgWoData.jobCardsCreated || 0
-            createdWorkOrders.push({
-              type: 'finished-good',
-              work_order_id: fgWoId,
-              item_code: fgItem.item_code,
-              item_name: fgItem.item_name,
-              jobCardsCreated: jobCardsCount
-            })
-            console.log(`✓ Created work order ${fgWoId} with ${jobCardsCount} job cards`)
-          } else {
-            const errorData = await fgWoResponse.json()
-            console.error(`Failed to create work order for ${fgItem.item_code}:`, errorData)
-          }
-        } catch (err) {
-          console.error(`Error creating work order for finished good ${fgItem.item_code}:`, err)
-        }
-      }
-
-      const subAsmCount = createdWorkOrders.filter(wo => wo.type === 'sub-assembly').length
-      const fgCount = createdWorkOrders.filter(wo => wo.type === 'finished-good').length
-      const totalJobCards = createdWorkOrders.reduce((sum, wo) => sum + (wo.jobCardsCreated || 0), 0)
-
-      console.log('=== WORK ORDER CREATION COMPLETE ===')
-      console.log(`✓ Sub-assembly work orders: ${subAsmCount}`)
-      console.log(`✓ Finished goods work orders: ${fgCount}`)
-      console.log(`✓ Total work orders: ${createdWorkOrders.length}`)
-      console.log(`✓ Total job cards created: ${totalJobCards}`)
-
-      setSuccess(`Created ${subAsmCount} sub-assembly + ${fgCount} finished goods = ${createdWorkOrders.length} work orders with ${totalJobCards} job cards`)
-
-      // Update plan status to in-progress
-      try {
-        await fetch(`${import.meta.env.VITE_API_URL}/production-planning/${plan_id}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ status: 'in-progress' })
-        })
-      } catch (statusErr) {
-        console.warn('Failed to update plan status:', statusErr)
-      }
-
-      setTimeout(() => {
-        navigate('/manufacturing/work-orders')
-      }, 2500)
     } catch (err) {
-      console.error('Error creating work orders:', err)
-      setError(`Failed to create work orders: ${err.message}`)
+      console.error('Error creating work orders from plan:', err)
+      setError(`Error creating work orders: ${err.message}`)
     } finally {
       setCreatingWorkOrders(false)
     }
@@ -1809,7 +1616,11 @@ export default function ProductionPlanningForm() {
 
             console.log(`BOM details for ${itemCode}:`, bom)
 
-            const materials = bom.bom_raw_materials || bom.rawMaterials || bom.lines || []
+            const materials = [
+              ...(bom.bom_raw_materials || []),
+              ...(bom.rawMaterials || []),
+              ...(bom.lines || [])
+            ]
             const operations = bom.bom_operations || bom.operations || []
             console.log(`Materials found: ${materials.length}, Operations found: ${operations.length}`)
 
@@ -1998,6 +1809,7 @@ export default function ProductionPlanningForm() {
               body: JSON.stringify({
                 item_code: item.item_code,
                 item_name: item.item_name,
+                parent_item_code: item.parent_code || item.parent_item_code,
                 bom_no: item.bom_id || item.bom_no,
                 planned_qty: item.quantity || item.planned_qty || 1,
                 scheduled_date: item.planned_start_date
@@ -2564,8 +2376,8 @@ export default function ProductionPlanningForm() {
                                                 <tr key={mIdx} className="hover:bg-slate-50 transition-colors">
                                                   <td className="p-2 text-slate-400 font-medium">{mIdx + 1}</td>
                                                   <td className="p-2">
-                                                    <div className="font-medium text-slate-900">{m.item_code}</div>
-                                                    <div className="text-slate-400 text-[9px]">{m.item_name || m.description}</div>
+                                                    <div className="font-medium text-slate-900">{m.item_code || m.component_code}</div>
+                                                    <div className="text-slate-400 text-[9px]">{m.item_name || m.component_description || m.description}</div>
                                                   </td>
                                                   <td className="p-2">
                                                     <GroupBadge group={m.item_group} />
@@ -2637,121 +2449,171 @@ export default function ProductionPlanningForm() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
-                            {subAssemblyItems.map((item, idx) => (
-                              <React.Fragment key={idx}>
-                                <tr 
-                                  className="hover:bg-rose-50/30 transition-colors group cursor-pointer"
-                                  onClick={() => toggleItemMaterials(item)}
-                                >
-                                  <td className="p-2 text-[10px] text-slate-400 font-medium">
-                                    {idx + 1}
-                                  </td>
-                                  <td className="p-2">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-7 h-7 rounded bg-rose-50 flex items-center justify-center text-rose-600 border border-rose-100">
-                                        <Layers size={14} />
-                                      </div>
-                                      <div>
-                                        <p className="text-xs font-medium text-slate-900 leading-tight">
-                                          {item.item_code}
-                                        </p>
-                                        <p className="text-[10px] text-slate-500 truncate max-w-[200px]">
-                                          {item.item_name}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td className="p-2">
-                                    <GroupBadge group={item.item_group || 'Sub Assembly'} />
-                                  </td>
-                                  <td className="p-2">
-                                    <div className="flex items-center gap-1.5 text-slate-600">
-                                      <Warehouse size={12} className="text-slate-400" />
-                                      <span className="text-[10px] font-medium truncate max-w-[120px]">
-                                        {item.warehouse || 'Work In Progress - NC'}
-                                      </span>
-                                    </div>
-                                  </td>
-                                  <td className="p-2 text-center">
-                                    <div className="flex items-center justify-center gap-1.5 text-slate-600">
-                                      <Calendar size={12} className="text-slate-400" />
-                                      <span className="text-[11px] font-medium">
-                                        {item.planned_start_date || 'TBD'}
-                                      </span>
-                                    </div>
-                                  </td>
-                                  <td className="p-2 text-right">
-                                    <div className="flex flex-col items-end">
-                                      <span className="text-sm  text-rose-600">
-                                        {item.planned_qty || item.quantity || item.qty || '-'}
-                                      </span>
-                                      <span className="text-[9px] text-slate-400 uppercase">{item.uom || 'PCS'}</span>
-                                    </div>
-                                  </td>
-                                  <td className="p-2 text-center">
-                                    <div className="flex items-center justify-center gap-1.5 text-rose-700 bg-rose-50/50 px-2 py-0.5 rounded border border-rose-100/50 w-fit mx-auto">
-                                      <Layers size={12} className="text-rose-500" />
-                                      <span className="font-mono text-[10px]">
-                                        {item.bom_no || item.bom_id || 'N/A'}
-                                      </span>
-                                    </div>
-                                  </td>
-                                  <td className="p-2 text-center">
-                                    <span className="text-[10px] text-rose-600 font-medium px-1.5 py-0.5 bg-rose-50 rounded border border-rose-100">
-                                      {item.manufacturing_type || 'In House'}
-                                    </span>
-                                  </td>
-                                </tr>
-                                {expandedSubAssemblyMaterials[item.item_code] && subAssemblyMaterials[item.item_code] && (
-                                  <tr>
-                                    <td colSpan="7" className="p-0 bg-rose-50/10">
-                                      <div className="p-4 border-l-4 border-rose-500 m-3 bg-white shadow-sm rounded-sm border border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
-                                        <div className="flex items-center gap-2 mb-3">
-                                          <div className="p-1.5 bg-rose-50 text-rose-600 rounded">
-                                            <Boxes size={14} />
-                                          </div>
-                                          <h4 className="text-[11px]  text-slate-800 ">Raw Materials from BOM</h4>
+                            {(() => {
+                              const tree = buildSubAssemblyTree(subAssemblyItems);
+                              
+                              const renderSubAssembly = (item, level = 0, path = '') => {
+                                const currentPath = path ? `${path}.${item.item_code}` : item.item_code;
+                                const isExpanded = expandedSubAsms[currentPath];
+                                const hasChildren = item.children && item.children.length > 0;
+                                
+                                return (
+                                  <React.Fragment key={currentPath}>
+                                    <tr 
+                                      className={`hover:bg-rose-50/30 transition-colors group cursor-pointer ${level > 0 ? 'bg-slate-50/30' : ''}`}
+                                      onClick={() => {
+                                        if (hasChildren) {
+                                          setExpandedSubAsms(prev => ({ ...prev, [currentPath]: !prev[currentPath] }));
+                                        }
+                                      }}
+                                    >
+                                      <td className="p-2 text-[10px] text-slate-400 font-medium">
+                                        <div className="flex items-center gap-1">
+                                          {hasChildren ? (
+                                            <ChevronDown 
+                                              size={12} 
+                                              className={`transform transition-transform ${isExpanded ? '' : '-rotate-90'}`} 
+                                            />
+                                          ) : <div className="w-3" />}
+                                          {level + 1}
                                         </div>
-                                        <table className="w-full text-[10px] border-collapse">
-                                          <thead>
-                                            <tr className="bg-slate-50 border-b border-slate-100">
-                                              <th className="p-2 text-left  text-slate-500 uppercase w-8">No.</th>
-                                              <th className="p-2 text-left  text-slate-500 uppercase">Item</th>
-                                              <th className="p-2 text-left  text-slate-500 uppercase">Group</th>
-                                              <th className="p-2 text-right  text-slate-500 uppercase">Qty per Unit</th>
-                                              <th className="p-2 text-right  text-slate-500 uppercase">Total Required Qty</th>
-                                              <th className="p-2 text-center  text-slate-500 uppercase">UOM</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody className="divide-y divide-slate-50">
-                                            {subAssemblyMaterials[item.item_code].map((m, mIdx) => {
-                                              const plannedQty = item.planned_qty || item.quantity || item.qty || 1;
-                                              const perUnitQty = parseFloat(m.qty || m.quantity || 0);
-                                              const totalQty = perUnitQty * plannedQty;
-                                              return (
-                                                <tr key={mIdx} className="hover:bg-slate-50 transition-colors">
-                                                  <td className="p-2 text-slate-400 font-medium">{mIdx + 1}</td>
-                                                  <td className="p-2">
-                                                    <div className="font-medium text-slate-900">{m.item_code}</div>
-                                                    <div className="text-slate-400 text-[9px]">{m.item_name || m.description}</div>
-                                                  </td>
-                                                  <td className="p-2">
-                                                    <GroupBadge group={m.item_group} />
-                                                  </td>
-                                                  <td className="p-2 text-right text-slate-600">{perUnitQty.toFixed(4)}</td>
-                                                  <td className="p-2 text-right  text-rose-600">{totalQty.toFixed(4)}</td>
-                                                  <td className="p-2 text-center text-slate-500">{m.uom || 'Nos'}</td>
+                                      </td>
+                                      <td className="p-2">
+                                        <div className="flex items-center gap-2" style={{ paddingLeft: `${level * 16}px` }}>
+                                          <div className={`w-7 h-7 rounded flex items-center justify-center border ${level === 0 ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                                            <Layers size={14} />
+                                          </div>
+                                          <div>
+                                            <p className="text-xs font-medium text-slate-900 leading-tight">
+                                              {item.item_code}
+                                            </p>
+                                            <p className="text-[10px] text-slate-500 truncate max-w-[200px]">
+                                              {item.item_name}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </td>
+                                      <td className="p-2">
+                                        <GroupBadge group={item.item_group || 'Sub Assembly'} />
+                                      </td>
+                                      <td className="p-2">
+                                        <div className="flex items-center gap-1.5 text-slate-600">
+                                          <Warehouse size={12} className="text-slate-400" />
+                                          <span className="text-[10px] font-medium truncate max-w-[120px]">
+                                            {item.warehouse || 'Work In Progress - NC'}
+                                          </span>
+                                        </div>
+                                      </td>
+                                      <td className="p-2 text-center">
+                                        <div className="flex items-center justify-center gap-1.5 text-slate-600">
+                                          <Calendar size={12} className="text-slate-400" />
+                                          <span className="text-[11px] font-medium">
+                                            {item.planned_start_date || 'TBD'}
+                                          </span>
+                                        </div>
+                                      </td>
+                                      <td className="p-2 text-right">
+                                        <div className="flex flex-col items-end">
+                                          <span className="text-sm  text-rose-600">
+                                            {item.planned_qty || item.quantity || item.qty || '-'}
+                                          </span>
+                                          <span className="text-[9px] text-slate-400 uppercase">{item.uom || 'PCS'}</span>
+                                        </div>
+                                      </td>
+                                      <td className="p-2 text-center">
+                                        <div className="flex items-center justify-center gap-1.5 text-rose-700 bg-rose-50/50 px-2 py-0.5 rounded border border-rose-100/50 w-fit mx-auto">
+                                          <Layers size={12} className="text-rose-500" />
+                                          <span className="font-mono text-[10px]">
+                                            {item.bom_no || item.bom_id || 'N/A'}
+                                          </span>
+                                        </div>
+                                      </td>
+                                      <td className="p-2 text-center">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleItemMaterials(item);
+                                          }}
+                                          className={`px-2 py-1 rounded text-[10px] font-medium border transition-colors ${
+                                            expandedSubAssemblyMaterials[item.item_code]
+                                              ? 'bg-rose-100 text-rose-700 border-rose-200'
+                                              : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300 hover:text-rose-600'
+                                          }`}
+                                        >
+                                          Materials
+                                        </button>
+                                      </td>
+                                    </tr>
+
+                                    {/* Sub-assembly materials (raw materials) */}
+                                    {expandedSubAssemblyMaterials[item.item_code] && subAssemblyMaterials[item.item_code] && (
+                                      <tr>
+                                        <td colSpan="8" className="p-0 bg-rose-50/10">
+                                          <div className="p-4 border-l-4 border-rose-500 m-3 bg-white shadow-sm rounded-sm border border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <div className="flex items-center gap-2 mb-3">
+                                              <div className="p-1.5 bg-rose-50 text-rose-600 rounded">
+                                                <Layers size={14} />
+                                              </div>
+                                              <h4 className="text-[11px]  text-slate-800 ">BOM Components & Materials</h4>
+                                            </div>
+                                            <table className="w-full text-[10px] border-collapse">
+                                              <thead>
+                                                <tr className="bg-slate-50 border-b border-slate-100">
+                                                  <th className="p-2 text-left  text-slate-500 uppercase w-8">No.</th>
+                                                  <th className="p-2 text-left  text-slate-500 uppercase">Item</th>
+                                                  <th className="p-2 text-left  text-slate-500 uppercase">Group</th>
+                                                  <th className="p-2 text-right  text-slate-500 uppercase">Qty per Unit</th>
+                                                  <th className="p-2 text-right  text-rose-600 uppercase">Total Required Qty</th>
+                                                  <th className="p-2 text-center  text-slate-500 uppercase">UOM</th>
                                                 </tr>
-                                              );
-                                            })}
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                )}
-                              </React.Fragment>
-                            ))}
+                                              </thead>
+                                              <tbody className="divide-y divide-slate-50">
+                                                {subAssemblyMaterials[item.item_code].map((m, mIdx) => {
+                                                  const plannedQty = item.planned_qty || item.quantity || item.qty || 1;
+                                                  const perUnitQty = parseFloat(m.qty || m.quantity || 0);
+                                                  const totalQty = perUnitQty * plannedQty;
+                                                  const mCode = m.item_code || m.component_code;
+                                                  const isSubAsm = isSubAssemblyGroup(m.item_group, mCode);
+                                                  
+                                                  return (
+                                                    <tr key={mIdx} className={`hover:bg-slate-50 transition-colors ${isSubAsm ? 'bg-rose-50/20' : ''}`}>
+                                                      <td className="p-2 text-slate-400 font-medium">{mIdx + 1}</td>
+                                                      <td className="p-2">
+                                                        <div className="flex items-center gap-2">
+                                                          {isSubAsm && <Layers size={10} className="text-rose-500" />}
+                                                          <div className={`font-medium ${isSubAsm ? 'text-rose-700' : 'text-slate-900'}`}>{mCode}</div>
+                                                          {isSubAsm && (
+                                                            <span className="px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[8px] font-bold uppercase tracking-wider">
+                                                              Sub-Assembly
+                                                            </span>
+                                                          )}
+                                                        </div>
+                                                        <div className="text-slate-400 text-[9px]">{m.item_name || m.component_description || m.description}</div>
+                                                      </td>
+                                                      <td className="p-2">
+                                                        <GroupBadge group={m.item_group} />
+                                                      </td>
+                                                      <td className="p-2 text-right text-slate-600">{perUnitQty.toFixed(4)}</td>
+                                                      <td className="p-2 text-right font-medium text-rose-600">{totalQty.toFixed(4)}</td>
+                                                      <td className="p-2 text-center text-slate-500">{m.uom || 'Nos'}</td>
+                                                    </tr>
+                                                  );
+                                                })}
+                                              </tbody>
+                                            </table>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    )}
+
+                                    {/* Recursive child sub-assemblies */}
+                                    {isExpanded && hasChildren && item.children.map(child => renderSubAssembly(child, level + 1, currentPath))}
+                                  </React.Fragment>
+                                );
+                              };
+
+                              return tree.map(rootItem => renderSubAssembly(rootItem));
+                            })()}
                           </tbody>
                         </table>
                       </div>

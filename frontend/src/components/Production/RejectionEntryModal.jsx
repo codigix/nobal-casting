@@ -22,6 +22,7 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
   const [formData, setFormData] = useState({
     reason: '',
     rejected_qty: 0,
+    scrap_qty: 0,
     notes: ''
   })
 
@@ -44,14 +45,14 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'rejected_qty' ? parseFloat(value) || 0 : value
+      [name]: (name === 'rejected_qty' || name === 'scrap_qty') ? parseFloat(value) || 0 : value
     }))
   }
 
   const handleAddRejection = async (e) => {
     e.preventDefault()
     
-    if (!formData.reason || formData.rejected_qty <= 0) {
+    if (!formData.reason || (formData.rejected_qty <= 0 && formData.scrap_qty <= 0)) {
       toast.addToast('Please select a reason and enter quantity', 'error')
       return
     }
@@ -62,6 +63,7 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
         job_card_id: jobCardId,
         rejection_reason: formData.reason,
         rejected_qty: formData.rejected_qty,
+        scrap_qty: formData.scrap_qty,
         notes: formData.notes
       }
 
@@ -71,6 +73,7 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
       setFormData({
         reason: '',
         rejected_qty: 0,
+        scrap_qty: 0,
         notes: ''
       })
       
@@ -94,6 +97,7 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
   }
 
   const totalRejectedQty = rejections.reduce((sum, r) => sum + (r.rejected_qty || 0), 0)
+  const totalScrapQty = rejections.reduce((sum, r) => sum + (r.scrap_qty || 0), 0)
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Rejection Entry" size="lg">
@@ -107,9 +111,9 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
         <form onSubmit={handleAddRejection} style={{ marginBottom: '30px', padding: '15px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
           <h3 style={{ marginTop: 0, marginBottom: '15px', fontSize: '1rem' }}>Record Rejection</h3>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '15px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '5px' }}>Rejection Reason *</label>
+              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '5px' }}>Reason *</label>
               <select
                 name="reason"
                 value={formData.reason}
@@ -125,7 +129,7 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '5px' }}>Rejected Qty *</label>
+              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '5px' }}>Rejected Qty</label>
               <input
                 type="number"
                 name="rejected_qty"
@@ -134,7 +138,19 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
                 step="0.01"
                 min="0"
                 style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                required
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '5px' }}>Scrap Qty</label>
+              <input
+                type="number"
+                name="scrap_qty"
+                value={formData.scrap_qty}
+                onChange={handleChange}
+                step="0.01"
+                min="0"
+                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
               />
             </div>
           </div>
@@ -169,8 +185,9 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
           </button>
         </form>
 
-        <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#fee2e2', border: '1px solid #fecaca', borderRadius: '8px' }}>
-          <strong>Total Rejected:</strong> {totalRejectedQty.toFixed(2)} units
+        <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#fee2e2', border: '1px solid #fecaca', borderRadius: '8px', display: 'flex', gap: '20px' }}>
+          <div><strong>Total Rejected:</strong> {totalRejectedQty.toFixed(2)} units</div>
+          <div><strong>Total Scrap:</strong> {totalScrapQty.toFixed(2)} units</div>
         </div>
 
         <h3 style={{ marginBottom: '15px', fontSize: '1rem' }}>Rejection History ({rejections.length})</h3>
@@ -181,7 +198,8 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
               <thead>
                 <tr style={{ backgroundColor: '#f3f4f6', borderBottom: '2px solid #e5e7eb' }}>
                   <th style={{ padding: '10px', textAlign: 'left' }}>Reason</th>
-                  <th style={{ padding: '10px', textAlign: 'center' }}>Qty</th>
+                  <th style={{ padding: '10px', textAlign: 'center' }}>Rej Qty</th>
+                  <th style={{ padding: '10px', textAlign: 'center' }}>Scrap Qty</th>
                   <th style={{ padding: '10px', textAlign: 'left' }}>Notes</th>
                   <th style={{ padding: '10px', textAlign: 'left' }}>Date</th>
                   <th style={{ padding: '10px', textAlign: 'center' }}>Action</th>
@@ -192,6 +210,7 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
                   <tr key={rejection.rejection_id} style={{ borderBottom: '1px solid #e5e7eb' }}>
                     <td style={{ padding: '10px' }}>{rejection.rejection_reason}</td>
                     <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: '#dc2626' }}>{rejection.rejected_qty}</td>
+                    <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: '#f97316' }}>{rejection.scrap_qty || 0}</td>
                     <td style={{ padding: '10px', fontSize: '0.85rem' }}>{rejection.notes || '-'}</td>
                     <td style={{ padding: '10px', fontSize: '0.85rem' }}>{rejection.created_at ? new Date(rejection.created_at).toLocaleDateString() : '-'}</td>
                     <td style={{ padding: '10px', textAlign: 'center' }}>

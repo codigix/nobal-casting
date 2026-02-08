@@ -61,6 +61,7 @@ class ProductionAnalyticsController {
           produced_qty: 0,
           accepted_qty: 0,
           rejected_qty: 0,
+          scrap_qty: 0,
           status: 'pending',
           job_cards_count: 0,
           completed_count: 0
@@ -82,6 +83,7 @@ class ProductionAnalyticsController {
             produced_qty: 0,
             accepted_qty: 0,
             rejected_qty: 0,
+            scrap_qty: 0,
             status: 'pending',
             job_cards_count: 0,
             completed_count: 0
@@ -93,6 +95,7 @@ class ProductionAnalyticsController {
         stage.produced_qty += parseFloat(jc.produced_quantity || 0)
         stage.accepted_qty += parseFloat(jc.accepted_quantity || 0)
         stage.rejected_qty += parseFloat(jc.rejected_quantity || 0)
+        stage.scrap_qty += parseFloat(jc.scrap_quantity || 0)
         stage.job_cards_count += 1
         
         if (jc.status?.toLowerCase() === 'completed') {

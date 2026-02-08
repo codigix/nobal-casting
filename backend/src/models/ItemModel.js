@@ -264,6 +264,12 @@ export class ItemModel {
         params.push(searchTerm, searchTerm)
       }
 
+      if (filters.item_codes && Array.isArray(filters.item_codes) && filters.item_codes.length > 0) {
+        const placeholders = filters.item_codes.map(() => '?').join(',')
+        query += ` AND i.item_code IN (${placeholders})`
+        params.push(...filters.item_codes)
+      }
+
       query += ` GROUP BY i.item_code`
 
       const limit = filters.limit || 100

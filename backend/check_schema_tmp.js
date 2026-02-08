@@ -1,29 +1,38 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+dotenv.config();
 
-dotenv.config({ path: path.join(__dirname, '.env') });
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'nobalcasting_user',
+  password: process.env.DB_PASSWORD || 'C0digix$309',
+  database: process.env.DB_NAME || 'nobalcasting',
+  port: process.env.DB_PORT || 3307,
+});
 
-async function check() {
-  const db = await mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port: parseInt(process.env.DB_PORT)
-  });
-  
-  const [jc] = await db.query('SHOW COLUMNS FROM job_card');
-  console.log('job_card columns:', jc.map(c => c.Field));
-  
-  const [tl] = await db.query('SHOW COLUMNS FROM time_log');
-  console.log('time_log columns:', tl.map(c => c.Field));
-  
-  await db.end();
+async function checkSchema() {
+  try {
+    const [columns] = await pool.query('SHOW COLUMNS FROM production_entry');
+    console.log('Columns in production_entry:');
+    console.table(columns.map(c => ({ Field: c.Field, Type: c.Type })));
+    
+    const [jcColumns] = await pool.query('SHOW COLUMNS FROM job_card');
+    console.log('Columns in job_card:');
+    console.table(jcColumns.map(c => ({ Field: c.Field, Type: c.Type })));
+
+    const [rejColumns] = await pool.query('SHOW COLUMNS FROM rejection_entry');
+    console.log('Columns in rejection_entry:');
+    console.table(rejColumns.map(c => ({ Field: c.Field, Type: c.Type })));
+
+    const [tlColumns] = await pool.query('SHOW COLUMNS FROM time_log');
+    console.log('Columns in time_log:');
+    console.table(tlColumns.map(c => ({ Field: c.Field, Type: c.Type })));
+  } catch (err) {
+    console.error(err);
+  } finally {
+    await pool.end();
+  }
 }
 
-check();
+checkSchema();

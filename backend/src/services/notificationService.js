@@ -1,3 +1,5 @@
+import { config } from '../config/config.js'
+
 let nodemailer = null
 let nodemailerInitialized = false
 
@@ -34,13 +36,13 @@ export class NotificationService {
 
     try {
       this.transporter = mod.createTransport({
-        host: process.env.MAIL_HOST || 'localhost',
-        port: process.env.MAIL_PORT || 587,
-        secure: process.env.MAIL_SECURE === 'true',
-        auth: process.env.MAIL_USER
+        host: config.mail.host,
+        port: config.mail.port,
+        secure: config.mail.secure,
+        auth: config.mail.user
           ? {
-              user: process.env.MAIL_USER,
-              pass: process.env.MAIL_PASSWORD
+              user: config.mail.user,
+              pass: config.mail.password
             }
           : undefined,
         tls: {
@@ -99,7 +101,7 @@ export class NotificationService {
       `
 
       const mailOptions = {
-        from: process.env.MAIL_FROM || 'erp@company.com',
+        from: config.mail.from,
         to: accountingEmails.join(', '),
         subject: `Payment Reminder - PO ${po_no} for ${supplier_name}`,
         html: htmlContent,
@@ -164,7 +166,7 @@ export class NotificationService {
       `
 
       const mailOptions = {
-        from: process.env.MAIL_FROM || 'erp@company.com',
+        from: config.mail.from,
         to: accountingEmails.join(', '),
         subject: `URGENT - Overdue Payment for PO ${po_no} (${days_overdue} days)`,
         html: htmlContent
@@ -230,7 +232,7 @@ export class NotificationService {
       `
 
       const mailOptions = {
-        from: process.env.MAIL_FROM || 'erp@company.com',
+        from: config.mail.from,
         to: accountingEmails.join(', '),
         subject: `Payment Confirmation - PO ${po_no}`,
         html: htmlContent

@@ -176,7 +176,7 @@ export default function InventoryDashboard() {
   }
 
   const StatCard = ({ label, value, icon: Icon, color, trend, trendValue, trendDirection }) => (
-    <div className={`bg-gradient-to-br ${color} p-5 rounded  border-2 transition-all duration-300 hover:shadow-lg hover:scale-105 relative overflow-hidden group`}>
+    <div className={`bg-gradient-to-br ${color} p-2 rounded  border-2 transition-all duration-300 hover:shadow-lg hover:scale-105 relative overflow-hidden group`}>
       <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full group-hover:scale-110 transition-transform" />
       <div className="flex items-start justify-between mb-2">
         <span className="text-xs    text-gray-500 ">{label}</span>

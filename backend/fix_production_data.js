@@ -5,17 +5,17 @@ import ProductionModel from './src/models/ProductionModel.js';
 dotenv.config();
 
 const db = createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
+  host: process.env.DB_HOST || '127.0.0.1',
+  user: process.env.DB_USER || 'nobalcasting_user',
+  password: process.env.DB_PASSWORD || 'C0digix$309',
   database: process.env.DB_NAME || 'nobalcasting',
-  port: process.env.DB_PORT || 3306,
+  port: process.env.DB_PORT || 3307,
 });
 
 async function fixData() {
   try {
     const model = new ProductionModel(db);
-    const woId = 'WO-1768825111111';
+    const woId = 'WO-1770270801569-126';
     
     console.log(`Fixing data for Work Order: ${woId}`);
     

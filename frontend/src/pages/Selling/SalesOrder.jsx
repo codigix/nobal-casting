@@ -592,7 +592,7 @@ export default function SalesOrder() {
           {/* Main Metric Card */}
           <div className="glass-card glass-card-primary p-2 relative group border-l-4">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+              <div className="p-2 rounded  bg-blue-50 text-blue-600">
                 <DollarSign size={20} />
               </div>
               <div className="flex items-center gap-1 text-xs  text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
@@ -615,7 +615,7 @@ export default function SalesOrder() {
 
           <div className="glass-card glass-card-warning p-2 relative group border-l-4">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-2 rounded-lg bg-amber-50 text-amber-600">
+              <div className="p-2 rounded  bg-amber-50 text-amber-600">
                 <Clock size={20} />
               </div>
               <div className="text-xs  text-amber-600 bg-amber-50 px-2 py-1 rounded-full ">
@@ -645,7 +645,7 @@ export default function SalesOrder() {
 
           <div className="glass-card glass-card-danger p-2 relative group border-l-4">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-2 rounded-lg bg-rose-50 text-rose-600">
+              <div className="p-2 rounded  bg-rose-50 text-rose-600">
                 <AlertTriangle size={20} />
               </div>
               {stats.overdue > 0 && (
@@ -664,7 +664,7 @@ export default function SalesOrder() {
 
           <div className="glass-card glass-card-success p-2 relative group border-l-4">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+              <div className="p-2 rounded  bg-emerald-50 text-emerald-600">
                 <CheckCircle size={20} />
               </div>
               <div className="text-xs  text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full ">

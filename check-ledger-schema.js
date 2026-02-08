@@ -8,7 +8,8 @@ async function checkSchema() {
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || 'proot',
-    database: process.env.DB_NAME || 'nobalcasting'
+    database: process.env.DB_NAME || 'nobalcasting',
+    port: process.env.DB_PORT || 3306
   });
 
   try {

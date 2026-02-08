@@ -178,7 +178,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
     try {
       setLoading(true)
       setError(null)
-      const isTransferOrIssue = ['material_transfer', 'material_issue'].includes(request?.purpose)
+      const isTransferOrIssue = ['material_transfer', 'material_issue'].includes(request?.purpose?.toLowerCase())
       const finalWarehouse = selectedSourceWarehouse || request?.source_warehouse
       
       if (isTransferOrIssue && !finalWarehouse) {
@@ -365,11 +365,11 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
     return <Badge color={colors[status] || 'secondary'} className=" text-xs p-1">{status}</Badge>
   }
 
-  const isTransferOrIssue = ['material_issue', 'material_transfer'].includes(request?.purpose)
+  const isTransferOrIssue = ['material_issue', 'material_transfer'].includes(request?.purpose?.toLowerCase())
   const anyAvailable = request?.items?.some(item => {
     const stock = stockData[item.item_code]
     const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
-    return stock && stock.hasStock && pendingQty > 0
+    return stock && stock.hasStock && (pendingQty > 0 || request?.status === 'completed')
   })
   const anyUnavailable = request?.items?.some(item => {
     const stock = stockData[item.item_code]
@@ -398,7 +398,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
           {/* New Header Info Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+              <div className="w-10 h-10 rounded  bg-amber-50 flex items-center justify-center text-amber-600">
                 <Activity size={15} />
               </div>
               <div>
@@ -408,7 +408,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
             </div>
 
             <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+              <div className="w-10 h-10 rounded  bg-blue-50 flex items-center justify-center text-blue-600">
                 <ArrowRightLeft size={15} />
               </div>
               <div>
@@ -418,7 +418,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
             </div>
 
             <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600">
+              <div className="w-10 h-10 rounded  bg-purple-50 flex items-center justify-center text-purple-600">
                 <Building2 size={15} />
               </div>
               <div>
@@ -428,7 +428,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
             </div>
 
             <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+              <div className="w-10 h-10 rounded  bg-emerald-50 flex items-center justify-center text-emerald-600">
                 <User size={15} />
               </div>
               <div>
@@ -438,7 +438,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
             </div>
 
             <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+              <div className="w-10 h-10 rounded  bg-indigo-50 flex items-center justify-center text-indigo-600">
                 <ShoppingCart size={15} />
               </div>
               <div>
@@ -461,16 +461,26 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
               <div className="bg-white rounded  border border-slate-200   overflow-hidden">
                 <div className="p-2 border-b border-slate-100 flex items-center justify-between bg-white">
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-slate-50 rounded-lg text-slate-600">
+                    <div className="p-1.5 bg-slate-50 rounded  text-slate-600">
                       <Package size={18} />
                     </div>
                     <h3 className="text-sm   text-slate-800">Line Items</h3>
                   </div>
-                  {checkingStock && (
-                    <div className="flex items-center gap-2 text-xs   text-blue-600 animate-pulse">
-                      <RefreshCw size={12} className="animate-spin" /> Verifying Inventory...
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => checkStockAvailability(request)}
+                      disabled={checkingStock}
+                      className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors text-[10px] font-medium"
+                    >
+                      <RefreshCw size={12} className={checkingStock ? 'animate-spin' : ''} />
+                      Refresh Stock
+                    </button>
+                    {checkingStock && (
+                      <div className="flex items-center gap-2 text-xs   text-blue-600 animate-pulse">
+                        Verifying Inventory...
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="overflow-x-auto">
@@ -551,7 +561,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                                 
                                 {/* Individual Release Button */}
                                 {isTransferOrIssue && 
-                                 ['pending', 'partial', 'approved'].includes(request?.status) && 
+                                 ['pending', 'partial', 'approved', 'completed'].includes(request?.status) && 
                                  item.status !== 'completed' && 
                                  stock?.hasStock && (
                                   <button
@@ -578,20 +588,44 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
             {/* Right Column: Sidebar */}
             <div className="space-y-6">
               {/* Source Configuration */}
-              {['draft', 'pending', 'partial', 'approved'].includes(request?.status) && ['material_issue', 'material_transfer'].includes(request?.purpose) && (
-                <div className="bg-white rounded  border border-amber-200   overflow-hidden">
-                  <div className="px-5 py-2 border-b border-amber-50 bg-amber-50 flex items-center gap-2 text-amber-800">
-                    <Warehouse size={16} />
-                    <h3 className="text-xs tracking-wider">Source Configuration</h3>
+              {['draft', 'pending', 'partial', 'approved', 'completed'].includes(request?.status) && isTransferOrIssue && (
+                <div className={`bg-white rounded border-2 transition-all duration-300 overflow-hidden ${
+                  !selectedSourceWarehouse && anyAvailable 
+                    ? 'border-amber-500 shadow-lg shadow-amber-500/10 scale-[1.02]' 
+                    : 'border-slate-200'
+                }`}>
+                  <div className={`px-5 py-2 border-b flex items-center justify-between ${
+                    !selectedSourceWarehouse && anyAvailable ? 'bg-amber-500 text-white' : 'bg-slate-50 text-slate-700'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <Warehouse size={16} />
+                      <h3 className="text-xs font-bold tracking-wider uppercase">Fulfillment Source</h3>
+                    </div>
+                    {!selectedSourceWarehouse && anyAvailable && (
+                      <Badge color="warning" className="text-[10px] animate-bounce bg-white text-amber-600 border-none">
+                        Action Required
+                      </Badge>
+                    )}
                   </div>
-                  <div className="p-5 ">
+                  <div className="p-5">
                     <div className="space-y-2">
-                      <label className="text-xs  text-slate-400 ">Fulfillment Warehouse</label>
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-semibold text-slate-500">Select Warehouse</label>
+                        {anyAvailable && (
+                          <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                            <CheckCheck size={10} /> Stock Available
+                          </span>
+                        )}
+                      </div>
                       <div className="relative">
                         <select
                           value={selectedSourceWarehouse || request.source_warehouse || ''}
                           onChange={(e) => setSelectedSourceWarehouse(e.target.value)}
-                          className="w-full pl-3 pr-10 py-2 border border-slate-200 rounded-lg text-sm bg-white text-slate-700 focus:ring-2 focus:ring-amber-500 outline-none appearance-none transition-all"
+                          className={`w-full pl-3 pr-10 py-2.5 border rounded  text-sm bg-white outline-none appearance-none transition-all ${
+                            !selectedSourceWarehouse && anyAvailable 
+                              ? 'border-amber-500 ring-2 ring-amber-500/20 text-amber-900 font-medium' 
+                              : 'border-slate-200 text-slate-700 focus:ring-2 focus:ring-blue-500'
+                          }`}
                         >
                           <option value="">Select Warehouse...</option>
                           {warehouses.map(wh => (
@@ -615,14 +649,14 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
               {request?.status === 'approved' && (
                 <div className="bg-emerald-50 rounded  border border-emerald-200 overflow-hidden p-4 space-y-3">
                   <div className="flex items-center gap-3 text-emerald-800">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded  bg-emerald-100 flex items-center justify-center">
                       <CheckCheck size={18} />
                     </div>
                     <h4 className="text-sm tracking-wider">Approved Requisition</h4>
                   </div>
                   <p className="text-xs text-emerald-700 leading-relaxed pl-11">
                     This requisition has been reviewed and authorized. 
-                    {request.purpose === 'purchase' ? ' It is now ready for procurement processing.' : ' Materials are being issued/transferred.'}
+                    {!isTransferOrIssue ? ' It is now ready for procurement processing.' : ' Materials are being issued/transferred.'}
                   </p>
                 </div>
               )}
@@ -693,7 +727,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
             {request?.status === 'draft' && (
               <button
                 onClick={handleDelete}
-                className="flex items-center gap-2 px-3 py-2 text-xs   text-rose-600 hover:bg-rose-50 rounded-lg transition-all group"
+                className="flex items-center gap-2 px-3 py-2 text-xs   text-rose-600 hover:bg-rose-50 rounded  transition-all group"
               >
                 <Trash2 size={16} className="group-hover:scale-110 transition-transform" /> 
                 <span>Remove Request</span>
@@ -731,12 +765,12 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                   disabled={loading || (isTransferOrIssue && !anyAvailable)}
                   className="p-2  shadow-lg shadow-emerald-600/20  text-xs rounded  flex items-center gap-2"
                 >
-                  {isTransferOrIssue ? (request?.department === 'Production' ? 'Release to Production' : 'Release Materials') : 'Authorize Request'} <CheckCircle size={16} />
+                  {isTransferOrIssue ? 'Release Material' : 'Authorize Request'} <CheckCircle size={16} />
                 </Button>
               </div>
             )}
 
-            {(request?.status === 'pending' || request?.status === 'partial' || (request?.status === 'approved' && isTransferOrIssue)) && (
+            {(['pending', 'partial', 'approved', 'completed'].includes(request?.status) && isTransferOrIssue) && (
               <div className="flex items-center gap-3">
                 {request?.status === 'pending' && (
                   <Button
@@ -750,15 +784,15 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                 <Button
                   onClick={handleApprove}
                   variant="success"
-                  disabled={loading || (isTransferOrIssue && !anyAvailable)}
+                  disabled={loading || (isTransferOrIssue && (!anyAvailable || request?.items?.every(item => Number(item.issued_qty) >= Number(item.qty))))}
                   className="p-2  shadow-lg shadow-emerald-600/20  text-xs rounded  flex items-center gap-2"
                 >
-                  {isTransferOrIssue ? (request?.department === 'Production' ? 'Release to Production' : 'Release Materials') : 'Authorize Request'} <CheckCircle size={16} />
+                  {isTransferOrIssue ? 'Release Material' : 'Authorize Request'} <CheckCircle size={16} />
                 </Button>
               </div>
             )}
 
-            {((request?.status === 'approved' && request?.purpose === 'purchase') || 
+            {((request?.status === 'approved' && request?.purpose?.toLowerCase() === 'purchase') || 
               (['draft', 'pending', 'approved', 'partial'].includes(request?.status) && anyUnavailable)) && (
               <Button
                 onClick={handleCreatePO}

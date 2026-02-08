@@ -25,7 +25,14 @@ export class PurchaseReceiptModel {
       [warehouseIdentifier, warehouseIdentifier]
     )
     
-    return rows.length ? rows[0].id : warehouseIdentifier
+    if (rows.length) return rows[0].id
+    
+    // If we can't find it and it's not a numeric ID, throw a clear error
+    if (!Number.isInteger(Number(warehouseIdentifier))) {
+      throw new Error(`Warehouse '${warehouseIdentifier}' not found. Please ensure the warehouse name or code is correct.`)
+    }
+    
+    return Number(warehouseIdentifier)
   }
 
   async create(data) {
@@ -272,7 +279,7 @@ export class PurchaseReceiptModel {
         reference_doctype: 'Purchase Receipt',
         reference_name: voucher_no,
         remarks: `${voucher_type} for GRN ${voucher_no}`,
-        created_by: 'system' // Should be passed if available
+        created_by: 1 // Should be passed if available
       }, this.db)
 
       return { success: true }

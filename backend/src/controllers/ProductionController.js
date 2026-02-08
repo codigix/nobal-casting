@@ -164,113 +164,33 @@ class ProductionController {
   // Create work order
   async createWorkOrder(req, res) {
     try {
-      const { item_code, bom_no, quantity, priority, notes, sales_order_id, planned_start_date, planned_end_date, actual_start_date, actual_end_date, expected_delivery_date, required_items, operations } = req.body
+      const data = { ...req.body }
 
-      if (!item_code || !quantity) {
+      if (!data.item_code || !data.quantity) {
         return res.status(400).json({
           success: false,
           message: 'Missing required fields: item_code, quantity'
         })
       }
 
-      const wo_id = `WO-${Date.now()}`
-      const workOrder = await this.productionModel.createWorkOrder({
-        wo_id,
-        item_code,
-        bom_no: bom_no || null,
-        quantity: parseFloat(quantity) || 0,
-        priority: priority || 'medium',
-        notes: notes || '',
-        sales_order_id: sales_order_id || null,
-        planned_start_date: planned_start_date || null,
-        planned_end_date: planned_end_date || null,
-        actual_start_date: actual_start_date || null,
-        actual_end_date: actual_end_date || null,
-        expected_delivery_date: expected_delivery_date || null,
-        status: 'Draft'
-      })
-
-      // NEW: Automatically allocate materials for the work order based on BOM
-      if (required_items && Array.isArray(required_items) && required_items.length > 0) {
-        try {
-          const InventoryModel = (await import('../models/InventoryModel.js')).default;
-          const inventoryModel = new InventoryModel(this.productionModel.db);
-          await inventoryModel.allocateMaterialsForWorkOrder(
-            wo_id,
-            required_items,
-            req.user?.username || 'system'
-          );
-        } catch (allocError) {
-          console.error(`Material allocation failed for Work Order ${wo_id}:`, allocError.message);
-          // We don't throw here to avoid failing WO creation, but we log it
-        }
+      // Generate a unique ID if not provided
+      if (!data.wo_id) {
+        data.wo_id = `WO-${Date.now()}-${Math.floor(Math.random() * 1000)}`
       }
 
-      if (required_items && Array.isArray(required_items) && required_items.length > 0) {
-        for (let i = 0; i < required_items.length; i++) {
-          await this.productionModel.addWorkOrderItem(wo_id, { ...required_items[i], sequence: i + 1 })
-        }
-      }
-
-      let createdJobCards = []
-      
-      // If operations are provided explicitly, use them
-      if (operations && Array.isArray(operations) && operations.length > 0) {
-        for (let i = 0; i < operations.length; i++) {
-          await this.productionModel.addWorkOrderOperation(wo_id, { ...operations[i], sequence: i + 1 })
-        }
-
-        for (let i = 0; i < operations.length; i++) {
-          const operation = operations[i]
-          const jc_id = `JC-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-          const operationName = operation.operation_name || operation.operation || ''
-          const workstationType = operation.workstation_type || operation.workstation || operation.machine_id || ''
-          const operationTime = operation.operation_time || operation.time || operation.proportional_time || 0
-          const hourlyRate = operation.hourly_rate || 0
-          const operatingCost = operation.operating_cost || 0
-          
-          const jobCard = await this.productionModel.createJobCard({
-            job_card_id: jc_id,
-            work_order_id: wo_id,
-            operation: operationName,
-            operation_sequence: operation.sequence || (i + 1),
-            machine_id: workstationType,
-            operator_id: '',
-            planned_quantity: parseFloat(quantity) || 0,
-            operation_time: parseFloat(operationTime) || 0,
-            hourly_rate: parseFloat(hourlyRate) || 0,
-            operating_cost: parseFloat(operatingCost) || 0,
-            operation_type: operation.operation_type || 'IN_HOUSE',
-            scheduled_start_date: new Date(),
-            scheduled_end_date: new Date(),
-            status: 'draft',
-            created_by: req.user?.username || 'system',
-            notes: operation.notes || ''
-          })
-          createdJobCards.push(jobCard)
-        }
-      } else if (!operations || (Array.isArray(operations) && operations.length === 0)) {
-        // Automatically generate job cards from BOM (or default) if operations not provided in payload or empty
-        console.log(`Attempting to auto-generate job cards for work order ${wo_id}`)
-        try {
-          const generatedCards = await this.productionModel.generateJobCardsForWorkOrder(
-            wo_id,
-            req.user?.username || 'system'
-          )
-          createdJobCards = generatedCards || []
-        } catch (genErr) {
-          console.warn(`Could not auto-generate job cards for ${wo_id}:`, genErr.message)
-        }
-      }
+      // Use the recursive method to handle BOM explosion and sub-assemblies
+      const createdWoIds = await this.productionModel.createWorkOrderRecursive(data, req.user?.id || 1)
 
       res.status(201).json({
         success: true,
-        message: `Work order created successfully with ${createdJobCards.length} job card(s)`,
-        data: workOrder,
-        jobCardsCreated: createdJobCards.length,
-        jobCards: createdJobCards
+        message: 'Work Order(s) created successfully',
+        data: {
+          wo_id: data.wo_id,
+          all_wo_ids: createdWoIds
+        }
       })
     } catch (error) {
+      console.error('Error in createWorkOrder controller:', error)
       res.status(500).json({
         success: false,
         message: 'Error creating work order',
@@ -361,44 +281,144 @@ class ProductionController {
       }
 
       if (operations && Array.isArray(operations)) {
-        await this.productionModel.deleteAllWorkOrderOperations(wo_id)
-        
-        // Delete existing job cards for this work order to recreate them
-        await this.productionModel.deleteJobCardsByWorkOrder(wo_id)
+        // Fetch existing job cards to check for progress
+        const existingJobCards = await this.productionModel.getJobCards({ work_order_id: wo_id })
+        const hasProgress = existingJobCards.some(jc => 
+          (jc.status || '').toLowerCase() !== 'draft' || 
+          (parseFloat(jc.produced_quantity) || 0) > 0
+        )
 
-        if (operations.length > 0) {
+        if (hasProgress) {
+          // SURGICAL UPDATE: Update existing operations and job cards, only add new ones
+          // This preserves data integrity for job cards already in production
+          
+          // 1. Update/Add Work Order Operations
+          // We don't delete all to avoid breaking foreign keys or losing completed_qty
           for (let i = 0; i < operations.length; i++) {
-            await this.productionModel.addWorkOrderOperation(wo_id, { ...operations[i], sequence: i + 1 })
+            const op = operations[i]
+            const opName = op.operation || op.operation_name || ''
+            const seq = op.sequence || (i + 1)
+            
+            // Check if this operation already exists in the work order
+            const [existingOps] = await this.productionModel.db.query(
+              'SELECT id FROM work_order_operation WHERE wo_id = ? AND operation = ? AND sequence = ?',
+              [wo_id, opName, seq]
+            )
+            
+            if (existingOps && existingOps.length > 0) {
+              // Update existing operation
+              await this.productionModel.db.query(
+                `UPDATE work_order_operation SET 
+                  workstation = ?, time = ?, hourly_rate = ?, 
+                  operation_type = ?, operating_cost = ?
+                 WHERE id = ?`,
+                [
+                  op.workstation || op.workstation_type || '',
+                  op.time || op.operation_time || 0,
+                  op.hourly_rate || 0,
+                  op.operation_type || 'IN_HOUSE',
+                  op.operating_cost || 0,
+                  existingOps[0].id
+                ]
+              )
+            } else {
+              // Add new operation
+              await this.productionModel.addWorkOrderOperation(wo_id, { ...op, sequence: seq })
+            }
+
+            // 2. Sync corresponding Job Card
+            const matchingJC = existingJobCards.find(jc => 
+              (jc.operation === opName) && jc.operation_sequence === seq
+            )
+
+            if (matchingJC) {
+              // Update existing Job Card (don't change status or quantities here)
+              await this.productionModel.updateJobCard(matchingJC.job_card_id, {
+                machine_id: op.workstation || op.workstation_type || matchingJC.machine_id,
+                operation_time: op.time || op.operation_time || matchingJC.operation_time,
+                hourly_rate: op.hourly_rate || matchingJC.hourly_rate,
+                operating_cost: op.operating_cost || matchingJC.operating_cost,
+                planned_quantity: parseFloat(quantity) || 0,
+                notes: op.notes || matchingJC.notes
+              })
+            } else {
+              // Create new Job Card for the new operation
+              const jc_id = `JC-${Date.now()}-${i + 1}`
+              await this.productionModel.createJobCard({
+                job_card_id: jc_id,
+                work_order_id: wo_id,
+                operation: opName,
+                operation_sequence: seq,
+                machine_id: op.workstation || op.workstation_type || '',
+                planned_quantity: parseFloat(quantity) || 0,
+                operation_time: op.time || op.operation_time || 0,
+                hourly_rate: op.hourly_rate || 0,
+                operating_cost: op.operating_cost || 0,
+                operation_type: op.operation_type || 'IN_HOUSE',
+                scheduled_start_date: planned_start_date,
+                scheduled_end_date: planned_end_date,
+                status: 'draft',
+                created_by: req.user?.username || 'system',
+                notes: op.notes || ''
+              })
+            }
+          }
+          
+          // Optional: Delete operations/job cards that are NOT in the new list AND have no progress
+          const newOpIdentifiers = operations.map((op, i) => `${op.operation || op.operation_name}-${op.sequence || (i + 1)}`)
+          
+          for (const jc of existingJobCards) {
+            const jcIdentifier = `${jc.operation}-${jc.operation_sequence}`
+            if (!newOpIdentifiers.includes(jcIdentifier)) {
+              const jcHasProgress = (jc.status || '').toLowerCase() !== 'draft' || (parseFloat(jc.produced_quantity) || 0) > 0
+              if (!jcHasProgress) {
+                // Safe to delete this specific job card and its WO operation
+                await this.productionModel.db.query('DELETE FROM job_card WHERE job_card_id = ?', [jc.job_card_id])
+                await this.productionModel.db.query(
+                  'DELETE FROM work_order_operation WHERE wo_id = ? AND operation = ? AND sequence = ?',
+                  [wo_id, jc.operation, jc.operation_sequence]
+                )
+              }
+            }
           }
 
-          // Recreate Job Cards
-          for (let i = 0; i < operations.length; i++) {
-            const operation = operations[i]
-            const jc_id = `JC-${Date.now()}-${i + 1}`
-            const opName = operation.operation || operation.operation_name || ''
-            const wsType = operation.workstation || operation.workstation_type || ''
-            const opTime = operation.time || operation.operation_time || 0
-            const hRate = operation.hourly_rate || 0
-            const opCost = operation.operating_cost || 0
+        } else {
+          // NO PROGRESS: Safe to wipe and recreate (Original Logic)
+          await this.productionModel.deleteAllWorkOrderOperations(wo_id)
+          await this.productionModel.deleteJobCardsByWorkOrder(wo_id)
 
-            await this.productionModel.createJobCard({
-              job_card_id: jc_id,
-              work_order_id: wo_id,
-              operation: opName,
-              operation_sequence: operation.sequence || (i + 1),
-              machine_id: wsType,
-              operator_id: '',
-              planned_quantity: parseFloat(quantity) || 0,
-              operation_time: parseFloat(opTime) || 0,
-              hourly_rate: parseFloat(hRate) || 0,
-              operating_cost: parseFloat(opCost) || 0,
-              operation_type: operation.operation_type || 'IN_HOUSE',
-              scheduled_start_date: planned_start_date,
-              scheduled_end_date: planned_end_date,
-              status: 'draft',
-              created_by: req.user?.username || 'system',
-              notes: operation.notes || ''
-            })
+          if (operations.length > 0) {
+            for (let i = 0; i < operations.length; i++) {
+              await this.productionModel.addWorkOrderOperation(wo_id, { ...operations[i], sequence: i + 1 })
+            }
+
+            for (let i = 0; i < operations.length; i++) {
+              const operation = operations[i]
+              const jc_id = `JC-${Date.now()}-${i + 1}`
+              const opName = operation.operation || operation.operation_name || ''
+              const wsType = operation.workstation || operation.workstation_type || ''
+              const opTime = operation.time || operation.operation_time || 0
+              const hRate = operation.hourly_rate || 0
+              const opCost = operation.operating_cost || 0
+
+              await this.productionModel.createJobCard({
+                job_card_id: jc_id,
+                work_order_id: wo_id,
+                operation: opName,
+                operation_sequence: operation.sequence || (i + 1),
+                machine_id: wsType,
+                planned_quantity: parseFloat(quantity) || 0,
+                operation_time: parseFloat(opTime) || 0,
+                hourly_rate: parseFloat(hRate) || 0,
+                operating_cost: parseFloat(opCost) || 0,
+                operation_type: operation.operation_type || 'IN_HOUSE',
+                scheduled_start_date: planned_start_date,
+                scheduled_end_date: planned_end_date,
+                status: 'draft',
+                created_by: req.user?.username || 'system',
+                notes: operation.notes || ''
+              })
+            }
           }
         }
       }
@@ -653,66 +673,6 @@ class ProductionController {
     }
   }
 
-  // ============= REJECTIONS =============
-
-  // Record rejection
-  async recordRejection(req, res) {
-    try {
-      const { production_entry_id, rejection_reason, rejection_count, root_cause, corrective_action, reported_by_id } = req.body
-
-      if (!production_entry_id || !rejection_reason || !rejection_count) {
-        return res.status(400).json({
-          success: false,
-          message: 'Missing required fields: production_entry_id, rejection_reason, rejection_count'
-        })
-      }
-
-      const rejection = await this.productionModel.recordRejection({
-        production_entry_id,
-        rejection_reason,
-        rejection_count: parseFloat(rejection_count) || 0,
-        root_cause,
-        corrective_action,
-        reported_by_id
-      })
-
-      res.status(201).json({
-        success: true,
-        message: 'Rejection recorded successfully',
-        data: rejection
-      })
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: 'Error recording rejection',
-        error: error.message
-      })
-    }
-  }
-
-  // Get rejection analysis
-  async getRejectionAnalysis(req, res) {
-    try {
-      const { date_from, date_to } = req.query
-
-      const analysis = await this.productionModel.getRejectionAnalysis({
-        date_from,
-        date_to
-      })
-
-      res.status(200).json({
-        success: true,
-        data: analysis
-      })
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: 'Error fetching rejection analysis',
-        error: error.message
-      })
-    }
-  }
-
   // ============= MACHINES =============
 
   // Create machine
@@ -829,83 +789,6 @@ class ProductionController {
       res.status(500).json({
         success: false,
         message: 'Error fetching operators',
-        error: error.message
-      })
-    }
-  }
-
-  // ============= ANALYTICS =============
-
-  // Get production dashboard
-  async getProductionDashboard(req, res) {
-    try {
-      const { date } = req.query
-      const dashboardDate = date || new Date().toISOString().split('T')[0]
-
-      const dashboard = await this.productionModel.getProductionDashboard(dashboardDate)
-
-      res.status(200).json({
-        success: true,
-        data: dashboard
-      })
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: 'Error fetching production dashboard',
-        error: error.message
-      })
-    }
-  }
-
-  // Get machine utilization
-  async getMachineUtilization(req, res) {
-    try {
-      const { date_from, date_to } = req.query
-
-      if (!date_from || !date_to) {
-        return res.status(400).json({
-          success: false,
-          message: 'date_from and date_to are required'
-        })
-      }
-
-      const utilization = await this.productionModel.getMachineUtilization(date_from, date_to)
-
-      res.status(200).json({
-        success: true,
-        data: utilization
-      })
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: 'Error fetching machine utilization',
-        error: error.message
-      })
-    }
-  }
-
-  // Get operator efficiency
-  async getOperatorEfficiency(req, res) {
-    try {
-      const { date_from, date_to } = req.query
-
-      if (!date_from || !date_to) {
-        return res.status(400).json({
-          success: false,
-          message: 'date_from and date_to are required'
-        })
-      }
-
-      const efficiency = await this.productionModel.getOperatorEfficiency(date_from, date_to)
-
-      res.status(200).json({
-        success: true,
-        data: efficiency
-      })
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: 'Error fetching operator efficiency',
         error: error.message
       })
     }

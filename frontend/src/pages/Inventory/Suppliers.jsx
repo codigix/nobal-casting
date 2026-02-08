@@ -303,7 +303,7 @@ export default function Suppliers() {
           </div>
           <button
             onClick={handleAddClick}
-            className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white p-2.5 rounded-xs  text-xs transition-all"
+            className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white p-2 rounded-xs  text-xs transition-all"
           >
             <Plus size={18} />
             Add Supplier

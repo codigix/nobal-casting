@@ -331,4 +331,20 @@ export class ProductionPlanningController {
       res.status(500).json({ success: false, error: error.message })
     }
   }
+
+  async getProductionReport(req, res) {
+    try {
+      const { plan_id } = req.params;
+      const reportData = await this.model.getProductionReportData(plan_id);
+
+      if (!reportData) {
+        return res.status(404).json({ success: false, error: 'Production plan not found' });
+      }
+
+      res.json({ success: true, data: reportData });
+    } catch (error) {
+      console.error('Error generating production report:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
 }

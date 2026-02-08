@@ -2,7 +2,8 @@ import http from 'http';
 
 async function testProductionPlanAPI() {
   return new Promise((resolve, reject) => {
-    const salesOrderId = 'SO-1768557808327'; // The test sales order we created
+    const salesOrderId = 'SO-1770459806347'; // Use an existing sales order
+    const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdC11c2VyIiwidXNlcm5hbWUiOiJ0ZXN0LXVzZXIiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJpYXQiOjE3NzA0Nzk5NDUsImV4cCI6MTc3MDU2NjM0NX0.snGfDwtu8Kfk2rZXtkoYEPEug-Ym5DDc3OHTGhcIRtM';
     
     const options = {
       hostname: 'localhost',
@@ -10,7 +11,8 @@ async function testProductionPlanAPI() {
       path: `/api/production-planning/generate/sales-order/${salesOrderId}`,
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       }
     };
 

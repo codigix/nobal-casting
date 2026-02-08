@@ -423,6 +423,19 @@ class GRNRequestModel {
         // 2. Update item details if provided
         if (approvedItemsData.length > 0) {
           for (const item of approvedItemsData) {
+            let valuationRate = Number(item.valuation_rate) || 0
+
+            // If valuation rate is 0, try to fetch it from Item Master
+            if (valuationRate === 0) {
+              const [itemInfo] = await connection.query(
+                'SELECT valuation_rate FROM item WHERE item_code = (SELECT item_code FROM grn_request_items WHERE id = ?)',
+                [item.id]
+              )
+              if (itemInfo[0] && itemInfo[0].valuation_rate > 0) {
+                valuationRate = itemInfo[0].valuation_rate
+              }
+            }
+
             await connection.query(
               `UPDATE grn_request_items SET 
                accepted_qty = ?, 
@@ -437,7 +450,7 @@ class GRNRequestModel {
                 Number(item.rejected_qty) || 0,
                 item.qc_status || 'pass',
                 item.bin_rack || null,
-                Number(item.valuation_rate) || 0,
+                valuationRate,
                 item.warehouse_name || 'Main Warehouse',
                 item.id
               ]

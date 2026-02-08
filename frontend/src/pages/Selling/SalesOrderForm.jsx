@@ -157,7 +157,7 @@ const InfoRow = ({ label, value, icon: Icon, className = "", color = "indigo" })
   return (
     <div className={`flex flex-col p-2 rounded border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 ${className}`}>
       <div className="flex items-center gap-2 mb-2">
-        <div className={`p-1.5 rounded-lg ${themeClass}`}>
+        <div className={`p-1.5 rounded  ${themeClass}`}>
           {Icon && <Icon size={12} />}
         </div>
         <span className="text-[10px]  text-slate-400 uppercase tracking-widest">{label}</span>
@@ -1234,7 +1234,7 @@ export default function SalesOrderForm() {
                           </div>
                         </td>
                         <td className="p-4 text-right">
-                          <span className="text-xs   text-slate-700 bg-amber-50/50 px-2 py-1 rounded-lg border border-amber-100/50">
+                          <span className="text-xs   text-slate-700 bg-amber-50/50 px-2 py-1 rounded  border border-amber-100/50">
                             {formatQty(multipliedQty)}
                           </span>
                         </td>
@@ -1323,7 +1323,7 @@ export default function SalesOrderForm() {
                         </td>
                         <td className="p-4 text-right">
                           <div className="flex flex-col items-end">
-                            <span className="text-xs   text-slate-700 bg-emerald-50/50 px-2 py-1 rounded-lg border border-emerald-100/50">
+                            <span className="text-xs   text-slate-700 bg-emerald-50/50 px-2 py-1 rounded  border border-emerald-100/50">
                               {formatQty(itemQty)}
                             </span>
                             <span className="text-[9px]  text-emerald-600  mt-1">{material.uom || material.unit || '-'}</span>
@@ -1398,7 +1398,7 @@ export default function SalesOrderForm() {
                         </td>
                         <td className="p-4 text-right">
                           <div className="flex flex-col items-end">
-                            <span className="text-xs   text-slate-700 bg-indigo-50/50 px-2 py-1 rounded-lg border border-indigo-100/50">
+                            <span className="text-xs   text-slate-700 bg-indigo-50/50 px-2 py-1 rounded  border border-indigo-100/50">
                               {totalTimeHours.toFixed(2)} HRS
                             </span>
                             <span className="text-[9px]  text-indigo-400  mt-1">

@@ -192,12 +192,51 @@ export default function WorkOrderForm() {
 
   useEffect(() => {
     if (jobCards.length > 0) {
-      calculateCompletionMetrics(jobCards)
+      calculateCompletionMetrics(jobCards).then(enriched => {
+        // Enrichment only happens here if the cards don't already have real-time data
+        // We use setJobCards to make sure the table renders the latest quantities
+        setJobCards(enriched)
+      })
       if (bomOperations.length > 0) {
         populateWorkstationsForJobCards(jobCards, bomOperations)
       }
     }
   }, [jobCards.length, bomOperations.length])
+
+  // Reactive update for materials and operations when quantity changes
+  useEffect(() => {
+    if (!id) {
+      const workOrderQty = parseFloat(formData.qty_to_manufacture) || 0
+      
+      if (bomMaterials.length > 0) {
+        setBomMaterials(prev => prev.map(mat => {
+          if (mat.base_qty !== undefined) {
+            const newQty = mat.base_qty * workOrderQty
+            return {
+              ...mat,
+              quantity: newQty,
+              required_qty: newQty
+            }
+          }
+          return mat
+        }))
+      }
+
+      if (bomOperations.length > 0) {
+        setBomOperations(prev => prev.map(op => {
+          if (op.base_time !== undefined) {
+            const newTime = op.base_time * workOrderQty
+            return {
+              ...op,
+              operation_time: newTime,
+              operating_cost: newTime * (parseFloat(op.hourly_rate) || 0)
+            }
+          }
+          return op
+        }))
+      }
+    }
+  }, [formData.qty_to_manufacture, id])
 
   const fetchProductionStages = async () => {
     try {
@@ -229,42 +268,77 @@ export default function WorkOrderForm() {
 
   const fetchJobCards = async (workOrderId) => {
     try {
+      setLoading(true)
       const response = await productionService.getJobCards({ work_order_id: workOrderId })
-      setJobCards(response.data || [])
-      await calculateCompletionMetrics(response.data || [])
-    } catch (err) { console.error('Failed to fetch job cards:', err) }
+      const rawCards = response.data || []
+      const enrichedCards = await calculateCompletionMetrics(rawCards)
+      setJobCards(enrichedCards)
+    } catch (err) { 
+      console.error('Failed to fetch job cards:', err) 
+    } finally {
+      setLoading(false)
+    }
   }
 
   const calculateCompletionMetrics = async (cards) => {
     try {
       const totalPlanned = cards.reduce((sum, jc) => sum + (parseFloat(jc.planned_quantity) || 0), 0)
-      const totalCompleted = cards.reduce((sum, jc) => sum + (parseFloat(jc.completed_quantity) || jc.actual_qty || 0), 0)
-      const allCompleted = cards.length > 0 && cards.every(jc => (jc.status || '').toLowerCase() === 'completed')
-
       let totalActualTime = 0
       let totalAccepted = 0
       
       const combinedTimeLogs = []
       const combinedRejections = []
       const combinedDowntimes = []
+      const updatedCards = []
 
       for (const jc of cards) {
         try {
           const jcId = jc.job_card_id || jc.id
+          let jcAccepted = 0
           
-          // Fetch Time Logs
+          // Fetch Time Logs - These represent production attempts
           const timeLogsRes = await productionService.getTimeLogs({ job_card_id: jcId })
           const logs = timeLogsRes.data || []
           combinedTimeLogs.push(...logs)
           
           logs.forEach(log => {
             if (log.from_time && log.to_time) totalActualTime += log.time_in_minutes || 0
-            totalAccepted += parseFloat(log.accepted_qty) || 0
+            // We use completed_qty from time logs as the base production
+            // If accepted_qty is populated, use that
+            const accepted = parseFloat(log.accepted_qty || log.completed_qty) || 0
+            jcAccepted += accepted
           })
 
-          // Fetch Rejections
+          // Fetch Rejections - These are finalized quality entries
           const rejectionsRes = await productionService.getRejections({ job_card_id: jcId })
-          combinedRejections.push(...(rejectionsRes.data || []))
+          const rejs = rejectionsRes.data || []
+          combinedRejections.push(...rejs)
+          
+          // If we have rejection entries, they represent the definitive "Accepted" count for that stage
+          // over and above (or instead of) simple time log entries
+          let rejAccepted = 0
+          rejs.forEach(rej => {
+            const accepted = parseFloat(rej.accepted_qty) || 0
+            rejAccepted += accepted
+          })
+
+          // Industry logic: Use Rejection Entry Accepted Qty if it exists, 
+          // otherwise fallback to Time Log Qty
+          let finalJcAccepted = Math.max(jcAccepted, rejAccepted)
+
+          // Fallback to Job Card summary if no logs/rejections are found but the card has data
+          // This ensures that "Sync Progress" doesn't zero out data for cards without detailed logs
+          if (logs.length === 0 && rejs.length === 0 && (parseFloat(jc.accepted_quantity) > 0 || parseFloat(jc.produced_quantity) > 0)) {
+            finalJcAccepted = parseFloat(jc.accepted_quantity) || (parseFloat(jc.produced_quantity) || 0)
+          }
+
+          totalAccepted += finalJcAccepted
+
+          // Update job card with real-time quantity
+          updatedCards.push({
+            ...jc,
+            completed_quantity: finalJcAccepted
+          })
 
           // Fetch Downtimes
           const downtimesRes = await productionService.getDowntimes({ job_card_id: jcId })
@@ -277,12 +351,60 @@ export default function WorkOrderForm() {
       setAllRejections(combinedRejections)
       setAllDowntimes(combinedDowntimes)
 
-      const expectedTime = (bomOperations || []).reduce((sum, op) => sum + (parseFloat(op.operation_time) || 0), 0) * 60
-      const efficiency = expectedTime > 0 && totalActualTime > 0 ? ((expectedTime / totalActualTime) * 100).toFixed(0) : 0
-      const qualityScore = totalCompleted > 0 ? ((totalAccepted / totalCompleted) * 100).toFixed(1) : 0
+      // Use the last operation's completed quantity for work order completion rate
+      // or use totalAccepted / totalPlanned for an aggregate view
+      // Industry standard for WO completion is often the last operation's output
+      const sortedCards = [...updatedCards].sort((a, b) => (a.operation_sequence || 0) - (b.operation_sequence || 0))
+      const lastOpCompleted = sortedCards.length > 0 ? sortedCards[sortedCards.length - 1].completed_quantity : 0
+      const totalCompleted = lastOpCompleted
 
-      setCompletionMetrics({ totalPlanned, totalCompleted, allCompleted, efficiency, totalActualTime, qualityScore })
-    } catch (err) { console.error('Failed to calculate metrics:', err) }
+      const allCompleted = updatedCards.length > 0 && updatedCards.every(jc => (jc.status || '').toLowerCase() === 'completed')
+
+      // Earned Value Analysis for Efficiency
+      let earnedMinutes = 0
+      updatedCards.forEach(jc => {
+        const op = bomOperations.find(o => 
+          (o.operation_name === (jc.operation_name || jc.operation)) || 
+          (o.operation === (jc.operation_name || jc.operation))
+        )
+        if (op) {
+          // Standard time is often stored in hours in BOM, convert to minutes
+          const stdTimeMinutes = (parseFloat(op.operation_time) || 0) * 60
+          earnedMinutes += (parseFloat(jc.completed_quantity) || 0) * stdTimeMinutes
+        }
+      })
+
+      const efficiency = totalActualTime > 0 ? ((earnedMinutes / totalActualTime) * 100).toFixed(0) : 0
+      
+      const totalRejected = combinedRejections.reduce((s, r) => s + (parseFloat(r.rejected_qty) || 0), 0)
+      const totalScrap = combinedRejections.reduce((s, r) => s + (parseFloat(r.scrap_qty) || 0), 0)
+      
+      // Quality Score (Yield): Accepted / (Accepted + Rejected + Scrap)
+      const totalInputAtQuality = totalAccepted + totalRejected + totalScrap
+      const qualityScore = totalInputAtQuality > 0 
+        ? ((totalAccepted / totalInputAtQuality) * 100).toFixed(1) 
+        : 0
+      
+      const scrapRate = totalInputAtQuality > 0
+        ? ((totalScrap / totalInputAtQuality) * 100).toFixed(1)
+        : 0
+
+      setCompletionMetrics({ 
+        totalPlanned, 
+        totalCompleted, 
+        allCompleted, 
+        efficiency, 
+        totalActualTime, 
+        qualityScore,
+        totalScrap,
+        scrapRate
+      })
+      
+      return updatedCards
+    } catch (err) { 
+      console.error('Failed to calculate metrics:', err)
+      return cards
+    }
   }
 
   const generateDailyReport = () => {
@@ -458,23 +580,29 @@ export default function WorkOrderForm() {
       setBomQuantity(bomData.quantity || 1)
       const workOrderQty = parseFloat(formData.qty_to_manufacture) || 1
 
-      const operations = (bomData.operations || []).map((op, idx) => ({
-        id: Date.now() + idx,
-        operation_name: op.operation_name || op.operation || '',
-        workstation: op.workstation || op.workstation_type || '',
-        operation_time: op.operation_time || op.time_in_hours || 0,
-        operating_cost: op.operating_cost || op.cost || 0,
-        operation_type: op.operation_type || 'FG',
-        hourly_rate: op.hourly_rate || 0
-      }))
+      const operations = (bomData.operations || []).map((op, idx) => {
+        const baseTime = (op.operation_time || op.time_in_hours || 0) / (bomData.quantity || 1)
+        const multipliedTime = baseTime * workOrderQty
+        return {
+          id: Date.now() + idx,
+          operation_name: op.operation_name || op.operation || '',
+          workstation: op.workstation || op.workstation_type || '',
+          base_time: baseTime, // Store base ratio
+          operation_time: multipliedTime,
+          operating_cost: (op.operating_cost || op.cost || 0) * (workOrderQty / (bomData.quantity || 1)),
+          operation_type: op.operation_type || 'FG',
+          hourly_rate: op.hourly_rate || 0
+        }
+      })
 
       const rawMaterials = (bomData.bom_raw_materials || bomData.rawMaterials || []).map((rm, idx) => {
-        const baseQty = rm.qty || rm.quantity || 0
+        const baseQty = (rm.qty || rm.quantity || 0) / (bomData.quantity || 1)
         const multipliedQty = baseQty * workOrderQty
         return {
           id: Date.now() + idx,
           item_code: rm.item_code || '',
           item_name: rm.item_name || rm.description || '',
+          base_qty: baseQty, // Store base ratio
           quantity: multipliedQty,
           uom: rm.uom || '',
           required_qty: multipliedQty,
@@ -646,6 +774,8 @@ export default function WorkOrderForm() {
       const response = id ? await productionService.updateWorkOrder(id, payload) : await productionService.createWorkOrder(payload)
       if (response.success) {
         // Automatically generate job cards if it's a new work order
+        // Note: Backend now handles this automatically in createWorkOrderRecursive
+        /*
         if (!id) {
           const newWoId = response.data?.wo_id || response.wo_id
           if (newWoId) {
@@ -657,6 +787,7 @@ export default function WorkOrderForm() {
             }
           }
         }
+        */
         setSuccess(`Work order ${id ? 'updated' : 'created'}`)
         setTimeout(() => navigate('/manufacturing/work-orders'), 1500)
       } else { setError(response.message || 'Save failed') }
@@ -980,12 +1111,23 @@ export default function WorkOrderForm() {
                       </div>
                       <h3 className="text-xs  text-slate-900  ">03 Operation Sequence</h3>
                     </div>
-                    {jobCards.length > 0 && (
-                      <div className="flex items-center gap-2 p-2  py-1 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-100">
-                        <Activity size={12} className="animate-pulse" />
-                        <span className="text-xs ">{jobCards.length} Tasks active</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {jobCards.length > 0 && (
+                        <button
+                          onClick={() => fetchJobCards(id)}
+                          className="flex items-center gap-2 px-3 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full transition-colors border border-indigo-100"
+                        >
+                          <Activity size={12} className={loading ? 'animate-spin' : ''} />
+                          Sync Progress
+                        </button>
+                      )}
+                      {jobCards.length > 0 && (
+                        <div className="flex items-center gap-2 p-2  py-1 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-100">
+                          <Activity size={12} className="animate-pulse" />
+                          <span className="text-xs ">{jobCards.length} Tasks active</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {jobCards.length > 0 ? (
@@ -996,6 +1138,7 @@ export default function WorkOrderForm() {
                             <th className="p-2  text-xs  text-slate-400  ">Phase</th>
                             <th className="p-2  text-xs  text-slate-400  ">Workstation</th>
                             <th className="p-2  text-xs  text-slate-400  text-center">Status</th>
+                            <th className="p-2  text-xs  text-slate-400  text-right">Time & Cost</th>
                             <th className="p-2  text-xs  text-slate-400  text-right">Progress</th>
                             {!isReadOnly && <th className="p-2  w-10"></th>}
                           </tr>
@@ -1037,6 +1180,12 @@ export default function WorkOrderForm() {
                                     <span className={`p-2  py-1 rounded-full text-xs  border   ${getStatusColor(jc.status)}`}>
                                       {(jc.status || 'pending').toUpperCase()}
                                     </span>
+                                  </div>
+                                </td>
+                                <td className="p-2  text-right">
+                                  <div className="flex flex-col items-end gap-0.5">
+                                    <span className="text-xs text-slate-900 font-medium">{jc.operation_time || 0}m</span>
+                                    <span className="text-[10px] text-slate-400">₹{parseFloat(jc.operating_cost || 0).toLocaleString()}</span>
                                   </div>
                                 </td>
                                 <td className="p-2  text-right">
@@ -1150,14 +1299,22 @@ export default function WorkOrderForm() {
                           />
                         </div>
                       </div>
-                      <div className="grid mt-2 grid-cols-2 gap-4">
+                      <div className="grid mt-2 grid-cols-2 gap-2">
                         <div className="bg-white/5 p-2 rounded  border border-white/10 hover:bg-white/[0.08] transition-colors group/card">
-                          <p className="text-xs  text-slate-500 mb-2  group-hover/card:text-indigo-400 transition-colors">Yield</p>
-                          <p className="text-md  text-white">{completionMetrics.qualityScore}%</p>
+                          <p className="text-[10px] text-slate-500 mb-1 group-hover/card:text-indigo-400 transition-colors">Yield</p>
+                          <p className="text-sm font-semibold text-white">{completionMetrics.qualityScore}%</p>
                         </div>
                         <div className="bg-white/5 p-2 rounded  border border-white/10 hover:bg-white/[0.08] transition-colors group/card">
-                          <p className="text-xs  text-slate-500 mb-2  group-hover/card:text-amber-400 transition-colors">Actual Hrs</p>
-                          <p className="text-md  text-white">{(completionMetrics.totalActualTime / 60).toFixed(1)}h</p>
+                          <p className="text-[10px] text-slate-500 mb-1 group-hover/card:text-amber-400 transition-colors">Actual Hrs</p>
+                          <p className="text-sm font-semibold text-white">{(completionMetrics.totalActualTime / 60).toFixed(1)}h</p>
+                        </div>
+                        <div className="bg-white/5 p-2 rounded  border border-white/10 hover:bg-white/[0.08] transition-colors group/card">
+                          <p className="text-[10px] text-slate-500 mb-1 group-hover/card:text-rose-400 transition-colors">Scrap Rate</p>
+                          <p className="text-sm font-semibold text-white">{completionMetrics.scrapRate}%</p>
+                        </div>
+                        <div className="bg-white/5 p-2 rounded  border border-white/10 hover:bg-white/[0.08] transition-colors group/card">
+                          <p className="text-[10px] text-slate-500 mb-1 group-hover/card:text-emerald-400 transition-colors">Efficiency</p>
+                          <p className="text-sm font-semibold text-white">{completionMetrics.efficiency}%</p>
                         </div>
                       </div>
                     </div>
@@ -1272,33 +1429,30 @@ export default function WorkOrderForm() {
               <Card className="p-2 border-none  col-span-12 lg:col-span-3 space-y-6 ">
                 <SectionTitle title="Operational Panel" icon={Zap} />
                 <div className="space-y-3">
-                  {!isReadOnly && (
-                    <>
-                      <button
-                        onClick={handleSubmit}
-                        disabled={loading}
-                        className="w-full flex items-center justify-between p-2  bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded  border border-indigo-100 transition-all group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Save size={16} />
-                          <span className="text-xs  ">Commit Progress</span>
-                        </div>
-                        <ArrowRight size={14} className=" group-hover:translate-x-1 transition-all" />
-                      </button>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={loading || isReadOnly}
+                    className="w-full flex items-center justify-between p-2  bg-indigo-50 text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 rounded  border border-indigo-100 transition-all group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Save size={16} />
+                      <span className="text-xs  ">Commit Progress</span>
+                    </div>
+                    <ArrowRight size={14} className=" group-hover:translate-x-1 transition-all" />
+                  </button>
 
-                      <button
-                        onClick={createJobCardsFromOperations}
-                        disabled={loading || jobCards.length > 0}
-                        className="w-full flex items-center justify-between p-2  bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30 rounded  transition-all group shadow-lg shadow-slate-200"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Layers size={16} />
-                          <span className="text-xs  ">Release job cards</span>
-                        </div>
-                        <Zap size={14} className="text-amber-400" />
-                      </button>
-                    </>
-                  )}
+                  <button
+                    onClick={createJobCardsFromOperations}
+                    disabled={loading || jobCards.length > 0 || isReadOnly}
+                    className="w-full flex items-center justify-between p-2  bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30 rounded  transition-all group shadow-lg shadow-slate-200"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Layers size={16} />
+                      <span className="text-xs  ">Release job cards</span>
+                    </div>
+                    <Zap size={14} className="text-amber-400" />
+                  </button>
+
                   {isReadOnly && (
                     <div className="p-4 bg-slate-50 border border-slate-100 rounded text-center">
                       <p className="text-xs text-slate-500 font-medium">Read-only Mode</p>

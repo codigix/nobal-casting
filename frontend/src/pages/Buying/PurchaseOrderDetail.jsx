@@ -147,7 +147,7 @@ export default function PurchaseOrderDetail() {
               </div>
               <div className="flex items-center gap-3 mt-1">
                 <h1 className="text-xl  text-neutral-900 dark:text-white ">{po.po_no}</h1>
-                <Badge color={getStatusColor(po.status)} variant="solid" className="flex items-center gap-1.5 px-2.5 py-1 text-[10px]  tracking-widest  rounded-lg">
+                <Badge color={getStatusColor(po.status)} variant="solid" className="flex items-center gap-1.5 px-2.5 py-1 text-[10px]  tracking-widest  rounded ">
                   {getStatusIcon(po.status)}
                   {po.status.replace('_', ' ')}
                 </Badge>
@@ -356,7 +356,7 @@ export default function PurchaseOrderDetail() {
                   </div>
                   <div className="flex justify-between items-center gap-4">
                     <span className="text-xs text-neutral-400 dark:text-neutral-500 ">Incoterm</span>
-                    <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 text-[10px]  rounded-lg border border-indigo-100 dark:border-indigo-900/50 ">
+                    <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 text-[10px]  rounded  border border-indigo-100 dark:border-indigo-900/50 ">
                       {po.incoterm || 'EXW'}
                     </span>
                   </div>
@@ -376,7 +376,7 @@ export default function PurchaseOrderDetail() {
                 <div className="p-2 space-y-2">
                   <div className="flex justify-between items-center gap-4">
                     <span className="text-xs text-neutral-400 dark:text-neutral-500 ">Tax Category</span>
-                    <span className="px-3 py-1 bg-sky-50 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400 text-[10px]  rounded-lg border border-sky-100 dark:border-sky-900/50 ">
+                    <span className="px-3 py-1 bg-sky-50 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400 text-[10px]  rounded  border border-sky-100 dark:border-sky-900/50 ">
                       {po.tax_category || 'GST'}
                     </span>
                   </div>
@@ -400,7 +400,7 @@ export default function PurchaseOrderDetail() {
                 <h2 className="text-[10px]  text-neutral-900 dark:text-white flex items-center gap-2 ">
                   <Package size={18} className="text-indigo-600 dark:text-indigo-400" /> Items List
                 </h2>
-                <span className="text-[10px]  text-neutral-400 dark:text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-3 py-1 rounded-lg ">
+                <span className="text-[10px]  text-neutral-400 dark:text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-3 py-1 rounded  ">
                   {po.items?.length || 0} ITEMS
                 </span>
               </div>

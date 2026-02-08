@@ -160,7 +160,7 @@ export default function ItemGroups() {
             <p className="text-2xl font-black mt-1 text-slate-900 dark:text-white">{value}</p>
             {description && <p className="text-[10px] mt-1 text-slate-400 dark:text-slate-500">{description}</p>}
           </div>
-          <div className="p-2 rounded-lg bg-white dark:bg-slate-900 shadow-sm border border-inherit">
+          <div className="p-2 rounded  bg-white dark:bg-slate-900 shadow-sm border border-inherit">
             <Icon size={20} className="text-inherit" />
           </div>
         </div>
@@ -248,7 +248,7 @@ export default function ItemGroups() {
             </div>
             
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 rounded  border border-indigo-100 dark:border-indigo-800">
                 <span className="flex h-2 w-2 rounded-full bg-indigo-500 animate-pulse"></span>
                 <span className="text-[10px] font-black text-indigo-700 dark:text-indigo-400  tracking-tighter">Live Database</span>
               </div>
@@ -267,7 +267,7 @@ export default function ItemGroups() {
                   size="sm" 
                   variant="secondary" 
                   onClick={() => handleOpenForm(row)}
-                  className="p-2 rounded-lg border shadow-sm bg-white dark:bg-slate-800"
+                  className="p-2 rounded  border shadow-sm bg-white dark:bg-slate-800"
                 >
                   <Edit2 size={14} className="text-slate-600 dark:text-slate-400" />
                 </Button>
@@ -278,7 +278,7 @@ export default function ItemGroups() {
                     e.stopPropagation()
                     handleDelete(row.id)
                   }}
-                  className="p-2 rounded-lg border-2 shadow-sm"
+                  className="p-2 rounded  border-2 shadow-sm"
                 >
                   <Trash2 size={14} />
                 </Button>

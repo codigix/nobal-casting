@@ -22,6 +22,39 @@ const getLocalDate = () => {
   return `${year}-${month}-${day}`;
 };
 
+const formatDateForMatch = (dateInput) => {
+  if (!dateInput) return null;
+  
+  let d;
+  if (dateInput instanceof Date) {
+    d = dateInput;
+  } else if (typeof dateInput === 'string') {
+    // 1. Handle DD-MM-YYYY or D-M-YYYY (manually to avoid timezone issues)
+    const dmyMatch = dateInput.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+    if (dmyMatch) {
+      return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
+    }
+
+    // 2. Handle pure YYYY-MM-DD (manually to avoid UTC interpretation)
+    const ymdMatch = dateInput.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (ymdMatch) {
+      return `${ymdMatch[1]}-${ymdMatch[2]}-${ymdMatch[3]}`;
+    }
+
+    // Fallback to JS Date parsing
+    d = new Date(dateInput);
+  } else {
+    d = new Date(dateInput);
+  }
+
+  if (isNaN(d.getTime())) return String(dateInput);
+
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const getShiftTimings = (shift) => {
   const shiftTimings = {
     'A': { from_time: '10:00', from_period: 'AM', to_time: '06:00', to_period: 'PM' },
@@ -124,7 +157,11 @@ export default function ProductionEntry() {
   const totalDowntimeMinutes = downtimes.reduce((sum, d) => sum + (parseFloat(d.duration_minutes) || 0), 0)
 
   const maxAllowedQty = previousOperationData
-    ? (parseFloat(previousOperationData.accepted_quantity) || (parseFloat(previousOperationData.produced_quantity) || 0) - (parseFloat(previousOperationData.rejected_quantity) || 0))
+    ? (
+        typeof previousOperationData.accepted_quantity !== 'undefined' && previousOperationData.accepted_quantity !== null
+          ? parseFloat(previousOperationData.accepted_quantity)
+          : (parseFloat(previousOperationData.produced_quantity) || 0) - (parseFloat(previousOperationData.rejected_quantity) || 0) - (parseFloat(previousOperationData.scrap_quantity) || 0)
+      )
     : parseFloat(jobCardData?.planned_quantity || 0);
 
   const isOperationFinished = totalProducedQty >= (maxAllowedQty - 0.1);
@@ -198,9 +235,7 @@ export default function ProductionEntry() {
     const stats = getShiftStats(rejectionForm.log_date, rejectionForm.shift);
     const produceQty = stats.produced; 
     const rejected = parseFloat(rejectionForm.rejected_qty) || 0;
-    
-    // Automatically sync scrap_qty with rejected_qty as requested
-    const scrap = rejected;
+    const scrap = parseFloat(rejectionForm.scrap_qty) || 0;
     
     setRejectionForm(prev => {
       const hasProduceQtyChanged = prev.produce_qty !== produceQty;
@@ -208,28 +243,22 @@ export default function ProductionEntry() {
       const hasScrapQtyChanged = prev.scrap_qty !== scrap;
       
       if (hasProduceQtyChanged || hasRejectedQtyChanged || hasScrapQtyChanged) {
-        // If produce_qty changed (shift/date changed), auto-calculate accepted
-        // If rejected_qty changed, auto-calculate accepted if it was previously 
-        // linked to produce_qty (i.e., produceQty > 0)
         let newAccepted = prev.accepted_qty;
         
-        if (hasProduceQtyChanged && produceQty > 0) {
-          newAccepted = Math.max(0, produceQty - rejected);
-        } else if (hasRejectedQtyChanged && produceQty > 0) {
-          newAccepted = Math.max(0, produceQty - rejected);
+        if ((hasProduceQtyChanged || hasRejectedQtyChanged || hasScrapQtyChanged) && produceQty > 0) {
+          newAccepted = Math.max(0, produceQty - rejected - scrap);
         }
 
         return {
           ...prev,
           produce_qty: produceQty,
-          scrap_qty: scrap,
           accepted_qty: newAccepted
         };
       }
 
       return prev;
     });
-  }, [rejectionForm.log_date, rejectionForm.shift, rejectionForm.rejected_qty, timeLogs]);
+  }, [rejectionForm.log_date, rejectionForm.shift, rejectionForm.rejected_qty, rejectionForm.scrap_qty, timeLogs]);
 
   const StatCard = ({ label, value, icon: Icon, color, subtitle }) => {
     const colorMap = {
@@ -384,6 +413,38 @@ export default function ProductionEntry() {
     }
   }, [jobCardData, operations, warehouses])
 
+  const getNextLogicalShiftAndDate = (logs = [], rejs = [], jobCard = null) => {
+    const allEntries = [
+      ...logs.map(l => ({ date: formatDateForMatch(l.log_date), shift: normalizeShift(l.shift), day: parseInt(l.day_number) || 1 })),
+      ...rejs.map(r => ({ date: formatDateForMatch(r.log_date), shift: normalizeShift(r.shift), day: parseInt(r.day_number) || 1 }))
+    ];
+
+    if (allEntries.length === 0) {
+      const startDate = jobCard?.actual_start_date ? formatDateForMatch(jobCard.actual_start_date) : getLocalDate();
+      return { date: startDate, shift: 'A', day: 1 };
+    }
+
+    // Sort by date, then day, then shift (B > A)
+    allEntries.sort((a, b) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      if (a.day !== b.day) return a.day - b.day;
+      return a.shift.localeCompare(b.shift);
+    });
+
+    const latest = allEntries[allEntries.length - 1];
+    
+    if (latest.shift === 'A') {
+      return { date: latest.date, shift: 'B', day: latest.day };
+    } else {
+      // Shift B is done, move to next day
+      const parts = latest.date.split('-');
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      d.setDate(d.getDate() + 1);
+      const nextDate = formatDateForMatch(d);
+      return { date: nextDate, shift: 'A', day: latest.day + 1 };
+    }
+  };
+
   const fetchAllData = async () => {
     try {
       setLoading(true)
@@ -405,12 +466,13 @@ export default function ProductionEntry() {
 
       const jobCardStatus = normalizeStatus(jobCard?.status)
 
-      if (jobCardStatus === 'draft') {
-        await productionService.updateJobCard(jobCard.job_card_id, { status: 'pending' })
-        await productionService.updateJobCard(jobCard.job_card_id, { status: 'in-progress' })
-        jobCard.status = 'in-progress'
-      } else if (jobCardStatus === 'pending') {
-        await productionService.updateJobCard(jobCard.job_card_id, { status: 'in-progress' })
+      if (jobCardStatus === 'draft' || jobCardStatus === 'pending') {
+        const updateData = { status: 'in-progress' };
+        if (!jobCard.actual_start_date) {
+          updateData.actual_start_date = getLocalDate();
+          jobCard.actual_start_date = updateData.actual_start_date;
+        }
+        await productionService.updateJobCard(jobCard.job_card_id, updateData)
         jobCard.status = 'in-progress'
       }
 
@@ -520,6 +582,34 @@ export default function ProductionEntry() {
       setTimeLogs(Array.isArray(logs) ? logs : [])
       setRejections(Array.isArray(rejs) ? rejs : [])
       setDowntimes(Array.isArray(down) ? down : [])
+
+      // Auto-populate next shift/date
+      const next = getNextLogicalShiftAndDate(Array.isArray(logs) ? logs : [], Array.isArray(rejs) ? rejs : [], jobCard);
+      const shiftTimings = getShiftTimings(next.shift);
+
+      setTimeLogForm(prev => ({
+        ...prev,
+        shift: next.shift,
+        log_date: next.date,
+        day_number: next.day,
+        ...shiftTimings
+      }));
+
+      setRejectionForm(prev => ({
+        ...prev,
+        shift: next.shift,
+        log_date: next.date,
+        day_number: next.day
+      }));
+
+      setDowntimeForm(prev => ({
+        ...prev,
+        shift: next.shift,
+        log_date: next.date,
+        day_number: next.day,
+        ...shiftTimings
+      }));
+
     } catch (err) {
       toast.addToast(err.message || 'Failed to load operational data', 'error')
     } finally {
@@ -555,36 +645,94 @@ export default function ProductionEntry() {
     }
   }
 
+  const getNextShiftData = (currentShift, currentDate, currentDay) => {
+    if (currentShift === 'A') {
+      return {
+        shift: 'B',
+        log_date: currentDate,
+        day_number: currentDay
+      };
+    } else {
+      // Safe date increment avoiding UTC issues
+      const parts = (currentDate || getLocalDate()).split('-');
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      d.setDate(d.getDate() + 1);
+      
+      return {
+        shift: 'A',
+        log_date: formatDateForMatch(d),
+        day_number: String(parseInt(currentDay || 1) + 1)
+      };
+    }
+  };
+
+  const syncAllForms = (data) => {
+    const { shift, log_date, day_number } = data;
+    const timings = getShiftTimings(shift);
+
+    setTimeLogForm(prev => ({
+      ...prev,
+      shift,
+      log_date: log_date || prev.log_date,
+      day_number: day_number || prev.day_number,
+      ...timings
+    }));
+
+    setRejectionForm(prev => ({
+      ...prev,
+      shift,
+      log_date: log_date || prev.log_date,
+      day_number: day_number || prev.day_number
+    }));
+
+    setDowntimeForm(prev => ({
+      ...prev,
+      shift,
+      log_date: log_date || prev.log_date,
+      day_number: day_number || prev.day_number,
+      ...timings
+    }));
+  };
+
   const handleDayChange = (val, formType) => {
-    if (formType === 'timeLog') setTimeLogForm({ ...timeLogForm, day_number: val })
-    else if (formType === 'rejection') setRejectionForm({ ...rejectionForm, day_number: val })
-    else if (formType === 'downtime') setDowntimeForm({ ...downtimeForm, day_number: val })
+    const dayNum = parseInt(val) || 1;
+    
+    // Anchor for "Day 1"
+    let anchorDateStr = jobCardData?.actual_start_date;
+    
+    if (!anchorDateStr) {
+      // If no actual_start_date, infer anchor from current state
+      const currentDay = parseInt(timeLogForm.day_number) || 1;
+      const parts = (timeLogForm.log_date || getLocalDate()).split('-');
+      const currentLogDate = new Date(parts[0], parts[1] - 1, parts[2]);
+      
+      if (!isNaN(currentLogDate.getTime())) {
+        currentLogDate.setDate(currentLogDate.getDate() - (currentDay - 1));
+        anchorDateStr = formatDateForMatch(currentLogDate);
+      }
+    }
+
+    let newDate = anchorDateStr || getLocalDate();
+
+    if (anchorDateStr) {
+      // Use parts parsing to avoid UTC shift
+      const parts = anchorDateStr.split('-');
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      if (!isNaN(d.getTime())) {
+        d.setDate(d.getDate() + (dayNum - 1));
+        newDate = formatDateForMatch(d);
+      }
+    }
+
+    syncAllForms({ day_number: val, log_date: newDate, shift: timeLogForm.shift });
   }
 
   const handleDateChange = (val, formType) => {
-    if (formType === 'timeLog') setTimeLogForm({ ...timeLogForm, log_date: val })
-    else if (formType === 'rejection') setRejectionForm({ ...rejectionForm, log_date: val })
-    else if (formType === 'downtime') setDowntimeForm({ ...downtimeForm, log_date: val })
+    syncAllForms({ log_date: val, shift: timeLogForm.shift, day_number: timeLogForm.day_number });
   }
 
   const handleShiftChange = (val, formType) => {
-    const timings = getShiftTimings(val)
-
-    if (formType === 'timeLog') {
-      setTimeLogForm({
-        ...timeLogForm,
-        shift: val,
-        ...timings
-      })
-    }
-    else if (formType === 'rejection') setRejectionForm({ ...rejectionForm, shift: val })
-    else if (formType === 'downtime') {
-      setDowntimeForm({
-        ...downtimeForm,
-        shift: val,
-        ...timings
-      })
-    }
+    syncAllForms({ shift: val, log_date: timeLogForm.log_date, day_number: timeLogForm.day_number });
   }
 
   const handleOperatorChange = (val) => {
@@ -595,39 +743,6 @@ export default function ProductionEntry() {
       operator_name: op ? `${op.first_name} ${op.last_name}` : ''
     })
   }
-
-  const formatDateForMatch = (dateInput) => {
-    if (!dateInput) return null;
-    
-    let d;
-    if (dateInput instanceof Date) {
-      d = dateInput;
-    } else if (typeof dateInput === 'string') {
-      // 1. Handle DD-MM-YYYY or D-M-YYYY (manually to avoid timezone issues)
-      const dmyMatch = dateInput.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
-      if (dmyMatch) {
-        return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
-      }
-
-      // 2. Handle pure YYYY-MM-DD (manually to avoid UTC interpretation)
-      const ymdMatch = dateInput.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (ymdMatch) {
-        return `${ymdMatch[1]}-${ymdMatch[2]}-${ymdMatch[3]}`;
-      }
-
-      // 3. Fallback to Date object for ISO strings etc.
-      d = new Date(dateInput);
-    } else {
-      d = new Date(dateInput);
-    }
-
-    if (isNaN(d.getTime())) return null;
-    
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
 
   const calculatePotentialIncrease = (formType, formData) => {
     const { log_date, shift } = formData;
@@ -648,7 +763,7 @@ export default function ProductionEntry() {
     });
 
     const timeLogProduced = shiftTimeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0);
-    const prevRejectionProduced = shiftRejections.reduce((sum, rej) => sum + (parseFloat(rej.accepted_qty) || 0) + Math.max(parseFloat(rej.rejected_qty) || 0, parseFloat(rej.scrap_qty) || 0), 0);
+    const prevRejectionProduced = shiftRejections.reduce((sum, rej) => sum + (parseFloat(rej.accepted_qty) || 0) + (parseFloat(rej.rejected_qty) || 0) + (parseFloat(rej.scrap_qty) || 0), 0);
 
     const prevTotalForShift = Math.max(timeLogProduced, prevRejectionProduced);
 
@@ -657,7 +772,7 @@ export default function ProductionEntry() {
       const newQty = parseFloat(formData.completed_qty) || 0;
       newTotalForShift = Math.max(timeLogProduced + newQty, prevRejectionProduced);
     } else if (formType === 'rejection') {
-      const enteringProduced = (parseFloat(formData.accepted_qty) || 0) + Math.max(parseFloat(formData.rejected_qty) || 0, parseFloat(formData.scrap_qty) || 0);
+      const enteringProduced = (parseFloat(formData.accepted_qty) || 0) + (parseFloat(formData.rejected_qty) || 0) + (parseFloat(formData.scrap_qty) || 0);
       newTotalForShift = Math.max(timeLogProduced, prevRejectionProduced + enteringProduced);
     }
 
@@ -682,7 +797,7 @@ export default function ProductionEntry() {
     });
 
     const produced = shiftTimeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0);
-    const rejectionProduced = shiftRejections.reduce((sum, rej) => sum + (parseFloat(rej.accepted_qty) || 0) + Math.max(parseFloat(rej.rejected_qty) || 0, parseFloat(rej.scrap_qty) || 0), 0);
+    const rejectionProduced = shiftRejections.reduce((sum, rej) => sum + (parseFloat(rej.accepted_qty) || 0) + (parseFloat(rej.rejected_qty) || 0) + (parseFloat(rej.scrap_qty) || 0), 0);
 
     return {
       produced,
@@ -713,15 +828,14 @@ export default function ProductionEntry() {
 
       const response = await productionService.createTimeLog({
         ...timeLogForm,
+        accepted_qty: timeLogForm.completed_qty, // Sync accepted_qty with completed_qty
         time_in_minutes,
         job_card_id: jobCardId
       })
       toast.addToast('Time log added successfully', 'success')
-      setTimeLogForm({
-        ...timeLogForm,
-        completed_qty: 0,
-        ...getShiftTimings(timeLogForm.shift)
-      })
+      const nextData = getNextShiftData(timeLogForm.shift, timeLogForm.log_date, timeLogForm.day_number);
+      syncAllForms(nextData);
+      setTimeLogForm(prev => ({ ...prev, completed_qty: 0 }));
       fetchAllData()
     } catch (err) {
       toast.addToast(err.message || 'Failed to add time log', 'error')
@@ -832,7 +946,11 @@ export default function ProductionEntry() {
 
       await productionService.updateJobCard(jobCardId, {
         status: 'completed',
-        actual_end_date: new Date().toISOString()
+        actual_end_date: new Date().toISOString(),
+        produced_quantity: totalProducedQty,
+        accepted_quantity: totalAcceptedQty,
+        rejected_quantity: totalRejectedQty,
+        scrap_quantity: totalScrapQty
       })
 
       if (nextOperationForm.next_operation_id) {
@@ -1279,15 +1397,28 @@ export default function ProductionEntry() {
                   </div>
                   <div className='col-span-1'>
                     <FieldWrapper label="Shift" required>
-                      <select
-                        value={timeLogForm.shift}
-                        onChange={(e) => handleShiftChange(e.target.value, 'timeLog')}
-                        className="w-full p-2  bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
-                      >
-                        {shifts.map(s => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
+                      <div className="flex gap-1">
+                        <select
+                          value={timeLogForm.shift}
+                          onChange={(e) => handleShiftChange(e.target.value, 'timeLog')}
+                          className="flex-1 p-2  bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
+                        >
+                          {shifts.map(s => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextData = getNextShiftData(timeLogForm.shift, timeLogForm.log_date, timeLogForm.day_number);
+                            syncAllForms(nextData);
+                          }}
+                          className="p-1 px-2 bg-indigo-50 hover:bg-indigo-100 rounded border border-indigo-100 text-indigo-600 transition-colors"
+                          title="Next Shift"
+                        >
+                          <ChevronRight size={14} />
+                        </button>
+                      </div>
                     </FieldWrapper>
                   </div>
 
@@ -1465,15 +1596,28 @@ export default function ProductionEntry() {
 
                   <div className='col-span-1'>
                     <FieldWrapper label="Shift" required>
-                      <select
-                        value={rejectionForm.shift}
-                        onChange={(e) => handleShiftChange(e.target.value, 'rejection')}
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
-                      >
-                        {shifts.map(s => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
+                      <div className="flex gap-1">
+                        <select
+                          value={rejectionForm.shift}
+                          onChange={(e) => handleShiftChange(e.target.value, 'rejection')}
+                          className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
+                        >
+                          {shifts.map(s => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextData = getNextShiftData(rejectionForm.shift, rejectionForm.log_date, rejectionForm.day_number);
+                            syncAllForms(nextData);
+                          }}
+                          className="p-1 px-2 bg-indigo-50 hover:bg-indigo-100 rounded border border-indigo-100 text-indigo-600 transition-colors"
+                          title="Next Shift"
+                        >
+                          <ChevronRight size={14} />
+                        </button>
+                      </div>
                     </FieldWrapper>
                   </div>
 
@@ -1514,7 +1658,7 @@ export default function ProductionEntry() {
                     </FieldWrapper>
                   </div>
                   <div className='col-span-1'>
-                    <FieldWrapper label="Rejected" required>
+                    <FieldWrapper label="Rejected (Scrap)" required>
                       <input
                         type="number"
                         step="0.01"
@@ -1646,15 +1790,28 @@ export default function ProductionEntry() {
 
                   <div className='col-span-1'>
                     <FieldWrapper label="Shift" required>
-                      <select
-                        value={downtimeForm.shift}
-                        onChange={(e) => handleShiftChange(e.target.value, 'downtime')}
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
-                      >
-                        {shifts.map(s => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
+                      <div className="flex gap-1">
+                        <select
+                          value={downtimeForm.shift}
+                          onChange={(e) => handleShiftChange(e.target.value, 'downtime')}
+                          className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none"
+                        >
+                          {shifts.map(s => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextData = getNextShiftData(downtimeForm.shift, downtimeForm.log_date, downtimeForm.day_number);
+                            syncAllForms(nextData);
+                          }}
+                          className="p-1 px-2 bg-indigo-50 hover:bg-indigo-100 rounded border border-indigo-100 text-indigo-600 transition-colors"
+                          title="Next Shift"
+                        >
+                          <ChevronRight size={14} />
+                        </button>
+                      </div>
                     </FieldWrapper>
                   </div>
 
@@ -1952,7 +2109,7 @@ export default function ProductionEntry() {
                   />
                   <button
                     onClick={downloadReport}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-all text-sm font-medium border border-indigo-100"
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded  hover:bg-indigo-100 transition-all text-sm font-medium border border-indigo-100"
                   >
                     <FileText size={16} />
                     Download CSV

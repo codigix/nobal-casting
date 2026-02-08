@@ -36,6 +36,7 @@ export async function listItems(req, res) {
     const filters = {
       item_group: req.query.item_group,
       search: req.query.search,
+      item_codes: req.query.item_codes ? req.query.item_codes.split(',') : null,
       limit: parseInt(req.query.limit) || 100,
       offset: parseInt(req.query.offset) || 0
     }

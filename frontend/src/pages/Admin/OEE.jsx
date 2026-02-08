@@ -71,6 +71,113 @@ const StatCard = ({ label, value, subValue, icon: Icon, color, trend, unit = "%"
   </div>
 );
 
+const LineDetailsModal = ({ isOpen, line, onClose }) => {
+  if (!isOpen || !line) return null;
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+      <div className="bg-white rounded shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-slate-200">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded bg-indigo-50 flex items-center justify-center text-indigo-600">
+              <Layers size={24} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 m-0">Line Details: {line.name}</h2>
+              <p className="text-xs text-slate-500 m-0">{line.machines.length} Machines in this Line</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded transition-all">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            {[
+              { label: 'Avg Availability', value: line.a, color: '#6366f1', icon: Clock },
+              { label: 'Avg Performance', value: line.p, color: '#3b82f6', icon: Activity },
+              { label: 'Avg Quality', value: line.q, color: '#10b981', icon: CheckCircle2 },
+              { label: 'Overall OEE', value: line.oee, color: '#f59e0b', icon: Gauge }
+            ].map((kpi) => (
+              <div key={kpi.label} className="bg-white rounded p-4 border border-slate-200 relative overflow-hidden group shadow-sm">
+                <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: kpi.color }}></div>
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <p className="text-[10px] font-semibold text-slate-400 mb-1 m-0">{kpi.label}</p>
+                    <p className="text-xl font-bold text-slate-900 m-0">{kpi.value.toFixed(1)}%</p>
+                  </div>
+                  <div className="p-2 rounded" style={{ backgroundColor: `${kpi.color}10`, color: kpi.color }}>
+                    <kpi.icon size={18} />
+                  </div>
+                </div>
+                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-2">
+                  <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${kpi.value}%`, backgroundColor: kpi.color }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-white rounded border border-slate-200 overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="text-sm font-bold text-slate-900 m-0">Machines Performance in {line.name}</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/30 border-b border-slate-200">
+                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Machine</th>
+                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Availability</th>
+                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Performance</th>
+                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Quality</th>
+                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">OEE</th>
+                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {line.machines.map((m) => (
+                    <tr key={m.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="p-4">
+                        <p className="text-sm font-bold text-slate-900 m-0">{m.name}</p>
+                        <p className="text-[10px] text-slate-400 m-0">{m.id}</p>
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className={`text-xs font-bold ${m.a > 80 ? 'text-emerald-600' : 'text-amber-600'}`}>{m.a.toFixed(1)}%</span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className={`text-xs font-bold ${m.p > 80 ? 'text-emerald-600' : 'text-amber-600'}`}>{m.p.toFixed(1)}%</span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className={`text-xs font-bold ${m.q > 95 ? 'text-emerald-600' : 'text-amber-600'}`}>{m.q.toFixed(1)}%</span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-xs font-bold text-slate-900">{m.oee.toFixed(1)}%</span>
+                          <div className="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
+                            <div className={`h-full ${m.oee > 85 ? 'bg-emerald-500' : m.oee > 70 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${m.oee}%` }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          m.status === 'Running' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 
+                          m.status === 'Maintenance' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-slate-50 text-slate-600 border border-slate-100'
+                        }`}>
+                          {m.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const MachineCard = ({ machine, onClick }) => {
   const statusColors = {
     'Running': { bg: 'bg-emerald-50', text: 'text-emerald-600', dot: 'bg-emerald-500' },
@@ -148,6 +255,8 @@ const MachineCard = ({ machine, onClick }) => {
 
 export default function OEE() {
   const [selectedMachine, setSelectedMachine] = useState(null);
+  const [selectedLine, setSelectedLine] = useState(null);
+  const [lineModalOpen, setLineModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState('Overview');
   const [machineHistory, setMachineHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -358,6 +467,9 @@ export default function OEE() {
             performance: [],
             quality: [],
             oee: [],
+            load_vals: [],
+            temp_vals: [],
+            health_vals: [],
             total_units: 0,
             rejected_units: 0,
             downtime_mins: 0,
@@ -372,6 +484,9 @@ export default function OEE() {
           acc[m.machine_id].performance.push(m.performance);
           acc[m.machine_id].quality.push(m.quality);
           acc[m.machine_id].oee.push(m.oee);
+          acc[m.machine_id].load_vals.push(m.load || 0);
+          acc[m.machine_id].temp_vals.push(m.temperature || 0);
+          acc[m.machine_id].health_vals.push(m.health || 0);
           acc[m.machine_id].total_units += m.total_units;
           acc[m.machine_id].rejected_units += m.rejected_units;
           acc[m.machine_id].downtime_mins += (m.downtime_mins || 0);
@@ -397,9 +512,9 @@ export default function OEE() {
             p: Number(avg(m.performance).toFixed(1)),
             q: Number(avg(m.quality).toFixed(1)),
             oee: Number(avg(m.oee).toFixed(1)),
-            load: m.entries > 0 ? 85 : 0,
-            temp: m.entries > 0 ? 42 : 22,
-            health: m.status === 'Running' ? 98 : m.status === 'Down' ? 45 : 85,
+            load: m.entries > 0 ? Number(avg(m.load_vals).toFixed(1)) : 0,
+            temp: m.entries > 0 ? Number(avg(m.temp_vals).toFixed(1)) : 22,
+            health: m.entries > 0 ? Number(avg(m.health_vals).toFixed(1)) : (m.status === 'Running' ? 98 : m.status === 'Down' ? 45 : 85),
             throughput: m.total_units,
             rejects: m.rejected_units,
             planned: m.entries > 0 ? Math.round((m.entries * 480) / m.ideal_cycle_time) : 0,
@@ -413,7 +528,7 @@ export default function OEE() {
     }
 
     return []; // Return empty instead of mock data to ensure real-time focus
-  }, [filters.line, realData.machineOEE]);
+  }, [filters.line, realData.machineOEE, realData.downtimeReasons]);
 
   const plantOEE = useMemo(() => {
     if (realData.summary) return realData.summary.oee;
@@ -556,7 +671,8 @@ const lineMetrics = useMemo(() => {
         p: avgP,
         q: avgQ,
         status,
-        statusColor
+        statusColor,
+        machines: machinesInLine
       };
     });
     return metrics.filter(m => filters.line === 'All Lines' || m.name === filters.line);
@@ -802,41 +918,66 @@ const lineMetrics = useMemo(() => {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {lineMetrics.map(line => (
-                <div key={line.name} className="p-3 bg-slate-50/50 rounded border border-slate-100 hover:border-indigo-200 transition-all group">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-xs  text-slate-800  ">{line.name}</h4>
-                    <span className={`p-2  py-1.5 rounded text-xs    ${line.statusColor}`}>{line.status}</span>
+                <div 
+                  key={line.name} 
+                  className="p-3 bg-white rounded border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all group cursor-pointer"
+                  onClick={() => { setSelectedLine(line); setLineModalOpen(true); }}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                        <Layers size={18} />
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-800 m-0">{line.name}</h4>
+                    </div>
+                    <span className={`p-2 py-1 rounded-full text-[10px] font-bold ${line.statusColor}`}>{line.status}</span>
                   </div>
                   
-                  <div className="space-y-8">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { label: 'AVAIL', val: line.a },
+                        { label: 'PERF', val: line.p },
+                        { label: 'QUAL', val: line.q }
+                      ].map((s, i) => (
+                        <div key={i} className="text-center">
+                          <p className="text-[9px] text-slate-400 mb-0.5 uppercase">{s.label}</p>
+                          <p className="text-xs font-bold text-slate-700">{s.val.toFixed(1)}%</p>
+                        </div>
+                      ))}
+                    </div>
+
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs   text-slate-400  ">Efficiency Index</span>
-                        <span className={`text-xs  ${line.oee >= 80 ? 'text-emerald-600' : line.oee >= 60 ? 'text-amber-600' : 'text-rose-600'}`}>{line.oee.toFixed(1)}%</span>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-medium text-slate-400">Efficiency Index</span>
+                        <span className={`text-[10px] font-bold ${line.oee >= 80 ? 'text-emerald-600' : 'text-amber-600'}`}>{line.oee.toFixed(1)}%</span>
                       </div>
-                      <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                         <div 
-                          className={`h-full ${line.oee >= 80 ? 'bg-emerald-500' : line.oee >= 60 ? 'bg-amber-500' : 'bg-rose-500'}`} 
+                          className={`h-full transition-all duration-1000 ${line.oee >= 80 ? 'bg-emerald-500' : line.oee >= 60 ? 'bg-amber-500' : 'bg-rose-500'}`} 
                           style={{ width: `${line.oee}%` }}
                         ></div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex flex-col">
-                        <span className="text-[9px]  text-slate-400  ">Availability</span>
-                        <span className="text-xs  text-slate-700">{line.a.toFixed(1)}%</span>
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                      <div className="flex -space-x-2">
+                        {line.machines.slice(0, 3).map((m, i) => (
+                          <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500" title={m.name}>
+                            {m.name.charAt(0)}
+                          </div>
+                        ))}
+                        {line.machines.length > 3 && (
+                          <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-50 flex items-center justify-center text-[8px] font-bold text-slate-400">
+                            +{line.machines.length - 3}
+                          </div>
+                        )}
                       </div>
-                      <div className="flex flex-col">
-                        <span className="text-[9px]  text-slate-400  ">Performance</span>
-                        <span className="text-xs  text-slate-700">{line.p.toFixed(1)}%</span>
-                      </div>
+                      <span className="text-[10px] font-bold text-indigo-600 flex items-center gap-1 uppercase tracking-widest group-hover:gap-2 transition-all">
+                        Details <ChevronRight size={14} />
+                      </span>
                     </div>
                   </div>
-
-                  <button className="w-full mt-8 py-4 bg-white border border-slate-200 text-slate-500 text-xs   rounded hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-all  ">
-                    Line Details
-                  </button>
                 </div>
               ))}
             </div>
@@ -1023,7 +1164,7 @@ const lineMetrics = useMemo(() => {
       <div className="bg-white rounded border border-slate-200  p-3 mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded bg-slate-100 flex items-center justify-center text-slate-500">
+            <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center text-slate-500">
               <Filter size={18} />
             </div>
             <span className="text-xs  text-slate-400  ">Global Filters</span>
@@ -1042,12 +1183,12 @@ const lineMetrics = useMemo(() => {
             { label: 'Shift', icon: Clock, value: filters.shift, options: ['All Shifts', 'Day Shift', 'Night Shift'] }
           ].map((f, i) => (
             <div key={i} className="flex flex-col min-w-[160px]">
-              <span className="text-xs   text-slate-400  mb-2 flex items-center gap-2 ">
+              <span className="text-[9px]   text-slate-400 flex items-center gap-2 ">
                 <f.icon size={14} />
                 {f.label}
               </span>
               <select 
-                className="bg-slate-50 text-xs  text-slate-800 border border-slate-200 rounded p-2.5 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none cursor-pointer appearance-none"
+                className="bg-slate-50 text-xs  text-slate-800 border border-slate-200 rounded p-2  focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none cursor-pointer appearance-none"
                 value={f.value}
                 onChange={(e) => setFilters({...filters, [f.label === 'Time Period' ? 'range' : f.label === 'Production Line' ? 'line' : 'shift']: e.target.value})}
               >
@@ -1301,6 +1442,12 @@ const lineMetrics = useMemo(() => {
           </div>
         </div>
       )}
+
+      <LineDetailsModal
+        isOpen={lineModalOpen}
+        line={selectedLine}
+        onClose={() => setLineModalOpen(false)}
+      />
 
       <style jsx>{`
         @keyframes shimmer {

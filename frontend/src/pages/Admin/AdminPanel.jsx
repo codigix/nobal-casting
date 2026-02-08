@@ -221,7 +221,7 @@ export default function AdminPanel() {
 
   const DepartmentCard = ({ dept }) => (
     <Card className="hover:shadow-lg transition-shadow">
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-2">
         <div>
           <h3 className="text-lg  text-gray-800 capitalize">{dept}</h3>
           <p className="text-xs text-gray-600">Department Management</p>
@@ -1235,7 +1235,7 @@ export default function AdminPanel() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {/* Machines */}
               <Card>
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between mb-2">
                   <div>
                     <h3 className="text-lg  text-gray-800">Machines</h3>
                     <p className="text-xs text-gray-600">Manage production machines</p>
@@ -1255,7 +1255,7 @@ export default function AdminPanel() {
 
               {/* Operators */}
               <Card>
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between mb-2">
                   <div>
                     <h3 className="text-lg  text-gray-800">Operators</h3>
                     <p className="text-xs text-gray-600">Manage production operators</p>
@@ -1275,7 +1275,7 @@ export default function AdminPanel() {
 
               {/* Tools */}
               <Card>
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between mb-2">
                   <div>
                     <h3 className="text-lg  text-gray-800">Tools</h3>
                     <p className="text-xs text-gray-600">Manage tool room tools</p>
@@ -1295,7 +1295,7 @@ export default function AdminPanel() {
 
               {/* Inspection Checklists */}
               <Card>
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between mb-2">
                   <div>
                     <h3 className="text-lg  text-gray-800">QC Checklists</h3>
                     <p className="text-xs text-gray-600">Inspection checklists</p>
@@ -1315,7 +1315,7 @@ export default function AdminPanel() {
 
               {/* Item Groups */}
               <Card>
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between mb-2">
                   <div>
                     <h3 className="text-lg  text-gray-800">Item Groups</h3>
                     <p className="text-xs text-gray-600">Manage item classification</p>
@@ -1335,7 +1335,7 @@ export default function AdminPanel() {
 
               {/* UOM */}
               <Card>
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between mb-2">
                   <div>
                     <h3 className="text-lg  text-gray-800">Units of Measure</h3>
                     <p className="text-xs text-gray-600">Manage measurement units</p>

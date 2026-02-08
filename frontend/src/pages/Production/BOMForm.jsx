@@ -1205,7 +1205,7 @@ export default function BOMForm() {
                       </div>
                     </div>
 
-                    <div className="bg-white/5 rounded-lg p-2.5 border border-white/5 backdrop-blur-sm hover:border-indigo-500/20 transition-all">
+                    <div className="bg-white/5 rounded  p-2.5 border border-white/5 backdrop-blur-sm hover:border-indigo-500/20 transition-all">
                       <p className="text-slate-500 text-[8px] uppercase  mb-1 tracking-widest">Nodes</p>
                       <div className="flex items-center gap-1.5">
                         <Database size={12} className="text-slate-400" />
@@ -1215,7 +1215,7 @@ export default function BOMForm() {
                       </div>
                     </div>
 
-                    <div className="bg-white/5 rounded-lg p-2.5 border border-white/5 backdrop-blur-sm hover:border-emerald-500/20 transition-all">
+                    <div className="bg-white/5 rounded  p-2.5 border border-white/5 backdrop-blur-sm hover:border-emerald-500/20 transition-all">
                       <p className="text-slate-500 text-[8px] uppercase  mb-1 tracking-widest">Ops</p>
                       <div className="flex items-center gap-1.5">
                         <Settings size={12} className="text-slate-400" />
@@ -1303,7 +1303,7 @@ export default function BOMForm() {
             <div className="w-full">
               {error && (
                 <div className="flex items-center gap-4 rounded border border-rose-100 bg-rose-50/50  p-2 text-rose-800 animate-in fade-in slide-in-from-top-2 backdrop-blur-sm">
-                  <div className="p-2 bg-rose-100 rounded-lg">
+                  <div className="p-2 bg-rose-100 rounded ">
                     <AlertCircle className="h-5 w-5 text-rose-600" />
                   </div>
                   <p className="text-xs   tracking-wide">{error}</p>
@@ -1658,7 +1658,7 @@ export default function BOMForm() {
                         </div>
 
                         <h4 className=" text-xs    text-indigo-600     mb-3 flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-lg bg-indigo-100 flex items-center justify-center">
+                          <div className="w-6 h-6 rounded  bg-indigo-100 flex items-center justify-center">
                             <Plus size={12} strokeWidth={3} />
                           </div>
                           Add Component Specification

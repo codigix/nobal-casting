@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken'
+import { config } from '../config/config.js'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production'
+const JWT_SECRET = config.jwt.secret
 
 const authMiddleware = (req, res, next) => {
   try {

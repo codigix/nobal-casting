@@ -418,7 +418,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
         {/* Modern Header Section */}
         <div className="bg-white border-b border-slate-200  p-2 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600">
+            <div className="w-10 h-10 bg-indigo-50 rounded  flex items-center justify-center text-indigo-600">
               <Package size={24} />
             </div>
             <div>
@@ -509,7 +509,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
                   </select>
                 </div>
                 {formData.supplier_id && (
-                  <div className="flex-1 p-2.5 bg-indigo-50 rounded-lg flex items-center gap-2.5 text-indigo-700 border border-indigo-100">
+                  <div className="flex-1 p-2.5 bg-indigo-50 rounded  flex items-center gap-2.5 text-indigo-700 border border-indigo-100">
                     <div className="w-8 h-8 bg-white rounded flex items-center justify-center text-indigo-600   shrink-0">
                       <Truck size={16} />
                     </div>
@@ -627,7 +627,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
                             type="button"
                             onClick={() => handleRemoveItem(index)}
                             disabled={grnItems.length === 1}
-                            className={`p-1.5 rounded-lg transition-all ${
+                            className={`p-1.5 rounded  transition-all ${
                               grnItems.length === 1
                                 ? 'text-slate-200 cursor-not-allowed'
                                 : 'text-rose-400 hover:text-rose-600 hover:bg-rose-50'
@@ -671,7 +671,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
                 <button
                   type="button"
                   onClick={handleAddItem}
-                  className="inline-flex items-center gap-2 p-2  bg-white border border-slate-200 text-slate-600 rounded-lg text-xs  hover:bg-slate-50 hover:border-slate-300 transition-all   active:scale-95"
+                  className="inline-flex items-center gap-2 p-2  bg-white border border-slate-200 text-slate-600 rounded  text-xs  hover:bg-slate-50 hover:border-slate-300 transition-all   active:scale-95"
                 >
                   <Plus size={14} className="text-indigo-500" />
                   Add Manual Item

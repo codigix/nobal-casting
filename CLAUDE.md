@@ -1453,12 +1453,41 @@ node scripts/seed-test-customers.js
 
 ## Next Steps
 
-1. **Work Orders**: Generate Work Orders from sub-assemblies
-2. **Job Cards**: Create Job Cards from operations with correct hours
-3. **Material Requests**: Auto-create MR for raw materials with correct quantities
-4. **Cost Tracking**: Calculate production cost from aggregated materials & operations
-5. **Stock Reservation**: Reserve raw materials based on aggregated quantities
-6. **WIP Tracking**: Track work-in-progress by sub-assembly
+1. **Job Cards**: Create Job Cards from operations with correct hours
+2. **Material Requests**: Auto-create MR for raw materials with correct quantities
+3. **Cost Tracking**: Calculate production cost from aggregated materials & operations
+4. **Stock Reservation**: Reserve raw materials based on aggregated quantities
+5. **WIP Tracking**: Track work-in-progress by sub-assembly
+
+---
+
+# Phase 23: Prioritizing Sub-Assembly Work Orders ✅
+
+## Overview
+Modified the Work Order generation process from Production Plans to ensure that sub-assembly Work Orders are created before finished goods. This alignment reflects manufacturing dependency logic, ensuring that components are registered in the system before their parent assemblies.
+
+## Features Implemented
+
+### 1. Sequential Work Order Creation
+- **ProductionPlanningService.js**:
+    - Refactored `createWorkOrdersFromPlan` to explicitly process `plan.sub_assemblies` before `plan.fg_items`.
+    - Implemented a small delay between Work Order creations to ensure unique timestamps and proper ordering in the database.
+    - Enforced non-recursive creation (`recurse = false`) during plan-based generation to leverage the plan's already flattened/aggregated BOM structure.
+
+### 2. Dependency Tracking
+- **ProductionModel.js**:
+    - Verified that `createWorkOrderRecursive` correctly handles parent-child relationships via `parent_wo_id`.
+    - Ensured that when recursion is disabled, the system still correctly populates operations and items from the BOM.
+
+## Files Modified
+- `backend/src/services/ProductionPlanningService.js`
+- `backend/src/models/ProductionModel.js`
+- `backend/src/controllers/ProductionPlanningController.js`
+
+## Test Results
+- ✅ Verified that sub-assembly Work Orders are created with earlier timestamps than finished goods for the same plan.
+- ✅ Confirmed that multiple sub-assemblies are processed sequentially before the final FG.
+- ✅ Verified that job cards and material allocations are still correctly generated for each Work Order in the sequence.
 
 ---
 

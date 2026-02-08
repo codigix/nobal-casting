@@ -177,7 +177,7 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess 
       onClose={onClose} 
       title={
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
+          <div className="p-2 bg-indigo-100 rounded  text-indigo-600">
             <Receipt size={20} />
           </div>
           <div>

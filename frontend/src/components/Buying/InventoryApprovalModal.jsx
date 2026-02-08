@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import axios from 'axios'
+import api from '../../services/api'
 import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
 import { CheckCircle, AlertCircle } from 'lucide-react'
@@ -7,6 +8,28 @@ import { CheckCircle, AlertCircle } from 'lucide-react'
 export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [itemRates, setItemRates] = useState({})
+
+  useEffect(() => {
+    if (grn?.items?.length > 0) {
+      const fetchValuationRates = async () => {
+        try {
+          const itemCodes = grn.items.map(i => i.item_code).join(',')
+          const response = await api.get(`/items?item_codes=${itemCodes}`)
+          if (response.data.success) {
+            const ratesMap = {}
+            response.data.data.forEach(item => {
+              ratesMap[item.item_code] = item.valuation_rate || 0
+            })
+            setItemRates(ratesMap)
+          }
+        } catch (err) {
+          console.error('Error fetching valuation rates:', err)
+        }
+      }
+      fetchValuationRates()
+    }
+  }, [grn])
 
   const handleApprove = async (e) => {
     e.preventDefault()
@@ -19,7 +42,7 @@ export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
         accepted_qty: parseFloat(item.accepted_qty || 0),
         rejected_qty: parseFloat(item.rejected_qty || 0),
         warehouse_name: item.warehouse_name || 'Main Warehouse',
-        valuation_rate: parseFloat(item.valuation_rate || item.rate || 0),
+        valuation_rate: parseFloat(item.valuation_rate || itemRates[item.item_code] || item.rate || 0),
         qc_status: item.qc_status || 'pass',
         bin_rack: item.bin_rack || null
       }))
@@ -107,6 +130,12 @@ export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
           <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '4px', fontWeight: 500 }}>Rejected Qty</p>
           <p style={{ fontWeight: 600, fontSize: '1.1rem', color: '#991b1b' }}>{totalRejected}</p>
         </div>
+        <div style={{ padding: '12px', backgroundColor: '#f0f9ff', borderRadius: '6px' }}>
+          <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '4px', fontWeight: 500 }}>Total Value</p>
+          <p style={{ fontWeight: 600, fontSize: '1.1rem', color: '#0369a1' }}>
+            ₹{acceptedItems.reduce((sum, item) => sum + (parseFloat(item.accepted_qty || 0) * parseFloat(item.valuation_rate || itemRates[item.item_code] || item.rate || 0)), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+        </div>
       </div>
 
       {/* Items to be Stored */}
@@ -126,6 +155,7 @@ export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
                   <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #ddd', fontSize: '0.85rem', fontWeight: 600 }}>Item Code</th>
                   <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #ddd', fontSize: '0.85rem', fontWeight: 600 }}>Item Name</th>
                   <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #ddd', fontSize: '0.85rem', fontWeight: 600 }}>Accepted</th>
+                  <th style={{ padding: '10px', textAlign: 'right', borderBottom: '2px solid #ddd', fontSize: '0.85rem', fontWeight: 600 }}>Rate</th>
                   <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #ddd', fontSize: '0.85rem', fontWeight: 600 }}>Warehouse</th>
                   <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #ddd', fontSize: '0.85rem', fontWeight: 600 }}>Batch No</th>
                 </tr>
@@ -137,6 +167,9 @@ export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
                     <td style={{ padding: '10px', fontSize: '0.85rem', color: '#666' }}>{item.item_name}</td>
                     <td style={{ padding: '10px', textAlign: 'center', fontWeight: 600, color: '#16a34a' }}>
                       {item.accepted_qty}
+                    </td>
+                    <td style={{ padding: '10px', textAlign: 'right', fontWeight: 500, color: '#4b5563' }}>
+                      ₹{parseFloat(item.valuation_rate || itemRates[item.item_code] || item.rate || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td style={{ padding: '10px' }}>
                       <span style={{ backgroundColor: '#e0f2fe', color: '#0284c7', padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 500 }}>

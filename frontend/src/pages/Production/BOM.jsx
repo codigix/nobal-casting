@@ -648,7 +648,7 @@ export default function BOM() {
                     name="status" 
                     value={filters.status} 
                     onChange={handleFilterChange}
-                    className="w-full bg-white border border-slate-200 rounded p-2.5 text-xs  text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none cursor-pointer appearance-none"
+                    className="w-full bg-white border border-slate-200 rounded p-2  text-xs  text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none cursor-pointer appearance-none"
                   >
                     <option value="">All Statuses</option>
                     <option value="active">Active Formulation</option>
@@ -667,7 +667,7 @@ export default function BOM() {
                     name="type" 
                     value={filters.type} 
                     onChange={handleFilterChange}
-                    className="w-full bg-white border border-slate-200 rounded p-2.5 text-xs  text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none cursor-pointer appearance-none"
+                    className="w-full bg-white border border-slate-200 rounded p-2  text-xs  text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none cursor-pointer appearance-none"
                   >
                     <option value="">All Categories</option>
                     <option value="Finished Good">Finished Goods</option>

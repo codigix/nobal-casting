@@ -97,7 +97,7 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
       onClick={onToggle}
     >
       <div className="flex items-center gap-4">
-        <div className={`p-2.5 rounded shadow-lg transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
+        <div className={`p-2 rounded shadow-lg transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
           <Icon size={20} strokeWidth={2.5} />
         </div>
         <div>
@@ -470,7 +470,7 @@ export default function SalesQuotationForm() {
               </div>
             </div>
 
-            <nav className="hidden lg:flex items-center bg-slate-50 p-1 rounded-lg border border-slate-100 ml-4 overflow-x-auto max-w-[600px] no-scrollbar">
+            <nav className="hidden lg:flex items-center bg-slate-50 p-1 rounded  border border-slate-100 ml-4 overflow-x-auto max-w-[600px] no-scrollbar">
               <NavItem label="01 FOUNDATION" icon={Landmark} section="foundation" isActive={activeSection === 'foundation'} onClick={scrollToSection} themeColor="blue" />
               <NavItem label="02 LOGISTICS" icon={MapPin} section="address" isActive={activeSection === 'address'} onClick={scrollToSection} themeColor="emerald" />
               <NavItem label="03 ITEMS" icon={Boxes} section="items" isActive={activeSection === 'items'} onClick={scrollToSection} themeColor="amber" />

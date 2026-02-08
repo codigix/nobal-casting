@@ -440,7 +440,7 @@ export default function StockEntries() {
   const renderActions = (row) => {
     if (!row) return null
     return (
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-2">
         <button
           onClick={() => {
             setEditingId(row.id || row.entry_id)
@@ -460,40 +460,44 @@ export default function StockEntries() {
             })
             formModal.open()
           }}
-          className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xs transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 border border-blue-100 dark:border-blue-900/40 rounded-xs transition-all"
           title="Edit"
           disabled={row.status !== 'Draft'}
         >
           <Edit2 size={14} />
+          <span>Edit</span>
         </button>
 
         {row.status === 'Draft' && (
           <button
             onClick={() => handleSubmitEntry(row.id || row.entry_id)}
-            className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-xs transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 border border-green-100 dark:border-green-900/40 rounded-xs transition-all"
             title="Submit"
           >
             <CheckCircle2 size={14} />
+            <span>Submit</span>
           </button>
         )}
 
         {row.status === 'Submitted' && (
           <button
             onClick={() => handleCancelEntry(row.id || row.entry_id)}
-            className="p-1.5 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-xs transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 border border-orange-100 dark:border-orange-900/40 rounded-xs transition-all"
             title="Cancel (Reverse Stock)"
           >
             <RotateCcw size={14} />
+            <span>Cancel</span>
           </button>
         )}
 
         <button
           onClick={() => handleDelete(row.id || row.entry_id)}
-          className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-xs transition-all"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-neutral-400 hover:text-red-600 hover:bg-red-50 hover:border-red-100 border border-neutral-100 rounded-xs transition-all"
           title="Delete"
           disabled={row.status !== 'Draft'}
         >
           <Trash2 size={14} />
+          <span>Delete</span>
         </button>
       </div>
     )
@@ -935,10 +939,11 @@ export default function StockEntries() {
                 {(searchTerm || typeFilter || warehouseFilter) && (
                   <button
                     onClick={handleClearFilters}
-                    className="p-2 text-neutral-500 hover:text-amber-600 transition-colors"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xs transition-colors"
                     title="Clear Filters"
                   >
-                    <RotateCcw size={14} />
+                    <RotateCcw size={12} />
+                    Reset
                   </button>
                 )}
 
@@ -948,12 +953,14 @@ export default function StockEntries() {
                   <button
                     onClick={() => setViewMode('table')}
                     className={`p-1.5 rounded-xs transition-all ${viewMode === 'table' ? 'bg-white dark:bg-neutral-700 shadow-sm text-amber-600' : 'text-neutral-500 hover:text-neutral-700'}`}
+                    title="Table View"
                   >
                     <ListIcon size={14} />
                   </button>
                   <button
                     onClick={() => setViewMode('card')}
                     className={`p-1.5 rounded-xs transition-all ${viewMode === 'card' ? 'bg-white dark:bg-neutral-700 shadow-sm text-amber-600' : 'text-neutral-500 hover:text-neutral-700'}`}
+                    title="Card View"
                   >
                     <LayoutGrid size={14} />
                   </button>
@@ -999,10 +1006,11 @@ export default function StockEntries() {
 
                 <button
                   onClick={fetchEntries}
-                  className="p-2 text-neutral-500 hover:text-blue-600 transition-colors bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs"
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-blue-600 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs transition-all shadow-sm"
                   title="Refresh Data"
                 >
                   <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                  Sync
                 </button>
               </div>
             </div>
@@ -1092,9 +1100,10 @@ export default function StockEntries() {
                                 </button>
                                 <button
                                   onClick={() => handleDelete(entry.id || entry.entry_id)}
-                                  className="p-2 text-neutral-400 hover:text-red-600 bg-neutral-50 hover:bg-red-50 rounded-xs transition-all border border-neutral-100 hover:border-red-100"
+                                  className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-medium text-neutral-400 hover:text-red-600 bg-neutral-50 hover:bg-red-50 rounded-xs transition-all border border-neutral-100 hover:border-red-100"
                                 >
-                                  <Trash2 size={14} />
+                                  <Trash2 size={12} />
+                                  DELETE
                                 </button>
                               </>
                             ) : entry.status === 'Submitted' ? (

@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
-  Plus, Edit2, Trash2, Eye, CheckCircle, ChevronDown, ChevronRight, AlertCircle, Zap, Trash,
-  ClipboardList, Search, Filter, Calendar, Activity, CheckCircle2, Factory, Clock, Package, MoreVertical, X,
-  FileText, TrendingUp, BarChart3, Layers
+  Plus, Edit2, Trash2, Eye, ChevronDown, ChevronRight, Zap, Trash,
+  ClipboardList, Search, Filter, Calendar, Activity, CheckCircle2, Factory, Clock, Package, X,
+  FileText, TrendingUp, Layers
 } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as productionService from '../../services/productionService'
-import Card from '../../components/Card/Card'
 import CreateJobCardModal from '../../components/Production/CreateJobCardModal'
 import ViewJobCardModal from '../../components/Production/ViewJobCardModal'
 import SearchableSelect from '../../components/SearchableSelect'
@@ -253,30 +252,6 @@ export default function JobCard() {
     }
   }
 
-  const handleAutoGenerate = async (woId) => {
-    try {
-      setLoading(true)
-      const response = await productionService.generateJobCardsForWorkOrder(woId)
-      if (response.success || (Array.isArray(response.data) && response.data.length > 0) || (Array.isArray(response.jobCards) && response.jobCards.length > 0)) {
-        toast.addToast('Job cards generated automatically from BOM', 'success')
-        fetchJobCardsForWO(woId, true)
-      } else {
-        toast.addToast('Could not find operations/BOM for this item to auto-generate', 'warning')
-      }
-    } catch (err) {
-      toast.addToast(err.message || 'Failed to auto-generate job cards', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleEdit = (card) => {
-    setEditingId(card.job_card_id)
-    setShowModal(true)
-  }
-
-
-
   const handleInlineEdit = (card) => {
     setInlineEditingId(card.job_card_id)
     setInlineEditData({
@@ -352,7 +327,7 @@ export default function JobCard() {
 
   const handleInlineSave = async (jobCardId) => {
     try {
-      const currentWO = Array.from(Object.entries(jobCardsByWO)).find(([woId, cards]) =>
+      const currentWO = Array.from(Object.entries(jobCardsByWO)).find(([_, cards]) =>
         cards.some(c => c.job_card_id === jobCardId)
       )
 
@@ -477,20 +452,6 @@ export default function JobCard() {
     }
   }
 
-  const getStatusColor = (status) => {
-    const colors = {
-      draft: 'status-draft',
-      pending: 'status-planned',
-      'in-progress': 'status-in-progress',
-      completed: 'status-completed',
-      cancelled: 'status-cancelled',
-      'quality-check': 'status-planned',
-      delivered: 'status-completed',
-      open: 'status-in-progress'
-    }
-    return colors[status] || 'status-draft'
-  }
-
   const formatQuantity = (qty) => {
     return typeof qty === 'number' ? qty.toFixed(2) : parseFloat(qty || 0).toFixed(2)
   }
@@ -540,7 +501,9 @@ export default function JobCard() {
     if (currentCardIndex === 0) return Infinity
 
     const previousCard = jobCards[currentCardIndex - 1]
-    return parseFloat(previousCard?.produced_quantity) || 0
+    return typeof previousCard?.accepted_quantity !== 'undefined' && previousCard?.accepted_quantity !== null
+      ? parseFloat(previousCard.accepted_quantity)
+      : (parseFloat(previousCard?.produced_quantity) || 0) - (parseFloat(previousCard?.rejected_quantity) || 0) - (parseFloat(previousCard?.scrap_quantity) || 0)
   }
 
   const getMaxProducibleQty = (jobCardId, woId) => {
@@ -778,15 +741,16 @@ export default function JobCard() {
                                 <th className="p-2 text-xs  text-gray-500 ">Operational Phase</th>
                                 <th className="p-2 text-xs  text-gray-500 ">Assignment</th>
                                 <th className="p-2 text-xs  text-gray-500  text-center">Status</th>
+                                <th className="p-2 text-xs  text-gray-500  text-right">Duration & Cost</th>
                                 <th className="p-2 text-xs  text-gray-500  text-right">Metrics</th>
                                 <th className="p-2 text-xs  text-gray-500  text-right">Action</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                              {jobCardsByWO[wo.wo_id].map((card, idx) => (
+                              {jobCardsByWO[wo.wo_id].map((card) => (
                                 inlineEditingId === card.job_card_id ? (
                                   <tr key={card.job_card_id} className="bg-indigo-50/50 border-y-2 border-indigo-200">
-                                    <td colSpan="5" className="p-2 ">
+                                    <td colSpan="6" className="p-2 ">
                                       <div className="flex items-center gap-2 mb-2">
                                         <div className="bg-indigo-600 p-2 rounded  text-white">
                                           <Edit2 size={16} />
@@ -960,6 +924,21 @@ export default function JobCard() {
                                     </td>
                                     <td className="p-2  text-right">
                                       <div className="flex flex-col items-end gap-1">
+                                        <div className="flex items-center gap-1.5 text-xs text-gray-900 font-medium">
+                                          <Clock size={12} className="text-gray-400" />
+                                          {card.operation_time || 0}m
+                                          <span className="text-[10px] text-gray-400 font-normal">/ unit</span>
+                                        </div>
+                                        <div className="text-[10px] text-gray-500">
+                                          Total: {((parseFloat(card.operation_time || 0) * parseFloat(card.planned_quantity || 0)) / 60).toFixed(1)} hrs
+                                        </div>
+                                        <div className="mt-1 px-1.5 py-0.5 bg-gray-100 rounded text-[10px] text-gray-600 font-mono">
+                                          ₹{parseFloat(card.operating_cost || 0).toLocaleString()}
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="p-2  text-right">
+                                      <div className="flex flex-col items-end gap-1">
                                         <div className="flex items-center gap-2">
                                           <span className="text-xs  text-gray-400 ">Quality Yield</span>
                                           <span className="text-xs  text-gray-900 font-medium">
@@ -979,9 +958,21 @@ export default function JobCard() {
                                             {formatQuantity(card.accepted_quantity)} / {formatQuantity(card.planned_quantity)}
                                           </p>
                                           {card.produced_quantity > card.accepted_quantity && (
-                                            <p className="text-[9px] text-amber-500 mt-0.5">
-                                              Total Produced: {formatQuantity(card.produced_quantity)}
-                                            </p>
+                                            <div className="flex flex-col items-end mt-1 gap-0.5">
+                                              {parseFloat(card.rejected_quantity) > 0 && (
+                                                <p className="text-[9px] text-rose-500 leading-none">
+                                                  Rejected: {formatQuantity(card.rejected_quantity)}
+                                                </p>
+                                              )}
+                                              {parseFloat(card.scrap_quantity) > 0 && (
+                                                <p className="text-[9px] text-orange-500 leading-none">
+                                                  Scrap: {formatQuantity(card.scrap_quantity)}
+                                                </p>
+                                              )}
+                                              <p className="text-[9px] text-amber-500 leading-none font-medium">
+                                                Total Prod: {formatQuantity(card.produced_quantity)}
+                                              </p>
+                                            </div>
                                           )}
                                         </div>
                                       </div>

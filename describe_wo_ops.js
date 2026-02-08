@@ -1,17 +1,14 @@
-const mysql = require('mysql2/promise');
-(async () => {
-  try {
-    const db = await mysql.createConnection({
-      host: 'localhost',
-      user: 'root',
-      password: 'root',
-      database: 'nobalcasting'
-    });
-    const [rows] = await db.execute('DESCRIBE work_order_operation');
-    console.log(JSON.stringify(rows, null, 2));
-    await db.end();
-  } catch (err) {
-    console.error(err);
-    process.exit(1);
-  }
-})();
+import mysql from 'mysql2/promise'
+
+const conn = await mysql.createConnection({
+  host: 'localhost',
+  user: 'root',
+  password: 'root',
+  database: 'nobalcasting'
+})
+
+console.log('\n=== WORK ORDER OPERATION TABLE ===')
+const [rows] = await conn.query('DESC work_order_operation')
+console.table(rows)
+
+await conn.end()

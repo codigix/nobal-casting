@@ -36,7 +36,7 @@ const StatCard = ({ label, value, icon: Icon, color, onClick, isActive, trend })
           : 'border-neutral-200 hover:border-neutral-300'
       }`}
     >
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-2">
         <div className={`p-2.5 bg-neutral-50 rounded-none border border-neutral-100 text-neutral-400 group-hover:text-${theme}-600 group-hover:border-${theme}-100 transition-colors`}>
           <Icon size={20} />
         </div>

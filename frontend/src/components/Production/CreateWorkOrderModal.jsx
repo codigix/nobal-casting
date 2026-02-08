@@ -50,6 +50,8 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
       const response = await productionService.createWorkOrder(formData)
       
       // Automatically generate job cards for the new work order
+      // Note: Backend now handles this automatically in createWorkOrderRecursive
+      /*
       const newWoId = response?.data?.wo_id || response?.wo_id
       if (newWoId) {
         console.log(`Automatically generating job cards for Work Order: ${newWoId}`)
@@ -59,6 +61,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
           console.warn('Failed to auto-generate job cards:', jcErr)
         }
       }
+      */
       
       // Reset form
       setFormData({

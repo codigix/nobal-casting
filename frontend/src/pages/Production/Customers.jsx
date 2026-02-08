@@ -300,7 +300,7 @@ export default function Customers() {
                       <tr key={customer.customer_id} className="group hover:bg-blue-50/30 transition-colors">
                         <td className="p-2">
                           <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded bg-slate-100 flex items-center justify-center text-slate-500  group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                            <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center text-slate-500  group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
                               {customer.customer_name?.charAt(0) || 'C'}
                             </div>
                             <div>

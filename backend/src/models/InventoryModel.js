@@ -9,7 +9,7 @@ class InventoryModel {
   // ============================================================================
   // STEP 1: ALLOCATE MATERIALS (When Work Order is Created)
   // ============================================================================
-  async allocateMaterialsForWorkOrder(wo_id, materials, createdBy = 'system') {
+  async allocateMaterialsForWorkOrder(wo_id, materials, createdBy = 1) {
     try {
       const allocations = []
 
@@ -93,7 +93,7 @@ class InventoryModel {
     job_card_id,
     work_order_id,
     materials,
-    tracked_by = 'system'
+    tracked_by = 1
   ) {
     try {
       const consumptions = []
@@ -160,7 +160,7 @@ class InventoryModel {
   // ============================================================================
   // STEP 3: FINALIZE MATERIAL DEDUCTION (When Work Order is Completed)
   // ============================================================================
-  async finalizeWorkOrderMaterials(work_order_id, finalized_by = 'system') {
+  async finalizeWorkOrderMaterials(work_order_id, finalized_by = 1) {
     try {
       // Get all allocations for this work order
       const [allocations] = await this.db.query(
@@ -281,7 +281,7 @@ class InventoryModel {
     warehouse_id,
     return_qty,
     reason = 'Unused material',
-    returned_by = 'system'
+    returned_by = 1
   ) {
     try {
       // Get current stock

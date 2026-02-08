@@ -401,6 +401,7 @@ export class ProductionPlanningModel {
           plan_id VARCHAR(100) NOT NULL,
           item_code VARCHAR(100) NOT NULL,
           item_name VARCHAR(255),
+          parent_item_code VARCHAR(100),
           target_warehouse VARCHAR(100),
           schedule_date DATE,
           required_qty DECIMAL(18,6),
@@ -429,9 +430,9 @@ export class ProductionPlanningModel {
       
       await this.db.execute(
         `INSERT INTO production_plan_sub_assembly 
-         (plan_id, item_code, item_name, target_warehouse, schedule_date, required_qty, planned_qty, planned_qty_before_scrap, scrap_percentage, manufacturing_type, bom_no, revision, material_grade, drawing_no, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [plan_id, item.item_code || null, item.item_name || null, item.target_warehouse || null, scheduleDate, 
+         (plan_id, item_code, item_name, parent_item_code, target_warehouse, schedule_date, required_qty, planned_qty, planned_qty_before_scrap, scrap_percentage, manufacturing_type, bom_no, revision, material_grade, drawing_no, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [plan_id, item.item_code || null, item.item_name || null, item.parent_item_code || item.parent_assembly_code || null, item.target_warehouse || null, scheduleDate, 
          requiredQty, plannedQty, plannedQtyBeforeScrap, scrapPercentage, item.manufacturing_type || null, item.bom_no || null, item.revision || null, item.material_grade || null, item.drawing_no || null, item.notes || null]
       )
     } catch (error) {
@@ -696,6 +697,68 @@ export class ProductionPlanningModel {
       await this.db.execute('DELETE FROM production_plan')
     } catch (error) {
       throw error
+    }
+  }
+
+  async getProductionReportData(plan_id) {
+    try {
+      const plan = await this.getPlanById(plan_id);
+      if (!plan) return null;
+
+      // Get all work orders for this plan
+      const [workOrders] = await this.db.execute(
+        `SELECT 
+          wo.*, 
+          i.name as item_name,
+          COALESCE(
+            (SELECT accepted_quantity FROM job_card WHERE work_order_id = wo.wo_id ORDER BY operation_sequence DESC LIMIT 1),
+            (SELECT quantity_produced FROM production_entry WHERE work_order_id = wo.wo_id ORDER BY created_at DESC LIMIT 1),
+            0
+          ) as produced_qty,
+          (SELECT COALESCE(SUM(scrap_quantity), 0) FROM job_card WHERE work_order_id = wo.wo_id) as scrap_qty,
+          (SELECT COALESCE(SUM(rejected_quantity), 0) FROM job_card WHERE work_order_id = wo.wo_id) as rejected_qty
+        FROM work_order wo
+        LEFT JOIN item i ON wo.item_code = i.item_code
+        WHERE wo.production_plan_id = ?`,
+        [plan_id]
+      );
+
+      // Get all job cards for these work orders
+      const woIds = workOrders.map(wo => wo.wo_id);
+      let jobCards = [];
+      let productionEntries = [];
+
+      if (woIds.length > 0) {
+        const placeholders = woIds.map(() => '?').join(',');
+        const [jcRows] = await this.db.execute(
+          `SELECT jc.*, o.operation_name 
+           FROM job_card jc
+           LEFT JOIN operation o ON jc.operation = o.name
+           WHERE jc.work_order_id IN (${placeholders})
+           ORDER BY jc.work_order_id, jc.operation_sequence`,
+          woIds
+        );
+        jobCards = jcRows;
+
+        const [peRows] = await this.db.execute(
+          `SELECT pe.* 
+           FROM production_entry pe
+           WHERE pe.work_order_id IN (${placeholders})
+           ORDER BY pe.created_at DESC`,
+          woIds
+        );
+        productionEntries = peRows;
+      }
+
+      return {
+        plan,
+        workOrders,
+        jobCards,
+        productionEntries
+      };
+    } catch (error) {
+      console.error('Error fetching production report data:', error);
+      throw error;
     }
   }
 }

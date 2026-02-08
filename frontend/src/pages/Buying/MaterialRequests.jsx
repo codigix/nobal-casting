@@ -227,7 +227,7 @@ export default function MaterialRequests() {
           <button
             onClick={() => { setSelectedMrId(row.mr_id); setViewModalOpen(true); }}
             className="p-1.5 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xs transition-colors"
-            title={['material_issue', 'material_transfer'].includes(row.purpose) && row.status === 'pending' ? "View & Release Materials" : "View Details"}
+            title={['material_issue', 'material_transfer'].includes(row.purpose?.toLowerCase()) && ['pending', 'approved', 'partial', 'completed'].includes(row.status) ? "View & Release Materials" : "View Details"}
           >
             <Eye size={16} />
           </button>

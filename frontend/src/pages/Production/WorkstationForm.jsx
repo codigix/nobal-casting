@@ -401,7 +401,7 @@ export default function WorkstationForm() {
                     name="maintenance_schedule"
                     value={formData.maintenance_schedule}
                     onChange={handleInputChange}
-                    className="w-full p-2.5 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 text-xs  text-slate-700 cursor-pointer"
+                    className="w-full p-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 text-xs  text-slate-700 cursor-pointer"
                   >
                     {maintenanceFrequencies.map(f => (
                       <option key={f} value={f}>{f}</option>

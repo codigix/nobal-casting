@@ -304,6 +304,11 @@ router.delete(
     authMiddleware,
     productionController.getOperatorEfficiency.bind(productionController)
   )
+  router.get(
+    '/analytics/rejection-analysis',
+    authMiddleware,
+    productionController.getRejectionAnalysis.bind(productionController)
+  )
 
   // ============= TIME LOGS =============
   router.post(
