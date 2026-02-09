@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
 import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
-import { Plus, Trash2, AlertCircle, CheckCircle, ChevronDown } from 'lucide-react'
+import Badge from '../Badge/Badge'
+import Card from '../Card/Card'
+import Input from '../Input/Input'
+import { Plus, Trash2, AlertCircle, CheckCircle, Package, Receipt, CreditCard, Calendar } from 'lucide-react'
+import { suppliersAPI, itemsAPI, taxTemplatesAPI, purchaseOrdersAPI } from '../../services/api'
 
 export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
@@ -33,23 +36,16 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
     try {
       setDataLoading(true)
       setError(null)
-      const apiUrl = import.meta.env.VITE_API_URL
       
-      const [supRes, itemRes] = await Promise.all([
-        axios.get(`${apiUrl}/suppliers?active=true`),
-        axios.get(`${apiUrl}/items?limit=1000`)
+      const [supRes, itemRes, taxRes] = await Promise.all([
+        suppliersAPI.list(),
+        itemsAPI.list(),
+        taxTemplatesAPI.list().catch(() => ({ data: { data: [] } }))
       ])
 
       setSuppliers(supRes.data.data || [])
       setAllItems(itemRes.data.data || [])
-      
-      try {
-        const taxRes = await axios.get(`${apiUrl}/tax-templates`)
-        setTaxTemplates(taxRes.data.data || [])
-      } catch (err) {
-        console.log('Tax templates not available')
-        setTaxTemplates([])
-      }
+      setTaxTemplates(taxRes.data.data || [])
       
       const today = new Date().toISOString().split('T')[0]
       setFormData(prev => ({
@@ -59,7 +55,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
       }))
     } catch (err) {
       console.error('Failed to fetch required data:', err)
-      setError('Failed to load suppliers, items, or tax templates')
+      setError('Failed to load required data')
     } finally {
       setDataLoading(false)
     }
@@ -94,7 +90,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
         ...newItems[index],
         item_code: value,
         uom: item?.uom || '',
-        rate: 0
+        rate: item?.last_purchase_rate || 0
       }
     } else if (field === 'qty' || field === 'rate') {
       newItems[index][field] = value ? parseFloat(value) : ''
@@ -172,7 +168,6 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
 
     try {
       setLoading(true)
-      const apiUrl = import.meta.env.VITE_API_URL
       
       const submitData = {
         supplier_id: formData.supplier_id,
@@ -191,7 +186,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
         total_value: calculateSubtotal()
       }
 
-      await axios.post(`${apiUrl}/purchase-orders`, submitData)
+      await purchaseOrdersAPI.create(submitData)
       
       onSuccess?.()
       onClose()
@@ -213,86 +208,67 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
     }
   }
 
-  const renderLoadingState = () => (
-    <div style={{ padding: '40px', textAlign: 'center' }}>
-      <div style={{ display: 'inline-block', width: '40px', height: '40px', border: '3px solid #e5e7eb', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }}></div>
-      <p style={{ marginTop: '12px', color: '#666', fontSize: '0.95rem' }}>Loading suppliers and items...</p>
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>
-  )
-
   if (dataLoading) {
     return (
-      <Modal isOpen={isOpen} onClose={onClose} title="📋 Create New Purchase Order" size="2xl">
-        {renderLoadingState()}
+      <Modal isOpen={isOpen} onClose={onClose} title="Create New Purchase Order" size="3xl">
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="w-10 h-10 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin"></div>
+          <p className="mt-4 text-neutral-500">Loading required data...</p>
+        </div>
       </Modal>
     )
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="📋 Create New Purchase Order" size="2xl">
-      <form onSubmit={handleSubmit}>
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title="Create New Purchase Order" 
+      size="3xl"
+      footer={
+        <div className="flex justify-end gap-3 w-full">
+          <Button variant="outline" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={handleSubmit} 
+            loading={loading}
+          >
+            <CheckCircle size={16} className="mr-2" />
+            Create Purchase Order
+          </Button>
+        </div>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div style={{
-            background: '#fee2e2',
-            border: '1px solid #fecaca',
-            borderRadius: '8px',
-            padding: '12px 16px',
-            marginBottom: '24px',
-            color: '#dc2626',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            fontSize: '0.9rem'
-          }}>
-            <AlertCircle size={18} />
-            <span>{error}</span>
-          </div>
+          <Alert variant="danger" className="mb-6">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={18} />
+              <span>{error}</span>
+            </div>
+          </Alert>
         )}
 
         {/* Basic Information Section */}
-        <div style={{
-          backgroundColor: '#f8fafc',
-          border: '1px solid #cbd5e1',
-          borderRadius: '8px',
-          padding: '20px',
-          marginBottom: '24px'
-        }}>
-          <h4 style={{ marginTop: 0, marginBottom: '16px', fontWeight: 700, color: '#1e293b', fontSize: '1rem' }}>
-            📌 Basic Information
-          </h4>
+        <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center gap-2">
+            <Receipt size={18} className="text-primary-600" />
+            <h3 className="font-semibold text-neutral-800">Basic Information</h3>
+          </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+          <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#1e293b', fontSize: '0.9rem' }}>
-                Supplier *
-              </label>
+              <label className="block text-xs font-medium text-neutral-700 mb-1.5">Supplier *</label>
               <select
                 name="supplier_id"
                 value={formData.supplier_id}
                 onChange={handleSupplierChange}
                 required
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  fontSize: '0.9rem',
-                  fontFamily: 'inherit',
-                  backgroundColor: '#fff',
-                  appearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%231e293b' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 10px center',
-                  paddingRight: '32px',
-                  cursor: 'pointer'
-                }}
+                className="w-full h-10 px-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-sm outline-none bg-white"
               >
-                <option value="">Select a Supplier</option>
+                <option value="">Select Supplier</option>
                 {suppliers.map(supplier => (
                   <option key={supplier.supplier_id} value={supplier.supplier_id}>
                     {supplier.name}
@@ -301,142 +277,72 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
               </select>
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#1e293b', fontSize: '0.9rem' }}>
-                Order Date *
-              </label>
-              <input
-                type="date"
-                name="order_date"
-                value={formData.order_date}
-                onChange={handleInputChange}
-                required
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  fontSize: '0.9rem',
-                  fontFamily: 'inherit',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
+            <Input
+              label="Order Date *"
+              type="date"
+              name="order_date"
+              value={formData.order_date}
+              onChange={handleInputChange}
+              required
+            />
 
-            <div>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#1e293b', fontSize: '0.9rem' }}>
-                Expected Delivery *
-              </label>
-              <input
-                type="date"
-                name="expected_date"
-                value={formData.expected_date}
-                onChange={handleInputChange}
-                required
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  fontSize: '0.9rem',
-                  fontFamily: 'inherit',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
+            <Input
+              label="Expected Delivery *"
+              type="date"
+              name="expected_date"
+              value={formData.expected_date}
+              onChange={handleInputChange}
+              required
+            />
           </div>
 
           {supplierDetails && (
-            <div style={{
-              marginTop: '16px',
-              padding: '12px',
-              backgroundColor: '#ecfdf5',
-              border: '1px solid #a7f3d0',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '0.85rem'
-            }}>
-              <CheckCircle size={16} style={{ color: '#10b981' }} />
-              <span style={{ color: '#047857', fontWeight: 500 }}>
-                {supplierDetails.name} • GSTIN: {supplierDetails.gstin || 'N/A'} • Lead time: {supplierDetails.lead_time_days || 7} days
-              </span>
+            <div className="mx-4 mb-4 p-3 bg-green-50 rounded-lg border border-green-100 flex items-center gap-3">
+              <div className="p-1.5 bg-green-100 rounded-full">
+                <CheckCircle size={14} className="text-green-600" />
+              </div>
+              <div className="text-xs text-green-700 flex flex-wrap gap-x-4 gap-y-1">
+                <span className="font-medium">{supplierDetails.name}</span>
+                <span>GSTIN: {supplierDetails.gstin || 'N/A'}</span>
+                <span>Lead time: {supplierDetails.lead_time_days || 7} days</span>
+              </div>
             </div>
           )}
-        </div>
+        </section>
 
         {/* Items Section */}
-        <div style={{
-          backgroundColor: '#f8fafc',
-          border: '1px solid #cbd5e1',
-          borderRadius: '8px',
-          padding: '20px',
-          marginBottom: '24px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h4 style={{ marginTop: 0, marginBottom: 0, fontWeight: 700, color: '#1e293b', fontSize: '1rem' }}>
-              📦 Purchase Order Items *
-            </h4>
-            <button
-              type="button"
-              onClick={handleAddItem}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 12px',
-                backgroundColor: '#dbeafe',
-                border: '1px solid #3b82f6',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                color: '#1e40af',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = '#bfdbfe'
-                e.target.style.borderColor = '#1e40af'
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = '#dbeafe'
-                e.target.style.borderColor = '#3b82f6'
-              }}
-            >
-              <Plus size={16} /> Add Item
-            </button>
+        <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Package size={18} className="text-primary-600" />
+              <h3 className="font-semibold text-neutral-800">Purchase Order Items</h3>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleAddItem} className="h-8">
+              <Plus size={14} className="mr-1" /> Add Item
+            </Button>
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid #cbd5e1', backgroundColor: '#f1f5f9' }}>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>Item Code</th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>Qty</th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>UOM</th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>Rate</th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#475569' }}>Amount</th>
-                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, color: '#475569' }}>Action</th>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-neutral-500 uppercase bg-neutral-50/50 border-b border-neutral-200">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Item Details</th>
+                  <th className="px-4 py-3 font-semibold w-24 text-right">Qty</th>
+                  <th className="px-4 py-3 font-semibold w-24">UOM</th>
+                  <th className="px-4 py-3 font-semibold w-32 text-right">Rate</th>
+                  <th className="px-4 py-3 font-semibold w-32 text-right">Amount</th>
+                  <th className="px-4 py-3 font-semibold w-16 text-center"></th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-neutral-100">
                 {formData.items.map((item, index) => (
-                  <tr key={index} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                    <td style={{ padding: '12px' }}>
+                  <tr key={index} className="hover:bg-neutral-50/50 transition-colors">
+                    <td className="px-4 py-3">
                       <select
                         value={item.item_code}
                         onChange={(e) => handleItemChange(index, 'item_code', e.target.value)}
                         required
-                        style={{
-                          width: '100%',
-                          padding: '8px',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '4px',
-                          fontSize: '0.85rem',
-                          fontFamily: 'inherit',
-                          backgroundColor: '#fff'
-                        }}
+                        className="w-full h-9 px-2 rounded-md border border-neutral-300 focus:ring-1 focus:ring-primary-500 outline-none text-sm bg-white"
                       >
                         <option value="">Select Item</option>
                         {allItems.map(it => (
@@ -446,95 +352,47 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
                         ))}
                       </select>
                     </td>
-                    <td style={{ padding: '12px' }}>
+                    <td className="px-4 py-3">
                       <input
                         type="number"
-                        placeholder="0"
                         value={item.qty}
                         onChange={(e) => handleItemChange(index, 'qty', e.target.value)}
                         required
                         min="0"
                         step="0.01"
-                        style={{
-                          width: '100%',
-                          padding: '8px',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '4px',
-                          fontSize: '0.85rem',
-                          fontFamily: 'inherit',
-                          boxSizing: 'border-box'
-                        }}
+                        placeholder="0"
+                        className="w-full h-9 px-2 text-right rounded-md border border-neutral-300 focus:ring-1 focus:ring-primary-500 outline-none text-sm"
                       />
                     </td>
-                    <td style={{ padding: '12px' }}>
+                    <td className="px-4 py-3">
                       <input
                         type="text"
                         value={item.uom}
                         readOnly
-                        style={{
-                          width: '100%',
-                          padding: '8px',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '4px',
-                          fontSize: '0.85rem',
-                          fontFamily: 'inherit',
-                          backgroundColor: '#f1f5f9',
-                          color: '#64748b'
-                        }}
+                        className="w-full h-9 px-2 rounded-md border border-neutral-200 bg-neutral-50 text-neutral-500 text-sm outline-none"
                       />
                     </td>
-                    <td style={{ padding: '12px' }}>
+                    <td className="px-4 py-3">
                       <input
                         type="number"
-                        placeholder="0.00"
                         value={item.rate}
                         onChange={(e) => handleItemChange(index, 'rate', e.target.value)}
                         required
                         min="0"
                         step="0.01"
-                        style={{
-                          width: '100%',
-                          padding: '8px',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '4px',
-                          fontSize: '0.85rem',
-                          fontFamily: 'inherit',
-                          boxSizing: 'border-box'
-                        }}
+                        placeholder="0.00"
+                        className="w-full h-9 px-2 text-right rounded-md border border-neutral-300 focus:ring-1 focus:ring-primary-500 outline-none text-sm"
                       />
                     </td>
-                    <td style={{ padding: '12px', backgroundColor: '#f0fdf4', fontWeight: 600, color: '#166534' }}>
-                      ₹{calculateLineAmount(item.qty, item.rate).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    <td className="px-4 py-3 text-right font-medium text-neutral-900">
+                      ₹{calculateLineAmount(item.qty, item.rate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                    <td className="px-4 py-3 text-center">
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(index)}
                         disabled={formData.items.length === 1}
-                        style={{
-                          padding: '6px',
-                          backgroundColor: formData.items.length === 1 ? '#f3f4f6' : '#fee2e2',
-                          border: '1px solid ' + (formData.items.length === 1 ? '#ddd' : '#fecaca'),
-                          borderRadius: '4px',
-                          cursor: formData.items.length === 1 ? 'not-allowed' : 'pointer',
-                          color: formData.items.length === 1 ? '#999' : '#dc2626',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          opacity: formData.items.length === 1 ? 0.5 : 1,
-                          transition: 'all 0.2s',
-                          margin: '0 auto'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (formData.items.length > 1) {
-                            e.target.style.backgroundColor = '#fecaca'
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (formData.items.length > 1) {
-                            e.target.style.backgroundColor = '#fee2e2'
-                          }
-                        }}
+                        className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-all disabled:opacity-30 disabled:hover:bg-transparent"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -545,201 +403,92 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
             </table>
           </div>
 
-          {/* Items Summary */}
-          <div style={{
-            marginTop: '16px',
-            padding: '16px',
-            backgroundColor: '#f1f5f9',
-            borderRadius: '6px',
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr',
-            gap: '16px'
-          }}>
-            <div>
-              <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '4px', fontWeight: 500 }}>Total Items</p>
-              <p style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b' }}>
-                {formData.items.length}
-              </p>
+          <div className="p-4 bg-neutral-50/50 border-t border-neutral-100 grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-neutral-400 mb-1">Total Items</span>
+              <span className="text-lg font-bold text-neutral-800">{formData.items.length}</span>
             </div>
-            <div>
-              <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '4px', fontWeight: 500 }}>Total Quantity</p>
-              <p style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b' }}>
-                {getTotalQty().toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-              </p>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-neutral-400 mb-1">Total Qty</span>
+              <span className="text-lg font-bold text-neutral-800">{getTotalQty().toLocaleString('en-IN')}</span>
             </div>
-            <div>
-              <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '4px', fontWeight: 500 }}>Subtotal</p>
-              <p style={{ fontSize: '1.25rem', fontWeight: 700, color: '#059669' }}>
-                ₹{calculateSubtotal().toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-              </p>
+            <div className="flex flex-col md:items-end">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-neutral-400 mb-1">Item Subtotal</span>
+              <span className="text-lg font-bold text-primary-600">
+                ₹{calculateSubtotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Tax & Currency Section */}
-        <div style={{
-          backgroundColor: '#f8fafc',
-          border: '1px solid #cbd5e1',
-          borderRadius: '8px',
-          padding: '20px',
-          marginBottom: '24px'
-        }}>
-          <h4 style={{ marginTop: 0, marginBottom: '16px', fontWeight: 700, color: '#1e293b', fontSize: '1rem' }}>
-            💰 Tax & Currency
-          </h4>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#1e293b', fontSize: '0.9rem' }}>
-                Currency
-              </label>
-              <select
-                name="currency"
-                value={formData.currency}
-                onChange={handleInputChange}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  fontSize: '0.9rem',
-                  fontFamily: 'inherit',
-                  backgroundColor: '#fff'
-                }}
-              >
-                <option value="INR">INR (Indian Rupee)</option>
-                <option value="USD">USD (US Dollar)</option>
-                <option value="EUR">EUR (Euro)</option>
-                <option value="GBP">GBP (British Pound)</option>
-              </select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Tax & Currency */}
+          <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+            <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center gap-2">
+              <CreditCard size={18} className="text-primary-600" />
+              <h3 className="font-semibold text-neutral-800">Tax & Currency</h3>
             </div>
-
-            <div>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#1e293b', fontSize: '0.9rem' }}>
-                Tax Template
-              </label>
-              <select
-                name="tax_template_id"
-                value={formData.tax_template_id}
-                onChange={handleInputChange}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  fontSize: '0.9rem',
-                  fontFamily: 'inherit',
-                  backgroundColor: '#fff'
-                }}
-              >
-                <option value="">No Tax Template</option>
-                {taxTemplates.map(tax => (
-                  <option key={tax.template_id} value={tax.template_id}>
-                    {tax.name}
-                  </option>
-                ))}
-              </select>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">Currency</label>
+                <select
+                  name="currency"
+                  value={formData.currency}
+                  onChange={handleInputChange}
+                  className="w-full h-10 px-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
+                >
+                  <option value="INR">INR (Indian Rupee)</option>
+                  <option value="USD">USD (US Dollar)</option>
+                  <option value="EUR">EUR (Euro)</option>
+                  <option value="GBP">GBP (British Pound)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">Tax Template</label>
+                <select
+                  name="tax_template_id"
+                  value={formData.tax_template_id}
+                  onChange={handleInputChange}
+                  className="w-full h-10 px-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
+                >
+                  <option value="">No Tax Template</option>
+                  {taxTemplates.map(tax => (
+                    <option key={tax.template_id} value={tax.template_id}>
+                      {tax.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
-        </div>
+          </section>
 
-        {/* Summary & Actions */}
-        <div style={{
-          backgroundColor: '#ecfdf5',
-          border: '2px solid #10b981',
-          borderRadius: '8px',
-          padding: '20px',
-          marginBottom: '24px'
-        }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-            <div>
-              <p style={{ fontSize: '0.8rem', color: '#047857', marginBottom: '4px', fontWeight: 500 }}>Subtotal Amount</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#059669' }}>
-                ₹{calculateSubtotal().toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-              </p>
+          {/* Financial Summary */}
+          <section className="bg-primary-600 rounded-xl border border-primary-700 overflow-hidden text-white flex flex-col justify-center p-6 shadow-md shadow-primary-200">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center border-b border-primary-500/50 pb-3">
+                <span className="text-primary-100 text-sm">Subtotal</span>
+                <span className="text-xl font-semibold">
+                  ₹{calculateSubtotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-b border-primary-500/50 pb-3">
+                <span className="text-primary-100 text-sm">Tax Amount</span>
+                <span className="text-xl font-semibold">₹0.00</span>
+              </div>
+              <div className="flex justify-between items-center pt-2">
+                <span className="text-primary-100 font-medium">Grand Total</span>
+                <span className="text-3xl font-bold">
+                  ₹{calculateSubtotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
             </div>
-            <div>
-              <p style={{ fontSize: '0.8rem', color: '#047857', marginBottom: '4px', fontWeight: 500 }}>Total Amount</p>
-              <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#059669' }}>
-                ₹{calculateSubtotal().toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-              </p>
+            <div className="mt-6 flex items-center gap-2 text-primary-100 text-xs bg-primary-700/50 p-2 rounded-lg">
+              <Calendar size={14} />
+              <span>Valid until {new Date(new Date().setDate(new Date().getDate() + 30)).toLocaleDateString()}</span>
             </div>
-          </div>
-
-          <p style={{ fontSize: '0.8rem', color: '#047857', margin: 0 }}>
-            ✓ Ready to create this purchase order
-          </p>
-        </div>
-
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#f3f4f6',
-              border: '1px solid #cbd5e1',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              color: '#374151',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#e5e7eb'
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = '#f3f4f6'
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              padding: '10px 24px',
-              backgroundColor: loading ? '#d1d5db' : '#10b981',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              color: '#fff',
-              transition: 'all 0.2s',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) e.target.style.backgroundColor = '#059669'
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) e.target.style.backgroundColor = '#10b981'
-            }}
-          >
-            {loading ? (
-              <>
-                <span style={{ display: 'inline-block', width: '14px', height: '14px', border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }}></span>
-                Creating...
-              </>
-            ) : (
-              <>
-                <CheckCircle size={18} />
-                Create Purchase Order
-              </>
-            )}
-          </button>
+          </section>
         </div>
       </form>
-
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </Modal>
   )
 }

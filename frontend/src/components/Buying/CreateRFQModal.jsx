@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
 import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
-import { Plus, X, ChevronDown, ChevronUp, Edit2, Trash2 } from 'lucide-react'
+import Input from '../Input/Input'
+import Badge from '../Badge/Badge'
+import { Plus, X, Edit2, Trash2, AlertCircle, CheckCircle, Package, Users, Building2, Calendar, FileText } from 'lucide-react'
+import { materialRequestsAPI, suppliersAPI, itemsAPI, companyAPI, rfqsAPI } from '../../services/api'
 
 export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
@@ -18,6 +20,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
   const [allItems, setAllItems] = useState([])
   const [companyInfo, setCompanyInfo] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [dataLoading, setDataLoading] = useState(true)
   const [error, setError] = useState(null)
   const [newSupplier, setNewSupplier] = useState('')
   const [showItemForm, setShowItemForm] = useState(false)
@@ -41,12 +44,12 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
 
   const fetchRequiredData = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL
+      setDataLoading(true)
       const [mrRes, supRes, itemRes, compRes] = await Promise.all([
-        axios.get(`${apiUrl}/material-requests/approved`),
-        axios.get(`${apiUrl}/suppliers?active=true`),
-        axios.get(`${apiUrl}/items?limit=1000`),
-        axios.get(`${apiUrl}/company-info`).catch(() => ({ data: { data: null } }))
+        materialRequestsAPI.getApproved(),
+        suppliersAPI.list(),
+        itemsAPI.list(),
+        companyAPI.get().catch(() => ({ data: { data: null } }))
       ])
 
       setApprovedMRs(mrRes.data.data || [])
@@ -55,25 +58,32 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
       setCompanyInfo(compRes.data.data)
     } catch (err) {
       console.error('Failed to fetch required data:', err)
+      setError('Failed to load required data')
+    } finally {
+      setDataLoading(false)
     }
   }
 
-  const handleLoadFromMR = (mrId) => {
-    const mr = approvedMRs.find(m => m.mr_id === mrId)
-    if (mr) {
-      const apiUrl = import.meta.env.VITE_API_URL
-      axios.get(`${apiUrl}/material-requests/${mrId}`).then(res => {
-        const items = res.data.data.items || []
-        setFormData({
-          ...formData,
-          items: items.map(item => ({
-            item_code: item.item_code,
-            qty: item.qty,
-            uom: item.uom,
-            id: Date.now() + Math.random()
-          }))
-        })
-      })
+  const handleLoadFromMR = async (mrId) => {
+    if (!mrId) return
+    try {
+      setLoading(true)
+      const res = await materialRequestsAPI.get(mrId)
+      const items = res.data.data.items || []
+      setFormData(prev => ({
+        ...prev,
+        items: items.map(item => ({
+          item_code: item.item_code,
+          qty: item.qty,
+          uom: item.uom,
+          id: Date.now() + Math.random()
+        }))
+      }))
+    } catch (err) {
+      console.error('Failed to fetch MR details:', err)
+      setError('Failed to load MR items')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -89,13 +99,13 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
         ...itemForm,
         id: updatedItems[editingItemIndex].id
       }
-      setFormData({ ...formData, items: updatedItems })
+      setFormData(prev => ({ ...prev, items: updatedItems }))
       setEditingItemIndex(null)
     } else {
-      setFormData({
-        ...formData,
-        items: [...formData.items, { ...itemForm, id: Date.now() + Math.random() }]
-      })
+      setFormData(prev => ({
+        ...prev,
+        items: [...prev.items, { ...itemForm, id: Date.now() + Math.random() }]
+      }))
     }
     setItemForm({ item_code: '', qty: '', uom: '' })
     setShowItemForm(false)
@@ -109,10 +119,10 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
   }
 
   const handleRemoveItem = (index) => {
-    setFormData({
-      ...formData,
-      items: formData.items.filter((_, i) => i !== index)
-    })
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index)
+    }))
   }
 
   const handleCancelItemEdit = () => {
@@ -133,53 +143,55 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
       return
     }
 
-    setFormData({
-      ...formData,
-      suppliers: [...formData.suppliers, { supplier_id: newSupplier, id: Date.now() }]
-    })
+    setFormData(prev => ({
+      ...prev,
+      suppliers: [...prev.suppliers, { supplier_id: newSupplier, id: Date.now() }]
+    }))
     setNewSupplier('')
     setError(null)
   }
 
   const handleRemoveSupplier = (id) => {
-    setFormData({
-      ...formData,
-      suppliers: formData.suppliers.filter(s => s.id !== id)
-    })
+    setFormData(prev => ({
+      ...prev,
+      suppliers: prev.suppliers.filter(s => s.id !== id)
+    }))
   }
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData({ ...formData, [name]: value })
+    setFormData(prev => ({ ...prev, [name]: value }))
     setError(null)
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    const errors = []
-    if (!formData.valid_till) errors.push('Valid Till')
-    if (formData.items.length === 0) errors.push('at least 1 item')
-    if (formData.suppliers.length === 0) errors.push('at least 1 supplier')
-
-    if (errors.length > 0) {
-      setError(`Please fill: ${errors.join(', ')}`)
+    if (!formData.valid_till) {
+      setError('Please enter valid till date')
+      return
+    }
+    if (formData.items.length === 0) {
+      setError('Please add at least 1 item')
+      return
+    }
+    if (formData.suppliers.length === 0) {
+      setError('Please add at least 1 supplier')
       return
     }
 
     try {
       setLoading(true)
-      const apiUrl = import.meta.env.VITE_API_URL
       const submitData = {
         series_no: formData.series_no,
         valid_till: formData.valid_till,
         items: formData.items.map(({ id, ...item }) => item),
-        suppliers: formData.suppliers.map(({ id, ...supplier }) => supplier)
+        suppliers: formData.suppliers.map(({ id, ...supplier }) => ({ supplier_id: supplier.supplier_id }))
       }
 
-      await axios.post(`${apiUrl}/rfqs`, submitData)
-      onSuccess()
-      onClose()
+      await rfqsAPI.create(submitData)
+      onSuccess?.()
+      handleClose()
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create RFQ')
     } finally {
@@ -187,25 +199,9 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
     }
   }
 
-  const getSupplierName = (id) => {
-    const supplier = suppliers.find(s => s.supplier_id === id)
-    return supplier ? supplier.name : id
-  }
-
   const getItemName = (code) => {
     const item = allItems.find(i => i.item_code === code)
     return item ? item.name : code
-  }
-
-  const getItemSpec = (code) => {
-    const item = allItems.find(i => i.item_code === code)
-    if (!item) return ''
-    const specs = [
-      item.item_group && `Group: ${item.item_group}`,
-      item.hsn_code && `HSN: ${item.hsn_code}`,
-      item.gst_rate && `GST: ${item.gst_rate}%`
-    ].filter(Boolean)
-    return specs.join(' • ')
   }
 
   const handleClose = () => {
@@ -223,287 +219,272 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
     onClose()
   }
 
-  return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Create Request for Quotation (RFQ)" size="xl">
-      <div style={{ maxHeight: '85vh', overflowY: 'auto', padding: '4px' }}>
-        {error && <Alert type="danger">{error}</Alert>}
+  if (dataLoading) {
+    return (
+      <Modal isOpen={isOpen} onClose={handleClose} title="Create Request for Quotation" size="3xl">
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="w-10 h-10 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin"></div>
+          <p className="mt-4 text-neutral-500">Loading required data...</p>
+        </div>
+      </Modal>
+    )
+  }
 
-        <form onSubmit={handleSubmit}>
-          {/* Section 1: Basic Information */}
-          <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
-            <h5 style={{ marginTop: 0, marginBottom: '16px', color: '#333', fontSize: '14px', fontWeight: '600' }}>Basic Information</h5>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>Series No</label>
-                <input 
-                  type="text"
+  return (
+    <Modal 
+      isOpen={isOpen} 
+      onClose={handleClose} 
+      title="Create Request for Quotation" 
+      size="4xl"
+      footer={
+        <div className="flex justify-end gap-3 w-full">
+          <Button variant="outline" onClick={handleClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={handleSubmit} 
+            loading={loading}
+            disabled={formData.items.length === 0 || formData.suppliers.length === 0}
+          >
+            <CheckCircle size={16} className="mr-2" />
+            Create RFQ
+          </Button>
+        </div>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && (
+          <Alert variant="danger">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={18} />
+              <span>{error}</span>
+            </div>
+          </Alert>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Basic Info & Source */}
+          <div className="space-y-6">
+            <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+              <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center gap-2">
+                <FileText size={18} className="text-primary-600" />
+                <h3 className="font-semibold text-neutral-800">Basic Information</h3>
+              </div>
+              <div className="p-4 space-y-4">
+                <Input
+                  label="RFQ Number"
                   value={formData.series_no}
                   readOnly
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', backgroundColor: '#f5f5f5', fontSize: '13px' }}
+                  className="bg-neutral-50"
                 />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>Valid Till <span style={{ color: '#d32f2f' }}>*</span></label>
-                <input 
+                <Input
+                  label="Valid Till *"
                   type="date"
                   name="valid_till"
                   value={formData.valid_till}
                   onChange={handleChange}
                   required
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
                 />
               </div>
-            </div>
+            </section>
+
+            <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+              <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center gap-2">
+                <Building2 size={18} className="text-primary-600" />
+                <h3 className="font-semibold text-neutral-800">Source MR</h3>
+              </div>
+              <div className="p-4">
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">Load from Approved MR</label>
+                <select 
+                  onChange={(e) => handleLoadFromMR(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
+                >
+                  <option value="">Select Material Request...</option>
+                  {approvedMRs.map(mr => (
+                    <option key={mr.mr_id} value={mr.mr_id}>
+                      {mr.mr_id} - {mr.purpose}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </section>
           </div>
 
-          {/* Section 2: Company Address */}
-          {companyInfo && (
-            <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
-              <h5 style={{ marginTop: 0, marginBottom: '12px', color: '#333', fontSize: '14px', fontWeight: '600' }}>Company Address</h5>
-              <p style={{ margin: '0', lineHeight: '1.6', fontSize: '13px' }}>
-                {companyInfo.company_name && <><strong>{companyInfo.company_name}</strong><br /></>}
-                {companyInfo.address && <>{companyInfo.address}<br /></>}
-                {companyInfo.city && <>{companyInfo.city}{companyInfo.state && `, ${companyInfo.state}`}{companyInfo.country && `, ${companyInfo.country}`}{companyInfo.postal_code && ` - ${companyInfo.postal_code}`}<br /></>}
-                {companyInfo.phone && <>Ph: {companyInfo.phone}<br /></>}
-                {companyInfo.email && <>Email: {companyInfo.email}</>}
-              </p>
+          {/* Suppliers Selection */}
+          <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden flex flex-col">
+            <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users size={18} className="text-primary-600" />
+                <h3 className="font-semibold text-neutral-800">Target Suppliers</h3>
+              </div>
+              <Badge variant="primary">{formData.suppliers.length} Selected</Badge>
+            </div>
+            <div className="p-4 flex-1 flex flex-col space-y-4">
+              <div className="flex gap-2">
+                <select 
+                  value={newSupplier}
+                  onChange={(e) => setNewSupplier(e.target.value)}
+                  className="flex-1 h-10 px-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
+                >
+                  <option value="">Choose Supplier...</option>
+                  {suppliers.map(sup => (
+                    <option key={sup.supplier_id} value={sup.supplier_id}>
+                      {sup.name}
+                    </option>
+                  ))}
+                </select>
+                <Button onClick={handleAddSupplier} className="h-10 px-4">
+                  Add
+                </Button>
+              </div>
+              
+              <div className="flex-1 min-h-[150px] border border-neutral-100 rounded-lg p-2 bg-neutral-50/50 space-y-2 overflow-y-auto max-h-[200px]">
+                {formData.suppliers.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-neutral-400 py-8">
+                    <Users size={24} className="mb-2 opacity-20" />
+                    <p className="text-xs">No suppliers added yet</p>
+                  </div>
+                ) : (
+                  formData.suppliers.map(s => (
+                    <div key={s.id} className="flex items-center justify-between bg-white p-2.5 rounded-md border border-neutral-200 shadow-sm transition-all hover:border-primary-200">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-neutral-800">
+                          {suppliers.find(sup => sup.supplier_id === s.supplier_id)?.name || s.supplier_id}
+                        </span>
+                        <span className="text-[10px] text-neutral-500">{s.supplier_id}</span>
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => handleRemoveSupplier(s.id)}
+                        className="p-1 text-neutral-400 hover:text-red-600 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* Items Section */}
+        <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Package size={18} className="text-primary-600" />
+              <h3 className="font-semibold text-neutral-800">Items for Quotation</h3>
+            </div>
+            <Button 
+              variant={showItemForm ? "outline" : "primary"} 
+              size="sm" 
+              onClick={() => showItemForm ? handleCancelItemEdit() : setShowItemForm(true)}
+              className="h-8"
+            >
+              {showItemForm ? <X size={14} className="mr-1" /> : <Plus size={14} className="mr-1" />}
+              {showItemForm ? "Cancel" : "Add Item"}
+            </Button>
+          </div>
+
+          {showItemForm && (
+            <div className="p-4 bg-primary-50/30 border-b border-neutral-100 animate-in slide-in-from-top duration-200">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div className="md:col-span-1">
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">Item *</label>
+                  <select 
+                    value={itemForm.item_code}
+                    onChange={(e) => {
+                      const item = allItems.find(i => i.item_code === e.target.value)
+                      setItemForm({ ...itemForm, item_code: e.target.value, uom: item?.uom || '' })
+                    }}
+                    className="w-full h-9 px-3 rounded-md border border-neutral-300 focus:ring-1 focus:ring-primary-500 outline-none text-sm bg-white"
+                  >
+                    <option value="">Select Item</option>
+                    {allItems.map(item => (
+                      <option key={item.item_code} value={item.item_code}>
+                        {item.name} ({item.item_code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <Input
+                  label="Quantity *"
+                  type="number"
+                  value={itemForm.qty}
+                  onChange={(e) => setItemForm({ ...itemForm, qty: e.target.value })}
+                  placeholder="0.00"
+                  className="h-9"
+                />
+                <div className="flex gap-2">
+                  <Input
+                    label="UOM"
+                    value={itemForm.uom}
+                    readOnly
+                    className="bg-neutral-50 h-9 flex-1"
+                  />
+                  <Button onClick={handleAddItem} className="h-9 px-4">
+                    {editingItemIndex !== null ? "Update" : "Add"}
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Section 3: Load from Material Request */}
-          <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
-            <h5 style={{ marginTop: 0, marginBottom: '12px', color: '#333', fontSize: '14px', fontWeight: '600' }}>Load from Material Request (Optional)</h5>
-            <select 
-              onChange={(e) => handleLoadFromMR(e.target.value)}
-              style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
-            >
-              <option value="">Select Approved MR to load items...</option>
-              {approvedMRs.map(mr => (
-                <option key={mr.mr_id} value={mr.mr_id}>
-                  {mr.mr_id} - {mr.purpose}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Section 4: Items for Quotation */}
-          <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h5 style={{ margin: 0, color: '#333', fontSize: '14px', fontWeight: '600' }}>Items for Quotation ({formData.items.length})</h5>
-              <Button 
-                type="button"
-                variant="success"
-                onClick={() => setShowItemForm(!showItemForm)}
-                style={{ padding: '8px 16px', fontSize: '13px', whiteSpace: 'nowrap' }}
-              >
-                <Plus size={16} /> Add Item
-              </Button>
-            </div>
-
-            {/* Item Form (Collapsible) */}
-            {showItemForm && (
-              <div style={{ padding: '16px', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '4px', marginBottom: '16px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '500' }}>Item <span style={{ color: '#d32f2f' }}>*</span></label>
-                    <select 
-                      value={itemForm.item_code}
-                      onChange={(e) => {
-                        const item = allItems.find(i => i.item_code === e.target.value)
-                        setItemForm({ ...itemForm, item_code: e.target.value, uom: item?.uom || '' })
-                      }}
-                      style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
-                    >
-                      <option value="">Select Item</option>
-                      {allItems.map(item => (
-                        <option key={item.item_code} value={item.item_code}>
-                          {item.name} ({item.item_code})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '500' }}>Quantity <span style={{ color: '#d32f2f' }}>*</span></label>
-                    <input 
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      value={itemForm.qty}
-                      onChange={(e) => setItemForm({ ...itemForm, qty: e.target.value })}
-                      placeholder="Qty"
-                      style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '500' }}>UOM</label>
-                    <input 
-                      type="text"
-                      value={itemForm.uom}
-                      readOnly
-                      style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', backgroundColor: '#f5f5f5', fontSize: '13px' }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                  <Button 
-                    type="button"
-                    variant="secondary"
-                    onClick={handleCancelItemEdit}
-                    style={{ padding: '8px 16px', fontSize: '13px' }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="button"
-                    variant="primary"
-                    onClick={handleAddItem}
-                    style={{ padding: '8px 16px', fontSize: '13px' }}
-                  >
-                    {editingItemIndex !== null ? 'Update Item' : 'Add Item'}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Items Table */}
-            {formData.items.length > 0 && (
-              <div style={{ overflowX: 'auto', border: '1px solid #ddd', borderRadius: '4px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                  <thead style={{ backgroundColor: '#f5f5f5' }}>
-                    <tr>
-                      <th style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #ddd', width: '40px' }}>No.</th>
-                      <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Item Name / Code</th>
-                      <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Specification</th>
-                      <th style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #ddd', width: '80px' }}>Qty</th>
-                      <th style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #ddd', width: '70px' }}>UOM</th>
-                      <th style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #ddd', width: '80px' }}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {formData.items.map((item, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #ddd' }}>
-                        <td style={{ padding: '10px', textAlign: 'center' }}>{idx + 1}</td>
-                        <td style={{ padding: '10px' }}>
-                          <strong>{getItemName(item.item_code)}</strong><br />
-                          <span style={{ fontSize: '12px', color: '#666' }}>({item.item_code})</span>
-                        </td>
-                        <td style={{ padding: '10px', fontSize: '12px', color: '#666' }}>{getItemSpec(item.item_code)}</td>
-                        <td style={{ padding: '10px', textAlign: 'center' }}>{item.qty}</td>
-                        <td style={{ padding: '10px', textAlign: 'center' }}>{item.uom}</td>
-                        <td style={{ padding: '10px', textAlign: 'center' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-neutral-500 uppercase bg-neutral-50/50 border-b border-neutral-200">
+                <tr>
+                  <th className="px-4 py-3 font-semibold w-12 text-center">#</th>
+                  <th className="px-4 py-3 font-semibold">Item Details</th>
+                  <th className="px-4 py-3 font-semibold w-24 text-right">Qty</th>
+                  <th className="px-4 py-3 font-semibold w-24">UOM</th>
+                  <th className="px-4 py-3 font-semibold w-24 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {formData.items.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="px-4 py-12 text-center text-neutral-400 italic">
+                      No items added to this RFQ yet.
+                    </td>
+                  </tr>
+                ) : (
+                  formData.items.map((item, idx) => (
+                    <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
+                      <td className="px-4 py-3 text-center text-neutral-400 font-mono text-xs">{idx + 1}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-neutral-900">{getItemName(item.item_code)}</div>
+                        <div className="text-[10px] text-neutral-500 uppercase tracking-tight">{item.item_code}</div>
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium text-neutral-700">{item.qty}</td>
+                      <td className="px-4 py-3 text-neutral-500 uppercase text-xs">{item.uom}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-center gap-1">
                           <button 
                             type="button"
                             onClick={() => handleEditItem(idx)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#007bff', marginRight: '8px', padding: '4px' }}
-                            title="Edit"
+                            className="p-1.5 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-md transition-all"
                           >
-                            <Edit2 size={16} />
+                            <Edit2 size={14} />
                           </button>
                           <button 
                             type="button"
                             onClick={() => handleRemoveItem(idx)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '4px' }}
-                            title="Remove"
+                            className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-all"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={14} />
                           </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* Section 5: Add Suppliers */}
-          <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
-            <h5 style={{ marginTop: 0, marginBottom: '16px', color: '#333', fontSize: '14px', fontWeight: '600' }}>Add Suppliers for Quotation</h5>
-            
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <select 
-                value={newSupplier}
-                onChange={(e) => setNewSupplier(e.target.value)}
-                style={{ flex: 1, padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
-              >
-                <option value="">Select Supplier</option>
-                {suppliers.map(supplier => (
-                  <option key={supplier.supplier_id} value={supplier.supplier_id}>
-                    {supplier.name}
-                  </option>
-                ))}
-              </select>
-
-              <Button 
-                onClick={handleAddSupplier}
-                variant="success"
-                type="button"
-                style={{ padding: '10px 20px', fontSize: '13px', whiteSpace: 'nowrap' }}
-              >
-                <Plus size={16} /> Add Supplier
-              </Button>
-            </div>
-          </div>
-
-          {/* Section 6: Suppliers List */}
-          {formData.suppliers.length > 0 && (
-            <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
-              <h5 style={{ marginTop: 0, marginBottom: '16px', color: '#333', fontSize: '14px', fontWeight: '600' }}>Selected Suppliers ({formData.suppliers.length})</h5>
-              <div style={{ overflowX: 'auto', border: '1px solid #ddd', borderRadius: '4px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                  <thead style={{ backgroundColor: '#f5f5f5' }}>
-                    <tr>
-                      <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #ddd' }}>Supplier</th>
-                      <th style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #ddd', width: '60px' }}>Action</th>
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {formData.suppliers.map(supplier => (
-                      <tr key={supplier.id} style={{ borderBottom: '1px solid #ddd' }}>
-                        <td style={{ padding: '10px' }}>{getSupplierName(supplier.supplier_id)}</td>
-                        <td style={{ padding: '10px', textAlign: 'center' }}>
-                          <button 
-                            type="button"
-                            onClick={() => handleRemoveSupplier(supplier.id)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', padding: '4px' }}
-                            title="Remove"
-                          >
-                            <X size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #e8e8e8' }}>
-            <Button 
-              type="button"
-              variant="secondary"
-              onClick={handleClose}
-              disabled={loading}
-              style={{ padding: '10px 24px', fontSize: '13px' }}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit"
-              variant="primary"
-              disabled={loading}
-              style={{ padding: '10px 24px', fontSize: '13px' }}
-            >
-              {loading ? 'Creating...' : 'Create RFQ'}
-            </Button>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        </form>
-      </div>
+        </section>
+      </form>
     </Modal>
   )
 }

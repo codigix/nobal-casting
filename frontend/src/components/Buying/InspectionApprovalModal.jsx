@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
-import api from '../../services/api'
+import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
 import Badge from '../Badge/Badge'
-import { X, CheckCircle, XCircle } from 'lucide-react'
-import '../../styles/Modal.css'
+import { CheckCircle, XCircle, Info, MapPin, ClipboardCheck, ArrowRightLeft, FileText } from 'lucide-react'
+import { grnRequestsAPI, stockAPI } from '../../services/api'
 
 export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
@@ -14,11 +14,9 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
   const [warehouseAssignments, setWarehouseAssignments] = useState({})
   const [warehouses, setWarehouses] = useState([])
 
-  // Fetch warehouses on mount
   useEffect(() => {
     fetchWarehouses()
-    // Initialize warehouse assignments from existing items
-    if (grn.items) {
+    if (grn?.items) {
       const assignments = {}
       grn.items.forEach(item => {
         if (item.accepted_qty > 0) {
@@ -31,7 +29,7 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
 
   const fetchWarehouses = async () => {
     try {
-      const response = await api.get('/stock/warehouses')
+      const response = await stockAPI.warehouses()
       setWarehouses(response.data.data || [])
     } catch (error) {
       console.error('Error fetching warehouses:', error)
@@ -42,9 +40,7 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
     return grn.items?.filter(item => item.accepted_qty > 0) || []
   }
 
-  const handleApprove = async (e) => {
-    e.preventDefault()
-
+  const handleApprove = async () => {
     const acceptedItems = getAcceptedItems()
     if (acceptedItems.length === 0) {
       setError('No items accepted for approval')
@@ -64,13 +60,14 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
         warehouse: warehouseAssignments[item.id] || item.warehouse_name
       }))
 
-      const response = await axios.post(
-        `http://localhost:5000/api/grn-requests/${grn.id}/send-to-inventory`,
-        { approvedItems, warehouseAssignments }
-      )
+      const response = await grnRequestsAPI.sendToInventory(grn.id, { 
+        approvedItems, 
+        warehouseAssignments 
+      })
 
       if (response.data.success) {
-        onSuccess && onSuccess(response.data.data)
+        onSuccess?.(response.data.data)
+        onClose()
       } else {
         setError(response.data.error || 'Failed to send to inventory')
       }
@@ -81,9 +78,7 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
     }
   }
 
-  const handleReject = async (e) => {
-    e.preventDefault()
-
+  const handleReject = async () => {
     if (!rejectionReason.trim()) {
       setError('Please provide a reason for rejection')
       return
@@ -93,13 +88,13 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
     setError(null)
 
     try {
-      const response = await axios.post(
-        `http://localhost:5000/api/grn-requests/${grn.id}/reject`,
-        { reason: rejectionReason }
-      )
+      const response = await grnRequestsAPI.reject(grn.id, { 
+        reason: rejectionReason 
+      })
 
       if (response.data.success) {
-        onSuccess && onSuccess(response.data.data)
+        onSuccess?.(response.data.data)
+        onClose()
       } else {
         setError(response.data.error || 'Failed to reject GRN')
       }
@@ -115,139 +110,183 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
   const totalRejected = grn.items?.reduce((sum, item) => sum + (item.rejected_qty || 0), 0) || 0
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <div>
-            <h2>GRN Inspection Approval</h2>
-            <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '4px' }}>GRN #{grn.grn_no} - Send to Inventory Department</p>
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title="GRN Inspection Approval"
+      size="4xl"
+      footer={
+        <div className="flex justify-end gap-3 w-full">
+          <Button variant="outline" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          {approvalStatus === 'approve' ? (
+            <Button 
+              variant="success" 
+              onClick={handleApprove} 
+              loading={loading}
+              disabled={acceptedItems.length === 0}
+            >
+              <CheckCircle size={16} className="mr-2" />
+              Approve & Store Stock
+            </Button>
+          ) : (
+            <Button 
+              variant="danger" 
+              onClick={handleReject} 
+              loading={loading}
+              disabled={!rejectionReason.trim()}
+            >
+              <XCircle size={16} className="mr-2" />
+              Confirm Rejection
+            </Button>
+          )}
+        </div>
+      }
+    >
+      <div className="space-y-6">
+        <div className="flex items-center gap-4 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+          <div className="p-3 bg-blue-100 rounded-lg text-blue-600">
+            <ClipboardCheck className="w-6 h-6" />
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-            <X size={24} />
+          <div>
+            <h3 className="font-bold text-neutral-800">Final Verification</h3>
+            <p className="text-sm text-neutral-500">
+              GRN <span className="font-mono text-primary-600">#{grn.grn_no}</span> • Please confirm the inspection outcome and assign storage locations.
+            </p>
+          </div>
+        </div>
+
+        {error && (
+          <Alert variant="danger">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={18} />
+              <span>{error}</span>
+            </div>
+          </Alert>
+        )}
+
+        {/* Action Selection */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            type="button"
+            onClick={() => setApprovalStatus('approve')}
+            className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all text-left ${
+              approvalStatus === 'approve' 
+              ? 'border-emerald-500 bg-emerald-50/50 ring-4 ring-emerald-50' 
+              : 'border-neutral-100 bg-white hover:border-neutral-200 hover:bg-neutral-50'
+            }`}
+          >
+            <div className={`p-2 rounded-lg ${approvalStatus === 'approve' ? 'bg-emerald-500 text-white' : 'bg-neutral-100 text-neutral-400'}`}>
+              <CheckCircle className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <p className={`font-bold ${approvalStatus === 'approve' ? 'text-emerald-900' : 'text-neutral-900'}`}>Approve & Store</p>
+              <p className="text-xs text-neutral-500 mt-1 leading-relaxed">Allocate accepted items to warehouses and update stock.</p>
+            </div>
+            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${approvalStatus === 'approve' ? 'border-emerald-500 bg-emerald-500' : 'border-neutral-300'}`}>
+              {approvalStatus === 'approve' && <div className="w-2 h-2 rounded-full bg-white" />}
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setApprovalStatus('reject')}
+            className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all text-left ${
+              approvalStatus === 'reject' 
+              ? 'border-red-500 bg-red-50/50 ring-4 ring-red-50' 
+              : 'border-neutral-100 bg-white hover:border-neutral-200 hover:bg-neutral-50'
+            }`}
+          >
+            <div className={`p-2 rounded-lg ${approvalStatus === 'reject' ? 'bg-red-500 text-white' : 'bg-neutral-100 text-neutral-400'}`}>
+              <XCircle className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <p className={`font-bold ${approvalStatus === 'reject' ? 'text-red-900' : 'text-neutral-900'}`}>Full Rejection</p>
+              <p className="text-xs text-neutral-500 mt-1 leading-relaxed">Mark the entire GRN as rejected and return items to supplier.</p>
+            </div>
+            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${approvalStatus === 'reject' ? 'border-red-500 bg-red-500' : 'border-neutral-300'}`}>
+              {approvalStatus === 'reject' && <div className="w-2 h-2 rounded-full bg-white" />}
+            </div>
           </button>
         </div>
 
-        {error && <Alert type="danger" className="mb-4">{error}</Alert>}
-
-        <form>
-          {/* Approval Type Selection */}
-          <div className="mb-6">
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '12px' }}>
-              Action
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px',
-                border: '2px solid' + (approvalStatus === 'approve' ? ' #0284c7' : ' #ddd'),
-                borderRadius: '6px',
-                cursor: 'pointer',
-                backgroundColor: approvalStatus === 'approve' ? '#e0f2fe' : '#fafafa'
-              }}>
-                <input
-                  type="radio"
-                  value="approve"
-                  checked={approvalStatus === 'approve'}
-                  onChange={(e) => setApprovalStatus(e.target.value)}
-                />
-                <div>
-                  <p style={{ fontWeight: 600, marginBottom: '2px' }}>Approve & Send to Inventory</p>
-                  <p style={{ fontSize: '0.85rem', color: '#666' }}>Send to inventory department for storage approval</p>
+        {approvalStatus === 'approve' ? (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Stats Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white border border-neutral-200 p-4 rounded-xl flex items-center gap-4">
+                <div className="p-2.5 bg-neutral-100 rounded-lg text-neutral-600">
+                  <Info className="w-5 h-5" />
                 </div>
-              </label>
-
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px',
-                border: '2px solid' + (approvalStatus === 'reject' ? ' #dc2626' : ' #ddd'),
-                borderRadius: '6px',
-                cursor: 'pointer',
-                backgroundColor: approvalStatus === 'reject' ? '#fee2e2' : '#fafafa'
-              }}>
-                <input
-                  type="radio"
-                  value="reject"
-                  checked={approvalStatus === 'reject'}
-                  onChange={(e) => setApprovalStatus(e.target.value)}
-                />
                 <div>
-                  <p style={{ fontWeight: 600, marginBottom: '2px' }}>Reject GRN</p>
-                  <p style={{ fontSize: '0.85rem', color: '#666' }}>Send GRN back to supplier</p>
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Total Items</p>
+                  <p className="text-xl font-bold text-neutral-800">{grn.items?.length || 0}</p>
                 </div>
-              </label>
+              </div>
+              
+              <div className="bg-white border border-emerald-100 p-4 rounded-xl flex items-center gap-4 shadow-sm shadow-emerald-50">
+                <div className="p-2.5 bg-emerald-50 rounded-lg text-emerald-600">
+                  <CheckCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Accepted Qty</p>
+                  <p className="text-xl font-bold text-emerald-700">{totalAccepted}</p>
+                </div>
+              </div>
+
+              <div className="bg-white border border-red-100 p-4 rounded-xl flex items-center gap-4 shadow-sm shadow-red-50">
+                <div className="p-2.5 bg-red-50 rounded-lg text-red-600">
+                  <XCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider">Rejected Qty</p>
+                  <p className="text-xl font-bold text-red-700">{totalRejected}</p>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {approvalStatus === 'approve' ? (
-            <>
-              {/* Inspection Summary */}
-              <Card className="mb-6">
-                <h4 style={{ fontWeight: 600, marginBottom: '12px' }}>Inspection Summary</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                  <div style={{ padding: '12px', backgroundColor: '#f0fdf4', borderRadius: '6px' }}>
-                    <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '4px' }}>Total Items</p>
-                    <p style={{ fontWeight: 600, fontSize: '1.5rem', color: '#16a34a' }}>
-                      {grn.items?.length || 0}
-                    </p>
-                  </div>
-                  <div style={{ padding: '12px', backgroundColor: '#dcfce7', borderRadius: '6px' }}>
-                    <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '4px' }}>Accepted Qty</p>
-                    <p style={{ fontWeight: 600, fontSize: '1.5rem', color: '#16a34a' }}>
-                      {totalAccepted}
-                    </p>
-                  </div>
-                  <div style={{ padding: '12px', backgroundColor: '#fee2e2', borderRadius: '6px' }}>
-                    <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '4px' }}>Rejected Qty</p>
-                    <p style={{ fontWeight: 600, fontSize: '1.5rem', color: '#991b1b' }}>
-                      {totalRejected}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Items to be Sent */}
-              <Card className="mb-6">
-                <h4 style={{ fontWeight: 600, marginBottom: '12px' }}>Items for Inventory Storage</h4>
-                {acceptedItems.length > 0 ? (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                      <thead style={{ backgroundColor: '#f5f5f5' }}>
-                        <tr>
-                          <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Item</th>
-                          <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #ddd' }}>Accepted Qty</th>
-                          <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Store Location</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {acceptedItems.map((item) => (
-                          <tr key={item.id} style={{ borderBottom: '1px solid #eee' }}>
-                            <td style={{ padding: '10px' }}>
-                              <div>
-                                <p style={{ fontWeight: 600 }}>{item.item_code}</p>
-                                <p style={{ fontSize: '0.85rem', color: '#666' }}>{item.item_name}</p>
-                              </div>
-                            </td>
-                            <td style={{ padding: '10px', textAlign: 'center', fontWeight: 600, color: '#16a34a' }}>
+            {/* Allocation Table */}
+            <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+              <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200 flex items-center justify-between">
+                <h3 className="font-semibold text-neutral-800 flex items-center gap-2">
+                  <MapPin size={16} className="text-primary-600" />
+                  Warehouse Allocation
+                </h3>
+                <Badge variant="primary">{acceptedItems.length} Items to Assign</Badge>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs text-neutral-500 uppercase bg-neutral-50/50 border-b border-neutral-200">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">Item Details</th>
+                      <th className="px-4 py-3 font-semibold text-center w-32">Accepted Qty</th>
+                      <th className="px-4 py-3 font-semibold w-56 text-right">Target Warehouse</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {acceptedItems.length > 0 ? (
+                      acceptedItems.map((item) => (
+                        <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-neutral-900">{item.item_code}</div>
+                            <div className="text-[10px] text-neutral-500 uppercase truncate max-w-[200px]">{item.item_name}</div>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
                               {item.accepted_qty}
-                            </td>
-                            <td style={{ padding: '10px' }}>
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end">
                               <select
                                 value={warehouseAssignments[item.id] || ''}
                                 onChange={(e) => setWarehouseAssignments(prev => ({
                                   ...prev,
                                   [item.id]: e.target.value
                                 }))}
-                                style={{
-                                  width: '100%',
-                                  padding: '6px 8px',
-                                  border: '1px solid #ddd',
-                                  borderRadius: '4px',
-                                  fontSize: '0.9rem'
-                                }}
+                                className="w-full max-w-[200px] h-9 px-3 bg-white border border-neutral-300 rounded-lg text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                               >
                                 <option value="">Select Warehouse</option>
                                 {warehouses.map(wh => (
@@ -256,119 +295,47 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
                                   </option>
                                 ))}
                               </select>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p style={{ color: '#666', padding: '12px' }}>No items accepted for storage</p>
-                )}
-              </Card>
-
-              {/* Additional Notes */}
-              <Card className="mb-6">
-                <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px' }}>
-                  Approval Notes (Optional)
-                </label>
-                <textarea
-                  placeholder="Add any notes for the inventory team..."
-                  style={{
-                    width: '100%',
-                    minHeight: '80px',
-                    padding: '10px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    fontFamily: 'system-ui',
-                    fontSize: '0.9rem'
-                  }}
-                />
-              </Card>
-            </>
-          ) : (
-            <>
-              {/* Rejection Reason */}
-              <Card className="mb-6">
-                <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px' }}>
-                  Reason for Rejection *
-                </label>
-                <textarea
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  placeholder="Explain why this GRN is being rejected..."
-                  style={{
-                    width: '100%',
-                    minHeight: '100px',
-                    padding: '10px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    fontFamily: 'system-ui',
-                    fontSize: '0.9rem'
-                  }}
-                />
-              </Card>
-
-              {/* Rejection Warning */}
-              <Card className="mb-6">
-                <div style={{ display: 'flex', gap: '12px', padding: '12px', backgroundColor: '#fee2e2', borderRadius: '6px' }}>
-                  <XCircle size={20} style={{ color: '#991b1b', flexShrink: 0 }} />
-                  <div>
-                    <p style={{ fontWeight: 600, color: '#991b1b', marginBottom: '4px' }}>GRN will be rejected</p>
-                    <p style={{ fontSize: '0.85rem', color: '#7f1d1d' }}>
-                      All items will be returned to the supplier. The supplier will be notified of this rejection.
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            </>
-          )}
-
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-            <Button variant="secondary" onClick={onClose}>
-              Cancel
-            </Button>
-
-            {approvalStatus === 'approve' ? (
-              <Button
-                variant="success"
-                type="button"
-                onClick={handleApprove}
-                loading={loading}
-                className="flex items-center gap-2"
-              >
-                <CheckCircle size={16} />
-                Send to Inventory Department
-              </Button>
-            ) : (
-              <Button
-                variant="danger"
-                type="button"
-                onClick={handleReject}
-                loading={loading}
-                className="flex items-center gap-2"
-              >
-                <XCircle size={16} />
-                Reject GRN
-              </Button>
-            )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="3" className="px-4 py-12 text-center text-neutral-400 italic">
+                          No items accepted for storage.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
-        </form>
-      </div>
-    </div>
-  )
-}
+        ) : (
+          <div className="space-y-4 animate-in fade-in duration-300">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
+                <FileText size={16} className="text-red-500" />
+                Reason for Rejection *
+              </label>
+              <textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Please explain the reason for rejecting this entire GRN..."
+                className="w-full min-h-[120px] p-4 bg-white border border-neutral-300 rounded-xl text-sm focus:ring-2 focus:ring-red-500 outline-none transition-all"
+              />
+            </div>
 
-function Card({ children, className = '' }) {
-  return (
-    <div style={{
-      padding: '16px',
-      border: '1px solid #ddd',
-      borderRadius: '6px',
-      backgroundColor: '#fafafa'
-    }} className={className}>
-      {children}
-    </div>
+            <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex gap-3 items-start">
+              <Info size={18} className="text-red-600 mt-0.5" />
+              <div className="text-sm text-red-700">
+                <p className="font-bold">Full Rejection Protocol</p>
+                <p className="mt-1 opacity-90">This will mark all items in this GRN as rejected. The status will be updated, and the procurement team will be notified to handle returns.</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
   )
 }

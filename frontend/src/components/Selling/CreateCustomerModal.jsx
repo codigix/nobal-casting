@@ -1,18 +1,25 @@
 import React, { useState } from 'react'
-import { AlertCircle } from 'lucide-react'
-import Modal from '../Modal'
-import api from '../../services/api'
+import api, { customersAPI } from '../../services/api'
+import Modal from '../Modal/Modal'
+import Button from '../Button/Button'
+import Alert from '../Alert/Alert'
+import Badge from '../Badge/Badge'
+import { 
+  User, Mail, Phone, MapPin, Building, 
+  CreditCard, CheckCircle2, UserPlus, Info, 
+  ShieldCheck, Globe, Briefcase
+} from 'lucide-react'
 
 export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [customerId, setCustomerId] = useState('')
   const [formData, setFormData] = useState({
-    name: '',
+    customer_name: '',
     email: '',
     phone: '',
     gst_no: '',
-    billing_address: '',
+    address: '',
     shipping_address: '',
     credit_limit: '',
     customer_type: 'other',
@@ -21,20 +28,16 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
 
   const generateCustomerId = async (name) => {
     if (!name || name.length < 3) return ''
-    
     const prefix = name.slice(0, 3).toUpperCase()
-    
     try {
-      const res = await api.get('/customers')
+      const res = await customersAPI.list()
       const existingCustomers = res.data.data || []
-      
       const prefixedIds = existingCustomers
         .filter(c => c.customer_id && c.customer_id.startsWith(prefix))
         .map(c => {
           const match = c.customer_id.match(/-(\d+)$/)
           return match ? parseInt(match[1]) : 0
         })
-      
       const nextNumber = (Math.max(...prefixedIds, 0) + 1).toString().padStart(3, '0')
       return `${prefix}-${nextNumber}`
     } catch (err) {
@@ -44,24 +47,16 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    
-    if (name === 'name') {
+    if (name === 'customer_name') {
       handleNameChange(value)
     } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }))
+      setFormData(prev => ({ ...prev, [name]: value }))
     }
     setError(null)
   }
 
   const handleNameChange = async (value) => {
-    setFormData(prev => ({
-      ...prev,
-      name: value
-    }))
-    
+    setFormData(prev => ({ ...prev, customer_name: value }))
     if (value.length >= 3) {
       const newId = await generateCustomerId(value)
       setCustomerId(newId)
@@ -74,45 +69,21 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
     setError(null)
 
     try {
-      if (!formData.name || !formData.email || !formData.phone) {
+      if (!formData.customer_name || !formData.email || !formData.phone) {
         throw new Error('Please fill in all required fields')
       }
 
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(formData.email)) {
-        throw new Error('Please enter a valid email address')
-      }
-
-      const res = await api.post('/customers', {
-        customer_id: customerId,
-        customer_name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.billing_address,
-        customer_type: formData.customer_type,
-        status: formData.status
+      const res = await customersAPI.create({
+        ...formData,
+        customer_id: customerId
       })
 
-      if (!res.status || res.status >= 400) {
-        throw new Error(res.data?.error || 'Failed to create customer')
+      if (res.data.success) {
+        onSuccess?.()
+        onClose()
+      } else {
+        throw new Error(res.data.error || 'Failed to create customer')
       }
-
-      setCustomerId('')
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        gst_no: '',
-        billing_address: '',
-        shipping_address: '',
-        credit_limit: '',
-        customer_type: 'other',
-        status: 'active'
-      })
-      
-      localStorage.setItem('customersUpdatedAt', new Date().getTime().toString())
-      onSuccess?.()
-      onClose()
     } catch (err) {
       setError(err.message || 'Failed to create customer')
     } finally {
@@ -121,179 +92,198 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="👤 Create New Customer" size="lg">
-      <form onSubmit={handleSubmit}>
-        {error && (
-          <div className="mb-5 p-3 bg-red-50 border border-red-300 rounded-xs text-red-700 text-xs flex items-center gap-2">
-            <AlertCircle size={18} />
-            {error}
-          </div>
-        )}
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title="Add New Customer" 
+      size="3xl"
+    >
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && <Alert type="error" message={error} />}
 
-        <div className="grid grid-cols-2 gap-5">
-          <div>
-            <label className="block  text-gray-900 mb-2 text-xs">
-              Customer Name *
-            </label>
-            <input
-              type="text"
-              name="name"
-              placeholder="Full company/customer name"
-              value={formData.name}
-              onChange={handleInputChange}
-              required
-              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Primary Info */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-slate-800 font-semibold border-b border-slate-100 pb-2">
+              <User size={18} className="text-blue-500" />
+              Basic Information
+            </div>
 
-          <div>
-            <label className="block  text-gray-900 mb-2 text-xs">
-              Customer ID * <span className="text-gray-500 font-normal">(Auto-generated)</span>
-            </label>
-            <input
-              type="text"
-              readOnly
-              value={customerId}
-              placeholder="Will auto-generate..."
-              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Customer Name *
+                </label>
+                <div className="relative">
+                  <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input
+                    type="text"
+                    name="customer_name"
+                    value={formData.customer_name}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Acme Corp"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                  />
+                </div>
+              </div>
 
-          <div>
-            <label className="block  text-gray-900 mb-2 text-xs">
-              Email *
-            </label>
-            <input
-              type="email"
-              name="email"
-              placeholder="customer@example.com"
-              value={formData.email}
-              onChange={handleInputChange}
-              required
-              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Customer ID (Generated)
+                </label>
+                <div className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono text-blue-600">
+                  {customerId || 'Awaiting name...'}
+                </div>
+              </div>
 
-          <div>
-            <label className="block  text-gray-900 mb-2 text-xs">
-              Phone *
-            </label>
-            <input
-              type="tel"
-              name="phone"
-              placeholder="+91-XXXXXXXXXX"
-              value={formData.phone}
-              onChange={handleInputChange}
-              required
-              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-
-          <div>
-            <label className="block  text-gray-900 mb-2 text-xs">
-              GST Number
-            </label>
-            <input
-              type="text"
-              name="gst_no"
-              placeholder="22ABCDE1234F1Z5"
-              value={formData.gst_no}
-              onChange={handleInputChange}
-              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Customer Type
+                  </label>
+                  <select
+                    name="customer_type"
+                    value={formData.customer_type}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                  >
+                    <option value="other">Standard</option>
+                    <option value="tata">Corporate (TATA)</option>
+                    <option value="retail">Retail</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Status
+                  </label>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="block  text-gray-900 mb-2 text-xs">
-              Customer Type *
-            </label>
-            <select
-              name="customer_type"
-              value={formData.customer_type}
-              onChange={handleInputChange}
-              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-              required
-            >
-              <option value="tata">TATA</option>
-              <option value="other">Other</option>
-            </select>
+          {/* Contact Details */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-slate-800 font-semibold border-b border-slate-100 pb-2">
+              <Phone size={18} className="text-blue-500" />
+              Contact Details
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Email Address *
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="billing@customer.com"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Phone Number *
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="+91-XXXXXXXXXX"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  GST Number
+                </label>
+                <div className="relative">
+                  <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input
+                    type="text"
+                    name="gst_no"
+                    value={formData.gst_no}
+                    onChange={handleInputChange}
+                    placeholder="22ABCDE1234F1Z5"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="block  text-gray-900 mb-2 text-xs">
-              Credit Limit (₹)
-            </label>
-            <input
-              type="number"
-              name="credit_limit"
-              placeholder="0.00"
-              value={formData.credit_limit}
-              onChange={handleInputChange}
-              step="0.01"
-              min="0"
-              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
+          {/* Address Info */}
+          <div className="md:col-span-2 space-y-4 pt-2">
+            <div className="flex items-center gap-2 text-slate-800 font-semibold border-b border-slate-100 pb-2">
+              <MapPin size={18} className="text-blue-500" />
+              Address Information
+            </div>
 
-          <div>
-            <label className="block  text-gray-900 mb-2 text-xs">
-              Status
-            </label>
-            <select
-              name="status"
-              value={formData.status}
-              onChange={handleInputChange}
-              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-
-          <div className="col-span-2">
-            <label className="block  text-gray-900 mb-2 text-xs">
-              Billing Address
-            </label>
-            <textarea
-              name="billing_address"
-              placeholder="Street, City, State, ZIP..."
-              value={formData.billing_address}
-              onChange={handleInputChange}
-              rows="2"
-              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs resize-vertical focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-
-          <div className="col-span-2">
-            <label className="block  text-gray-900 mb-2 text-xs">
-              Shipping Address
-            </label>
-            <textarea
-              name="shipping_address"
-              placeholder="Street, City, State, ZIP..."
-              value={formData.shipping_address}
-              onChange={handleInputChange}
-              rows="2"
-              className="w-full p-2  py-2 border border-gray-300 rounded-xs text-xs resize-vertical focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Billing Address
+                </label>
+                <textarea
+                  name="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  rows="3"
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                  placeholder="Official registered address..."
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Shipping Address
+                </label>
+                <textarea
+                  name="shipping_address"
+                  value={formData.shipping_address}
+                  onChange={handleInputChange}
+                  rows="3"
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                  placeholder="Where goods should be delivered..."
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex gap-2 justify-end mt-6">
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-6  py-2 bg-gray-100 border border-gray-300 rounded-xs text-gray-700 cursor-pointer text-xs font-medium hover:bg-gray-200 transition"
-          >
+        <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+          <Button type="button" variant="outline" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="p-6  py-2 bg-gradient-to-r from-green-500 to-green-600 text-white border-none rounded-xs cursor-pointer text-xs   hover:from-green-600 hover:to-green-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+          </Button>
+          <Button 
+            type="submit" 
+            variant="primary" 
+            loading={loading}
+            icon={CheckCircle2}
           >
-            {loading ? 'Creating...' : '✓ Create Customer'}
-          </button>
+            Create Customer
+          </Button>
         </div>
       </form>
     </Modal>

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
-import api from '../../services/api'
 import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
-import { CheckCircle, AlertCircle } from 'lucide-react'
+import Alert from '../Alert/Alert'
+import { CheckCircle, AlertCircle, Truck, User, Package, XCircle, TrendingUp, Info } from 'lucide-react'
+import { grnRequestsAPI, itemsAPI } from '../../services/api'
 
 export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
@@ -15,7 +15,7 @@ export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
       const fetchValuationRates = async () => {
         try {
           const itemCodes = grn.items.map(i => i.item_code).join(',')
-          const response = await api.get(`/items?item_codes=${itemCodes}`)
+          const response = await itemsAPI.list({ item_codes: itemCodes })
           if (response.data.success) {
             const ratesMap = {}
             response.data.data.forEach(item => {
@@ -31,8 +31,7 @@ export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
     }
   }, [grn])
 
-  const handleApprove = async (e) => {
-    e.preventDefault()
+  const handleApprove = async () => {
     setLoading(true)
     setError(null)
 
@@ -47,13 +46,11 @@ export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
         bin_rack: item.bin_rack || null
       }))
 
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/grn-requests/${grn.id}/inventory-approve`,
-        { approvedItems }
-      )
+      const response = await grnRequestsAPI.inventoryApprove(grn.id, { approvedItems })
 
       if (response.data.success) {
-        onSuccess && onSuccess(response.data.data)
+        onSuccess?.(response.data.data)
+        onClose()
       } else {
         setError(response.data.error || 'Failed to approve GRN')
       }
@@ -73,136 +70,157 @@ export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
     <Modal 
       isOpen={true} 
       onClose={onClose} 
-      title="📦 Inventory Storage Approval" 
-      size="2xl"
+      title="Inventory Storage Approval" 
+      size="3xl"
       footer={
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+        <div className="flex gap-3 justify-end w-full">
+          <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
           <Button
             variant="success"
             onClick={handleApprove}
             loading={loading}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
-            <CheckCircle size={16} />
-            Approve & Store in Inventory
+            <CheckCircle size={16} className="mr-2" />
+            Approve & Store Stock
           </Button>
         </div>
       }
     >
-      {error && (
-        <div style={{
-          backgroundColor: '#fee2e2',
-          border: '1px solid #fecaca',
-          borderRadius: '8px',
-          padding: '12px 16px',
-          marginBottom: '20px',
-          color: '#dc2626',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px'
-        }}>
-          <AlertCircle size={18} />
-          <span>{error}</span>
-        </div>
-      )}
+      <div className="space-y-6">
+        {error && (
+          <Alert variant="danger">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={18} />
+              <span>{error}</span>
+            </div>
+          </Alert>
+        )}
 
-      {/* GRN Summary */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-        gap: '12px',
-        marginBottom: '20px'
-      }}>
-        <div style={{ padding: '12px', backgroundColor: '#f0fdf4', borderRadius: '6px' }}>
-          <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '4px', fontWeight: 500 }}>PO Number</p>
-          <p style={{ fontWeight: 600, color: '#16a34a', fontSize: '0.95rem' }}>{grn.po_no}</p>
-        </div>
-        <div style={{ padding: '12px', backgroundColor: '#f0fdf4', borderRadius: '6px' }}>
-          <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '4px', fontWeight: 500 }}>Supplier</p>
-          <p style={{ fontWeight: 600, color: '#16a34a', fontSize: '0.95rem' }}>{grn.supplier_name}</p>
-        </div>
-        <div style={{ padding: '12px', backgroundColor: '#dcfce7', borderRadius: '6px' }}>
-          <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '4px', fontWeight: 500 }}>Accepted Qty</p>
-          <p style={{ fontWeight: 600, fontSize: '1.1rem', color: '#16a34a' }}>{totalAccepted}</p>
-        </div>
-        <div style={{ padding: '12px', backgroundColor: '#fee2e2', borderRadius: '6px' }}>
-          <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '4px', fontWeight: 500 }}>Rejected Qty</p>
-          <p style={{ fontWeight: 600, fontSize: '1.1rem', color: '#991b1b' }}>{totalRejected}</p>
-        </div>
-        <div style={{ padding: '12px', backgroundColor: '#f0f9ff', borderRadius: '6px' }}>
-          <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '4px', fontWeight: 500 }}>Total Value</p>
-          <p style={{ fontWeight: 600, fontSize: '1.1rem', color: '#0369a1' }}>
-            ₹{acceptedItems.reduce((sum, item) => sum + (parseFloat(item.accepted_qty || 0) * parseFloat(item.valuation_rate || itemRates[item.item_code] || item.rate || 0)), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </p>
-        </div>
-      </div>
+        {/* GRN Summary */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="p-4 bg-neutral-50 border border-neutral-100 rounded-xl">
+            <div className="flex items-center gap-2 mb-2">
+              <Truck size={14} className="text-neutral-400" />
+              <p className="text-[10px] text-neutral-500  uppercase tracking-wider">PO Number</p>
+            </div>
+            <p className=" text-neutral-800">{grn.po_no}</p>
+          </div>
 
-      {/* Items to be Stored */}
-      <div style={{
-        backgroundColor: '#fafafa',
-        border: '1px solid #e5e7eb',
-        borderRadius: '6px',
-        padding: '16px',
-        marginBottom: '20px'
-      }}>
-        <h4 style={{ margin: '0 0 12px 0', fontWeight: 600, fontSize: '0.95rem', color: '#1f2937' }}>Items for Storage</h4>
-        {acceptedItems.length > 0 ? (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-              <thead style={{ backgroundColor: '#f5f5f5' }}>
+          <div className="p-4 bg-neutral-50 border border-neutral-100 rounded-xl">
+            <div className="flex items-center gap-2 mb-2">
+              <User size={14} className="text-neutral-400" />
+              <p className="text-[10px] text-neutral-500  uppercase tracking-wider">Supplier</p>
+            </div>
+            <p className=" text-neutral-800 truncate" title={grn.supplier_name}>{grn.supplier_name}</p>
+          </div>
+
+          <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
+            <div className="flex items-center gap-2 mb-2">
+              <Package size={14} className="text-emerald-500" />
+              <p className="text-[10px] text-emerald-600  uppercase tracking-wider">Accepted</p>
+            </div>
+            <p className=" text-emerald-700">{totalAccepted}</p>
+          </div>
+
+          <div className="p-4 bg-red-50 border border-red-100 rounded-xl">
+            <div className="flex items-center gap-2 mb-2">
+              <XCircle size={14} className="text-red-500" />
+              <p className="text-[10px] text-red-600  uppercase tracking-wider">Rejected</p>
+            </div>
+            <p className=" text-red-700">{totalRejected}</p>
+          </div>
+        </div>
+
+        {/* Total Valuation */}
+        <div className="bg-primary-600 rounded p-2 text-white flex justify-between items-center shadow-md shadow-primary-100">
+          <div className="flex items-center gap-4">
+            <div className="p-2 bg-primary-700 rounded-lg">
+              <TrendingUp size={24} />
+            </div>
+            <div>
+              <p className="text-primary-100 text-xs  uppercase tracking-wider">Total Valuation Value</p>
+              <p className="text-xl text-white">
+                ₹{acceptedItems.reduce((sum, item) => sum + (parseFloat(item.accepted_qty || 0) * parseFloat(item.valuation_rate || itemRates[item.item_code] || item.rate || 0)), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+          <div className="text-right flex flex-col items-end">
+            <span className="bg-primary-700 text-primary-50 px-3 py-1 rounded-full text-[10px]  uppercase tracking-wider">
+              {acceptedItems.length} Items Ready
+            </span>
+          </div>
+        </div>
+
+        {/* Items Table */}
+        <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200">
+            <h4 className="font-semibold text-neutral-800 flex items-center gap-2 text-sm">
+              <Package size={16} className="text-primary-600" /> Items for Storage
+            </h4>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-neutral-500 uppercase bg-neutral-50/50 border-b border-neutral-200">
                 <tr>
-                  <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #ddd', fontSize: '0.85rem', fontWeight: 600 }}>Item Code</th>
-                  <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #ddd', fontSize: '0.85rem', fontWeight: 600 }}>Item Name</th>
-                  <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #ddd', fontSize: '0.85rem', fontWeight: 600 }}>Accepted</th>
-                  <th style={{ padding: '10px', textAlign: 'right', borderBottom: '2px solid #ddd', fontSize: '0.85rem', fontWeight: 600 }}>Rate</th>
-                  <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid #ddd', fontSize: '0.85rem', fontWeight: 600 }}>Warehouse</th>
-                  <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid #ddd', fontSize: '0.85rem', fontWeight: 600 }}>Batch No</th>
+                  <th className="px-4 py-3 font-semibold">Item Details</th>
+                  <th className="px-4 py-3 font-semibold text-center w-32">Accepted</th>
+                  <th className="px-4 py-3 font-semibold text-right w-40">Valuation Rate</th>
+                  <th className="px-4 py-3 font-semibold w-48">Warehouse</th>
                 </tr>
               </thead>
-              <tbody>
-                {acceptedItems.map((item) => (
-                  <tr key={item.id} style={{ borderBottom: '1px solid #eee' }}>
-                    <td style={{ padding: '10px', fontWeight: 600, color: '#1f2937' }}>{item.item_code}</td>
-                    <td style={{ padding: '10px', fontSize: '0.85rem', color: '#666' }}>{item.item_name}</td>
-                    <td style={{ padding: '10px', textAlign: 'center', fontWeight: 600, color: '#16a34a' }}>
-                      {item.accepted_qty}
+              <tbody className="divide-y divide-neutral-100">
+                {acceptedItems.length > 0 ? (
+                  acceptedItems.map((item) => (
+                    <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-neutral-900">{item.item_code}</div>
+                        <div className="text-[10px] text-neutral-500 uppercase truncate max-w-[250px]">{item.item_name}</div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs  bg-emerald-100 text-emerald-700">
+                          {item.accepted_qty}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium text-neutral-700">
+                        ₹{parseFloat(item.valuation_rate || itemRates[item.item_code] || item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs  border border-blue-100 w-fit">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                          {item.warehouse_name}
+                        </div>
+                        {item.batch_no && (
+                          <div className="text-[10px] text-neutral-400 mt-1 italic">
+                            Batch: {item.batch_no}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="4" className="px-4 py-12 text-center text-neutral-400 italic">
+                      No items accepted for storage.
                     </td>
-                    <td style={{ padding: '10px', textAlign: 'right', fontWeight: 500, color: '#4b5563' }}>
-                      ₹{parseFloat(item.valuation_rate || itemRates[item.item_code] || item.rate || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td style={{ padding: '10px' }}>
-                      <span style={{ backgroundColor: '#e0f2fe', color: '#0284c7', padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 500 }}>
-                        {item.warehouse_name}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px', textAlign: 'center', fontSize: '0.85rem', color: '#666' }}>{item.batch_no || '-'}</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
-        ) : (
-          <p style={{ color: '#666', padding: '12px', margin: 0 }}>No items accepted for storage</p>
-        )}
-      </div>
+        </section>
 
-      {/* Approval Confirmation */}
-      <div style={{
-        display: 'flex',
-        gap: '12px',
-        padding: '12px',
-        backgroundColor: '#e0f2fe',
-        borderRadius: '6px',
-        alignItems: 'flex-start',
-        marginBottom: '20px'
-      }}>
-        <CheckCircle size={20} style={{ color: '#0284c7', flexShrink: 0, marginTop: '2px' }} />
-        <div>
-          <p style={{ margin: 0, marginBottom: '4px', fontWeight: 600, color: '#0284c7' }}>Ready to Store in Warehouse</p>
-          <p style={{ fontSize: '0.85rem', color: '#0c4a6e', margin: 0 }}>
-            {acceptedItems.length} item{acceptedItems.length !== 1 ? 's' : ''} will be stored in assigned warehouse{acceptedItems.length !== 1 ? 's' : ''} and stock entries will be created automatically.
-          </p>
+        {/* Info Banner */}
+        <div className="flex gap-4 p-4 bg-sky-50 border border-sky-100 rounded-xl items-start">
+          <div className="p-2 bg-sky-100 rounded-lg">
+            <Info size={20} className="text-sky-700" />
+          </div>
+          <div>
+            <p className=" text-sky-900 text-sm">Automated Stock Updates</p>
+            <p className="text-xs text-sky-800 leading-relaxed mt-1">
+              Approving this storage will automatically create <strong>Stock Ledger</strong> entries and update the <strong>Stock Balance</strong> for {acceptedItems.length} item{acceptedItems.length !== 1 ? 's' : ''}.
+            </p>
+          </div>
         </div>
       </div>
     </Modal>

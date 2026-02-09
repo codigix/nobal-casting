@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
 import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
-import { Plus, Trash2, AlertCircle, CheckCircle } from 'lucide-react'
+import Input from '../Input/Input'
+import { Plus, Trash2, AlertCircle, CheckCircle, FileText, User, Tag, ShoppingBag, Info } from 'lucide-react'
+import { suppliersAPI, rfqsAPI, itemsAPI, quotationsAPI } from '../../services/api'
 
 export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
@@ -31,12 +32,11 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
     try {
       setDataLoading(true)
       setError(null)
-      const apiUrl = import.meta.env.VITE_API_URL
       
       const [supRes, rfqRes, itemRes] = await Promise.all([
-        axios.get(`${apiUrl}/suppliers?active=true`),
-        axios.get(`${apiUrl}/rfqs`),
-        axios.get(`${apiUrl}/items?limit=1000`)
+        suppliersAPI.list(),
+        rfqsAPI.list(),
+        itemsAPI.list()
       ])
 
       setSuppliers(supRes.data.data || [])
@@ -44,7 +44,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
       setAllItems(itemRes.data.data || [])
     } catch (err) {
       console.error('Failed to fetch required data:', err)
-      setError('Failed to load suppliers and RFQs')
+      setError('Failed to load required data')
     } finally {
       setDataLoading(false)
     }
@@ -55,48 +55,48 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
     
     if (rfqId) {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL
-        const response = await axios.get(`${apiUrl}/rfqs/${rfqId}`)
+        const response = await rfqsAPI.get(rfqId)
         const rfq = response.data.data
         setSelectedRFQ(rfq)
         
-        setFormData({
-          ...formData,
+        setFormData(prev => ({
+          ...prev,
           rfq_id: rfqId,
           items: (rfq.items || []).map(item => ({
             item_code: item.item_code,
             qty: item.qty,
             rate: 0,
             lead_time_days: 0,
-            min_qty: item.qty,
-            id: Date.now() + Math.random()
+            min_qty: item.qty
           }))
-        })
+        }))
         setError(null)
       } catch (err) {
         console.error('Failed to fetch RFQ details:', err)
         setError('Failed to load RFQ items')
-        setFormData({ ...formData, rfq_id: '', items: [] })
+        setFormData(prev => ({ ...prev, rfq_id: '', items: [] }))
         setSelectedRFQ(null)
       }
     } else {
-      setFormData({ ...formData, rfq_id: '', items: [] })
+      setFormData(prev => ({ ...prev, rfq_id: '', items: [] }))
       setSelectedRFQ(null)
     }
   }
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData({ ...formData, [name]: value })
+    setFormData(prev => ({ ...prev, [name]: value }))
   }
 
   const handleItemChange = (idx, field, value) => {
     const updatedItems = [...formData.items]
     updatedItems[idx] = {
       ...updatedItems[idx],
-      [field]: field === 'rate' ? parseFloat(value) || 0 : value
+      [field]: (field === 'rate' || field === 'qty' || field === 'lead_time_days' || field === 'min_qty') 
+        ? parseFloat(value) || 0 
+        : value
     }
-    setFormData({ ...formData, items: updatedItems })
+    setFormData(prev => ({ ...prev, items: updatedItems }))
   }
 
   const calculateTotal = () => {
@@ -134,16 +134,16 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
 
     try {
       setLoading(true)
-      const apiUrl = import.meta.env.VITE_API_URL
       const submitData = {
         supplier_id: formData.supplier_id,
         rfq_id: formData.rfq_id,
-        items: formData.items.map(({ id, ...item }) => item),
-        total_value: calculateTotal()
+        items: formData.items,
+        total_value: calculateTotal(),
+        notes: formData.notes
       }
 
-      await axios.post(`${apiUrl}/quotations`, submitData)
-      onSuccess()
+      await quotationsAPI.create(submitData)
+      onSuccess?.()
       handleClose()
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create quotation')
@@ -169,46 +169,67 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
     onClose()
   }
 
-  const getSupplierName = (id) => {
-    const supplier = suppliers.find(s => s.supplier_id === id)
-    return supplier?.name || 'Unknown Supplier'
-  }
-
-  const getRFQInfo = (id) => {
-    const rfq = rfqs.find(r => r.rfq_id === id)
-    return rfq || null
-  }
-
   if (dataLoading) {
     return (
-      <Modal isOpen={isOpen} onClose={handleClose} title="Create Supplier Quotation" size="xl">
-        <div style={{ textAlign: 'center', padding: '40px' }}>
-          <div style={{ fontSize: '18px', color: '#666' }}>Loading suppliers and RFQs...</div>
+      <Modal isOpen={isOpen} onClose={handleClose} title="Create Supplier Quotation" size="3xl">
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="w-10 h-10 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin"></div>
+          <p className="mt-4 text-neutral-500">Loading required data...</p>
         </div>
       </Modal>
     )
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Create Supplier Quotation" size="xl">
-      <div style={{ maxHeight: '85vh', overflowY: 'auto', padding: '4px' }}>
-        {error && <Alert type="danger">{error}</Alert>}
+    <Modal 
+      isOpen={isOpen} 
+      onClose={handleClose} 
+      title="Create Supplier Quotation" 
+      size="3xl"
+      footer={
+        <div className="flex justify-end gap-3 w-full">
+          <Button variant="outline" onClick={handleClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={handleSubmit} 
+            loading={loading}
+            disabled={!formData.supplier_id || !formData.rfq_id || formData.items.length === 0}
+          >
+            <CheckCircle size={16} className="mr-2" />
+            Create Quotation
+          </Button>
+        </div>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && (
+          <Alert variant="danger">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={18} />
+              <span>{error}</span>
+            </div>
+          </Alert>
+        )}
 
-        <form onSubmit={handleSubmit}>
-          {/* Section 1: Basic Information */}
-          <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
-            <h5 style={{ marginTop: 0, marginBottom: '16px', color: '#333', fontSize: '14px', fontWeight: '600' }}>Basic Information</h5>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Supplier & RFQ Selection */}
+          <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+            <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center gap-2">
+              <User size={18} className="text-primary-600" />
+              <h3 className="font-semibold text-neutral-800">Source Information</h3>
+            </div>
+            <div className="p-4 space-y-4">
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>Supplier <span style={{ color: '#d32f2f' }}>*</span></label>
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">Supplier *</label>
                 <select 
                   name="supplier_id"
                   value={formData.supplier_id}
                   onChange={handleChange}
                   required
                   disabled={loading}
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
+                  className="w-full h-10 px-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
                 >
                   <option value="">Select Supplier</option>
                   {suppliers.map(supplier => (
@@ -217,23 +238,17 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
                     </option>
                   ))}
                 </select>
-                {formData.supplier_id && (
-                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#666', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <CheckCircle size={14} color="#4CAF50" />
-                    Selected: {getSupplierName(formData.supplier_id)}
-                  </div>
-                )}
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>RFQ <span style={{ color: '#d32f2f' }}>*</span></label>
+                <label className="block text-xs font-medium text-neutral-700 mb-1.5">RFQ Request *</label>
                 <select 
                   value={formData.rfq_id}
                   onChange={handleRFQSelect}
                   disabled={loading}
-                  style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px' }}
+                  className="w-full h-10 px-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
                 >
-                  <option value="">Select RFQ Request</option>
+                  <option value="">Select RFQ</option>
                   {rfqs.map(rfq => (
                     <option key={rfq.rfq_id} value={rfq.rfq_id}>
                       {rfq.rfq_id} - Valid till {rfq.valid_till || 'N/A'}
@@ -241,136 +256,139 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
                   ))}
                 </select>
                 {selectedRFQ && (
-                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#666', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <CheckCircle size={14} color="#4CAF50" />
-                    {selectedRFQ.items?.length || 0} items loaded
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-green-600 font-medium bg-green-50 p-2 rounded-md border border-green-100">
+                    <CheckCircle size={14} />
+                    {selectedRFQ.items?.length || 0} items loaded from RFQ
                   </div>
                 )}
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Section 2: Quotation Items */}
-          {formData.items.length > 0 && (
-            <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
-              <h5 style={{ marginTop: 0, marginBottom: '16px', color: '#333', fontSize: '14px', fontWeight: '600' }}>Quotation Items ({formData.items.length})</h5>
-              
-              <div style={{ overflowX: 'auto', border: '1px solid #ddd', borderRadius: '4px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                  <thead style={{ backgroundColor: '#f5f5f5' }}>
-                    <tr>
-                      <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #ddd', fontWeight: '600' }}>Item</th>
-                      <th style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #ddd', fontWeight: '600', width: '70px' }}>Qty</th>
-                      <th style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #ddd', fontWeight: '600', width: '100px' }}>Rate/Unit</th>
-                      <th style={{ padding: '10px', textAlign: 'right', borderBottom: '1px solid #ddd', fontWeight: '600', width: '100px' }}>Amount</th>
-                      <th style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #ddd', fontWeight: '600', width: '100px' }}>Lead Time</th>
-                      <th style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #ddd', fontWeight: '600', width: '80px' }}>Min Qty</th>
+          {/* Quotation Summary */}
+          <section className="bg-primary-600 rounded-xl border border-primary-700 overflow-hidden text-white flex flex-col justify-center p-6 shadow-md shadow-primary-200">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center border-b border-primary-500/50 pb-3">
+                <span className="text-primary-100 text-sm">Total Items</span>
+                <span className="text-xl font-semibold">{formData.items.length}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2">
+                <span className="text-primary-100 font-medium">Quotation Value</span>
+                <span className="text-3xl font-bold">
+                  ₹{calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+            <div className="mt-6 flex items-center gap-2 text-primary-100 text-[10px] uppercase tracking-wider font-bold">
+              <Tag size={14} />
+              <span>Quoted Price (Excl. Tax)</span>
+            </div>
+          </section>
+        </div>
+
+        {/* Quotation Items */}
+        {formData.items.length > 0 && (
+          <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+            <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center gap-2">
+              <ShoppingBag size={18} className="text-primary-600" />
+              <h3 className="font-semibold text-neutral-800">Quotation Items</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-neutral-500 uppercase bg-neutral-50/50 border-b border-neutral-200">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Item Details</th>
+                    <th className="px-4 py-3 font-semibold w-24 text-center">Qty</th>
+                    <th className="px-4 py-3 font-semibold w-32 text-right">Rate/Unit</th>
+                    <th className="px-4 py-3 font-semibold w-32 text-right">Amount</th>
+                    <th className="px-4 py-3 font-semibold w-28 text-center">Lead Time</th>
+                    <th className="px-4 py-3 font-semibold w-24 text-center">Min Qty</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100">
+                  {formData.items.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-neutral-50/50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-neutral-900">{getItemName(item.item_code)}</div>
+                        <div className="text-xs text-neutral-500">{item.item_code}</div>
+                      </td>
+                      <td className="px-4 py-3 text-center text-neutral-600 font-medium">
+                        {item.qty}
+                      </td>
+                      <td className="px-4 py-3">
+                        <input 
+                          type="number"
+                          value={item.rate || ''}
+                          onChange={(e) => handleItemChange(idx, 'rate', e.target.value)}
+                          placeholder="0.00"
+                          step="0.01"
+                          min="0"
+                          required
+                          className={`w-full h-9 px-2 text-right rounded-md border focus:ring-1 outline-none text-sm ${
+                            !item.rate || item.rate <= 0 ? 'border-red-300 bg-red-50' : 'border-neutral-300'
+                          }`}
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-primary-600">
+                        ₹{((item.qty || 0) * (item.rate || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <input 
+                            type="number"
+                            value={item.lead_time_days || ''}
+                            onChange={(e) => handleItemChange(idx, 'lead_time_days', e.target.value)}
+                            placeholder="0"
+                            min="0"
+                            className="w-full h-9 px-2 text-center rounded-md border border-neutral-300 focus:ring-1 outline-none text-sm"
+                          />
+                          <span className="text-[10px] text-neutral-400">days</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <input 
+                          type="number"
+                          value={item.min_qty || ''}
+                          onChange={(e) => handleItemChange(idx, 'min_qty', e.target.value)}
+                          placeholder="1"
+                          min="0"
+                          step="0.01"
+                          className="w-full h-9 px-2 text-center rounded-md border border-neutral-300 focus:ring-1 outline-none text-sm"
+                        />
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {formData.items.map((item, idx) => {
-                      const amount = (item.qty || 0) * (item.rate || 0)
-                      return (
-                        <tr key={idx} style={{ borderBottom: '1px solid #ddd' }}>
-                          <td style={{ padding: '10px' }}>
-                            <strong>{getItemName(item.item_code)}</strong><br />
-                            <span style={{ fontSize: '11px', color: '#666' }}>({item.item_code})</span>
-                          </td>
-                          <td style={{ padding: '10px', textAlign: 'center' }}>{item.qty}</td>
-                          <td style={{ padding: '10px' }}>
-                            <input 
-                              type="number"
-                              value={item.rate || ''}
-                              onChange={(e) => handleItemChange(idx, 'rate', e.target.value)}
-                              placeholder="0.00"
-                              step="0.01"
-                              min="0"
-                              required
-                              disabled={loading}
-                              style={{ width: '100%', padding: '6px', borderRadius: '3px', border: `1px solid ${!item.rate || item.rate <= 0 ? '#d32f2f' : '#ddd'}`, fontSize: '12px' }}
-                            />
-                          </td>
-                          <td style={{ padding: '10px', textAlign: 'right', fontWeight: 'bold', color: '#2196F3' }}>₹{amount.toFixed(2)}</td>
-                          <td style={{ padding: '10px' }}>
-                            <input 
-                              type="number"
-                              value={item.lead_time_days || ''}
-                              onChange={(e) => handleItemChange(idx, 'lead_time_days', e.target.value)}
-                              placeholder="0"
-                              min="0"
-                              disabled={loading}
-                              style={{ width: '100%', padding: '6px', borderRadius: '3px', border: '1px solid #ddd', fontSize: '12px' }}
-                            />
-                          </td>
-                          <td style={{ padding: '10px' }}>
-                            <input 
-                              type="number"
-                              value={item.min_qty || ''}
-                              onChange={(e) => handleItemChange(idx, 'min_qty', e.target.value)}
-                              placeholder="1"
-                              min="0"
-                              step="0.01"
-                              disabled={loading}
-                              style={{ width: '100%', padding: '6px', borderRadius: '3px', border: '1px solid #ddd', fontSize: '12px' }}
-                            />
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#e8f5e9', borderRadius: '4px', border: '1px solid #4CAF50', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '14px', color: '#333' }}>Total Quotation Value:</span>
-                <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#2e7d32' }}>₹{calculateTotal().toFixed(2)}</span>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
+          </section>
+        )}
 
-          {formData.items.length === 0 && formData.rfq_id && (
-            <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: '#fff3e0', borderRadius: '4px', border: '1px solid #FF9800', display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <AlertCircle size={16} color="#FF9800" />
-              <span style={{ fontSize: '13px', color: '#666' }}>Select an RFQ to load items</span>
-            </div>
-          )}
-
-          {/* Section 3: Notes */}
-          <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f9f9f9', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
-            <h5 style={{ marginTop: 0, marginBottom: '12px', color: '#333', fontSize: '14px', fontWeight: '600' }}>Notes & Comments</h5>
+        {/* Notes Section */}
+        <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center gap-2">
+            <FileText size={18} className="text-primary-600" />
+            <h3 className="font-semibold text-neutral-800">Notes & Comments</h3>
+          </div>
+          <div className="p-4">
             <textarea 
               name="notes"
               value={formData.notes}
               onChange={handleChange}
               placeholder="Add any additional notes or comments about this quotation..."
               rows="3"
-              disabled={loading}
-              style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '13px', fontFamily: 'inherit', resize: 'vertical' }}
+              className="w-full p-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm min-h-[100px]"
             />
           </div>
+        </section>
 
-          {/* Actions */}
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e0e0e0' }}>
-            <Button 
-              type="button"
-              variant="secondary"
-              onClick={handleClose}
-              disabled={loading}
-              style={{ padding: '10px 24px', fontSize: '13px' }}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit"
-              variant="primary"
-              disabled={loading || !formData.supplier_id || !formData.rfq_id || formData.items.length === 0}
-              style={{ padding: '10px 24px', fontSize: '13px' }}
-            >
-              {loading ? 'Creating Quotation...' : 'Create Quotation'}
-            </Button>
+        {!formData.rfq_id && (
+          <div className="flex items-center gap-2 p-4 bg-amber-50 rounded-lg border border-amber-200 text-amber-700 text-sm">
+            <Info size={18} />
+            <span>Select an RFQ request from the source information to load quotation items.</span>
           </div>
-        </form>
-      </div>
+        )}
+      </form>
     </Modal>
   )
 }

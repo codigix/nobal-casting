@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react'
-import api from '../../services/api'
+import api, { grnRequestsAPI } from '../../services/api'
+import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
-import { X } from 'lucide-react'
-import '../Modal.css'
+import Badge from '../Badge/Badge'
+import { 
+  X, FileText, User, Calendar, ClipboardList, 
+  Package, ArrowRight, Info, Warehouse, CheckCircle2,
+  RefreshCw, Hash, ClipboardCheck
+} from 'lucide-react'
 
 export default function CreateGRNRequestModal({ purchaseReceipt, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
@@ -20,15 +25,14 @@ export default function CreateGRNRequestModal({ purchaseReceipt, onClose, onSucc
     }
   }, [purchaseReceipt])
 
-  const handleCreateGRN = async (e) => {
-    e.preventDefault()
-    
+  const handleCreateGRN = async () => {
     if (selectedItems.length === 0) {
       setError('Please select at least one item')
       return
     }
 
     setLoading(true)
+    setError(null)
     try {
       const grnData = {
         grn_no: purchaseReceipt.grn_no,
@@ -50,14 +54,9 @@ export default function CreateGRNRequestModal({ purchaseReceipt, onClose, onSucc
         notes
       }
 
-      const response = await api.post('/grn-requests', grnData)
-      
-      if (response.data.success) {
-        setError(null)
-        onSuccess && onSuccess(response.data.data)
-      } else {
-        setError(response.data.error || 'Failed to create GRN request')
-      }
+      await grnRequestsAPI.create(grnData)
+      onSuccess && onSuccess()
+      onClose && onClose()
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create GRN request')
     } finally {
@@ -66,75 +65,158 @@ export default function CreateGRNRequestModal({ purchaseReceipt, onClose, onSucc
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-          <h2>Create GRN Request</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-            <X size={24} />
-          </button>
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title="Create GRN Request"
+      size="5xl"
+      footer={
+        <div className="flex items-center justify-between w-full">
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={handleCreateGRN} 
+            disabled={loading}
+            className="flex items-center gap-2 px-8"
+          >
+            {loading ? <RefreshCw size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+            Submit for Inspection
+          </Button>
         </div>
-
+      }
+    >
+      <div className="space-y-6">
         {error && <Alert type="danger">{error}</Alert>}
 
-        <form onSubmit={handleCreateGRN}>
-          <div className="form-group">
-            <label><strong>GRN Number:</strong> {purchaseReceipt?.grn_no}</label>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left: Summary Panel */}
+          <div className="lg:col-span-1 space-y-6">
+            <section className="bg-neutral-50 rounded-2xl border border-neutral-200 p-5 space-y-5">
+              <div className="flex items-center gap-2 pb-3 border-b border-neutral-200">
+                <div className="p-2 bg-blue-600 rounded-lg text-white">
+                  <ClipboardCheck size={20} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-800 uppercase tracking-tight">Receipt Overview</h3>
+                  <p className="text-[10px] text-neutral-500 font-medium">Source document summary</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-3 bg-white rounded-xl border border-neutral-100 shadow-sm">
+                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1">GRN Number</span>
+                  <div className="text-sm font-black text-neutral-900 font-mono">{purchaseReceipt?.grn_no}</div>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-neutral-100 shadow-sm">
+                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1">Source PO</span>
+                  <div className="text-sm font-bold text-neutral-700">
+                    {purchaseReceipt?.po_no || <span className="text-neutral-400 italic font-normal">No Reference</span>}
+                  </div>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-neutral-100 shadow-sm">
+                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1">Supplier</span>
+                  <div className="text-sm font-bold text-neutral-900 truncate" title={purchaseReceipt?.supplier_name}>
+                    {purchaseReceipt?.supplier_name}
+                  </div>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-neutral-100 shadow-sm">
+                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1">Date Received</span>
+                  <div className="text-sm font-bold text-neutral-700">
+                    {purchaseReceipt?.receipt_date ? new Date(purchaseReceipt.receipt_date).toLocaleDateString() : '-'}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex gap-3">
+              <div className="text-blue-500 shrink-0">
+                <Info size={18} />
+              </div>
+              <p className="text-[11px] text-blue-700 leading-relaxed font-medium">
+                Submitting this request will notify the Quality Control team. Items will remain in <strong>Pending Inspection</strong> status until approved.
+              </p>
+            </div>
           </div>
 
-          <div className="form-group">
-            <label><strong>PO Number:</strong> {purchaseReceipt?.po_no}</label>
-          </div>
+          {/* Right: Items Table & Notes */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-neutral-100 bg-neutral-50/30 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
+                    <Package size={16} />
+                  </div>
+                  <h3 className="text-sm font-bold text-neutral-800 uppercase tracking-tight">Inspection Queue</h3>
+                </div>
+                <Badge variant="blue" className="px-2.5 py-1 text-[10px]">
+                  {selectedItems.length} Items Total
+                </Badge>
+              </div>
 
-          <div className="form-group">
-            <label><strong>Supplier:</strong> {purchaseReceipt?.supplier_name}</label>
-          </div>
+              <div className="p-0">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-neutral-50 border-b border-neutral-200">
+                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider">Item Details</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider text-center">Received</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider">Warehouse</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider">Batch Info</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {selectedItems.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-neutral-50/30 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-black text-neutral-800">{item.item_code}</span>
+                            <span className="text-[10px] text-neutral-500 font-medium italic truncate max-w-[200px]">{item.item_name}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-black bg-blue-50 text-blue-700 border border-blue-100">
+                            {item.received_qty}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-700">
+                            <Warehouse size={12} className="text-neutral-400" />
+                            {item.warehouse_name}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {item.batch_no ? (
+                            <Badge variant="neutral" className="font-mono text-[10px]">{item.batch_no}</Badge>
+                          ) : (
+                            <span className="text-[10px] text-neutral-400 italic">No Batch ID</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-          <div className="form-group">
-            <label><strong>Receipt Date:</strong> {purchaseReceipt?.receipt_date ? new Date(purchaseReceipt.receipt_date).toLocaleDateString() : '-'}</label>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-neutral-500 uppercase flex items-center gap-1.5 ml-1">
+                <FileText size={12} /> Special Inspection Instructions
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows="4"
+                placeholder="Add any specific instructions for the QC team (e.g., check for moisture, verification of certificates, etc.)..."
+                className="w-full p-4 border border-neutral-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500/10 outline-none transition-all resize-none shadow-sm"
+              ></textarea>
+            </div>
           </div>
-
-          <h4 style={{ marginTop: '20px', marginBottom: '10px' }}>Items to Send for Inspection</h4>
-          
-          {selectedItems.length > 0 && (
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '15px' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid #ddd', backgroundColor: '#f5f5f5' }}>
-                  <th style={{ padding: '8px', textAlign: 'left' }}>Item Code</th>
-                  <th style={{ padding: '8px', textAlign: 'left' }}>Item Name</th>
-                  <th style={{ padding: '8px', textAlign: 'center' }}>Qty</th>
-                  <th style={{ padding: '8px', textAlign: 'left' }}>Warehouse</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selectedItems.map((item, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
-                    <td style={{ padding: '8px' }}>{item.item_code}</td>
-                    <td style={{ padding: '8px' }}>{item.item_name}</td>
-                    <td style={{ padding: '8px', textAlign: 'center' }}>{item.received_qty}</td>
-                    <td style={{ padding: '8px' }}>{item.warehouse_name}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          <div className="form-group">
-            <label>Notes (Optional)</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any additional notes for the inspection team..."
-              style={{ minHeight: '80px' }}
-            />
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
-            <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" type="submit" loading={loading}>Create GRN Request</Button>
-          </div>
-        </form>
+        </div>
       </div>
-    </div>
+    </Modal>
   )
 }

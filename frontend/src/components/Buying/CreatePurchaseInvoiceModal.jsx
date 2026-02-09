@@ -2,10 +2,14 @@ import React, { useState, useEffect } from 'react'
 import { 
   AlertCircle, ChevronDown, FileText, Calendar, User, 
   CreditCard, Info, Package, DollarSign, Calculator, 
-  CheckCircle, ArrowRight, Building2, Receipt, ShieldCheck
+  CheckCircle, ArrowRight, Building2, Receipt, ShieldCheck,
+  RefreshCw, Clock
 } from 'lucide-react'
-import Modal from '../Modal'
+import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
+import Alert from '../Alert/Alert'
+import Badge from '../Badge/Badge'
+import { purchaseInvoicesAPI, purchaseReceiptsAPI } from '../../services/api'
 
 export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
@@ -18,35 +22,31 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess 
     po_no: '',
     supplier_name: '',
     supplier_id: '',
-    invoice_date: '',
+    invoice_date: new Date().toISOString().split('T')[0],
     due_date: '',
-    net_amount: '',
+    net_amount: '0.00',
     tax_rate: '18',
-    tax_amount: '0',
-    gross_amount: '0',
+    tax_amount: '0.00',
+    gross_amount: '0.00',
     notes: ''
   })
 
   useEffect(() => {
     if (isOpen) {
       fetchAcceptedGRNs()
-      const today = new Date().toISOString().split('T')[0]
       const nextMonth = new Date()
       nextMonth.setMonth(nextMonth.getMonth() + 1)
-      const dueDate = nextMonth.toISOString().split('T')[0]
-      
       setFormData(prev => ({ 
         ...prev, 
-        invoice_date: today,
-        due_date: dueDate 
+        due_date: nextMonth.toISOString().split('T')[0] 
       }))
     }
   }, [isOpen])
 
   const fetchAcceptedGRNs = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/purchase-receipts`)
-      const data = await res.json()
+      const res = await purchaseReceiptsAPI.list()
+      const data = res.data
       if (data.success) {
         setGrns(data.data?.filter(grn => grn.status === 'accepted') || [])
       }
@@ -58,8 +58,8 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess 
   const fetchGRNDetails = async (grnNo) => {
     setLoadingGrn(true)
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/purchase-receipts/${grnNo}`)
-      const data = await res.json()
+      const res = await purchaseReceiptsAPI.get(grnNo)
+      const data = res.data
       if (data.success) {
         setSelectedGrn(data.data)
         
@@ -68,16 +68,7 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess 
             return sum + ((item.received_qty || 0) * (item.rate || 0))
           }, 0)
           
-          const taxRate = parseFloat(formData.tax_rate) || 18
-          const taxAmount = (netAmount * taxRate) / 100
-          const grossAmount = netAmount + taxAmount
-          
-          setFormData(prev => ({
-            ...prev,
-            net_amount: netAmount.toFixed(2),
-            tax_amount: taxAmount.toFixed(2),
-            gross_amount: grossAmount.toFixed(2)
-          }))
+          calculateTotals(netAmount, formData.tax_rate)
         }
       }
     } catch (error) {
@@ -88,21 +79,30 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess 
     }
   }
 
+  const calculateTotals = (net, taxR) => {
+    const netAmount = parseFloat(net) || 0
+    const taxRate = parseFloat(taxR) || 0
+    const taxAmount = (netAmount * taxRate) / 100
+    const grossAmount = netAmount + taxAmount
+    
+    setFormData(prev => ({
+      ...prev,
+      net_amount: netAmount.toFixed(2),
+      tax_amount: taxAmount.toFixed(2),
+      gross_amount: grossAmount.toFixed(2)
+    }))
+  }
+
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => {
       const newData = { ...prev, [name]: value }
-      
       if (name === 'net_amount' || name === 'tax_rate') {
-        const netAmount = name === 'net_amount' ? parseFloat(value) || 0 : parseFloat(newData.net_amount) || 0
-        const taxRate = name === 'tax_rate' ? parseFloat(value) || 0 : parseFloat(newData.tax_rate) || 0
-        const taxAmount = (netAmount * taxRate) / 100
-        const grossAmount = netAmount + taxAmount
-        
-        newData.tax_amount = taxAmount.toFixed(2)
-        newData.gross_amount = grossAmount.toFixed(2)
+        calculateTotals(
+          name === 'net_amount' ? value : newData.net_amount,
+          name === 'tax_rate' ? value : newData.tax_rate
+        )
       }
-      
       return newData
     })
     setError(null)
@@ -128,8 +128,7 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess 
     }
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = async (status = 'draft') => {
     setLoading(true)
     setError(null)
 
@@ -144,28 +143,22 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess 
         rate: item.rate || 0
       })) || []
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/purchase-invoices`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          net_amount: parseFloat(formData.net_amount),
-          tax_rate: parseFloat(formData.tax_rate),
-          tax_amount: parseFloat(formData.tax_amount),
-          gross_amount: parseFloat(formData.gross_amount),
-          status: 'draft',
-          payment_status: 'unpaid',
-          items: invoiceItems
-        })
-      })
+      const payload = {
+        ...formData,
+        net_amount: parseFloat(formData.net_amount),
+        tax_rate: parseFloat(formData.tax_rate),
+        tax_amount: parseFloat(formData.tax_amount),
+        gross_amount: parseFloat(formData.gross_amount),
+        status,
+        payment_status: 'unpaid',
+        items: invoiceItems
+      }
 
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to create purchase invoice')
-
+      await purchaseInvoicesAPI.create(payload)
       onSuccess?.()
       onClose()
     } catch (err) {
-      setError(err.message)
+      setError(err.response?.data?.error || err.message)
     } finally {
       setLoading(false)
     }
@@ -175,173 +168,194 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess 
     <Modal 
       isOpen={isOpen} 
       onClose={onClose} 
-      title={
-        <div className="flex items-center gap-2">
-          <div className="p-2 bg-indigo-100 rounded  text-indigo-600">
-            <Receipt size={20} />
-          </div>
-          <div>
-            <h2 className="text-lg  text-slate-800">Create Purchase Invoice</h2>
-            <p className="text-xs font-medium text-slate-500">Record a new invoice against a Good Receipt Note</p>
+      title="Create Purchase Invoice" 
+      size="5xl"
+      footer={
+        <div className="flex items-center justify-between w-full">
+          <Button variant="secondary" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => handleSubmit('draft')}
+              disabled={loading || !formData.grn_no}
+              className="flex items-center gap-2"
+            >
+              {loading ? <RefreshCw size={16} className="animate-spin" /> : <Clock size={16} />}
+              Save as Draft
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => handleSubmit('submitted')}
+              disabled={loading || !formData.grn_no}
+              className="flex items-center gap-2"
+            >
+              {loading ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+              Submit Invoice
+            </Button>
           </div>
         </div>
-      } 
-      size="xl"
+      }
     >
-      <form onSubmit={handleSubmit} className="p-1">
-        {error && (
-          <div className="flex items-center gap-3 p-2 mb-6 text-xs border bg-rose-50 border-rose-200 text-rose-600 rounded">
-            <AlertCircle size={15} className="shrink-0" />
-            <p className="font-medium">{error}</p>
-          </div>
-        )}
+      <div className="space-y-6">
+        {error && <Alert type="danger">{error}</Alert>}
 
-        <div className=" gap-8">
-          {/* Left Column: Form Fields */}
-          <div className="">
-            {/* Section 1: Source Info */}
-            <section>
-              <div className="flex items-center gap-2 mb-4 text-slate-800">
-                <div className="p-2 bg-slate-100 rounded">
-                  <Building2 size={16} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left: Configuration & Financials */}
+          <div className="lg:col-span-1 space-y-6">
+            <section className="bg-neutral-50 rounded-2xl border border-neutral-200 p-5 space-y-5">
+              <div className="flex items-center gap-2 pb-3 border-b border-neutral-200">
+                <div className="p-2 bg-indigo-500 rounded-lg text-white">
+                  <Receipt size={20} />
                 </div>
-                <h3 className="text-xs    text-slate-600">Source Information</h3>
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-800 uppercase tracking-tight">Invoice Details</h3>
+                  <p className="text-[10px] text-neutral-500 font-medium">Link GRN and set dates</p>
+                </div>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-2 bg-slate-50 rounded border border-slate-200 ">
-                <div className="">
-                  <label className="text-xs  text-slate-700 flex items-center gap-1.5">
-                    GRN Number <span className="text-rose-500">*</span>
+
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-neutral-500 uppercase flex items-center gap-1">
+                    <Package size={12} /> GRN Number <span className="text-red-500">*</span>
                   </label>
-                  <div className="relative">
-                    <select
-                      name="grn_no"
-                      value={formData.grn_no}
-                      onChange={handleGRNChange}
-                      required
-                      className="w-full pl-3 pr-10 py-2 bg-white border border-slate-300 rounded text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none appearance-none  font-medium"
-                    >
-                      <option value="">Select an accepted GRN</option>
-                      {grns.map(grn => (
-                        <option key={grn.grn_no} value={grn.grn_no}>
-                          {grn.grn_no} - {grn.supplier_name}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  </div>
+                  <select
+                    name="grn_no"
+                    value={formData.grn_no}
+                    onChange={handleGRNChange}
+                    className="w-full p-2.5 bg-white border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
+                  >
+                    <option value="">Select Accepted GRN</option>
+                    {grns.map(grn => (
+                      <option key={grn.grn_no} value={grn.grn_no}>
+                        {grn.grn_no} ({grn.supplier_name})
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                <div className="">
-                  <label className="text-xs  text-slate-700">Supplier</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={formData.supplier_name}
-                      readOnly
-                      placeholder="Auto-populated"
-                      className="w-full pl-9 pr-4 py-2 bg-slate-100 border border-slate-200 rounded text-xs text-slate-600 font-medium cursor-not-allowed outline-none"
-                    />
-                    <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-neutral-500 uppercase flex items-center gap-1">
+                    <Calendar size={12} /> Invoice Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    name="invoice_date"
+                    value={formData.invoice_date}
+                    onChange={handleInputChange}
+                    className="w-full p-2.5 bg-white border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
+                  />
                 </div>
 
-                <div className="">
-                  <label className="text-xs  text-slate-700">Purchase Order</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={formData.po_no}
-                      readOnly
-                      placeholder="Auto-populated"
-                      className="w-full pl-9 pr-4 py-2 bg-slate-100 border border-slate-200 rounded text-xs text-slate-600 font-medium cursor-not-allowed outline-none"
-                    />
-                    <FileText size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  </div>
-                </div>
-
-                <div className="">
-                  <label className="text-xs  text-slate-700">Invoice Date *</label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      name="invoice_date"
-                      value={formData.invoice_date}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none  font-medium"
-                    />
-                    <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  </div>
-                </div>
-
-                <div className="">
-                  <label className="text-xs  text-slate-700">Due Date *</label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      name="due_date"
-                      value={formData.due_date}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none  font-medium"
-                    />
-                    <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-neutral-500 uppercase flex items-center gap-1">
+                    <Calendar size={12} /> Due Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    name="due_date"
+                    value={formData.due_date}
+                    onChange={handleInputChange}
+                    className="w-full p-2.5 bg-white border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all"
+                  />
                 </div>
               </div>
             </section>
 
-            {/* Section 2: Items Verification */}
-            <section className='my-2'>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2 text-slate-800">
-                  <div className="p-1.5 bg-slate-100 rounded ">
-                    <Package size={16} />
-                  </div>
-                  <h3 className="text-xs    text-slate-600">Item Verification</h3>
+            <section className="bg-slate-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+              <div className="relative z-10 space-y-6">
+                <div className="flex items-center gap-2 pb-4 border-b border-white/10">
+                  <Calculator size={18} className="text-indigo-400" />
+                  <h3 className="text-sm font-bold uppercase tracking-wider">Financial Summary</h3>
                 </div>
-                {selectedGrn && (
-                  <span className="text-xs  px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100  tracking-tight">
-                    {selectedGrn.items?.length || 0} Items Linked
-                  </span>
-                )}
+
+                <div className="space-y-4">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase">Net Subtotal</span>
+                    <div className="text-right">
+                      <span className="text-lg font-bold">₹{parseFloat(formData.net_amount).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-[11px] font-bold text-slate-400 uppercase">
+                      <span>GST Rate (%)</span>
+                      <input 
+                        type="number"
+                        name="tax_rate"
+                        value={formData.tax_rate}
+                        onChange={handleInputChange}
+                        className="w-16 bg-white/5 border border-white/10 rounded px-2 py-1 text-right text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <div className="flex justify-between text-[11px] font-bold text-slate-400 uppercase">
+                      <span>Tax Amount</span>
+                      <span className="text-white">₹{parseFloat(formData.tax_amount).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-white/10">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Grand Total</span>
+                      <span className="text-2xl font-black text-white">₹{parseFloat(formData.gross_amount).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          {/* Right: Item Verification & Details */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-neutral-100 bg-neutral-50/30 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
+                    <ShieldCheck size={16} />
+                  </div>
+                  <h3 className="text-sm font-bold text-neutral-800">Verification Table</h3>
+                </div>
+                <Badge variant={selectedGrn ? "success" : "neutral"} className="px-2.5 py-1 text-[10px]">
+                  {selectedGrn?.items?.length || 0} Items Linked
+                </Badge>
               </div>
 
-              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden ">
+              <div className="p-0">
                 {loadingGrn ? (
-                  <div className="flex flex-col items-center justify-center py-12 gap-3">
-                    <RefreshCw className="text-indigo-500 animate-spin" size={24} />
-                    <p className="text-xs font-medium text-slate-500 italic">Fetching GRN items...</p>
+                  <div className="flex flex-col items-center justify-center py-20 gap-3">
+                    <RefreshCw className="text-indigo-500 animate-spin" size={32} />
+                    <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Syncing GRN Items...</p>
                   </div>
                 ) : selectedGrn?.items?.length > 0 ? (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+                    <table className="w-full text-left">
                       <thead>
-                        <tr className="bg-slate-50/50 border-b border-slate-100">
-                          <th className="px-5 py-3 text-[11px]  text-slate-500  ">Item Details</th>
-                          <th className="px-5 py-3 text-[11px]  text-slate-500   text-right">Received</th>
-                          <th className="px-5 py-3 text-[11px]  text-slate-500   text-right">Rate</th>
-                          <th className="px-5 py-3 text-[11px]  text-slate-500   text-right">Total</th>
+                        <tr className="bg-neutral-50/50 border-b border-neutral-100">
+                          <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider">Item Details</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider text-right">Received</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider text-right">Unit Rate</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider text-right">Row Total</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-50">
+                      <tbody className="divide-y divide-neutral-50">
                         {selectedGrn.items.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-5 py-3">
+                          <tr key={idx} className="hover:bg-neutral-50/30 transition-colors">
+                            <td className="px-6 py-4">
                               <div className="flex flex-col">
-                                <span className="text-xs  text-slate-800">{item.item_code}</span>
-                                <span className="text-xs text-slate-400 font-medium italic">{item.item_name || 'No description'}</span>
+                                <span className="text-sm font-bold text-neutral-800">{item.item_code}</span>
+                                <span className="text-[10px] text-neutral-500 font-medium italic">{item.item_name}</span>
                               </div>
                             </td>
-                            <td className="px-5 py-3 text-right">
-                              <span className="text-xs font-medium text-slate-600">{item.received_qty}</span>
+                            <td className="px-6 py-4 text-right">
+                              <span className="text-sm font-bold text-neutral-700">{item.received_qty}</span>
                             </td>
-                            <td className="px-5 py-3 text-right">
-                              <span className="text-xs font-medium text-slate-600">₹{(item.rate || 0).toLocaleString()}</span>
+                            <td className="px-6 py-4 text-right text-neutral-500 font-medium">
+                              ₹{(item.rate || 0).toLocaleString()}
                             </td>
-                            <td className="px-5 py-3 text-right">
-                              <span className="text-xs  text-slate-900">₹{((item.received_qty || 0) * (item.rate || 0)).toLocaleString()}</span>
+                            <td className="px-6 py-4 text-right">
+                              <span className="text-sm font-bold text-neutral-900">₹{((item.received_qty || 0) * (item.rate || 0)).toLocaleString()}</span>
                             </td>
                           </tr>
                         ))}
@@ -349,107 +363,54 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess 
                     </table>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-center p-2">
-                    <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
-                      <Receipt size={24} className="text-slate-300" />
+                  <div className="flex flex-col items-center justify-center py-20 text-center px-10">
+                    <div className="w-16 h-16 bg-neutral-50 rounded-full flex items-center justify-center mb-4 border border-neutral-100">
+                      <Receipt size={32} className="text-neutral-300" />
                     </div>
-                    <p className="text-xs font-medium text-slate-400">Select a GRN to verify items</p>
+                    <h4 className="text-sm font-bold text-neutral-800 mb-1">No Source Document Selected</h4>
+                    <p className="text-xs text-neutral-500 max-w-[200px]">Select an accepted Good Receipt Note to pull item details and financials.</p>
                   </div>
                 )}
               </div>
-            </section>
-          </div>
+            </div>
 
-          {/* Right Column: Financials & Summary */}
-          <div className="my-3">
-            <section className="bg-slate-900 rounded p-2 text-white  relative overflow-hidden">
-              {/* Decorative elements */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-16 -mt-16 blur-2xl" />
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-500/10 rounded-full -ml-12 -mb-12 blur-2xl" />
-              
-              <div className="relative z-10 ">
-                <div className="flex items-center gap-2 pb-4 border-b border-white/10">
-                  <Calculator size={15} className="text-indigo-400" />
-                  <h3 className="text-xs text-white">Financial Summary</h3>
-                </div>
-
-                <div className="">
-                  <div className="mt-2">
-                    <label className="text-xs  text-slate-400  ">Net Amount (Subtotal)</label>
-                    <div className="relative group">
-                      <input
-                        type="number"
-                        name="net_amount"
-                        value={formData.net_amount}
-                        onChange={handleInputChange}
-                        required
-                        step="0.01"
-                        className="w-full pl-10 pr-4 p-2 bg-white/5 border border-white/10 rounded text-xs  text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                      />
-                      <DollarSign size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mt-2">
-                    <div className="">
-                      <label className="text-xs  text-slate-400  ">Tax Rate (%)</label>
-                      <select
-                        name="tax_rate"
-                        value={formData.tax_rate}
-                        onChange={handleInputChange}
-                        className="w-full p-2 bg-white/5 border border-white/10 rounded text-xs  text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none"
-                      >
-                        <option value="0" className="text-slate-900">0%</option>
-                        <option value="5" className="text-slate-900">5%</option>
-                        <option value="12" className="text-slate-900">12%</option>
-                        <option value="18" className="text-slate-900">18%</option>
-                        <option value="28" className="text-slate-900">28%</option>
-                      </select>
-                    </div>
-                    <div className="">
-                      <label className="text-xs  text-slate-400  ">Tax Amount</label>
-                      <div className="w-full p-2 bg-white/5 border border-white/10 rounded text-xs  text-indigo-300">
-                        ₹{(parseFloat(formData.tax_amount) || 0).toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-6 border-t border-white/10">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium text-slate-400">Total Payable</span>
-                      <ShieldCheck size={16} className="text-emerald-500" />
-                    </div>
-                    <div className="text-xl  text-white ">
-                      ₹{(parseFloat(formData.gross_amount) || 0).toLocaleString()}
-                    </div>
-                  </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-3">
+                <label className="text-[10px] font-black text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <User size={12} /> Supplier Reference
+                </label>
+                <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+                  <p className="text-sm font-bold text-neutral-800 truncate">{formData.supplier_name || 'Not Linked'}</p>
+                  <p className="text-[10px] text-neutral-500 font-medium">ID: {formData.supplier_id || 'N/A'}</p>
                 </div>
               </div>
-            </section>
+              <div className="bg-white rounded-2xl border border-neutral-200 p-4 space-y-3">
+                <label className="text-[10px] font-black text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText size={12} /> Order Context
+                </label>
+                <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+                  <p className="text-sm font-bold text-neutral-800">PO: {formData.po_no || 'Manual'}</p>
+                  <p className="text-[10px] text-neutral-500 font-medium">Ref: {formData.grn_no || 'N/A'}</p>
+                </div>
+              </div>
+            </div>
 
-           
-
-            <div className="flex  gap-3 pt-2">
-              <Button
-                type="submit"
-                loading={loading}
-                className="w-full  bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded flex items-center justify-center gap-2 text-base transition-all active:scale-[0.98]"
-              >
-                {loading ? <RefreshCw className="animate-spin" size={15} /> : <CheckCircle size={15} />}
-                Create Purchase Invoice
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={onClose}
-                className="w-full  text-slate-500  hover:bg-slate-100 transition-all rounded p-2"
-              >
-                Cancel
-              </Button>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-neutral-500 uppercase flex items-center gap-1">
+                <Info size={12} /> Notes & Internal Remarks
+              </label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleInputChange}
+                rows="3"
+                placeholder="Add any internal remarks or notes regarding this invoice..."
+                className="w-full p-3 border border-neutral-200 rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all resize-none"
+              ></textarea>
             </div>
           </div>
         </div>
-      </form>
+      </div>
     </Modal>
   )
 }

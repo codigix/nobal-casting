@@ -1,78 +1,83 @@
 import React, { useState, useEffect } from 'react'
-import { AlertCircle } from 'lucide-react'
-import Modal from '../Modal'
+import api, { 
+  jobCardsAPI, 
+  workOrdersAPI, 
+  workstationsAPI, 
+  employeesAPI 
+} from '../../services/api'
+import Modal from '../Modal/Modal'
+import Button from '../Button/Button'
+import Alert from '../Alert/Alert'
+import Badge from '../Badge/Badge'
 import SearchableSelect from '../SearchableSelect'
-import * as productionService from '../../services/productionService'
-import api from '../../services/api'
-import { useToast } from '../ToastContainer'
+import { 
+  Plus, X, Edit, User, Calendar, FileText, 
+  Hash, ClipboardList, CheckCircle2, 
+  Info, AlertCircle, Settings, 
+  UserCheck, Activity, Clock
+} from 'lucide-react'
 
-export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editingId, preSelectedWorkOrderId, preSelectedOperation }) {
-  const toast = useToast()
+export default function CreateJobCardModal({ 
+  isOpen, 
+  onClose, 
+  onSuccess, 
+  editingId, 
+  preSelectedWorkOrderId, 
+  preSelectedOperation 
+}) {
   const [loading, setLoading] = useState(false)
+  const [fetchingData, setFetchingData] = useState(false)
   const [error, setError] = useState(null)
+  
   const [workOrders, setWorkOrders] = useState([])
   const [workstations, setWorkstations] = useState([])
   const [operators, setOperators] = useState([])
   const [operations, setOperations] = useState([])
+
   const [formData, setFormData] = useState({
-    jc_id: '',
-    wo_id: '',
+    work_order_id: '',
     machine_id: '',
     operator_id: '',
     operation: '',
-    quantity: '100',
-    start_date: new Date().toISOString().split('T')[0],
-    end_date: '',
+    operation_sequence: null,
+    operation_type: 'IN_HOUSE',
+    planned_quantity: '100',
+    scheduled_start_date: new Date().toISOString().split('T')[0],
+    scheduled_end_date: '',
     status: 'draft',
-    notes: ''
+    notes: '',
+    hourly_rate: 0,
+    operating_cost: 0,
+    operation_time: 0
   })
 
   useEffect(() => {
     if (isOpen) {
-      fetchData()
-      if (!editingId && !preSelectedOperation) {
-        setFormData({
-          jc_id: '',
-          wo_id: '',
-          machine_id: '',
-          operator_id: '',
-          operation: '',
-          quantity: '100',
-          start_date: new Date().toISOString().split('T')[0],
-          end_date: '',
-          status: 'draft',
-          notes: ''
-        })
-      }
+      initializeModal()
     }
-  }, [isOpen, editingId, preSelectedOperation])
+  }, [isOpen])
 
   useEffect(() => {
     if (isOpen && editingId && workOrders.length > 0) {
       fetchJobCardDetails(editingId)
     }
-  }, [workOrders])
+  }, [isOpen, editingId, workOrders])
 
   useEffect(() => {
     if (isOpen && preSelectedWorkOrderId && workOrders.length > 0 && !editingId) {
       const wo = workOrders.find(w => w.wo_id === preSelectedWorkOrderId)
       if (wo) {
-        const baseFormData = {
-          wo_id: wo.wo_id,
-          quantity: wo.quantity || wo.qty_to_manufacture || '100',
-          machine_id: '',
-          operator_id: '',
-          operation: '',
-          start_date: new Date().toISOString().split('T')[0],
-          status: 'draft'
-        }
+        handleSelectWorkOrder(wo.wo_id)
+        setFormData(prev => ({
+          ...prev,
+          work_order_id: wo.wo_id,
+          planned_quantity: wo.quantity || wo.qty_to_manufacture || '100'
+        }))
 
         if (preSelectedOperation) {
-          const opName = preSelectedOperation.operation || preSelectedOperation.operation_name || ''
           setFormData(prev => ({
             ...prev,
-            ...baseFormData,
-            operation: opName,
+            operation: preSelectedOperation.operation || preSelectedOperation.operation_name || '',
             machine_id: preSelectedOperation.workstation || preSelectedOperation.workstation_type || '',
             operation_sequence: preSelectedOperation.sequence || 0,
             operation_type: preSelectedOperation.operation_type || 'IN_HOUSE',
@@ -80,64 +85,89 @@ export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editing
             operating_cost: preSelectedOperation.operating_cost || 0,
             operation_time: preSelectedOperation.operation_time || preSelectedOperation.time || 0
           }))
-        } else {
-          setFormData(prev => ({
-            ...prev,
-            ...baseFormData
-          }))
         }
-        handleSelectWorkOrder(wo)
       }
     }
-  }, [preSelectedWorkOrderId, workOrders, isOpen, editingId, preSelectedOperation])
+  }, [isOpen, preSelectedWorkOrderId, workOrders, editingId, preSelectedOperation])
 
-  const fetchData = async () => {
+  const initializeModal = async () => {
+    setFetchingData(true)
+    setError(null)
     try {
-      const [woRes, wsRes, empRes] = await Promise.all([
-        productionService.getWorkOrders({ status: '' }),
-        productionService.getWorkstationsList(),
-        productionService.getEmployees()
+      await Promise.all([
+        fetchWorkOrders(),
+        fetchWorkstations(),
+        fetchOperators()
       ])
-      setWorkOrders(woRes.data || [])
-      setWorkstations(wsRes.data || [])
-      setOperators(empRes.data || [])
     } catch (err) {
-      console.error('Failed to fetch data:', err)
+      setError('Failed to load initial data')
+    } finally {
+      setFetchingData(false)
+    }
+  }
+
+  const fetchWorkOrders = async () => {
+    try {
+      const response = await workOrdersAPI.list()
+      setWorkOrders(response.data.data || response.data || [])
+    } catch (err) {
+      console.error('Failed to fetch work orders:', err)
+    }
+  }
+
+  const fetchWorkstations = async () => {
+    try {
+      const response = await workstationsAPI.list()
+      setWorkstations(response.data.data || response.data || [])
+    } catch (err) {
+      console.error('Failed to fetch workstations:', err)
+    }
+  }
+
+  const fetchOperators = async () => {
+    try {
+      const response = await employeesAPI.list()
+      setOperators(response.data.data || response.data || [])
+    } catch (err) {
+      console.error('Failed to fetch operators:', err)
     }
   }
 
   const fetchJobCardDetails = async (id) => {
     try {
-      const response = await productionService.getJobCardDetails(id)
-      const jc = response.data || response
-      const wo = workOrders.find(w => w.wo_id === jc.work_order_id)
+      const response = await jobCardsAPI.get(id)
+      const jc = response.data.data || response.data
       
-      if (wo) {
-        handleSelectWorkOrder(wo)
+      if (jc.work_order_id) {
+        handleSelectWorkOrder(jc.work_order_id)
       }
       
       setFormData({
-        jc_id: jc.job_card_id || '',
-        wo_id: jc.work_order_id || '',
+        work_order_id: jc.work_order_id || '',
         machine_id: jc.machine_id || '',
         operator_id: jc.operator_id || '',
         operation: jc.operation || '',
-        quantity: String(jc.planned_quantity || jc.quantity || '100'),
-        start_date: jc.scheduled_start_date ? jc.scheduled_start_date.split('T')[0] : new Date().toISOString().split('T')[0],
-        end_date: jc.scheduled_end_date ? (jc.scheduled_end_date.split('T')[0]) : '',
+        operation_sequence: jc.operation_sequence || null,
+        operation_type: jc.operation_type || 'IN_HOUSE',
+        planned_quantity: String(jc.planned_quantity || jc.quantity || '100'),
+        scheduled_start_date: jc.scheduled_start_date ? jc.scheduled_start_date.split('T')[0] : new Date().toISOString().split('T')[0],
+        scheduled_end_date: jc.scheduled_end_date ? jc.scheduled_end_date.split('T')[0] : '',
         status: jc.status || 'draft',
-        notes: jc.notes || ''
+        notes: jc.notes || '',
+        hourly_rate: jc.hourly_rate || 0,
+        operating_cost: jc.operating_cost || 0,
+        operation_time: jc.operation_time || 0
       })
     } catch (err) {
       console.error('Error loading job card:', err)
-      toast.addToast('Failed to load job card details', 'error')
+      setError('Failed to load job card details')
     }
   }
 
-  const handleSelectWorkOrder = async (wo) => {
+  const handleSelectWorkOrder = async (woId) => {
     try {
-      const response = await productionService.getWorkOrder(wo.wo_id)
-      const woData = response.data || response
+      const response = await workOrdersAPI.get(woId)
+      const woData = response.data.data || response.data
       
       const ops = (woData.operations || []).map(op => ({
         label: op.operation_name || op.operation || '',
@@ -157,192 +187,247 @@ export default function CreateJobCardModal({ isOpen, onClose, onSuccess, editing
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+    setFormData(prev => ({ ...prev, [name]: value }))
+    setError(null)
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
+    setError(null)
 
     try {
-      if (!formData.wo_id || !formData.machine_id || !formData.quantity || !formData.start_date) {
-        throw new Error('Please fill all required fields')
+      if (!formData.work_order_id || !formData.machine_id || !formData.planned_quantity || !formData.scheduled_start_date) {
+        throw new Error('Please fill in all required fields')
       }
 
-      if (formData.end_date && new Date(formData.start_date) >= new Date(formData.end_date)) {
-        throw new Error('End date must be after start date')
-      }
+      const response = editingId 
+        ? await jobCardsAPI.update(editingId, formData)
+        : await jobCardsAPI.create(formData)
 
-      const payload = {
-        work_order_id: formData.wo_id,
-        machine_id: formData.machine_id,
-        operator_id: formData.operator_id || null,
-        operation: formData.operation || null,
-        operation_sequence: formData.operation_sequence,
-        operation_type: formData.operation_type || 'IN_HOUSE',
-        hourly_rate: parseFloat(formData.hourly_rate || 0),
-        operating_cost: parseFloat(formData.operating_cost || 0),
-        operation_time: parseFloat(formData.operation_time || 0),
-        planned_quantity: parseFloat(formData.quantity),
-        scheduled_start_date: formData.start_date,
-        scheduled_end_date: formData.end_date,
-        status: formData.status,
-        notes: formData.notes
-      }
-
-      if (editingId) {
-        await productionService.updateJobCard(editingId, payload)
+      if (response.data.success) {
+        onSuccess?.()
+        onClose()
       } else {
-        await productionService.createJobCard(payload)
+        throw new Error(response.data.error || 'Failed to save job card')
       }
-
-      setFormData({
-        jc_id: '',
-        wo_id: '',
-        machine_id: '',
-        operator_id: '',
-        operation: '',
-        operation_sequence: null,
-        quantity: '100',
-        start_date: new Date().toISOString().split('T')[0],
-        end_date: '',
-        status: 'draft',
-        notes: ''
-      })
-
-      onSuccess?.()
-      onClose()
     } catch (err) {
-      toast.addToast(err.message || 'Failed to create job card', 'error')
+      setError(err.message || 'Failed to save job card')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editingId ? '✏️ Edit Job Card' : '🎫 Create Job Card'} size="lg">
-      <form onSubmit={handleSubmit}>
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title={editingId ? 'Edit Job Card' : 'Create New Job Card'} 
+      size="3xl"
+    >
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && <Alert type="error" message={error} />}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-          <div>
-            <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '0.9rem' }}>Work Order *</label>
-            <SearchableSelect
-              value={formData.wo_id}
-              onChange={(value) => {
-                setFormData(prev => ({
-                  ...prev,
-                  wo_id: value
-                }))
-                const wo = workOrders.find(w => w.wo_id === value)
-                if (wo) {
-                  handleSelectWorkOrder(wo)
-                }
-              }}
-              options={workOrders.map(wo => ({
-                value: wo.wo_id,
-                label: `${wo.wo_id} - ${wo.item_name || wo.item_code || ''}`
-              }))}
-              placeholder="Select Work Order"
-              isClearable={true}
-            />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Assignment Panel */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-slate-800 font-bold uppercase tracking-tight border-b border-slate-100 pb-2">
+              <Settings size={18} className="text-blue-500" />
+              Resource Assignment
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Work Order *
+                </label>
+                <SearchableSelect
+                  value={formData.work_order_id}
+                  onChange={(value) => {
+                    setFormData(prev => ({ ...prev, work_order_id: value }))
+                    if (value) handleSelectWorkOrder(value)
+                  }}
+                  options={workOrders.map(wo => ({
+                    value: wo.wo_id,
+                    label: `${wo.wo_id} - ${wo.item_name || wo.item_code}`
+                  }))}
+                  placeholder="Select Work Order"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Workstation *
+                </label>
+                <SearchableSelect
+                  value={formData.machine_id}
+                  onChange={(value) => setFormData(prev => ({ ...prev, machine_id: value }))}
+                  options={workstations.map(ws => ({
+                    value: ws.workstation_id || ws.name,
+                    label: ws.workstation_name || ws.name
+                  }))}
+                  placeholder="Select Workstation"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Operator
+                </label>
+                <div className="relative">
+                  <UserCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <select
+                    name="operator_id"
+                    value={formData.operator_id}
+                    onChange={handleInputChange}
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                  >
+                    <option value="">Select Operator (Optional)</option>
+                    {operators.map(emp => (
+                      <option key={emp.employee_id} value={emp.employee_id}>
+                        {emp.first_name} {emp.last_name} ({emp.employee_id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
-          <div>
-            <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '0.9rem' }}>Workstation *</label>
-            <SearchableSelect
-              value={formData.machine_id}
-              onChange={(value) => setFormData(prev => ({ ...prev, machine_id: value }))}
-              options={workstations.map(ws => ({
-                value: ws.name || ws.workstation_id,
-                label: ws.workstation_name || ws.name
-              }))}
-              placeholder="Select Workstation"
-              isClearable={true}
-            />
+
+          {/* Operation Panel */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-slate-800 font-bold uppercase tracking-tight border-b border-slate-100 pb-2">
+              <Activity size={18} className="text-indigo-500" />
+              Operation Details
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Operation *
+                </label>
+                <select
+                  name="operation"
+                  value={formData.operation}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    const selectedOp = operations.find(op => op.value === val)
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      operation: val,
+                      operation_sequence: selectedOp?.sequence || null,
+                      operation_type: selectedOp?.operation_type || 'IN_HOUSE',
+                      hourly_rate: selectedOp?.hourly_rate || 0,
+                      operating_cost: selectedOp?.operating_cost || 0,
+                      operation_time: selectedOp?.operation_time || 0
+                    }))
+                  }}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
+                  disabled={!formData.work_order_id}
+                >
+                  <option value="">Select Operation</option>
+                  {operations.map(op => (
+                    <option key={op.value} value={op.value}>{op.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Planned Qty *
+                  </label>
+                  <div className="relative">
+                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <input
+                      type="number"
+                      name="planned_quantity"
+                      value={formData.planned_quantity}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Status
+                  </label>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="pending">Pending</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Start Date *
+                  </label>
+                  <input
+                    type="date"
+                    name="scheduled_start_date"
+                    value={formData.scheduled_start_date}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    name="scheduled_end_date"
+                    value={formData.scheduled_end_date}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="md:col-span-2 space-y-2">
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+              Instructions & Notes
+            </label>
+            <div className="relative">
+              <ClipboardList className="absolute left-3 top-3 text-slate-400" size={16} />
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleInputChange}
+                rows="3"
+                placeholder="Specific instructions for the operator..."
+                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm resize-none"
+              />
+            </div>
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-          <div>
-            <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '0.9rem' }}>Operator</label>
-            <SearchableSelect
-              value={formData.operator_id}
-              onChange={(value) => setFormData(prev => ({ ...prev, operator_id: value }))}
-              options={[
-                { value: '', label: 'Unassigned' },
-                ...operators.map(emp => ({
-                  value: emp.employee_id || emp.id,
-                  label: `${emp.first_name || ''} ${emp.last_name || ''}`.trim() || emp.name
-                }))
-              ]}
-              placeholder="Select Operator"
-              isClearable={true}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '0.9rem' }}>Operation</label>
-            <SearchableSelect
-              value={formData.operation}
-              onChange={(value) => {
-                const selectedOp = operations.find(op => op.value === value)
-                setFormData(prev => ({ 
-                  ...prev, 
-                  operation: value,
-                  operation_sequence: selectedOp?.sequence || null,
-                  operation_type: selectedOp?.operation_type || 'IN_HOUSE',
-                  hourly_rate: selectedOp?.hourly_rate || 0,
-                  operating_cost: selectedOp?.operating_cost || 0,
-                  operation_time: selectedOp?.operation_time || 0
-                }))
-              }}
-              options={operations.length > 0 ? operations : [{ value: '', label: 'Select Work Order first' }]}
-              placeholder="Select Operation from Work Order"
-              isClearable={true}
-              isDisabled={operations.length === 0}
-            />
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-          <div>
-            <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '0.9rem' }}>Quantity *</label>
-            <input type="number" name="quantity" value={formData.quantity} onChange={handleInputChange} step="0.01" required style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '0.9rem' }}>Status</label>
-            <select name="status" value={formData.status} onChange={handleInputChange} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}>
-              <option value="draft">Draft</option>
-              <option value="pending">Pending</option>
-              <option value="in-progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-          <div>
-            <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '0.9rem' }}>Start Date *</label>
-            <input type="date" name="start_date" value={formData.start_date} onChange={handleInputChange} required style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '0.9rem' }}>End Date</label>
-            <input type="date" name="end_date" value={formData.end_date} onChange={handleInputChange} style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }} />
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontWeight: '600', marginBottom: '6px', fontSize: '0.9rem' }}>Notes</label>
-          <textarea name="notes" value={formData.notes} onChange={handleInputChange} placeholder="Job card notes" style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', minHeight: '60px', fontFamily: 'inherit' }} />
-        </div>
-
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-          <button type="button" onClick={onClose} style={{ padding: '8px 16px', border: '1px solid #ddd', borderRadius: '4px', background: '#f3f4f6', cursor: 'pointer' }}>Cancel</button>
-          <button type="submit" disabled={loading} style={{ padding: '8px 16px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
-            {loading ? 'Saving...' : editingId ? 'Update Card' : 'Create Card'}
-          </button>
+        <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            variant="primary" 
+            loading={loading}
+            icon={CheckCircle2}
+          >
+            {editingId ? 'Update Job Card' : 'Create Job Card'}
+          </Button>
         </div>
       </form>
     </Modal>

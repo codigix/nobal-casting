@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react'
-import { AlertCircle } from 'lucide-react'
-import Modal from '../Modal'
+import { deliveryNotesAPI, salesInvoicesAPI } from '../../services/api'
+import Modal from '../Modal/Modal'
+import Button from '../Button/Button'
+import Alert from '../Alert/Alert'
+import Badge from '../Badge/Badge'
+import { 
+  FileText, Calendar, User, IndianRupee, 
+  Calculator, CheckCircle2, Info, CreditCard,
+  Clock, Receipt
+} from 'lucide-react'
 
 export default function CreateInvoiceModal({ isOpen, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false)
@@ -9,28 +17,27 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     delivery_note_id: '',
     customer_name: '',
-    invoice_date: '',
+    invoice_date: new Date().toISOString().split('T')[0],
     total_value: '',
     due_date: '',
     tax_rate: '18',
-    invoice_type: 'standard'
+    invoice_type: 'standard',
+    status: 'draft',
+    payment_status: 'unpaid',
+    amount_paid: 0
   })
 
   useEffect(() => {
     if (isOpen) {
       fetchDeliveryNotes()
-      // Set today's date as default
-      const today = new Date().toISOString().split('T')[0]
-      setFormData(prev => ({ ...prev, invoice_date: today }))
     }
   }, [isOpen])
 
   const fetchDeliveryNotes = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/selling/delivery-notes`)
-      const data = await res.json()
-      if (data.success) {
-        setDeliveryNotes(data.data?.filter(d => d.status === 'delivered') || [])
+      const res = await deliveryNotesAPI.list()
+      if (res.data.success) {
+        setDeliveryNotes(res.data.data?.filter(d => d.status === 'delivered' || d.status === 'draft') || [])
       }
     } catch (error) {
       console.error('Error fetching delivery notes:', error)
@@ -39,20 +46,18 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSuccess }) {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+    setFormData(prev => ({ ...prev, [name]: value }))
     setError(null)
   }
 
   const handleDeliveryNoteChange = (e) => {
     const noteId = e.target.value
-    const note = deliveryNotes.find(n => n.delivery_note_id === noteId)
+    const note = deliveryNotes.find(n => String(n.delivery_note_id) === String(noteId))
     setFormData(prev => ({
       ...prev,
       delivery_note_id: noteId,
-      customer_name: note?.customer_name || ''
+      customer_name: note?.customer_name || '',
+      total_value: note?.total_value || ''
     }))
     setError(null)
   }
@@ -67,40 +72,13 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSuccess }) {
         throw new Error('Please fill in all required fields')
       }
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/selling/sales-invoices`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          delivery_note_id: formData.delivery_note_id,
-          customer_name: formData.customer_name,
-          invoice_date: formData.invoice_date,
-          total_value: parseFloat(formData.total_value),
-          due_date: formData.due_date,
-          tax_rate: parseFloat(formData.tax_rate),
-          invoice_type: formData.invoice_type,
-          status: 'draft',
-          payment_status: 'unpaid',
-          amount_paid: 0
-        })
-      })
-
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to create invoice')
+      const res = await salesInvoicesAPI.create(formData)
+      if (res.data.success) {
+        onSuccess?.()
+        onClose()
+      } else {
+        throw new Error(res.data.error || 'Failed to create invoice')
       }
-
-      setFormData({
-        delivery_note_id: '',
-        customer_name: '',
-        invoice_date: '',
-        total_value: '',
-        due_date: '',
-        tax_rate: '18',
-        invoice_type: 'standard'
-      })
-      
-      onSuccess?.()
-      onClose()
     } catch (err) {
       setError(err.message || 'Failed to create invoice')
     } finally {
@@ -109,210 +87,168 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSuccess }) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="📃 Create New Invoice" size="lg">
-      <form onSubmit={handleSubmit}>
-        {error && (
-          <div style={{
-            background: '#fee2e2',
-            border: '1px solid #fecaca',
-            borderRadius: '8px',
-            padding: '12px 16px',
-            marginBottom: '20px',
-            color: '#dc2626',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            fontSize: '0.9rem'
-          }}>
-            <AlertCircle size={18} />
-            {error}
-          </div>
-        )}
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title="Create Sales Invoice" 
+      size="3xl"
+    >
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && <Alert type="error" message={error} />}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Delivery Note *
-            </label>
-            <select
-              name="delivery_note_id"
-              value={formData.delivery_note_id}
-              onChange={handleDeliveryNoteChange}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                backgroundColor: '#fff'
-              }}
-            >
-              <option value="">Select Delivery Note</option>
-              {deliveryNotes.map(note => (
-                <option key={note.delivery_note_id} value={note.delivery_note_id}>
-                  {note.delivery_note_id} - {note.customer_name}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Source & Customer */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-slate-800 font-semibold border-b border-slate-100 pb-2">
+              <Receipt size={18} className="text-blue-500" />
+              Billing Basis
+            </div>
 
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Invoice Date *
-            </label>
-            <input
-              type="date"
-              name="invoice_date"
-              value={formData.invoice_date}
-              onChange={handleInputChange}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                boxSizing: 'border-box'
-              }}
-            />
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Delivery Note *
+                </label>
+                <select
+                  name="delivery_note_id"
+                  value={formData.delivery_note_id}
+                  onChange={handleDeliveryNoteChange}
+                  required
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                >
+                  <option value="">Select Delivery Note</option>
+                  {deliveryNotes.map(n => (
+                    <option key={n.delivery_note_id} value={n.delivery_note_id}>
+                      {n.delivery_note_id} - {n.customer_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Customer
+                </label>
+                <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-600">
+                  <User size={16} className="text-slate-400" />
+                  <span className="text-sm font-medium">{formData.customer_name || 'Select a delivery note'}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Invoice Type
+                </label>
+                <select
+                  name="invoice_type"
+                  value={formData.invoice_type}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                >
+                  <option value="standard">Standard Invoice</option>
+                  <option value="advance">Advance Payment</option>
+                  <option value="credit">Credit Note</option>
+                  <option value="debit">Debit Note</option>
+                </select>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Invoice Amount (₹) *
-            </label>
-            <input
-              type="number"
-              name="total_value"
-              placeholder="0.00"
-              value={formData.total_value}
-              onChange={handleInputChange}
-              step="0.01"
-              min="0"
-              required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
+          {/* Financial & Dates */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-slate-800 font-semibold border-b border-slate-100 pb-2">
+              <Calculator size={18} className="text-blue-500" />
+              Financial Details
+            </div>
 
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Due Date *
-            </label>
-            <input
-              type="date"
-              name="due_date"
-              value={formData.due_date}
-              onChange={handleInputChange}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Invoice Date *
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <input
+                      type="date"
+                      name="invoice_date"
+                      value={formData.invoice_date}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Due Date *
+                  </label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <input
+                      type="date"
+                      name="due_date"
+                      value={formData.due_date}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
 
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Tax Rate (%)
-            </label>
-            <select
-              name="tax_rate"
-              value={formData.tax_rate}
-              onChange={handleInputChange}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                backgroundColor: '#fff'
-              }}
-            >
-              <option value="0">0% (Exempt)</option>
-              <option value="5">5%</option>
-              <option value="12">12%</option>
-              <option value="18">18%</option>
-              <option value="28">28%</option>
-            </select>
-          </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Total Payable (₹) *
+                </label>
+                <div className="relative">
+                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input
+                    type="number"
+                    name="total_value"
+                    value={formData.total_value}
+                    onChange={handleInputChange}
+                    required
+                    step="0.01"
+                    placeholder="0.00"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-bold text-blue-600"
+                  />
+                </div>
+              </div>
 
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Invoice Type
-            </label>
-            <select
-              name="invoice_type"
-              value={formData.invoice_type}
-              onChange={handleInputChange}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit',
-                backgroundColor: '#fff'
-              }}
-            >
-              <option value="standard">Standard</option>
-              <option value="advance">Advance Payment</option>
-              <option value="credit">Credit</option>
-            </select>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Tax Rate (%)
+                </label>
+                <select
+                  name="tax_rate"
+                  value={formData.tax_rate}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                >
+                  <option value="0">0% (GST Exempt)</option>
+                  <option value="5">5% GST</option>
+                  <option value="12">12% GST</option>
+                  <option value="18">18% GST</option>
+                  <option value="28">28% GST</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '30px' }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              padding: '10px 24px',
-              backgroundColor: '#f3f4f6',
-              border: '1px solid #ddd',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '0.95rem',
-              fontWeight: 500,
-              transition: 'all 0.2s'
-            }}
-          >
+        <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+          <Button type="button" variant="outline" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              padding: '10px 24px',
-              background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontSize: '0.95rem',
-              fontWeight: 600,
-              opacity: loading ? 0.65 : 1,
-              transition: 'all 0.2s'
-            }}
+          </Button>
+          <Button 
+            type="submit" 
+            variant="primary" 
+            loading={loading}
+            icon={CheckCircle2}
           >
-            {loading ? 'Creating...' : '✓ Create Invoice'}
-          </button>
+            Generate Invoice
+          </Button>
         </div>
       </form>
     </Modal>
