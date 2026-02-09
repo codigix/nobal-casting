@@ -40,11 +40,15 @@ export default function ViewSalesOrderModal({ isOpen, orderId, onClose }) {
   }
 
   const getStatusVariant = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'draft': return 'warning'
       case 'confirmed': return 'blue'
+      case 'ready_for_production': return 'blue'
+      case 'production': return 'blue'
       case 'dispatched': return 'blue'
       case 'invoiced': return 'success'
+      case 'complete': return 'success'
+      case 'delivered': return 'success'
       case 'cancelled': return 'error'
       default: return 'gray'
     }
@@ -166,7 +170,7 @@ export default function ViewSalesOrderModal({ isOpen, orderId, onClose }) {
           {/* Right Panel - Items & Terms */}
           <div className="lg:w-2/3 space-y-6">
             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-              <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+              <div className="bg-slate-50 p-2  border-b border-slate-200 flex justify-between items-center">
                 <div className="flex items-center gap-2 font-bold text-slate-800 uppercase tracking-tight">
                   <ShoppingCart size={18} className="text-blue-500" />
                   Order Items ({order.items?.length || 0})
@@ -186,7 +190,7 @@ export default function ViewSalesOrderModal({ isOpen, orderId, onClose }) {
                   <tbody className="divide-y divide-slate-100">
                     {order.items && order.items.length > 0 ? order.items.map((item, idx) => (
                       <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="px-6 py-4">
+                        <td className="p-2 ">
                           <div className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
                             {item.item_name || item.item_code}
                           </div>
@@ -196,13 +200,13 @@ export default function ViewSalesOrderModal({ isOpen, orderId, onClose }) {
                             {item.specifications && <span className="text-[10px] text-slate-400 italic">| {item.specifications}</span>}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="p-2  text-center">
                           <span className="px-2 py-1 bg-slate-100 rounded-md font-bold text-slate-700">{item.qty}</span>
                         </td>
-                        <td className="px-6 py-4 text-right font-medium text-slate-600">
+                        <td className="p-2  text-right font-medium text-slate-600">
                           ₹{parseFloat(item.rate || 0).toFixed(2)}
                         </td>
-                        <td className="px-6 py-4 text-right font-bold text-blue-600">
+                        <td className="p-2  text-right font-bold text-blue-600">
                           ₹{(item.qty * item.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </td>
                       </tr>

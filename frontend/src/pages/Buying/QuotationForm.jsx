@@ -267,12 +267,12 @@ export default function QuotationForm() {
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="bg-neutral-50 border-b border-neutral-200">
-                          <th className="px-4 py-3 text-left text-[10px] font-black text-neutral-500  tracking-widest">Item Detail</th>
-                          <th className="px-4 py-3 text-right text-[10px] font-black text-neutral-500  tracking-widest">Qty</th>
-                          <th className="px-4 py-3 text-right text-[10px] font-black text-neutral-500  tracking-widest w-32">Rate (₹)</th>
-                          <th className="px-4 py-3 text-right text-[10px] font-black text-neutral-500  tracking-widest">Amount</th>
-                          <th className="px-4 py-3 text-right text-[10px] font-black text-neutral-500  tracking-widest w-24">Lead Time</th>
-                          <th className="px-4 py-3 text-right text-[10px] font-black text-neutral-500  tracking-widest w-24">Min Qty</th>
+                          <th className="p-2  text-left text-[10px] font-black text-neutral-500  tracking-widest">Item Detail</th>
+                          <th className="p-2  text-right text-[10px] font-black text-neutral-500  tracking-widest">Qty</th>
+                          <th className="p-2  text-right text-[10px] font-black text-neutral-500  tracking-widest w-32">Rate (₹)</th>
+                          <th className="p-2  text-right text-[10px] font-black text-neutral-500  tracking-widest">Amount</th>
+                          <th className="p-2  text-right text-[10px] font-black text-neutral-500  tracking-widest w-24">Lead Time</th>
+                          <th className="p-2  text-right text-[10px] font-black text-neutral-500  tracking-widest w-24">Min Qty</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-neutral-100">

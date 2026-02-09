@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react'
-import api, { itemsAPI, bomAPI } from '../../services/api'
+import api, { itemsAPI, bomAPI, workstationsAPI } from '../../services/api'
 import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
 import Badge from '../Badge/Badge'
+import SearchableSelect from '../SearchableSelect'
 import { 
   Plus, X, Edit, Trash2, Package, Settings, 
   Recycle, Info, Globe, Layers, ListChecks,
   CheckCircle2, AlertTriangle, IndianRupee, Clock,
-  History, Hammer, FlaskConical, ClipboardList
+  History, Hammer, FlaskConical, ClipboardList,
+  ChevronRight, ArrowRight
 } from 'lucide-react'
 
 export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }) {
@@ -16,6 +18,7 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
   const [fetchingData, setFetchingData] = useState(false)
   const [error, setError] = useState(null)
   const [items, setItems] = useState([])
+  const [workstations, setWorkstations] = useState([])
   const [activeTab, setActiveTab] = useState('production-item')
   
   const [formData, setFormData] = useState({
@@ -41,7 +44,6 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
     scrapItems: []
   })
 
-  // Local state for new entries
   const [newLine, setNewLine] = useState({
     component_code: '',
     component_name: '',
@@ -50,14 +52,16 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
     type: 'raw-material',
     notes: ''
   })
+
   const [newOperation, setNewOperation] = useState({
     operation_name: '',
-    workstation_type: '',
+    workstation_id: '',
     operation_time: 0,
     fixed_time: 0,
     operating_cost: 0,
     notes: ''
   })
+
   const [newScrapItem, setNewScrapItem] = useState({
     item_code: '',
     item_name: '',
@@ -75,8 +79,13 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
     setFetchingData(true)
     setError(null)
     try {
-      const itemsRes = await itemsAPI.list()
+      const [itemsRes, wsRes] = await Promise.all([
+        itemsAPI.list(),
+        workstationsAPI.list()
+      ])
+      
       setItems(itemsRes.data.data || itemsRes.data || [])
+      setWorkstations(wsRes.data.data || wsRes.data || [])
       
       if (editingId) {
         const bomRes = await bomAPI.get(editingId)
@@ -106,7 +115,6 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
     setError(null)
   }
 
-  // BOM Lines Management
   const addBomLine = () => {
     if (!newLine.component_code || newLine.qty <= 0) {
       setError('Please select a component and enter quantity')
@@ -127,17 +135,21 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
     }))
   }
 
-  // Operations Management
   const addOperation = () => {
     if (!newOperation.operation_name) {
       setError('Please enter operation name')
       return
     }
+    const ws = workstations.find(w => w.workstation_id === newOperation.workstation_id)
     setFormData(prev => ({
       ...prev,
-      operations: [...prev.operations, { ...newOperation, id: Date.now() }]
+      operations: [...prev.operations, { 
+        ...newOperation, 
+        workstation_name: ws?.workstation_name || ws?.name || '',
+        id: Date.now() 
+      }]
     }))
-    setNewOperation({ operation_name: '', workstation_type: '', operation_time: 0, fixed_time: 0, operating_cost: 0, notes: '' })
+    setNewOperation({ operation_name: '', workstation_id: '', operation_time: 0, fixed_time: 0, operating_cost: 0, notes: '' })
   }
 
   const removeOperation = (id) => {
@@ -147,7 +159,6 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
     }))
   }
 
-  // Scrap Management
   const addScrapItem = () => {
     if (!newScrapItem.item_code || newScrapItem.quantity <= 0) {
       setError('Please select item and quantity')
@@ -213,20 +224,20 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && <Alert type="error" message={error} />}
 
-        {/* Custom Tab Navigation */}
-        <div className="flex border-b border-slate-200">
+        {/* High-Fidelity Tab Navigation */}
+        <div className="flex items-center gap-1 p-1 bg-slate-100/50 rounded-xl border border-slate-200 w-fit">
           {tabs.map(tab => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-6 py-3 text-sm font-semibold transition-all border-b-2 ${
+              className={`flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all rounded-lg ${
                 activeTab === tab.id 
-                ? "border-blue-500 text-blue-600 bg-blue-50/30" 
-                : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                ? "bg-white text-blue-600 shadow-sm border border-slate-200" 
+                : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
               }`}
             >
-              <tab.icon size={16} />
+              <tab.icon size={14} />
               {tab.label}
               {tab.id === 'components' && formData.lines.length > 0 && (
                 <span className="ml-1 px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded-full text-[10px]">
@@ -237,110 +248,115 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
           ))}
         </div>
 
-        <div className="min-h-[450px]">
+        <div className="min-h-[480px]">
           {/* BOM Details Tab */}
           {activeTab === 'production-item' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="lg:col-span-2 space-y-6">
-                <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 space-y-4">
-                  <div className="flex items-center gap-2 text-slate-800 font-bold uppercase tracking-tight pb-2 border-b border-slate-200">
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+                  <div className="flex items-center gap-2 text-slate-800 font-bold uppercase tracking-tight pb-3 border-b border-slate-100">
                     <FlaskConical size={18} className="text-blue-500" />
-                    Core Product
+                    Product Configuration
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-5">
                     <div className="col-span-2">
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Production Item *</label>
-                      <select
-                        name="item_code"
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Finished Product *</label>
+                      <SearchableSelect
                         value={formData.item_code}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
-                      >
-                        <option value="">Select Finished Good / Sub-Assembly</option>
-                        {items.map(i => (
-                          <option key={i.item_code} value={i.item_code}>{i.item_name} ({i.item_code})</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Production Qty *</label>
-                      <input
-                        type="number"
-                        name="quantity"
-                        value={formData.quantity}
-                        onChange={handleInputChange}
-                        step="0.01"
-                        required
-                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
+                        onChange={(val) => {
+                          const item = items.find(i => i.item_code === val)
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            item_code: val,
+                            product_name: item?.item_name || '',
+                            uom: item?.uom || prev.uom
+                          }))
+                        }}
+                        options={items.map(i => ({ value: i.item_code, label: `${i.item_name} (${i.item_code})` }))}
+                        placeholder="Select product to manufacture..."
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">UOM</label>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Base Quantity *</label>
+                      <div className="relative">
+                        <Package className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <input
+                          type="number"
+                          name="quantity"
+                          value={formData.quantity}
+                          onChange={handleInputChange}
+                          step="0.01"
+                          required
+                          className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all font-semibold"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">UOM</label>
                       <input
                         type="text"
                         name="uom"
                         value={formData.uom}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
+                        className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 space-y-4">
-                  <div className="flex items-center gap-2 text-slate-800 font-bold uppercase tracking-tight pb-2 border-b border-slate-200">
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                  <div className="flex items-center gap-2 text-slate-800 font-bold uppercase tracking-tight pb-3 border-b border-slate-100">
                     <ClipboardList size={18} className="text-blue-500" />
-                    Additional Metadata
+                    Notes & Specifications
                   </div>
                   <textarea
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
-                    placeholder="Provide a detailed description of this version of the BOM..."
+                    placeholder="Provide detailed assembly instructions or version notes..."
                     rows="4"
-                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
+                    className="w-full p-2  bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all resize-none"
                   />
                 </div>
               </div>
 
               <div className="space-y-6">
-                <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 space-y-4">
-                  <div className="flex items-center gap-2 text-blue-800 font-bold uppercase tracking-tight pb-2 border-b border-blue-200">
+                <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 shadow-sm space-y-5">
+                  <div className="flex items-center gap-2 text-blue-800 font-bold uppercase tracking-tight pb-3 border-b border-blue-100">
                     <History size={18} />
-                    Status & Version
+                    Status Control
                   </div>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <div>
-                      <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Lifecycle Status</label>
+                      <label className="block text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1.5">Lifecycle Stage</label>
                       <select
                         name="status"
                         value={formData.status}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm outline-none"
+                        className="w-full px-4 py-2.5 bg-white border border-blue-200 rounded-xl text-sm font-semibold text-blue-800 outline-none shadow-sm focus:ring-2 focus:ring-blue-500"
                       >
-                        <option value="draft">Draft (Development)</option>
-                        <option value="active">Active (Production Ready)</option>
-                        <option value="inactive">Inactive (Obsolete)</option>
+                        <option value="draft">🛠️ Draft / Development</option>
+                        <option value="active">✅ Active / Production</option>
+                        <option value="inactive">🚫 Inactive / Obsolete</option>
                       </select>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-semibold text-slate-700">Revision</label>
+                    <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-blue-100 shadow-sm">
+                      <span className="text-sm font-bold text-slate-700">Revision No.</span>
                       <input
                         type="number"
                         name="revision"
                         value={formData.revision}
                         onChange={handleInputChange}
-                        className="w-20 px-2 py-1 text-center border border-blue-200 rounded-lg font-bold text-blue-600 outline-none"
+                        className="w-16 px-2 py-1 text-center bg-blue-50 rounded-lg font-black text-blue-600 outline-none"
                       />
                     </div>
 
-                    <div className="space-y-2 pt-2 border-t border-blue-200">
+                    <div className="space-y-3 pt-2 border-t border-blue-100">
                       <label className="flex items-center gap-3 cursor-pointer group">
                         <div className="relative">
                           <input 
@@ -353,7 +369,7 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
                           <div className="w-10 h-5 bg-slate-200 rounded-full peer-checked:bg-blue-600 transition-all"></div>
                           <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-all"></div>
                         </div>
-                        <span className="text-sm font-medium text-slate-700 group-hover:text-blue-600">Active BOM</span>
+                        <span className="text-sm font-bold text-slate-600 group-hover:text-blue-600">BOM is Active</span>
                       </label>
 
                       <label className="flex items-center gap-3 cursor-pointer group">
@@ -368,10 +384,17 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
                           <div className="w-10 h-5 bg-slate-200 rounded-full peer-checked:bg-blue-600 transition-all"></div>
                           <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-all"></div>
                         </div>
-                        <span className="text-sm font-medium text-slate-700 group-hover:text-blue-600">Default BOM</span>
+                        <span className="text-sm font-bold text-slate-600 group-hover:text-blue-600">Set as Default</span>
                       </label>
                     </div>
                   </div>
+                </div>
+
+                <div className="p-5 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3">
+                  <Info className="text-amber-500 shrink-0 mt-0.5" size={18} />
+                  <p className="text-[11px] text-amber-800 leading-relaxed font-medium">
+                    Changing the <strong>Active BOM</strong> will affect all future production planning and material requirement calculations for this product.
+                  </p>
                 </div>
               </div>
             </div>
@@ -379,85 +402,100 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
 
           {/* Components Tab */}
           {activeTab === 'components' && (
-            <div className="space-y-4">
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Component</label>
-                  <select
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-12 gap-4 items-end shadow-inner">
+                <div className="md:col-span-5">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Select Raw Material / Sub-Assembly</label>
+                  <SearchableSelect
                     value={newLine.component_code}
-                    onChange={(e) => setNewLine({...newLine, component_code: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none bg-white"
-                  >
-                    <option value="">Select Material</option>
-                    {items.map(i => (
-                      <option key={i.item_code} value={i.item_code}>{i.item_name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => {
+                      const item = items.find(i => i.item_code === val)
+                      setNewLine({ ...newLine, component_code: val, component_name: item?.item_name || '', uom: item?.uom || 'Kg' })
+                    }}
+                    options={items.map(i => ({ value: i.item_code, label: `${i.item_name} (${i.item_code})` }))}
+                    placeholder="Search material..."
+                  />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Quantity</label>
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Qty</label>
                   <input
                     type="number"
                     value={newLine.qty}
                     onChange={(e) => setNewLine({...newLine, qty: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="0.0"
                   />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">UOM</label>
-                  <input
-                    type="text"
-                    value={newLine.uom}
-                    onChange={(e) => setNewLine({...newLine, uom: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Type</label>
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Type</label>
                   <select
                     value={newLine.type}
                     onChange={(e) => setNewLine({...newLine, type: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none bg-white"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm outline-none"
                   >
                     <option value="raw-material">Raw Material</option>
                     <option value="sub-assembly">Sub-Assembly</option>
                     <option value="consumable">Consumable</option>
                   </select>
                 </div>
-                <Button type="button" onClick={addBomLine} variant="primary" className="h-10" icon={Plus}>Add</Button>
+                <div className="md:col-span-3">
+                  <Button type="button" onClick={addBomLine} variant="primary" className="w-full h-[38px] rounded-xl shadow-md" icon={<Plus size={16} />}>
+                    Add Material
+                  </Button>
+                </div>
               </div>
 
-              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold text-[10px] uppercase tracking-wider">
+                  <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold text-[10px] uppercase tracking-widest">
                     <tr>
-                      <th className="px-6 py-3 text-left">Component</th>
-                      <th className="px-6 py-3 text-center">Type</th>
-                      <th className="px-6 py-3 text-center">Qty</th>
-                      <th className="px-6 py-3 text-center">UOM</th>
-                      <th className="px-6 py-3 text-right">Action</th>
+                      <th className="p-2  text-left">Component Details</th>
+                      <th className="p-2  text-center">Category</th>
+                      <th className="p-2  text-center">Required Qty</th>
+                      <th className="p-2  text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {formData.lines.length === 0 ? (
                       <tr>
-                        <td colSpan="5" className="px-6 py-12 text-center text-slate-400 italic">No components added. At least one is required.</td>
+                        <td colSpan="4" className="px-6 py-20 text-center">
+                          <div className="flex flex-col items-center gap-3 text-slate-400">
+                            <Layers size={40} className="opacity-20" />
+                            <p className="italic text-sm">No components added yet. Every BOM needs materials.</p>
+                          </div>
+                        </td>
                       </tr>
                     ) : (
                       formData.lines.map((line, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50 transition-colors group">
-                          <td className="px-6 py-4">
-                            <div className="font-bold text-slate-900">{line.component_name}</div>
-                            <div className="text-[10px] text-slate-400 font-mono">{line.component_code}</div>
+                        <tr key={line.id || idx} className="hover:bg-slate-50/50 transition-colors group">
+                          <td className="p-2 ">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
+                                <Package size={16} />
+                              </div>
+                              <div>
+                                <div className="font-bold text-slate-900">{line.component_name}</div>
+                                <div className="text-[10px] text-slate-400 font-mono tracking-tighter">{line.component_code}</div>
+                              </div>
+                            </div>
                           </td>
-                          <td className="px-6 py-4 text-center">
-                            <Badge variant={line.type === 'sub-assembly' ? 'blue' : 'gray'}>{line.type}</Badge>
+                          <td className="p-2  text-center">
+                            <Badge variant={line.type === 'sub-assembly' ? 'blue' : line.type === 'consumable' ? 'indigo' : 'gray'}>
+                              {line.type.replace('-', ' ')}
+                            </Badge>
                           </td>
-                          <td className="px-6 py-4 text-center font-bold text-slate-700">{line.qty}</td>
-                          <td className="px-6 py-4 text-center text-slate-500">{line.uom}</td>
-                          <td className="px-6 py-4 text-right">
-                            <button type="button" onClick={() => removeBomLine(line.id)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
-                              <Trash2 size={16} />
+                          <td className="p-2  text-center">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full font-black text-slate-700">
+                              {line.qty} <span className="text-[10px] text-slate-400 font-normal">{line.uom}</span>
+                            </div>
+                          </td>
+                          <td className="p-2  text-right">
+                            <button 
+                              type="button" 
+                              onClick={() => removeBomLine(line.id)} 
+                              className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all "
+                            >
+                              <Trash2 size={18} />
                             </button>
                           </td>
                         </tr>
@@ -471,147 +509,214 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
 
           {/* Operations Tab */}
           {activeTab === 'operations' && (
-            <div className="space-y-4">
-              <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex items-center gap-3 mb-4">
-                <AlertTriangle size={18} className="text-blue-500" />
-                <p className="text-xs text-blue-800">
-                  Enable <strong>"With Operations"</strong> in Advanced tab to include these in costing and production planning.
-                </p>
-              </div>
-
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Operation Name</label>
-                  <input
-                    type="text"
-                    value={newOperation.operation_name}
-                    onChange={(e) => setNewOperation({...newOperation, operation_name: e.target.value})}
-                    placeholder="e.g. Casting, Grinding, Polishing"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none bg-white"
-                  />
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+              {!formData.with_operations && (
+                <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Info size={18} className="text-blue-500" />
+                    <p className="text-xs font-semibold text-blue-800">
+                      Operations are currently disabled. Enable them in the <strong>Advanced</strong> tab to include routing and workstation costs.
+                    </p>
+                  </div>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-blue-600 hover:bg-blue-100"
+                    onClick={() => setActiveTab('advanced')}
+                  >
+                    Go to Advanced <ArrowRight size={14} className="ml-1" />
+                  </Button>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Time (Mins)</label>
-                  <input
-                    type="number"
-                    value={newOperation.operation_time}
-                    onChange={(e) => setNewOperation({...newOperation, operation_time: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none"
-                  />
-                </div>
-                <Button type="button" onClick={addOperation} variant="primary" className="h-10" icon={Plus}>Add Operation</Button>
-              </div>
+              )}
 
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold text-[10px] uppercase">
-                    <tr>
-                      <th className="px-6 py-3 text-left">Step / Operation</th>
-                      <th className="px-6 py-3 text-center">Workstation</th>
-                      <th className="px-6 py-3 text-center">Time</th>
-                      <th className="px-6 py-3 text-right">Cost (Est)</th>
-                      <th className="px-6 py-3 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {formData.operations.length === 0 ? (
+              <div className={`space-y-6 ${!formData.with_operations ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-12 gap-4 items-end shadow-inner">
+                  <div className="md:col-span-4">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Operation Name</label>
+                    <input
+                      type="text"
+                      value={newOperation.operation_name}
+                      onChange={(e) => setNewOperation({...newOperation, operation_name: e.target.value})}
+                      placeholder="e.g. Injection Molding"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm outline-none"
+                    />
+                  </div>
+                  <div className="md:col-span-4">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Target Workstation</label>
+                    <SearchableSelect
+                      value={newOperation.workstation_id}
+                      onChange={(val) => setNewOperation({ ...newOperation, workstation_id: val })}
+                      options={workstations.map(ws => ({ value: ws.workstation_id, label: ws.workstation_name || ws.name }))}
+                      placeholder="Select workstation..."
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Time (Min)</label>
+                    <div className="relative">
+                      <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                      <input
+                        type="number"
+                        value={newOperation.operation_time}
+                        onChange={(e) => setNewOperation({...newOperation, operation_time: e.target.value})}
+                        className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Button type="button" onClick={addOperation} variant="primary" className="w-full h-[38px] rounded-xl shadow-md" icon={<Plus size={16} />}>
+                      Add Step
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold text-[10px] uppercase tracking-widest">
                       <tr>
-                        <td colSpan="5" className="px-6 py-12 text-center text-slate-400 italic">No manufacturing operations defined.</td>
+                        <th className="p-2  text-left w-16">Seq</th>
+                        <th className="p-2  text-left">Operation Detail</th>
+                        <th className="p-2  text-center">Workstation</th>
+                        <th className="p-2  text-center">Duration</th>
+                        <th className="p-2  text-right">Action</th>
                       </tr>
-                    ) : (
-                      formData.operations.map((op, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50">
-                          <td className="px-6 py-4 font-bold text-slate-900 flex items-center gap-2">
-                            <span className="w-5 h-5 bg-blue-100 text-blue-600 rounded flex items-center justify-center text-[10px]">{idx + 1}</span>
-                            {op.operation_name}
-                          </td>
-                          <td className="px-6 py-4 text-center text-slate-500">{op.workstation_type || 'General'}</td>
-                          <td className="px-6 py-4 text-center font-bold text-slate-700">{op.operation_time} m</td>
-                          <td className="px-6 py-4 text-right text-green-600 font-medium">₹{op.operating_cost || 0}</td>
-                          <td className="px-6 py-4 text-right">
-                            <button type="button" onClick={() => removeOperation(op.id)} className="text-slate-300 hover:text-red-500 transition-all"><Trash2 size={16} /></button>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {formData.operations.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="px-6 py-20 text-center">
+                            <div className="flex flex-col items-center gap-3 text-slate-400">
+                              <Settings size={40} className="opacity-20" />
+                              <p className="italic text-sm">No operations defined. Enable "With Operations" to add routing.</p>
+                            </div>
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        formData.operations.map((op, idx) => (
+                          <tr key={op.id || idx} className="hover:bg-slate-50/50 transition-colors group">
+                            <td className="p-2 ">
+                              <span className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-slate-400 text-xs">
+                                {idx + 1}
+                              </span>
+                            </td>
+                            <td className="p-2  font-bold text-slate-900">{op.operation_name}</td>
+                            <td className="p-2  text-center">
+                              <Badge variant="blue">{op.workstation_name || 'General'}</Badge>
+                            </td>
+                            <td className="p-2  text-center font-bold text-slate-700">
+                              <div className="inline-flex items-center gap-1.5">
+                                <Clock size={12} className="text-slate-400" />
+                                {op.operation_time} <span className="text-[10px] font-normal text-slate-400 uppercase">min</span>
+                              </div>
+                            </td>
+                            <td className="p-2  text-right">
+                              <button 
+                                type="button" 
+                                onClick={() => removeOperation(op.id)} 
+                                className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all "
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
 
           {/* Scrap Tab */}
           {activeTab === 'scrap' && (
-            <div className="space-y-6">
-              <div className="bg-orange-50 p-6 rounded-xl border border-orange-100 flex items-center justify-between">
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="bg-orange-50 p-6 rounded-2xl border border-orange-100 flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-orange-100 text-orange-600 rounded-xl">
-                    <FlaskConical size={24} />
+                  <div className="p-3 bg-white rounded-xl shadow-sm text-orange-600 border border-orange-200">
+                    <AlertTriangle size={24} />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-orange-800 uppercase tracking-tight">Process Loss Allowance</h4>
-                    <p className="text-xs text-orange-600 opacity-80">Define expected material loss during the production process.</p>
+                    <h4 className="text-sm font-black text-orange-800 uppercase tracking-tight">Process Loss Allowance</h4>
+                    <p className="text-xs text-orange-600/80 font-medium">Define expected material loss or shrinkage during the process.</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-orange-200 shadow-inner">
                   <input
                     type="number"
                     name="process_loss_percentage"
                     value={formData.process_loss_percentage}
                     onChange={handleInputChange}
-                    className="w-20 px-3 py-2 border border-orange-200 rounded-lg text-center font-bold text-orange-700 outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-16 px-2 py-1 bg-transparent text-center font-black text-orange-700 outline-none text-lg"
                   />
-                  <span className="font-bold text-orange-800">%</span>
+                  <span className="font-bold text-orange-400 pr-2">%</span>
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Scrap Item</label>
-                  <select
+              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-12 gap-4 items-end shadow-inner">
+                <div className="md:col-span-6">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">By-Product / Scrap Item</label>
+                  <SearchableSelect
                     value={newScrapItem.item_code}
-                    onChange={(e) => setNewScrapItem({...newScrapItem, item_code: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none bg-white"
-                  >
-                    <option value="">Select Scrap Item</option>
-                    {items.map(i => (
-                      <option key={i.item_code} value={i.item_code}>{i.item_name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => {
+                      const item = items.find(i => i.item_code === val)
+                      setNewScrapItem({ ...newScrapItem, item_code: val, item_name: item?.item_name || '' })
+                    }}
+                    options={items.map(i => ({ value: i.item_code, label: `${i.item_name} (${i.item_code})` }))}
+                    placeholder="Select material..."
+                  />
                 </div>
-                <input
-                  type="number"
-                  placeholder="Qty"
-                  value={newScrapItem.quantity}
-                  onChange={(e) => setNewScrapItem({...newScrapItem, quantity: e.target.value})}
-                  className="px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none bg-white"
-                />
-                <Button type="button" onClick={addScrapItem} variant="primary" className="h-10" icon={Plus}>Add Scrap</Button>
+                <div className="md:col-span-3">
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Est. Qty</label>
+                  <input
+                    type="number"
+                    placeholder="0.0"
+                    value={newScrapItem.quantity}
+                    onChange={(e) => setNewScrapItem({...newScrapItem, quantity: e.target.value})}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="md:col-span-3">
+                  <Button type="button" onClick={addScrapItem} variant="primary" className="w-full h-[38px] rounded-xl shadow-md" icon={<Plus size={16} />}>
+                    Add Scrap
+                  </Button>
+                </div>
               </div>
 
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold text-[10px] uppercase">
+                  <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold text-[10px] uppercase tracking-widest">
                     <tr>
-                      <th className="px-6 py-3 text-left">Scrap Material</th>
-                      <th className="px-6 py-3 text-center">Expected Qty</th>
-                      <th className="px-6 py-3 text-right">Recovery Rate</th>
-                      <th className="px-6 py-3 text-right">Action</th>
+                      <th className="p-2  text-left">Scrap Material</th>
+                      <th className="p-2  text-center">Expected Recovery</th>
+                      <th className="p-2  text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {formData.scrapItems.length === 0 ? (
                       <tr>
-                        <td colSpan="4" className="px-6 py-12 text-center text-slate-400 italic">No expected scrap items defined.</td>
+                        <td colSpan="3" className="px-6 py-20 text-center">
+                          <div className="flex flex-col items-center gap-3 text-slate-400">
+                            <Recycle size={40} className="opacity-20" />
+                            <p className="italic text-sm">No expected by-products or scrap defined.</p>
+                          </div>
+                        </td>
                       </tr>
                     ) : (
                       formData.scrapItems.map((s, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 font-bold text-slate-900">{s.item_name}</td>
-                          <td className="px-6 py-4 text-center font-bold text-orange-600">{s.quantity}</td>
-                          <td className="px-6 py-4 text-right text-slate-500">₹{s.rate || 0}</td>
-                          <td className="px-6 py-4 text-right">
-                            <button type="button" onClick={() => removeScrapItem(s.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={16} /></button>
+                        <tr key={s.id || idx} className="hover:bg-slate-50/50 transition-colors group">
+                          <td className="p-2  font-bold text-slate-900">{s.item_name}</td>
+                          <td className="p-2  text-center">
+                            <Badge variant="yellow">{s.quantity} recovered</Badge>
+                          </td>
+                          <td className="p-2  text-right">
+                            <button 
+                              type="button" 
+                              onClick={() => removeScrapItem(s.id)} 
+                              className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all "
+                            >
+                              <Trash2 size={18} />
+                            </button>
                           </td>
                         </tr>
                       ))
@@ -624,71 +729,86 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
 
           {/* Advanced Tab */}
           {activeTab === 'advanced' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 space-y-4">
-                <div className="flex items-center gap-2 text-slate-800 font-bold uppercase tracking-tight pb-2 border-b border-slate-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+                <div className="flex items-center gap-2 text-slate-800 font-bold uppercase tracking-tight pb-3 border-b border-slate-100">
                   <Hammer size={18} className="text-blue-500" />
-                  Manufacturing Rules
+                  Engineering Rules
                 </div>
                 
                 <div className="space-y-4">
-                  <label className="flex items-start gap-3 cursor-pointer group">
-                    <input type="checkbox" name="with_operations" checked={formData.with_operations} onChange={handleInputChange} className="mt-1" />
+                  <label className="flex items-start gap-4 p-4 rounded-xl border border-slate-50 hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer group">
+                    <div className="relative mt-1">
+                      <input type="checkbox" name="with_operations" checked={formData.with_operations} onChange={handleInputChange} className="peer sr-only" />
+                      <div className="w-10 h-5 bg-slate-200 rounded-full peer-checked:bg-blue-600 transition-all"></div>
+                      <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-all"></div>
+                    </div>
                     <div>
-                      <span className="block text-sm font-bold text-slate-700 group-hover:text-blue-600 transition-colors">With Operations</span>
-                      <span className="text-[10px] text-slate-400 leading-tight block">Include workstations and time-based costing in this BOM.</span>
+                      <span className="block text-sm font-bold text-slate-700">Enable Route Operations</span>
+                      <span className="text-[11px] text-slate-500 leading-tight block mt-0.5">Include workstations, labor time, and energy costs.</span>
                     </div>
                   </label>
 
-                  <label className="flex items-start gap-3 cursor-pointer group">
-                    <input type="checkbox" name="allow_alternative_item" checked={formData.allow_alternative_item} onChange={handleInputChange} className="mt-1" />
+                  <label className="flex items-start gap-4 p-4 rounded-xl border border-slate-50 hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer group">
+                    <div className="relative mt-1">
+                      <input type="checkbox" name="allow_alternative_item" checked={formData.allow_alternative_item} onChange={handleInputChange} className="peer sr-only" />
+                      <div className="w-10 h-5 bg-slate-200 rounded-full peer-checked:bg-blue-600 transition-all"></div>
+                      <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-all"></div>
+                    </div>
                     <div>
-                      <span className="block text-sm font-bold text-slate-700 group-hover:text-blue-600 transition-colors">Allow Alternative Items</span>
-                      <span className="text-[10px] text-slate-400 leading-tight block">Permit the use of substitutes if primary components are out of stock.</span>
+                      <span className="block text-sm font-bold text-slate-700">Allow Alternatives</span>
+                      <span className="text-[11px] text-slate-500 leading-tight block mt-0.5">Permit substitute materials if primary stock is unavailable.</span>
                     </div>
                   </label>
 
-                  <label className="flex items-start gap-3 cursor-pointer group">
-                    <input type="checkbox" name="auto_sub_assembly_rate" checked={formData.auto_sub_assembly_rate} onChange={handleInputChange} className="mt-1" />
+                  <label className="flex items-start gap-4 p-4 rounded-xl border border-slate-50 hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer group">
+                    <div className="relative mt-1">
+                      <input type="checkbox" name="auto_sub_assembly_rate" checked={formData.auto_sub_assembly_rate} onChange={handleInputChange} className="peer sr-only" />
+                      <div className="w-10 h-5 bg-slate-200 rounded-full peer-checked:bg-blue-600 transition-all"></div>
+                      <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-all"></div>
+                    </div>
                     <div>
-                      <span className="block text-sm font-bold text-slate-700 group-hover:text-blue-600 transition-colors">Auto-Calc Sub-Assembly Rate</span>
-                      <span className="text-[10px] text-slate-400 leading-tight block">Recalculate component costs based on their respective BOMs.</span>
+                      <span className="block text-sm font-bold text-slate-700">Recursive Rate Calc</span>
+                      <span className="text-[11px] text-slate-500 leading-tight block mt-0.5">Auto-calculate component rates from their own sub-BOMs.</span>
                     </div>
                   </label>
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 space-y-4">
-                <div className="flex items-center gap-2 text-slate-800 font-bold uppercase tracking-tight pb-2 border-b border-slate-200">
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+                <div className="flex items-center gap-2 text-slate-800 font-bold uppercase tracking-tight pb-3 border-b border-slate-100">
                   <IndianRupee size={18} className="text-blue-500" />
-                  Costing Settings
+                  Costing Methodology
                 </div>
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Costing Method</label>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Valuation Strategy</label>
                     <select
                       name="cost_rate_based_on"
                       value={formData.cost_rate_based_on}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     >
-                      <option value="Valuation Rate">Valuation Rate (Store Avg)</option>
-                      <option value="Standard Rate">Standard Rate (Fixed)</option>
-                      <option value="Average Rate">Moving Average Rate</option>
+                      <option value="Valuation Rate">Valuation Rate (Stock Avg)</option>
+                      <option value="Last Purchase Rate">Last Purchase Price</option>
+                      <option value="Standard Rate">Standard Engineering Cost</option>
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Project Linkage</label>
-                    <input
-                      type="text"
-                      name="project"
-                      value={formData.project}
-                      onChange={handleInputChange}
-                      placeholder="e.g. Project-2024-X"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none"
-                    />
+                  <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 space-y-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-blue-800 font-medium">Estimated Material Cost</span>
+                      <span className="font-bold text-blue-900">₹0.00</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-blue-800 font-medium">Estimated Operating Cost</span>
+                      <span className="font-bold text-blue-900">₹0.00</span>
+                    </div>
+                    <div className="pt-2 border-t border-blue-200 flex justify-between items-center">
+                      <span className="text-sm font-black text-blue-900">Total Unit Cost</span>
+                      <span className="text-lg font-black text-blue-600">₹0.00</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -696,18 +816,31 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
           )}
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button 
-            type="submit" 
-            variant="primary" 
-            loading={loading}
-            icon={CheckCircle2}
-          >
-            {editingId ? "Update BOM" : "Create BOM"}
-          </Button>
+        <div className="flex justify-between items-center pt-6 border-t border-slate-200">
+          <div className="flex items-center gap-2 text-slate-400">
+            <Info size={14} />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Total Items: {formData.lines.length} | Ops: {formData.operations.length}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onClose}
+              disabled={loading}
+              className="font-bold uppercase tracking-widest text-xs"
+            >
+              Discard
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              isLoading={loading}
+              className="px-10 rounded-xl shadow-lg shadow-blue-100 font-bold uppercase tracking-widest text-xs"
+              icon={<CheckCircle2 size={16} />}
+            >
+              {editingId ? 'Save Revision' : 'Create BOM'}
+            </Button>
+          </div>
         </div>
       </form>
     </Modal>

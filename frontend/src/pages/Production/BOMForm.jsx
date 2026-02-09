@@ -1287,7 +1287,7 @@ export default function BOMForm() {
                   disabled={loading}
                   className="group relative bg-indigo-600 text-white rounded p-2 text-xs shadow-indigo-200 hover:shadow-indigo-300 transition-all active:scale-[0.98] disabled:opacity-50"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-violet-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-violet-600  transition-opacity" />
                   <div className="relative flex items-center justify-center gap-3">
                     {loading ? (
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded animate-spin" />

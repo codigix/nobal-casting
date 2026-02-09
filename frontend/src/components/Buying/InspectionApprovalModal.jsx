@@ -248,7 +248,7 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
 
             {/* Allocation Table */}
             <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200 flex items-center justify-between">
+              <div className="p-2  bg-neutral-50 border-b border-neutral-200 flex items-center justify-between">
                 <h3 className="font-semibold text-neutral-800 flex items-center gap-2">
                   <MapPin size={16} className="text-primary-600" />
                   Warehouse Allocation
@@ -260,25 +260,25 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
                 <table className="w-full text-sm text-left">
                   <thead className="text-xs text-neutral-500 uppercase bg-neutral-50/50 border-b border-neutral-200">
                     <tr>
-                      <th className="px-4 py-3 font-semibold">Item Details</th>
-                      <th className="px-4 py-3 font-semibold text-center w-32">Accepted Qty</th>
-                      <th className="px-4 py-3 font-semibold w-56 text-right">Target Warehouse</th>
+                      <th className="p-2  font-semibold">Item Details</th>
+                      <th className="p-2  font-semibold text-center w-32">Accepted Qty</th>
+                      <th className="p-2  font-semibold w-56 text-right">Target Warehouse</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100">
                     {acceptedItems.length > 0 ? (
                       acceptedItems.map((item) => (
                         <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
-                          <td className="px-4 py-3">
+                          <td className="p-2 ">
                             <div className="font-medium text-neutral-900">{item.item_code}</div>
                             <div className="text-[10px] text-neutral-500 uppercase truncate max-w-[200px]">{item.item_name}</div>
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          <td className="p-2  text-center">
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
                               {item.accepted_qty}
                             </span>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="p-2 ">
                             <div className="flex justify-end">
                               <select
                                 value={warehouseAssignments[item.id] || ''}

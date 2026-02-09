@@ -560,6 +560,7 @@ export default function PurchaseOrderDetail() {
         onClose={() => setShowGRNModal(false)}
         onSuccess={fetchPO}
         initialPoNo={po.po_no}
+        purchaseOrder={po}
       />
     </div>
   )

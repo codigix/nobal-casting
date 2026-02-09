@@ -368,8 +368,8 @@ export default function WorkOrderForm() {
           (o.operation === (jc.operation_name || jc.operation))
         )
         if (op) {
-          // Standard time is often stored in hours in BOM, convert to minutes
-          const stdTimeMinutes = (parseFloat(op.operation_time) || 0) * 60
+          // Standard time is stored in minutes in BOM
+          const stdTimeMinutes = parseFloat(op.operation_time) || 0
           earnedMinutes += (parseFloat(jc.completed_quantity) || 0) * stdTimeMinutes
         }
       })

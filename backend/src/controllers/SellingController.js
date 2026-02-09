@@ -863,13 +863,14 @@ export class SellingController {
     const db = req.app.locals.db
 
     try {
-      await db.execute(
-        'DELETE FROM selling_sales_order'
-      )
+      await db.execute('SET FOREIGN_KEY_CHECKS = 0')
+      await db.execute('DELETE FROM selling_sales_order')
+      await db.execute('SET FOREIGN_KEY_CHECKS = 1')
 
       res.json({ success: true, message: 'All sales orders truncated successfully' })
     } catch (error) {
       console.error('Error truncating sales orders:', error)
+      await db.execute('SET FOREIGN_KEY_CHECKS = 1')
       res.status(500).json({ error: 'Failed to truncate sales orders', details: error.message })
     }
   }

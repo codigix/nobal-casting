@@ -93,13 +93,13 @@ export default function CreateGRNRequestModal({ purchaseReceipt, onClose, onSucc
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Summary Panel */}
           <div className="lg:col-span-1 space-y-6">
-            <section className="bg-neutral-50 rounded-2xl border border-neutral-200 p-5 space-y-5">
+            <section className="bg-neutral-50 rounded border border-neutral-200 p-2 space-y-2">
               <div className="flex items-center gap-2 pb-3 border-b border-neutral-200">
                 <div className="p-2 bg-blue-600 rounded-lg text-white">
                   <ClipboardCheck size={20} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-neutral-800 uppercase tracking-tight">Receipt Overview</h3>
+                  <h3 className="text-xs  text-neutral-800 ">Receipt Overview</h3>
                   <p className="text-[10px] text-neutral-500 font-medium">Source document summary</p>
                 </div>
               </div>
@@ -151,7 +151,7 @@ export default function CreateGRNRequestModal({ purchaseReceipt, onClose, onSucc
                   <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
                     <Package size={16} />
                   </div>
-                  <h3 className="text-sm font-bold text-neutral-800 uppercase tracking-tight">Inspection Queue</h3>
+                  <h3 className="text-xs  text-neutral-800 ">Inspection Queue</h3>
                 </div>
                 <Badge variant="blue" className="px-2.5 py-1 text-[10px]">
                   {selectedItems.length} Items Total
@@ -162,33 +162,33 @@ export default function CreateGRNRequestModal({ purchaseReceipt, onClose, onSucc
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-neutral-50 border-b border-neutral-200">
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider">Item Details</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider text-center">Received</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider">Warehouse</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider">Batch Info</th>
+                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider">Item Details</th>
+                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider text-center">Received</th>
+                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider">Warehouse</th>
+                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider">Batch Info</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100">
                     {selectedItems.map((item, idx) => (
                       <tr key={idx} className="hover:bg-neutral-50/30 transition-colors">
-                        <td className="px-6 py-4">
+                        <td className="p-2 ">
                           <div className="flex flex-col">
-                            <span className="text-sm font-black text-neutral-800">{item.item_code}</span>
+                            <span className="text-xs  text-neutral-800">{item.item_code}</span>
                             <span className="text-[10px] text-neutral-500 font-medium italic truncate max-w-[200px]">{item.item_name}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="p-2  text-center">
                           <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-black bg-blue-50 text-blue-700 border border-blue-100">
                             {item.received_qty}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="p-2 ">
                           <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-700">
                             <Warehouse size={12} className="text-neutral-400" />
                             {item.warehouse_name}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="p-2 ">
                           {item.batch_no ? (
                             <Badge variant="neutral" className="font-mono text-[10px]">{item.batch_no}</Badge>
                           ) : (

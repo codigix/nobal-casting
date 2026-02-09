@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Trash2, Clock, AlertCircle } from 'lucide-react'
+import { Plus, Trash2, Clock, AlertCircle, CheckCircle } from 'lucide-react'
 import Modal from '../Modal'
 import * as productionService from '../../services/productionService'
 import api from '../../services/api'
@@ -390,6 +390,19 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
     }
   }
 
+  const handleApproveRejection = async (rejectionId) => {
+    try {
+      setLoading(true)
+      await productionService.approveRejection(rejectionId)
+      toast.addToast('Quality inspection approved', 'success')
+      fetchRejections()
+    } catch (err) {
+      toast.addToast('Failed to approve inspection', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleDowntimeChange = (e) => {
     const { name, value } = e.target
     setDowntimeForm(prev => ({
@@ -547,14 +560,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
 
         {(() => {
           const expectedMinutes = (operationCycleTime || 0) * (jobCardData?.planned_quantity || 1)
-          const actualMinutes = timeLogs.reduce((sum, log) => {
-            if (log.from_time && log.to_time) {
-              const [fh, fm] = log.from_time.split(':').map(Number)
-              const [th, tm] = log.to_time.split(':').map(Number)
-              return sum + Math.max(0, (th * 60 + tm) - (fh * 60 + fm))
-            }
-            return sum
-          }, 0)
+          const actualMinutes = timeLogs.reduce((sum, log) => sum + (parseFloat(log.time_in_minutes) || 0), 0)
           const efficiency = expectedMinutes > 0 ? ((expectedMinutes / actualMinutes) * 100).toFixed(0) : 0
           const qualityScore = totalProducedQty > 0 ? ((totalAcceptedQty / totalProducedQty) * 100).toFixed(1) : 0
           const isBottleneck = actualMinutes > expectedMinutes * 1.3
@@ -979,6 +985,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                     <thead className="bg-gray-100 border-b border-gray-200">
                       <tr>
                         <th className="p-2  py-2 text-center text-gray-700 w-10">Day</th>
+                        <th className="p-2  py-2 text-left  text-gray-700">Status</th>
                         <th className="p-2  py-2 text-left  text-gray-700">Reason</th>
                         <th className="p-2  py-2 text-center  text-gray-700">Qty</th>
                         <th className="p-2  py-2 text-left  text-gray-700">Notes</th>
@@ -992,17 +999,36 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                           <td className="p-2  py-2 text-center text-gray-900 font-bold bg-gray-50/50">
                             {r.day_number || '-'}
                           </td>
+                          <td className="p-2  py-2">
+                            {r.status === 'Approved' ? (
+                              <span className="text-emerald-600 font-bold uppercase text-[9px]">Approved</span>
+                            ) : (
+                              <span className="text-amber-600 font-bold uppercase text-[9px]">Pending</span>
+                            )}
+                          </td>
                           <td className="p-2  py-2 text-gray-900">{r.rejection_reason}</td>
                           <td className="p-2  py-2 text-center font-medium text-red-600">{r.rejected_qty}</td>
                           <td className="p-2  py-2 text-gray-600 text-xs">{r.notes || '-'}</td>
                           <td className="p-2  py-2 text-center text-gray-500 text-xs">{r.created_at ? new Date(r.created_at).toLocaleDateString() : '-'}</td>
                           <td className="p-2  py-2 text-center">
-                            <button
-                              onClick={() => handleDeleteRejection(r.rejection_id)}
-                              className="text-red-600 hover:text-red-900 transition"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            <div className="flex items-center justify-center gap-2">
+                              {r.status !== 'Approved' && (
+                                <button
+                                  onClick={() => handleApproveRejection(r.rejection_id)}
+                                  className="text-emerald-600 hover:text-emerald-900 transition"
+                                  title="Approve"
+                                >
+                                  <CheckCircle size={14} />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteRejection(r.rejection_id)}
+                                className="text-red-600 hover:text-red-900 transition"
+                                title="Delete"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}

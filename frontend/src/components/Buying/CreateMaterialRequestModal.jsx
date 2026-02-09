@@ -279,13 +279,13 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Configuration */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="bg-neutral-50 rounded-2xl border border-neutral-200 p-5 space-y-5">
+            <div className="bg-neutral-50 rounded border border-neutral-200 p-2 space-y-2">
               <div className="flex items-center gap-2 pb-3 border-b border-neutral-200">
                 <div className="p-2 bg-blue-500 rounded-lg text-white">
                   <ClipboardList size={20} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-neutral-800 uppercase tracking-tight">Request Details</h3>
+                  <h3 className="text-xs  text-neutral-800 ">Request Details</h3>
                   <p className="text-[10px] text-neutral-500 font-medium">Define MR basic parameters</p>
                 </div>
               </div>
@@ -481,9 +481,9 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                   <table className="w-full text-left text-sm">
                     <thead>
                       <tr className="bg-neutral-50 border-b border-neutral-200">
-                        <th className="px-4 py-3 font-bold text-neutral-600 text-xs uppercase tracking-tight">Item Info</th>
-                        <th className="px-4 py-3 font-bold text-neutral-600 text-xs uppercase tracking-tight text-center">Qty</th>
-                        <th className="px-4 py-3 font-bold text-neutral-600 text-xs uppercase tracking-tight text-right">Actions</th>
+                        <th className="p-2  font-bold text-neutral-600 text-xs uppercase tracking-tight">Item Info</th>
+                        <th className="p-2  font-bold text-neutral-600 text-xs uppercase tracking-tight text-center">Qty</th>
+                        <th className="p-2  font-bold text-neutral-600 text-xs uppercase tracking-tight text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100">
@@ -499,18 +499,18 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                       ) : (
                         formData.items.map((item, index) => (
                           <tr key={item.id || index} className="group hover:bg-neutral-50/50 transition-colors">
-                            <td className="px-4 py-3">
+                            <td className="p-2 ">
                               <div className="flex flex-col">
                                 <span className="font-bold text-neutral-800">{item.item_code}</span>
                                 <span className="text-xs text-neutral-500 truncate max-w-[200px]">{item.item_name}</span>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-center">
+                            <td className="p-2  text-center">
                               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-neutral-100 rounded-lg text-neutral-700 font-bold text-xs">
                                 {item.qty} {item.uom}
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-right">
+                            <td className="p-2  text-right">
                               <div className="flex items-center justify-end gap-1">
                                 <button 
                                   onClick={() => handleEditItem(index)}

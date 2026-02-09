@@ -305,7 +305,7 @@ export default function Items() {
                   <button
                     key={group}
                     onClick={() => setActiveGroup(group)}
-                    className={`p-2 rounded text-[10px] font-black tracking-widest transition-all whitespace-nowrap ${
+                    className={`p-2 rounded text-[10px] transition-all whitespace-nowrap ${
                       activeGroup === group
                         ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
                         : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'

@@ -691,11 +691,15 @@ export class ProductionPlanningModel {
 
   async truncatePlans() {
     try {
+      await this.db.execute('SET FOREIGN_KEY_CHECKS = 0')
+      await this.db.execute('DELETE FROM production_plan_operations')
       await this.db.execute('DELETE FROM production_plan_fg')
       await this.db.execute('DELETE FROM production_plan_sub_assembly')
       await this.db.execute('DELETE FROM production_plan_raw_material')
       await this.db.execute('DELETE FROM production_plan')
+      await this.db.execute('SET FOREIGN_KEY_CHECKS = 1')
     } catch (error) {
+      await this.db.execute('SET FOREIGN_KEY_CHECKS = 1')
       throw error
     }
   }

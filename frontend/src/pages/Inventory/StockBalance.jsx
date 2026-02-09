@@ -437,7 +437,7 @@ export default function StockBalance() {
                                 {Number(stock.current_qty).toFixed(2)} {stock.uom}
                               </span>
                             </div>
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex gap-1  transition-opacity">
                               <button
                                 onClick={() => { setSelectedStockItem({ ...stock, movement_type: 'IN' }); setShowMovementModal(true) }}
                                 className="p-1.5 bg-green-50 text-green-600 rounded-xs hover:bg-green-100"

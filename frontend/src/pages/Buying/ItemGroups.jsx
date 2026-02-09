@@ -304,7 +304,7 @@ export default function ItemGroups() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g., Raw Materials"
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded  text-xs  focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all dark:text-white"
+                className="w-full p-2  bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded  text-xs  focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all dark:text-white"
                 required
               />
             </div>
@@ -318,7 +318,7 @@ export default function ItemGroups() {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Briefly describe the purpose of this group..."
                 rows="4"
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded  text-xs font-medium focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all dark:text-white resize-none"
+                className="w-full p-2  bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded  text-xs font-medium focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all dark:text-white resize-none"
               />
             </div>
 

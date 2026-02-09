@@ -157,7 +157,7 @@ export default function QCApprovalModal({ grn, onClose, onSuccess }) {
     >
       <div className="flex flex-col h-full bg-white">
         {/* Modern Header Section */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 z-20 bg-white">
+        <div className="p-2  border-b border-gray-100 flex items-center justify-between sticky top-0 z-20 bg-white">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-100">
               <ShieldCheck className="w-6 h-6" />
@@ -290,10 +290,10 @@ export default function QCApprovalModal({ grn, onClose, onSuccess }) {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-white border-b border-gray-100">
-                          <th className="px-6 py-4 text-left font-bold text-gray-400 uppercase tracking-widest text-[10px]">Item Identification</th>
-                          <th className="px-6 py-4 text-center font-bold text-gray-400 uppercase tracking-widest text-[10px]">Recv. Qty</th>
-                          <th className="px-6 py-4 text-center font-bold text-gray-400 uppercase tracking-widest text-[10px]">Accp. Qty</th>
-                          <th className="px-6 py-4 text-right font-bold text-gray-400 uppercase tracking-widest text-[10px]">QC Protocol Status</th>
+                          <th className="p-2  text-left font-bold text-gray-400 uppercase tracking-widest text-[10px]">Item Identification</th>
+                          <th className="p-2  text-center font-bold text-gray-400 uppercase tracking-widest text-[10px]">Recv. Qty</th>
+                          <th className="p-2  text-center font-bold text-gray-400 uppercase tracking-widest text-[10px]">Accp. Qty</th>
+                          <th className="p-2  text-right font-bold text-gray-400 uppercase tracking-widest text-[10px]">QC Protocol Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -301,14 +301,14 @@ export default function QCApprovalModal({ grn, onClose, onSuccess }) {
                           const statusColor = getQCStatusColor(item.qc_checks);
                           return (
                             <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                              <td className="px-6 py-4 font-black text-gray-900">{item.item_code}</td>
-                              <td className="px-6 py-4 text-center font-medium text-gray-500">{item.received_qty}</td>
-                              <td className="px-6 py-4 text-center">
+                              <td className="p-2  font-black text-gray-900">{item.item_code}</td>
+                              <td className="p-2  text-center font-medium text-gray-500">{item.received_qty}</td>
+                              <td className="p-2  text-center">
                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800">
                                   {item.accepted_qty}
                                 </span>
                               </td>
-                              <td className="px-6 py-4">
+                              <td className="p-2 ">
                                 <div className="flex justify-end">
                                   <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-black border ${
                                     statusColor === 'success' 
@@ -349,9 +349,9 @@ export default function QCApprovalModal({ grn, onClose, onSuccess }) {
                       <tbody className="divide-y divide-rose-100/50">
                         {rejectedItems.map((item) => (
                           <tr key={item.id} className="hover:bg-rose-50/50 transition-colors">
-                            <td className="px-6 py-4 font-black text-rose-900">{item.item_code}</td>
-                            <td className="px-6 py-4 text-center font-bold text-rose-700">{item.received_qty}</td>
-                            <td className="px-6 py-4 text-xs font-medium text-rose-600 italic">
+                            <td className="p-2  font-black text-rose-900">{item.item_code}</td>
+                            <td className="p-2  text-center font-bold text-rose-700">{item.received_qty}</td>
+                            <td className="p-2  text-xs font-medium text-rose-600 italic">
                               {item.notes || 'Detailed non-compliance report missing'}
                             </td>
                           </tr>

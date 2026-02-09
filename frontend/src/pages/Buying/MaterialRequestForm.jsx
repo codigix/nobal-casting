@@ -712,10 +712,10 @@ export default function MaterialRequestForm() {
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-slate-50/50 border-b border-slate-200">
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">No.</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Material Specification</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Quantity</th>
-                            <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Actions</th>
+                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">No.</th>
+                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Material Specification</th>
+                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Quantity</th>
+                            <th className="p-2  text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -724,8 +724,8 @@ export default function MaterialRequestForm() {
                               key={item.id}
                               className={`group hover:bg-slate-50/80 transition-all duration-300 ${editingItemIndex === index ? 'bg-amber-50/50' : ''}`}
                             >
-                              <td className="px-6 py-4 text-xs  text-slate-400">{String(index + 1).padStart(2, '0')}</td>
-                              <td className="px-6 py-4">
+                              <td className="p-2  text-xs  text-slate-400">{String(index + 1).padStart(2, '0')}</td>
+                              <td className="p-2 ">
                                 <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-amber-500 group-hover:text-white transition-all duration-300">
                                     <Package size={16} />
@@ -738,14 +738,14 @@ export default function MaterialRequestForm() {
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-6 py-4">
+                              <td className="p-2 ">
                                 <div className="flex items-center gap-2">
                                   <span className="text-xs font-black text-slate-900">{item.qty}</span>
                                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-1.5 py-0.5 rounded">{item.uom}</span>
                                 </div>
                               </td>
-                              <td className="px-6 py-4">
-                                <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                              <td className="p-2 ">
+                                <div className="flex items-center justify-end gap-2  transition-all duration-300">
                                   <button
                                     type="button"
                                     onClick={() => handleEditItem(index)}

@@ -528,6 +528,12 @@ export class ProductionPlanningService {
       // 3. Update Plan Status
       await productionPlanningModel.updatePlanStatus(planId, 'in_progress')
 
+      // 4. Sync Sales Order Status
+      if (plan.sales_order_id) {
+        console.log(`Syncing status for Sales Order: ${plan.sales_order_id}`)
+        await productionModel.syncSalesOrderStatus(plan.sales_order_id)
+      }
+
       return [...new Set(createdWorkOrders)] // Return unique IDs
     } catch (error) {
       console.error('Error in createWorkOrdersFromPlan:', error)

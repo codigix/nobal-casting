@@ -118,6 +118,7 @@ export default function JobCard() {
   const StatusBadge = ({ status }) => {
     const configs = {
       draft: { color: 'text-slate-600 bg-slate-50 border-slate-100', icon: FileText },
+      ready: { color: 'text-indigo-600 bg-indigo-50 border-indigo-100', icon: Zap },
       planned: { color: 'text-blue-600 bg-blue-50 border-blue-100', icon: Calendar },
       'in-progress': { color: 'text-amber-600 bg-amber-50 border-amber-100', icon: Activity },
       completed: { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: CheckCircle2 },
@@ -392,13 +393,22 @@ export default function JobCard() {
     const jobCards = jobCardsByWO[woId] || []
     const currentCard = jobCards.find(c => c.job_card_id === jobCardId)
 
-    if (!currentCard || (currentCard.status || '').toLowerCase() !== 'draft') {
-      return { canStart: false, reason: 'Only draft job cards can be started' }
+    const currentStatus = (currentCard.status || '').toLowerCase()
+    if (!['draft', 'ready'].includes(currentStatus)) {
+      return { canStart: false, reason: 'Only draft or ready job cards can be started' }
     }
 
     const currentCardIndex = jobCards.findIndex(c => c.job_card_id === jobCardId)
 
     if (currentCardIndex === 0) {
+      // NEW: Check for sub-assemblies on the first task
+      const workOrder = workOrders.find(wo => wo.wo_id === woId)
+      if (workOrder && workOrder.incomplete_sub_assemblies > 0) {
+        return { 
+          canStart: false, 
+          reason: `Cannot start Work Order. ${workOrder.incomplete_sub_assemblies} sub-assemblies are still incomplete.` 
+        }
+      }
       return { canStart: true }
     }
 
@@ -479,12 +489,13 @@ export default function JobCard() {
 
   const getStatusWorkflow = () => {
     return {
-      'draft': ['in-progress', 'hold', 'completed'],
-      'in-progress': ['completed', 'hold'],
-      'hold': ['in-progress', 'completed'],
+      'draft': ['ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled'],
+      'ready': ['pending', 'in-progress', 'hold', 'completed', 'cancelled'],
+      'in-progress': ['completed', 'hold', 'cancelled'],
+      'hold': ['in-progress', 'completed', 'cancelled'],
       'completed': ['completed'],
-      'open': ['in-progress', 'hold', 'completed'],
-      'pending': ['in-progress', 'hold', 'completed'],
+      'open': ['ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled'],
+      'pending': ['ready', 'in-progress', 'hold', 'completed', 'cancelled'],
       'cancelled': ['cancelled']
     }
   }
@@ -688,6 +699,16 @@ export default function JobCard() {
                               {wo.item_name || wo.item_code || 'Generic Work Order'}
                               </span>
                             <StatusBadge status={wo.status} />
+                            {wo.total_sub_assemblies > 0 && (
+                              <span className={`inline-flex items-center gap-1 p-2 py-0.5 rounded-full text-[10px] border ${
+                                wo.incomplete_sub_assemblies > 0 
+                                  ? 'bg-amber-50 text-amber-600 border-amber-100' 
+                                  : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                              }`}>
+                                <Layers size={10} />
+                                {wo.incomplete_sub_assemblies > 0 ? 'Sub-assemblies Pending' : 'Sub-assemblies Ready'}
+                              </span>
+                            )}
                           </div>
                           <p className="text-xs  text-gray-500  max-w-[250px] truncate">
                             {wo.wo_id}
@@ -979,7 +1000,7 @@ export default function JobCard() {
                                     </td>
                                     <td className="p-2  text-right">
                                       <div className="flex items-center justify-end gap-2">
-                                        {(card.status || '').toLowerCase() === 'draft' ? (
+                                        {(card.status || '').toLowerCase() === 'ready' ? (
                                           <button
                                             className="flex items-center gap-2 p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded  text-xs   transition-all  active:scale-95"
                                             onClick={() => handleStartJobCard(card.job_card_id, wo.wo_id)}

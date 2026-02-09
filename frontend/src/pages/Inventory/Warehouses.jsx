@@ -391,7 +391,7 @@ export default function Warehouses() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-1  transition-opacity">
                           <button
                             onClick={() => handleEdit(warehouse)}
                             className="p-1.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-xs transition-all"

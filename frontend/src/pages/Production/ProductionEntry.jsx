@@ -155,6 +155,7 @@ export default function ProductionEntry() {
   const totalRejectedQty = parseFloat(jobCardData?.rejected_quantity || 0)
   const totalScrapQty = parseFloat(jobCardData?.scrap_quantity || 0)
   const totalDowntimeMinutes = downtimes.reduce((sum, d) => sum + (parseFloat(d.duration_minutes) || 0), 0)
+  const hasPendingApproval = rejections.some(rej => rej.status !== 'Approved')
 
   const maxAllowedQty = previousOperationData
     ? (
@@ -232,7 +233,7 @@ export default function ProductionEntry() {
   }, [jobCardId])
   
   useEffect(() => {
-    const stats = getShiftStats(rejectionForm.log_date, rejectionForm.shift);
+    const stats = getShiftStats(rejectionForm.log_date, rejectionForm.shift, rejectionForm.day_number);
     const produceQty = stats.produced; 
     const rejected = parseFloat(rejectionForm.rejected_qty) || 0;
     const scrap = parseFloat(rejectionForm.scrap_qty) || 0;
@@ -258,7 +259,7 @@ export default function ProductionEntry() {
 
       return prev;
     });
-  }, [rejectionForm.log_date, rejectionForm.shift, rejectionForm.rejected_qty, rejectionForm.scrap_qty, timeLogs]);
+  }, [rejectionForm.log_date, rejectionForm.shift, rejectionForm.day_number, rejectionForm.rejected_qty, rejectionForm.scrap_qty, timeLogs]);
 
   const StatCard = ({ label, value, icon: Icon, color, subtitle }) => {
     const colorMap = {
@@ -445,6 +446,14 @@ export default function ProductionEntry() {
     }
   };
 
+  const parseTimeToMinutes = (time, period) => {
+    if (!time) return 0;
+    let [hours, minutes] = time.split(':').map(Number);
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  };
+
   const fetchAllData = async () => {
     try {
       setLoading(true)
@@ -575,7 +584,15 @@ export default function ProductionEntry() {
         productionService.getDowntimes({ job_card_id: jobCardId })
       ])
 
-      const logs = logsRes.data || logsRes || []
+      const logs = (logsRes.data || logsRes || []).sort((a, b) => {
+        const dateCompare = new Date(a.log_date) - new Date(b.log_date);
+        if (dateCompare !== 0) return dateCompare;
+        
+        const shiftCompare = normalizeShift(a.shift).localeCompare(normalizeShift(b.shift));
+        if (shiftCompare !== 0) return shiftCompare;
+        
+        return parseTimeToMinutes(a.from_time, a.from_period) - parseTimeToMinutes(b.from_time, b.from_period);
+      })
       const rejs = rejsRes.data || rejsRes || []
       const down = downRes.data || downRes || []
 
@@ -697,13 +714,17 @@ export default function ProductionEntry() {
   const handleDayChange = (val, formType) => {
     const dayNum = parseInt(val) || 1;
     
+    // Get current state based on formType
+    const currentForm = formType === 'rejection' ? rejectionForm : 
+                        formType === 'downtime' ? downtimeForm : timeLogForm;
+    
     // Anchor for "Day 1"
     let anchorDateStr = jobCardData?.actual_start_date;
     
     if (!anchorDateStr) {
       // If no actual_start_date, infer anchor from current state
-      const currentDay = parseInt(timeLogForm.day_number) || 1;
-      const parts = (timeLogForm.log_date || getLocalDate()).split('-');
+      const currentDay = parseInt(currentForm.day_number) || 1;
+      const parts = (currentForm.log_date || getLocalDate()).split('-');
       const currentLogDate = new Date(parts[0], parts[1] - 1, parts[2]);
       
       if (!isNaN(currentLogDate.getTime())) {
@@ -724,15 +745,40 @@ export default function ProductionEntry() {
       }
     }
 
-    syncAllForms({ day_number: val, log_date: newDate, shift: timeLogForm.shift });
+    syncAllForms({ day_number: val, log_date: newDate, shift: currentForm.shift });
   }
 
   const handleDateChange = (val, formType) => {
-    syncAllForms({ log_date: val, shift: timeLogForm.shift, day_number: timeLogForm.day_number });
+    const currentForm = formType === 'rejection' ? rejectionForm : 
+                        formType === 'downtime' ? downtimeForm : timeLogForm;
+    
+    // Calculate new day number based on date if possible
+    let newDayNumber = currentForm.day_number;
+    const anchorDateStr = jobCardData?.actual_start_date;
+    
+    if (anchorDateStr && val) {
+      const anchorParts = anchorDateStr.split('-');
+      const anchorDate = new Date(anchorParts[0], anchorParts[1] - 1, anchorParts[2]);
+      const newParts = val.split('-');
+      const newDate = new Date(newParts[0], newParts[1] - 1, newParts[2]);
+      
+      if (!isNaN(anchorDate.getTime()) && !isNaN(newDate.getTime())) {
+        const diffTime = newDate.getTime() - anchorDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        // Only update if it's a reasonable day number (>= 1)
+        if (diffDays >= 1) {
+          newDayNumber = String(diffDays);
+        }
+      }
+    }
+    
+    syncAllForms({ log_date: val, shift: currentForm.shift, day_number: newDayNumber });
   }
 
   const handleShiftChange = (val, formType) => {
-    syncAllForms({ shift: val, log_date: timeLogForm.log_date, day_number: timeLogForm.day_number });
+    const currentForm = formType === 'rejection' ? rejectionForm : 
+                        formType === 'downtime' ? downtimeForm : timeLogForm;
+    syncAllForms({ shift: val, log_date: currentForm.log_date, day_number: currentForm.day_number });
   }
 
   const handleOperatorChange = (val) => {
@@ -765,35 +811,53 @@ export default function ProductionEntry() {
     const timeLogProduced = shiftTimeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0);
     const prevRejectionProduced = shiftRejections.reduce((sum, rej) => sum + (parseFloat(rej.accepted_qty) || 0) + (parseFloat(rej.rejected_qty) || 0) + (parseFloat(rej.scrap_qty) || 0), 0);
 
-    const prevTotalForShift = Math.max(timeLogProduced, prevRejectionProduced);
+    // Prioritize time logs as source of truth for production quantity
+    const prevTotalForShift = timeLogProduced > 0 ? timeLogProduced : prevRejectionProduced;
 
     let newTotalForShift = prevTotalForShift;
     if (formType === 'timeLog') {
       const newQty = parseFloat(formData.completed_qty) || 0;
-      newTotalForShift = Math.max(timeLogProduced + newQty, prevRejectionProduced);
+      const updatedTimeLogProduced = timeLogProduced + newQty;
+      // If we have (or just added) time logs, they are the total produced quantity
+      newTotalForShift = updatedTimeLogProduced > 0 ? updatedTimeLogProduced : prevRejectionProduced;
     } else if (formType === 'rejection') {
       const enteringProduced = (parseFloat(formData.accepted_qty) || 0) + (parseFloat(formData.rejected_qty) || 0) + (parseFloat(formData.scrap_qty) || 0);
-      newTotalForShift = Math.max(timeLogProduced, prevRejectionProduced + enteringProduced);
+      const updatedRejectionProduced = prevRejectionProduced + enteringProduced;
+      // If time logs exist, they remain the source of truth even if rejections are added
+      newTotalForShift = timeLogProduced > 0 ? timeLogProduced : updatedRejectionProduced;
     }
 
     const remainingTotalFromOtherShifts = Math.max(0, totalProducedQty - prevTotalForShift);
     return (remainingTotalFromOtherShifts + newTotalForShift) - totalProducedQty;
   };
 
-  const getShiftStats = (date, shift) => {
+  const getShiftStats = (date, shift, dayNumber) => {
     const targetDate = formatDateForMatch(date);
     const targetShift = normalizeShift(shift);
+    const targetDay = dayNumber ? String(dayNumber) : null;
 
     const shiftTimeLogs = timeLogs.filter(log => {
       const logDate = formatDateForMatch(log.log_date);
       const logShift = normalizeShift(log.shift);
-      return logDate === targetDate && logShift === targetShift;
+      const logDay = log.day_number ? String(log.day_number) : null;
+      
+      const dateMatch = logDate === targetDate;
+      const shiftMatch = logShift === targetShift;
+      const dayMatch = !targetDay || logDay === targetDay;
+
+      return dateMatch && shiftMatch && dayMatch;
     });
 
     const shiftRejections = rejections.filter(rej => {
       const rejDate = formatDateForMatch(rej.log_date);
       const rejShift = normalizeShift(rej.shift);
-      return rejDate === targetDate && rejShift === targetShift;
+      const rejDay = rej.day_number ? String(rej.day_number) : null;
+
+      const dateMatch = rejDate === targetDate;
+      const shiftMatch = rejShift === targetShift;
+      const dayMatch = !targetDay || rejDay === targetDay;
+
+      return dateMatch && shiftMatch && dayMatch;
     });
 
     const produced = shiftTimeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0);
@@ -802,7 +866,7 @@ export default function ProductionEntry() {
     return {
       produced,
       rejectionProduced,
-      maxProduced: Math.max(produced, rejectionProduced)
+      maxProduced: produced > 0 ? produced : rejectionProduced
     };
   };
 
@@ -923,6 +987,19 @@ export default function ProductionEntry() {
       } catch (err) {
         toast.addToast(err.message || 'Failed to remove entry', 'error')
       }
+    }
+  }
+
+  const handleApproveRejection = async (id) => {
+    try {
+      setFormLoading(true)
+      await productionService.approveRejection(id)
+      toast.addToast('Quality inspection approved', 'success')
+      await fetchAllData()
+    } catch (err) {
+      toast.addToast(err.message || 'Failed to approve inspection', 'error')
+    } finally {
+      setFormLoading(false)
     }
   }
 
@@ -1207,17 +1284,11 @@ export default function ProductionEntry() {
           <div className="col-span-12">
             {(() => {
               const expectedMinutes = (operationCycleTime || 0) * (totalProducedQty || 0)
-              const actualMinutes = timeLogs.reduce((sum, log) => {
-                if (log.from_time && log.to_time) {
-                  const [fh, fm] = log.from_time.split(':').map(Number)
-                  const [th, tm] = log.to_time.split(':').map(Number)
-                  return sum + Math.max(0, (th * 60 + tm) - (fh * 60 + fm))
-                }
-                return sum
-              }, 0)
+              const actualMinutes = timeLogs.reduce((sum, log) => sum + (parseFloat(log.time_in_minutes) || 0), 0)
 
               const efficiency = actualMinutes > 0 ? ((expectedMinutes / actualMinutes) * 100).toFixed(0) : 0
               const qualityScore = totalProducedQty > 0 ? ((totalAcceptedQty / totalProducedQty) * 100).toFixed(1) : 0
+              const hasPendingApproval = rejections.some(rej => rej.status !== 'Approved')
 
               return (
                 <div className="grid grid-cols-3 gap-4 h-full">
@@ -1232,8 +1303,8 @@ export default function ProductionEntry() {
                     label="Quality Yield"
                     value={`${qualityScore}%`}
                     icon={ShieldCheck}
-                    color={qualityScore >= 98 ? 'emerald' : 'amber'}
-                    subtitle="ACCEPTANCE RATE"
+                    color={hasPendingApproval ? 'amber' : (qualityScore >= 98 ? 'emerald' : 'amber')}
+                    subtitle={hasPendingApproval ? "PENDING APPROVAL" : "ACCEPTANCE RATE"}
                   />
                   <StatCard
                     label="Productivity"
@@ -1584,7 +1655,7 @@ export default function ProductionEntry() {
                         />
                       </div>
                       {(() => {
-                        const stats = getShiftStats(rejectionForm.log_date, rejectionForm.shift);
+                        const stats = getShiftStats(rejectionForm.log_date, rejectionForm.shift, rejectionForm.day_number);
                         return stats.produced > 0 ? (
                           <p className="text-[9px] text-indigo-600 mt-1 font-medium italic">
                             Produced units in this shift: {stats.produced.toFixed(0)} units
@@ -1652,7 +1723,7 @@ export default function ProductionEntry() {
                         step="0.01"
                         value={rejectionForm.accepted_qty}
                         onChange={(e) => setRejectionForm({ ...rejectionForm, accepted_qty: parseFloat(e.target.value) || 0 })}
-                        className="w-full p-2 bg-emerald-50/50 border border-emerald-100 rounded text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-emerald-700 "
+                        className="w-full p-2 bg-emerald-50/50 border border-emerald-100 rounded text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all text-emerald-700 font-medium"
                         required
                       />
                     </FieldWrapper>
@@ -1695,17 +1766,31 @@ export default function ProductionEntry() {
                   </div>
                 </form>
 
-                <div className="mt-2  border border-slate-100">
+                <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-lg flex items-start gap-3">
+                  <div className="p-1.5 bg-amber-100 text-amber-600 rounded">
+                    <Info size={14} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[11px] font-bold text-amber-900 uppercase tracking-tight">Quality Gate Active</p>
+                    <p className="text-[10px] text-amber-700 leading-relaxed">
+                      Only <strong>Approved</strong> quality inspection records contribute to the <strong>Accepted Quantity</strong> of this job card.
+                      Pending records will block the progression to subsequent operations.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4  border border-slate-100">
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-100">
                         <th className="p-2 text-slate-400 w-12 text-center">Day</th>
                         <th className="p-2 text-slate-400">Date / Shift</th>
-                        <th className="p-2 text-slate-400">Status / Reason</th>
+                        <th className="p-2 text-slate-400">Inspection Status</th>
+                        <th className="p-2 text-slate-400">Quality Notes</th>
                         <th className="p-2 text-slate-400 text-center">Accepted</th>
                         <th className="p-2 text-slate-400 text-center">Rejected</th>
                         <th className="p-2 text-slate-400 text-center">Scrap</th>
-                        <th className="p-2 text-slate-400 text-center w-20">Action</th>
+                        <th className="p-2 text-slate-400 text-center w-24">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
@@ -1724,6 +1809,17 @@ export default function ProductionEntry() {
                             <td className="p-3">
                               <p className="font-medium text-slate-900">{new Date(rej.log_date).toLocaleDateString()}</p>
                               <p className="text-[10px] text-slate-400 uppercase">Shift {normalizeShift(rej.shift)}</p>
+                            </td>
+                            <td className="p-3">
+                              {rej.status === 'Approved' ? (
+                                <span className="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-[10px] font-bold uppercase border border-emerald-100">
+                                  <ShieldCheck size={10} /> Approved
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-1 rounded text-[10px] font-bold uppercase border border-amber-100 animate-pulse">
+                                  <Clock size={10} /> Pending Approval
+                                </span>
+                              )}
                             </td>
                             <td className="p-3">
                               <div className="flex flex-col gap-1">
@@ -1745,12 +1841,24 @@ export default function ProductionEntry() {
                               <span className="text-slate-600 ">{parseFloat(rej.scrap_qty).toLocaleString()}</span>
                             </td>
                             <td className="p-3 text-center">
-                              <button
-                                onClick={() => handleDeleteRejection(rej.rejection_id)}
-                                className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all"
-                              >
-                                <Trash2 size={14} />
-                              </button>
+                              <div className="flex items-center justify-center gap-1">
+                                {rej.status !== 'Approved' && (
+                                  <button
+                                    onClick={() => handleApproveRejection(rej.rejection_id)}
+                                    className="p-2 text-emerald-500 hover:bg-emerald-50 rounded transition-all"
+                                    title="Approve Quality"
+                                  >
+                                    <CheckCircle size={14} />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDeleteRejection(rej.rejection_id)}
+                                  className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded transition-all"
+                                  title="Delete Record"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -2067,31 +2175,39 @@ export default function ProductionEntry() {
 
 
                     {isOperationFinished && (
-                      <button
-                        onClick={handleSubmitProduction}
-                        disabled={isSubmitting}
-                        className="relative group overflow-hidden p-2 bg-emerald-600 text-white rounded hover:shadow-emerald-200 transition-all duration-500 disabled:opacity-50 flex items-center justify-center gap-4 active:scale-95 animate-pulse"
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-emerald-400 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500"></div>
-                        <div className="relative flex items-center gap-4">
-                          {isSubmitting ? (
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded animate-spin" />
-                          ) : (
-                            <div className="p-1.5 bg-white/10 rounded group-hover:bg-white/20 transition-colors">
-                              <CheckCircle size={10} />
-                            </div>
-                          )}
-                          <div className="text-left">
-                            <p className="text-xs text-white/50 leading-none">
-                              {normalizeStatus(jobCardData?.status) === 'completed' ? 'Synchronize Next Stage' : 'Finalize & Dispatch'}
-                            </p>
-                            <p className="text-xs">
-                              {normalizeStatus(jobCardData?.status) === 'completed' ? 'Update Stage' : 'Complete Production'}
-                            </p>
+                      <div className="flex flex-col gap-2">
+                        {hasPendingApproval && (
+                          <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-3 py-2 rounded-lg border border-amber-100 animate-pulse">
+                            <AlertTriangle size={14} />
+                            <span className="text-[10px] font-bold uppercase">Pending Quality Approvals - Accepted Quantity may be incomplete</span>
                           </div>
-                          <ChevronRight size={10} className="group-hover:translate-x-1 transition-transform" />
-                        </div>
-                      </button>
+                        )}
+                        <button
+                          onClick={handleSubmitProduction}
+                          disabled={isSubmitting || (hasPendingApproval && totalAcceptedQty === 0)}
+                          className="relative group overflow-hidden p-2 bg-emerald-600 text-white rounded hover:shadow-emerald-200 transition-all duration-500 disabled:opacity-50 flex items-center justify-center gap-4 active:scale-95 animate-pulse"
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-emerald-400 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500"></div>
+                          <div className="relative flex items-center gap-4">
+                            {isSubmitting ? (
+                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded animate-spin" />
+                            ) : (
+                              <div className="p-1.5 bg-white/10 rounded group-hover:bg-white/20 transition-colors">
+                                <CheckCircle size={10} />
+                              </div>
+                            )}
+                            <div className="text-left">
+                              <p className="text-xs text-white/50 leading-none">
+                                {normalizeStatus(jobCardData?.status) === 'completed' ? 'Synchronize Next Stage' : 'Finalize & Dispatch'}
+                              </p>
+                              <p className="text-xs">
+                                {normalizeStatus(jobCardData?.status) === 'completed' ? 'Update Stage' : 'Complete Production'}
+                              </p>
+                            </div>
+                            <ChevronRight size={10} className="group-hover:translate-x-1 transition-transform" />
+                          </div>
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>

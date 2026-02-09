@@ -316,12 +316,12 @@ const LineDetailsModal = ({ isOpen, line, onClose }) => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-neutral-50/30 border-b border-neutral-200">
-                    <th className="p-4 text-xs font-bold text-neutral-400 uppercase tracking-widest">Machine</th>
-                    <th className="p-4 text-xs font-bold text-neutral-400 uppercase tracking-widest text-center">Availability</th>
-                    <th className="p-4 text-xs font-bold text-neutral-400 uppercase tracking-widest text-center">Performance</th>
-                    <th className="p-4 text-xs font-bold text-neutral-400 uppercase tracking-widest text-center">Quality</th>
-                    <th className="p-4 text-xs font-bold text-neutral-400 uppercase tracking-widest text-center">OEE</th>
-                    <th className="p-4 text-xs font-bold text-neutral-400 uppercase tracking-widest text-center">Status</th>
+                    <th className="p-4 text-xs  text-neutral-400 uppercase tracking-widest">Machine</th>
+                    <th className="p-4 text-xs  text-neutral-400 uppercase tracking-widest text-center">Availability</th>
+                    <th className="p-4 text-xs  text-neutral-400 uppercase tracking-widest text-center">Performance</th>
+                    <th className="p-4 text-xs  text-neutral-400 uppercase tracking-widest text-center">Quality</th>
+                    <th className="p-4 text-xs  text-neutral-400 uppercase tracking-widest text-center">OEE</th>
+                    <th className="p-4 text-xs  text-neutral-400 uppercase tracking-widest text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">

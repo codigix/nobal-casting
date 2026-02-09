@@ -91,6 +91,7 @@ export const grnRequestsAPI = {
   reject: (id, data) => api.post(`/grn-requests/${id}/reject`, data),
   inspectItem: (grnId, data) => api.post(`/grn-requests/${grnId}/items/inspect`, data),
   qcApprove: (id) => api.post(`/grn-requests/${id}/qc-approve`),
+  inventoryApprove: (id, data) => api.post(`/grn-requests/${id}/inventory-approve`, data),
   sendBack: (id, data) => api.post(`/grn-requests/${id}/send-back`, data),
 }
 
@@ -156,16 +157,20 @@ export const salesOrdersAPI = {
 
 // Delivery Notes API
 export const deliveryNotesAPI = {
-  list: () => api.get('/selling/delivery-notes'),
+  list: (params) => api.get('/selling/delivery-notes', { params }),
   get: (id) => api.get(`/selling/delivery-notes/${id}`),
   create: (data) => api.post('/selling/delivery-notes', data),
+  update: (id, data) => api.put(`/selling/delivery-notes/${id}`, data),
+  delete: (id) => api.delete(`/selling/delivery-notes/${id}`),
 }
 
 // Sales Invoices API
 export const salesInvoicesAPI = {
-  list: () => api.get('/selling/invoices'),
+  list: (params) => api.get('/selling/invoices', { params }),
   get: (id) => api.get(`/selling/invoices/${id}`),
   create: (data) => api.post('/selling/invoices', data),
+  update: (id, data) => api.put(`/selling/invoices/${id}`, data),
+  delete: (id) => api.delete(`/selling/invoices/${id}`),
 }
 
 // BOM API

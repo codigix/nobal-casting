@@ -689,11 +689,11 @@ export default function SalesQuotationForm() {
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-slate-50/50 border-b border-slate-200">
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Item </th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[120px]">Quantity</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Rate (₹)</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Amount (₹)</th>
-                            <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[80px]">Action</th>
+                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Item </th>
+                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[120px]">Quantity</th>
+                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Rate (₹)</th>
+                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Amount (₹)</th>
+                            <th className="p-2  text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[80px]">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -701,7 +701,7 @@ export default function SalesQuotationForm() {
                             const amount = (item.qty || 0) * (item.rate || 0)
                             return (
                               <tr key={item.id || idx} className="group hover:bg-slate-50/80 transition-all duration-300">
-                                <td className="px-6 py-4">
+                                <td className="p-2 ">
                                   <SearchableSelect
                                     options={allItems.map(itm => ({ label: `${itm.name} [${itm.item_code}]`, value: itm.item_code }))}
                                     value={item.item_code}
@@ -709,7 +709,7 @@ export default function SalesQuotationForm() {
                                     placeholder="SELECT ITEM"
                                   />
                                 </td>
-                                <td className="px-6 py-4">
+                                <td className="p-2 ">
                                   <input
                                     type="number"
                                     value={item.qty || ''}
@@ -717,7 +717,7 @@ export default function SalesQuotationForm() {
                                     className="w-full p-2 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all"
                                   />
                                 </td>
-                                <td className="px-6 py-4">
+                                <td className="p-2 ">
                                   <input
                                     type="number"
                                     value={item.rate || ''}
@@ -725,14 +725,14 @@ export default function SalesQuotationForm() {
                                     className="w-full p-2 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all"
                                   />
                                 </td>
-                                <td className="px-6 py-4">
+                                <td className="p-2 ">
                                   <span className="text-xs font-black text-slate-900">₹{amount.toFixed(2)}</span>
                                 </td>
-                                <td className="px-6 py-4 text-right">
+                                <td className="p-2  text-right">
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveItem(idx)}
-                                    className="p-2 text-rose-500 hover:bg-rose-50 rounded transition-all opacity-0 group-hover:opacity-100"
+                                    className="p-2 text-rose-500 hover:bg-rose-50 rounded transition-all "
                                   >
                                     <Trash2 size={16} strokeWidth={2.5} />
                                   </button>
@@ -743,8 +743,8 @@ export default function SalesQuotationForm() {
                         </tbody>
                         <tfoot>
                           <tr className="bg-slate-50/50 font-black">
-                            <td colSpan="3" className="px-6 py-4 text-[10px] text-slate-400 uppercase tracking-widest text-right">Net Total</td>
-                            <td className="px-6 py-4 text-xs text-emerald-600">₹{calculateTotal().toFixed(2)}</td>
+                            <td colSpan="3" className="p-2  text-[10px] text-slate-400 uppercase tracking-widest text-right">Net Total</td>
+                            <td className="p-2  text-xs text-emerald-600">₹{calculateTotal().toFixed(2)}</td>
                             <td></td>
                           </tr>
                         </tfoot>
@@ -812,17 +812,17 @@ export default function SalesQuotationForm() {
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-slate-50/50 border-b border-slate-200">
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Type</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Account Head</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[120px]">Rate (%)</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Amount (₹)</th>
-                            <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[80px]">Action</th>
+                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Type</th>
+                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Account Head</th>
+                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[120px]">Rate (%)</th>
+                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Amount (₹)</th>
+                            <th className="p-2  text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[80px]">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {formData.taxes_charges.map((tax, idx) => (
                             <tr key={tax.id || idx} className="group hover:bg-slate-50/80 transition-all duration-300">
-                              <td className="px-6 py-4">
+                              <td className="p-2 ">
                                 <SearchableSelect
                                   options={[{ label: 'ADD', value: 'Add' }, { label: 'DEDUCT', value: 'Deduct' }]}
                                   value={tax.type}
@@ -833,7 +833,7 @@ export default function SalesQuotationForm() {
                                   }}
                                 />
                               </td>
-                              <td className="px-6 py-4">
+                              <td className="p-2 ">
                                 <SearchableSelect
                                   options={accountHeads}
                                   value={tax.account_head}
@@ -845,7 +845,7 @@ export default function SalesQuotationForm() {
                                   placeholder="SELECT ACCOUNT"
                                 />
                               </td>
-                              <td className="px-6 py-4">
+                              <td className="p-2 ">
                                 <input
                                   type="number"
                                   value={tax.rate || ''}
@@ -858,17 +858,17 @@ export default function SalesQuotationForm() {
                                   className="w-full p-2 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 outline-none transition-all"
                                 />
                               </td>
-                              <td className="px-6 py-4">
+                              <td className="p-2 ">
                                 <span className="text-xs font-black text-slate-900">₹{(tax.amount || 0).toFixed(2)}</span>
                               </td>
-                              <td className="px-6 py-4 text-right">
+                              <td className="p-2  text-right">
                                 <button
                                   type="button"
                                   onClick={() => {
                                     const updated = formData.taxes_charges.filter((_, i) => i !== idx)
                                     setFormData({ ...formData, taxes_charges: updated })
                                   }}
-                                  className="p-2 text-rose-500 hover:bg-rose-50 rounded transition-all opacity-0 group-hover:opacity-100"
+                                  className="p-2 text-rose-500 hover:bg-rose-50 rounded transition-all "
                                 >
                                   <Trash2 size={16} />
                                 </button>

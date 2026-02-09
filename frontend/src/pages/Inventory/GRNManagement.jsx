@@ -12,8 +12,11 @@ import {
   XCircle, AlertCircle, TrendingUp, LayoutGrid, List as ListIcon,
   Filter, MoreVertical, ChevronRight, ClipboardList,
   Calendar, Building2, Truck, ShieldCheck, RefreshCcw,
-  Layout, Grid3x3, Activity, Download, Settings2, X
+  Layout, Grid3x3, Activity, Download, Settings2, X,
+  Zap, Printer, ArrowRight, MapPin, Save, ClipboardCheck,
+  Info
 } from 'lucide-react'
+import Modal from '../../components/Modal/Modal'
 
 export default function GRNManagement() {
   const navigate = useNavigate()
@@ -25,15 +28,57 @@ export default function GRNManagement() {
   const [viewMode, setViewMode] = useState('table')
   const [filterStatus, setFilterStatus] = useState('')
   const [showColumnMenu, setShowColumnMenu] = useState(false)
+  const [selectedGRN, setSelectedGRN] = useState(null)
+  const [showDetails, setShowDetails] = useState(false)
+  const [showApprovalForm, setShowApprovalForm] = useState(false)
+  const [rejectionReason, setRejectionReason] = useState('')
+  const [approvalItems, setApprovalItems] = useState([])
+  const [warehouses, setWarehouses] = useState([])
+  const [storageData, setStorageData] = useState({})
+  const [availableItems, setAvailableItems] = useState([])
+  const [availableItemsLoading, setAvailableItemsLoading] = useState(false)
   
   // Default visible columns
   const [visibleColumns, setVisibleColumns] = useState(new Set([
-    'grn_no', 'po_no', 'supplier_name', 'status', 'created_at', 'items_count'
+    'grn_no', 'po_no', 'supplier_name', 'status', 'created_at', 'items_count', 'actions'
   ]))
 
   useEffect(() => {
     fetchGRNs()
+    fetchWarehouses()
   }, [])
+
+  // Pre-populate valuation rates when approval form opens
+  useEffect(() => {
+    if (showApprovalForm && selectedGRN?.items?.length > 0) {
+      const fetchValuationRates = async () => {
+        try {
+          const itemCodes = selectedGRN.items.map(i => i.item_code).join(',')
+          const response = await api.get(`/items?item_codes=${itemCodes}`)
+          if (response.data.success) {
+            const itemDetails = response.data.data
+            setStorageData(prev => {
+              const updated = { ...prev }
+              selectedGRN.items.forEach(item => {
+                const details = itemDetails.find(d => d.item_code === item.item_code)
+                if (details) {
+                  updated[item.id] = {
+                    ...updated[item.id],
+                    valuation_rate: details.valuation_rate || 0,
+                    batch_no: updated[item.id]?.batch_no || item.batch_no || ''
+                  }
+                }
+              })
+              return updated
+            })
+          }
+        } catch (err) {
+          console.error('Error fetching valuation rates:', err)
+        }
+      }
+      fetchValuationRates()
+    }
+  }, [showApprovalForm, selectedGRN])
 
   const fetchGRNs = async () => {
     setLoading(true)
@@ -133,8 +178,299 @@ export default function GRNManagement() {
   }, [grns, searchTerm, filterStatus])
 
   const handleViewGRN = useCallback((grnNo) => {
-    navigate(`/inventory/grn/${grnNo}`)
-  }, [navigate])
+    const grn = grns.find(g => g.grn_no === grnNo)
+    if (grn) {
+      setSelectedGRN(grn)
+      setShowDetails(true)
+    } else {
+      navigate(`/inventory/grn/${grnNo}`)
+    }
+  }, [grns, navigate])
+
+  const handleStartInspection = async (grnId) => {
+    try {
+      await api.post(`/grn-requests/${grnId}/start-inspection`)
+      toast.addToast('Inspection started successfully', 'success')
+      fetchGRNs()
+    } catch (err) {
+      toast.addToast(err.response?.data?.error || 'Failed to start inspection', 'error')
+    }
+  }
+
+  const handleApprove = async (grnId) => {
+    if (approvalItems.length === 0) {
+      toast.addToast('Please add accepted items', 'warning')
+      return
+    }
+
+    try {
+      await api.post(`/grn-requests/${grnId}/approve`, {
+        approvedItems: approvalItems
+      })
+      toast.addToast('GRN approved and stock entry created', 'success')
+      setShowApprovalForm(false)
+      setApprovalItems([])
+      fetchGRNs()
+    } catch (err) {
+      toast.addToast(err.response?.data?.error || 'Failed to approve GRN', 'error')
+    }
+  }
+
+  const handleReject = async (grnId) => {
+    if (!rejectionReason.trim()) {
+      toast.addToast('Please provide rejection reason', 'warning')
+      return
+    }
+
+    try {
+      await api.post(`/grn-requests/${grnId}/reject`, {
+        reason: rejectionReason
+      })
+      toast.addToast('GRN rejected successfully', 'success')
+      setShowDetails(false)
+      setRejectionReason('')
+      fetchGRNs()
+    } catch (err) {
+      toast.addToast(err.response?.data?.error || 'Failed to reject GRN', 'error')
+    }
+  }
+
+  const handleApprovalItemChange = (itemId, field, value) => {
+    setApprovalItems(prev => {
+      const existing = prev.find(item => item.id === itemId)
+      const numValue = ['accepted_qty', 'rejected_qty'].includes(field) ? Number(value) || 0 : value
+
+      if (existing) {
+        return prev.map(item =>
+          item.id === itemId ? { ...item, [field]: numValue } : item
+        )
+      } else {
+        return [...prev, { id: itemId, [field]: numValue }]
+      }
+    })
+  }
+
+  const handleStorageDataChange = (itemId, field, value) => {
+    const finalValue = field === 'valuation_rate' ? (Number(value) || 0) : value
+
+    setStorageData(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        [field]: finalValue
+      }
+    }))
+  }
+
+  const handleApproveAndStore = async () => {
+    if (approvalItems.length === 0) {
+      toast.addToast('Please add accepted items', 'warning')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const approvedItemsWithStorage = approvalItems.map(item => {
+        const grnItem = selectedGRN.items.find(gi => gi.id === item.id)
+        
+        return {
+          id: item.id,
+          accepted_qty: Number(item.accepted_qty) || 0,
+          rejected_qty: Number(item.rejected_qty) || 0,
+          qc_status: item.qc_status || 'pass',
+          bin_rack: storageData[item.id]?.bin_rack || '',
+          batch_no: storageData[item.id]?.batch_no || '',
+          valuation_rate: Number(storageData[item.id]?.valuation_rate) || 0,
+          warehouse_name: grnItem?.warehouse_name || 'Main Warehouse'
+        }
+      })
+
+      await api.post(`/grn-requests/${selectedGRN.id}/inventory-approve`, {
+        approvedItems: approvedItemsWithStorage
+      })
+      
+      toast.addToast('GRN approved! Materials stored in inventory.', 'success')
+      setShowApprovalForm(false)
+      setApprovalItems([])
+      setStorageData({})
+      fetchGRNs()
+    } catch (err) {
+      console.error('Approval error:', err)
+      toast.addToast(err.response?.data?.error || err.message || 'Failed to approve and store GRN', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchWarehouses = async () => {
+    try {
+      const response = await api.get('/stock/warehouses')
+      setWarehouses(response.data.data || [])
+    } catch (err) {
+      console.error('Error fetching warehouses:', err)
+    }
+  }
+
+  const handlePrintGRN = (grn) => {
+    window.print()
+  }
+
+  const getActionButton = (grn) => {
+    if (grn.status === 'pending') {
+      return (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleStartInspection(grn.id)
+            }}
+            className="flex items-center gap-2 text-[10px] py-1 px-2 w-fit justify-center bg-amber-600 hover:bg-amber-700 text-white border-none transition-all hover:scale-[1.02]"
+          >
+            <Zap size={12} /> Start QC
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleViewGRN(grn.grn_no)
+            }}
+            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded"
+          >
+            <Eye size={14} />
+          </Button>
+        </div>
+      )
+    }
+
+    if (grn.status === 'inspecting') {
+      return (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              setSelectedGRN(grn)
+              setApprovalItems(grn.items.map(item => ({
+                id: item.id,
+                accepted_qty: item.received_qty,
+                rejected_qty: 0,
+                qc_status: 'pass'
+              })))
+              setShowApprovalForm(true)
+            }}
+            className="flex items-center gap-2 text-[10px] py-1 px-2 w-fit justify-center bg-blue-600 hover:bg-blue-700 text-white border-none transition-all hover:scale-[1.02]"
+          >
+            <ShieldCheck size={12} /> QC Inspect
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleViewGRN(grn.grn_no)
+            }}
+            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded"
+          >
+            <Eye size={14} />
+          </Button>
+        </div>
+      )
+    }
+
+    if (grn.status === 'awaiting_inventory_approval') {
+      return (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              setSelectedGRN(grn)
+              setApprovalItems(grn.items.map(item => ({
+                id: item.id,
+                accepted_qty: item.accepted_qty || item.received_qty,
+                rejected_qty: item.rejected_qty || 0,
+                qc_status: item.qc_status || 'pass'
+              })))
+              setShowApprovalForm(true)
+            }}
+            className="flex items-center gap-2 text-[10px] py-1 px-2 w-fit justify-center bg-indigo-600 hover:bg-indigo-700 text-white border-none transition-all hover:scale-[1.02]"
+          >
+            <Package size={12} /> Approve & Store
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleViewGRN(grn.grn_no)
+            }}
+            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded"
+          >
+            <Eye size={14} />
+          </Button>
+        </div>
+      )
+    }
+
+    if (grn.status === 'approved') {
+      return (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              handlePrintGRN(grn)
+            }}
+            className="flex items-center gap-2 text-[10px] py-1 px-2 w-fit justify-center border-slate-200 text-slate-600 hover:bg-slate-50 transition-all"
+          >
+            <Printer size={12} /> Print
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleViewGRN(grn.grn_no)
+            }}
+            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded"
+          >
+            <Eye size={14} />
+          </Button>
+        </div>
+      )
+    }
+
+    return (
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={(e) => {
+          e.stopPropagation()
+          handleViewGRN(grn.grn_no)
+        }}
+        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded"
+      >
+        <Eye size={14} />
+      </Button>
+    )
+  }
+
+  const getStatusBadge = (status) => {
+    const config = getStatusConfig(status)
+    const Icon = config.icon
+    return (
+      <Badge className={`${config.badge} flex items-center gap-1.5 w-fit border`}>
+        <Icon size={12} />
+        {config.label.toUpperCase()}
+      </Badge>
+    )
+  }
 
   const columns = useMemo(() => [
     {
@@ -199,24 +535,9 @@ export default function GRNManagement() {
     {
       key: 'actions',
       label: 'Actions',
-      render: (_, row) => (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => handleViewGRN(row.grn_no)}
-            className="p-1.5 text-neutral-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xs transition-colors"
-            title="View Details"
-          >
-            <Eye size={16} />
-          </button>
-          <button
-            className="p-1.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xs transition-colors"
-          >
-            <MoreVertical size={16} />
-          </button>
-        </div>
-      )
+      render: (_, row) => getActionButton(row)
     }
-  ], [handleViewGRN])
+  ], [handleViewGRN, getActionButton])
 
   const kanbanColumns = [
     { status: 'pending', title: 'Pending Inspection', icon: Clock },
@@ -470,11 +791,8 @@ export default function GRNManagement() {
                                 {new Date(grn.created_at).toLocaleDateString()}
                               </div>
                               <div className="flex items-center gap-2">
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-neutral-50 dark:bg-neutral-800">
-                                  {totalItems} Items
-                                </Badge>
-                                <div className="w-6 h-6 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <ChevronRight size={14} />
+                                <div onClick={(e) => e.stopPropagation()}>
+                                  {getActionButton(grn)}
                                 </div>
                               </div>
                             </div>
@@ -494,6 +812,342 @@ export default function GRNManagement() {
           </div>
         )}
       </div>
+
+      {/* Details Modal */}
+      <Modal
+        isOpen={showDetails}
+        onClose={() => {
+          setShowDetails(false)
+          setRejectionReason('')
+        }}
+        title={selectedGRN ? `GRN Details - ${selectedGRN.grn_no}` : 'GRN Details'}
+        size="4xl"
+        footer={
+          <div className="flex items-center gap-2 w-full">
+            {selectedGRN?.status === 'inspecting' && (
+              <Button
+                variant="danger"
+                className="px-6"
+                onClick={() => {
+                  if (!rejectionReason.trim()) {
+                    toast.addToast('Please provide rejection reason', 'warning')
+                    return
+                  }
+                  handleReject(selectedGRN.id)
+                }}
+              >
+                <XCircle size={16} className="mr-2" />
+                Reject GRN
+              </Button>
+            )}
+            {selectedGRN?.status === 'approved' && (
+              <Button
+                variant="secondary"
+                className="px-6 flex items-center gap-2"
+                onClick={() => handlePrintGRN(selectedGRN)}
+              >
+                <Printer size={16} />
+                Print GRN
+              </Button>
+            )}
+            <div className="ml-auto flex gap-2">
+              <Button
+                variant="secondary"
+                className="px-6"
+                onClick={() => {
+                  setShowDetails(false)
+                  setRejectionReason('')
+                }}
+              >
+                Close
+              </Button>
+              {selectedGRN && (
+                <div onClick={(e) => e.stopPropagation()}>
+                  {getActionButton(selectedGRN)}
+                </div>
+              )}
+            </div>
+          </div>
+        }
+      >
+        {selectedGRN && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between bg-neutral-50 dark:bg-neutral-800/50 p-4 rounded-xl border border-neutral-100 dark:border-neutral-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded bg-white dark:bg-neutral-900 flex items-center justify-center text-indigo-600 border border-neutral-200 dark:border-neutral-700">
+                  <ClipboardList size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] text-neutral-400 uppercase tracking-wider leading-none mb-1.5">Status</p>
+                  {getStatusBadge(selectedGRN.status)}
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-neutral-400 uppercase tracking-wider leading-none mb-1.5">Receipt Date</p>
+                <p className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
+                  {new Date(selectedGRN.receipt_date || selectedGRN.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white dark:bg-neutral-900 p-4 rounded-xl border border-neutral-100 dark:border-neutral-800 shadow-sm">
+                <p className="text-[10px] text-neutral-400 uppercase tracking-wider leading-none mb-2">PO Reference</p>
+                <p className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                  <Truck size={16} className="text-indigo-500" />
+                  {selectedGRN.po_no || 'Manual Entry'}
+                </p>
+              </div>
+              <div className="bg-white dark:bg-neutral-900 p-4 rounded-xl border border-neutral-100 dark:border-neutral-800 shadow-sm">
+                <p className="text-[10px] text-neutral-400 uppercase tracking-wider leading-none mb-2">Supplier</p>
+                <p className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                  <Building2 size={16} className="text-indigo-500" />
+                  {selectedGRN.supplier_name}
+                </p>
+              </div>
+            </div>
+
+            {selectedGRN.rejection_reason && (
+              <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/30 rounded-xl p-4 flex gap-3 items-start">
+                <AlertCircle className="text-rose-500 shrink-0" size={20} />
+                <div>
+                  <p className="text-[10px] text-rose-500 uppercase tracking-wider leading-none mb-1">Rejection Reason</p>
+                  <p className="text-sm font-medium text-rose-700 dark:text-rose-400 mt-1">{selectedGRN.rejection_reason}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                <Package size={14} className="text-indigo-500" />
+                Received Items ({selectedGRN.items?.length || 0})
+              </h4>
+              <div className="border border-neutral-100 dark:border-neutral-800 rounded-xl overflow-hidden shadow-sm">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 dark:text-neutral-400 font-bold uppercase tracking-wider">
+                    <tr>
+                      <th className="p-3">Item</th>
+                      <th className="p-3 text-right">Received Qty</th>
+                      <th className="p-3">Unit</th>
+                      <th className="p-3">QC Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-50 dark:divide-neutral-800">
+                    {(selectedGRN.items || []).map((item, idx) => (
+                      <tr key={idx} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">
+                        <td className="p-3">
+                          <div className="font-bold text-neutral-900 dark:text-white">{item.item_code}</div>
+                          <div className="text-[10px] text-neutral-400 font-medium">{item.item_name}</div>
+                        </td>
+                        <td className="p-3 text-right font-bold text-neutral-700 dark:text-neutral-300">
+                          {item.received_qty}
+                        </td>
+                        <td className="p-3 text-neutral-500 dark:text-neutral-400 font-medium">{item.unit}</td>
+                        <td className="p-3">
+                           {item.qc_status ? (
+                             <Badge variant={item.qc_status === 'pass' ? 'success' : 'danger'} size="sm">
+                               {item.qc_status.toUpperCase()}
+                             </Badge>
+                           ) : (
+                             <span className="text-[10px] text-neutral-400 italic">Pending</span>
+                           )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {selectedGRN.status === 'inspecting' && (
+              <div className="space-y-3 pt-2">
+                <h4 className="text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                  QC Decision & Feedback
+                </h4>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Provide feedback or reason for rejection if necessary..."
+                  className="w-full min-h-[100px] p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-indigo-500 text-sm font-medium text-neutral-700 dark:text-neutral-300 transition-all"
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Approval & Store Modal */}
+      <Modal
+        isOpen={showApprovalForm}
+        onClose={() => {
+          setShowApprovalForm(false)
+          setApprovalItems([])
+          setStorageData({})
+        }}
+        title={selectedGRN ? `Approve & Store - ${selectedGRN.grn_no}` : 'Approve & Store GRN'}
+        size="5xl"
+        footer={
+          <div className="flex gap-3 justify-end w-full">
+            <Button
+              variant="secondary"
+              className="px-6"
+              onClick={() => {
+                setShowApprovalForm(false)
+                setApprovalItems([])
+                setStorageData({})
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              className={`${selectedGRN?.status === 'inspecting' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white border-none px-6 shadow-lg shadow-indigo-500/20`}
+              onClick={() => {
+                if (selectedGRN.status === 'inspecting') {
+                  handleApprove(selectedGRN.id)
+                } else {
+                  handleApproveAndStore()
+                }
+              }}
+              disabled={loading}
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Processing...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  {selectedGRN?.status === 'inspecting' ? <ShieldCheck size={16} /> : <Save size={16} />}
+                  {selectedGRN?.status === 'inspecting' ? 'Complete QC & Submit' : 'Approve & Store'}
+                </div>
+              )}
+            </Button>
+          </div>
+        }
+      >
+        {selectedGRN && (
+          <div className="space-y-6">
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 rounded-xl p-4 flex gap-3 items-start">
+              <AlertCircle className="text-amber-500 shrink-0" size={20} />
+              <div className="text-xs font-medium text-amber-700 dark:text-amber-400 leading-relaxed">
+                <span className="font-bold">Important:</span> Review the quantities accepted and rejected. Ensure the valuation rates and storage locations (Warehouse/Bin) are correctly assigned before final approval.
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                <ClipboardCheck size={14} className="text-indigo-500" />
+                Material Receipt & Storage Assignment
+              </h4>
+              <div className="border border-neutral-100 dark:border-neutral-800 rounded-xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-[11px]">
+                    <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 dark:text-neutral-400 font-bold uppercase tracking-wider border-b border-neutral-100 dark:border-neutral-800">
+                      <tr>
+                        <th className="p-3 min-w-[180px]">Item Details</th>
+                        <th className="px-2 py-3 text-center w-20">Recv.</th>
+                        <th className="px-2 py-3 text-center w-24">Accept</th>
+                        <th className="px-2 py-3 text-center w-24">Reject</th>
+                        <th className="px-2 py-3 text-center w-28">QC Status</th>
+                        <th className="px-2 py-3 w-32">Warehouse</th>
+                        <th className="px-2 py-3 w-32">Bin/Rack</th>
+                        <th className="px-2 py-3 w-32">Batch #</th>
+                        <th className="p-3 text-right w-32">Rate (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-50 dark:divide-neutral-800 bg-white dark:bg-neutral-900">
+                      {(selectedGRN.items || []).map((item, idx) => {
+                        const approvalItem = approvalItems.find(ai => ai.id === item.id) || {}
+                        const storage = storageData[item.id] || {}
+                        return (
+                          <tr key={idx} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">
+                            <td className="p-3">
+                              <div className="font-bold text-neutral-900 dark:text-white">{item.item_code}</div>
+                              <div className="text-[10px] text-neutral-400 font-medium truncate max-w-[150px]">{item.item_name}</div>
+                            </td>
+                            <td className="px-2 py-3 text-center font-bold text-neutral-700 dark:text-neutral-300 bg-neutral-50/30 dark:bg-neutral-800/30">
+                              {item.received_qty}
+                            </td>
+                            <td className="px-2 py-3">
+                              <input
+                                type="number"
+                                min="0"
+                                max={item.received_qty}
+                                value={approvalItem.accepted_qty || 0}
+                                onChange={(e) => handleApprovalItemChange(item.id, 'accepted_qty', e.target.value)}
+                                className="w-full px-2 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-center font-bold text-indigo-600 dark:text-indigo-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                              />
+                            </td>
+                            <td className="px-2 py-3">
+                              <input
+                                type="number"
+                                min="0"
+                                max={item.received_qty}
+                                value={approvalItem.rejected_qty || 0}
+                                onChange={(e) => handleApprovalItemChange(item.id, 'rejected_qty', e.target.value)}
+                                className="w-full px-2 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-center font-bold text-rose-500 focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+                              />
+                            </td>
+                            <td className="px-2 py-3">
+                              <select
+                                value={approvalItem.qc_status || 'pass'}
+                                onChange={(e) => handleApprovalItemChange(item.id, 'qc_status', e.target.value)}
+                                className={`w-full px-2 py-1.5 border rounded text-[10px] font-bold outline-none cursor-pointer transition-colors ${
+                                  approvalItem.qc_status === 'fail' ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-900/30 text-rose-600' : 
+                                  approvalItem.qc_status === 'rework' ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-900/30 text-amber-600' :
+                                  'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-900/30 text-emerald-600'
+                                }`}
+                              >
+                                <option value="pass">PASS</option>
+                                <option value="fail">FAIL</option>
+                                <option value="rework">REWORK</option>
+                              </select>
+                            </td>
+                            <td className="px-2 py-3">
+                              <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 px-2 py-1 rounded border border-blue-100 dark:border-blue-900/30 w-fit text-[10px] font-bold">
+                                <MapPin size={10} />
+                                {item.warehouse_name || 'Main'}
+                              </div>
+                            </td>
+                            <td className="px-2 py-3">
+                              <input
+                                type="text"
+                                placeholder="Bin/Rack"
+                                value={storage.bin_rack || ''}
+                                onChange={(e) => handleStorageDataChange(item.id, 'bin_rack', e.target.value)}
+                                className="w-full px-2 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-[10px] focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                              />
+                            </td>
+                            <td className="px-2 py-3">
+                              <input
+                                type="text"
+                                placeholder="Batch #"
+                                value={storage.batch_no || item.batch_no || ''}
+                                onChange={(e) => handleStorageDataChange(item.id, 'batch_no', e.target.value)}
+                                className="w-full px-2 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-[10px] focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                              />
+                            </td>
+                            <td className="p-3 text-right">
+                              <input
+                                type="number"
+                                placeholder="0.00"
+                                value={storage.valuation_rate || ''}
+                                onChange={(e) => handleStorageDataChange(item.id, 'valuation_rate', e.target.value)}
+                                className="w-full px-2 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-right font-bold text-neutral-700 dark:text-neutral-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                              />
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

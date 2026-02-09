@@ -1219,11 +1219,11 @@ export default function ProductionPlanning() {
                               <Package size={15} />
                             </div>
                             <div>
-                              <p className="text-xs  text-gray-900">{plan.plan_id}</p>
+                              <p className="text-xs  text-gray-900">{plan.bom_id && bomCache[plan.bom_id] ? bomCache[plan.bom_id] : (plan.fg_items?.[0]?.item_name || 'Generic Production')}</p>
                               <div className="flex items-center gap-2 ">
                                 
                                 <span className="text-xs   text-gray-400 truncate max-w-[200px]">
-                                  {plan.bom_id && bomCache[plan.bom_id] ? bomCache[plan.bom_id] : (plan.fg_items?.[0]?.item_name || 'Generic Production')}
+                                  {plan.plan_id}
                                 </span>
                               </div>
                             </div>

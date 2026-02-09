@@ -368,7 +368,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
           {/* Main Area - Items and Terms */}
           <div className="lg:w-2/3 space-y-6">
             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-              <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+              <div className="bg-slate-50 p-2  border-b border-slate-200 flex justify-between items-center">
                 <div className="flex items-center gap-2 font-semibold text-slate-800">
                   <ShoppingCart size={18} className="text-blue-500" />
                   Order Items
@@ -486,7 +486,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                               ₹{(item.qty * item.rate).toFixed(2)}
                             </td>
                             <td className="px-3 py-2">
-                              <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex justify-center gap-1  transition-opacity">
                                 <button
                                   type="button"
                                   onClick={() => editItem(index)}

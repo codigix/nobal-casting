@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import ViewSalesOrderModal from '../../components/Selling/ViewSalesOrderModal'
 import ProductionPlanGenerationModal from '../../components/Production/ProductionPlanGenerationModal'
+import api, { salesOrdersAPI } from '../../services/api'
 import './Selling.css'
 
 const iconColorMap = {
@@ -23,6 +24,8 @@ const iconColorMap = {
 
 const statusConfig = {
   draft: { icon: Edit2, color: '#f97316', bg: '#fef3c7', text: '#92400e', label: 'Draft' },
+  confirmed: { icon: CheckCircle, color: '#2563eb', bg: '#dbeafe', text: '#1e40af', label: 'Confirmed' },
+  ready_for_production: { icon: Package, color: '#6366f1', bg: '#e0e7ff', text: '#3730a3', label: 'Ready for production' },
   production: { icon: Truck, color: '#06b6d4', bg: '#cffafe', text: '#164e63', label: 'Production' },
   complete: { icon: CheckCircle, color: '#10b981', bg: '#d1fae5', text: '#065f46', label: 'Complete' },
   on_hold: { icon: AlertCircle, color: '#f59e0b', bg: '#fef3c7', text: '#92400e', label: 'On Hold' },
@@ -121,12 +124,12 @@ export default function SalesOrder() {
     setLoading(true)
     setError(null)
     try {
-      const query = new URLSearchParams()
+      const params = {}
       if (filters.status) {
-        query.append('status', filters.status)
+        params.status = filters.status
       }
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/selling/sales-orders?${query}`)
-      const data = await res.json()
+      const res = await api.get('/selling/sales-orders', { params })
+      const data = res.data
       if (data.success) {
         const ordersData = data.data || []
         setOrders(ordersData)
@@ -192,6 +195,7 @@ export default function SalesOrder() {
       total: data.length,
       draft: 0,
       confirmed: 0,
+      ready_for_production: 0,
       production: 0,
       complete: 0,
       on_hold: 0,
@@ -212,7 +216,7 @@ export default function SalesOrder() {
         if (status === 'confirmed') newStats.confirmed += 1
       }
       newStats.total_value += parseFloat(order.total_value || 0)
-      if (['production', 'complete', 'on_hold', 'dispatched', 'overdue'].includes(status)) {
+      if (['ready_for_production', 'production', 'complete', 'on_hold', 'dispatched', 'overdue'].includes(status)) {
         newStats.pending_delivery += 1
       }
     })
@@ -228,6 +232,8 @@ export default function SalesOrder() {
     switch (status?.toLowerCase()) {
       case 'draft':
         return 'warning'
+      case 'ready_for_production':
+        return 'indigo'
       case 'production':
         return 'info'
       case 'complete':
@@ -245,11 +251,8 @@ export default function SalesOrder() {
 
   const handleConfirmOrder = async (id) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/selling/sales-orders/${id}/confirm`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' }
-      })
-      if (res.ok) {
+      const res = await api.put(`/selling/sales-orders/${id}/confirm`)
+      if (res.data.success) {
         fetchOrders()
       } else {
         alert('Failed to confirm order')
@@ -262,12 +265,14 @@ export default function SalesOrder() {
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/selling/sales-orders/${orderId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
-      })
-      if (res.ok) {
+      let res;
+      if (newStatus === 'confirmed') {
+        res = await api.put(`/selling/sales-orders/${orderId}/confirm`)
+      } else {
+        res = await api.put(`/selling/sales-orders/${orderId}`, { status: newStatus })
+      }
+      
+      if (res.data.success) {
         fetchOrders()
       } else {
         alert('Failed to update order status')
@@ -279,7 +284,7 @@ export default function SalesOrder() {
   }
 
   const StatusDropdown = ({ currentStatus, orderId }) => {
-    const statuses = ['draft', 'production', 'complete', 'on_hold', 'dispatched', 'delivered']
+    const statuses = ['draft', 'confirmed', 'ready_for_production', 'production', 'complete', 'on_hold', 'dispatched', 'delivered']
     const [isOpen, setIsOpen] = useState(false)
     const config = statusConfig[currentStatus?.toLowerCase()] || statusConfig.draft
 
@@ -343,10 +348,8 @@ export default function SalesOrder() {
   const handleDeleteOrder = async (id) => {
     if (!window.confirm('Are you sure you want to delete this sales order?')) return
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/selling/sales-orders/${id}`, {
-        method: 'DELETE'
-      })
-      if (res.ok) {
+      const res = await api.delete(`/selling/sales-orders/${id}`)
+      if (res.data.success) {
         fetchOrders()
       } else {
         alert('Failed to delete order')
@@ -361,10 +364,8 @@ export default function SalesOrder() {
     if (!window.confirm('⚠️ Warning: This will permanently delete ALL sales orders. Are you sure?')) return
     try {
       setLoading(true)
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/selling/sales-orders/truncate/all`, {
-        method: 'DELETE'
-      })
-      if (res.ok) {
+      const res = await api.delete('/selling/sales-orders/truncate/all')
+      if (res.data.success) {
         fetchOrders()
         alert('All sales orders truncated successfully')
       } else {
@@ -438,27 +439,14 @@ export default function SalesOrder() {
     { 
       label: 'Status', 
       key: 'status',
-      render: (val, row) => {
-        const displayStatus = row.production_plan_status || val || 'draft'
-        const config = statusConfig[displayStatus.toLowerCase()] || statusConfig.draft
-        return (
-          <div className="p-2 w-fit">
-            <div 
-              className="w-fit  p-1 text-xs rounded border transition-all  "
-              style={{
-                backgroundColor: config.bg,
-                borderColor: `${config.color}40`,
-                color: config.text
-              }}
-            >
-              <div >
-                
-                <span className="">{config.label}</span>
-              </div>
-            </div>
-          </div>
-        )
-      }
+      render: (val, row) => (
+        <div className="p-2 w-fit">
+          <StatusDropdown 
+            currentStatus={row.production_plan_status || val || 'draft'} 
+            orderId={row.sales_order_id} 
+          />
+        </div>
+      )
     },
     {
       label: 'Delivary Vectors',

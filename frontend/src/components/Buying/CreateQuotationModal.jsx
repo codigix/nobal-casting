@@ -216,7 +216,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Supplier & RFQ Selection */}
           <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-            <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center gap-2">
+            <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
               <User size={18} className="text-primary-600" />
               <h3 className="font-semibold text-neutral-800">Source Information</h3>
             </div>
@@ -289,7 +289,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
         {/* Quotation Items */}
         {formData.items.length > 0 && (
           <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-            <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center gap-2">
+            <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
               <ShoppingBag size={18} className="text-primary-600" />
               <h3 className="font-semibold text-neutral-800">Quotation Items</h3>
             </div>
@@ -297,25 +297,25 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
               <table className="w-full text-sm text-left">
                 <thead className="text-xs text-neutral-500 uppercase bg-neutral-50/50 border-b border-neutral-200">
                   <tr>
-                    <th className="px-4 py-3 font-semibold">Item Details</th>
-                    <th className="px-4 py-3 font-semibold w-24 text-center">Qty</th>
-                    <th className="px-4 py-3 font-semibold w-32 text-right">Rate/Unit</th>
-                    <th className="px-4 py-3 font-semibold w-32 text-right">Amount</th>
-                    <th className="px-4 py-3 font-semibold w-28 text-center">Lead Time</th>
-                    <th className="px-4 py-3 font-semibold w-24 text-center">Min Qty</th>
+                    <th className="p-2  font-semibold">Item Details</th>
+                    <th className="p-2  font-semibold w-24 text-center">Qty</th>
+                    <th className="p-2  font-semibold w-32 text-right">Rate/Unit</th>
+                    <th className="p-2  font-semibold w-32 text-right">Amount</th>
+                    <th className="p-2  font-semibold w-28 text-center">Lead Time</th>
+                    <th className="p-2  font-semibold w-24 text-center">Min Qty</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
                   {formData.items.map((item, idx) => (
                     <tr key={idx} className="hover:bg-neutral-50/50 transition-colors">
-                      <td className="px-4 py-3">
+                      <td className="p-2 ">
                         <div className="font-medium text-neutral-900">{getItemName(item.item_code)}</div>
                         <div className="text-xs text-neutral-500">{item.item_code}</div>
                       </td>
-                      <td className="px-4 py-3 text-center text-neutral-600 font-medium">
+                      <td className="p-2  text-center text-neutral-600 font-medium">
                         {item.qty}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="p-2 ">
                         <input 
                           type="number"
                           value={item.rate || ''}
@@ -329,10 +329,10 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
                           }`}
                         />
                       </td>
-                      <td className="px-4 py-3 text-right font-bold text-primary-600">
+                      <td className="p-2  text-right font-bold text-primary-600">
                         ₹{((item.qty || 0) * (item.rate || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="p-2 ">
                         <div className="flex items-center gap-1">
                           <input 
                             type="number"
@@ -345,7 +345,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
                           <span className="text-[10px] text-neutral-400">days</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="p-2 ">
                         <input 
                           type="number"
                           value={item.min_qty || ''}
@@ -366,7 +366,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
 
         {/* Notes Section */}
         <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-          <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center gap-2">
+          <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
             <FileText size={18} className="text-primary-600" />
             <h3 className="font-semibold text-neutral-800">Notes & Comments</h3>
           </div>

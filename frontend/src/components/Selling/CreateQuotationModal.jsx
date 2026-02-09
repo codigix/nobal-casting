@@ -349,7 +349,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
           {/* Main Area - Items and Notes */}
           <div className="lg:w-2/3 space-y-6">
             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-              <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+              <div className="bg-slate-50 p-2  border-b border-slate-200 flex justify-between items-center">
                 <div className="flex items-center gap-2 font-semibold text-slate-800">
                   <ShoppingCart size={18} className="text-blue-500" />
                   Quoted Items
@@ -419,7 +419,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
                           <td className="py-3 text-right">₹{parseFloat(item.rate).toFixed(2)}</td>
                           <td className="py-3 text-right font-medium">₹{(item.qty * item.rate).toFixed(2)}</td>
                           <td className="py-3 text-right">
-                            <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex justify-end gap-1  transition-opacity">
                               <button
                                 type="button"
                                 onClick={() => editItem(index)}

@@ -501,7 +501,7 @@ export default function MaterialRequests() {
                               <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-neutral-50 dark:bg-neutral-800">
                                 {req.items?.length || 0} Items
                               </Badge>
-                              <div className="w-6 h-6 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="w-6 h-6 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400  transition-opacity">
                                 <ChevronRight size={14} />
                               </div>
                             </div>

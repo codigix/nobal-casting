@@ -1705,6 +1705,25 @@ class ProductionController {
     }
   }
 
+  async approveRejection(req, res) {
+    try {
+      const { id } = req.params
+
+      await this.productionModel.approveRejection(id)
+
+      res.json({
+        success: true,
+        message: 'Rejection entry approved successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error approving rejection',
+        error: error.message
+      })
+    }
+  }
+
   async createDowntime(req, res) {
     try {
       const { job_card_id, day_number, log_date, downtime_type, downtime_reason, from_time, to_time, duration_minutes } = req.body

@@ -343,6 +343,12 @@ router.delete(
     productionController.deleteRejection.bind(productionController)
   )
 
+  router.put(
+    '/rejections/:id/approve',
+    authMiddleware,
+    productionController.approveRejection.bind(productionController)
+  )
+
   router.post(
     '/downtimes',
     authMiddleware,

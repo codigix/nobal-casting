@@ -60,7 +60,13 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
       setWarehouses(warehousesList)
       setSuppliers(supRes.data.data || [])
       setItems(itemsRes.data.data || [])
-      setPurchaseOrders(poListRes.data.data || [])
+      
+      let poList = poListRes.data.data || []
+      // If we have a target purchaseOrder, ensure it's in the list
+      if (purchaseOrder && !poList.find(p => p.po_no === purchaseOrder.po_no)) {
+        poList = [purchaseOrder, ...poList]
+      }
+      setPurchaseOrders(poList)
 
       const grnNoRes = await api.get('/grn-requests/generate-grn-no')
       const nextGrnNo = grnNoRes.data.success ? grnNoRes.data.data.grn_no : ''
@@ -201,7 +207,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
           <div className="flex gap-6 items-center">
             <div className="flex flex-col">
               <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Total Quantity</span>
-              <span className="text-sm font-black text-neutral-800">{totalQty.toLocaleString()} Units</span>
+              <span className="text-xs  text-neutral-800">{totalQty.toLocaleString()} Units</span>
             </div>
             <div className="h-8 w-px bg-neutral-200" />
             <div className="flex flex-col">
@@ -227,16 +233,16 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
       <div className="space-y-6">
         {error && <Alert type="danger">{error}</Alert>}
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
           {/* Sidebar: Configuration */}
           <div className="lg:col-span-1 space-y-6">
-            <section className="bg-neutral-50 rounded-2xl border border-neutral-200 p-5 space-y-5">
+            <section className="bg-neutral-50 rounded border border-neutral-200 p-2 space-y-2">
               <div className="flex items-center gap-2 pb-3 border-b border-neutral-200">
                 <div className="p-2 bg-blue-600 rounded-lg text-white">
                   <Package size={20} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-neutral-800 uppercase tracking-tight">Receipt Context</h3>
+                  <h3 className="text-xs  text-neutral-800 ">Receipt Context</h3>
                   <p className="text-[10px] text-neutral-500 font-medium">Link source and set date</p>
                 </div>
               </div>
@@ -290,7 +296,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
                   <User size={20} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-neutral-800 uppercase tracking-tight">Supplier Info</h3>
+                  <h3 className="text-xs  text-neutral-800 ">Supplier Info</h3>
                   <p className="text-[10px] text-neutral-500 font-medium">Verified supplier details</p>
                 </div>
               </div>
@@ -298,7 +304,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
               <div className="space-y-4">
                 <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
                   <span className="text-[10px] font-bold text-neutral-400 uppercase">Selected Supplier</span>
-                  <p className="text-sm font-black text-neutral-800 truncate">{formData.supplier_name || 'No Supplier Linked'}</p>
+                  <p className="text-xs  text-neutral-800 truncate">{formData.supplier_name || 'No Supplier Linked'}</p>
                   <p className="text-[10px] text-neutral-500 font-medium">ID: {formData.supplier_id || 'N/A'}</p>
                 </div>
 
@@ -320,14 +326,14 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
 
           {/* Main Content: Items Table */}
           <div className="lg:col-span-3 space-y-6">
-            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col h-full">
-              <div className="px-6 py-4 border-b border-neutral-100 bg-neutral-50/30 flex items-center justify-between">
+            <div className="bg-white rounded border border-neutral-200  overflow-hidden flex flex-col h-full">
+              <div className="p-2 border-b border-neutral-100 bg-neutral-50/30 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
                     <ClipboardList size={18} />
                   </div>
                   <div>
-                    <h3 className="text-sm font-black text-neutral-800 uppercase tracking-tight">Receipt Items</h3>
+                    <h3 className="text-xs  text-neutral-800 uppercase tracking-tight">Receipt Items</h3>
                     <p className="text-[10px] text-neutral-500 font-medium">Verify received quantities against PO</p>
                   </div>
                 </div>
@@ -343,19 +349,19 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-neutral-50/50 border-b border-neutral-100">
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider w-[30%]">Item Details</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider text-center">Warehouse</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider text-center">PO Qty</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider text-center">Received</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider text-right">Rate</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider text-right">Total</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider text-center">Action</th>
+                      <th className="p-2 text-xs font-black text-neutral-400 ">Item Details</th>
+                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider text-center">Warehouse</th>
+                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider text-center">PO Qty</th>
+                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider text-center">Received</th>
+                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider text-right">Rate</th>
+                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider text-right">Total</th>
+                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider text-center">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-50">
                     {grnItems.map((item, idx) => (
                       <tr key={idx} className="hover:bg-neutral-50/30 transition-colors group">
-                        <td className="px-6 py-4">
+                        <td className="p-2 ">
                           <select
                             value={item.item_code}
                             onChange={(e) => {
@@ -365,7 +371,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
                               handleItemChange(idx, 'uom', selectedItem?.uom || '')
                               handleItemChange(idx, 'rate', selectedItem?.valuation_rate || selectedItem?.rate || 0)
                             }}
-                            className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-blue-500/10 outline-none"
+                            className="w-full p-2 bg-white border border-neutral-200 rounded text-xs focus:ring-2 focus:ring-blue-500/10 outline-none"
                           >
                             <option value="">Select Item</option>
                             {items.map(i => (
@@ -374,11 +380,11 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
                           </select>
                           <p className="mt-1 text-[10px] text-neutral-500 truncate max-w-[200px]">{item.item_name}</p>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="p-2 ">
                           <select
                             value={item.warehouse_name}
                             onChange={(e) => handleItemChange(idx, 'warehouse_name', e.target.value)}
-                            className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500/10 outline-none"
+                            className="w-full p-2 bg-white border border-neutral-200 rounded text-xs "
                           >
                             <option value="">Select WH</option>
                             {warehouses.map(w => (
@@ -386,32 +392,32 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
                             ))}
                           </select>
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="text-xs font-bold text-neutral-400">{item.po_qty}</span>
+                        <td className="p-2  text-center">
+                          <span className="text-xs  text-neutral-400">{item.po_qty}</span>
                         </td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="p-2  text-center">
                           <input
                             type="number"
                             value={item.received_qty}
                             onChange={(e) => handleItemChange(idx, 'received_qty', parseFloat(e.target.value) || 0)}
-                            className="w-20 p-2 bg-white border border-neutral-200 rounded-lg text-sm font-black text-center focus:ring-2 focus:ring-blue-500/10 outline-none"
+                            className="w-20 p-2 bg-white border border-neutral-200 rounded text-xs  text-center focus:ring-2 focus:ring-blue-500/10 outline-none"
                           />
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="p-2  text-right">
                           <input
                             type="number"
                             value={item.rate}
                             onChange={(e) => handleItemChange(idx, 'rate', parseFloat(e.target.value) || 0)}
-                            className="w-24 p-2 bg-white border border-neutral-200 rounded-lg text-sm font-bold text-right focus:ring-2 focus:ring-blue-500/10 outline-none"
+                            className="w-20 p-2 bg-white border border-neutral-200 rounded text-xs text-right focus:ring-2 focus:ring-blue-500/10 outline-none"
                           />
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="text-sm font-black text-neutral-800">₹{((item.received_qty || 0) * (item.rate || 0)).toLocaleString()}</span>
+                        <td className="p-2  text-right">
+                          <span className="text-xs  text-neutral-800">₹{((item.received_qty || 0) * (item.rate || 0)).toLocaleString()}</span>
                         </td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="p-2  text-center">
                           <button 
                             onClick={() => handleRemoveItem(idx)}
-                            className="p-2 text-neutral-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            className="p-2 text-neutral-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all "
                           >
                             <Trash2 size={16} />
                           </button>

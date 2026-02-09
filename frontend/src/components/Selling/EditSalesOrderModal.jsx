@@ -289,8 +289,12 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
                   >
                     <option value="draft">Draft</option>
                     <option value="confirmed">Confirmed</option>
+                    <option value="ready_for_production">Ready for Production</option>
+                    <option value="production">Production</option>
                     <option value="dispatched">Dispatched</option>
                     <option value="invoiced">Invoiced</option>
+                    <option value="complete">Complete</option>
+                    <option value="delivered">Delivered</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
@@ -350,7 +354,7 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
           {/* Main Area */}
           <div className="lg:w-2/3 space-y-6">
             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-              <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+              <div className="bg-slate-50 p-2  border-b border-slate-200 flex justify-between items-center">
                 <div className="flex items-center gap-2 font-semibold text-slate-800">
                   <ShoppingCart size={18} className="text-blue-500" />
                   Order Items
@@ -417,7 +421,7 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
                             ₹{(item.qty * item.rate).toFixed(2)}
                           </td>
                           <td className="px-3 py-2">
-                            <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100">
+                            <div className="flex justify-center gap-1 ">
                               <button type="button" onClick={() => editItem(index)} className="p-1 text-slate-400 hover:text-blue-600"><Edit size={14} /></button>
                               <button type="button" onClick={() => removeItem(index)} className="p-1 text-slate-400 hover:text-red-600"><Trash2 size={14} /></button>
                             </div>

@@ -204,13 +204,13 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Configuration & Financials */}
           <div className="lg:col-span-1 space-y-6">
-            <section className="bg-neutral-50 rounded-2xl border border-neutral-200 p-5 space-y-5">
+            <section className="bg-neutral-50 rounded border border-neutral-200 p-2 space-y-2">
               <div className="flex items-center gap-2 pb-3 border-b border-neutral-200">
                 <div className="p-2 bg-indigo-500 rounded-lg text-white">
                   <Receipt size={20} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-neutral-800 uppercase tracking-tight">Invoice Details</h3>
+                  <h3 className="text-xs  text-neutral-800 ">Invoice Details</h3>
                   <p className="text-[10px] text-neutral-500 font-medium">Link GRN and set dates</p>
                 </div>
               </div>
@@ -326,35 +326,35 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess 
                 {loadingGrn ? (
                   <div className="flex flex-col items-center justify-center py-20 gap-3">
                     <RefreshCw className="text-indigo-500 animate-spin" size={32} />
-                    <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Syncing GRN Items...</p>
+                    <p className="text-xs  text-neutral-400 uppercase tracking-widest">Syncing GRN Items...</p>
                   </div>
                 ) : selectedGrn?.items?.length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
                       <thead>
                         <tr className="bg-neutral-50/50 border-b border-neutral-100">
-                          <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider">Item Details</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider text-right">Received</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider text-right">Unit Rate</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-wider text-right">Row Total</th>
+                          <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider">Item Details</th>
+                          <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider text-right">Received</th>
+                          <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider text-right">Unit Rate</th>
+                          <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider text-right">Row Total</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-neutral-50">
                         {selectedGrn.items.map((item, idx) => (
                           <tr key={idx} className="hover:bg-neutral-50/30 transition-colors">
-                            <td className="px-6 py-4">
+                            <td className="p-2 ">
                               <div className="flex flex-col">
                                 <span className="text-sm font-bold text-neutral-800">{item.item_code}</span>
                                 <span className="text-[10px] text-neutral-500 font-medium italic">{item.item_name}</span>
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-right">
+                            <td className="p-2  text-right">
                               <span className="text-sm font-bold text-neutral-700">{item.received_qty}</span>
                             </td>
-                            <td className="px-6 py-4 text-right text-neutral-500 font-medium">
+                            <td className="p-2  text-right text-neutral-500 font-medium">
                               ₹{(item.rate || 0).toLocaleString()}
                             </td>
-                            <td className="px-6 py-4 text-right">
+                            <td className="p-2  text-right">
                               <span className="text-sm font-bold text-neutral-900">₹{((item.received_qty || 0) * (item.rate || 0)).toLocaleString()}</span>
                             </td>
                           </tr>

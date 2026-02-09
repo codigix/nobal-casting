@@ -13,7 +13,7 @@ import {
   Info, Save, MapPin, Zap, Plus, Grid3x3, List, RefreshCw, ClipboardCheck, 
   Truck, ShieldCheck, Search, Filter, RefreshCcw, LayoutGrid, MoreVertical,
   ChevronRight, ClipboardList, Calendar, Building2, TrendingUp, ArrowUpRight,
-  Database, Boxes, History, FileCheck, Settings2, X 
+  Database, Boxes, History, FileCheck, Settings2, X, Printer 
 } from 'lucide-react'
 import Modal from '../../components/Modal/Modal'
 import InventoryApprovalModal from '../../components/Buying/InventoryApprovalModal'
@@ -268,25 +268,12 @@ export default function PurchaseReceipts() {
       return
     }
 
-    const warehouseAssigned = approvalItems.every(item => {
-      return storageData[item.id]?.warehouse_id
-    })
-
-    if (!warehouseAssigned) {
-      toast.addToast('Please assign warehouse location for all items', 'warning')
-      return
-    }
-
     setLoading(true)
     try {
       const approvedItemsWithStorage = approvalItems.map(item => {
-        const warehouseId = storageData[item.id]?.warehouse_id
-        const selectedWarehouse = warehouses.find(w => String(w.id) === String(warehouseId))
-
-        if (!selectedWarehouse) {
-          throw new Error(`Warehouse not found for item ${item.id}`)
-        }
-
+        // Find the item in the selectedGRN to get its pre-assigned warehouse
+        const grnItem = selectedGRN.items.find(gi => gi.id === item.id)
+        
         return {
           id: item.id,
           accepted_qty: Number(item.accepted_qty) || 0,
@@ -295,7 +282,7 @@ export default function PurchaseReceipts() {
           bin_rack: storageData[item.id]?.bin_rack || '',
           batch_no: storageData[item.id]?.batch_no || '',
           valuation_rate: Number(storageData[item.id]?.valuation_rate) || 0,
-          warehouse_name: selectedWarehouse.warehouse_name
+          warehouse_name: grnItem?.warehouse_name || 'Main Warehouse'
         }
       })
 
@@ -350,43 +337,136 @@ export default function PurchaseReceipts() {
   }
 
   const getActionButton = (grn) => {
-    if (grn.status === 'awaiting_inventory_approval') {
+    if (grn.status === 'pending') {
       return (
-        <Button
-          variant="success"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation()
-            setSelectedGRN(grn)
-            if (grn.items && grn.items.length > 0) {
+        <div className="flex items-center gap-1">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleStartInspection(grn.id)
+            }}
+            className="flex items-center gap-2 text-[10px] py-1 px-2 w-fit justify-center bg-amber-600 hover:bg-amber-700 text-white border-none transition-all hover:scale-[1.02]"
+          >
+            <Zap size={12} /> Start QC
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleViewGRN(grn.grn_no)
+            }}
+            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded"
+          >
+            <Eye size={14} />
+          </Button>
+        </div>
+      )
+    }
+
+    if (grn.status === 'inspecting') {
+      return (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              setSelectedGRN(grn)
               setApprovalItems(grn.items.map(item => ({
                 id: item.id,
-                accepted_qty: Number(item.received_qty) || 0,
-                rejected_qty: 0,
-                qc_status: 'pass'
+                accepted_qty: Number(item.accepted_qty || item.received_qty) || 0,
+                rejected_qty: Number(item.rejected_qty) || 0,
+                qc_status: item.qc_status || 'pass'
               })))
-            }
-            setShowApprovalForm(true)
-          }}
-          className="flex items-center gap-2 text-xs p-2 w-fit justify-center   bg-emerald-600 hover:bg-emerald-700 text-white border-none transition-all hover:scale-[1.02]"
-        >
-          <Package size={14} /> Approve & Store
-        </Button>
+              setShowApprovalForm(true)
+            }}
+            className="flex items-center gap-2 text-[10px] py-1 px-2 w-fit justify-center bg-blue-600 hover:bg-blue-700 text-white border-none transition-all hover:scale-[1.02]"
+          >
+            <ShieldCheck size={12} /> QC Inspect
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleViewGRN(grn.grn_no)
+            }}
+            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded"
+          >
+            <Eye size={14} />
+          </Button>
+        </div>
+      )
+    }
+
+    if (grn.status === 'awaiting_inventory_approval') {
+      return (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="success"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              setSelectedGRN(grn)
+              if (grn.items && grn.items.length > 0) {
+                setApprovalItems(grn.items.map(item => ({
+                  id: item.id,
+                  accepted_qty: Number(item.accepted_qty || item.received_qty) || 0,
+                  rejected_qty: Number(item.rejected_qty) || 0,
+                  qc_status: item.qc_status || 'pass'
+                })))
+              }
+              setShowApprovalForm(true)
+            }}
+            className="flex items-center gap-2 text-[10px] py-1 px-2 w-fit justify-center bg-emerald-600 hover:bg-emerald-700 text-white border-none transition-all hover:scale-[1.02]"
+          >
+            <Package size={12} /> Approve & Store
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleViewGRN(grn.grn_no)
+            }}
+            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded"
+          >
+            <Eye size={14} />
+          </Button>
+        </div>
       )
     }
 
     return (
-      <Button
-        variant="primary"
-        size="sm"
-        onClick={(e) => {
-          e.stopPropagation()
-          handleViewGRN(grn.grn_no)
-        }}
-        className="flex items-center gap-2 text-xs p-2 w-fit justify-center   bg-indigo-600 hover:bg-indigo-700 text-white border-none transition-all hover:scale-[1.02]"
-      >
-        <Eye size={14} /> View Details
-      </Button>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation()
+            handleViewGRN(grn.grn_no)
+          }}
+          className="flex items-center gap-2 text-[10px] py-1 px-2 w-fit justify-center bg-indigo-600 hover:bg-indigo-700 text-white border-none transition-all hover:scale-[1.02]"
+        >
+          <Eye size={12} /> View Details
+        </Button>
+        {grn.status === 'approved' && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              window.print()
+            }}
+            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded"
+          >
+            <Printer size={14} />
+          </Button>
+        )}
+      </div>
     )
   }
 
@@ -791,7 +871,7 @@ export default function PurchaseReceipts() {
 
             {/* Views */}
             {viewMode === 'kanban' ? (
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-2 items-start">
                 {kanbanColumns.map((column) => {
                   const columnGrns = filteredGRNs.filter(g => g.status === column.status)
                   const config = getStatusConfig(column.status)
@@ -980,7 +1060,17 @@ export default function PurchaseReceipts() {
                 Reject GRN
               </Button>
             )}
-            <div className="ml-auto">
+            {selectedGRN?.status === 'approved' && (
+              <Button
+                variant="secondary"
+                className="px-6 flex items-center gap-2"
+                onClick={() => window.print()}
+              >
+                <Printer size={16} />
+                Print GRN
+              </Button>
+            )}
+            <div className="ml-auto flex gap-2">
               <Button
                 variant="secondary"
                 className="px-6"
@@ -1113,8 +1203,14 @@ export default function PurchaseReceipts() {
             </Button>
             <Button
               variant="primary"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white border-none px-6"
-              onClick={handleApproveAndStore}
+              className={`${selectedGRN?.status === 'inspecting' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white border-none px-6`}
+              onClick={() => {
+                if (selectedGRN.status === 'inspecting') {
+                  handleApprove(selectedGRN.id)
+                } else {
+                  handleApproveAndStore()
+                }
+              }}
               disabled={loading}
             >
               {loading ? (
@@ -1124,8 +1220,8 @@ export default function PurchaseReceipts() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <Save size={16} />
-                  Approve & Store
+                  {selectedGRN?.status === 'inspecting' ? <ShieldCheck size={16} /> : <Save size={16} />}
+                  {selectedGRN?.status === 'inspecting' ? 'Complete QC & Submit' : 'Approve & Store'}
                 </div>
               )}
             </Button>
@@ -1142,141 +1238,113 @@ export default function PurchaseReceipts() {
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-xs  text-slate-900  flex items-center gap-2">
+              <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
                 <ClipboardCheck size={14} className="text-indigo-500" />
-                Items Approval
+                Material Receipt & Storage Assignment
               </h4>
-              <div className="border border-slate-100 rounded-2xl overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-xs  text-slate-400 ">
-                    <tr>
-                      <th className="p-2 ">Item Details</th>
-                      <th className="p-2  text-center">Received</th>
-                      <th className="p-2  text-center">Accept Qty</th>
-                      <th className="p-2  text-center">Reject Qty</th>
-                      <th className="p-2  text-center">QC Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {(selectedGRN.items || []).map((item, idx) => {
-                      const approvalItem = approvalItems.find(ai => ai.id === item.id) || {}
-                      return (
-                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-4 py-4">
-                            <div className=" text-slate-900">{item.item_code}</div>
-                            <div className="text-xs text-slate-400 font-medium">{item.item_name}</div>
-                          </td>
-                          <td className="px-4 py-4 text-center  text-slate-700">
-                            {item.received_qty}
-                          </td>
-                          <td className="px-4 py-4">
-                            <input
-                              type="number"
-                              min="0"
-                              max={item.received_qty}
-                              value={approvalItem.accepted_qty || 0}
-                              onChange={(e) => handleApprovalItemChange(item.id, 'accepted_qty', e.target.value)}
-                              className="w-20 mx-auto block px-3 py-1.5 bg-white border border-slate-200 rounded  text-center  text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
-                            />
-                          </td>
-                          <td className="px-4 py-4">
-                            <input
-                              type="number"
-                              min="0"
-                              max={item.received_qty}
-                              value={approvalItem.rejected_qty || 0}
-                              onChange={(e) => handleApprovalItemChange(item.id, 'rejected_qty', e.target.value)}
-                              className="w-20 mx-auto block px-3 py-1.5 bg-white border border-slate-200 rounded  text-center  text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
-                            />
-                          </td>
-                          <td className="px-4 py-4">
-                            <select
-                              value={approvalItem.qc_status || 'pass'}
-                              onChange={(e) => handleApprovalItemChange(item.id, 'qc_status', e.target.value)}
-                              className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded   text-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
-                            >
-                              <option value="pass">Pass</option>
-                              <option value="fail">Fail</option>
-                              <option value="rework">Rework</option>
-                            </select>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <h4 className="text-xs  text-slate-900  flex items-center gap-2">
-                <MapPin size={14} className="text-indigo-500" />
-                Warehouse & Valuation
-              </h4>
-              <div className="border border-slate-100 rounded-2xl overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-xs  text-slate-400 ">
-                    <tr>
-                      <th className="p-2 ">Item</th>
-                      <th className="p-2 ">Warehouse</th>
-                      <th className="p-2 ">Bin/Rack</th>
-                      <th className="p-2 ">Batch No</th>
-                      <th className="p-2  text-right">Valuation Rate</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {(selectedGRN.items || []).map((item, idx) => {
-                      const storage = storageData[item.id] || {}
-                      const hasWarehouse = storage.warehouse_id
-                      return (
-                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-4 py-4">
-                            <div className=" text-slate-900">{item.item_code}</div>
-                          </td>
-                          <td className="px-4 py-4">
-                            <select
-                              value={storage.warehouse_id || ''}
-                              onChange={(e) => handleStorageDataChange(item.id, 'warehouse_id', e.target.value)}
-                              className={`w-full px-3 py-1.5 border rounded   text-slate-600 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer transition-all ${hasWarehouse ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200'}`}
-                            >
-                              <option value="">Select Location</option>
-                              {warehouses.map(wh => (
-                                <option key={wh.id} value={wh.id}>{wh.warehouse_name}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="px-4 py-4">
-                            <input
-                              type="text"
-                              placeholder="e.g. A-102"
-                              value={storage.bin_rack || ''}
-                              onChange={(e) => handleStorageDataChange(item.id, 'bin_rack', e.target.value)}
-                              className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded  font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
-                            />
-                          </td>
-                          <td className="px-4 py-4">
-                            <input
-                              type="text"
-                              placeholder="Batch #"
-                              value={storage.batch_no || item.batch_no || ''}
-                              onChange={(e) => handleStorageDataChange(item.id, 'batch_no', e.target.value)}
-                              className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded  font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
-                            />
-                          </td>
-                          <td className="px-4 py-4 text-right">
-                            <input
-                              type="number"
-                              placeholder="0.00"
-                              value={storage.valuation_rate || ''}
-                              onChange={(e) => handleStorageDataChange(item.id, 'valuation_rate', e.target.value)}
-                              className="w-24 px-3 py-1.5 bg-white border border-slate-200 rounded  text-right  text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
-                            />
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+              <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-[11px]">
+                    <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
+                      <tr>
+                        <th className="p-2  min-w-[180px]">Item Details</th>
+                        <th className="px-2 py-3 text-center w-20">Recv.</th>
+                        <th className="px-2 py-3 text-center w-24">Accept</th>
+                        <th className="px-2 py-3 text-center w-24">Reject</th>
+                        <th className="px-2 py-3 text-center w-28">QC Status</th>
+                        <th className="px-2 py-3 w-32">Warehouse</th>
+                        <th className="px-2 py-3 w-32">Bin/Rack</th>
+                        <th className="px-2 py-3 w-32">Batch #</th>
+                        <th className="p-2  text-right w-32">Rate (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 bg-white">
+                      {(selectedGRN.items || []).map((item, idx) => {
+                        const approvalItem = approvalItems.find(ai => ai.id === item.id) || {}
+                        const storage = storageData[item.id] || {}
+                        return (
+                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="p-2 ">
+                              <div className="font-bold text-slate-900">{item.item_code}</div>
+                              <div className="text-[10px] text-slate-400 font-medium truncate max-w-[150px]">{item.item_name}</div>
+                            </td>
+                            <td className="px-2 py-3 text-center font-bold text-slate-700 bg-slate-50/30">
+                              {item.received_qty}
+                            </td>
+                            <td className="px-2 py-3">
+                              <input
+                                type="number"
+                                min="0"
+                                max={item.received_qty}
+                                value={approvalItem.accepted_qty || 0}
+                                onChange={(e) => handleApprovalItemChange(item.id, 'accepted_qty', e.target.value)}
+                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-center font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-500 outline-none"
+                              />
+                            </td>
+                            <td className="px-2 py-3">
+                              <input
+                                type="number"
+                                min="0"
+                                max={item.received_qty}
+                                value={approvalItem.rejected_qty || 0}
+                                onChange={(e) => handleApprovalItemChange(item.id, 'rejected_qty', e.target.value)}
+                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-center font-bold text-rose-500 focus:ring-2 focus:ring-rose-500 outline-none"
+                              />
+                            </td>
+                            <td className="px-2 py-3">
+                              <select
+                                value={approvalItem.qc_status || 'pass'}
+                                onChange={(e) => handleApprovalItemChange(item.id, 'qc_status', e.target.value)}
+                                className={`w-full px-2 py-1.5 border rounded text-[10px] font-bold outline-none cursor-pointer transition-colors ${
+                                  approvalItem.qc_status === 'fail' ? 'bg-rose-50 border-rose-200 text-rose-600' : 
+                                  approvalItem.qc_status === 'rework' ? 'bg-amber-50 border-amber-200 text-amber-600' :
+                                  'bg-emerald-50 border-emerald-200 text-emerald-600'
+                                }`}
+                              >
+                                <option value="pass">PASS</option>
+                                <option value="fail">FAIL</option>
+                                <option value="rework">REWORK</option>
+                              </select>
+                            </td>
+                            <td className="px-2 py-3">
+                              <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-100 w-fit text-[10px] font-bold">
+                                <MapPin size={10} />
+                                {item.warehouse_name || 'Main'}
+                              </div>
+                            </td>
+                            <td className="px-2 py-3">
+                              <input
+                                type="text"
+                                placeholder="Bin/Rack"
+                                value={storage.bin_rack || ''}
+                                onChange={(e) => handleStorageDataChange(item.id, 'bin_rack', e.target.value)}
+                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] focus:ring-2 focus:ring-indigo-500 outline-none"
+                              />
+                            </td>
+                            <td className="px-2 py-3">
+                              <input
+                                type="text"
+                                placeholder="Batch #"
+                                value={storage.batch_no || item.batch_no || ''}
+                                onChange={(e) => handleStorageDataChange(item.id, 'batch_no', e.target.value)}
+                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-[10px] focus:ring-2 focus:ring-indigo-500 outline-none"
+                              />
+                            </td>
+                            <td className="p-2  text-right">
+                              <input
+                                type="number"
+                                placeholder="0.00"
+                                value={storage.valuation_rate || ''}
+                                onChange={(e) => handleStorageDataChange(item.id, 'valuation_rate', e.target.value)}
+                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-right font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
+                              />
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>

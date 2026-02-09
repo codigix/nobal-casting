@@ -350,6 +350,11 @@ export const deleteRejection = async (id) => {
   return response.data
 }
 
+export const approveRejection = async (id) => {
+  const response = await api.put(`/production/rejections/${id}/approve`)
+  return response.data
+}
+
 // Downtimes
 export const getDowntimes = async (filters = {}) => {
   const params = new URLSearchParams(filters)

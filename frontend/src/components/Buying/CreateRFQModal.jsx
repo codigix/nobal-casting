@@ -267,7 +267,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
           {/* Basic Info & Source */}
           <div className="space-y-6">
             <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-              <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center gap-2">
+              <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
                 <FileText size={18} className="text-primary-600" />
                 <h3 className="font-semibold text-neutral-800">Basic Information</h3>
               </div>
@@ -290,7 +290,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
             </section>
 
             <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-              <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center gap-2">
+              <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
                 <Building2 size={18} className="text-primary-600" />
                 <h3 className="font-semibold text-neutral-800">Source MR</h3>
               </div>
@@ -313,7 +313,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
 
           {/* Suppliers Selection */}
           <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden flex flex-col">
-            <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center justify-between">
+            <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Users size={18} className="text-primary-600" />
                 <h3 className="font-semibold text-neutral-800">Target Suppliers</h3>
@@ -371,7 +371,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
 
         {/* Items Section */}
         <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-          <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center justify-between">
+          <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Package size={18} className="text-primary-600" />
               <h3 className="font-semibold text-neutral-800">Items for Quotation</h3>
@@ -435,11 +435,11 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-neutral-500 uppercase bg-neutral-50/50 border-b border-neutral-200">
                 <tr>
-                  <th className="px-4 py-3 font-semibold w-12 text-center">#</th>
-                  <th className="px-4 py-3 font-semibold">Item Details</th>
-                  <th className="px-4 py-3 font-semibold w-24 text-right">Qty</th>
-                  <th className="px-4 py-3 font-semibold w-24">UOM</th>
-                  <th className="px-4 py-3 font-semibold w-24 text-center">Actions</th>
+                  <th className="p-2  font-semibold w-12 text-center">#</th>
+                  <th className="p-2  font-semibold">Item Details</th>
+                  <th className="p-2  font-semibold w-24 text-right">Qty</th>
+                  <th className="p-2  font-semibold w-24">UOM</th>
+                  <th className="p-2  font-semibold w-24 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
@@ -452,14 +452,14 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
                 ) : (
                   formData.items.map((item, idx) => (
                     <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
-                      <td className="px-4 py-3 text-center text-neutral-400 font-mono text-xs">{idx + 1}</td>
-                      <td className="px-4 py-3">
+                      <td className="p-2  text-center text-neutral-400 font-mono text-xs">{idx + 1}</td>
+                      <td className="p-2 ">
                         <div className="font-medium text-neutral-900">{getItemName(item.item_code)}</div>
                         <div className="text-[10px] text-neutral-500 uppercase tracking-tight">{item.item_code}</div>
                       </td>
-                      <td className="px-4 py-3 text-right font-medium text-neutral-700">{item.qty}</td>
-                      <td className="px-4 py-3 text-neutral-500 uppercase text-xs">{item.uom}</td>
-                      <td className="px-4 py-3">
+                      <td className="p-2  text-right font-medium text-neutral-700">{item.qty}</td>
+                      <td className="p-2  text-neutral-500 uppercase text-xs">{item.uom}</td>
+                      <td className="p-2 ">
                         <div className="flex items-center justify-center gap-1">
                           <button 
                             type="button"

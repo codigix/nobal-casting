@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, CheckCircle2 } from 'lucide-react'
 import Modal from '../Modal'
 import * as productionService from '../../services/productionService'
 import { useToast } from '../ToastContainer'
@@ -93,6 +93,19 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
       fetchRejections()
     } catch (err) {
       toast.addToast('Failed to delete rejection', 'error')
+    }
+  }
+
+  const handleApproveRejection = async (rejectionId) => {
+    try {
+      setLoading(true)
+      await productionService.approveRejection(rejectionId)
+      toast.addToast('Quality inspection approved', 'success')
+      fetchRejections()
+    } catch (err) {
+      toast.addToast('Failed to approve inspection', 'error')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -197,6 +210,7 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
               <thead>
                 <tr style={{ backgroundColor: '#f3f4f6', borderBottom: '2px solid #e5e7eb' }}>
+                  <th style={{ padding: '10px', textAlign: 'left' }}>Status</th>
                   <th style={{ padding: '10px', textAlign: 'left' }}>Reason</th>
                   <th style={{ padding: '10px', textAlign: 'center' }}>Rej Qty</th>
                   <th style={{ padding: '10px', textAlign: 'center' }}>Scrap Qty</th>
@@ -208,19 +222,37 @@ export default function RejectionEntryModal({ isOpen, onClose, jobCardId, jobCar
               <tbody>
                 {rejections.map(rejection => (
                   <tr key={rejection.rejection_id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                    <td style={{ padding: '10px' }}>
+                      {rejection.status === 'Approved' ? (
+                        <span style={{ color: '#059669', backgroundColor: '#ecfdf5', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>APPROVED</span>
+                      ) : (
+                        <span style={{ color: '#d97706', backgroundColor: '#fffbeb', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>PENDING</span>
+                      )}
+                    </td>
                     <td style={{ padding: '10px' }}>{rejection.rejection_reason}</td>
                     <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: '#dc2626' }}>{rejection.rejected_qty}</td>
                     <td style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold', color: '#f97316' }}>{rejection.scrap_qty || 0}</td>
                     <td style={{ padding: '10px', fontSize: '0.85rem' }}>{rejection.notes || '-'}</td>
                     <td style={{ padding: '10px', fontSize: '0.85rem' }}>{rejection.created_at ? new Date(rejection.created_at).toLocaleDateString() : '-'}</td>
                     <td style={{ padding: '10px', textAlign: 'center' }}>
-                      <button
-                        onClick={() => handleDeleteRejection(rejection.rejection_id)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}
-                        title="Delete"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <div style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
+                        {rejection.status !== 'Approved' && (
+                          <button
+                            onClick={() => handleApproveRejection(rejection.rejection_id)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#059669' }}
+                            title="Approve"
+                          >
+                            <CheckCircle2 size={16} />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeleteRejection(rejection.rejection_id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626' }}
+                          title="Delete"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

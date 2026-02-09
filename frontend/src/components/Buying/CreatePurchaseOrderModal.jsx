@@ -253,7 +253,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
 
         {/* Basic Information Section */}
         <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-          <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center gap-2">
+          <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
             <Receipt size={18} className="text-primary-600" />
             <h3 className="font-semibold text-neutral-800">Basic Information</h3>
           </div>
@@ -312,7 +312,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
 
         {/* Items Section */}
         <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-          <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center justify-between">
+          <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Package size={18} className="text-primary-600" />
               <h3 className="font-semibold text-neutral-800">Purchase Order Items</h3>
@@ -326,18 +326,18 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-neutral-500 uppercase bg-neutral-50/50 border-b border-neutral-200">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Item Details</th>
-                  <th className="px-4 py-3 font-semibold w-24 text-right">Qty</th>
-                  <th className="px-4 py-3 font-semibold w-24">UOM</th>
-                  <th className="px-4 py-3 font-semibold w-32 text-right">Rate</th>
-                  <th className="px-4 py-3 font-semibold w-32 text-right">Amount</th>
-                  <th className="px-4 py-3 font-semibold w-16 text-center"></th>
+                  <th className="p-2  font-semibold">Item Details</th>
+                  <th className="p-2  font-semibold w-24 text-right">Qty</th>
+                  <th className="p-2  font-semibold w-24">UOM</th>
+                  <th className="p-2  font-semibold w-32 text-right">Rate</th>
+                  <th className="p-2  font-semibold w-32 text-right">Amount</th>
+                  <th className="p-2  font-semibold w-16 text-center"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {formData.items.map((item, index) => (
                   <tr key={index} className="hover:bg-neutral-50/50 transition-colors">
-                    <td className="px-4 py-3">
+                    <td className="p-2 ">
                       <select
                         value={item.item_code}
                         onChange={(e) => handleItemChange(index, 'item_code', e.target.value)}
@@ -352,7 +352,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
                         ))}
                       </select>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="p-2 ">
                       <input
                         type="number"
                         value={item.qty}
@@ -364,7 +364,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
                         className="w-full h-9 px-2 text-right rounded-md border border-neutral-300 focus:ring-1 focus:ring-primary-500 outline-none text-sm"
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="p-2 ">
                       <input
                         type="text"
                         value={item.uom}
@@ -372,7 +372,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
                         className="w-full h-9 px-2 rounded-md border border-neutral-200 bg-neutral-50 text-neutral-500 text-sm outline-none"
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="p-2 ">
                       <input
                         type="number"
                         value={item.rate}
@@ -384,10 +384,10 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
                         className="w-full h-9 px-2 text-right rounded-md border border-neutral-300 focus:ring-1 focus:ring-primary-500 outline-none text-sm"
                       />
                     </td>
-                    <td className="px-4 py-3 text-right font-medium text-neutral-900">
+                    <td className="p-2  text-right font-medium text-neutral-900">
                       ₹{calculateLineAmount(item.qty, item.rate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="p-2  text-center">
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(index)}
@@ -424,7 +424,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Tax & Currency */}
           <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
-            <div className="bg-neutral-50 px-4 py-3 border-b border-neutral-200 flex items-center gap-2">
+            <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
               <CreditCard size={18} className="text-primary-600" />
               <h3 className="font-semibold text-neutral-800">Tax & Currency</h3>
             </div>

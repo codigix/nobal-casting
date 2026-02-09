@@ -1,13 +1,29 @@
 import React, { useState, useEffect } from 'react'
-import { AlertCircle } from 'lucide-react'
-import Modal from '../Modal'
-import * as productionService from '../../services/productionService'
+import { 
+  productionEntriesAPI, 
+  workOrdersAPI, 
+  workstationsAPI, 
+  employeesAPI 
+} from '../../services/api'
+import Modal from '../Modal/Modal'
+import Button from '../Button/Button'
+import Alert from '../Alert/Alert'
+import Badge from '../Badge/Badge'
+import { 
+  ClipboardList, 
+  Settings, 
+  User, 
+  Calendar, 
+  Clock, 
+  Package, 
+  AlertCircle, 
+  FileText,
+  CheckCircle2,
+  Activity,
+  UserCheck
+} from 'lucide-react'
 
 export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess }) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [machines, setMachines] = useState([])
-  const [operators, setOperators] = useState([])
   const [formData, setFormData] = useState({
     work_order_id: '',
     machine_id: '',
@@ -20,22 +36,37 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
     remarks: ''
   })
 
+  const [workOrders, setWorkOrders] = useState([])
+  const [machines, setMachines] = useState([])
+  const [operators, setOperators] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [fetchingData, setFetchingData] = useState(false)
+  const [error, setError] = useState(null)
+
   useEffect(() => {
     if (isOpen) {
-      fetchData()
+      initializeModal()
     }
   }, [isOpen])
 
-  const fetchData = async () => {
+  const initializeModal = async () => {
+    setFetchingData(true)
+    setError(null)
     try {
-      const [machinesRes, operatorsRes] = await Promise.all([
-        productionService.getMachines(),
-        productionService.getOperators()
+      const [woRes, wsRes, opRes] = await Promise.all([
+        workOrdersAPI.list({ status: 'in_progress' }),
+        workstationsAPI.list(),
+        employeesAPI.list()
       ])
-      setMachines(machinesRes.data || [])
-      setOperators(operatorsRes.data || [])
+      
+      setWorkOrders(woRes.data.data || woRes.data || [])
+      setMachines(wsRes.data.data || wsRes.data || [])
+      setOperators(opRes.data.data || opRes.data || [])
     } catch (err) {
-      console.error('Failed to fetch data:', err)
+      console.error('Failed to load initial data:', err)
+      setError('Failed to load required data. Please try again.')
+    } finally {
+      setFetchingData(false)
     }
   }
 
@@ -58,307 +89,236 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
         throw new Error('Please fill in all required fields')
       }
 
-      await productionService.createProductionEntry(formData)
-      
-      // Reset form
-      setFormData({
-        work_order_id: '',
-        machine_id: '',
-        operator_id: '',
-        entry_date: new Date().toISOString().split('T')[0],
-        shift_no: '1',
-        quantity_produced: '',
-        quantity_rejected: '',
-        hours_worked: '',
-        remarks: ''
-      })
-      
-      onSuccess?.()
-      onClose()
+      const response = await productionEntriesAPI.create(formData)
+      if (response.data.success) {
+        onSuccess?.()
+        onClose()
+      } else {
+        setError(response.data.error || 'Failed to record production entry')
+      }
     } catch (err) {
-      setError(err.message || 'Failed to create production entry')
+      setError(err.response?.data?.error || err.message || 'Failed to record production entry')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="📊 Record Daily Production Entry" size="2xl">
-      <form onSubmit={handleSubmit}>
-        {error && (
-          <div style={{
-            background: '#fee2e2',
-            border: '1px solid #fecaca',
-            borderRadius: '8px',
-            padding: '12px 16px',
-            marginBottom: '20px',
-            color: '#dc2626',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            fontSize: '0.9rem'
-          }}>
-            <AlertCircle size={18} />
-            {error}
-          </div>
-        )}
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title="Record Daily Production" 
+      size="4xl"
+    >
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && <Alert type="error" message={error} />}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Work Order ID *
-            </label>
-            <input
-              type="text"
-              name="work_order_id"
-              placeholder="WO-XXXXX"
-              value={formData.work_order_id}
-              onChange={handleInputChange}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit'
-              }}
-            />
-          </div>
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Left Pane - Context */}
+          <div className="lg:w-5/12 space-y-4">
+            <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+              <div className="flex items-center gap-2 text-slate-800 font-semibold border-b border-slate-200 pb-3 mb-2">
+                <ClipboardList size={18} className="text-blue-500" />
+                Execution Context
+              </div>
 
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Machine *
-            </label>
-            <select
-              name="machine_id"
-              value={formData.machine_id}
-              onChange={handleInputChange}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit'
-              }}
-            >
-              <option value="">Select Machine</option>
-              {machines.map(m => (
-                <option key={m.machine_id} value={m.machine_id}>
-                  {m.name} ({m.type})
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Work Order *
+                  </label>
+                  <div className="relative">
+                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <select
+                      name="work_order_id"
+                      value={formData.work_order_id}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    >
+                      <option value="">Select Work Order</option>
+                      {workOrders.map(wo => (
+                        <option key={wo.work_order_id} value={wo.work_order_id}>
+                          {wo.work_order_id} - {wo.item_name || wo.item_code}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Operator
-            </label>
-            <select
-              name="operator_id"
-              value={formData.operator_id}
-              onChange={handleInputChange}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit'
-              }}
-            >
-              <option value="">Select Operator</option>
-              {operators.map(op => (
-                <option key={op.operator_id} value={op.operator_id}>
-                  {op.name}
-                </option>
-              ))}
-            </select>
-          </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Machine/Workstation *
+                  </label>
+                  <div className="relative">
+                    <Settings className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <select
+                      name="machine_id"
+                      value={formData.machine_id}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    >
+                      <option value="">Select Workstation</option>
+                      {machines.map(m => (
+                        <option key={m.workstation_id || m.machine_id} value={m.workstation_id || m.machine_id}>
+                          {m.workstation_name || m.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Entry Date *
-            </label>
-            <input
-              type="date"
-              name="entry_date"
-              value={formData.entry_date}
-              onChange={handleInputChange}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit'
-              }}
-            />
-          </div>
-        </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Operator
+                  </label>
+                  <div className="relative">
+                    <UserCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <select
+                      name="operator_id"
+                      value={formData.operator_id}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    >
+                      <option value="">Select Operator</option>
+                      {operators.map(op => (
+                        <option key={op.employee_id || op.operator_id} value={op.employee_id || op.operator_id}>
+                          {op.first_name ? `${op.first_name} ${op.last_name}` : op.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Shift No *
-            </label>
-            <select
-              name="shift_no"
-              value={formData.shift_no}
-              onChange={handleInputChange}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit'
-              }}
-            >
-              <option value="1">Shift 1 (6AM - 2PM)</option>
-              <option value="2">Shift 2 (2PM - 10PM)</option>
-              <option value="3">Shift 3 (10PM - 6AM)</option>
-            </select>
+            <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 space-y-4">
+              <div className="flex items-center gap-2 text-blue-800 font-semibold mb-1">
+                <Clock size={18} />
+                Timing & Shift
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Entry Date</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-blue-400" size={14} />
+                    <input
+                      type="date"
+                      name="entry_date"
+                      value={formData.entry_date}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full pl-8 pr-3 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Shift</label>
+                  <select
+                    name="shift_no"
+                    value={formData.shift_no}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="1">Shift 1</option>
+                    <option value="2">Shift 2</option>
+                    <option value="3">Shift 3</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Hours Worked
-            </label>
-            <input
-              type="number"
-              name="hours_worked"
-              placeholder="0.0"
-              value={formData.hours_worked}
-              onChange={handleInputChange}
-              min="0"
-              step="0.5"
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit'
-              }}
-            />
-          </div>
-        </div>
+          {/* Right Pane - Output & Quality */}
+          <div className="lg:w-7/12 space-y-4">
+            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+              <div className="bg-slate-50 px-5 py-3 border-b border-slate-200 flex justify-between items-center">
+                <div className="flex items-center gap-2 font-semibold text-slate-800">
+                  <Activity size={18} className="text-blue-500" />
+                  Production Metrics
+                </div>
+                {formData.quantity_produced && (
+                  <Badge variant="green">
+                    Efficiency: {((formData.quantity_produced / (formData.hours_worked || 8)) * 100).toFixed(0)}%
+                  </Badge>
+                )}
+              </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Quantity Produced *
-            </label>
-            <input
-              type="number"
-              name="quantity_produced"
-              placeholder="0"
-              value={formData.quantity_produced}
-              onChange={handleInputChange}
-              required
-              min="0"
-              step="1"
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit'
-              }}
-            />
-          </div>
+              <div className="p-5 space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-slate-700">Quantity Produced *</label>
+                    <div className="relative">
+                      <Package className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <input
+                        type="number"
+                        name="quantity_produced"
+                        value={formData.quantity_produced}
+                        onChange={handleInputChange}
+                        placeholder="0"
+                        required
+                        min="0"
+                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
 
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-              Quantity Rejected
-            </label>
-            <input
-              type="number"
-              name="quantity_rejected"
-              placeholder="0"
-              value={formData.quantity_rejected}
-              onChange={handleInputChange}
-              min="0"
-              step="1"
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '0.95rem',
-                fontFamily: 'inherit'
-              }}
-            />
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-slate-700">Quantity Rejected</label>
+                    <div className="relative">
+                      <AlertCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-red-400" size={18} />
+                      <input
+                        type="number"
+                        name="quantity_rejected"
+                        value={formData.quantity_rejected}
+                        onChange={handleInputChange}
+                        placeholder="0"
+                        min="0"
+                        className="w-full pl-10 pr-4 py-3 bg-red-50/30 border border-red-100 rounded-xl text-lg font-bold text-red-700 focus:bg-white focus:ring-2 focus:ring-red-500 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+                    <FileText size={16} className="text-slate-400" />
+                    Production Remarks
+                  </label>
+                  <textarea
+                    name="remarks"
+                    value={formData.remarks}
+                    onChange={handleInputChange}
+                    placeholder="Describe any issues, downtime causes, or quality observations..."
+                    rows="3"
+                    className="w-full p-2  bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm resize-none"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontWeight: 600, marginBottom: '8px', color: '#333' }}>
-            Remarks
-          </label>
-          <textarea
-            name="remarks"
-            placeholder="Add any notes or observations about production..."
-            value={formData.remarks}
-            onChange={handleInputChange}
-            rows="3"
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              border: '1px solid #ddd',
-              borderRadius: '6px',
-              fontSize: '0.95rem',
-              fontFamily: 'inherit',
-              resize: 'vertical'
-            }}
-          />
-        </div>
-
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '20px', borderTop: '1px solid #f0f0f0' }}>
-          <button
+        <div className="flex justify-end items-center gap-3 pt-4 border-t border-slate-100">
+          <Button
             type="button"
+            variant="ghost"
             onClick={onClose}
             disabled={loading}
-            style={{
-              padding: '10px 20px',
-              border: '1px solid #ddd',
-              borderRadius: '6px',
-              background: '#f9fafb',
-              color: '#1a1a1a',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              opacity: loading ? 0.6 : 1
-            }}
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            disabled={loading}
-            style={{
-              padding: '10px 20px',
-              border: 'none',
-              borderRadius: '6px',
-              background: '#f59e0b',
-              color: 'white',
-              fontWeight: 600,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s ease',
-              opacity: loading ? 0.7 : 1
-            }}
+            variant="primary"
+            isLoading={loading}
+            className="px-8"
+            icon={<CheckCircle2 size={18} />}
           >
-            {loading ? 'Recording...' : '✓ Record Entry'}
-          </button>
+            Record Entry
+          </Button>
         </div>
       </form>
     </Modal>

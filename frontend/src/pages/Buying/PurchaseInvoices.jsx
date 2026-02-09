@@ -506,7 +506,7 @@ export default function PurchaseInvoices() {
 
               {showColumnMenu && (
                 <div className="absolute right-0 mt-2 w-56 bg-white border border-neutral-900 shadow-2xl z-50 py-0">
-                  <div className="px-4 py-3 border-b border-neutral-100 flex justify-between items-center bg-neutral-50">
+                  <div className="p-2  border-b border-neutral-100 flex justify-between items-center bg-neutral-50">
                     <span className="text-[10px] font-black text-neutral-900  tracking-widest">Visible Columns</span>
                   </div>
                   <div className="p-2 border-b border-neutral-100 flex gap-2">
@@ -631,7 +631,7 @@ export default function PurchaseInvoices() {
                               {inv.purchase_invoice_no}
                             </span>
                           </div>
-                          <div className="p-1.5 bg-neutral-50 text-neutral-400 opacity-0 group-hover:opacity-100 transition-all">
+                          <div className="p-1.5 bg-neutral-50 text-neutral-400  transition-all">
                             <ArrowUpRight size={14} strokeWidth={3} />
                           </div>
                         </div>
