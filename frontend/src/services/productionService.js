@@ -152,8 +152,8 @@ export const getProductionPlanDetails = async (plan_id) => {
   return response.data
 }
 
-export const createWorkOrdersFromPlan = async (plan_id) => {
-  const response = await api.post(`/production-planning/${plan_id}/create-work-orders`)
+export const createWorkOrdersFromPlan = async (plan_id, data = {}) => {
+  const response = await api.post(`/production-planning/${plan_id}/create-work-orders`, data)
   return response.data
 }
 

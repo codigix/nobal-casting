@@ -318,7 +318,9 @@ export class ProductionPlanningController {
       const result = await this.service.createWorkOrdersFromPlan(
         plan_id, 
         this.productionModel, 
-        this.model
+        this.model,
+        req.body,
+        req.user?.user_id
       )
 
       res.json({ 

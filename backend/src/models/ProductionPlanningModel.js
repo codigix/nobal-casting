@@ -48,7 +48,7 @@ export class ProductionPlanningModel {
          FROM production_plan_sub_assembly psa 
          LEFT JOIN item i ON psa.item_code = i.item_code 
          WHERE psa.plan_id = ?
-         ORDER BY psa.id ASC`,
+         ORDER BY psa.id DESC`,
         [plan_id]
       ).catch(() => [])
 
@@ -159,31 +159,42 @@ export class ProductionPlanningModel {
       const plansWithItems = []
       for (const plan of plans) {
         try {
-          const [fgItems] = await this.db.execute(
-            `SELECT pg.*, i.name as item_name 
-             FROM production_plan_fg pg 
-             LEFT JOIN item i ON pg.item_code = i.item_code 
-             WHERE pg.plan_id = ?`,
-            [plan.plan_id]
-          ).catch(() => [])
-          
-          const [rawMaterials] = await this.db.execute(
-            `SELECT prm.*, i.name as item_name 
-             FROM production_plan_raw_material prm 
-             LEFT JOIN item i ON prm.item_code = i.item_code 
-             WHERE prm.plan_id = ?`,
-            [plan.plan_id]
-          ).catch(() => [])
-          
-          const mappedRawMaterials = rawMaterials.map(item => ({
-            ...item,
-            qty: parseFloat(item.plan_to_request_qty) || parseFloat(item.qty) || 0
-          }))
-          
-          const mappedFGItems = fgItems.map(item => ({
-            ...item,
-            planned_qty: parseFloat(item.planned_qty) || 0
-          }))
+          const [mappedRawMaterials, mappedFGItems, mappedSubAssemblies] = await Promise.all([
+            this.db.execute(
+              `SELECT prm.*, i.name as item_name 
+               FROM production_plan_raw_material prm 
+               LEFT JOIN item i ON prm.item_code = i.item_code 
+               WHERE prm.plan_id = ?`,
+              [plan.plan_id]
+            ).then(([rows]) => rows.map(item => ({
+              ...item,
+              qty: parseFloat(item.plan_to_request_qty) || parseFloat(item.qty) || 0
+            }))).catch(() => []),
+            
+            this.db.execute(
+              `SELECT pg.*, i.name as item_name 
+               FROM production_plan_fg pg 
+               LEFT JOIN item i ON pg.item_code = i.item_code 
+               WHERE pg.plan_id = ?`,
+              [plan.plan_id]
+            ).then(([rows]) => rows.map(item => ({
+              ...item,
+              planned_qty: parseFloat(item.planned_qty) || 0
+            }))).catch(() => []),
+
+            this.db.execute(
+              `SELECT psa.*, i.name as item_name 
+               FROM production_plan_sub_assembly psa 
+               LEFT JOIN item i ON psa.item_code = i.item_code 
+               WHERE psa.plan_id = ?`,
+              [plan.plan_id]
+            ).then(([rows]) => rows.map(item => ({
+              ...item,
+              planned_qty: parseFloat(item.planned_qty) || parseFloat(item.required_qty) || 0,
+              required_qty: parseFloat(item.required_qty) || parseFloat(item.planned_qty) || 0,
+              scheduled_date: item.schedule_date
+            }))).catch(() => [])
+          ])
           
           let salesOrderId = plan.sales_order_id
           if (!salesOrderId && mappedFGItems.length > 0) {
@@ -196,6 +207,7 @@ export class ProductionPlanningModel {
           plansWithItems.push({
             ...plan,
             fg_items: mappedFGItems,
+            sub_assemblies: mappedSubAssemblies,
             raw_materials: mappedRawMaterials
           })
         } catch (err) {
@@ -203,6 +215,7 @@ export class ProductionPlanningModel {
           plansWithItems.push({
             ...plan,
             fg_items: [],
+            sub_assemblies: [],
             raw_materials: []
           })
         }
@@ -432,7 +445,7 @@ export class ProductionPlanningModel {
         `INSERT INTO production_plan_sub_assembly 
          (plan_id, item_code, item_name, parent_item_code, target_warehouse, schedule_date, required_qty, planned_qty, planned_qty_before_scrap, scrap_percentage, manufacturing_type, bom_no, revision, material_grade, drawing_no, notes)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [plan_id, item.item_code || null, item.item_name || null, item.parent_item_code || item.parent_assembly_code || null, item.target_warehouse || null, scheduleDate, 
+        [plan_id, item.item_code || null, item.item_name || null, item.parent_item_code || item.parent_assembly_code || item.parent_code || null, item.target_warehouse || null, scheduleDate, 
          requiredQty, plannedQty, plannedQtyBeforeScrap, scrapPercentage, item.manufacturing_type || null, item.bom_no || null, item.revision || null, item.material_grade || null, item.drawing_no || null, item.notes || null]
       )
     } catch (error) {

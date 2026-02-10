@@ -170,7 +170,7 @@ const StatusBadge = ({ status }) => {
 
 const GroupBadge = ({ group }) => {
   const normalizedGroup = (group || 'Raw Material').toLowerCase().replace(/[-\s]/g, '').trim()
-  
+
   const styles = {
     consumable: 'bg-cyan-50 text-cyan-700 border-cyan-200',
     subassembly: 'bg-rose-50 text-rose-700 border-rose-200',
@@ -196,13 +196,13 @@ const isConsumableGroup = (itemGroup) => {
 
 const isSubAssemblyGroup = (itemGroup, itemCode = '') => {
   if (!itemGroup && !itemCode) return false
-  
+
   const normalizedGroup = (itemGroup || '').toLowerCase().replace(/[-\s]/g, '').trim()
   if (normalizedGroup === 'consumable') return false
-  
+
   const isSAGroup = normalizedGroup === 'subassemblies' || normalizedGroup === 'subassembly' || normalizedGroup === 'intermediates'
   const isSACode = (itemCode || '').toUpperCase().startsWith('SA-') || (itemCode || '').toUpperCase().startsWith('SA')
-  
+
   return isSAGroup || isSACode
 }
 
@@ -299,7 +299,7 @@ export default function ProductionPlanningForm() {
 
   const buildSubAssemblyTree = (items) => {
     if (!items || items.length === 0) return [];
-    
+
     // Create map for easy lookup
     const itemMap = {};
     items.forEach((item, index) => {
@@ -605,7 +605,7 @@ export default function ProductionPlanningForm() {
           if (!selectedBom) selectedBom = bomList[0];
 
           const bomId = selectedBom.bom_id || selectedBom.id;
-          
+
           // Update the item being processed with the correct BOM ID
           item.bom_id = bomId;
           item.bom_no = bomId;
@@ -688,7 +688,7 @@ export default function ProductionPlanningForm() {
 
       if (level === 0) {
         console.log('=== RECURSIVE EXPLOSION COMPLETE ===');
-        
+
         setSubAssemblyBomMaterials([...allSubAsmMaterials]);
 
         if (allDiscoveredSubAsms.length > 0) {
@@ -708,16 +708,16 @@ export default function ProductionPlanningForm() {
           setSubAssemblyItems(prev => {
             const updated = [...prev];
             Object.values(aggregatedSubAsms).forEach(discovered => {
-              const existingIdx = updated.findIndex(i => 
-                i.item_code === discovered.item_code && 
+              const existingIdx = updated.findIndex(i =>
+                i.item_code === discovered.item_code &&
                 (i.parent_code === discovered.parent_code || i.parent_item_code === discovered.parent_code)
               );
               if (existingIdx !== -1) {
                 const newQty = (updated[existingIdx].quantity || 0) + discovered.quantity;
-                updated[existingIdx] = { 
-                  ...updated[existingIdx], 
-                  quantity: newQty, 
-                  qty: newQty, 
+                updated[existingIdx] = {
+                  ...updated[existingIdx],
+                  quantity: newQty,
+                  qty: newQty,
                   planned_qty: newQty,
                   bom_id: discovered.bom_id || updated[existingIdx].bom_id,
                   bom_no: discovered.bom_no || updated[existingIdx].bom_no
@@ -742,7 +742,7 @@ export default function ProductionPlanningForm() {
 
   const handleExplodeBoms = () => {
     const subAsmFromRawMaterials = rawMaterialItems.filter(item => {
-      return (item.item_code || '').startsWith('SA-') ||
+      return isSubAssemblyGroup(item.item_group, item.item_code || item.component_code) ||
         (item.fg_sub_assembly || item.component_type || '').toLowerCase().includes('sub')
     })
     if (subAsmFromRawMaterials.length === 0) {
@@ -802,7 +802,7 @@ export default function ProductionPlanningForm() {
     try {
       const token = localStorage.getItem('token')
       let bomId = item.bom_no || item.bom_id
-      
+
       if (!bomId) {
         const foundBom = boms.find(b => b.item_code === itemSku)
         if (foundBom) {
@@ -903,7 +903,7 @@ export default function ProductionPlanningForm() {
       const firstItemQty = items.length > 0 ? (items[0].qty || items[0].quantity || items[0].ordered_qty) : null
       quantity = soDetails.qty || soDetails.quantity || firstItemQty || 1
     }
-    
+
     quantity = parseFloat(quantity) || 1
     setSalesOrderQuantity(quantity)
 
@@ -972,33 +972,33 @@ export default function ProductionPlanningForm() {
       if (trueSubAsmLines.length > 0) {
         const subAsmItemsFromBOM = trueSubAsmLines
           .map(subAsmItem => {
-          const baseQty = subAsmItem.quantity || subAsmItem.qty || subAsmItem.bom_qty || 1
-          const totalQtyBeforeScrap = baseQty * quantity
-          const scrapPercentage = parseFloat(subAsmItem.loss_percentage || subAsmItem.item_loss_percentage || 0)
-          const qtyAfterScrap = totalQtyBeforeScrap + (totalQtyBeforeScrap * scrapPercentage / 100)
+            const baseQty = subAsmItem.quantity || subAsmItem.qty || subAsmItem.bom_qty || 1
+            const totalQtyBeforeScrap = baseQty * quantity
+            const scrapPercentage = parseFloat(subAsmItem.loss_percentage || subAsmItem.item_loss_percentage || 0)
+            const qtyAfterScrap = totalQtyBeforeScrap + (totalQtyBeforeScrap * scrapPercentage / 100)
 
-          return {
-            item_code: subAsmItem.component_code || subAsmItem.item_code,
-            item_name: subAsmItem.component_description || subAsmItem.item_name,
-            uom: subAsmItem.uom || 'Nos',
-            warehouse: subAsmItem.warehouse || 'Work In Progress - NC',
-            manufacturing_type: 'In House',
-            bom_no: subAsmItem.bom_no || null,
-            bom_id: subAsmItem.bom_no || null,
-            quantity: qtyAfterScrap,
-            qty_before_scrap: totalQtyBeforeScrap,
-            scrap_percentage: scrapPercentage,
-            qty_after_scrap: qtyAfterScrap,
-            planned_qty_before_scrap: totalQtyBeforeScrap,
-            planned_qty: qtyAfterScrap,
-            sales_order_quantity: quantity,
-            fg_sub_assembly: 'Sub-Assembly',
-            component_type: subAsmItem.component_type || 'Sub-Assembly',
-            item_group: subAsmItem.item_group,
-            planned_start_date: new Date().toISOString().split('T')[0],
-            planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-          }
-        })
+            return {
+              item_code: subAsmItem.component_code || subAsmItem.item_code,
+              item_name: subAsmItem.component_description || subAsmItem.item_name,
+              uom: subAsmItem.uom || 'Nos',
+              warehouse: subAsmItem.warehouse || 'Work In Progress - NC',
+              manufacturing_type: 'In House',
+              bom_no: subAsmItem.bom_no || null,
+              bom_id: subAsmItem.bom_no || null,
+              quantity: qtyAfterScrap,
+              qty_before_scrap: totalQtyBeforeScrap,
+              scrap_percentage: scrapPercentage,
+              qty_after_scrap: qtyAfterScrap,
+              planned_qty_before_scrap: totalQtyBeforeScrap,
+              planned_qty: qtyAfterScrap,
+              sales_order_quantity: quantity,
+              fg_sub_assembly: 'Sub-Assembly',
+              component_type: subAsmItem.component_type || 'Sub-Assembly',
+              item_group: subAsmItem.item_group,
+              planned_start_date: new Date().toISOString().split('T')[0],
+              planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            }
+          })
         console.log('✓ Extracted Sub-Assemblies from BOM Lines:', subAsmItemsFromBOM.length)
         subAsmItemsFromBOM.forEach((item, idx) => {
           console.log(`  Sub-Assembly ${idx + 1}: ${item.item_code} | Qty Before Scrap: ${item.qty_before_scrap.toFixed(2)} | Scrap%: ${item.scrap_percentage}% | Qty After Scrap: ${item.qty_after_scrap.toFixed(2)}`)
@@ -1017,10 +1017,10 @@ export default function ProductionPlanningForm() {
         ...(bomData?.rawMaterials || []),
         ...(bomData?.bom_raw_materials || [])
       ]
-      
+
       // Combine with material lines found in BOM lines
       const combinedMaterials = [...allMaterials, ...materialLinesFromBOM]
-      
+
       const proportionalMaterials = combinedMaterials
         .map(mat => ({
           ...mat,
@@ -1337,15 +1337,15 @@ export default function ProductionPlanningForm() {
       setError(null)
 
       const response = await productionService.createWorkOrdersFromPlan(plan_id)
-      
+
       if (response.success) {
         const workOrderIds = response.data?.work_orders || []
         setSuccess(`Successfully generated ${workOrderIds.length} work orders from production plan.`)
         toast.addToast(`Generated ${workOrderIds.length} work orders successfully`, 'success')
-        
+
         // Refresh local state
         setPlanHeader(prev => ({ ...prev, status: 'in-progress' }))
-        
+
         setTimeout(() => {
           navigate('/manufacturing/work-orders')
         }, 2000)
@@ -1422,7 +1422,7 @@ export default function ProductionPlanningForm() {
         for (const item of itemsToCheck || []) {
           const itemBalances = balances.filter(b => b.item_code === item.item_code)
           const totalAvailable = itemBalances.reduce((sum, b) => sum + parseFloat(b.available_qty || b.current_qty || 0), 0)
-          
+
           stockInfo[item.item_code] = {
             available: totalAvailable,
             requested: item.qty || item.quantity || 0,
@@ -1499,7 +1499,7 @@ export default function ProductionPlanningForm() {
     try {
       const allMaterials = consolidateMaterials()
       let materials = []
-      
+
       if (filterType === 'in_stock') {
         materials = allMaterials.filter(m => materialStockData[m.item_code]?.isAvailable)
       } else if (filterType === 'out_of_stock') {
@@ -1515,7 +1515,7 @@ export default function ProductionPlanningForm() {
 
       const fgItem = fgItems[0] || {}
       const seriesNo = `MR-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`
-      
+
       const mrData = {
         series_no: seriesNo,
         transition_date: new Date().toISOString().split('T')[0],
@@ -1788,7 +1788,8 @@ export default function ProductionPlanningForm() {
                 bom_no: item.bom_id || item.bom_no,
                 planned_qty: item.quantity || item.planned_qty || 1,
                 planned_start_date: item.planned_start_date,
-                planned_end_date: item.planned_end_date
+                planned_end_date: item.planned_end_date,
+                fg_warehouse: item.warehouse || item.fg_warehouse
               })
             })
           } catch (err) {
@@ -1812,7 +1813,8 @@ export default function ProductionPlanningForm() {
                 parent_item_code: item.parent_code || item.parent_item_code,
                 bom_no: item.bom_id || item.bom_no,
                 planned_qty: item.quantity || item.planned_qty || 1,
-                scheduled_date: item.planned_start_date
+                scheduled_date: item.planned_start_date,
+                target_warehouse: item.warehouse || item.target_warehouse
               })
             })
           } catch (err) {
@@ -2289,7 +2291,7 @@ export default function ProductionPlanningForm() {
                           <tbody className="divide-y divide-slate-100">
                             {fgItems.map((item, idx) => (
                               <React.Fragment key={idx}>
-                                <tr 
+                                <tr
                                   className="hover:bg-blue-50/30 transition-colors group cursor-pointer"
                                   onClick={() => toggleItemMaterials(item)}
                                 >
@@ -2414,381 +2416,380 @@ export default function ProductionPlanningForm() {
             </div>
 
             {/* Material Requirements Section */}
-            
+
 
             {/* Sub-Assembly Items Section */}
-           
+
           </div>
-           <div id="subassembly" className="block bg-white">
-              {subAssemblyItems.length > 0 && (
-                <Card>
-                  <SectionHeader
-                    title="04 Sub Assemblies"
-                    icon={Activity}
-                    subtitle="Manufacturing breakdown of intermediate components"
-                    badge={`${subAssemblyItems.length} ITEMS`}
-                    isExpanded={expandedSections.subassembly}
-                    onToggle={() => toggleSection('subassembly')}
-                    themeColor="rose"
-                  />
+          <div id="subassembly" className="block bg-white">
+            {subAssemblyItems.length > 0 && (
+              <Card>
+                <SectionHeader
+                  title="04 Sub Assemblies"
+                  icon={Activity}
+                  subtitle="Manufacturing breakdown of intermediate components"
+                  badge={`${subAssemblyItems.length} ITEMS`}
+                  isExpanded={expandedSections.subassembly}
+                  onToggle={() => toggleSection('subassembly')}
+                  themeColor="rose"
+                />
 
-                  {expandedSections.subassembly && (
-                    <div className="p-2 animate-in fade-in duration-300">
-                      <div className="overflow-x-auto rounded border border-slate-100">
-                        <table className="w-full text-left border-collapse">
-                          <thead className="bg-slate-50 border-b border-slate-100">
-                            <tr>
-                              <th className="p-2 text-[10px]  text-slate-500  w-8">No.</th>
-                              <th className="p-2 text-[10px]  text-slate-500 ">Sub Assembly Item Code</th>
-                              <th className="p-2 text-[10px]  text-slate-500 ">Group</th>
-                              <th className="p-2 text-[10px]  text-slate-500 ">Target Warehouse</th>
-                              <th className="p-2 text-[10px]  text-slate-500  text-center">Scheduled Date</th>
-                              <th className="p-2 text-[10px]  text-slate-500  text-right">Required Qty</th>
-                              <th className="p-2 text-[10px]  text-slate-500  text-center">Bom No</th>
-                              <th className="p-2 text-[10px]  text-slate-500  text-center">Manufacturing Type</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {(() => {
-                              const tree = buildSubAssemblyTree(subAssemblyItems);
-                              
-                              const renderSubAssembly = (item, level = 0, path = '') => {
-                                const currentPath = path ? `${path}.${item.item_code}` : item.item_code;
-                                const isExpanded = expandedSubAsms[currentPath];
-                                const hasChildren = item.children && item.children.length > 0;
-                                
-                                return (
-                                  <React.Fragment key={currentPath}>
-                                    <tr 
-                                      className={`hover:bg-rose-50/30 transition-colors group cursor-pointer ${level > 0 ? 'bg-slate-50/30' : ''}`}
-                                      onClick={() => {
-                                        if (hasChildren) {
-                                          setExpandedSubAsms(prev => ({ ...prev, [currentPath]: !prev[currentPath] }));
-                                        }
-                                      }}
-                                    >
-                                      <td className="p-2 text-[10px] text-slate-400 font-medium">
-                                        <div className="flex items-center gap-1">
-                                          {hasChildren ? (
-                                            <ChevronDown 
-                                              size={12} 
-                                              className={`transform transition-transform ${isExpanded ? '' : '-rotate-90'}`} 
-                                            />
-                                          ) : <div className="w-3" />}
-                                          {level + 1}
-                                        </div>
-                                      </td>
-                                      <td className="p-2">
-                                        <div className="flex items-center gap-2" style={{ paddingLeft: `${level * 16}px` }}>
-                                          <div className={`w-7 h-7 rounded flex items-center justify-center border ${level === 0 ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
-                                            <Layers size={14} />
-                                          </div>
-                                          <div>
-                                            <p className="text-xs font-medium text-slate-900 leading-tight">
-                                              {item.item_code}
-                                            </p>
-                                            <p className="text-[10px] text-slate-500 truncate max-w-[200px]">
-                                              {item.item_name}
-                                            </p>
-                                          </div>
-                                        </div>
-                                      </td>
-                                      <td className="p-2">
-                                        <GroupBadge group={item.item_group || 'Sub Assembly'} />
-                                      </td>
-                                      <td className="p-2">
-                                        <div className="flex items-center gap-1.5 text-slate-600">
-                                          <Warehouse size={12} className="text-slate-400" />
-                                          <span className="text-[10px] font-medium truncate max-w-[120px]">
-                                            {item.warehouse || 'Work In Progress - NC'}
-                                          </span>
-                                        </div>
-                                      </td>
-                                      <td className="p-2 text-center">
-                                        <div className="flex items-center justify-center gap-1.5 text-slate-600">
-                                          <Calendar size={12} className="text-slate-400" />
-                                          <span className="text-[11px] font-medium">
-                                            {item.planned_start_date || 'TBD'}
-                                          </span>
-                                        </div>
-                                      </td>
-                                      <td className="p-2 text-right">
-                                        <div className="flex flex-col items-end">
-                                          <span className="text-sm  text-rose-600">
-                                            {item.planned_qty || item.quantity || item.qty || '-'}
-                                          </span>
-                                          <span className="text-[9px] text-slate-400 uppercase">{item.uom || 'PCS'}</span>
-                                        </div>
-                                      </td>
-                                      <td className="p-2 text-center">
-                                        <div className="flex items-center justify-center gap-1.5 text-rose-700 bg-rose-50/50 px-2 py-0.5 rounded border border-rose-100/50 w-fit mx-auto">
-                                          <Layers size={12} className="text-rose-500" />
-                                          <span className="font-mono text-[10px]">
-                                            {item.bom_no || item.bom_id || 'N/A'}
-                                          </span>
-                                        </div>
-                                      </td>
-                                      <td className="p-2 text-center">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            toggleItemMaterials(item);
-                                          }}
-                                          className={`px-2 py-1 rounded text-[10px] font-medium border transition-colors ${
-                                            expandedSubAssemblyMaterials[item.item_code]
-                                              ? 'bg-rose-100 text-rose-700 border-rose-200'
-                                              : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300 hover:text-rose-600'
-                                          }`}
-                                        >
-                                          Materials
-                                        </button>
-                                      </td>
-                                    </tr>
+                {expandedSections.subassembly && (
+                  <div className="p-2 animate-in fade-in duration-300">
+                    <div className="overflow-x-auto rounded border border-slate-100">
+                      <table className="w-full text-left border-collapse">
+                        <thead className="bg-slate-50 border-b border-slate-100">
+                          <tr>
+                            <th className="p-2 text-[10px]  text-slate-500  w-8">No.</th>
+                            <th className="p-2 text-[10px]  text-slate-500 ">Sub Assembly Item Code</th>
+                            <th className="p-2 text-[10px]  text-slate-500 ">Group</th>
+                            <th className="p-2 text-[10px]  text-slate-500 ">Target Warehouse</th>
+                            <th className="p-2 text-[10px]  text-slate-500  text-center">Scheduled Date</th>
+                            <th className="p-2 text-[10px]  text-slate-500  text-right">Required Qty</th>
+                            <th className="p-2 text-[10px]  text-slate-500  text-center">Bom No</th>
+                            <th className="p-2 text-[10px]  text-slate-500  text-center">Manufacturing Type</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {(() => {
+                            const tree = buildSubAssemblyTree(subAssemblyItems);
 
-                                    {/* Sub-assembly materials (raw materials) */}
-                                    {expandedSubAssemblyMaterials[item.item_code] && subAssemblyMaterials[item.item_code] && (
-                                      <tr>
-                                        <td colSpan="8" className="p-0 bg-rose-50/10">
-                                          <div className="p-4 border-l-4 border-rose-500 m-3 bg-white shadow-sm rounded-sm border border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
-                                            <div className="flex items-center gap-2 mb-3">
-                                              <div className="p-1.5 bg-rose-50 text-rose-600 rounded">
-                                                <Layers size={14} />
-                                              </div>
-                                              <h4 className="text-[11px]  text-slate-800 ">BOM Components & Materials</h4>
-                                            </div>
-                                            <table className="w-full text-[10px] border-collapse">
-                                              <thead>
-                                                <tr className="bg-slate-50 border-b border-slate-100">
-                                                  <th className="p-2 text-left  text-slate-500 uppercase w-8">No.</th>
-                                                  <th className="p-2 text-left  text-slate-500 uppercase">Item</th>
-                                                  <th className="p-2 text-left  text-slate-500 uppercase">Group</th>
-                                                  <th className="p-2 text-right  text-slate-500 uppercase">Qty per Unit</th>
-                                                  <th className="p-2 text-right  text-rose-600 uppercase">Total Required Qty</th>
-                                                  <th className="p-2 text-center  text-slate-500 uppercase">UOM</th>
-                                                </tr>
-                                              </thead>
-                                              <tbody className="divide-y divide-slate-50">
-                                                {subAssemblyMaterials[item.item_code].map((m, mIdx) => {
-                                                  const plannedQty = item.planned_qty || item.quantity || item.qty || 1;
-                                                  const perUnitQty = parseFloat(m.qty || m.quantity || 0);
-                                                  const totalQty = perUnitQty * plannedQty;
-                                                  const mCode = m.item_code || m.component_code;
-                                                  const isSubAsm = isSubAssemblyGroup(m.item_group, mCode);
-                                                  
-                                                  return (
-                                                    <tr key={mIdx} className={`hover:bg-slate-50 transition-colors ${isSubAsm ? 'bg-rose-50/20' : ''}`}>
-                                                      <td className="p-2 text-slate-400 font-medium">{mIdx + 1}</td>
-                                                      <td className="p-2">
-                                                        <div className="flex items-center gap-2">
-                                                          {isSubAsm && <Layers size={10} className="text-rose-500" />}
-                                                          <div className={`font-medium ${isSubAsm ? 'text-rose-700' : 'text-slate-900'}`}>{mCode}</div>
-                                                          {isSubAsm && (
-                                                            <span className="px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[8px] font-bold uppercase tracking-wider">
-                                                              Sub-Assembly
-                                                            </span>
-                                                          )}
-                                                        </div>
-                                                        <div className="text-slate-400 text-[9px]">{m.item_name || m.component_description || m.description}</div>
-                                                      </td>
-                                                      <td className="p-2">
-                                                        <GroupBadge group={m.item_group} />
-                                                      </td>
-                                                      <td className="p-2 text-right text-slate-600">{perUnitQty.toFixed(4)}</td>
-                                                      <td className="p-2 text-right font-medium text-rose-600">{totalQty.toFixed(4)}</td>
-                                                      <td className="p-2 text-center text-slate-500">{m.uom || 'Nos'}</td>
-                                                    </tr>
-                                                  );
-                                                })}
-                                              </tbody>
-                                            </table>
-                                          </div>
-                                        </td>
-                                      </tr>
-                                    )}
+                            const renderSubAssembly = (item, level = 0, path = '') => {
+                              const currentPath = path ? `${path}.${item.item_code}` : item.item_code;
+                              const isExpanded = expandedSubAsms[currentPath];
+                              const hasChildren = item.children && item.children.length > 0;
 
-                                    {/* Recursive child sub-assemblies */}
-                                    {isExpanded && hasChildren && item.children.map(child => renderSubAssembly(child, level + 1, currentPath))}
-                                  </React.Fragment>
-                                );
-                              };
-
-                              return tree.map(rootItem => renderSubAssembly(rootItem));
-                            })()}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-                </Card>
-              )}
-            </div>
-            <div id="requirements" className="block bg-white">
-              {(rawMaterialItems.length > 0 || subAssemblyBomMaterials.length > 0) && (
-                <Card>
-                  <SectionHeader
-                    title="03 Materials"
-                    icon={Boxes}
-                    subtitle="Consolidated material explosion across all levels"
-                    badge={`${rawMaterialItems.length + subAssemblyBomMaterials.length} ITEMS`}
-                    isExpanded={expandedSections.requirements}
-                    onToggle={() => toggleSection('requirements')}
-                    themeColor="amber"
-                    actions={
-                      <div className="flex items-center gap-2">
-                        {/* Buttons moved to bottom sticky bar */}
-                      </div>
-                    }
-                  />
-
-                  {expandedSections.requirements && (
-                    <div className="p-3 space-y-2 animate-in fade-in duration-300">
-                      {/* Primary Raw Materials */}
-                      {rawMaterialItems.length > 0 && (
-                        <div className="space-y-2">
-                          <h4 className="text-xs   text-amber-600 flex items-center gap-2 px-1">
-                            <div className="w-1.5 h-1.5  rounded  bg-amber-500"></div>
-                            CORE MATERIALS
-                          </h4>
-                          <div className="rounded border border-amber-100 overflow-hidden bg-white">
-                            <table className="w-full text-left border-collapse">
-                              <thead className="bg-amber-50/50 border-b border-amber-100">
-                                <tr>
-                                  <th className="p-2 text-[10px]  text-amber-700 ">Item </th>
-                                  <th className="p-2 text-[10px]  text-amber-700 ">Group</th>
-                                  <th className="p-2 text-[10px]  text-amber-700  text-right">Required Qty</th>
-                                  <th className="p-2 text-[10px]  text-amber-700 ">Warehouse</th>
-                                  <th className="p-2 text-[10px]  text-amber-700  text-center">BOM Ref</th>
-                                  <th className="p-2 text-[10px]  text-amber-700  text-center">Status</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-amber-50">
-                                {rawMaterialItems.map((item, idx) => (
-                                  <tr key={idx} className="hover:bg-amber-50/20 transition-colors group">
-                                    <td className="p-2">
-                                      <p className="text-xs font-medium text-slate-900 group-hover:text-amber-600 transition-colors">
-                                        {item.item_code}
-                                      </p>
-                                      <p className="text-[10px] text-slate-500 truncate max-w-[200px]">
-                                        {item.item_name}
-                                      </p>
-                                    </td>
-                                    <td className="p-2">
-                                      <GroupBadge group={item.item_group || 'Raw Material'} />
-                                    </td>
-                                    <td className="p-2 text-right">
-                                      <div className="flex flex-col items-end">
-                                        <span className="text-xs  text-amber-600">
-                                          {item.quantity || item.qty_as_per_bom}
-                                        </span>
-                                        <span className="text-[9px] text-slate-400 uppercase">{item.uom || 'PCS'}</span>
+                              return (
+                                <React.Fragment key={currentPath}>
+                                  <tr
+                                    className={`hover:bg-rose-50/30 transition-colors group cursor-pointer ${level > 0 ? 'bg-slate-50/30' : ''}`}
+                                    onClick={() => {
+                                      if (hasChildren) {
+                                        setExpandedSubAsms(prev => ({ ...prev, [currentPath]: !prev[currentPath] }));
+                                      }
+                                    }}
+                                  >
+                                    <td className="p-2 text-[10px] text-slate-400 font-medium">
+                                      <div className="flex items-center gap-1">
+                                        {hasChildren ? (
+                                          <ChevronDown
+                                            size={12}
+                                            className={`transform transition-transform ${isExpanded ? '' : '-rotate-90'}`}
+                                          />
+                                        ) : <div className="w-3" />}
+                                        {level + 1}
                                       </div>
+                                    </td>
+                                    <td className="p-2">
+                                      <div className="flex items-center gap-2" style={{ paddingLeft: `${level * 16}px` }}>
+                                        <div className={`w-7 h-7 rounded flex items-center justify-center border ${level === 0 ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                                          <Layers size={14} />
+                                        </div>
+                                        <div>
+                                          <p className="text-xs font-medium text-slate-900 leading-tight">
+                                            {item.item_code}
+                                          </p>
+                                          <p className="text-[10px] text-slate-500 truncate max-w-[200px]">
+                                            {item.item_name}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="p-2">
+                                      <GroupBadge group={item.item_group || 'Sub Assembly'} />
                                     </td>
                                     <td className="p-2">
                                       <div className="flex items-center gap-1.5 text-slate-600">
                                         <Warehouse size={12} className="text-slate-400" />
                                         <span className="text-[10px] font-medium truncate max-w-[120px]">
-                                          {item.for_warehouse || '-'}
+                                          {item.warehouse || 'Work In Progress - NC'}
                                         </span>
                                       </div>
                                     </td>
-                                    <td className="p-2">
-                                      <div className="flex items-center justify-center gap-1.5 text-amber-700 bg-amber-50/50 px-2 py-0.5 rounded border border-amber-100/50 w-fit mx-auto">
-                                        <Layers size={12} className="text-amber-500" />
-                                        <span className="font-mono text-[10px]">
-                                          {item.bom_id || item.bom_no || '-'}
+                                    <td className="p-2 text-center">
+                                      <div className="flex items-center justify-center gap-1.5 text-slate-600">
+                                        <Calendar size={12} className="text-slate-400" />
+                                        <span className="text-[11px] font-medium">
+                                          {item.planned_start_date || 'TBD'}
                                         </span>
                                       </div>
-                                    </td>
-                                    <td className="p-2">
-                                      <div className="flex justify-center">
-                                        {item.material_status ? (
-                                          <span className={`px-2 py-0.5 rounded text-[10px] font-medium border 
-                                            ${item.material_status === 'issued' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                                              item.material_status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                item.material_status === 'requested' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                                  'bg-slate-50 text-slate-400 border-slate-100'}`}>
-                                            {item.material_status.charAt(0).toUpperCase() + item.material_status.slice(1)}
-                                          </span>
-                                        ) : (
-                                          <span className="text-xs text-slate-200">--</span>
-                                        )}
-                                      </div>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Sub-Assembly Materials */}
-                      {subAssemblyBomMaterials.length > 0 && (
-                        <div className="space-y-2 pt-2">
-                          <h4 className="text-xs  text-rose-600 flex items-center gap-2 px-1">
-                            <div className="w-1.5 h-1.5 rounded bg-rose-500"></div>
-                            EXPLODED COMPONENTS
-                          </h4>
-                          <div className="rounded border border-rose-100 overflow-hidden bg-white">
-                            <table className="w-full text-left border-collapse">
-                              <thead className="bg-rose-50/50 border-b border-rose-100">
-                                <tr>
-                                  <th className="p-2 text-[10px]  text-rose-700 ">Component Specification</th>
-                                  <th className="p-2 text-[10px]  text-rose-700 ">Group</th>
-                                  <th className="p-2 text-[10px]  text-rose-700  text-right">Required Qty</th>
-                                  <th className="p-2 text-[10px]  text-rose-700  text-center">Source Assembly</th>
-                                  <th className="p-2 text-[10px]  text-rose-700  text-center">BOM Ref</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-rose-50">
-                                {subAssemblyBomMaterials.filter(m => !m.is_operation).map((item, idx) => (
-                                  <tr key={idx} className="hover:bg-rose-50/20 transition-colors group">
-                                    <td className="p-2">
-                                      <p className="text-xs font-medium text-slate-900 group-hover:text-rose-600 transition-colors">
-                                        {item.item_code || item.component_code}
-                                      </p>
-                                      <p className="text-[10px] text-slate-500 truncate max-w-[200px]">
-                                        {item.item_name || item.component_description}
-                                      </p>
-                                    </td>
-                                    <td className="p-2">
-                                      <GroupBadge group={item.item_group || 'Raw Material'} />
                                     </td>
                                     <td className="p-2 text-right">
                                       <div className="flex flex-col items-end">
-                                        <span className="text-xs  text-rose-600">
-                                          {(item.quantity || item.qty || 0).toFixed(2)}
+                                        <span className="text-sm  text-rose-600">
+                                          {item.planned_qty || item.quantity || item.qty || '-'}
                                         </span>
                                         <span className="text-[9px] text-slate-400 uppercase">{item.uom || 'PCS'}</span>
                                       </div>
                                     </td>
                                     <td className="p-2 text-center">
-                                      <div className="inline-flex items-center gap-1.5 text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">
-                                        <Activity size={10} />
-                                        <span className="text-[10px] font-medium">{item.sub_assembly_code}</span>
-                                      </div>
-                                    </td>
-                                    <td className="p-2">
                                       <div className="flex items-center justify-center gap-1.5 text-rose-700 bg-rose-50/50 px-2 py-0.5 rounded border border-rose-100/50 w-fit mx-auto">
                                         <Layers size={12} className="text-rose-500" />
                                         <span className="font-mono text-[10px]">
-                                          {item.bom_id || item.bom_no || '-'}
+                                          {item.bom_no || item.bom_id || 'N/A'}
                                         </span>
                                       </div>
                                     </td>
+                                    <td className="p-2 text-center">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleItemMaterials(item);
+                                        }}
+                                        className={`px-2 py-1 rounded text-[10px] font-medium border transition-colors ${expandedSubAssemblyMaterials[item.item_code]
+                                            ? 'bg-rose-100 text-rose-700 border-rose-200'
+                                            : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300 hover:text-rose-600'
+                                          }`}
+                                      >
+                                        Materials
+                                      </button>
+                                    </td>
                                   </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-                    
+
+                                  {/* Sub-assembly materials (raw materials) */}
+                                  {expandedSubAssemblyMaterials[item.item_code] && subAssemblyMaterials[item.item_code] && (
+                                    <tr>
+                                      <td colSpan="8" className="p-0 bg-rose-50/10">
+                                        <div className="p-4 border-l-4 border-rose-500 m-3 bg-white shadow-sm rounded-sm border border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                                          <div className="flex items-center gap-2 mb-3">
+                                            <div className="p-1.5 bg-rose-50 text-rose-600 rounded">
+                                              <Layers size={14} />
+                                            </div>
+                                            <h4 className="text-[11px]  text-slate-800 ">BOM Components & Materials</h4>
+                                          </div>
+                                          <table className="w-full text-[10px] border-collapse">
+                                            <thead>
+                                              <tr className="bg-slate-50 border-b border-slate-100">
+                                                <th className="p-2 text-left  text-slate-500 uppercase w-8">No.</th>
+                                                <th className="p-2 text-left  text-slate-500 uppercase">Item</th>
+                                                <th className="p-2 text-left  text-slate-500 uppercase">Group</th>
+                                                <th className="p-2 text-right  text-slate-500 uppercase">Qty per Unit</th>
+                                                <th className="p-2 text-right  text-rose-600 uppercase">Total Required Qty</th>
+                                                <th className="p-2 text-center  text-slate-500 uppercase">UOM</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                              {subAssemblyMaterials[item.item_code].map((m, mIdx) => {
+                                                const plannedQty = item.planned_qty || item.quantity || item.qty || 1;
+                                                const perUnitQty = parseFloat(m.qty || m.quantity || 0);
+                                                const totalQty = perUnitQty * plannedQty;
+                                                const mCode = m.item_code || m.component_code;
+                                                const isSubAsm = isSubAssemblyGroup(m.item_group, mCode);
+
+                                                return (
+                                                  <tr key={mIdx} className={`hover:bg-slate-50 transition-colors ${isSubAsm ? 'bg-rose-50/20' : ''}`}>
+                                                    <td className="p-2 text-slate-400 font-medium">{mIdx + 1}</td>
+                                                    <td className="p-2">
+                                                      <div className="flex items-center gap-2">
+                                                        {isSubAsm && <Layers size={10} className="text-rose-500" />}
+                                                        <div className={`font-medium ${isSubAsm ? 'text-rose-700' : 'text-slate-900'}`}>{mCode}</div>
+                                                        {isSubAsm && (
+                                                          <span className="px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[8px] font-bold uppercase tracking-wider">
+                                                            Sub-Assembly
+                                                          </span>
+                                                        )}
+                                                      </div>
+                                                      <div className="text-slate-400 text-[9px]">{m.item_name || m.component_description || m.description}</div>
+                                                    </td>
+                                                    <td className="p-2">
+                                                      <GroupBadge group={m.item_group} />
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600">{perUnitQty.toFixed(4)}</td>
+                                                    <td className="p-2 text-right font-medium text-rose-600">{totalQty.toFixed(4)}</td>
+                                                    <td className="p-2 text-center text-slate-500">{m.uom || 'Nos'}</td>
+                                                  </tr>
+                                                );
+                                              })}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
+
+                                  {/* Recursive child sub-assemblies */}
+                                  {isExpanded && hasChildren && item.children.map(child => renderSubAssembly(child, level + 1, currentPath))}
+                                </React.Fragment>
+                              );
+                            };
+
+                            return tree.map(rootItem => renderSubAssembly(rootItem));
+                          })()}
+                        </tbody>
+                      </table>
                     </div>
-                  )}
-                    </Card>
-              )}
-            </div>
+                  </div>
+                )}
+              </Card>
+            )}
+          </div>
+          <div id="requirements" className="block bg-white">
+            {(rawMaterialItems.length > 0 || subAssemblyBomMaterials.length > 0) && (
+              <Card>
+                <SectionHeader
+                  title="03 Materials"
+                  icon={Boxes}
+                  subtitle="Consolidated material explosion across all levels"
+                  badge={`${rawMaterialItems.length + subAssemblyBomMaterials.length} ITEMS`}
+                  isExpanded={expandedSections.requirements}
+                  onToggle={() => toggleSection('requirements')}
+                  themeColor="amber"
+                  actions={
+                    <div className="flex items-center gap-2">
+                      {/* Buttons moved to bottom sticky bar */}
+                    </div>
+                  }
+                />
+
+                {expandedSections.requirements && (
+                  <div className="p-3 space-y-2 animate-in fade-in duration-300">
+                    {/* Primary Raw Materials */}
+                    {rawMaterialItems.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-xs   text-amber-600 flex items-center gap-2 px-1">
+                          <div className="w-1.5 h-1.5  rounded  bg-amber-500"></div>
+                          CORE MATERIALS
+                        </h4>
+                        <div className="rounded border border-amber-100 overflow-hidden bg-white">
+                          <table className="w-full text-left border-collapse">
+                            <thead className="bg-amber-50/50 border-b border-amber-100">
+                              <tr>
+                                <th className="p-2 text-[10px]  text-amber-700 ">Item </th>
+                                <th className="p-2 text-[10px]  text-amber-700 ">Group</th>
+                                <th className="p-2 text-[10px]  text-amber-700  text-right">Required Qty</th>
+                                <th className="p-2 text-[10px]  text-amber-700 ">Warehouse</th>
+                                <th className="p-2 text-[10px]  text-amber-700  text-center">BOM Ref</th>
+                                <th className="p-2 text-[10px]  text-amber-700  text-center">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-amber-50">
+                              {rawMaterialItems.map((item, idx) => (
+                                <tr key={idx} className="hover:bg-amber-50/20 transition-colors group">
+                                  <td className="p-2">
+                                    <p className="text-xs font-medium text-slate-900 group-hover:text-amber-600 transition-colors">
+                                      {item.item_code}
+                                    </p>
+                                    <p className="text-[10px] text-slate-500 truncate max-w-[200px]">
+                                      {item.item_name}
+                                    </p>
+                                  </td>
+                                  <td className="p-2">
+                                    <GroupBadge group={item.item_group || 'Raw Material'} />
+                                  </td>
+                                  <td className="p-2 text-right">
+                                    <div className="flex flex-col items-end">
+                                      <span className="text-xs  text-amber-600">
+                                        {item.quantity || item.qty_as_per_bom}
+                                      </span>
+                                      <span className="text-[9px] text-slate-400 uppercase">{item.uom || 'PCS'}</span>
+                                    </div>
+                                  </td>
+                                  <td className="p-2">
+                                    <div className="flex items-center gap-1.5 text-slate-600">
+                                      <Warehouse size={12} className="text-slate-400" />
+                                      <span className="text-[10px] font-medium truncate max-w-[120px]">
+                                        {item.for_warehouse || '-'}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="p-2">
+                                    <div className="flex items-center justify-center gap-1.5 text-amber-700 bg-amber-50/50 px-2 py-0.5 rounded border border-amber-100/50 w-fit mx-auto">
+                                      <Layers size={12} className="text-amber-500" />
+                                      <span className="font-mono text-[10px]">
+                                        {item.bom_id || item.bom_no || '-'}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="p-2">
+                                    <div className="flex justify-center">
+                                      {item.material_status ? (
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium border 
+                                            ${item.material_status === 'issued' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                            item.material_status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                              item.material_status === 'requested' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                                'bg-slate-50 text-slate-400 border-slate-100'}`}>
+                                          {item.material_status.charAt(0).toUpperCase() + item.material_status.slice(1)}
+                                        </span>
+                                      ) : (
+                                        <span className="text-xs text-slate-200">--</span>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sub-Assembly Materials */}
+                    {subAssemblyBomMaterials.length > 0 && (
+                      <div className="space-y-2 pt-2">
+                        <h4 className="text-xs  text-rose-600 flex items-center gap-2 px-1">
+                          <div className="w-1.5 h-1.5 rounded bg-rose-500"></div>
+                          EXPLODED COMPONENTS
+                        </h4>
+                        <div className="rounded border border-rose-100 overflow-hidden bg-white">
+                          <table className="w-full text-left border-collapse">
+                            <thead className="bg-rose-50/50 border-b border-rose-100">
+                              <tr>
+                                <th className="p-2 text-[10px]  text-rose-700 ">Component Specification</th>
+                                <th className="p-2 text-[10px]  text-rose-700 ">Group</th>
+                                <th className="p-2 text-[10px]  text-rose-700  text-right">Required Qty</th>
+                                <th className="p-2 text-[10px]  text-rose-700  text-center">Source Assembly</th>
+                                <th className="p-2 text-[10px]  text-rose-700  text-center">BOM Ref</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-rose-50">
+                              {subAssemblyBomMaterials.filter(m => !m.is_operation).map((item, idx) => (
+                                <tr key={idx} className="hover:bg-rose-50/20 transition-colors group">
+                                  <td className="p-2">
+                                    <p className="text-xs font-medium text-slate-900 group-hover:text-rose-600 transition-colors">
+                                      {item.item_code || item.component_code}
+                                    </p>
+                                    <p className="text-[10px] text-slate-500 truncate max-w-[200px]">
+                                      {item.item_name || item.component_description}
+                                    </p>
+                                  </td>
+                                  <td className="p-2">
+                                    <GroupBadge group={item.item_group || 'Raw Material'} />
+                                  </td>
+                                  <td className="p-2 text-right">
+                                    <div className="flex flex-col items-end">
+                                      <span className="text-xs  text-rose-600">
+                                        {(item.quantity || item.qty || 0).toFixed(2)}
+                                      </span>
+                                      <span className="text-[9px] text-slate-400 uppercase">{item.uom || 'PCS'}</span>
+                                    </div>
+                                  </td>
+                                  <td className="p-2 text-center">
+                                    <div className="inline-flex items-center gap-1.5 text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">
+                                      <Activity size={10} />
+                                      <span className="text-[10px] font-medium">{item.sub_assembly_code}</span>
+                                    </div>
+                                  </td>
+                                  <td className="p-2">
+                                    <div className="flex items-center justify-center gap-1.5 text-rose-700 bg-rose-50/50 px-2 py-0.5 rounded border border-rose-100/50 w-fit mx-auto">
+                                      <Layers size={12} className="text-rose-500" />
+                                      <span className="font-mono text-[10px]">
+                                        {item.bom_id || item.bom_no || '-'}
+                                      </span>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+                )}
+              </Card>
+            )}
+          </div>
         </div>
       </div>
 
@@ -2989,11 +2990,10 @@ export default function ProductionPlanningForm() {
                               {checkingStock ? (
                                 <span className="inline-block w-16 h-4 bg-slate-100 animate-pulse rounded" />
                               ) : (
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px]  border transition-all ${
-                                  isAvailable 
-                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px]  border transition-all ${isAvailable
+                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
                                     : 'bg-rose-50 text-rose-600 border-rose-100'
-                                }`}>
+                                  }`}>
                                   {isAvailable ? <Check size={10} /> : <AlertCircle size={10} />}
                                   {isAvailable ? 'Fully Stocked' : 'Low Inventory'}
                                 </span>
@@ -3050,31 +3050,46 @@ export default function ProductionPlanningForm() {
           </div>
 
           <div className="flex items-center gap-3">
-           
 
-            {subAssemblyBomMaterials.length > 0 && (
+
+            {(subAssemblyBomMaterials.length > 0 || fgItems.length > 0) && (
               <>
                 <button
                   onClick={createWorkOrders}
-                  disabled={creatingWorkOrders || (existingWorkOrders && existingWorkOrders.length > 0) || isReadOnly}
-                  className={`flex items-center gap-2 p-2 rounded transition-all text-xs border ${
-                    (existingWorkOrders && existingWorkOrders.length > 0) || isReadOnly
+                  disabled={creatingWorkOrders || (existingWorkOrders && existingWorkOrders.length > 0) || isReadOnly || !plan_id || fetchingSubAssemblyBoms}
+                  className={`flex items-center gap-2 p-2 rounded transition-all text-xs border ${(existingWorkOrders && existingWorkOrders.length > 0) || isReadOnly || !plan_id || fetchingSubAssemblyBoms
                       ? 'bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed opacity-70'
                       : 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'
-                  }`}
-                  title={existingWorkOrders && existingWorkOrders.length > 0 ? `Work orders already exist for this plan (${plan_id})` : isReadOnly ? "Switch to Edit mode to generate Work Orders" : "Generate Work Orders"}
+                    }`}
+                  title={
+                    existingWorkOrders && existingWorkOrders.length > 0
+                      ? `Work orders already exist for this plan (${plan_id})`
+                      : !plan_id
+                        ? "Save the plan first to generate Work Orders"
+                        : fetchingSubAssemblyBoms
+                          ? "BOM explosion in progress..."
+                          : isReadOnly
+                            ? "Switch to Edit mode to generate Work Orders"
+                            : "Generate Work Orders"
+                  }
                 >
                   <Plus size={14} />
                   {creatingWorkOrders ? 'Executing...' : (existingWorkOrders && existingWorkOrders.length > 0 ? 'Work Orders Created' : 'Work Orders')}
                 </button>
                 <button
                   onClick={createMaterialRequest}
-                  disabled={creatingMaterialRequest || isReadOnly}
-                  className={`flex items-center gap-2 p-2 rounded transition-all text-xs border ${
-                    isReadOnly
+                  disabled={creatingMaterialRequest || isReadOnly || !plan_id || fetchingSubAssemblyBoms}
+                  className={`flex items-center gap-2 p-2 rounded transition-all text-xs border ${isReadOnly || !plan_id || fetchingSubAssemblyBoms
                       ? 'bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed opacity-70'
                       : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100'
-                  }`}
+                    }`}
+                  title={
+                    !plan_id
+                      ? "Save the plan first to create Material Request"
+                      : fetchingSubAssemblyBoms
+                        ? "BOM explosion in progress..."
+                        : "Create Material Request"
+                  }
                 >
                   <ClipboardList size={14} />
                   {creatingMaterialRequest ? 'Creating...' : 'Material Request'}
@@ -3095,11 +3110,12 @@ export default function ProductionPlanningForm() {
             ) : (
               <button
                 onClick={saveProductionPlan}
-                disabled={savingPlan || !selectedSalesOrders.length}
+                disabled={savingPlan || !selectedSalesOrders.length || fetchingSubAssemblyBoms}
                 className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-slate-200  text-xs"
+                title={fetchingSubAssemblyBoms ? "BOM explosion in progress..." : "Save Strategic Plan"}
               >
                 <Save size={16} />
-                {savingPlan ? 'Saving Plan...' : 'Save Strategic Plan'}
+                {savingPlan ? 'Saving Plan...' : (fetchingSubAssemblyBoms ? 'Exploding BOM...' : 'Save Strategic Plan')}
               </button>
             )}
           </div>

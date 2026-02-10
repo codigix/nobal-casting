@@ -152,15 +152,16 @@ class ProductionModel {
   async createWorkOrder(data) {
     try {
       await this.db.query(
-        `INSERT INTO work_order (wo_id, item_code, quantity, priority, notes, status, sales_order_id, production_plan_id, bom_no, planned_start_date, planned_end_date, actual_start_date, actual_end_date, expected_delivery_date, parent_wo_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO work_order (wo_id, item_code, quantity, priority, notes, status, sales_order_id, production_plan_id, bom_no, planned_start_date, planned_end_date, actual_start_date, actual_end_date, expected_delivery_date, parent_wo_id, target_warehouse)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [data.wo_id, data.item_code, data.quantity, data.priority || 'medium', data.notes || '', data.status, data.sales_order_id || null, data.production_plan_id || data.plan_id || null, data.bom_no || null, 
          this._formatMySQLDate(data.planned_start_date), 
          this._formatMySQLDate(data.planned_end_date), 
          this._formatMySQLDate(data.actual_start_date), 
          this._formatMySQLDate(data.actual_end_date), 
          this._formatMySQLDate(data.expected_delivery_date),
-         data.parent_wo_id || null]
+         data.parent_wo_id || null,
+         data.target_warehouse || null]
       )
       return { wo_id: data.wo_id, ...data }
     } catch (error) {
@@ -170,9 +171,12 @@ class ProductionModel {
 
   async createWorkOrderRecursive(data, createdBy = 1, recurse = true) {
     try {
-      const { item_code, quantity, bom_no, priority, notes, sales_order_id, production_plan_id, planned_start_date, planned_end_date, expected_delivery_date, parent_wo_id } = data;
+      const { wo_id, item_code, quantity, bom_no, priority, notes, sales_order_id, production_plan_id, planned_start_date, planned_end_date, expected_delivery_date, parent_wo_id, target_warehouse } = data;
       
-      // 1. Determine actual BOM
+      // 1. Determine actual WO ID
+      const finalWoId = wo_id || `WO-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      
+      // 2. Determine actual BOM
       let actualBomNo = bom_no;
       if (!actualBomNo) {
         const [boms] = await this.db.query(
@@ -184,11 +188,24 @@ class ProductionModel {
         }
       }
 
-      // Generate this Work Order ID early so children can reference it
-      const wo_id = data.wo_id || `WO-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      const createdWorkOrderIds = [];
+      // 3. Create the Work Order for the item itself FIRST (so it has the oldest timestamp)
+      const workOrderData = {
+        ...data,
+        wo_id: finalWoId,
+        bom_no: actualBomNo,
+        status: 'Draft',
+        parent_wo_id: parent_wo_id || null
+      };
 
-      // 2. EXPLODE BOM to find and create sub-assemblies (ONLY IF recurse is true)
+      await this.createWorkOrder(workOrderData);
+      
+      // Add a small delay to ensure unique timestamps and correct DESC sorting
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const createdWorkOrderIds = [finalWoId];
+
+      // 4. EXPLODE BOM to find and create sub-assemblies (ONLY IF recurse is true)
+      // These will be created LAST, so they appear at the TOP in DESC sorting.
       if (actualBomNo && recurse) {
         const bomDetails = await this.getBOMDetails(actualBomNo);
         const lines = bomDetails?.lines || [];
@@ -218,7 +235,7 @@ class ProductionModel {
               planned_start_date,
               planned_end_date,
               expected_delivery_date,
-              parent_wo_id: wo_id // PASSING PARENT WO ID
+              parent_wo_id: finalWoId // PASSING PARENT WO ID
             }, createdBy, true);
             
             createdWorkOrderIds.push(...subWOs);
@@ -226,18 +243,7 @@ class ProductionModel {
         }
       }
 
-      // 3. Create the Work Order for the item itself
-      const workOrderData = {
-        ...data,
-        wo_id,
-        bom_no: actualBomNo,
-        status: 'Draft',
-        parent_wo_id: parent_wo_id || null
-      };
-
-      await this.createWorkOrder(workOrderData);
-      
-      // 4. Automatically populate items and operations from BOM if not provided
+      // 5. Automatically populate items and operations from BOM if not provided
       const bomDetails = actualBomNo ? await this.getBOMDetails(actualBomNo) : null;
       
       // Add items (prefer passed data.required_items)
@@ -252,7 +258,7 @@ class ProductionModel {
 
       for (let i = 0; i < itemsToUse.length; i++) {
         const item = itemsToUse[i];
-        await this.addWorkOrderItem(wo_id, {
+        await this.addWorkOrderItem(finalWoId, {
           ...item,
           sequence: i + 1
         });
@@ -274,16 +280,16 @@ class ProductionModel {
 
       for (let i = 0; i < opsToUse.length; i++) {
         const op = opsToUse[i];
-        await this.addWorkOrderOperation(wo_id, {
+        await this.addWorkOrderOperation(finalWoId, {
           ...op,
           sequence: i + 1
         });
       }
 
-      // 5. Generate Job Cards
-      await this.generateJobCardsForWorkOrder(wo_id, createdBy);
+      // 6. Generate Job Cards
+      await this.generateJobCardsForWorkOrder(finalWoId, createdBy);
 
-      // 6. Material Allocation
+      // 7. Material Allocation
       try {
         if (itemsToUse.length > 0) {
           const InventoryModel = (await import('./InventoryModel.js')).default;
@@ -295,14 +301,14 @@ class ProductionModel {
             source_warehouse: item.source_warehouse || 'Main'
           }));
           
-          await inventoryModel.allocateMaterialsForWorkOrder(wo_id, allocationItems, createdBy);
+          await inventoryModel.allocateMaterialsForWorkOrder(finalWoId, allocationItems, createdBy);
         }
       } catch (allocError) {
-        console.warn(`Material allocation skipped/failed for ${wo_id}:`, allocError.message);
+        console.warn(`Material allocation skipped/failed for ${finalWoId}:`, allocError.message);
       }
 
-      createdWorkOrderIds.push(wo_id);
-      return createdWorkOrderIds;
+      // return createdWorkOrderIds;
+      return [...new Set(createdWorkOrderIds)];
     } catch (error) {
       console.error('Error in createWorkOrderRecursive:', error);
       throw error;
@@ -1646,6 +1652,32 @@ async deleteAllBOMRawMaterials(bom_id) {
         if (workOrder && workOrder.sales_order_id) {
           await this.syncSalesOrderStatus(workOrder.sales_order_id)
         }
+
+        // NEW: Check if parent Work Order can now be set to 'ready'
+        if (workOrder && workOrder.parent_wo_id) {
+          const parentWoId = workOrder.parent_wo_id;
+          const [incompleteChildren] = await this.db.query(
+            'SELECT COUNT(*) as count FROM work_order WHERE parent_wo_id = ? AND status != ?',
+            [parentWoId, 'completed']
+          );
+
+          if (incompleteChildren && incompleteChildren[0].count === 0) {
+            // All sub-assemblies for the parent are completed!
+            // Set the parent's first Job Card to 'ready'
+            const [firstJobCard] = await this.db.query(
+              'SELECT job_card_id FROM job_card WHERE work_order_id = ? ORDER BY operation_sequence ASC LIMIT 1',
+              [parentWoId]
+            );
+
+            if (firstJobCard && firstJobCard.length > 0) {
+              await this.db.query(
+                "UPDATE job_card SET status = 'ready' WHERE job_card_id = ? AND status = 'draft'",
+                [firstJobCard[0].job_card_id]
+              );
+              console.log(`Parent Work Order ${parentWoId} is now ready to start. First Job Card set to ready.`);
+            }
+          }
+        }
         
         return true
       }
@@ -1779,7 +1811,8 @@ async deleteAllBOMRawMaterials(bom_id) {
       }
 
       if (!workOrder.operations || workOrder.operations.length === 0) {
-        throw new Error('No operations found for this work order')
+        console.log(`No operations found for Work Order ${work_order_id}. Skipping job card generation.`)
+        return []
       }
 
       // If work order operations table is empty, save the operations we found (likely from BOM fallback)
@@ -1876,7 +1909,7 @@ async deleteAllBOMRawMaterials(bom_id) {
           operation_type: operation.operation_type || 'IN_HOUSE',
           scheduled_start_date: null,
           scheduled_end_date: null,
-          status: isFirst ? 'ready' : 'draft',
+          status: (isFirst && (parseInt(workOrder.incomplete_sub_assemblies) || 0) === 0) ? 'ready' : 'draft',
           created_by,
           notes: null
         }
@@ -2458,9 +2491,8 @@ async deleteAllBOMRawMaterials(bom_id) {
       let shiftTotalAccepted = 0;
 
       Object.values(shifts).forEach(s => {
-        // If we have time logs (gross production), use them as the primary source for "Produced"
-        // If no time logs exist for this shift/date, use the rejection entry's inferred production
-        const shiftProduced = s.produced > 0 ? s.produced : s.rejectionProduced;
+        // Use the maximum of reported production and inferred production from quality entries
+        const shiftProduced = Math.max(s.produced, s.rejectionProduced);
         
         shiftTotalProduced += shiftProduced;
         shiftTotalRejected += Math.max(s.rejected, s.rejectionRejected);

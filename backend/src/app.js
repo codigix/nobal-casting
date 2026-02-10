@@ -96,11 +96,15 @@ async function initializeDatabase() {
     
     await enhanceJobCardTable()
     
+    await enhanceWorkOrderOperationTable()
+    
     await createTimeLogTable()
     
     await createRejectionTable()
     
     await createRejectionEntryTable()
+    
+    await enhanceRejectionEntryTable()
     
     await enhanceTimeLogTable()
     
@@ -464,7 +468,12 @@ async function enhanceJobCardTable() {
       { name: 'assigned_workstation_id', sql: 'assigned_workstation_id VARCHAR(50) DEFAULT NULL' },
       { name: 'assignment_notes', sql: 'assignment_notes TEXT DEFAULT NULL' },
       { name: 'inhouse', sql: 'inhouse TINYINT(1) DEFAULT 0' },
-      { name: 'outsource', sql: 'outsource TINYINT(1) DEFAULT 0' }
+      { name: 'outsource', sql: 'outsource TINYINT(1) DEFAULT 0' },
+      { name: 'accepted_quantity', sql: 'accepted_quantity DECIMAL(18,6) DEFAULT 0' },
+      { name: 'scrap_quantity', sql: 'scrap_quantity DECIMAL(18,6) DEFAULT 0' },
+      { name: 'hourly_rate', sql: 'hourly_rate DECIMAL(15,2) DEFAULT 0' },
+      { name: 'operating_cost', sql: 'operating_cost DECIMAL(18,6) DEFAULT 0' },
+      { name: 'operation_type', sql: 'operation_type VARCHAR(50) DEFAULT "IN_HOUSE"' }
     ]
 
     for (const column of columnsToAdd) {
@@ -480,11 +489,64 @@ async function enhanceJobCardTable() {
       }
     }
 
-    await db.execute(`
-      ALTER TABLE job_card ADD INDEX idx_operation_sequence (operation_sequence),
-      ADD INDEX idx_planned_dates (planned_start_date, planned_end_date),
-      ADD INDEX idx_is_delayed (is_delayed)
-    `)
+    try {
+      await db.execute(`
+        ALTER TABLE job_card ADD INDEX idx_operation_sequence (operation_sequence),
+        ADD INDEX idx_planned_dates (planned_start_date, planned_end_date),
+        ADD INDEX idx_is_delayed (is_delayed)
+      `)
+    } catch (e) {
+      // Index might already exist
+    }
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
+async function enhanceWorkOrderOperationTable() {
+  try {
+    const columnsToAdd = [
+      { name: 'hourly_rate', sql: 'hourly_rate DECIMAL(15,2) DEFAULT 0' },
+      { name: 'operating_cost', sql: 'operating_cost DECIMAL(18,6) DEFAULT 0' },
+      { name: 'operation_type', sql: 'operation_type VARCHAR(50) DEFAULT "IN_HOUSE"' },
+      { name: 'workstation', sql: 'workstation VARCHAR(100) DEFAULT NULL' }
+    ]
+
+    for (const column of columnsToAdd) {
+      try {
+        await db.execute(`ALTER TABLE work_order_operation ADD COLUMN ${column.sql}`)
+        console.log(`✓ Added column ${column.name} to work_order_operation`)
+      } catch (error) {
+        if (error.message.includes('Duplicate column')) {
+          console.log(`→ Column ${column.name} already exists in work_order_operation`)
+        } else {
+          console.log('Error enhancing work_order_operation:', error.message)
+        }
+      }
+    }
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
+async function enhanceRejectionEntryTable() {
+  try {
+    const columnsToAdd = [
+      { name: 'status', sql: 'status VARCHAR(50) DEFAULT "Pending"' }
+    ]
+
+    for (const column of columnsToAdd) {
+      try {
+        await db.execute(`ALTER TABLE rejection_entry ADD COLUMN ${column.sql}`)
+        console.log(`✓ Added column ${column.name} to rejection_entry`)
+      } catch (error) {
+        if (error.message.includes('Duplicate column')) {
+          console.log(`→ Column ${column.name} already exists in rejection_entry`)
+        } else {
+          console.log('Error enhancing rejection_entry:', error.message)
+        }
+      }
+    }
   } catch (error) {
     console.log('Note:', error.message)
   }
