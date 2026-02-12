@@ -48,7 +48,7 @@ export class ProductionPlanningModel {
          FROM production_plan_sub_assembly psa 
          LEFT JOIN item i ON psa.item_code = i.item_code 
          WHERE psa.plan_id = ?
-         ORDER BY psa.id DESC`,
+         ORDER BY psa.explosion_level DESC, psa.id ASC`,
         [plan_id]
       ).catch(() => [])
 
@@ -71,7 +71,8 @@ export class ProductionPlanningModel {
         ...item,
         planned_qty: parseFloat(item.planned_qty) || parseFloat(item.required_qty) || 0,
         required_qty: parseFloat(item.required_qty) || parseFloat(item.planned_qty) || 0,
-        scheduled_date: item.schedule_date
+        scheduled_date: item.schedule_date,
+        explosion_level: item.explosion_level || 0
       }))
 
       const mappedFGItems = fgItems.map(item => ({
@@ -186,13 +187,15 @@ export class ProductionPlanningModel {
               `SELECT psa.*, i.name as item_name 
                FROM production_plan_sub_assembly psa 
                LEFT JOIN item i ON psa.item_code = i.item_code 
-               WHERE psa.plan_id = ?`,
+               WHERE psa.plan_id = ?
+               ORDER BY psa.explosion_level DESC, psa.id ASC`,
               [plan.plan_id]
             ).then(([rows]) => rows.map(item => ({
               ...item,
               planned_qty: parseFloat(item.planned_qty) || parseFloat(item.required_qty) || 0,
               required_qty: parseFloat(item.required_qty) || parseFloat(item.planned_qty) || 0,
-              scheduled_date: item.schedule_date
+              scheduled_date: item.schedule_date,
+              explosion_level: item.explosion_level || 0
             }))).catch(() => [])
           ])
           
@@ -413,6 +416,7 @@ export class ProductionPlanningModel {
           id INT AUTO_INCREMENT PRIMARY KEY,
           plan_id VARCHAR(100) NOT NULL,
           item_code VARCHAR(100) NOT NULL,
+          explosion_level INT DEFAULT 0,
           item_name VARCHAR(255),
           parent_item_code VARCHAR(100),
           target_warehouse VARCHAR(100),
@@ -440,12 +444,13 @@ export class ProductionPlanningModel {
       const plannedQty = item.planned_qty || requiredQty
       const plannedQtyBeforeScrap = item.planned_qty_before_scrap || requiredQty
       const scrapPercentage = item.scrap_percentage || 0
+      const explosionLevel = item.explosion_level || 0
       
       await this.db.execute(
         `INSERT INTO production_plan_sub_assembly 
-         (plan_id, item_code, item_name, parent_item_code, target_warehouse, schedule_date, required_qty, planned_qty, planned_qty_before_scrap, scrap_percentage, manufacturing_type, bom_no, revision, material_grade, drawing_no, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [plan_id, item.item_code || null, item.item_name || null, item.parent_item_code || item.parent_assembly_code || item.parent_code || null, item.target_warehouse || null, scheduleDate, 
+         (plan_id, item_code, explosion_level, item_name, parent_item_code, target_warehouse, schedule_date, required_qty, planned_qty, planned_qty_before_scrap, scrap_percentage, manufacturing_type, bom_no, revision, material_grade, drawing_no, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [plan_id, item.item_code || null, explosionLevel, item.item_name || null, item.parent_item_code || item.parent_assembly_code || item.parent_code || null, item.target_warehouse || null, scheduleDate, 
          requiredQty, plannedQty, plannedQtyBeforeScrap, scrapPercentage, item.manufacturing_type || null, item.bom_no || null, item.revision || null, item.material_grade || null, item.drawing_no || null, item.notes || null]
       )
     } catch (error) {

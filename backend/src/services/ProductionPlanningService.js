@@ -150,9 +150,9 @@ export class ProductionPlanningService {
     const itemGroup = (line.item_group || '').toLowerCase().replace(/[-\s]/g, '').trim()
     const fgType = (line.component_type || line.fg_sub_assembly || '').toLowerCase().replace(/[-\s]/g, '').trim()
     
-    const isSAGroup = itemGroup === 'subassemblies' || itemGroup === 'subassembly' || itemGroup === 'intermediates'
-    const isSAType = fgType.includes('subassembly') || fgType.includes('sub-assembly') || fgType.includes('subassembly')
-    const isSACode = itemCode.toUpperCase().startsWith('SA-') || itemCode.toUpperCase().startsWith('SA')
+    const isSAGroup = itemGroup === 'subassemblies' || itemGroup === 'subassembly' || itemGroup === 'intermediates' || itemGroup.includes('subassembly') || itemGroup.includes('sub-assembly')
+    const isSAType = fgType.includes('subassembly') || fgType.includes('sub-assembly')
+    const isSACode = itemCode.toUpperCase().startsWith('SA-') || itemCode.toUpperCase().startsWith('SA') || itemCode.toUpperCase().includes('SUBASM')
     
     if (isSAGroup || isSAType || isSACode) return true
 
@@ -190,7 +190,12 @@ export class ProductionPlanningService {
     }
 
     for (const rawMaterial of raw_materials) {
-      this.addRawMaterialToPlan(rawMaterial, fgQuantity, plan, bomData.item_code)
+      const isSA = await this.isSubAssembly(rawMaterial)
+      if (isSA) {
+        await this.processSubAssembly(rawMaterial, fgQuantity, plan, bomData.item_code)
+      } else {
+        this.addRawMaterialToPlan(rawMaterial, fgQuantity, plan, bomData.item_code)
+      }
     }
 
     for (const operation of operations) {
@@ -253,20 +258,12 @@ export class ProductionPlanningService {
   }
 
   addSubAssemblyToPlan(plan, item) {
-    const existing = plan.sub_assemblies.find(sa => 
-      sa.item_code === item.item_code && 
-      (sa.parent_item_code === item.parent_item_code || sa.parent_assembly_code === item.parent_assembly_code)
-    )
-    
-    if (existing) {
-      existing.planned_qty += item.planned_qty
-      existing.planned_qty_before_scrap += item.planned_qty_before_scrap
-    } else {
-      plan.sub_assemblies.push(item)
-    }
+    // Disable consolidation to support serial manufacturing workflow
+    // Every occurrence in the BOM tree now becomes a unique row in the production plan
+    plan.sub_assemblies.push(item)
   }
 
-  async processSubAssembly(bomLine, fgQuantity, plan, parentCode = null) {
+  async processSubAssembly(bomLine, fgQuantity, plan, parentCode = null, level = 1) {
     const subAsmCode = bomLine.component_code || bomLine.item_code
     const subAsmName = bomLine.component_description || bomLine.item_name
     const bomQtyPerFg = parseFloat(bomLine.quantity || bomLine.qty || 1)
@@ -289,11 +286,12 @@ export class ProductionPlanningService {
       planned_qty_before_scrap: plannedQtyBeforeScrap,
       planned_qty: plannedQty,
       status: 'pending',
-      bom_no: subBomData ? subBomData.bom_id : null
+      bom_no: subBomData ? subBomData.bom_id : null,
+      explosion_level: level
     })
 
     if (subBomData) {
-      await this.processSubAssemblyBOM(subBomData, plannedQty, plan)
+      await this.processSubAssemblyBOM(subBomData, plannedQty, plan, level + 1)
     }
   }
 
@@ -322,7 +320,10 @@ export class ProductionPlanningService {
   async getSubAssemblyBOM(itemCode, bomId = null) {
     try {
       if (bomId) {
-        return await this.getBOMDetails(bomId)
+        const bom = await this.getBOMDetails(bomId)
+        if (bom) return bom
+        // If specific BOM ID not found, fallback to default/active BOM
+        console.warn(`Warning: Specific BOM ${bomId} not found for ${itemCode}, falling back to default.`)
       }
 
       const [boms] = await this.db.execute(
@@ -339,7 +340,7 @@ export class ProductionPlanningService {
     }
   }
 
-  async processSubAssemblyBOM(bomData, plannedQty, plan) {
+  async processSubAssemblyBOM(bomData, plannedQty, plan, level = 1) {
     const { lines = [], operations = [], raw_materials = [] } = bomData
 
     for (const line of lines) {
@@ -366,11 +367,12 @@ export class ProductionPlanningService {
           planned_qty_before_scrap: plannedQtyBeforeScrap,
           planned_qty: nestedPlannedQty,
           status: 'pending',
-          bom_no: nestedBomData ? nestedBomData.bom_id : null
+          bom_no: nestedBomData ? nestedBomData.bom_id : null,
+          explosion_level: level
         })
 
         if (nestedBomData) {
-          await this.processSubAssemblyBOM(nestedBomData, nestedPlannedQty, plan)
+          await this.processSubAssemblyBOM(nestedBomData, nestedPlannedQty, plan, level + 1)
         }
       } else {
         this.addRawMaterialToPlan(line, plannedQty, plan, bomData.item_code)
@@ -378,7 +380,39 @@ export class ProductionPlanningService {
     }
 
     for (const rawMaterial of raw_materials) {
-      this.addRawMaterialToPlan(rawMaterial, plannedQty, plan, bomData.item_code)
+      const isSA = await this.isSubAssembly(rawMaterial)
+      if (isSA) {
+        const nestedSubAsmCode = rawMaterial.component_code || rawMaterial.item_code
+        const item = await this.getItemDetails(nestedSubAsmCode)
+        const scrapPercentage = item ? parseFloat(item.loss_percentage || 0) : 0
+
+        const bomQtyPerParent = parseFloat(rawMaterial.quantity || rawMaterial.qty || 1)
+        const plannedQtyBeforeScrap = plannedQty * bomQtyPerParent
+
+        const nestedPlannedQty = this.calculateQtyWithScrap(plannedQtyBeforeScrap, scrapPercentage)
+
+        const nestedBomData = await this.getSubAssemblyBOM(nestedSubAsmCode, rawMaterial.bom_no)
+
+        this.addSubAssemblyToPlan(plan, {
+          item_code: nestedSubAsmCode,
+          item_name: rawMaterial.component_description || rawMaterial.item_name || rawMaterial.description,
+          parent_item_code: bomData.item_code,
+          bom_qty_per_parent: bomQtyPerParent,
+          parent_planned_qty: plannedQty,
+          scrap_percentage: scrapPercentage,
+          planned_qty_before_scrap: plannedQtyBeforeScrap,
+          planned_qty: nestedPlannedQty,
+          status: 'pending',
+          bom_no: nestedBomData ? nestedBomData.bom_id : null,
+          explosion_level: level
+        })
+
+        if (nestedBomData) {
+          await this.processSubAssemblyBOM(nestedBomData, nestedPlannedQty, plan, level + 1)
+        }
+      } else {
+        this.addRawMaterialToPlan(rawMaterial, plannedQty, plan, bomData.item_code)
+      }
     }
 
     for (const operation of operations) {
@@ -444,8 +478,8 @@ export class ProductionPlanningService {
         }
 
         await this.db.execute(
-          'INSERT INTO production_plan_sub_assembly (plan_id, item_code, item_name, parent_item_code, required_qty, planned_qty, planned_qty_before_scrap, scrap_percentage, bom_no, schedule_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          [planId, sa.item_code, sa.item_name, sa.parent_item_code || sa.parent_assembly_code || null, sa.planned_qty, sa.planned_qty, sa.planned_qty_before_scrap, sa.scrap_percentage, saBomNo, sa.schedule_date || null]
+          'INSERT INTO production_plan_sub_assembly (plan_id, item_code, item_name, parent_item_code, required_qty, planned_qty, planned_qty_before_scrap, scrap_percentage, bom_no, schedule_date, explosion_level) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [planId, sa.item_code, sa.item_name, sa.parent_item_code || sa.parent_assembly_code || null, sa.planned_qty, sa.planned_qty, sa.planned_qty_before_scrap, sa.scrap_percentage, saBomNo, sa.schedule_date || null, sa.explosion_level || 0]
         )
       }
 
@@ -496,41 +530,26 @@ export class ProductionPlanningService {
       // 1. PRE-GENERATE IDs and Establish Hierarchy
       const batchTimestamp = Date.now()
       let woCounter = 0
-      const itemToWoIdMap = {} // item_code -> wo_id
+      const rowIdToWoIdMap = {} // production_plan_sub_assembly.id -> wo_id
+      const fgCodeToWoIdMap = {} // item_code -> wo_id (for FG)
 
-      // Aggregate SAs by item_code to avoid duplicate Work Orders for the same item
-      // but keep track of parents for linking
-      const aggregatedSubAsms = allSubAsms.reduce((acc, curr) => {
-        const itemCode = curr.item_code;
-        if (!itemCode) return acc;
+      // Use all sub-assemblies directly to ensure each plan row gets its own Work Order
+      // This supports detailed tracking for each branch of the manufacturing process
+      const sortedSubAsmList = [...allSubAsms].sort((a, b) => (b.explosion_level || 0) - (a.explosion_level || 0))
 
-        if (!acc[itemCode]) {
-          acc[itemCode] = { ...curr };
-        } else {
-          const currentQty = parseFloat(acc[itemCode].planned_qty) || parseFloat(acc[itemCode].quantity) || 0;
-          const newQty = parseFloat(curr.planned_qty) || parseFloat(curr.quantity) || 0;
-          acc[itemCode].planned_qty = currentQty + newQty;
-          
-          // If the existing one doesn't have a parent, use this one's parent
-          if (!acc[itemCode].parent_item_code) acc[itemCode].parent_item_code = curr.parent_item_code || curr.parent_code;
+      // Generate IDs for SAs first (Lower sequence numbers)
+      sortedSubAsmList.forEach(item => {
+        const id = `WO-SA-${batchTimestamp}-${++woCounter}`
+        if (item.id) {
+          rowIdToWoIdMap[item.id] = id
         }
-        return acc;
-      }, {});
-
-      // Convert aggregated map to list (Parent -> Child order)
-      const subAsmList = Object.values(aggregatedSubAsms)
-
-      // Generate IDs for FGs (Lower sequence numbers) - Created FIRST
-      allFGItems.forEach(item => {
-        const id = `WO-FG-${batchTimestamp}-${++woCounter}`
-        itemToWoIdMap[item.item_code] = id
         item.generated_wo_id = id
       })
 
-      // Generate IDs for SAs (Higher sequence numbers) - Created LAST
-      subAsmList.forEach(item => {
-        const id = `WO-SA-${batchTimestamp}-${++woCounter}`
-        itemToWoIdMap[item.item_code] = id
+      // Generate IDs for FGs (Higher sequence numbers)
+      allFGItems.forEach(item => {
+        const id = `WO-FG-${batchTimestamp}-${++woCounter}`
+        fgCodeToWoIdMap[item.item_code] = id
         item.generated_wo_id = id
       })
 
@@ -544,7 +563,23 @@ export class ProductionPlanningService {
 
           const wo_id = item.generated_wo_id
           const parentItemCode = item.parent_item_code || item.parent_code
-          const parentWoId = parentItemCode ? itemToWoIdMap[parentItemCode] : null
+          let parentWoId = null
+
+          if (parentItemCode) {
+            // Attempt to link to the correct parent Work Order
+            // First check if parent is another sub-assembly at the next higher level
+            const parentRow = allSubAsms.find(sa => 
+              sa.item_code === parentItemCode && 
+              (parseInt(sa.explosion_level || 0) === parseInt(item.explosion_level || 0) - 1)
+            )
+
+            if (parentRow && rowIdToWoIdMap[parentRow.id]) {
+              parentWoId = rowIdToWoIdMap[parentRow.id]
+            } else {
+              // Otherwise, check if it's the Finished Good
+              parentWoId = fgCodeToWoIdMap[parentItemCode] || null
+            }
+          }
 
           const woData = {
             wo_id,
@@ -567,17 +602,15 @@ export class ProductionPlanningService {
           const createdIds = await productionModel.createWorkOrderRecursive(woData, userId || 1, false)
           createdWorkOrders.push(...createdIds)
           
-          // Add a 200ms delay to ensure unique timestamps and guaranteed DESC sorting (Children at top, FG at bottom)
-          await new Promise(resolve => setTimeout(resolve, 200))
+          // Add a 100ms delay to ensure unique timestamps and sequential creation
+          await new Promise(resolve => setTimeout(resolve, 100))
         }
       }
 
       // 2. CREATE WORK ORDERS
-      // Logic: Create Finished Goods FIRST, then Sub-assemblies LAST.
-      // In a DESC-sorted list, the last-created items (Sub-assemblies) will appear at the TOP,
-      // and the first-created item (Finished Good) will appear at the BOTTOM.
+      // Logic: Create Sub-assemblies FIRST (deepest level first), then Finished Goods LAST.
+      await processBatch(sortedSubAsmList, false)
       await processBatch(allFGItems, true)
-      await processBatch(subAsmList, false)
 
       // 3. Update Plan Status
       await productionPlanningModel.updatePlanStatus(planId, 'in_progress')

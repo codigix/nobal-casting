@@ -18,36 +18,6 @@ export default function ViewProductionPlanModal({ isOpen, onClose, planId }) {
     workOrders: true
   })
 
-  const buildSubAssemblyTree = (items) => {
-    if (!items || items.length === 0) return [];
-    
-    // Create map for easy lookup using unique ID
-    const itemMap = {};
-    items.forEach((item) => {
-      itemMap[item.id] = { ...item, children: [] };
-    });
-
-    const tree = [];
-    Object.values(itemMap).forEach(item => {
-      const parentCode = item.parent_item_code || item.parent_code;
-      if (!parentCode || parentCode === 'top' || parentCode === 'root') {
-        tree.push(item);
-      } else {
-        // Find parent by item_code (since children only know parent's code)
-        // If multiple items have same code, we look for one that is a "likely" parent
-        // In a real tree, we'd have parent_id, but here we have parent_item_code
-        const parents = Object.values(itemMap).filter(i => i.item_code === parentCode);
-        if (parents.length > 0) {
-          parents[0].children.push(item);
-        } else {
-          tree.push(item);
-        }
-      }
-    });
-
-    return tree;
-  };
-
   useEffect(() => {
     if (isOpen && planId) {
       fetchPlanDetails()
@@ -269,65 +239,51 @@ export default function ViewProductionPlanModal({ isOpen, onClose, planId }) {
                       <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                         <thead style={{ background: '#fff1f2', borderBottom: '1px solid #fecdd3' }}>
                           <tr>
+                            <th style={{ padding: '10px 15px', color: '#9f1239', fontWeight: '600', width: '60px' }}>Seq.</th>
+                            <th style={{ padding: '10px 15px', color: '#9f1239', fontWeight: '600', width: '60px' }}>Lvl.</th>
                             <th style={{ padding: '10px 15px', color: '#9f1239', fontWeight: '600' }}>Sub Assembly Item</th>
                             <th style={{ padding: '10px 15px', color: '#9f1239', fontWeight: '600' }}>BOM No</th>
                             <th style={{ padding: '10px 15px', color: '#9f1239', fontWeight: '600', textAlign: 'right' }}>Planned Qty</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {(() => {
-                            const tree = buildSubAssemblyTree(plan.sub_assemblies);
-                            
-                            const renderRows = (item, level = 0) => {
-                              const isExpanded = expandedSubAsms[item.id];
-                              const hasChildren = item.children && item.children.length > 0;
-                              
-                              return (
-                                <React.Fragment key={item.id}>
-                                  <tr 
-                                    style={{ 
-                                      borderBottom: '1px solid #f1f5f9',
-                                      background: level > 0 ? '#fcfcfc' : '#fff',
-                                      cursor: hasChildren ? 'pointer' : 'default'
-                                    }}
-                                    onClick={() => {
-                                      if (hasChildren) {
-                                        setExpandedSubAsms(prev => ({ ...prev, [item.id]: !prev[item.id] }));
-                                      }
-                                    }}
-                                  >
-                                    <td style={{ padding: '10px 15px', paddingLeft: `${15 + (level * 20)}px` }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        {hasChildren ? (
-                                          isExpanded ? <ChevronDown size={14} color="#94a3b8" /> : <ChevronRight size={14} color="#94a3b8" />
-                                        ) : (
-                                          <div style={{ width: 14 }} />
-                                        )}
-                                        <div style={{ width: 24, height: 24, borderRadius: '4px', background: level === 0 ? '#fff1f2' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center' }}>
-                                          <Layers size={14} color={level === 0 ? '#e11d48' : '#64748b'} />
-                                        </div>
-                                        <div>
-                                          <div style={{ fontWeight: '600', color: level === 0 ? '#1e293b' : '#475569' }}>{item.item_code}</div>
-                                          <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{item.item_name}</div>
-                                        </div>
-                                      </div>
-                                    </td>
-                                    <td style={{ padding: '10px 15px' }}>
-                                      <span style={{ padding: '2px 6px', background: '#fef2f2', color: '#9f1239', border: '1px solid #fecdd3', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '500' }}>
-                                        {item.bom_no || 'N/A'}
-                                      </span>
-                                    </td>
-                                    <td style={{ padding: '10px 15px', textAlign: 'right', fontWeight: '600', color: '#e11d48' }}>
-                                      {item.planned_qty} <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{item.uom || 'PCS'}</span>
-                                    </td>
-                                  </tr>
-                                  {isExpanded && hasChildren && item.children.map(child => renderRows(child, level + 1))}
-                                </React.Fragment>
-                              );
-                            };
-                            
-                            return tree.map(rootItem => renderRows(rootItem));
-                          })()}
+                          {(plan.sub_assemblies || []).sort((a, b) => (b.explosion_level || 0) - (a.explosion_level || 0)).map((item, idx) => (
+                            <tr 
+                              key={item.id || idx}
+                              style={{ 
+                                borderBottom: '1px solid #f1f5f9',
+                                background: '#fff'
+                              }}
+                            >
+                              <td style={{ padding: '10px 15px', color: '#94a3b8', fontWeight: '500' }}>
+                                {idx + 1}
+                              </td>
+                              <td style={{ padding: '10px 15px' }}>
+                                <span style={{ padding: '2px 6px', background: '#fff1f2', color: '#e11d48', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '700' }}>
+                                  L{item.explosion_level || 0}
+                                </span>
+                              </td>
+                              <td style={{ padding: '10px 15px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <div style={{ width: 24, height: 24, borderRadius: '4px', background: '#fff1f2', display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center' }}>
+                                    <Layers size={14} color="#e11d48" />
+                                  </div>
+                                  <div>
+                                    <div style={{ fontWeight: '600', color: '#1e293b' }}>{item.item_code}</div>
+                                    <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{item.item_name}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td style={{ padding: '10px 15px' }}>
+                                <span style={{ padding: '2px 6px', background: '#fef2f2', color: '#9f1239', border: '1px solid #fecdd3', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '500' }}>
+                                  {item.bom_no || 'N/A'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '10px 15px', textAlign: 'right', fontWeight: '600', color: '#e11d48' }}>
+                                {item.planned_qty} <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{item.uom || 'PCS'}</span>
+                              </td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>

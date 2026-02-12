@@ -193,7 +193,6 @@ router.delete(
   )
   router.post(
     '/job-cards/:work_order_id/generate-all',
-    authMiddleware,
     productionController.generateJobCardsForWorkOrder.bind(productionController)
   )
   router.put(

@@ -150,6 +150,20 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
       }
 
       setLoading(true)
+      const completedQty = parseFloat(formData.completed_qty) || 0
+      const acceptedQty = parseFloat(formData.accepted_qty) || 0
+      const rejectedQty = parseFloat(formData.rejected_qty) || 0
+      const scrapQty = parseFloat(formData.scrap_qty) || 0
+
+      const totalProducedSoFar = timeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0)
+      const plannedQty = parseFloat(jobCardData?.planned_quantity) || 0
+
+      if (totalProducedSoFar + completedQty > plannedQty * 1.001) {
+        toast.addToast(`Total production (${(totalProducedSoFar + completedQty).toFixed(2)}) would exceed planned quantity (${plannedQty.toFixed(2)}). Please manage within planned units only.`, 'error')
+        setLoading(false)
+        return
+      }
+
       const payload = {
         job_card_id: jobCardId,
         employee_id: formData.employee_id,

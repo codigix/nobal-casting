@@ -266,7 +266,7 @@ export default function ProductionPlanningForm() {
   // Scroll spy to update active section on scroll
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ['parameters', 'scope', 'requirements', 'subassembly']
+      const sections = ['parameters', 'subassembly', 'scope', 'requirements']
       const scrollPosition = window.scrollY + 200 // Adjust offset for detection
 
       for (const sectionId of sections) {
@@ -296,40 +296,6 @@ export default function ProductionPlanningForm() {
     })
     return grouped
   }
-
-  const buildSubAssemblyTree = (items) => {
-    if (!items || items.length === 0) return [];
-
-    // Create map for easy lookup
-    const itemMap = {};
-    items.forEach((item, index) => {
-      const key = `${item.item_code}-${item.parent_item_code || item.parent_code || 'root'}`;
-      itemMap[key] = { ...item, children: [], id: index };
-    });
-
-    const tree = [];
-    Object.values(itemMap).forEach(item => {
-      const parentCode = item.parent_item_code || item.parent_code;
-      if (!parentCode || parentCode === 'top' || parentCode === 'root') {
-        tree.push(item);
-      } else {
-        // Try to find parent. Since we don't have parent's parent, 
-        // we might have multiple items with same item_code but different parents.
-        // We look for any item that matches the parentCode
-        const parents = Object.values(itemMap).filter(i => i.item_code === parentCode);
-        if (parents.length > 0) {
-          // If multiple potential parents (same item code in different branches), 
-          // we'd need more data to be perfect. For now, add to all or first.
-          parents[0].children.push(item);
-        } else {
-          // Orphan - add to root
-          tree.push(item);
-        }
-      }
-    });
-
-    return tree;
-  };
 
   const [planHeader, setPlanHeader] = useState({
     plan_id: '',
@@ -416,7 +382,8 @@ export default function ProductionPlanningForm() {
           })
 
           setFGItems(plan.fg_items || [])
-          setSubAssemblyItems(plan.sub_assemblies || plan.sub_assembly_items || [])
+          const loadedSubAsms = plan.sub_assemblies || plan.sub_assembly_items || []
+          setSubAssemblyItems(Array.isArray(loadedSubAsms) ? [...loadedSubAsms].sort((a, b) => (b.explosion_level || 0) - (a.explosion_level || 0)) : [])
           setRawMaterialItems(plan.raw_materials || [])
           setFGOperations(plan.fg_operations || [])
           setOperationItems(plan.operations || [])
@@ -692,9 +659,9 @@ export default function ProductionPlanningForm() {
         setSubAssemblyBomMaterials([...allSubAsmMaterials]);
 
         if (allDiscoveredSubAsms.length > 0) {
-          // Aggregate all discovered sub-assemblies by item_code AND parent_code to preserve hierarchy
+          // Aggregate all discovered sub-assemblies by item_code ONLY for a flat serial list
           const aggregatedSubAsms = allDiscoveredSubAsms.reduce((acc, curr) => {
-            const key = `${curr.item_code}-${curr.parent_code || 'top'}`;
+            const key = curr.item_code;
             if (!acc[key]) {
               acc[key] = { ...curr };
             } else {
@@ -708,10 +675,7 @@ export default function ProductionPlanningForm() {
           setSubAssemblyItems(prev => {
             const updated = [...prev];
             Object.values(aggregatedSubAsms).forEach(discovered => {
-              const existingIdx = updated.findIndex(i =>
-                i.item_code === discovered.item_code &&
-                (i.parent_code === discovered.parent_code || i.parent_item_code === discovered.parent_code)
-              );
+              const existingIdx = updated.findIndex(i => i.item_code === discovered.item_code);
               if (existingIdx !== -1) {
                 const newQty = (updated[existingIdx].quantity || 0) + discovered.quantity;
                 updated[existingIdx] = {
@@ -720,13 +684,15 @@ export default function ProductionPlanningForm() {
                   qty: newQty,
                   planned_qty: newQty,
                   bom_id: discovered.bom_id || updated[existingIdx].bom_id,
-                  bom_no: discovered.bom_no || updated[existingIdx].bom_no
+                  bom_no: discovered.bom_no || updated[existingIdx].bom_no,
+                  explosion_level: Math.max(updated[existingIdx].explosion_level || 0, discovered.explosion_level || 0)
                 };
               } else {
                 updated.push(discovered);
               }
             });
-            return updated;
+            // Sort by explosion level descending so deeper sub-assemblies come first
+            return updated.sort((a, b) => (b.explosion_level || 0) - (a.explosion_level || 0));
           });
         }
       }
@@ -949,27 +915,13 @@ export default function ProductionPlanningForm() {
         console.log(`Line ${idx + 1}: Code=${item.component_code || item.item_code}, Name=${item.component_description || item.item_name}, Qty=${item.quantity || item.qty}, Scrap%=${scrapPct}`)
       })
 
-      // Set Finished Good from BOM metadata
-      const fgFromBOM = {
-        item_code: bomData?.item_code || itemCode,
-        item_name: bomData?.product_name || itemName,
-        uom: bomData?.uom || items[0]?.uom || 'Nos',
-        warehouse: items[0]?.warehouse || 'Finished Goods - NC',
-        quantity: quantity,
-        sales_order_quantity: quantity,
-        bom_id: bomId,
-        planned_start_date: new Date().toISOString().split('T')[0],
-        planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      }
-      setFGItems([fgFromBOM])
-      console.log('✓ Finished Good set:', fgFromBOM)
-
       // Split BOM lines into sub-assemblies and materials
       const trueSubAsmLines = bomLines.filter(line => isSubAssemblyGroup(line.item_group, line.component_code || line.item_code) || (line.component_type || '').toLowerCase().includes('sub'))
       const materialLinesFromBOM = bomLines.filter(line => !isSubAssemblyGroup(line.item_group, line.component_code || line.item_code) && !(line.component_type || '').toLowerCase().includes('sub'))
 
       // All lines in a FG BOM that are sub-assemblies
       if (trueSubAsmLines.length > 0) {
+        console.log('=== PRODUCTION PLANNING: FETCHING SUB-ASSEMBLIES FIRST ===')
         const subAsmItemsFromBOM = trueSubAsmLines
           .map(subAsmItem => {
             const baseQty = subAsmItem.quantity || subAsmItem.qty || subAsmItem.bom_qty || 1
@@ -1006,12 +958,28 @@ export default function ProductionPlanningForm() {
         console.log('Sub-Assemblies:', subAsmItemsFromBOM)
         setSubAssemblyItems(subAsmItemsFromBOM)
 
+        // Recursively fetch all nested sub-assemblies before finished goods
         await fetchSubAssemblyBomMaterials(subAsmItemsFromBOM)
       } else {
         console.warn('⚠️ No sub-assemblies found in BOM lines')
         setSubAssemblyItems([])
         setSubAssemblyBomMaterials([])
       }
+
+      // Set Finished Good from BOM metadata - AFTER sub-assemblies are fetched
+      const fgFromBOM = {
+        item_code: bomData?.item_code || itemCode,
+        item_name: bomData?.product_name || itemName,
+        uom: bomData?.uom || items[0]?.uom || 'Nos',
+        warehouse: items[0]?.warehouse || 'Finished Goods - NC',
+        quantity: quantity,
+        sales_order_quantity: quantity,
+        bom_id: bomId,
+        planned_start_date: new Date().toISOString().split('T')[0],
+        planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      }
+      setFGItems([fgFromBOM])
+      console.log('✓ Finished Good set (after sub-assemblies):', fgFromBOM)
 
       const allMaterials = bomRawMaterialsFromSO.length > 0 ? bomRawMaterialsFromSO : [
         ...(bomData?.rawMaterials || []),
@@ -1814,7 +1782,8 @@ export default function ProductionPlanningForm() {
                 bom_no: item.bom_id || item.bom_no,
                 planned_qty: item.quantity || item.planned_qty || 1,
                 scheduled_date: item.planned_start_date,
-                target_warehouse: item.warehouse || item.target_warehouse
+                target_warehouse: item.warehouse || item.target_warehouse,
+                explosion_level: item.explosion_level || 0
               })
             })
           } catch (err) {
@@ -2103,25 +2072,9 @@ export default function ProductionPlanningForm() {
                 onClick={scrollToSection}
                 themeColor="indigo"
               />
-              <NavItem
-                label="02 Finished Goods"
-                icon={Layout}
-                section="scope"
-                isActive={activeSection === 'scope'}
-                onClick={scrollToSection}
-                themeColor="blue"
-              />
-              <NavItem
-                label="03 Materials"
-                icon={Boxes}
-                section="requirements"
-                isActive={activeSection === 'requirements'}
-                onClick={scrollToSection}
-                themeColor="amber"
-              />
               {subAssemblyItems.length > 0 && (
                 <NavItem
-                  label="04 Sub Assemblies"
+                  label="02 Sub Assemblies"
                   icon={Activity}
                   section="subassembly"
                   isActive={activeSection === 'subassembly'}
@@ -2129,6 +2082,22 @@ export default function ProductionPlanningForm() {
                   themeColor="rose"
                 />
               )}
+              <NavItem
+                label="03 Finished Goods"
+                icon={Layout}
+                section="scope"
+                isActive={activeSection === 'scope'}
+                onClick={scrollToSection}
+                themeColor="blue"
+              />
+              <NavItem
+                label="04 Materials"
+                icon={Boxes}
+                section="requirements"
+                isActive={activeSection === 'requirements'}
+                onClick={scrollToSection}
+                themeColor="amber"
+              />
             </div>
 
             {/* Compact Planning Insight (moved to top bar) */}
@@ -2258,12 +2227,200 @@ export default function ProductionPlanningForm() {
                 )}
               </Card>
             </div>
+<div id="subassembly" className="block bg-white">
+            {subAssemblyItems.length > 0 && (
+              <Card>
+                <SectionHeader
+                  title="02 SUB ASSEMBLIES"
+                  icon={Activity}
+                  subtitle="Manufacturing breakdown of intermediate components"
+                  badge={`${subAssemblyItems.length} ITEMS`}
+                  isExpanded={expandedSections.subassembly}
+                  onToggle={() => toggleSection('subassembly')}
+                  themeColor="rose"
+                />
 
+                {expandedSections.subassembly && (
+                  <div className="p-2 animate-in fade-in duration-300">
+                    <div className="overflow-x-auto rounded border border-slate-100">
+                      <table className="w-full text-left border-collapse">
+                        <thead className="bg-slate-50 border-b border-slate-100">
+                          <tr>
+                            <th className="p-2 text-[10px]  text-slate-500  w-8">Seq.</th>
+                            <th className="p-2 text-[10px]  text-slate-500  w-8">Lvl.</th>
+                            <th className="p-2 text-[10px]  text-slate-500 ">Sub Assembly Item Code</th>
+                            <th className="p-2 text-[10px]  text-slate-500 ">Group</th>
+                            <th className="p-2 text-[10px]  text-slate-500 ">Target Warehouse</th>
+                            <th className="p-2 text-[10px]  text-slate-500  text-center">Scheduled Date</th>
+                            <th className="p-2 text-[10px]  text-slate-500  text-right">Required Qty</th>
+                            <th className="p-2 text-[10px]  text-slate-500  text-center">Bom No</th>
+                            <th className="p-2 text-[10px]  text-slate-500  text-center">Manufacturing Type</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {(() => {
+                            const renderSubAssembly = (item, index) => {
+                              const currentPath = item.item_code;
+
+                              return (
+                                <React.Fragment key={index}>
+                                  <tr
+                                    className="hover:bg-rose-50/30 transition-colors group cursor-pointer"
+                                  >
+                                    <td className="p-2 text-[10px] text-slate-400 font-medium">
+                                      <div className="flex items-center gap-1">
+                                        <div className="w-3" />
+                                        {index + 1}
+                                      </div>
+                                    </td>
+                                    <td className="p-2 text-[10px] text-slate-500 font-bold">
+                                      L{item.explosion_level || 0}
+                                    </td>
+                                    <td className="p-2">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-7 h-7 rounded flex items-center justify-center border bg-rose-50 text-rose-600 border-rose-100">
+                                          <Layers size={14} />
+                                        </div>
+                                        <div>
+                                          <p className="text-xs  text-slate-900 leading-tight">
+                                            {item.item_code}
+                                          </p>
+                                          <p className="text-[10px] text-slate-500 truncate max-w-[200px]">
+                                            {item.item_name}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="p-2">
+                                      <GroupBadge group={item.item_group || 'Sub Assembly'} />
+                                    </td>
+                                    <td className="p-2">
+                                      <div className="flex items-center gap-1.5 text-slate-600">
+                                        <Warehouse size={12} className="text-slate-400" />
+                                        <span className="text-[10px] font-medium truncate max-w-[120px]">
+                                          {item.warehouse || 'Work In Progress - NC'}
+                                        </span>
+                                      </div>
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <div className="flex items-center justify-center gap-1.5 text-slate-600">
+                                        <Calendar size={12} className="text-slate-400" />
+                                        <span className="text-[11px] font-medium">
+                                          {item.planned_start_date || 'TBD'}
+                                        </span>
+                                      </div>
+                                    </td>
+                                    <td className="p-2 text-right">
+                                      <div className="flex flex-col items-end">
+                                        <span className="text-sm  text-rose-600">
+                                          {item.planned_qty || item.quantity || item.qty || '-'}
+                                        </span>
+                                        <span className="text-[9px] text-slate-400 uppercase">{item.uom || 'PCS'}</span>
+                                      </div>
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <div className="flex items-center justify-center gap-1.5 text-rose-700 bg-rose-50/50 px-2 py-0.5 rounded border border-rose-100/50 w-fit mx-auto">
+                                        <Layers size={12} className="text-rose-500" />
+                                        <span className="font-mono text-[10px]">
+                                          {item.bom_no || item.bom_id || 'N/A'}
+                                        </span>
+                                      </div>
+                                    </td>
+                                    <td className="p-2 text-center">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleItemMaterials(item);
+                                        }}
+                                        className={`px-2 py-1 rounded text-[10px] font-medium border transition-colors ${expandedSubAssemblyMaterials[item.item_code]
+                                            ? 'bg-rose-100 text-rose-700 border-rose-200'
+                                            : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300 hover:text-rose-600'
+                                          }`}
+                                      >
+                                        Materials
+                                      </button>
+                                    </td>
+                                  </tr>
+
+                                  {/* Sub-assembly materials (raw materials) */}
+                                  {expandedSubAssemblyMaterials[item.item_code] && subAssemblyMaterials[item.item_code] && (
+                                    <tr>
+                                      <td colSpan="9" className="p-0 bg-rose-50/10">
+                                        <div className="p-4 border-l-4 border-rose-500 m-3 bg-white shadow-sm rounded-sm border border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                                          <div className="flex items-center gap-2 mb-3">
+                                            <div className="p-1.5 bg-rose-50 text-rose-600 rounded">
+                                              <Layers size={14} />
+                                            </div>
+                                            <h4 className="text-[11px]  text-slate-800 ">BOM Components & Materials</h4>
+                                          </div>
+                                          <table className="w-full text-[10px] border-collapse">
+                                            <thead>
+                                              <tr className="bg-slate-50 border-b border-slate-100">
+                                                <th className="p-2 text-left  text-slate-500 uppercase w-8">No.</th>
+                                                <th className="p-2 text-left  text-slate-500 uppercase">Item</th>
+                                                <th className="p-2 text-left  text-slate-500 uppercase">Group</th>
+                                                <th className="p-2 text-right  text-slate-500 uppercase">Qty per Unit</th>
+                                                <th className="p-2 text-right  text-rose-600 uppercase">Total Required Qty</th>
+                                                <th className="p-2 text-center  text-slate-500 uppercase">UOM</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                              {subAssemblyMaterials[item.item_code].map((m, mIdx) => {
+                                                const plannedQty = item.planned_qty || item.quantity || item.qty || 1;
+                                                const perUnitQty = parseFloat(m.qty || m.quantity || 0);
+                                                const totalQty = perUnitQty * plannedQty;
+                                                const mCode = m.item_code || m.component_code;
+                                                const isSubAsm = isSubAssemblyGroup(m.item_group, mCode);
+
+                                                return (
+                                                  <tr key={mIdx} className={`hover:bg-slate-50 transition-colors ${isSubAsm ? 'bg-rose-50/20' : ''}`}>
+                                                    <td className="p-2 text-slate-400 font-medium">{mIdx + 1}</td>
+                                                    <td className="p-2">
+                                                      <div className="flex items-center gap-2">
+                                                        {isSubAsm && <Layers size={10} className="text-rose-500" />}
+                                                        <div className={`font-medium ${isSubAsm ? 'text-rose-700' : 'text-slate-900'}`}>{mCode}</div>
+                                                        {isSubAsm && (
+                                                          <span className="px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[8px] font-bold uppercase tracking-wider">
+                                                            Sub-Assembly
+                                                          </span>
+                                                        )}
+                                                      </div>
+                                                      <div className="text-slate-400 text-[9px]">{m.item_name || m.component_description || m.description}</div>
+                                                    </td>
+                                                    <td className="p-2">
+                                                      <GroupBadge group={m.item_group} />
+                                                    </td>
+                                                    <td className="p-2 text-right text-slate-600">{perUnitQty.toFixed(4)}</td>
+                                                    <td className="p-2 text-right font-medium text-rose-600">{totalQty.toFixed(4)}</td>
+                                                    <td className="p-2 text-center text-slate-500">{m.uom || 'Nos'}</td>
+                                                  </tr>
+                                                );
+                                              })}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </React.Fragment>
+                              );
+                            };
+
+                            return subAssemblyItems.map((item, index) => renderSubAssembly(item, index));
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            )}
+          </div>
             {/* Production Scope Section */}
             <div id="scope" className="block bg-white">
               <Card>
                 <SectionHeader
-                  title="02 Finished Goods "
+                  title="03 FINISHED GOODS"
                   icon={Layout}
                   subtitle="Finished goods and target fulfillment"
                   badge={`${fgItems.length} ITEMS`}
@@ -2304,7 +2461,7 @@ export default function ProductionPlanningForm() {
                                         <Package size={14} />
                                       </div>
                                       <div>
-                                        <p className="text-xs font-medium text-slate-900 leading-tight">
+                                        <p className="text-xs  text-slate-900 leading-tight">
                                           {item.item_code || selectedSalesOrderDetails?.item_code || 'N/A'}
                                         </p>
                                         <p className="text-[10px] text-slate-500 truncate max-w-[150px]">
@@ -2415,219 +2572,13 @@ export default function ProductionPlanningForm() {
               </Card>
             </div>
 
-            {/* Material Requirements Section */}
-
-
-            {/* Sub-Assembly Items Section */}
-
           </div>
-          <div id="subassembly" className="block bg-white">
-            {subAssemblyItems.length > 0 && (
-              <Card>
-                <SectionHeader
-                  title="04 Sub Assemblies"
-                  icon={Activity}
-                  subtitle="Manufacturing breakdown of intermediate components"
-                  badge={`${subAssemblyItems.length} ITEMS`}
-                  isExpanded={expandedSections.subassembly}
-                  onToggle={() => toggleSection('subassembly')}
-                  themeColor="rose"
-                />
-
-                {expandedSections.subassembly && (
-                  <div className="p-2 animate-in fade-in duration-300">
-                    <div className="overflow-x-auto rounded border border-slate-100">
-                      <table className="w-full text-left border-collapse">
-                        <thead className="bg-slate-50 border-b border-slate-100">
-                          <tr>
-                            <th className="p-2 text-[10px]  text-slate-500  w-8">No.</th>
-                            <th className="p-2 text-[10px]  text-slate-500 ">Sub Assembly Item Code</th>
-                            <th className="p-2 text-[10px]  text-slate-500 ">Group</th>
-                            <th className="p-2 text-[10px]  text-slate-500 ">Target Warehouse</th>
-                            <th className="p-2 text-[10px]  text-slate-500  text-center">Scheduled Date</th>
-                            <th className="p-2 text-[10px]  text-slate-500  text-right">Required Qty</th>
-                            <th className="p-2 text-[10px]  text-slate-500  text-center">Bom No</th>
-                            <th className="p-2 text-[10px]  text-slate-500  text-center">Manufacturing Type</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {(() => {
-                            const tree = buildSubAssemblyTree(subAssemblyItems);
-
-                            const renderSubAssembly = (item, level = 0, path = '') => {
-                              const currentPath = path ? `${path}.${item.item_code}` : item.item_code;
-                              const isExpanded = expandedSubAsms[currentPath];
-                              const hasChildren = item.children && item.children.length > 0;
-
-                              return (
-                                <React.Fragment key={currentPath}>
-                                  <tr
-                                    className={`hover:bg-rose-50/30 transition-colors group cursor-pointer ${level > 0 ? 'bg-slate-50/30' : ''}`}
-                                    onClick={() => {
-                                      if (hasChildren) {
-                                        setExpandedSubAsms(prev => ({ ...prev, [currentPath]: !prev[currentPath] }));
-                                      }
-                                    }}
-                                  >
-                                    <td className="p-2 text-[10px] text-slate-400 font-medium">
-                                      <div className="flex items-center gap-1">
-                                        {hasChildren ? (
-                                          <ChevronDown
-                                            size={12}
-                                            className={`transform transition-transform ${isExpanded ? '' : '-rotate-90'}`}
-                                          />
-                                        ) : <div className="w-3" />}
-                                        {level + 1}
-                                      </div>
-                                    </td>
-                                    <td className="p-2">
-                                      <div className="flex items-center gap-2" style={{ paddingLeft: `${level * 16}px` }}>
-                                        <div className={`w-7 h-7 rounded flex items-center justify-center border ${level === 0 ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
-                                          <Layers size={14} />
-                                        </div>
-                                        <div>
-                                          <p className="text-xs font-medium text-slate-900 leading-tight">
-                                            {item.item_code}
-                                          </p>
-                                          <p className="text-[10px] text-slate-500 truncate max-w-[200px]">
-                                            {item.item_name}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </td>
-                                    <td className="p-2">
-                                      <GroupBadge group={item.item_group || 'Sub Assembly'} />
-                                    </td>
-                                    <td className="p-2">
-                                      <div className="flex items-center gap-1.5 text-slate-600">
-                                        <Warehouse size={12} className="text-slate-400" />
-                                        <span className="text-[10px] font-medium truncate max-w-[120px]">
-                                          {item.warehouse || 'Work In Progress - NC'}
-                                        </span>
-                                      </div>
-                                    </td>
-                                    <td className="p-2 text-center">
-                                      <div className="flex items-center justify-center gap-1.5 text-slate-600">
-                                        <Calendar size={12} className="text-slate-400" />
-                                        <span className="text-[11px] font-medium">
-                                          {item.planned_start_date || 'TBD'}
-                                        </span>
-                                      </div>
-                                    </td>
-                                    <td className="p-2 text-right">
-                                      <div className="flex flex-col items-end">
-                                        <span className="text-sm  text-rose-600">
-                                          {item.planned_qty || item.quantity || item.qty || '-'}
-                                        </span>
-                                        <span className="text-[9px] text-slate-400 uppercase">{item.uom || 'PCS'}</span>
-                                      </div>
-                                    </td>
-                                    <td className="p-2 text-center">
-                                      <div className="flex items-center justify-center gap-1.5 text-rose-700 bg-rose-50/50 px-2 py-0.5 rounded border border-rose-100/50 w-fit mx-auto">
-                                        <Layers size={12} className="text-rose-500" />
-                                        <span className="font-mono text-[10px]">
-                                          {item.bom_no || item.bom_id || 'N/A'}
-                                        </span>
-                                      </div>
-                                    </td>
-                                    <td className="p-2 text-center">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          toggleItemMaterials(item);
-                                        }}
-                                        className={`px-2 py-1 rounded text-[10px] font-medium border transition-colors ${expandedSubAssemblyMaterials[item.item_code]
-                                            ? 'bg-rose-100 text-rose-700 border-rose-200'
-                                            : 'bg-white text-slate-600 border-slate-200 hover:border-rose-300 hover:text-rose-600'
-                                          }`}
-                                      >
-                                        Materials
-                                      </button>
-                                    </td>
-                                  </tr>
-
-                                  {/* Sub-assembly materials (raw materials) */}
-                                  {expandedSubAssemblyMaterials[item.item_code] && subAssemblyMaterials[item.item_code] && (
-                                    <tr>
-                                      <td colSpan="8" className="p-0 bg-rose-50/10">
-                                        <div className="p-4 border-l-4 border-rose-500 m-3 bg-white shadow-sm rounded-sm border border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
-                                          <div className="flex items-center gap-2 mb-3">
-                                            <div className="p-1.5 bg-rose-50 text-rose-600 rounded">
-                                              <Layers size={14} />
-                                            </div>
-                                            <h4 className="text-[11px]  text-slate-800 ">BOM Components & Materials</h4>
-                                          </div>
-                                          <table className="w-full text-[10px] border-collapse">
-                                            <thead>
-                                              <tr className="bg-slate-50 border-b border-slate-100">
-                                                <th className="p-2 text-left  text-slate-500 uppercase w-8">No.</th>
-                                                <th className="p-2 text-left  text-slate-500 uppercase">Item</th>
-                                                <th className="p-2 text-left  text-slate-500 uppercase">Group</th>
-                                                <th className="p-2 text-right  text-slate-500 uppercase">Qty per Unit</th>
-                                                <th className="p-2 text-right  text-rose-600 uppercase">Total Required Qty</th>
-                                                <th className="p-2 text-center  text-slate-500 uppercase">UOM</th>
-                                              </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-50">
-                                              {subAssemblyMaterials[item.item_code].map((m, mIdx) => {
-                                                const plannedQty = item.planned_qty || item.quantity || item.qty || 1;
-                                                const perUnitQty = parseFloat(m.qty || m.quantity || 0);
-                                                const totalQty = perUnitQty * plannedQty;
-                                                const mCode = m.item_code || m.component_code;
-                                                const isSubAsm = isSubAssemblyGroup(m.item_group, mCode);
-
-                                                return (
-                                                  <tr key={mIdx} className={`hover:bg-slate-50 transition-colors ${isSubAsm ? 'bg-rose-50/20' : ''}`}>
-                                                    <td className="p-2 text-slate-400 font-medium">{mIdx + 1}</td>
-                                                    <td className="p-2">
-                                                      <div className="flex items-center gap-2">
-                                                        {isSubAsm && <Layers size={10} className="text-rose-500" />}
-                                                        <div className={`font-medium ${isSubAsm ? 'text-rose-700' : 'text-slate-900'}`}>{mCode}</div>
-                                                        {isSubAsm && (
-                                                          <span className="px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[8px] font-bold uppercase tracking-wider">
-                                                            Sub-Assembly
-                                                          </span>
-                                                        )}
-                                                      </div>
-                                                      <div className="text-slate-400 text-[9px]">{m.item_name || m.component_description || m.description}</div>
-                                                    </td>
-                                                    <td className="p-2">
-                                                      <GroupBadge group={m.item_group} />
-                                                    </td>
-                                                    <td className="p-2 text-right text-slate-600">{perUnitQty.toFixed(4)}</td>
-                                                    <td className="p-2 text-right font-medium text-rose-600">{totalQty.toFixed(4)}</td>
-                                                    <td className="p-2 text-center text-slate-500">{m.uom || 'Nos'}</td>
-                                                  </tr>
-                                                );
-                                              })}
-                                            </tbody>
-                                          </table>
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  )}
-
-                                  {/* Recursive child sub-assemblies */}
-                                  {isExpanded && hasChildren && item.children.map(child => renderSubAssembly(child, level + 1, currentPath))}
-                                </React.Fragment>
-                              );
-                            };
-
-                            return tree.map(rootItem => renderSubAssembly(rootItem));
-                          })()}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </Card>
-            )}
-          </div>
+          
           <div id="requirements" className="block bg-white">
             {(rawMaterialItems.length > 0 || subAssemblyBomMaterials.length > 0) && (
               <Card>
                 <SectionHeader
-                  title="03 Materials"
+                  title="04 MATERIALS"
                   icon={Boxes}
                   subtitle="Consolidated material explosion across all levels"
                   badge={`${rawMaterialItems.length + subAssemblyBomMaterials.length} ITEMS`}

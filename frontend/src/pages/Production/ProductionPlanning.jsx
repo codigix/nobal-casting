@@ -1358,17 +1358,17 @@ export default function ProductionPlanning() {
                 </tbody>
               </table>
             ) : (
-              <div className="flex flex-col items-center justify-center py-22 text-center bg-gray-50/30">
-                <div className="w-24 h-24 rounded bg-white shadow  shadow-gray-200/50 flex items-center justify-center text-gray-200 mb-6 border border-gray-100">
-                  <Layers size={48} />
+              <div className="flex flex-col items-center justify-center py-5 text-center bg-gray-50/30">
+                <div className="w-12 h-12 rounded bg-white shadow  shadow-gray-200/50 flex items-center justify-center text-gray-200 mb-6 border border-gray-100">
+                  <Layers size={15} />
                 </div>
-                <h3 className="text-lg  text-gray-900 ">No Strategic Plans Found</h3>
-                <p className="text-sm  text-gray-400 mt-2 max-w-[300px] leading-relaxed">
+                <h3 className="text-md  text-gray-900 ">No Strategic Plans Found</h3>
+                <p className="text-xs  text-gray-400 mt-2  leading-relaxed">
                   Start by creating a new production plan to coordinate your manufacturing operations.
                 </p>
                 <button
                   onClick={() => navigate('/manufacturing/production-planning/new')}
-                  className="mt-8 flex items-center gap-2 p-2  bg-slate-900 text-white rounded hover:bg-slate-800 shadow  shadow-slate-200 transition-all text-xs   "
+                  className="mt-2 flex items-center gap-2 p-2  bg-slate-900 text-white rounded hover:bg-slate-800 shadow  shadow-slate-200 transition-all text-xs   "
                 >
                   <Plus size={18} />
                   Initiate First Strategy
@@ -1456,31 +1456,42 @@ export default function ProductionPlanning() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
-                        {workOrderData.operations.map((op, idx) => {
-                          const isNewGroup = idx === 0 || workOrderData.operations[idx - 1].bom_id !== op.bom_id;
-                          return (
-                            <React.Fragment key={idx}>
-                              {isNewGroup && (
-                                <tr className="bg-slate-50/50">
-                                  <td colSpan="3" className="p-2 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                                    <div className={`w-2 h-2 rounded-full ${op.depth === 0 ? 'bg-indigo-500' : 'bg-amber-500'}`} />
-                                    {op.item_name || op.item_code} {op.depth === 0 ? '(Finished Good)' : '(Sub-Assembly)'}
+                        {(() => {
+                          const sortedOps = [...(workOrderData.operations || [])].sort((a, b) => {
+                            // Sort by depth descending (deepest sub-assemblies first)
+                            if ((b.depth || 0) !== (a.depth || 0)) {
+                              return (b.depth || 0) - (a.depth || 0);
+                            }
+                            // Keep relative order within same BOM
+                            return 0;
+                          });
+                          
+                          return sortedOps.map((op, idx) => {
+                            const isNewGroup = idx === 0 || sortedOps[idx - 1].bom_id !== op.bom_id;
+                            return (
+                              <React.Fragment key={idx}>
+                                {isNewGroup && (
+                                  <tr className="bg-slate-50/50">
+                                    <td colSpan="3" className="p-2 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                      <div className={`w-2 h-2 rounded-full ${op.depth === 0 ? 'bg-indigo-500' : 'bg-amber-500'}`} />
+                                      {op.item_name || op.item_code} {op.depth === 0 ? '(Finished Good)' : '(Sub-Assembly)'}
+                                    </td>
+                                  </tr>
+                                )}
+                                <tr className="hover:bg-indigo-50/30 transition-colors">
+                                  <td className="p-2  text-xs  text-gray-900 flex items-center gap-2">
+                                    <div className="w-4 flex justify-center">
+                                      <div className="w-0.5 h-4 bg-gray-200" />
+                                    </div>
+                                    {op.operation_name || op.operation || '-'}
                                   </td>
+                                  <td className="p-2  text-xs  text-gray-500">{op.workstation_type || op.workstation || '-'}</td>
+                                  <td className="p-2  text-right text-xs  text-indigo-600">{op.operation_time || op.time || 0}</td>
                                 </tr>
-                              )}
-                              <tr className="hover:bg-indigo-50/30 transition-colors">
-                                <td className="p-2  text-xs  text-gray-900 flex items-center gap-2">
-                                  <div className="w-4 flex justify-center">
-                                    <div className="w-0.5 h-4 bg-gray-200" />
-                                  </div>
-                                  {op.operation_name || op.operation || '-'}
-                                </td>
-                                <td className="p-2  text-xs  text-gray-500">{op.workstation_type || op.workstation || '-'}</td>
-                                <td className="p-2  text-right text-xs  text-indigo-600">{op.operation_time || op.time || 0}</td>
-                              </tr>
-                            </React.Fragment>
-                          );
-                        })}
+                              </React.Fragment>
+                            );
+                          });
+                        })()}
                       </tbody>
                     </table>
                   </div>

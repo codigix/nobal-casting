@@ -1632,7 +1632,7 @@ class ProductionController {
 
   async createRejection(req, res) {
     try {
-      const { job_card_id, day_number, log_date, accepted_qty, rejection_reason, rejected_qty, scrap_qty, notes } = req.body
+      const { job_card_id, day_number, log_date, shift, accepted_qty, rejection_reason, rejected_qty, scrap_qty, notes } = req.body
 
       if (!job_card_id) {
         return res.status(400).json({
@@ -1645,6 +1645,7 @@ class ProductionController {
         job_card_id,
         day_number,
         log_date,
+        shift,
         accepted_qty,
         rejection_reason,
         rejected_qty,
@@ -1726,7 +1727,7 @@ class ProductionController {
 
   async createDowntime(req, res) {
     try {
-      const { job_card_id, day_number, log_date, downtime_type, downtime_reason, from_time, to_time, duration_minutes } = req.body
+      const { job_card_id, day_number, log_date, shift, downtime_type, downtime_reason, from_time, to_time, duration_minutes } = req.body
 
       if (!job_card_id || !downtime_type || !from_time || !to_time) {
         return res.status(400).json({
@@ -1739,6 +1740,7 @@ class ProductionController {
         job_card_id,
         day_number,
         log_date,
+        shift,
         downtime_type,
         downtime_reason,
         from_time,

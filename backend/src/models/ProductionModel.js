@@ -371,7 +371,7 @@ class ProductionModel {
         params.push(filters.year)
       }
 
-      query += ' ORDER BY wo.created_at DESC'
+      query += ' ORDER BY wo.created_at ASC'
 
       const [workOrders] = await this.db.query(query, params)
       return (workOrders || []).map(wo => ({
@@ -1433,7 +1433,7 @@ async deleteAllBOMRawMaterials(bom_id) {
         params.push(year)
       }
 
-      query += ' ORDER BY jc.operation_sequence ASC, jc.created_at DESC'
+      query += ' ORDER BY jc.operation_sequence ASC, jc.created_at ASC'
       const [jobCards] = await this.db.query(query, params)
       return jobCards || []
     } catch (error) {
@@ -1447,6 +1447,7 @@ async deleteAllBOMRawMaterials(bom_id) {
         SELECT 
           jc.*, 
           wo.item_code, 
+          wo.quantity as sales_qty,
           i.name as item_name,
           mm.name as machine_name,
           om.name as operator_name
@@ -1865,27 +1866,15 @@ async deleteAllBOMRawMaterials(bom_id) {
       const createdCards = []
       const plannedQty = parseFloat(workOrder.quantity) || parseFloat(workOrder.qty_to_manufacture) || 0
 
-      // Get starting sequence number
-      const [rows] = await this.db.query(
-        "SELECT job_card_id FROM job_card WHERE job_card_id LIKE 'JC-%'"
-      )
-      
-      let maxNum = 0
-      rows.forEach(row => {
-        const parts = row.job_card_id.split('-')
-        if (parts.length >= 2) {
-          const num = parseInt(parts[1])
-          if (!isNaN(num) && num > maxNum) {
-            maxNum = num
-          }
-        }
-      })
-
-      let currentSeq = maxNum + 1
-
+      let opSeq = 1
       let isFirst = true
       for (const operation of workOrder.operations) {
-        const job_card_id = `JC-${currentSeq++}`
+        // The user wants "JC - 1", "JC - 2" etc. for each Work Order.
+        // To ensure global uniqueness (since job_card_id is PK), we use JC-[OpSeq]-[WorkOrderID]. 
+        // We'll format it as "JC - [OpSeq] - [WorkOrderID]" so the readable part is at the beginning.
+        
+        const job_card_id = `JC - ${opSeq} - ${work_order_id}`
+        
         const operationTime = parseFloat(operation.operation_time || operation.time || 0)
         const hourlyRate = parseFloat(operation.hourly_rate || 0)
         const baseOperatingCost = parseFloat(operation.operating_cost || 0)
@@ -1899,7 +1888,7 @@ async deleteAllBOMRawMaterials(bom_id) {
           job_card_id,
           work_order_id,
           operation: operation.operation_name || operation.name || operation.operation || '',
-          operation_sequence: operation.sequence || 0,
+          operation_sequence: operation.sequence || opSeq,
           machine_id: operation.default_workstation || operation.workstation || operation.workstation_type || operation.machine_id || '',
           operator_id: null,
           planned_quantity: plannedQty,
@@ -1917,6 +1906,7 @@ async deleteAllBOMRawMaterials(bom_id) {
         await this.createJobCard(jobCardData)
         createdCards.push(jobCardData)
         isFirst = false
+        opSeq++
       }
 
       return createdCards
@@ -2428,13 +2418,13 @@ async deleteAllBOMRawMaterials(bom_id) {
 
       // 1. Get all time logs for this job card
       const [timeLogs] = await this.db.query(
-        'SELECT completed_qty, rejected_qty, scrap_qty, shift, log_date, time_in_minutes FROM time_log WHERE job_card_id = ?',
+        'SELECT completed_qty, rejected_qty, scrap_qty, shift, log_date, day_number, time_in_minutes FROM time_log WHERE job_card_id = ?',
         [jobCardId]
       );
 
       // 2. Get all rejection entries for this job card
       const [rejections] = await this.db.query(
-        'SELECT rejected_qty, scrap_qty, accepted_qty, shift, log_date, status FROM rejection_entry WHERE job_card_id = ?',
+        'SELECT rejected_qty, scrap_qty, accepted_qty, shift, log_date, day_number, status FROM rejection_entry WHERE job_card_id = ?',
         [jobCardId]
       );
 
@@ -2449,7 +2439,8 @@ async deleteAllBOMRawMaterials(bom_id) {
 
       timeLogs.forEach(log => {
         const dateStr = this._formatDate(log.log_date);
-        const key = `${dateStr}_${normShift(log.shift)}`;
+        const dayNum = log.day_number || 1;
+        const key = `day_${dayNum}_${normShift(log.shift)}`;
         if (!shifts[key]) shifts[key] = { produced: 0, rejected: 0, scrap: 0, rejectionProduced: 0, rejectionRejected: 0, rejectionScrap: 0, rejectionAccepted: 0, isInferred: false };
         shifts[key].produced += parseFloat(log.completed_qty) || 0;
         shifts[key].rejected += parseFloat(log.rejected_qty) || 0;
@@ -2458,7 +2449,8 @@ async deleteAllBOMRawMaterials(bom_id) {
 
       rejections.forEach(rej => {
         const dateStr = this._formatDate(rej.log_date);
-        const key = `${dateStr}_${normShift(rej.shift)}`;
+        const dayNum = rej.day_number || 1;
+        const key = `day_${dayNum}_${normShift(rej.shift)}`;
         
         const rQty = parseFloat(rej.rejected_qty) || 0;
         const sQty = parseFloat(rej.scrap_qty) || 0;
@@ -2491,7 +2483,8 @@ async deleteAllBOMRawMaterials(bom_id) {
       let shiftTotalAccepted = 0;
 
       Object.values(shifts).forEach(s => {
-        // Use the maximum of reported production and inferred production from quality entries
+        // Use the maximum of reported production (Time Logs) and inferred production from quality entries
+        // This ensures the summary is mathematically correct if more items were inspected than logged.
         const shiftProduced = Math.max(s.produced, s.rejectionProduced);
         
         shiftTotalProduced += shiftProduced;
@@ -2525,6 +2518,11 @@ async deleteAllBOMRawMaterials(bom_id) {
       let totalProduced = shiftTotalProduced + totalChallanProduced;
       let totalRejected = shiftTotalRejected + totalChallanRejected;
       let totalScrap = shiftTotalScrap;
+      
+      // Enforce business rule: Strict Quality Gate
+      // Accepted quantity ONLY comes from Approved Quality Entries (rejection_entry)
+      // or from Inward Challans (for outsourced/received items).
+      // This ensures the next stage receives ONLY what has been explicitly verified.
       let totalAccepted = shiftTotalAccepted + totalChallanAccepted;
       let totalLoss = totalRejected + totalScrap;
 
@@ -2829,9 +2827,9 @@ async deleteAllBOMRawMaterials(bom_id) {
       const currentTotalProduced = Math.max(totalTimeLogProduced + totalChallanProduced, totalRejectionProduced);
       const newTotalProduced = Math.max(totalTimeLogProduced + totalChallanProduced + newQty, totalRejectionProduced);
       
-      const tolerance = 0.10; // 10% tolerance
+      const tolerance = 0.001; // 0.1% tolerance to allow for rounding errors only
       if (newTotalProduced > (maxAllowed * (1 + tolerance)) + 0.0001) {
-        throw new Error(`Quantity Validation Error: Total production (${newTotalProduced.toFixed(2)}) would exceed allowed quantity with tolerance (${(maxAllowed * (1 + tolerance)).toFixed(2)}) based on previous operation or plan.`);
+        throw new Error(`Quantity Validation Error: Total production (${newTotalProduced.toFixed(2)}) would exceed planned quantity (${maxAllowed.toFixed(2)}). Please manage within planned units only.`);
       }
 
       // Check for overlapping time intervals for operator or workstation
@@ -2869,6 +2867,9 @@ async deleteAllBOMRawMaterials(bom_id) {
       const timeLogId = `TL-${Date.now()}`
       const query = `INSERT INTO time_log (time_log_id, job_card_id, day_number, log_date, employee_id, operator_name, workstation_name, shift, from_time, to_time, time_in_minutes, completed_qty, accepted_qty, rejected_qty, scrap_qty, inhouse, outsource)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      
+      const normShift = (s) => String(s || '').trim().toUpperCase().replace(/^SHIFT\s+/, '') || 'A';
+
       await this.db.query(query, [
         timeLogId,
         data.job_card_id,
@@ -2877,7 +2878,7 @@ async deleteAllBOMRawMaterials(bom_id) {
         data.employee_id || null,
         data.operator_name || null,
         data.workstation_name || null,
-        data.shift || 'A',
+        normShift(data.shift),
         data.from_time || null,
         data.to_time || null,
         data.time_in_minutes || 0,
@@ -2948,20 +2949,23 @@ async deleteAllBOMRawMaterials(bom_id) {
       const currentTotalProduced = Math.max(totalTimeLogProduced + totalChallanProduced, totalRejectionProduced);
       const newTotalProduced = Math.max(totalTimeLogProduced + totalChallanProduced, totalRejectionProduced + enteringProduced);
       
-      const tolerance = 0.10; // 10% tolerance
+      const tolerance = 0.001; // 0.1% tolerance to allow for rounding errors only
       if (newTotalProduced > (maxAllowed * (1 + tolerance)) + 0.0001) {
-        throw new Error(`Quantity Validation Error: Total production (${newTotalProduced.toFixed(2)}) would exceed allowed quantity with tolerance (${(maxAllowed * (1 + tolerance)).toFixed(2)}) based on previous operation or plan.`);
+        throw new Error(`Quantity Validation Error: Total production (${newTotalProduced.toFixed(2)}) would exceed planned quantity (${maxAllowed.toFixed(2)}). Please manage within planned units only.`);
       }
 
       const rejectionId = `REJ-${Date.now()}`
       const query = `INSERT INTO rejection_entry (rejection_id, job_card_id, day_number, log_date, shift, accepted_qty, rejection_reason, rejected_qty, scrap_qty, notes, status)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      
+      const normShift = (s) => String(s || '').trim().toUpperCase().replace(/^SHIFT\s+/, '') || 'A';
+
       await this.db.query(query, [
         rejectionId,
         data.job_card_id,
         data.day_number || 1,
         data.log_date || this._formatDate(new Date()),
-        data.shift || 'A',
+        normShift(data.shift),
         data.accepted_qty || 0,
         data.rejection_reason || null,
         data.rejected_qty || 0,
@@ -3027,12 +3031,15 @@ async deleteAllBOMRawMaterials(bom_id) {
       const downtimeId = `DT-${Date.now()}`
       const query = `INSERT INTO downtime_entry (downtime_id, job_card_id, day_number, log_date, shift, downtime_type, downtime_reason, from_time, to_time, duration_minutes)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      
+      const normShift = (s) => String(s || '').trim().toUpperCase().replace(/^SHIFT\s+/, '') || 'A';
+
       await this.db.query(query, [
         downtimeId,
         data.job_card_id,
         data.day_number || 1,
         data.log_date || this._formatDate(new Date()),
-        data.shift || 'A',
+        normShift(data.shift),
         data.downtime_type || null,
         data.downtime_reason || null,
         data.from_time || null,

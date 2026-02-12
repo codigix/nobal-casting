@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ChevronRight, ChevronDown, AlertCircle, TrendingUp, BarChart3, Layers, ClipboardList,
@@ -8,6 +8,373 @@ import {
 import * as productionService from '../../services/productionService'
 import Card from '../../components/Card/Card'
 import api from '../../services/api'
+
+// --- Helpers & Sub-components (Moved outside to prevent re-mount issues) ---
+
+const getPriorityInfo = (priority) => {
+  const p = (priority || 'medium').toLowerCase()
+  switch (p) {
+    case 'high': return { color: 'text-rose-600', dot: 'bg-rose-500', label: 'high priority' }
+    case 'medium': return { color: 'text-amber-600', dot: 'bg-amber-500', label: 'medium priority' }
+    case 'low': return { color: 'text-emerald-600', dot: 'bg-emerald-500', label: 'low priority' }
+    default: return { color: 'text-gray-600', dot: 'bg-gray-400', label: 'normal priority' }
+  }
+}
+
+const StatusBadge = ({ status }) => {
+  const config = {
+    draft: { color: 'text-slate-600 bg-slate-50 border-slate-100', icon: Clock },
+    planned: { color: 'text-indigo-600 bg-indigo-50 border-indigo-100', icon: Calendar },
+    'in-progress': { color: 'text-amber-600 bg-amber-50 border-amber-100', icon: Activity },
+    completed: { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: CheckCircle2 },
+    cancelled: { color: 'text-rose-600 bg-rose-50 border-rose-100', icon: AlertCircle }
+  }
+  const s = (status || 'draft').toLowerCase()
+  const { color, icon: Icon } = config[s] || config.draft
+
+  return (
+    <span className={`inline-flex items-center gap-1 p-2  py-1 rounded w-fit text-xs    border ${color}`}>
+      <Icon size={12} />
+      {s}
+    </span>
+  )
+}
+
+const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
+  const colorMap = {
+    blue: 'text-blue-600 bg-blue-50 border-blue-100',
+    emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+    amber: 'text-amber-600 bg-amber-50 border-amber-100',
+    rose: 'text-rose-600 bg-rose-50 border-rose-100',
+    indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100',
+    violet: 'text-violet-600 bg-violet-50 border-violet-100'
+  }
+
+  return (
+    <div className="bg-white p-2 rounded border border-gray-100   hover:shadow-md transition-all group overflow-hidden relative">
+      <div className="absolute -right-4 -top-4 w-24 h-24 bg-gray-50 rounded-full opacity-50 group-hover:scale-110 transition-transform" />
+      
+      <div className="relative flex justify-between items-start">
+        <div className="">
+          <p className="text-xs   text-gray-400 ">{label}</p>
+          <div className="flex items-baseline gap-2">
+            <h3 className="text-xl  text-gray-900 ">{value}</h3>
+            {trend && (
+              <span className={`text-xs   ${trend > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                {trend > 0 ? '+' : ''}{trend}%
+              </span>
+            )}
+          </div>
+          {subtitle && (
+            <p className="text-xs   text-gray-500 tracking-tight">{subtitle}</p>
+          )}
+        </div>
+        <div className={`p-2 roundedl ${colorMap[color] || colorMap.blue}   group-hover:scale-110 transition-transform`}>
+          <Icon size={24} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const WorkOrderRow = React.memo(({ 
+  order, 
+  depth = 0, 
+  layout = 'flat',
+  navigate,
+  handleView,
+  handleEdit,
+  handleDelete
+}) => {
+  const [rowExpanded, setRowExpanded] = useState(false)
+  const hasSubAssemblies = order.subAssemblies && order.subAssemblies.length > 0
+  const priority = getPriorityInfo(order.priority)
+
+  if (layout === 'flat') {
+    return (
+      <div className="group/row">
+        <div className="flex items-center gap-4 p-4 hover:bg-indigo-50/30 transition-all border-b border-gray-50">
+          <div className="flex items-center gap-4 flex-1 min-w-[200px]">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100 group-hover/row:scale-110 transition-transform shadow-sm">
+              <ClipboardList size={14} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-gray-900">{order.wo_id}</span>
+              </div>
+              <div className="flex items-center gap-2 mt-0.5 text-[10px] text-gray-400">
+                <Calendar size={10} />
+                <span>{new Date(order.created_at || new Date()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 min-w-[200px]">
+            <p className="text-xs font-medium text-gray-900">{order.item_name}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              {(order.bom_no || '').startsWith('BOM-') ? order.bom_no : `BOM-${order.bom_no || order.wo_id.split('-')[1] || 'STANDARD'}`}
+            </p>
+          </div>
+
+          <div className="w-32">
+            <StatusBadge status={order.status} />
+            <div className="flex items-center gap-1.5 mt-1.5 px-1">
+              <div className={`w-1.5 h-1.5 rounded-full ${priority.dot}`} />
+              <span className={`text-[10px] ${priority.color} font-medium`}>{priority.label}</span>
+            </div>
+          </div>
+
+          <div className="w-40">
+            <div className="flex justify-between text-[10px] mb-1.5">
+              <span className="font-medium text-gray-700">{order.produced_qty || 0} / {Math.round(((order.produced_qty || 0) / (order.quantity || 1)) * 100)}%</span>
+            </div>
+            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+              <div 
+                className={`h-full transition-all duration-700 ${order.status === 'completed' ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                style={{ width: `${Math.min(((order.produced_qty || 0) / (order.quantity || 1)) * 100, 100)}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="w-28 flex items-center justify-end gap-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); handleView(order); }}
+              className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+              title="View"
+            >
+              <Eye size={14} />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); navigate(`/manufacturing/job-cards?filter_work_order=${order.wo_id}`); }}
+              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+              title="Track"
+            >
+              <Activity size={14} />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleEdit(order); }}
+              className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+              title="Edit"
+            >
+              <Edit2 size={14} />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDelete(order.wo_id); }}
+              className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+              title="Delete"
+            >
+              <Trash size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col">
+      <div 
+        onClick={(e) => {
+          if (hasSubAssemblies) {
+            e.stopPropagation();
+            setRowExpanded(prev => !prev);
+          }
+        }}
+        className={`p-4 hover:bg-gray-50/30 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 ${depth > 0 ? 'bg-gray-50/10' : ''} ${hasSubAssemblies ? 'cursor-pointer' : ''}`} 
+        style={{ paddingLeft: `${depth * 1.5 + 1}rem` }}
+      >
+        <div className="flex items-center gap-4 flex-1">
+          {hasSubAssemblies ? (
+            <div className="p-1 text-gray-500">
+              {rowExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </div>
+          ) : depth > 0 ? (
+            <div className="w-6" />
+          ) : null}
+          <div className="w-8 h-8 rounded border border-gray-100 flex items-center justify-center text-gray-400 bg-white shadow-sm">
+            <ClipboardList size={16} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">{order.wo_id}</span>
+              <span className="text-sm font-medium text-gray-900 truncate">{order.item_name}</span>
+              {hasSubAssemblies && (
+                <span className="text-[10px] text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-full font-medium">
+                  {order.subAssemblies.length} Sub-assemblies
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-400">
+              <span className={order.priority === 'high' ? 'text-rose-500 font-medium' : ''}>
+                {order.priority.toUpperCase()} priority
+              </span>
+              <span className="w-1 h-1 bg-gray-300 rounded-full" />
+              <span>BOM: {(order.bom_no || '').startsWith('BOM-') ? order.bom_no : `BOM-${order.bom_no || order.wo_id.split('-')[1] || 'STANDARD'}`}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-8 min-w-[320px]" onClick={(e) => e.stopPropagation()}>
+          <div className="flex-1">
+            <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+              <span>Progress</span>
+              <span>{Math.round((order.produced_qty / order.quantity) * 100)}%</span>
+            </div>
+            <div className="w-32 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div 
+                className={`h-full ${order.status === 'completed' ? 'bg-emerald-500' : 'bg-indigo-500'} transition-all duration-500`}
+                style={{ width: `${Math.min((order.produced_qty / order.quantity) * 100, 100)}%` }}
+              />
+            </div>
+            <div className="text-[10px] text-gray-400 mt-1 flex justify-between">
+              <span>{order.produced_qty} / {order.quantity} units</span>
+              {(parseFloat(order.scrap_qty) > 0 || parseFloat(order.rejected_qty) > 0) && (
+                <span className="text-rose-500 font-medium">
+                  Loss: {(parseFloat(order.scrap_qty) + parseFloat(order.rejected_qty)).toFixed(0)} units
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="w-24 flex justify-center">
+            <StatusBadge status={order.status} />
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => handleView(order)}
+              className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
+              title="View"
+            >
+              <Eye size={14} />
+            </button>
+            <button
+              onClick={() => navigate(`/manufacturing/job-cards?filter_work_order=${order.wo_id}`)}
+              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-all"
+              title="Track"
+            >
+              <Activity size={14} />
+            </button>
+            <button
+              onClick={() => handleEdit(order)}
+              className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all"
+              title="Edit"
+            >
+              <Edit2 size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {rowExpanded && hasSubAssemblies && (
+        <div className="divide-y divide-gray-50 border-l-2 border-indigo-100/50 bg-gray-50/5">
+          {order.subAssemblies.map(sub => (
+            <WorkOrderRow 
+              key={sub.wo_id} 
+              order={sub} 
+              depth={depth + 1} 
+              layout="grouped"
+              navigate={navigate}
+              handleView={handleView}
+              handleEdit={handleEdit}
+              handleDelete={handleDelete}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+})
+
+const groupOrdersBySalesOrder = (ordersData) => {
+  const groups = {}
+  
+  const ordersMap = {}
+  ordersData.forEach(order => {
+    ordersMap[order.wo_id] = { ...order, subAssemblies: [] }
+  })
+
+  const getEffectiveSOData = (order) => {
+    if (order.sales_order_id && order.sales_order_id !== 'NO_SALES_ORDER') {
+      return {
+        id: order.sales_order_id,
+        customer_name: order.customer_name || 'Individual Order'
+      }
+    }
+    if (order.parent_wo_id && ordersMap[order.parent_wo_id]) {
+      return getEffectiveSOData(ordersMap[order.parent_wo_id])
+    }
+    return {
+      id: 'NO_SALES_ORDER',
+      customer_name: 'Individual Order'
+    }
+  }
+
+  ordersData.forEach(order => {
+    const { id: soId, customer_name: custName } = getEffectiveSOData(order)
+    
+    if (!groups[soId]) {
+      groups[soId] = {
+        id: soId,
+        customer_name: custName,
+        orders: [],
+        allCompleted: true,
+        totalProduced: 0,
+        totalQuantity: 0,
+        totalScrap: 0,
+        fgProduced: 0,
+        fgQuantity: 0,
+        earliestStart: null,
+        latestEnd: null
+      }
+    }
+    
+    const group = groups[soId]
+    group.orders.push(order)
+    
+    if ((order.status || '').toLowerCase() !== 'completed') {
+      group.allCompleted = false
+    }
+    group.totalProduced += parseFloat(order.produced_qty) || 0
+    group.totalQuantity += parseFloat(order.quantity) || 0
+    group.totalScrap += parseFloat(order.scrap_qty) || 0
+    
+    const startDate = order.planned_start_date ? new Date(order.planned_start_date) : null
+    const endDate = order.planned_end_date ? new Date(order.planned_end_date) : null
+    
+    if (startDate && (!group.earliestStart || startDate < group.earliestStart)) {
+      group.earliestStart = startDate
+    }
+    if (endDate && (!group.latestEnd || endDate > group.latestEnd)) {
+      group.latestEnd = endDate
+    }
+  })
+
+  Object.values(groups).forEach(group => {
+    const localOrderMap = {}
+    group.orders.forEach(o => {
+      localOrderMap[o.wo_id] = { ...o, subAssemblies: [] }
+    })
+
+    const rootOrders = []
+    Object.values(localOrderMap).forEach(o => {
+      if (o.parent_wo_id && localOrderMap[o.parent_wo_id]) {
+        localOrderMap[o.parent_wo_id].subAssemblies.push(o)
+      } else {
+        rootOrders.push(o)
+      }
+    })
+    group.hierarchicalOrders = rootOrders
+    group.fgQuantity = rootOrders.reduce((sum, o) => sum + (parseFloat(o.quantity) || 0), 0)
+    group.fgProduced = rootOrders.reduce((sum, o) => sum + (parseFloat(o.produced_qty) || 0), 0)
+  })
+
+  return Object.values(groups).sort((a, b) => {
+    if (a.id === 'NO_SALES_ORDER') return 1
+    if (b.id === 'NO_SALES_ORDER') return -1
+    return b.id.localeCompare(a.id)
+  })
+}
 
 export default function WorkOrder() {
   const navigate = useNavigate()
@@ -41,63 +408,7 @@ export default function WorkOrder() {
     fetchWorkOrders()
   }, [filters])
 
-  const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
-    const colorMap = {
-      blue: 'text-blue-600 bg-blue-50 border-blue-100',
-      emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
-      amber: 'text-amber-600 bg-amber-50 border-amber-100',
-      rose: 'text-rose-600 bg-rose-50 border-rose-100',
-      indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100',
-      violet: 'text-violet-600 bg-violet-50 border-violet-100'
-    }
-
-    return (
-      <div className="bg-white p-2 rounded border border-gray-100   hover:shadow-md transition-all group overflow-hidden relative">
-        <div className="absolute -right-4 -top-4 w-24 h-24 bg-gray-50 rounded-full opacity-50 group-hover:scale-110 transition-transform" />
-        
-        <div className="relative flex justify-between items-start">
-          <div className="">
-            <p className="text-xs   text-gray-400 ">{label}</p>
-            <div className="flex items-baseline gap-2">
-              <h3 className="text-xl  text-gray-900 ">{value}</h3>
-              {trend && (
-                <span className={`text-xs   ${trend > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                  {trend > 0 ? '+' : ''}{trend}%
-                </span>
-              )}
-            </div>
-            {subtitle && (
-              <p className="text-xs   text-gray-500 tracking-tight">{subtitle}</p>
-            )}
-          </div>
-          <div className={`p-2 roundedl ${colorMap[color] || colorMap.blue}   group-hover:scale-110 transition-transform`}>
-            <Icon size={24} />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const StatusBadge = ({ status }) => {
-    const config = {
-      draft: { color: 'text-slate-600 bg-slate-50 border-slate-100', icon: Clock },
-      planned: { color: 'text-indigo-600 bg-indigo-50 border-indigo-100', icon: Calendar },
-      'in-progress': { color: 'text-amber-600 bg-amber-50 border-amber-100', icon: Activity },
-      completed: { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: CheckCircle2 },
-      cancelled: { color: 'text-rose-600 bg-rose-50 border-rose-100', icon: AlertCircle }
-    }
-    const s = (status || 'draft').toLowerCase()
-    const { color, icon: Icon } = config[s] || config.draft
-
-    return (
-      <span className={`inline-flex items-center gap-1 p-2  py-1 rounded w-fit text-xs    border ${color}`}>
-        <Icon size={12} />
-        {s}
-      </span>
-    )
-  }
-
-  const fetchWorkOrders = async () => {
+  const fetchWorkOrders = useCallback(async () => {
     try {
       setLoading(true)
       const cleanFilters = Object.fromEntries(
@@ -114,9 +425,9 @@ export default function WorkOrder() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filters])
 
-  const calculateStats = (ordersData) => {
+  const calculateStats = useCallback((ordersData) => {
     const total = ordersData.length
     const inProgress = ordersData.filter(o => (o.status || '').toLowerCase() === 'in-progress').length
     const completed = ordersData.filter(o => (o.status || '').toLowerCase() === 'completed').length
@@ -124,17 +435,7 @@ export default function WorkOrder() {
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0
 
     setStats({ totalOrders: total, inProgress, completed, pending, completionRate })
-  }
-
-  const getPriorityInfo = (priority) => {
-    const p = (priority || 'medium').toLowerCase()
-    switch (p) {
-      case 'high': return { color: 'text-rose-600', dot: 'bg-rose-500', label: 'high priority' }
-      case 'medium': return { color: 'text-amber-600', dot: 'bg-amber-500', label: 'medium priority' }
-      case 'low': return { color: 'text-emerald-600', dot: 'bg-emerald-500', label: 'low priority' }
-      default: return { color: 'text-gray-600', dot: 'bg-gray-400', label: 'normal priority' }
-    }
-  }
+  }, [])
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target
@@ -144,7 +445,7 @@ export default function WorkOrder() {
     }))
   }
 
-  const handleDelete = async (wo_id) => {
+  const handleDelete = useCallback(async (wo_id) => {
     if (window.confirm('Delete this work order?')) {
       try {
         await productionService.deleteWorkOrder(wo_id)
@@ -155,7 +456,7 @@ export default function WorkOrder() {
         setError(err.message || 'Failed to delete work order')
       }
     }
-  }
+  }, [fetchWorkOrders])
 
   const handleTruncate = async () => {
     if (!window.confirm('⚠️ Warning: This will permanently delete ALL work orders. Are you sure?')) return
@@ -172,23 +473,21 @@ export default function WorkOrder() {
     }
   }
 
-  const handleView = (order) => {
+  const handleView = useCallback((order) => {
     navigate(`/manufacturing/work-orders/${order.wo_id}?readonly=true`)
-  }
+  }, [navigate])
 
-  const handleEdit = (order) => {
+  const handleEdit = useCallback((order) => {
     navigate(`/manufacturing/work-orders/${order.wo_id}`)
-  }
+  }, [navigate])
 
-  const handleShipment = async (salesOrderId, orders) => {
+  const handleShipment = useCallback(async (salesOrderId, groupOrders) => {
     if (!window.confirm(`Send all completed work orders for ${salesOrderId} to shipment?`)) return
     
     try {
       setLoading(true)
-      // Only include root orders (Finished Goods) in the shipment quantity
-      // We identify roots as those that either have no parent OR whose parent is not in this shipment set
-      const orderIds = new Set(orders.map(o => o.wo_id))
-      const fgOrders = orders.filter(o => !o.parent_wo_id || !orderIds.has(o.parent_wo_id))
+      const orderIds = new Set(groupOrders.map(o => o.wo_id))
+      const fgOrders = groupOrders.filter(o => !o.parent_wo_id || !orderIds.has(o.parent_wo_id))
       const totalQty = fgOrders.reduce((sum, o) => sum + (parseFloat(o.produced_qty) || 0), 0)
       
       const response = await api.post('/selling/delivery-notes', {
@@ -207,11 +506,11 @@ export default function WorkOrder() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const handlePrintReport = (salesOrderId, orders) => {
+  const handlePrintReport = useCallback((salesOrderId, groupOrders) => {
     const printWindow = window.open('', '_blank')
-    const customerName = orders[0]?.customer_name || 'N/A'
+    const customerName = groupOrders[0]?.customer_name || 'N/A'
     
     const html = `
       <html>
@@ -246,7 +545,7 @@ export default function WorkOrder() {
               </tr>
             </thead>
             <tbody>
-              ${orders.map(o => `
+              ${groupOrders.map(o => `
                 <tr>
                   <td>${o.wo_id}</td>
                   <td>${o.item_name}</td>
@@ -260,10 +559,10 @@ export default function WorkOrder() {
             </tbody>
           </table>
           <div class="summary">
-            <p>Total Items: ${orders.length}</p>
-            <p>Total Quantity: ${orders.reduce((sum, o) => sum + parseFloat(o.quantity), 0)}</p>
-            <p>Total Produced: ${orders.reduce((sum, o) => sum + parseFloat(o.produced_qty), 0)}</p>
-            <p>Total Rejection/Scrap: ${orders.reduce((sum, o) => sum + (parseFloat(o.rejected_qty) || 0) + (parseFloat(o.scrap_qty) || 0), 0)}</p>
+            <p>Total Items: ${groupOrders.length}</p>
+            <p>Total Quantity: ${groupOrders.reduce((sum, o) => sum + parseFloat(o.quantity), 0)}</p>
+            <p>Total Produced: ${groupOrders.reduce((sum, o) => sum + parseFloat(o.produced_qty), 0)}</p>
+            <p>Total Rejection/Scrap: ${groupOrders.reduce((sum, o) => sum + (parseFloat(o.rejected_qty) || 0) + (parseFloat(o.scrap_qty) || 0), 0)}</p>
           </div>
           <script>window.print();</script>
         </body>
@@ -271,11 +570,11 @@ export default function WorkOrder() {
     `
     printWindow.document.write(html)
     printWindow.document.close()
-  }
-  const handleDownloadReport = (salesOrderId, orders) => {
-    // Basic CSV download or Print view
+  }, [])
+
+  const handleDownloadReport = useCallback((salesOrderId, groupOrders) => {
     const headers = ['Work Order ID', 'Item', 'Target Qty', 'Produced Qty', 'Rejected', 'Scrap', 'Status', 'Start Date', 'End Date']
-    const data = orders.map(o => [
+    const data = groupOrders.map(o => [
       o.wo_id,
       o.item_name,
       o.quantity,
@@ -289,7 +588,7 @@ export default function WorkOrder() {
     
     const csvContent = [
       `Work Order Report for Sales Order: ${salesOrderId}`,
-      `Customer: ${orders[0]?.customer_name || 'N/A'}`,
+      `Customer: ${groupOrders[0]?.customer_name || 'N/A'}`,
       headers.join(','),
       ...data.map(row => row.join(','))
     ].join('\n')
@@ -306,334 +605,9 @@ export default function WorkOrder() {
     
     setSuccess('Report downloaded successfully')
     setTimeout(() => setSuccess(null), 3000)
-  }
+  }, [])
 
-  const groupOrdersBySalesOrder = (ordersData) => {
-    const groups = {}
-    
-    // 1. Build a global map of all orders for fast lookup during hierarchy resolution
-    const ordersMap = {}
-    ordersData.forEach(order => {
-      ordersMap[order.wo_id] = { ...order, subAssemblies: [] }
-    })
-
-    // 2. Helper to find the "Effective Sales Order" for an order (tracing up the parent tree)
-    const getEffectiveSOData = (order) => {
-      // If order has a Sales Order, use it
-      if (order.sales_order_id && order.sales_order_id !== 'NO_SALES_ORDER') {
-        return {
-          id: order.sales_order_id,
-          customer_name: order.customer_name || 'Individual Order'
-        }
-      }
-      
-      // If it has a parent, try to get it from the parent
-      if (order.parent_wo_id && ordersMap[order.parent_wo_id]) {
-        return getEffectiveSOData(ordersMap[order.parent_wo_id])
-      }
-      
-      // Default to No Sales Order
-      return {
-        id: 'NO_SALES_ORDER',
-        customer_name: 'Individual Order'
-      }
-    }
-
-    // 3. Assign each order to its effective Sales Order group
-    ordersData.forEach(order => {
-      const { id: soId, customer_name: custName } = getEffectiveSOData(order)
-      
-      if (!groups[soId]) {
-        groups[soId] = {
-          id: soId,
-          customer_name: custName,
-          orders: [],
-          allCompleted: true,
-          totalProduced: 0,
-          totalQuantity: 0,
-          totalScrap: 0,
-          fgProduced: 0,
-          fgQuantity: 0,
-          earliestStart: null,
-          latestEnd: null
-        }
-      }
-      
-      const group = groups[soId]
-      group.orders.push(order)
-      
-      if ((order.status || '').toLowerCase() !== 'completed') {
-        group.allCompleted = false
-      }
-      group.totalProduced += parseFloat(order.produced_qty) || 0
-      group.totalQuantity += parseFloat(order.quantity) || 0
-      group.totalScrap += parseFloat(order.scrap_qty) || 0
-      
-      const startDate = order.planned_start_date ? new Date(order.planned_start_date) : null
-      const endDate = order.planned_end_date ? new Date(order.planned_end_date) : null
-      
-      if (startDate && (!group.earliestStart || startDate < group.earliestStart)) {
-        group.earliestStart = startDate
-      }
-      if (endDate && (!group.latestEnd || endDate > group.latestEnd)) {
-        group.latestEnd = endDate
-      }
-    })
-
-    // 4. Nest sub-assemblies inside each group
-    Object.values(groups).forEach(group => {
-      const localOrderMap = {}
-      group.orders.forEach(o => {
-        localOrderMap[o.wo_id] = { ...o, subAssemblies: [] }
-      })
-
-      const rootOrders = []
-      Object.values(localOrderMap).forEach(o => {
-        if (o.parent_wo_id && localOrderMap[o.parent_wo_id]) {
-          localOrderMap[o.parent_wo_id].subAssemblies.push(o)
-        } else {
-          rootOrders.push(o)
-        }
-      })
-      group.hierarchicalOrders = rootOrders
-      
-      // Calculate FG specifically from root orders in this hierarchy context
-      group.fgProduced = rootOrders.reduce((sum, o) => sum + (parseFloat(o.produced_qty) || 0), 0)
-      group.fgQuantity = rootOrders.reduce((sum, o) => sum + (parseFloat(o.quantity) || 0), 0)
-    })
-
-    return Object.values(groups).sort((a, b) => {
-      if (a.id === 'NO_SALES_ORDER') return 1
-      if (b.id === 'NO_SALES_ORDER') return -1
-      return b.id.localeCompare(a.id)
-    })
-  }
-
-  const WorkOrderRow = ({ order, depth = 0, layout = 'flat' }) => {
-    const [isExpanded, setIsExpanded] = useState(false)
-    const hasSubAssemblies = order.subAssemblies && order.subAssemblies.length > 0
-    const priority = getPriorityInfo(order.priority)
-
-    if (layout === 'flat') {
-      return (
-        <div className="group/row">
-          <div className="flex items-center gap-4 p-4 hover:bg-indigo-50/30 transition-all border-b border-gray-50">
-            {/* Identity */}
-            <div className="flex items-center gap-4 flex-1 min-w-[200px]">
-              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100 group-hover/row:scale-110 transition-transform shadow-sm">
-                <ClipboardList size={14} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-gray-900">{order.wo_id}</span>
-                </div>
-                <div className="flex items-center gap-2 mt-0.5 text-[10px] text-gray-400">
-                  <Calendar size={10} />
-                  <span>{new Date(order.created_at || new Date()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Item */}
-            <div className="flex-1 min-w-[200px]">
-              <p className="text-xs font-medium text-gray-900">{order.item_name}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">
-                {(order.bom_no || '').startsWith('BOM-') ? order.bom_no : `BOM-${order.bom_no || order.wo_id.split('-')[1] || 'STANDARD'}`}
-              </p>
-            </div>
-
-            {/* Status & Priority */}
-            <div className="w-32">
-              <StatusBadge status={order.status} />
-              <div className="flex items-center gap-1.5 mt-1.5 px-1">
-                <div className={`w-1.5 h-1.5 rounded-full ${priority.dot}`} />
-                <span className={`text-[10px] ${priority.color} font-medium`}>{priority.label}</span>
-              </div>
-            </div>
-
-            {/* Progress */}
-            <div className="w-40">
-              <div className="flex justify-between text-[10px] mb-1.5">
-                <span className="font-medium text-gray-700">{order.produced_qty || 0} / {Math.round(((order.produced_qty || 0) / (order.quantity || 1)) * 100)}%</span>
-              </div>
-              <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden shadow-inner">
-                <div 
-                  className={`h-full transition-all duration-700 ${order.status === 'completed' ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                  style={{ width: `${Math.min(((order.produced_qty || 0) / (order.quantity || 1)) * 100, 100)}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="w-28 flex items-center justify-end gap-1">
-              <button
-                onClick={() => handleView(order)}
-                className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                title="View"
-              >
-                <Eye size={14} />
-              </button>
-              <button
-                onClick={() => navigate(`/manufacturing/job-cards?filter_work_order=${order.wo_id}`)}
-                className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
-                title="Track"
-              >
-                <Activity size={14} />
-              </button>
-              <button
-                onClick={() => handleEdit(order)}
-                className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                title="Edit"
-              >
-                <Edit2 size={14} />
-              </button>
-              <button
-                onClick={() => handleDelete(order.wo_id)}
-                className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                title="Delete"
-              >
-                <Trash size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )
-    }
-
-    return (
-      <div className="flex flex-col">
-        <div 
-          className={`p-4 hover:bg-gray-50/30 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 ${depth > 0 ? 'bg-gray-50/10' : ''}`} 
-          style={{ paddingLeft: `${depth * 1.5 + 1}rem` }}
-        >
-          <div className="flex items-center gap-4 flex-1">
-            {hasSubAssemblies ? (
-              <button 
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="p-1 hover:bg-gray-100 rounded transition-colors text-gray-500"
-              >
-                {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </button>
-            ) : depth > 0 ? (
-              <div className="w-6" />
-            ) : null}
-            <div className="w-8 h-8 rounded border border-gray-100 flex items-center justify-center text-gray-400 bg-white shadow-sm">
-              <ClipboardList size={16} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">{order.wo_id}</span>
-                <span className="text-sm font-medium text-gray-900 truncate">{order.item_name}</span>
-                {hasSubAssemblies && (
-                  <span className="text-[10px] text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-full font-medium">
-                    {order.subAssemblies.length} Sub-assemblies
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-400">
-                <span className={order.priority === 'high' ? 'text-rose-500 font-medium' : ''}>
-                  {order.priority.toUpperCase()} priority
-                </span>
-                <span className="w-1 h-1 bg-gray-300 rounded-full" />
-                <span>BOM: {(order.bom_no || '').startsWith('BOM-') ? order.bom_no : `BOM-${order.bom_no || order.wo_id.split('-')[1] || 'STANDARD'}`}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-8 min-w-[320px]">
-            {/* Progress */}
-            <div className="flex-1">
-              <div className="flex justify-between text-[10px] text-gray-500 mb-1">
-                <span>Progress</span>
-                <span>{Math.round((order.produced_qty / order.quantity) * 100)}%</span>
-              </div>
-              <div className="w-32 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full ${order.status === 'completed' ? 'bg-emerald-500' : 'bg-indigo-500'} transition-all duration-500`}
-                  style={{ width: `${Math.min((order.produced_qty / order.quantity) * 100, 100)}%` }}
-                />
-              </div>
-              <div className="text-[10px] text-gray-400 mt-1 flex justify-between">
-                <span>{order.produced_qty} / {order.quantity} units</span>
-                {(parseFloat(order.scrap_qty) > 0 || parseFloat(order.rejected_qty) > 0) && (
-                  <span className="text-rose-500 font-medium">
-                    Loss: {(parseFloat(order.scrap_qty) + parseFloat(order.rejected_qty)).toFixed(0)} units
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Status */}
-            <div className="w-24 flex justify-center">
-              <StatusBadge status={order.status} />
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => handleView(order)}
-                className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
-                title="View"
-              >
-                <Eye size={14} />
-              </button>
-              <button
-                onClick={() => navigate(`/manufacturing/job-cards?filter_work_order=${order.wo_id}`)}
-                className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-all"
-                title="Track"
-              >
-                <Activity size={14} />
-              </button>
-              <button
-                onClick={() => handleEdit(order)}
-                className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all"
-                title="Edit"
-              >
-                <Edit2 size={14} />
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        {isExpanded && hasSubAssemblies && (
-          <div className="divide-y divide-gray-50 border-l-2 border-indigo-100/50 bg-gray-50/5">
-            {order.subAssemblies.map(sub => (
-              <WorkOrderRow key={sub.wo_id} order={sub} depth={depth + 1} layout="grouped" />
-            ))}
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'high': return 'text-rose-600 bg-rose-50 border-rose-100'
-      case 'medium': return 'text-amber-600 bg-amber-50 border-amber-100'
-      case 'low': return 'text-emerald-600 bg-emerald-50 border-emerald-100'
-      default: return 'text-gray-600 bg-gray-50 border-gray-100'
-    }
-  }
-
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      draft: { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-300' },
-      planned: { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300' },
-      'in-progress': { bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-300' },
-      completed: { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' },
-      cancelled: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300' }
-    }
-    return statusConfig[status] || statusConfig.draft
-  }
-
-  const getPriorityBadge = (priority) => {
-    const priorityConfig = {
-      high: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300' },
-      medium: { bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-300' },
-      low: { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' }
-    }
-    return priorityConfig[priority] || { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-300' }
-  }
+  const memoizedGroups = useMemo(() => groupOrdersBySalesOrder(orders), [orders])
 
   return (
     <div className="min-h-screen bg-white p-2">
@@ -934,7 +908,15 @@ export default function WorkOrder() {
 
                         <div className="divide-y divide-gray-50">
                           {activeOrders.map(order => (
-                            <WorkOrderRow key={order.wo_id} order={order} layout="flat" />
+                            <WorkOrderRow 
+                              key={order.wo_id} 
+                              order={order} 
+                              layout="flat" 
+                              navigate={navigate}
+                              handleView={handleView}
+                              handleEdit={handleEdit}
+                              handleDelete={handleDelete}
+                            />
                           ))}
                         </div>
                       </div>
@@ -955,7 +937,10 @@ export default function WorkOrder() {
                             <div key={group.id} className="bg-white rounded border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                               {/* Group Header */}
                               <div 
-                                onClick={() => setExpandedGroups(prev => ({ ...prev, [group.id]: !prev[group.id] }))}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedGroups(prev => ({ ...prev, [group.id]: !prev[group.id] }));
+                                }}
                                 className="bg-gray-50/50 p-4 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer hover:bg-gray-100/50 transition-colors"
                               >
                                 <div className="flex items-center gap-4">
@@ -1016,7 +1001,15 @@ export default function WorkOrder() {
                               {isExpanded && (
                                 <div className="divide-y divide-gray-50 bg-gray-50/5 animate-in slide-in-from-top-2 duration-300">
                                   {(group.hierarchicalOrders || []).map((order) => (
-                                    <WorkOrderRow key={order.wo_id} order={order} layout="grouped" />
+                                    <WorkOrderRow 
+                                      key={order.wo_id} 
+                                      order={order} 
+                                      layout="grouped" 
+                                      navigate={navigate}
+                                      handleView={handleView}
+                                      handleEdit={handleEdit}
+                                      handleDelete={handleDelete}
+                                    />
                                   ))}
                                 </div>
                               )}

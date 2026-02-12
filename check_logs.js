@@ -2,10 +2,11 @@ const mysql = require('mysql2/promise');
 (async () => {
   try {
     const db = await mysql.createConnection({
-      host: 'localhost',
-      user: 'root',
-      password: 'root',
-      database: 'nobalcasting'
+      host: '127.0.0.1',
+      user: 'nobalcasting_user',
+      password: 'C0digix$309',
+      database: 'nobalcasting',
+      port: 3307
     });
     const [tl] = await db.execute('SELECT completed_qty, shift, log_date FROM time_log WHERE job_card_id = ?', ['JC-8']);
     const [rj] = await db.execute('SELECT accepted_qty, rejected_qty, scrap_qty, shift, log_date, status FROM rejection_entry WHERE job_card_id = ?', ['JC-8']);

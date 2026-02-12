@@ -271,8 +271,18 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
       const rejectedQty = parseFloat(timeLogForm.rejected_qty) || 0
       const scrapQty = parseFloat(timeLogForm.scrap_qty) || 0
 
+      const totalProducedSoFar = timeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0)
+      const plannedQty = parseFloat(jobCardData?.planned_quantity) || 0
+
+      if (totalProducedSoFar + completedQty > plannedQty * 1.001) {
+        toast.addToast(`Total production (${(totalProducedSoFar + completedQty).toFixed(2)}) would exceed planned quantity (${plannedQty.toFixed(2)}). Please manage within ${plannedQty.toFixed(2)} units only.`, 'error')
+        setLoading(false)
+        return
+      }
+
       if (completedQty <= 0) {
         toast.addToast('Completed quantity must be greater than 0', 'error')
+        setLoading(false)
         return
       }
 
@@ -349,6 +359,17 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
     
     if (!rejectionForm.reason || rejectionForm.rejected_qty <= 0) {
       toast.addToast('Please select a reason and enter quantity', 'error')
+      return
+    }
+
+    const totalProducedSoFar = timeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0)
+    const totalRejectedSoFar = rejections.reduce((sum, r) => sum + (parseFloat(r.rejected_qty) || 0), 0)
+    const totalTimeLogRejected = timeLogs.reduce((sum, log) => sum + (parseFloat(log.rejected_qty) || 0), 0)
+    
+    const combinedRejected = totalRejectedSoFar + totalTimeLogRejected + rejectionForm.rejected_qty
+
+    if (combinedRejected > totalProducedSoFar) {
+      toast.addToast(`Total rejections (${combinedRejected.toFixed(2)}) cannot exceed total produced quantity (${totalProducedSoFar.toFixed(2)})`, 'error')
       return
     }
 
@@ -804,22 +825,31 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                   const scrap = parseFloat(timeLogForm.scrap_qty || 0)
                   const total = accepted + rejected + scrap
                   const isValid = total <= completed && total > 0
+                  
+                  const currentTotalProduced = timeLogs.reduce((sum, log) => sum + (parseFloat(log.completed_qty) || 0), 0)
+                  const planned = parseFloat(jobCardData?.planned_quantity || 0)
+                  const exceedsPlan = (currentTotalProduced + completed) > (planned * 1.001)
 
                   return (
                     <div className={`mb-3 p-2 rounded-xs border text-xs ${
-                      isValid 
+                      isValid && !exceedsPlan
                         ? 'bg-green-50 border-green-300 text-green-700' 
                         : 'bg-red-50 border-red-300 text-red-700'
                     }`}>
-                      <p className="">Quality Summary</p>
+                      <p className="font-bold mb-1">Quality & Plan Summary</p>
                       <p>Accepted ({accepted.toFixed(2)}) + Rejected ({rejected.toFixed(2)}) + Scrap ({scrap.toFixed(2)}) = {total.toFixed(2)}</p>
+                      <p className="mt-1">Cumulative Production: {(currentTotalProduced + completed).toFixed(2)} / {planned.toFixed(2)}</p>
+                      
                       {total > completed && (
-                        <p className="mt-1 ">⚠️ Total exceeds completed quantity!</p>
+                        <p className="mt-1 font-bold italic">⚠️ Total exceeds completed quantity!</p>
+                      )}
+                      {exceedsPlan && (
+                        <p className="mt-1 font-bold italic">⚠️ Cumulative production exceeds planned quantity!</p>
                       )}
                       {total === 0 && completed > 0 && (
                         <p className="mt-1 ">⚠️ Please specify accepted, rejected, or scrap quantities</p>
                       )}
-                      {isValid && (
+                      {isValid && !exceedsPlan && (
                         <p className="mt-1">✓ Next operation will receive {accepted.toFixed(2)} units (accepted qty)</p>
                       )}
                     </div>
