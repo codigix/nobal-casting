@@ -310,7 +310,8 @@ class ProductionController {
               await this.productionModel.db.query(
                 `UPDATE work_order_operation SET 
                   workstation = ?, time = ?, hourly_rate = ?, 
-                  operation_type = ?, operating_cost = ?
+                  operation_type = ?, operating_cost = ?,
+                  execution_mode = ?, vendor_id = ?, vendor_rate_per_unit = ?
                  WHERE id = ?`,
                 [
                   op.workstation || op.workstation_type || '',
@@ -318,6 +319,9 @@ class ProductionController {
                   op.hourly_rate || 0,
                   op.operation_type || 'IN_HOUSE',
                   op.operating_cost || 0,
+                  op.execution_mode || 'IN_HOUSE',
+                  op.vendor_id || null,
+                  op.vendor_rate_per_unit || 0,
                   existingOps[0].id
                 ]
               )
@@ -338,6 +342,9 @@ class ProductionController {
                 operation_time: op.time || op.operation_time || matchingJC.operation_time,
                 hourly_rate: op.hourly_rate || matchingJC.hourly_rate,
                 operating_cost: op.operating_cost || matchingJC.operating_cost,
+                execution_mode: op.execution_mode || matchingJC.execution_mode || 'IN_HOUSE',
+                vendor_id: op.vendor_id || matchingJC.vendor_id || null,
+                vendor_rate_per_unit: op.vendor_rate_per_unit || matchingJC.vendor_rate_per_unit || 0,
                 planned_quantity: parseFloat(quantity) || 0,
                 notes: op.notes || matchingJC.notes
               })
@@ -355,6 +362,9 @@ class ProductionController {
                 hourly_rate: op.hourly_rate || 0,
                 operating_cost: op.operating_cost || 0,
                 operation_type: op.operation_type || 'IN_HOUSE',
+                execution_mode: op.execution_mode || 'IN_HOUSE',
+                vendor_id: op.vendor_id || null,
+                vendor_rate_per_unit: op.vendor_rate_per_unit || 0,
                 scheduled_start_date: planned_start_date,
                 scheduled_end_date: planned_end_date,
                 status: 'draft',
@@ -412,6 +422,9 @@ class ProductionController {
                 hourly_rate: parseFloat(hRate) || 0,
                 operating_cost: parseFloat(opCost) || 0,
                 operation_type: operation.operation_type || 'IN_HOUSE',
+                execution_mode: operation.execution_mode || 'IN_HOUSE',
+                vendor_id: operation.vendor_id || null,
+                vendor_rate_per_unit: operation.vendor_rate_per_unit || 0,
                 scheduled_start_date: planned_start_date,
                 scheduled_end_date: planned_end_date,
                 status: 'draft',
@@ -1104,12 +1117,17 @@ class ProductionController {
 
   async createJobCard(req, res) {
     try {
-      const { work_order_id, machine_id, operator_id, operation, operation_sequence, planned_quantity, operation_time, hourly_rate, scheduled_start_date, scheduled_end_date, status, notes } = req.body
+      const { 
+        work_order_id, machine_id, operator_id, operation, operation_sequence, 
+        planned_quantity, operation_time, hourly_rate, scheduled_start_date, 
+        scheduled_end_date, status, notes,
+        execution_mode, vendor_id, vendor_rate_per_unit, operation_type
+      } = req.body
 
-      if (!work_order_id || !machine_id || !planned_quantity) {
+      if (!work_order_id || (!machine_id && execution_mode !== 'OUTSOURCE') || !planned_quantity) {
         return res.status(400).json({
           success: false,
-          message: 'work_order_id, machine_id, and planned_quantity are required'
+          message: 'work_order_id, (machine_id or vendor_id), and planned_quantity are required'
         })
       }
 
@@ -1126,7 +1144,11 @@ class ProductionController {
         scheduled_end_date,
         status: status || 'draft',
         created_by: req.user?.username || 'system',
-        notes
+        notes,
+        execution_mode,
+        vendor_id,
+        vendor_rate_per_unit: parseFloat(vendor_rate_per_unit) || 0,
+        operation_type
       })
 
       res.status(201).json({
@@ -1176,7 +1198,14 @@ class ProductionController {
   async updateJobCard(req, res) {
     try {
       const { job_card_id } = req.params
-      const { machine_id, operator_id, operation, operation_sequence, planned_quantity, produced_quantity, rejected_quantity, operation_time, hourly_rate, scheduled_start_date, scheduled_end_date, actual_start_date, actual_end_date, status, notes } = req.body
+      const { 
+        machine_id, operator_id, operation, operation_sequence, planned_quantity, 
+        produced_quantity, rejected_quantity, operation_time, hourly_rate, 
+        scheduled_start_date, scheduled_end_date, actual_start_date, actual_end_date, 
+        status, notes,
+        execution_mode, vendor_id, subcontract_status, sent_qty, received_qty, 
+        accepted_qty, rejected_qty, scrap_quantity, accepted_quantity, rejected_quantity: rejQty
+      } = req.body
 
       if (status) {
         await this.productionModel.validateJobCardStatusTransition(job_card_id, status)
@@ -1189,7 +1218,7 @@ class ProductionController {
         operation_sequence,
         planned_quantity,
         produced_quantity,
-        rejected_quantity,
+        rejected_quantity: rejected_quantity !== undefined ? rejected_quantity : rejQty,
         operation_time: operation_time !== undefined ? parseFloat(operation_time) : undefined,
         hourly_rate: hourly_rate !== undefined ? parseFloat(hourly_rate) : undefined,
         scheduled_start_date,
@@ -1197,7 +1226,16 @@ class ProductionController {
         actual_start_date,
         actual_end_date,
         status,
-        notes
+        notes,
+        execution_mode,
+        vendor_id,
+        subcontract_status,
+        sent_qty,
+        received_qty,
+        accepted_qty,
+        rejected_qty,
+        scrap_quantity,
+        accepted_quantity
       })
 
       if (success) {
@@ -1299,7 +1337,7 @@ class ProductionController {
 
   async createWorkstation(req, res) {
     try {
-      const { name, workstation_name, description, location, capacity_per_hour, is_active } = req.body
+      const { name, workstation_name, description, location, capacity_per_hour, rate_per_hour, is_active } = req.body
 
       if (!name || !workstation_name) {
         return res.status(400).json({
@@ -1314,6 +1352,7 @@ class ProductionController {
         description: description || '',
         location: location || '',
         capacity_per_hour: capacity_per_hour || 0,
+        rate_per_hour: rate_per_hour || 0,
         is_active: is_active !== false ? true : false
       })
 
@@ -1900,7 +1939,7 @@ class ProductionController {
 
   async createOutwardChallan(req, res) {
     try {
-      const { job_card_id, vendor_id, vendor_name, expected_return_date, notes } = req.body
+      const { job_card_id, vendor_id, vendor_name, expected_return_date, notes, dispatch_quantity, items } = req.body
 
       if (!job_card_id) {
         return res.status(400).json({
@@ -1915,6 +1954,8 @@ class ProductionController {
         vendor_name,
         expected_return_date,
         notes,
+        dispatch_quantity,
+        items,
         created_by: req.user?.id || 'system'
       })
 
@@ -2109,6 +2150,59 @@ class ProductionController {
     } catch (error) {
       console.error('Error creating stock movements from BOM:', error)
       return []
+    }
+  }
+
+  // ============= SUBCONTRACTING =============
+
+  async handleSubcontractDispatch(req, res) {
+    try {
+      const { job_card_id } = req.params;
+      const { items, outward_challan_id } = req.body;
+      const result = await this.productionModel.handleSubcontractDispatch(job_card_id, req.user?.id || 1, items, outward_challan_id);
+      res.status(200).json({
+        success: true,
+        message: 'Job card dispatched to vendor successfully',
+        data: result
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error dispatching job card to vendor',
+        error: error.message
+      });
+    }
+  }
+
+  async handleSubcontractReceipt(req, res) {
+    try {
+      const { job_card_id } = req.params;
+      const { received_qty, accepted_qty, rejected_qty } = req.body;
+
+      if (received_qty === undefined || accepted_qty === undefined || rejected_qty === undefined) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: received_qty, accepted_qty, rejected_qty'
+        });
+      }
+
+      const result = await this.productionModel.handleSubcontractReceipt(job_card_id, {
+        received_qty: parseFloat(received_qty),
+        accepted_qty: parseFloat(accepted_qty),
+        rejected_qty: parseFloat(rejected_qty)
+      }, req.user?.id || 1);
+
+      res.status(200).json({
+        success: true,
+        message: 'Job card receipt recorded successfully',
+        data: result
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error recording job card receipt',
+        error: error.message
+      });
     }
   }
 }

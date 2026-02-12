@@ -278,6 +278,11 @@ export const getCustomers = async () => {
   return response.data
 }
 
+export const getVendors = async () => {
+  const response = await api.get('/suppliers')
+  return response.data
+}
+
 export const getItems = async () => {
   const response = await api.get('/items')
   return response.data
@@ -389,6 +394,17 @@ export const createInwardChallan = async (data) => {
 
 export const getInwardChallans = async (jobCardId) => {
   const response = await api.get(`/production/inward-challans?job_card_id=${jobCardId}`)
+  return response.data
+}
+
+// Subcontracting
+export const dispatchToVendor = async (job_card_id, data = {}) => {
+  const response = await api.post(`/production/job-cards/${job_card_id}/dispatch`, data)
+  return response.data
+}
+
+export const receiveFromVendor = async (job_card_id, data) => {
+  const response = await api.post(`/production/job-cards/${job_card_id}/receive`, data)
   return response.data
 }
 

@@ -33,6 +33,7 @@ export default function CreateJobCardModal({
   const [workstations, setWorkstations] = useState([])
   const [operators, setOperators] = useState([])
   const [operations, setOperations] = useState([])
+  const [suppliers, setSuppliers] = useState([])
 
   const [formData, setFormData] = useState({
     work_order_id: '',
@@ -41,6 +42,10 @@ export default function CreateJobCardModal({
     operation: '',
     operation_sequence: null,
     operation_type: 'IN_HOUSE',
+    execution_mode: 'IN_HOUSE',
+    vendor_id: '',
+    vendor_name: '',
+    vendor_rate_per_unit: 0,
     planned_quantity: '100',
     scheduled_start_date: new Date().toISOString().split('T')[0],
     scheduled_end_date: '',
@@ -81,6 +86,10 @@ export default function CreateJobCardModal({
             machine_id: preSelectedOperation.workstation || preSelectedOperation.workstation_type || '',
             operation_sequence: preSelectedOperation.sequence || 0,
             operation_type: preSelectedOperation.operation_type || 'IN_HOUSE',
+            execution_mode: preSelectedOperation.execution_mode || 'IN_HOUSE',
+            vendor_id: preSelectedOperation.vendor_id || '',
+            vendor_name: preSelectedOperation.vendor_name || '',
+            vendor_rate_per_unit: preSelectedOperation.vendor_rate_per_unit || 0,
             hourly_rate: preSelectedOperation.hourly_rate || 0,
             operating_cost: preSelectedOperation.operating_cost || 0,
             operation_time: preSelectedOperation.operation_time || preSelectedOperation.time || 0
@@ -97,7 +106,8 @@ export default function CreateJobCardModal({
       await Promise.all([
         fetchWorkOrders(),
         fetchWorkstations(),
-        fetchOperators()
+        fetchOperators(),
+        fetchSuppliers()
       ])
     } catch (err) {
       setError('Failed to load initial data')
@@ -133,6 +143,15 @@ export default function CreateJobCardModal({
     }
   }
 
+  const fetchSuppliers = async () => {
+    try {
+      const response = await suppliersAPI.list()
+      setSuppliers(response.data.data || response.data || [])
+    } catch (err) {
+      console.error('Failed to fetch suppliers:', err)
+    }
+  }
+
   const fetchJobCardDetails = async (id) => {
     try {
       const response = await jobCardsAPI.get(id)
@@ -149,6 +168,10 @@ export default function CreateJobCardModal({
         operation: jc.operation || '',
         operation_sequence: jc.operation_sequence || null,
         operation_type: jc.operation_type || 'IN_HOUSE',
+        execution_mode: jc.execution_mode || 'IN_HOUSE',
+        vendor_id: jc.vendor_id || '',
+        vendor_name: jc.vendor_name || '',
+        vendor_rate_per_unit: jc.vendor_rate_per_unit || 0,
         planned_quantity: String(jc.planned_quantity || jc.quantity || '100'),
         scheduled_start_date: jc.scheduled_start_date ? jc.scheduled_start_date.split('T')[0] : new Date().toISOString().split('T')[0],
         scheduled_end_date: jc.scheduled_end_date ? jc.scheduled_end_date.split('T')[0] : '',
@@ -174,6 +197,10 @@ export default function CreateJobCardModal({
         value: op.operation_name || op.operation || '',
         sequence: op.sequence || op.operation_sequence || 0,
         operation_type: op.operation_type || 'IN_HOUSE',
+        execution_mode: op.execution_mode || 'IN_HOUSE',
+        vendor_id: op.vendor_id || '',
+        vendor_name: op.vendor_name || '',
+        vendor_rate_per_unit: op.vendor_rate_per_unit || 0,
         hourly_rate: op.hourly_rate || 0,
         operating_cost: op.operating_cost || 0,
         operation_time: op.operation_time || op.time || 0
@@ -197,8 +224,21 @@ export default function CreateJobCardModal({
     setError(null)
 
     try {
-      if (!formData.work_order_id || !formData.machine_id || !formData.planned_quantity || !formData.scheduled_start_date) {
-        throw new Error('Please fill in all required fields')
+      const isOutsourced = formData.execution_mode === 'OUTSOURCE';
+      const requiredFields = ['work_order_id', 'planned_quantity', 'scheduled_start_date'];
+      
+      if (!isOutsourced && !formData.machine_id) {
+        throw new Error('Please select a workstation for in-house operation');
+      }
+      
+      if (isOutsourced && !formData.vendor_id) {
+        throw new Error('Please select a vendor for outsourced operation');
+      }
+
+      for (const field of requiredFields) {
+        if (!formData[field]) {
+          throw new Error(`Please fill in all required fields (${field.replace(/_/g, ' ')})`);
+        }
       }
 
       const response = editingId 
@@ -237,6 +277,23 @@ export default function CreateJobCardModal({
             </div>
 
             <div className="space-y-3">
+              <div className="flex p-1 bg-slate-100 rounded-lg mb-2">
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, execution_mode: 'IN_HOUSE' }))}
+                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${formData.execution_mode === 'IN_HOUSE' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+                >
+                  IN-HOUSE
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, execution_mode: 'OUTSOURCE' }))}
+                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${formData.execution_mode === 'OUTSOURCE' ? 'bg-white text-amber-600 shadow-sm' : 'text-slate-500'}`}
+                >
+                  OUTSOURCE
+                </button>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
                   Work Order *
@@ -255,42 +312,86 @@ export default function CreateJobCardModal({
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Workstation *
-                </label>
-                <SearchableSelect
-                  value={formData.machine_id}
-                  onChange={(value) => setFormData(prev => ({ ...prev, machine_id: value }))}
-                  options={workstations.map(ws => ({
-                    value: ws.workstation_id || ws.name,
-                    label: ws.workstation_name || ws.name
-                  }))}
-                  placeholder="Select Workstation"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Operator
-                </label>
-                <div className="relative">
-                  <UserCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                  <select
-                    name="operator_id"
-                    value={formData.operator_id}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
-                  >
-                    <option value="">Select Operator (Optional)</option>
-                    {operators.map(emp => (
-                      <option key={emp.employee_id} value={emp.employee_id}>
-                        {emp.first_name} {emp.last_name} ({emp.employee_id})
-                      </option>
-                    ))}
-                  </select>
+              {formData.execution_mode === 'IN_HOUSE' ? (
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Workstation *
+                  </label>
+                  <SearchableSelect
+                    value={formData.machine_id}
+                    onChange={(value) => setFormData(prev => ({ ...prev, machine_id: value }))}
+                    options={workstations.map(ws => ({
+                      value: ws.workstation_id || ws.name,
+                      label: ws.workstation_name || ws.name
+                    }))}
+                    placeholder="Select Workstation"
+                  />
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                      Vendor / Subcontractor *
+                    </label>
+                    <SearchableSelect
+                      value={formData.vendor_id}
+                      onChange={(value) => {
+                        const vendor = suppliers.find(s => s.supplier_id === value)
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          vendor_id: value,
+                          vendor_name: vendor?.name || ''
+                        }))
+                      }}
+                      options={suppliers.map(s => ({
+                        value: s.supplier_id,
+                        label: s.name
+                      }))}
+                      placeholder="Select Vendor"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                      Vendor Rate per Unit
+                    </label>
+                    <div className="relative">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">₹</div>
+                      <input
+                        type="number"
+                        name="vendor_rate_per_unit"
+                        value={formData.vendor_rate_per_unit}
+                        onChange={handleInputChange}
+                        className="w-full pl-8 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {formData.execution_mode === 'IN_HOUSE' && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Operator
+                  </label>
+                  <div className="relative">
+                    <UserCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <select
+                      name="operator_id"
+                      value={formData.operator_id}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    >
+                      <option value="">Select Operator (Optional)</option>
+                      {operators.map(emp => (
+                        <option key={emp.employee_id} value={emp.employee_id}>
+                          {emp.first_name} {emp.last_name} ({emp.employee_id})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

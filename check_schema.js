@@ -1,17 +1,27 @@
+
 const mysql = require('mysql2/promise');
-(async () => {
+require('dotenv').config({ path: './backend/.env' });
+
+async function checkSchema() {
+  const connection = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT
+  });
+
   try {
-    const db = await mysql.createConnection({
-      host: '127.0.0.1',
-      user: 'nobalcasting_user',
-      password: 'C0digix$309',
-      database: 'nobalcasting',
-      port: 3307
-    });
-    const [cols] = await db.execute('DESCRIBE time_log');
-    console.log(JSON.stringify(cols, null, 2));
-    await db.end();
-  } catch (err) {
-    console.error(err);
+    const tables = ['operation', 'bom_operation', 'work_order_operation', 'job_card', 'warehouses'];
+    for (const table of tables) {
+      console.log(`--- Schema for ${table} ---`);
+      const [rows] = await connection.execute(`DESCRIBE ${table}`);
+      console.log(JSON.stringify(rows, null, 2));
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    await connection.end();
   }
-})();
+}
+checkSchema();

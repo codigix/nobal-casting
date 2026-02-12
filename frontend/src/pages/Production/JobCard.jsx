@@ -8,6 +8,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as productionService from '../../services/productionService'
 import CreateJobCardModal from '../../components/Production/CreateJobCardModal'
 import ViewJobCardModal from '../../components/Production/ViewJobCardModal'
+import SubcontractDispatchModal from '../../components/Production/SubcontractDispatchModal'
+import SubcontractReceiptModal from '../../components/Production/SubcontractReceiptModal'
 import SearchableSelect from '../../components/SearchableSelect'
 import { useToast } from '../../components/ToastContainer'
 
@@ -372,6 +374,45 @@ export default function JobCard() {
   const handleInlineCancel = () => {
     setInlineEditingId(null)
     setInlineEditData({})
+  }
+
+  const [showDispatchModal, setShowDispatchModal] = useState(false)
+  const [dispatchingJobCard, setDispatchingJobCard] = useState(null)
+  const [showReceiptModal, setShowReceiptModal] = useState(false)
+  const [receivingJobCard, setReceivingJobCard] = useState(null)
+
+  const handleDispatch = (card) => {
+    setDispatchingJobCard(card)
+    setShowDispatchModal(true)
+  }
+
+  const handleDispatchSuccess = async () => {
+    if (dispatchingJobCard) {
+      const woId = dispatchingJobCard.work_order_id
+      const jobCardsResponse = await productionService.getJobCards({ work_order_id: woId })
+      setJobCardsByWO(prev => ({
+        ...prev,
+        [woId]: jobCardsResponse.data || []
+      }))
+    }
+    fetchWorkOrders()
+  }
+
+  const handleOpenReceiptModal = (card) => {
+    setReceivingJobCard(card)
+    setShowReceiptModal(true)
+  }
+
+  const handleReceiptSuccess = async () => {
+    if (receivingJobCard) {
+      const woId = receivingJobCard.work_order_id
+      const jobCardsResponse = await productionService.getJobCards({ work_order_id: woId })
+      setJobCardsByWO(prev => ({
+        ...prev,
+        [woId]: jobCardsResponse.data || []
+      }))
+    }
+    fetchWorkOrders()
   }
 
   const handleViewJobCard = (jobCardId) => {
@@ -923,21 +964,35 @@ export default function JobCard() {
                                           <Activity size={16} />
                                         </div>
                                         <div>
-                                          <p className="text-xs  text-gray-900 ">{card.operation || 'N/A'}</p>
+                                          <div className="flex items-center gap-2">
+                                            <p className="text-xs  text-gray-900 ">{card.operation || 'N/A'}</p>
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${card.execution_mode === 'OUTSOURCE' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                                              {card.execution_mode === 'OUTSOURCE' ? 'Outsource' : 'In-House'}
+                                            </span>
+                                          </div>
                                           <p className="text-xs  text-gray-400 ">{card.job_card_id}</p>
                                         </div>
                                       </div>
                                     </td>
                                     <td className="p-2 ">
                                       <div className="flex flex-col gap-1">
-                                        <div className="flex items-center gap-1.5 text-xs  text-gray-700">
-                                          <Factory size={12} className="text-gray-400" />
-                                          {getWorkstationName(card.machine_id)}
-                                        </div>
-                                        <div className="flex items-center gap-1.5 text-xs  text-gray-500">
-                                          <Activity size={10} className="text-gray-400" />
-                                          {getOperatorName(card.operator_id)}
-                                        </div>
+                                        {card.execution_mode === 'OUTSOURCE' ? (
+                                          <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium">
+                                            <Package size={12} className="text-amber-500" />
+                                            {card.vendor_name || 'Assigned Vendor'}
+                                          </div>
+                                        ) : (
+                                          <>
+                                            <div className="flex items-center gap-1.5 text-xs  text-gray-700">
+                                              <Factory size={12} className="text-gray-400" />
+                                              {getWorkstationName(card.machine_id)}
+                                            </div>
+                                            <div className="flex items-center gap-1.5 text-xs  text-gray-500">
+                                              <Activity size={10} className="text-gray-400" />
+                                              {getOperatorName(card.operator_id)}
+                                            </div>
+                                          </>
+                                        )}
                                       </div>
                                     </td>
                                     <td className="p-2  text-center">
@@ -1000,7 +1055,29 @@ export default function JobCard() {
                                     </td>
                                     <td className="p-2  text-right">
                                       <div className="flex items-center justify-end gap-2">
-                                        {(card.status || '').toLowerCase() === 'ready' ? (
+                                        {card.execution_mode === 'OUTSOURCE' ? (
+                                          <>
+                                            {(card.status || '').toLowerCase() === 'ready' || (card.status || '').toLowerCase() === 'draft' ? (
+                                              <button
+                                                className="flex items-center gap-2 p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded  text-xs   transition-all  active:scale-95"
+                                                onClick={() => handleDispatch(card)}
+                                                disabled={loading}
+                                              >
+                                                <Package size={14} />
+                                                Dispatch
+                                              </button>
+                                            ) : card.subcontract_status === 'SENT_TO_VENDOR' || card.subcontract_status === 'PARTIALLY_RECEIVED' ? (
+                                              <button
+                                                className="flex items-center gap-2 p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded  text-xs   transition-all  active:scale-95"
+                                                onClick={() => handleOpenReceiptModal(card)}
+                                                disabled={loading}
+                                              >
+                                                <Package size={14} />
+                                                Receive
+                                              </button>
+                                            ) : null}
+                                          </>
+                                        ) : (card.status || '').toLowerCase() === 'ready' ? (
                                           <button
                                             className="flex items-center gap-2 p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded  text-xs   transition-all  active:scale-95"
                                             onClick={() => handleStartJobCard(card.job_card_id, wo.wo_id)}
@@ -1093,6 +1170,20 @@ export default function JobCard() {
         isOpen={showViewModal}
         onClose={() => setShowViewModal(false)}
         jobCardId={viewingJobCardId}
+      />
+
+      <SubcontractDispatchModal
+        isOpen={showDispatchModal}
+        onClose={() => setShowDispatchModal(false)}
+        jobCard={dispatchingJobCard}
+        onDispatchSuccess={handleDispatchSuccess}
+      />
+
+      <SubcontractReceiptModal
+        isOpen={showReceiptModal}
+        onClose={() => setShowReceiptModal(false)}
+        jobCard={receivingJobCard}
+        onReceiptSuccess={handleReceiptSuccess}
       />
     </div>
   )

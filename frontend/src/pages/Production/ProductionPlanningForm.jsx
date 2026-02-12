@@ -194,16 +194,25 @@ const isConsumableGroup = (itemGroup) => {
   return normalized === 'consumable'
 }
 
-const isSubAssemblyGroup = (itemGroup, itemCode = '') => {
-  if (!itemGroup && !itemCode) return false
+const isSubAssemblyGroup = (itemGroup, itemCode = '', componentType = '') => {
+  if (!itemGroup && !itemCode && !componentType) return false
 
   const normalizedGroup = (itemGroup || '').toLowerCase().replace(/[-\s]/g, '').trim()
   if (normalizedGroup === 'consumable') return false
 
-  const isSAGroup = normalizedGroup === 'subassemblies' || normalizedGroup === 'subassembly' || normalizedGroup === 'intermediates'
-  const isSACode = (itemCode || '').toUpperCase().startsWith('SA-') || (itemCode || '').toUpperCase().startsWith('SA')
+  const isSAGroup = normalizedGroup === 'subassemblies' || 
+                    normalizedGroup === 'subassembly' || 
+                    normalizedGroup === 'intermediates' ||
+                    normalizedGroup.includes('subassembly') ||
+                    normalizedGroup.includes('sub-assembly')
 
-  return isSAGroup || isSACode
+  const isSACode = (itemCode || '').toUpperCase().startsWith('SA-') || 
+                   (itemCode || '').toUpperCase().startsWith('SA') ||
+                   (itemCode || '').toUpperCase().includes('SUBASM')
+
+  const isSAType = (componentType || '').toLowerCase().includes('sub')
+
+  return isSAGroup || isSACode || isSAType
 }
 
 export default function ProductionPlanningForm() {
@@ -604,7 +613,7 @@ export default function ProductionPlanningForm() {
             const group = (mat.item_group || '').toLowerCase();
             const matCode = mat.item_code || mat.component_code;
 
-            if (isSubAssemblyGroup(mat.item_group, matCode)) {
+            if (isSubAssemblyGroup(mat.item_group, matCode, mat.component_type || mat.fg_sub_assembly)) {
               const subAsmEntry = {
                 item_code: mat.item_code || mat.component_code,
                 item_name: mat.item_name || mat.component_description,
@@ -708,8 +717,7 @@ export default function ProductionPlanningForm() {
 
   const handleExplodeBoms = () => {
     const subAsmFromRawMaterials = rawMaterialItems.filter(item => {
-      return isSubAssemblyGroup(item.item_group, item.item_code || item.component_code) ||
-        (item.fg_sub_assembly || item.component_type || '').toLowerCase().includes('sub')
+      return isSubAssemblyGroup(item.item_group, item.item_code || item.component_code, item.fg_sub_assembly || item.component_type)
     })
     if (subAsmFromRawMaterials.length === 0) {
       toast.addToast('No sub-assemblies found in raw materials', 'info')
@@ -916,8 +924,8 @@ export default function ProductionPlanningForm() {
       })
 
       // Split BOM lines into sub-assemblies and materials
-      const trueSubAsmLines = bomLines.filter(line => isSubAssemblyGroup(line.item_group, line.component_code || line.item_code) || (line.component_type || '').toLowerCase().includes('sub'))
-      const materialLinesFromBOM = bomLines.filter(line => !isSubAssemblyGroup(line.item_group, line.component_code || line.item_code) && !(line.component_type || '').toLowerCase().includes('sub'))
+      const trueSubAsmLines = bomLines.filter(line => isSubAssemblyGroup(line.item_group, line.component_code || line.item_code, line.component_type))
+      const materialLinesFromBOM = bomLines.filter(line => !isSubAssemblyGroup(line.item_group, line.component_code || line.item_code, line.component_type))
 
       // All lines in a FG BOM that are sub-assemblies
       if (trueSubAsmLines.length > 0) {

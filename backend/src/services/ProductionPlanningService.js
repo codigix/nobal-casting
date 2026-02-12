@@ -212,7 +212,10 @@ export class ProductionPlanningService {
         hourly_rate: parseFloat(operation.hourly_rate || 0),
         total_cost: totalHours * parseFloat(operation.hourly_rate || 0),
         operation_type: operation.operation_type || 'FG',
-        notes: operation.notes || ''
+        notes: operation.notes || '',
+        execution_mode: operation.execution_mode || 'IN_HOUSE',
+        vendor_id: operation.vendor_id || null,
+        vendor_rate_per_unit: parseFloat(operation.vendor_rate_per_unit || 0)
       })
     }
   }
@@ -427,6 +430,7 @@ export class ProductionPlanningService {
       if (existingOp) {
         existingOp.total_time += totalTime
         existingOp.total_hours += totalHours
+        existingOp.total_cost += totalHours * parseFloat(operation.hourly_rate || 0)
         existingOp.sources.push({
           source_bom: bomData.item_code,
           operation_time_per_unit: operationTimePerUnit,
@@ -443,6 +447,9 @@ export class ProductionPlanningService {
           total_cost: totalHours * parseFloat(operation.hourly_rate || 0),
           operation_type: operation.operation_type || 'SA',
           notes: operation.notes || '',
+          execution_mode: operation.execution_mode || 'IN_HOUSE',
+          vendor_id: operation.vendor_id || null,
+          vendor_rate_per_unit: parseFloat(operation.vendor_rate_per_unit || 0),
           sources: [{
             source_bom: bomData.item_code,
             operation_time_per_unit: operationTimePerUnit,
@@ -492,8 +499,8 @@ export class ProductionPlanningService {
 
       for (const op of [...planData.fg_operations, ...planData.operations]) {
         await this.db.execute(
-          'INSERT INTO production_plan_operations (plan_id, operation_name, total_time_minutes, total_hours, hourly_rate, total_cost, operation_type) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [planId, op.operation_name, op.total_time, op.total_hours || (op.total_time / 60), op.hourly_rate, op.total_cost, op.operation_type]
+          'INSERT INTO production_plan_operations (plan_id, operation_name, total_time_minutes, total_hours, hourly_rate, total_cost, operation_type, execution_mode, vendor_id, vendor_rate_per_unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [planId, op.operation_name, op.total_time, op.total_hours || (op.total_time / 60), op.hourly_rate, op.total_cost, op.operation_type, op.execution_mode || 'IN_HOUSE', op.vendor_id || null, op.vendor_rate_per_unit || 0]
         )
       }
 
@@ -581,6 +588,44 @@ export class ProductionPlanningService {
             }
           }
 
+          // Fetch operations for this item (BOM or overridden in plan)
+          let operationsToUse = []
+          const itemBomNo = item.bom_no || item.bom_id || (isFG ? plan.bom_id : null)
+          
+          if (itemBomNo) {
+            const bomDetails = await productionModel.getBOMDetails(itemBomNo)
+            if (bomDetails && bomDetails.operations) {
+              operationsToUse = bomDetails.operations.map(op => {
+                // Check if plan has an override for this operation name
+                const planOpOverride = (plan.operations || []).find(pop => pop.operation_name === op.operation_name)
+                const executionMode = planOpOverride?.execution_mode || op.execution_mode || 'IN_HOUSE'
+                const vendorRate = parseFloat(planOpOverride?.vendor_rate_per_unit || op.vendor_rate_per_unit || 0)
+                const opTime = parseFloat(op.operation_time || 0)
+                const hRate = parseFloat(op.hourly_rate || 0)
+                
+                let opCost = 0
+                if (executionMode === 'OUTSOURCE') {
+                  opCost = vendorRate * plannedQty
+                } else {
+                  opCost = (opTime / 60) * hRate * plannedQty
+                }
+                
+                return {
+                  operation_name: op.operation_name,
+                  workstation: op.workstation_type,
+                  operation_time: op.operation_time,
+                  hourly_rate: op.hourly_rate,
+                  operating_cost: opCost,
+                  operation_type: op.operation_type || (isFG ? 'FG' : 'SA'),
+                  execution_mode: executionMode,
+                  vendor_id: planOpOverride?.vendor_id || op.vendor_id || null,
+                  vendor_rate_per_unit: vendorRate,
+                  notes: op.notes || op.description || ''
+                }
+              })
+            }
+          }
+
           const woData = {
             wo_id,
             item_code: item.item_code,
@@ -589,12 +634,13 @@ export class ProductionPlanningService {
             priority: isFG ? 'Medium' : 'High',
             sales_order_id: plan.sales_order_id || item.sales_order_id || options.sales_order_id || null,
             production_plan_id: planId,
-            bom_no: item.bom_no || item.bom_id,
+            bom_no: itemBomNo,
             planned_start_date: item.planned_start_date || item.schedule_date || item.scheduled_date || plan.plan_date,
             expected_delivery_date: item.expected_delivery_date || plan.expected_delivery_date,
             parent_wo_id: parentWoId,
             target_warehouse: item.target_warehouse || item.fg_warehouse || null,
-            notes: `Created from Production Plan: ${planId}${isFG ? '' : ' (Sub-Assembly)'}`
+            notes: `Created from Production Plan: ${planId}${isFG ? '' : ' (Sub-Assembly)'}`,
+            operations: operationsToUse
           }
 
           console.log(`[ProductionPlanningService] Generating WO: ${wo_id} for ${item.item_code} | Parent: ${parentWoId || 'None'}`)

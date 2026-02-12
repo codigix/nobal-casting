@@ -593,6 +593,13 @@ export default function ProductionEntry() {
       setWarehouses(whRes.data || [])
       setJobCardData(jobCard)
 
+      // Handle Outsource Operations: Redirect or show restricted view
+      if (jobCard.execution_mode === 'OUTSOURCE') {
+        toast.addToast('Outsource operation detected. Production should be recorded via Subcontract Receipt.', 'info')
+        // We could either navigate away or just let the render handle the restriction
+        // For now, let's just let the render handle it if we want to show a specialized message
+      }
+
       const woId = jobCard.work_order_id
       const currentSequence = parseInt(jobCard.operation_sequence || 0)
       let jobCards = []
@@ -1428,8 +1435,30 @@ export default function ProductionEntry() {
           </div>
         </div>
 
-        {/* New Horizontal Context & Stats Bar */}
-        <div className="grid grid-cols-12 gap-4 mb28">
+        {jobCardData?.execution_mode === 'OUTSOURCE' && (
+          <div className="mb-6 p-8 bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-2xl text-center animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-100">
+              <Package className="text-indigo-600" size={32} />
+            </div>
+            <h2 className="text-xl font-bold text-slate-900 mb-2">Outsource Operation</h2>
+            <p className="text-slate-600 max-w-lg mx-auto mb-6">
+              This operation is handled by an external vendor. 
+              Production tracking and stock movements for outsourced tasks are managed via 
+              <strong> Subcontract Dispatch</strong> and <strong>Receipt</strong> in the Job Card list.
+            </p>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={() => navigate('/manufacturing/job-cards')}
+                className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center gap-2"
+              >
+                <ArrowLeft size={18} />
+                Back to Job Cards
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className={`grid grid-cols-12 gap-4 mb28 ${jobCardData?.execution_mode === 'OUTSOURCE' ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
           {/* Target Item Card - Horizontal Layout */}
           <Card className="col-span-12  border-slate-100 bg-white p-2 flex flex-col md:flex-row items-start md:items-center gap-6 ">
             <div className="flex items-center gap-4 flex-1">

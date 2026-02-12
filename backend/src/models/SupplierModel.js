@@ -5,7 +5,10 @@
   static async getAll(db) {
     try {
       const [rows] = await db.execute(
-        'SELECT * FROM supplier ORDER BY name'
+        `SELECT s.*, sg.name as supplier_group 
+         FROM supplier s 
+         LEFT JOIN supplier_group sg ON s.supplier_group_id = sg.id 
+         ORDER BY s.name`
       )
       return rows
     } catch (error) {
@@ -19,7 +22,11 @@
   static async getActive(db) {
     try {
       const [rows] = await db.execute(
-        'SELECT * FROM supplier WHERE is_active = true ORDER BY name'
+        `SELECT s.*, sg.name as supplier_group 
+         FROM supplier s 
+         LEFT JOIN supplier_group sg ON s.supplier_group_id = sg.id 
+         WHERE s.is_active = true 
+         ORDER BY s.name`
       )
       return rows
     } catch (error) {
@@ -33,7 +40,10 @@
   static async getById(db, supplierId) {
     try {
       const [rows] = await db.execute(
-        'SELECT * FROM supplier WHERE supplier_id = ?',
+        `SELECT s.*, sg.name as supplier_group 
+         FROM supplier s 
+         LEFT JOIN supplier_group sg ON s.supplier_group_id = sg.id 
+         WHERE s.supplier_id = ?`,
         [supplierId]
       )
       return rows[0] || null
@@ -64,6 +74,7 @@
     try {
       const {
         name,
+        service_name,
         supplier_group,
         gstin,
         payment_terms_days = 30,
@@ -91,11 +102,11 @@
       }
 
       const [result] = await db.execute(
-        'INSERT INTO supplier (supplier_id, name, supplier_group_id, gstin, payment_terms_days, lead_time_days, rating, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [supplier_id, name, supplier_group_id, gstin, payment_terms_days, lead_time_days, rating, is_active]
+        'INSERT INTO supplier (supplier_id, name, service_name, supplier_group_id, gstin, payment_terms_days, lead_time_days, rating, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [supplier_id, name, service_name, supplier_group_id, gstin, payment_terms_days, lead_time_days, rating, is_active]
       )
 
-      return { supplier_id, name, supplier_group_id, gstin, payment_terms_days, lead_time_days, rating, is_active }
+      return { supplier_id, name, service_name, supplier_group_id, gstin, payment_terms_days, lead_time_days, rating, is_active }
     } catch (error) {
       throw new Error('Failed to create supplier: ' + error.message)
     }
@@ -108,6 +119,7 @@
     try {
       const validColumns = [
         'name',
+        'service_name',
         'supplier_group_id',
         'gstin',
         'contact_person_id',
@@ -214,7 +226,11 @@
   static async getByGroup(db, groupName) {
     try {
       const [rows] = await db.execute(
-        'SELECT * FROM supplier WHERE supplier_group = ? AND is_active = true ORDER BY name',
+        `SELECT s.*, sg.name as supplier_group 
+         FROM supplier s 
+         LEFT JOIN supplier_group sg ON s.supplier_group_id = sg.id 
+         WHERE sg.name = ? AND s.is_active = true 
+         ORDER BY s.name`,
         [groupName]
       )
       return rows
@@ -228,31 +244,36 @@
    */
   static async search(db, searchTerm, filters = {}) {
     try {
-      let query = 'SELECT * FROM supplier WHERE 1=1'
+      let query = `
+        SELECT s.*, sg.name as supplier_group 
+        FROM supplier s 
+        LEFT JOIN supplier_group sg ON s.supplier_group_id = sg.id 
+        WHERE 1=1
+      `
       const params = []
 
       if (searchTerm) {
-        query += ' AND (name LIKE ? OR supplier_id LIKE ? OR gstin LIKE ?)'
+        query += ' AND (s.name LIKE ? OR s.supplier_id LIKE ? OR s.gstin LIKE ? OR s.service_name LIKE ?)'
         const term = `%${searchTerm}%`
-        params.push(term, term, term)
+        params.push(term, term, term, term)
       }
 
       if (filters.group) {
-        query += ' AND supplier_group = ?'
+        query += ' AND sg.name = ?'
         params.push(filters.group)
       }
 
       if (filters.isActive !== undefined) {
-        query += ' AND is_active = ?'
+        query += ' AND s.is_active = ?'
         params.push(filters.isActive)
       }
 
       if (filters.minRating !== undefined) {
-        query += ' AND rating >= ?'
+        query += ' AND s.rating >= ?'
         params.push(filters.minRating)
       }
 
-      query += ' ORDER BY name'
+      query += ' ORDER BY s.name'
 
       const [rows] = await db.execute(query, params)
       return rows

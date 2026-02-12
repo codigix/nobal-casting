@@ -29,9 +29,10 @@ export default function Suppliers() {
       render: (val) => <span className="text-primary-600 ">{val}</span>
     },
     { key: 'name', label: 'Supplier Name' },
+    { key: 'service_name', label: 'Service Name' },
     { 
       key: 'supplier_group', 
-      label: 'Group',
+      label: 'Service Group',
       render: (val) => val ? (
         <Badge className={`${getGroupColor(val)} ${getGroupTextColor(val)} border`}>
           {val}
@@ -70,6 +71,7 @@ export default function Suppliers() {
 
   const [formData, setFormData] = useState({
     name: '',
+    service_name: '',
     supplier_group: '',
     gstin: '',
     payment_terms_days: 30,
@@ -167,6 +169,7 @@ export default function Suppliers() {
   const resetForm = () => {
     setFormData({
       name: '',
+      service_name: '',
       supplier_group: '',
       gstin: '',
       payment_terms_days: 30,
@@ -186,6 +189,7 @@ export default function Suppliers() {
   const handleEditClick = (supplier) => {
     setFormData({
       name: supplier.name || '',
+      service_name: supplier.service_name || '',
       supplier_group: supplier.supplier_group || '',
       gstin: supplier.gstin || '',
       payment_terms_days: supplier.payment_terms_days || 30,
@@ -337,6 +341,17 @@ export default function Suppliers() {
                 </div>
 
                 <div>
+                  <label className="block text-xs  text-neutral-700 dark:text-neutral-300 mb-2">Service Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Maintenance Services"
+                    value={formData.service_name}
+                    onChange={(e) => setFormData({ ...formData, service_name: e.target.value })}
+                    className="w-full p-2  py-2 text-xs border border-neutral-300 dark:border-neutral-700 rounded-xs bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+
+                <div>
                   <label className="block text-xs  text-neutral-700 dark:text-neutral-300 mb-2">GSTIN *</label>
                   <input
                     type="text"
@@ -348,7 +363,7 @@ export default function Suppliers() {
                 </div>
 
                 <div>
-                  <label className="block text-xs  text-neutral-700 dark:text-neutral-300 mb-2">Supplier Group</label>
+                  <label className="block text-xs  text-neutral-700 dark:text-neutral-300 mb-2">Service Group</label>
                   <SearchableSelect
                     value={formData.supplier_group}
                     onChange={(val) => setFormData({ ...formData, supplier_group: val })}
@@ -558,9 +573,10 @@ export default function Suppliers() {
               <thead>
                 <tr className="bg-neutral-100 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
                   <th className="p-2 text-left text-xs  text-neutral-700 dark:text-neutral-300">Name</th>
+                  <th className="p-2 text-left text-xs  text-neutral-700 dark:text-neutral-300">Service Name</th>
                   <th className="p-2 text-left text-xs  text-neutral-700 dark:text-neutral-300">ID</th>
                   <th className="p-2 text-left text-xs  text-neutral-700 dark:text-neutral-300">GSTIN</th>
-                  <th className="p-2 text-left text-xs  text-neutral-700 dark:text-neutral-300">Group</th>
+                  <th className="p-2 text-left text-xs  text-neutral-700 dark:text-neutral-300">Service Group</th>
                   <th className="p-2 text-center text-xs text-xs  text-neutral-700 dark:text-neutral-300">Rating</th>
                   <th className="p-2 text-center text-xs text-xs  text-neutral-700 dark:text-neutral-300">Lead Time</th>
                   <th className="p-2 text-center text-xs text-xs  text-neutral-700 dark:text-neutral-300">Status</th>
@@ -571,6 +587,7 @@ export default function Suppliers() {
                 {filteredSuppliers.map((supplier) => (
                   <tr key={supplier.supplier_id} className="border-b border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
                     <td className="p-2 text-xs   text-neutral-900 dark:text-white">{supplier.name}</td>
+                    <td className="p-2 text-xs   text-neutral-900 dark:text-white">{supplier.service_name || '-'}</td>
                     <td className="p-2 text-xs text-neutral-600 dark:text-neutral-400 font-mono">{supplier.supplier_id}</td>
                     <td className="p-2 text-xs text-neutral-600 dark:text-neutral-400 font-mono">{supplier.gstin || '-'}</td>
                     <td className="p-2 text-xs">
@@ -632,12 +649,16 @@ export default function Suppliers() {
                   </div>
                   <div className="p-4 space-y-3">
                     <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 ">Service Name</p>
+                        <p className="text-xs   text-neutral-900 dark:text-white">{supplier.service_name || '-'}</p>
+                      </div>
                       <div>
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 ">GSTIN</p>
                         <p className="text-xs font-mono text-neutral-900 dark:text-white">{supplier.gstin || '-'}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-neutral-600 dark:text-neutral-400 ">Group</p>
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 ">Service Group</p>
                         <p className={`text-xs  ${getGroupTextColor(supplier.supplier_group)}`}>{supplier.supplier_group || '-'}</p>
                       </div>
                       <div>

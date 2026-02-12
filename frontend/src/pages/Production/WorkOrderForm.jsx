@@ -97,6 +97,13 @@ export default function WorkOrderForm() {
   const [productionStages, setProductionStages] = useState([])
   const [isEditMode, setIsEditMode] = useState(!id)
   const [editingJobCardId, setEditingJobCardId] = useState(null)
+  const [showReceiptModal, setShowReceiptModal] = useState(false)
+  const [receivingJobCard, setReceivingJobCard] = useState(null)
+  const [receiptData, setReceiptData] = useState({
+    received_qty: 0,
+    accepted_qty: 0,
+    rejected_qty: 0
+  })
   const [activeSection, setActiveSection] = useState('foundation')
 
   const scrollToSection = (sectionId) => {
@@ -547,7 +554,11 @@ export default function WorkOrderForm() {
           operation_time: op.time || op.operation_time || 0,
           operating_cost: op.operating_cost || 0,
           operation_type: op.operation_type || 'FG',
-          hourly_rate: op.hourly_rate || 0
+          hourly_rate: op.hourly_rate || 0,
+          execution_mode: op.execution_mode || 'IN_HOUSE',
+          vendor_id: op.vendor_id || null,
+          vendor_name: op.vendor_name || null,
+          vendor_rate_per_unit: op.vendor_rate_per_unit || 0
         })))
       } else if (woData.bom_id || woData.bom_no) {
         await fetchBOMDetails(woData.bom_id || woData.bom_no)
@@ -591,7 +602,11 @@ export default function WorkOrderForm() {
           operation_time: multipliedTime,
           operating_cost: (op.operating_cost || op.cost || 0) * (workOrderQty / (bomData.quantity || 1)),
           operation_type: op.operation_type || 'FG',
-          hourly_rate: op.hourly_rate || 0
+          hourly_rate: op.hourly_rate || 0,
+          execution_mode: op.execution_mode || 'IN_HOUSE',
+          vendor_id: op.vendor_id || null,
+          vendor_name: op.vendor_name || null,
+          vendor_rate_per_unit: op.vendor_rate_per_unit || 0
         }
       })
 
@@ -673,6 +688,38 @@ export default function WorkOrderForm() {
 
   const updateMaterial = (id, field, value) => {
     setBomMaterials(prev => prev.map(mat => mat.id === id ? { ...mat, [field]: value } : mat))
+  }
+
+  const handleDispatch = async (jobCardId) => {
+    if (!window.confirm('Dispatch this job card to vendor?')) return
+    try {
+      setLoading(true)
+      await productionService.dispatchToVendor(jobCardId)
+      setSuccess('Job card dispatched to vendor')
+      fetchJobCards(id)
+    } catch (err) { setError(err.message) }
+    finally { setLoading(false) }
+  }
+
+  const handleOpenReceiptModal = (card) => {
+    setReceivingJobCard(card)
+    setReceiptData({
+      received_qty: parseFloat(card.planned_quantity) - (parseFloat(card.received_qty) || 0),
+      accepted_qty: parseFloat(card.planned_quantity) - (parseFloat(card.received_qty) || 0),
+      rejected_qty: 0
+    })
+    setShowReceiptModal(true)
+  }
+
+  const handleReceive = async () => {
+    try {
+      setLoading(true)
+      await productionService.receiveFromVendor(receivingJobCard.job_card_id, receiptData)
+      setSuccess('Receipt recorded successfully')
+      setShowReceiptModal(false)
+      fetchJobCards(id)
+    } catch (err) { setError(err.message) }
+    finally { setLoading(false) }
   }
 
   const updateJobCard = (jcIdentifier, field, value) => {
@@ -768,7 +815,10 @@ export default function WorkOrderForm() {
           operation_time: op.operation_time,
           operating_cost: op.operating_cost,
           operation_type: op.operation_type,
-          hourly_rate: op.hourly_rate
+          hourly_rate: op.hourly_rate,
+          execution_mode: op.execution_mode || 'IN_HOUSE',
+          vendor_id: op.vendor_id || null,
+          vendor_rate_per_unit: op.vendor_rate_per_unit || 0
         }))
       }
       const response = id ? await productionService.updateWorkOrder(id, payload) : await productionService.createWorkOrder(payload)
@@ -1136,7 +1186,7 @@ export default function WorkOrderForm() {
                         <thead>
                           <tr className="bg-slate-50/30">
                             <th className="p-2  text-xs  text-slate-400  ">Phase</th>
-                            <th className="p-2  text-xs  text-slate-400  ">Workstation</th>
+                            <th className="p-2  text-xs  text-slate-400  ">Assignment</th>
                             <th className="p-2  text-xs  text-slate-400  text-center">Status</th>
                             <th className="p-2  text-xs  text-slate-400  text-right">Time & Cost</th>
                             <th className="p-2  text-xs  text-slate-400  text-right">Progress</th>
@@ -1162,16 +1212,29 @@ export default function WorkOrderForm() {
                                 </td>
                                 <td className="p-2 ">
                                   {isEditing ? (
-                                    <SearchableSelect
-                                      value={jc.workstation_type || jc.workstation || ''}
-                                      onChange={(v) => updateJobCard(jcId, 'workstation_type', v)}
-                                      options={workstations.map(ws => ({ value: ws.workstation_id || ws.id, label: ws.workstation_name || ws.name }))}
-                                      placeholder="Select Workstation..."
-                                    />
+                                    jc.execution_mode === 'OUTSOURCE' ? (
+                                      <div className="text-xs text-slate-600 italic">
+                                        Outsourced to: {jc.vendor_name || 'Assigned Vendor'}
+                                      </div>
+                                    ) : (
+                                      <SearchableSelect
+                                        value={jc.workstation_type || jc.workstation || ''}
+                                        onChange={(v) => updateJobCard(jcId, 'workstation_type', v)}
+                                        options={workstations.map(ws => ({ value: ws.workstation_id || ws.id, label: ws.workstation_name || ws.name }))}
+                                        placeholder="Select Workstation..."
+                                      />
+                                    )
                                   ) : (
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)]" />
-                                      <span className="text-xs font-medium text-slate-600">{getWorkstationName(jc.workstation_type || jc.workstation)}</span>
+                                    <div className="flex flex-col gap-1">
+                                      <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${jc.execution_mode === 'OUTSOURCE' ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]' : 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)]'}`} />
+                                        <span className="text-xs font-medium text-slate-600">
+                                          {jc.execution_mode === 'OUTSOURCE' ? (jc.vendor_name || 'Vendor Assigned') : getWorkstationName(jc.workstation_type || jc.workstation)}
+                                        </span>
+                                      </div>
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded w-fit ${jc.execution_mode === 'OUTSOURCE' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                        {jc.execution_mode === 'OUTSOURCE' ? 'OUTSOURCED' : 'IN-HOUSE'}
+                                      </span>
                                     </div>
                                   )}
                                 </td>
@@ -1204,13 +1267,42 @@ export default function WorkOrderForm() {
                                 {!isReadOnly && (
                                   <td className="p-2 ">
                                     {isEditing ? (
-                                      <button onClick={() => { saveJobCard(jcId); setEditingJobCardId(null) }} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded transition-colors">
-                                        <Save size={14} />
-                                      </button>
+                                      <div className="flex items-center gap-2">
+                                        <button onClick={() => { saveJobCard(jcId); setEditingJobCardId(null) }} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded transition-colors" title="Save Changes">
+                                          <Save size={14} />
+                                        </button>
+                                        <button onClick={() => setEditingJobCardId(null)} className="p-2 text-rose-600 hover:bg-rose-50 rounded transition-colors" title="Cancel">
+                                          <X size={14} />
+                                        </button>
+                                      </div>
                                     ) : (
-                                      <button onClick={() => setEditingJobCardId(jcId)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all">
-                                        <Edit2 size={14} />
-                                      </button>
+                                      <div className="flex items-center gap-2">
+                                        {jc.execution_mode === 'OUTSOURCE' ? (
+                                          <>
+                                            {(jc.status || '').toLowerCase() === 'ready' || (jc.status || '').toLowerCase() === 'draft' ? (
+                                              <button
+                                                className="flex items-center gap-1.5 px-2 py-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded text-[10px] font-bold transition-all"
+                                                onClick={() => handleDispatch(jc.job_card_id || jc.id)}
+                                              >
+                                                <Package size={12} />
+                                                DISPATCH
+                                              </button>
+                                            ) : jc.subcontract_status === 'SENT_TO_VENDOR' || jc.subcontract_status === 'PARTIALLY_RECEIVED' ? (
+                                              <button
+                                                className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded text-[10px] font-bold transition-all"
+                                                onClick={() => handleOpenReceiptModal(jc)}
+                                              >
+                                                <Package size={12} />
+                                                RECEIVE
+                                              </button>
+                                            ) : null}
+                                          </>
+                                        ) : (
+                                          <button onClick={() => setEditingJobCardId(jcId)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all" title="Edit Assignment">
+                                            <Edit2 size={14} />
+                                          </button>
+                                        )}
+                                      </div>
                                     )}
                                   </td>
                                 )}
@@ -1230,7 +1322,8 @@ export default function WorkOrderForm() {
                         <thead>
                           <tr className="bg-slate-50/30">
                             <th className="p-2 text-xs text-slate-400">Operation</th>
-                            <th className="p-2 text-xs text-slate-400">Workstation</th>
+                            <th className="p-2 text-xs text-slate-400">Mode</th>
+                            <th className="p-2 text-xs text-slate-400">Workstation/Vendor</th>
                             <th className="p-2 text-xs text-slate-400 text-right">Time (Mins)</th>
                             <th className="p-2 text-xs text-slate-400 text-right">Cost</th>
                           </tr>
@@ -1239,9 +1332,16 @@ export default function WorkOrderForm() {
                           {bomOperations.map((op, idx) => (
                             <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                               <td className="p-2 text-xs text-slate-900">{op.operation_name}</td>
-                              <td className="p-2 text-xs text-slate-600">{getWorkstationName(op.workstation)}</td>
-                              <td className="p-2 text-xs text-slate-900 text-right">{op.operation_time}</td>
-                              <td className="p-2 text-xs text-slate-900 text-right">{op.operating_cost}</td>
+                              <td className="p-2 text-xs">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] ${op.execution_mode === 'OUTSOURCE' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                  {op.execution_mode === 'OUTSOURCE' ? 'Outsource' : 'In-House'}
+                                </span>
+                              </td>
+                              <td className="p-2 text-xs text-slate-600">
+                                {op.execution_mode === 'OUTSOURCE' ? (op.vendor_name || 'No Vendor Assigned') : getWorkstationName(op.workstation)}
+                              </td>
+                              <td className="p-2 text-xs text-slate-900 text-right">{op.execution_mode === 'OUTSOURCE' ? '-' : op.operation_time}</td>
+                              <td className="p-2 text-xs text-slate-900 text-right">₹{parseFloat(op.operating_cost || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1576,6 +1676,102 @@ export default function WorkOrderForm() {
 
         </div>
       </div>
+      {/* Subcontract Receipt Modal */}
+      {showReceiptModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl">
+                  <Package size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 text-xs">Subcontract Receipt</h3>
+                  <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">{receivingJobCard?.job_card_id || receivingJobCard?.id}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowReceiptModal(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-full transition-all">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-5">
+              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <div>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">Total Sent</p>
+                  <p className="text-sm font-bold text-slate-900">{receivingJobCard?.sent_qty || receivingJobCard?.planned_quantity} Units</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">Already Received</p>
+                  <p className="text-sm font-bold text-slate-900">{receivingJobCard?.received_qty || 0} Units</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Received Quantity</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={receiptData.received_qty}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      setReceiptData(prev => ({ ...prev, received_qty: val, accepted_qty: val }));
+                    }}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-medium"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Accepted</label>
+                  <input
+                    type="number"
+                    value={receiptData.accepted_qty}
+                    onChange={(e) => setReceiptData(prev => ({ ...prev, accepted_qty: parseFloat(e.target.value) || 0 }))}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-medium"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Rejected</label>
+                  <input
+                    type="number"
+                    value={receiptData.rejected_qty}
+                    onChange={(e) => setReceiptData(prev => ({ ...prev, rejected_qty: parseFloat(e.target.value) || 0 }))}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 outline-none transition-all font-medium text-rose-600"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              {receiptData.accepted_qty + receiptData.rejected_qty > receiptData.received_qty && (
+                <div className="p-3 bg-rose-50 rounded-xl border border-rose-100 flex items-center gap-2 text-rose-600 animate-pulse">
+                  <AlertCircle size={14} />
+                  <p className="text-[10px] font-bold uppercase tracking-tight">Accepted + Rejected cannot exceed Received</p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex gap-3">
+              <button
+                onClick={() => setShowReceiptModal(false)}
+                className="flex-1 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-500 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all active:scale-95"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReceive}
+                disabled={loading || (receiptData.accepted_qty + receiptData.rejected_qty > receiptData.received_qty) || receiptData.received_qty <= 0}
+                className="flex-1 py-3 text-[11px] font-bold uppercase tracking-widest text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-100 transition-all active:scale-95"
+              >
+                {loading ? 'Processing...' : 'Confirm Receipt'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

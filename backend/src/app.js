@@ -98,6 +98,10 @@ async function initializeDatabase() {
     
     await enhanceWorkOrderOperationTable()
     
+    await enhanceBOMOperationTable()
+    
+    await enhanceProductionPlanOperationsTable()
+    
     await createTimeLogTable()
     
     await createRejectionTable()
@@ -473,7 +477,14 @@ async function enhanceJobCardTable() {
       { name: 'scrap_quantity', sql: 'scrap_quantity DECIMAL(18,6) DEFAULT 0' },
       { name: 'hourly_rate', sql: 'hourly_rate DECIMAL(15,2) DEFAULT 0' },
       { name: 'operating_cost', sql: 'operating_cost DECIMAL(18,6) DEFAULT 0' },
-      { name: 'operation_type', sql: 'operation_type VARCHAR(50) DEFAULT "IN_HOUSE"' }
+      { name: 'operation_type', sql: 'operation_type VARCHAR(50) DEFAULT "IN_HOUSE"' },
+      { name: 'execution_mode', sql: "execution_mode ENUM('IN_HOUSE', 'OUTSOURCE') DEFAULT 'IN_HOUSE'" },
+      { name: 'vendor_id', sql: 'vendor_id VARCHAR(50) DEFAULT NULL' },
+      { name: 'subcontract_status', sql: "subcontract_status ENUM('DRAFT', 'READY', 'SENT_TO_VENDOR', 'PARTIALLY_RECEIVED', 'RECEIVED', 'COMPLETED') DEFAULT 'DRAFT'" },
+      { name: 'sent_qty', sql: 'sent_qty DECIMAL(18,6) DEFAULT 0' },
+      { name: 'received_qty', sql: 'received_qty DECIMAL(18,6) DEFAULT 0' },
+      { name: 'accepted_qty', sql: 'accepted_qty DECIMAL(18,6) DEFAULT 0' },
+      { name: 'rejected_qty', sql: 'rejected_qty DECIMAL(18,6) DEFAULT 0' }
     ]
 
     for (const column of columnsToAdd) {
@@ -509,7 +520,10 @@ async function enhanceWorkOrderOperationTable() {
       { name: 'hourly_rate', sql: 'hourly_rate DECIMAL(15,2) DEFAULT 0' },
       { name: 'operating_cost', sql: 'operating_cost DECIMAL(18,6) DEFAULT 0' },
       { name: 'operation_type', sql: 'operation_type VARCHAR(50) DEFAULT "IN_HOUSE"' },
-      { name: 'workstation', sql: 'workstation VARCHAR(100) DEFAULT NULL' }
+      { name: 'workstation', sql: 'workstation VARCHAR(100) DEFAULT NULL' },
+      { name: 'execution_mode', sql: "execution_mode ENUM('IN_HOUSE', 'OUTSOURCE') DEFAULT 'IN_HOUSE'" },
+      { name: 'vendor_id', sql: 'vendor_id VARCHAR(50) DEFAULT NULL' },
+      { name: 'vendor_rate_per_unit', sql: 'vendor_rate_per_unit DECIMAL(18,2) DEFAULT 0' }
     ]
 
     for (const column of columnsToAdd) {
@@ -521,6 +535,56 @@ async function enhanceWorkOrderOperationTable() {
           console.log(`→ Column ${column.name} already exists in work_order_operation`)
         } else {
           console.log('Error enhancing work_order_operation:', error.message)
+        }
+      }
+    }
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
+async function enhanceBOMOperationTable() {
+  try {
+    const columnsToAdd = [
+      { name: 'execution_mode', sql: "execution_mode ENUM('IN_HOUSE', 'OUTSOURCE') DEFAULT 'IN_HOUSE'" },
+      { name: 'vendor_id', sql: 'vendor_id VARCHAR(50) DEFAULT NULL' },
+      { name: 'vendor_rate_per_unit', sql: 'vendor_rate_per_unit DECIMAL(18,2) DEFAULT 0' }
+    ]
+
+    for (const column of columnsToAdd) {
+      try {
+        await db.execute(`ALTER TABLE bom_operation ADD COLUMN ${column.sql}`)
+        console.log(`✓ Added column ${column.name} to bom_operation`)
+      } catch (error) {
+        if (error.message.includes('Duplicate column')) {
+          console.log(`→ Column ${column.name} already exists in bom_operation`)
+        } else {
+          console.log('Error enhancing bom_operation:', error.message)
+        }
+      }
+    }
+  } catch (error) {
+    console.log('Note:', error.message)
+  }
+}
+
+async function enhanceProductionPlanOperationsTable() {
+  try {
+    const columnsToAdd = [
+      { name: 'execution_mode', sql: "execution_mode ENUM('IN_HOUSE', 'OUTSOURCE') DEFAULT 'IN_HOUSE'" },
+      { name: 'vendor_id', sql: 'vendor_id VARCHAR(50) DEFAULT NULL' },
+      { name: 'vendor_rate_per_unit', sql: 'vendor_rate_per_unit DECIMAL(18,2) DEFAULT 0' }
+    ]
+
+    for (const column of columnsToAdd) {
+      try {
+        await db.execute(`ALTER TABLE production_plan_operations ADD COLUMN ${column.sql}`)
+        console.log(`✓ Added column ${column.name} to production_plan_operations`)
+      } catch (error) {
+        if (error.message.includes('Duplicate column')) {
+          console.log(`→ Column ${column.name} already exists in production_plan_operations`)
+        } else {
+          console.log('Error enhancing production_plan_operations:', error.message)
         }
       }
     }

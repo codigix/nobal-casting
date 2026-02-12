@@ -339,6 +339,35 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                 </div>
               </div>
             </div>
+
+            {jobCard?.execution_mode === 'OUTSOURCE' && (
+              <div className="bg-white rounded p-2 border border-amber-100 bg-amber-50/10 space-y-2">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="bg-amber-50 p-2 rounded text-amber-600">
+                    <Package size={18} />
+                  </div>
+                  <h4 className="text-xs text-gray-900 font-bold">Subcontracting Intelligence</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-2 bg-white rounded border border-amber-100">
+                    <p className="text-[10px] text-amber-600 uppercase font-bold mb-1">Assigned Vendor</p>
+                    <p className="text-xs text-gray-900 font-semibold">{jobCard?.vendor_name || 'N/A'}</p>
+                  </div>
+                  <div className="p-2 bg-white rounded border border-amber-100">
+                    <p className="text-[10px] text-amber-600 uppercase font-bold mb-1">Dispatch Status</p>
+                    <p className="text-xs text-gray-900 font-semibold">{jobCard?.subcontract_status?.replace(/_/g, ' ') || 'DRAFT'}</p>
+                  </div>
+                  <div className="p-2 bg-white rounded border border-amber-100">
+                    <p className="text-[10px] text-amber-600 uppercase font-bold mb-1">Sent Qty</p>
+                    <p className="text-xs text-gray-900 font-semibold">{jobCard?.sent_qty || 0} Units</p>
+                  </div>
+                  <div className="p-2 bg-white rounded border border-amber-100">
+                    <p className="text-[10px] text-amber-600 uppercase font-bold mb-1">Received Qty</p>
+                    <p className="text-xs text-gray-900 font-semibold">{jobCard?.received_qty || 0} Units</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">

@@ -211,6 +211,18 @@ router.delete(
     productionController.deleteJobCard.bind(productionController)
   )
 
+  // ============= SUBCONTRACTING =============
+  router.post(
+    '/job-cards/:job_card_id/dispatch',
+    authMiddleware,
+    productionController.handleSubcontractDispatch.bind(productionController)
+  )
+  router.post(
+    '/job-cards/:job_card_id/receive',
+    authMiddleware,
+    productionController.handleSubcontractReceipt.bind(productionController)
+  )
+
   // ============= OPERATION EXECUTION =============
   router.post(
     '/job-cards/:job_card_id/start',

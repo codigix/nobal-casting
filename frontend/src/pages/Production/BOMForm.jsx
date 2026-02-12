@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AlertCircle, Plus, Trash2, X, ChevronRight, Save, RotateCcw, ChevronDown, ChevronUp, Check, FileText, Settings, Database, Layers, TrendingDown, Package, Users, DollarSign, AlertTriangle, Activity, ArrowLeft } from 'lucide-react'
 import * as productionService from '../../services/productionService'
+import { suppliersAPI } from '../../services/api'
 import SearchableSelect from '../../components/SearchableSelect'
 import DraftsList from '../../components/DraftsList'
 import Card from '../../components/Card/Card'
@@ -167,6 +168,7 @@ export default function BOMForm() {
   const [operationsList, setOperationsList] = useState([])
   const [workstationsList, setWorkstationsList] = useState([])
   const [warehousesList, setWarehousesList] = useState([])
+  const [suppliers, setSuppliers] = useState([])
   const [newRawMaterial, setNewRawMaterial] = useState({
     item_code: '',
     item_name: '',
@@ -189,6 +191,10 @@ export default function BOMForm() {
     hourly_rate: '0',
     operating_cost: '0',
     operation_type: 'IN_HOUSE',
+    execution_mode: 'IN_HOUSE',
+    vendor_rate_per_unit: '0',
+    vendor_name: '',
+    subcontract_warehouse: '',
     target_warehouse: '',
     notes: ''
   })
@@ -245,6 +251,7 @@ export default function BOMForm() {
     fetchOperations()
     fetchWorkstations()
     fetchWarehouses()
+    fetchSuppliers()
     fetchUOMs()
     fetchItemGroups()
     if (id) {
@@ -394,6 +401,16 @@ export default function BOMForm() {
       setWarehousesList(Array.isArray(warehousesData) ? warehousesData : [])
     } catch (err) {
       console.error('Failed to fetch warehouses:', err)
+    }
+  }
+
+  const fetchSuppliers = async () => {
+    try {
+      const response = await suppliersAPI.list()
+      const suppliersData = response.data?.data || response.data || []
+      setSuppliers(Array.isArray(suppliersData) ? suppliersData : [])
+    } catch (err) {
+      console.error('Failed to fetch suppliers:', err)
     }
   }
 
@@ -978,7 +995,11 @@ export default function BOMForm() {
     setError(null)
   }
 
-  const calculateOperationCost = (cycleTime, setupTime, hourlyRate) => {
+  const calculateOperationCost = (cycleTime, setupTime, hourlyRate, executionMode, vendorRate) => {
+    if (executionMode === 'OUTSOURCE') {
+      // For outsource, cost is per unit (we assume quantity 1 for BOM base cost)
+      return parseFloat(vendorRate) || 0
+    }
     const cycleTimeMinutes = parseFloat(cycleTime) || 0
     const setupTimeMinutes = parseFloat(setupTime) || 0
     const totalTimeMinutes = cycleTimeMinutes + setupTimeMinutes
@@ -991,7 +1012,17 @@ export default function BOMForm() {
       setError('Please enter operation name')
       return
     }
-    const calculatedCost = calculateOperationCost(newOperation.operation_time, newOperation.setup_time, newOperation.hourly_rate)
+    if (newOperation.execution_mode === 'OUTSOURCE' && !newOperation.vendor_name) {
+      setError('Please select a vendor for outsourced operation')
+      return
+    }
+    const calculatedCost = calculateOperationCost(
+      newOperation.operation_time, 
+      newOperation.setup_time, 
+      newOperation.hourly_rate,
+      newOperation.execution_mode,
+      newOperation.vendor_rate_per_unit
+    )
     setOperations([...operations, { ...newOperation, operating_cost: calculatedCost.toFixed(2), id: Date.now() }])
     setNewOperation({
       operation_name: '',
@@ -1002,6 +1033,10 @@ export default function BOMForm() {
       hourly_rate: '0',
       operating_cost: '0',
       operation_type: 'IN_HOUSE',
+      execution_mode: 'IN_HOUSE',
+      vendor_rate_per_unit: '0',
+      vendor_name: '',
+      subcontract_warehouse: '',
       target_warehouse: '',
       notes: ''
     })
@@ -2248,102 +2283,179 @@ export default function BOMForm() {
                               </FieldWrapper>
                             </div>
                             <div className="md:col-span-3">
-                              <FieldWrapper label="Workstation">
-                                <SearchableSelect
-                                  value={newOperation.workstation_type}
-                                  onChange={(value) => setNewOperation({ ...newOperation, workstation_type: value })}
-                                  options={workstationsList.filter(ws => ws && ws.name).map(ws => ({
-                                    label: ws.name,
-                                    value: ws.name
-                                  }))}
-                                  placeholder="Select"
-                                  className="glass-input"
-                                />
-                              </FieldWrapper>
-                            </div>
-                             <div className="md:col-span-3">
-                              <FieldWrapper label="Target Warehouse">
-                                <SearchableSelect
-                                  value={newOperation.target_warehouse}
-                                  onChange={(value) => setNewOperation({ ...newOperation, target_warehouse: value })}
-                                  options={warehousesList.filter(wh => wh && (wh.warehouse_name || wh.name)).map(wh => ({
-                                    label: wh.warehouse_name || wh.name,
-                                    value: wh.warehouse_name || wh.name
-                                  }))}
-                                  placeholder="Select"
-                                  className="glass-input"
-                                />
-                              </FieldWrapper>
-                            </div>
-                            <div className="md:col-span-3">
-                              <FieldWrapper label="Cycle Time (min)">
-                                <input
-                                  type="number"
-                                  value={newOperation.operation_time}
-                                  onChange={(e) => {
-                                    const val = e.target.value
-                                    const cost = calculateOperationCost(val, newOperation.setup_time, newOperation.hourly_rate)
-                                    setNewOperation({ ...newOperation, operation_time: val, operating_cost: cost.toFixed(2) })
-                                  }}
-                                  onKeyDown={handleKeyDown}
-                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
-                                />
-                              </FieldWrapper>
-                            </div>
-                            <div className="md:col-span-2">
-                              <FieldWrapper label="Setup Time (min)">
-                                <input
-                                  type="number"
-                                  value={newOperation.setup_time}
-                                  onChange={(e) => {
-                                    const val = e.target.value
-                                    const cost = calculateOperationCost(newOperation.operation_time, val, newOperation.hourly_rate)
-                                    setNewOperation({ ...newOperation, setup_time: val, operating_cost: cost.toFixed(2) })
-                                  }}
-                                  onKeyDown={handleKeyDown}
-                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
-                                />
-                              </FieldWrapper>
-                            </div>
-                            <div className="md:col-span-2">
-                              <FieldWrapper label="Hourly Rate (₹)">
-                                <input
-                                  type="number"
-                                  value={newOperation.hourly_rate}
-                                  onChange={(e) => {
-                                    const val = e.target.value
-                                    const cost = calculateOperationCost(newOperation.operation_time, newOperation.setup_time, val)
-                                    setNewOperation({ ...newOperation, hourly_rate: val, operating_cost: cost.toFixed(2) })
-                                  }}
-                                  onKeyDown={handleKeyDown}
-                                  className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
-                                />
-                              </FieldWrapper>
-                            </div>
-                            <div className="md:col-span-2">
-                              <FieldWrapper label="Cost (₹)">
-                                <input
-                                  type="number"
-                                  value={newOperation.operating_cost}
-                                  readOnly
-                                  className="w-full rounded border border-slate-200 bg-slate-50  p-2 text-xs focus:outline-none "
-                                />
-                              </FieldWrapper>
-                            </div>
-                            <div className="md:col-span-2">
-                              <FieldWrapper label="Type">
+                              <FieldWrapper label="Execution Mode">
                                 <select
-                                  value={newOperation.operation_type}
-                                  onChange={(e) => setNewOperation({ ...newOperation, operation_type: e.target.value })}
+                                  value={newOperation.execution_mode}
+                                  onChange={(e) => {
+                                    const mode = e.target.value
+                                    const cost = calculateOperationCost(
+                                      newOperation.operation_time, 
+                                      newOperation.setup_time, 
+                                      newOperation.hourly_rate,
+                                      mode,
+                                      newOperation.vendor_rate_per_unit
+                                    )
+                                    setNewOperation({ ...newOperation, execution_mode: mode, operating_cost: cost.toFixed(2) })
+                                  }}
                                   className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none   appearance-none"
                                 >
                                   <option value="IN_HOUSE">In-House</option>
-                                  <option value="OUTSOURCED">Outsourced</option>
+                                  <option value="OUTSOURCE">Outsource</option>
                                 </select>
                               </FieldWrapper>
                             </div>
+
+                            {newOperation.execution_mode === 'IN_HOUSE' ? (
+                              <>
+                                <div className="md:col-span-3">
+                                  <FieldWrapper label="Workstation">
+                                    <SearchableSelect
+                                      value={newOperation.workstation_type}
+                                      onChange={(value) => setNewOperation({ ...newOperation, workstation_type: value })}
+                                      options={workstationsList.filter(ws => ws && ws.name).map(ws => ({
+                                        label: ws.name,
+                                        value: ws.name
+                                      }))}
+                                      placeholder="Select"
+                                      className="glass-input"
+                                    />
+                                  </FieldWrapper>
+                                </div>
+                                <div className="md:col-span-3">
+                                  <FieldWrapper label="Target Warehouse">
+                                    <SearchableSelect
+                                      value={newOperation.target_warehouse}
+                                      onChange={(value) => setNewOperation({ ...newOperation, target_warehouse: value })}
+                                      options={warehousesList.filter(wh => wh && (wh.warehouse_name || wh.name)).map(wh => ({
+                                        label: wh.warehouse_name || wh.name,
+                                        value: wh.warehouse_name || wh.name
+                                      }))}
+                                      placeholder="Select"
+                                      className="glass-input"
+                                    />
+                                  </FieldWrapper>
+                                </div>
+                                <div className="md:col-span-3">
+                                  <FieldWrapper label="Cycle Time (min)">
+                                    <input
+                                      type="number"
+                                      value={newOperation.operation_time}
+                                      onChange={(e) => {
+                                        const val = e.target.value
+                                        const cost = calculateOperationCost(val, newOperation.setup_time, newOperation.hourly_rate)
+                                        setNewOperation({ ...newOperation, operation_time: val, operating_cost: cost.toFixed(2) })
+                                      }}
+                                      onKeyDown={handleKeyDown}
+                                      className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
+                                    />
+                                  </FieldWrapper>
+                                </div>
+                                <div className="md:col-span-2">
+                                  <FieldWrapper label="Setup Time (min)">
+                                    <input
+                                      type="number"
+                                      value={newOperation.setup_time}
+                                      onChange={(e) => {
+                                        const val = e.target.value
+                                        const cost = calculateOperationCost(newOperation.operation_time, val, newOperation.hourly_rate)
+                                        setNewOperation({ ...newOperation, setup_time: val, operating_cost: cost.toFixed(2) })
+                                      }}
+                                      onKeyDown={handleKeyDown}
+                                      className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
+                                    />
+                                  </FieldWrapper>
+                                </div>
+                                <div className="md:col-span-2">
+                                  <FieldWrapper label="Hourly Rate (₹)">
+                                    <input
+                                      type="number"
+                                      value={newOperation.hourly_rate}
+                                      onChange={(e) => {
+                                        const val = e.target.value
+                                        const cost = calculateOperationCost(newOperation.operation_time, newOperation.setup_time, val)
+                                        setNewOperation({ ...newOperation, hourly_rate: val, operating_cost: cost.toFixed(2) })
+                                      }}
+                                      onKeyDown={handleKeyDown}
+                                      className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
+                                    />
+                                  </FieldWrapper>
+                                </div>
+                                <div className="md:col-span-2">
+                                  <FieldWrapper label="Cost (₹)">
+                                    <input
+                                      type="number"
+                                      value={newOperation.operating_cost}
+                                      readOnly
+                                      className="w-full rounded border border-slate-200 bg-slate-50  p-2 text-xs focus:outline-none "
+                                    />
+                                  </FieldWrapper>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="md:col-span-3">
+                                  <FieldWrapper label="Vendor Name">
+                                    <SearchableSelect
+                                      value={newOperation.vendor_name}
+                                      onChange={(value) => setNewOperation({ ...newOperation, vendor_name: value })}
+                                      options={suppliers.map(s => ({
+                                        label: s.customer_name || s.name,
+                                        value: s.customer_name || s.name
+                                      }))}
+                                      placeholder="Select Vendor"
+                                      className="glass-input"
+                                    />
+                                  </FieldWrapper>
+                                </div>
+                                <div className="md:col-span-3">
+                                  <FieldWrapper label="Vendor Rate / Unit (₹)">
+                                    <input
+                                      type="number"
+                                      value={newOperation.vendor_rate_per_unit}
+                                      onChange={(e) => {
+                                        const val = e.target.value
+                                        const cost = calculateOperationCost(
+                                          newOperation.operation_time, 
+                                          newOperation.setup_time, 
+                                          newOperation.hourly_rate,
+                                          newOperation.execution_mode,
+                                          val
+                                        )
+                                        setNewOperation({ ...newOperation, vendor_rate_per_unit: val, operating_cost: cost.toFixed(2) })
+                                      }}
+                                      onKeyDown={handleKeyDown}
+                                      className="w-full rounded border border-slate-200 bg-white  p-2 text-xs    focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all focus:outline-none  "
+                                    />
+                                  </FieldWrapper>
+                                </div>
+                                <div className="md:col-span-3">
+                                  <FieldWrapper label="Subcontract Warehouse">
+                                    <SearchableSelect
+                                      value={newOperation.subcontract_warehouse}
+                                      onChange={(value) => setNewOperation({ ...newOperation, subcontract_warehouse: value })}
+                                      options={warehousesList.filter(wh => wh && (wh.warehouse_name || wh.name)).map(wh => ({
+                                        label: wh.warehouse_name || wh.name,
+                                        value: wh.warehouse_name || wh.name
+                                      }))}
+                                      placeholder="Select"
+                                      className="glass-input"
+                                    />
+                                  </FieldWrapper>
+                                </div>
+                                <div className="md:col-span-3">
+                                  <FieldWrapper label="Cost (₹)">
+                                    <input
+                                      type="number"
+                                      value={newOperation.operating_cost}
+                                      readOnly
+                                      className="w-full rounded border border-slate-200 bg-slate-50  p-2 text-xs focus:outline-none "
+                                    />
+                                  </FieldWrapper>
+                                </div>
+                              </>
+                            )}
                            
-                            <div className="md:col-span-4 flex items-end pb-1">
+                            <div className="md:col-span-3 flex items-end pb-1">
                               <button
                                 type="button"
                                 onClick={addOperation}
@@ -2364,13 +2476,13 @@ export default function BOMForm() {
                                   <tr>
                                     <th className="p-2 text-xs   text-slate-400  w-12">#</th>
                                     <th className="p-2 text-xs   text-slate-400 ">Operation</th>
-                                    <th className="p-2 text-xs   text-slate-400 ">Workstation</th>
+                                    <th className="p-2 text-xs   text-slate-400 ">Mode</th>
+                                    <th className="p-2 text-xs   text-slate-400 ">Workstation/Vendor</th>
                                     <th className="p-2 text-xs   text-slate-400  text-right">Cycle (min)</th>
                                     <th className="p-2 text-xs   text-slate-400  text-right">Setup (min)</th>
-                                    <th className="p-2 text-xs   text-slate-400  text-right">Hourly Rate (₹)</th>
+                                    <th className="p-2 text-xs   text-slate-400  text-right">Rate (₹)</th>
                                     <th className="p-2 text-xs   text-slate-400  text-right">Cost (₹)</th>
-                                    <th className="p-2 text-xs   text-slate-400  text-center">Type</th>
-                                    <th className="p-2 text-xs   text-slate-400 ">Target Warehouse</th>
+                                    <th className="p-2 text-xs   text-slate-400 ">Warehouse</th>
                                     <th className="p-2 text-xs   text-slate-400  text-center w-12">Del</th>
                                   </tr>
                                 </thead>
@@ -2383,28 +2495,36 @@ export default function BOMForm() {
                                       <td className="p-2 ">
                                         <div className="text-xs   text-slate-900 ">{op.operation_name}</div>
                                       </td>
+                                      <td className="p-2  text-center">
+                                        <span className={`inline-flex items-center px-3 py-1 rounded text-[9px]      ${op.execution_mode === 'OUTSOURCE' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                                          {op.execution_mode === 'OUTSOURCE' ? 'Outsource' : 'In-House'}
+                                        </span>
+                                      </td>
                                       <td className="p-2 ">
-                                        <div className="text-xs   text-slate-700">{op.workstation_type || '-'}</div>
+                                        <div className="text-xs   text-slate-700">
+                                          {op.execution_mode === 'OUTSOURCE' ? (op.vendor_name || '-') : (op.workstation_type || '-')}
+                                        </div>
                                       </td>
                                       <td className="p-2  text-right">
-                                        <div className="text-xs   text-slate-900">{parseFloat(op.operation_time || 0).toFixed(2)}</div>
+                                        <div className="text-xs   text-slate-900">{op.execution_mode === 'OUTSOURCE' ? '-' : parseFloat(op.operation_time || 0).toFixed(2)}</div>
                                       </td>
                                       <td className="p-2  text-right">
-                                        <div className="text-xs   text-slate-900">{parseFloat(op.setup_time || 0).toFixed(2)}</div>
+                                        <div className="text-xs   text-slate-900">{op.execution_mode === 'OUTSOURCE' ? '-' : parseFloat(op.setup_time || 0).toFixed(2)}</div>
                                       </td>
                                       <td className="p-2  text-right">
-                                        <div className="text-xs   text-slate-700">₹{parseFloat(op.hourly_rate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                        <div className="text-xs   text-slate-700">
+                                          ₹{op.execution_mode === 'OUTSOURCE' 
+                                            ? parseFloat(op.vendor_rate_per_unit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })
+                                            : parseFloat(op.hourly_rate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </div>
                                       </td>
                                       <td className="p-2  text-right">
                                         <div className="text-xs   text-slate-900  bg-slate-100 rounded px-2 py-0.5 inline-block min-w-[60px]">₹{parseFloat(op.operating_cost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                                       </td>
-                                      <td className="p-2  text-center">
-                                        <span className={`inline-flex items-center px-3 py-1 rounded text-[9px]      ${op.operation_type === 'OUTSOURCED' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
-                                          {op.operation_type === 'OUTSOURCED' ? 'Outsourced' : 'In-House'}
-                                        </span>
-                                      </td>
                                       <td className="p-2 ">
-                                        <div className="text-xs   text-slate-700">{op.target_warehouse || '-'}</div>
+                                        <div className="text-xs   text-slate-700">
+                                          {op.execution_mode === 'OUTSOURCE' ? (op.subcontract_warehouse || '-') : (op.target_warehouse || '-')}
+                                        </div>
                                       </td>
                                       <td className="p-2  text-center">
                                         <button

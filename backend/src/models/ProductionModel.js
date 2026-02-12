@@ -268,14 +268,33 @@ class ProductionModel {
       const opsToUse = (data.operations && Array.isArray(data.operations) && data.operations.length > 0)
         ? data.operations
         : (bomDetails && bomDetails.operations)
-          ? bomDetails.operations.map(op => ({
-              operation_name: op.operation_name,
-              workstation: op.workstation_type,
-              operation_time: op.operation_time,
-              hourly_rate: op.hourly_rate,
-              operating_cost: op.operating_cost || 0,
-              operation_type: op.operation_type || 'IN_HOUSE'
-            }))
+          ? bomDetails.operations.map(op => {
+              const vendorRate = parseFloat(op.vendor_rate_per_unit || 0);
+              const opTime = parseFloat(op.operation_time || 0);
+              const hRate = parseFloat(op.hourly_rate || 0);
+              
+              // Calculate operating cost based on execution mode
+              let opCost = 0;
+              if (op.execution_mode === 'OUTSOURCE') {
+                opCost = vendorRate * quantity;
+              } else {
+                opCost = (opTime / 60) * hRate * quantity;
+              }
+
+              return {
+                operation_name: op.operation_name,
+                workstation: op.workstation_type,
+                operation_time: op.operation_time,
+                hourly_rate: op.hourly_rate,
+                operating_cost: opCost,
+                operation_type: op.operation_type || 'IN_HOUSE',
+                execution_mode: op.execution_mode || 'IN_HOUSE',
+                vendor_id: op.vendor_id || null,
+                vendor_name: op.vendor_name || null,
+                vendor_rate_per_unit: vendorRate,
+                notes: op.notes || op.description || ''
+              };
+            })
           : [];
 
       for (let i = 0; i < opsToUse.length; i++) {
@@ -455,9 +474,14 @@ class ProductionModel {
             operation_name as operation, 
             workstation_type as workstation, 
             operation_time as time, 
+            operation_time,
             hourly_rate,
             operating_cost,
             operation_type,
+            execution_mode,
+            vendor_id,
+            vendor_rate_per_unit,
+            notes,
             0 as completed_qty, 
             0 as process_loss_qty, 
             sequence 
@@ -484,7 +508,8 @@ class ProductionModel {
             0 as transferred_qty, 
             0 as consumed_qty, 
             0 as returned_qty, 
-            sequence 
+            sequence,
+            operation
            FROM bom_line 
            WHERE bom_id = ? 
            ORDER BY sequence ASC`,
@@ -625,10 +650,10 @@ class ProductionModel {
       const requiredQty = parseFloat(item.required_qty) || parseFloat(item.required_quantity) || parseFloat(item.qty) || parseFloat(item.quantity) || 0
       
       await this.db.query(
-        `INSERT INTO work_order_item (wo_id, item_code, source_warehouse, required_qty, transferred_qty, consumed_qty, returned_qty, sequence)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO work_order_item (wo_id, item_code, source_warehouse, required_qty, transferred_qty, consumed_qty, returned_qty, sequence, operation)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [wo_id, item.item_code, item.source_warehouse || '', requiredQty, 
-         parseFloat(item.transferred_qty) || 0, parseFloat(item.consumed_qty) || 0, parseFloat(item.returned_qty) || 0, item.sequence || 0]
+         parseFloat(item.transferred_qty) || 0, parseFloat(item.consumed_qty) || 0, parseFloat(item.returned_qty) || 0, item.sequence || 0, item.operation || null]
       )
     } catch (error) {
       throw error
@@ -652,10 +677,11 @@ class ProductionModel {
       const hourly_rate = parseFloat(operation.hourly_rate) || 0
       
       await this.db.query(
-        `INSERT INTO work_order_operation (wo_id, operation, workstation, time, hourly_rate, operation_type, operating_cost, completed_qty, process_loss_qty, sequence)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO work_order_operation (wo_id, operation, workstation, time, hourly_rate, operation_type, execution_mode, vendor_id, vendor_rate_per_unit, operating_cost, completed_qty, process_loss_qty, sequence)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [wo_id, operationName, workstation, time, hourly_rate,
-         operation.operation_type || 'IN_HOUSE', parseFloat(operation.operating_cost) || 0,
+         operation.operation_type || 'IN_HOUSE', operation.execution_mode || 'IN_HOUSE', operation.vendor_id || null, parseFloat(operation.vendor_rate_per_unit) || 0,
+         parseFloat(operation.operating_cost) || 0,
          parseFloat(operation.completed_qty) || 0, parseFloat(operation.process_loss_qty) || 0, operation.sequence || 0]
       )
     } catch (error) {
@@ -1194,10 +1220,10 @@ async deleteAllBOMRawMaterials(bom_id) {
       const scrapQty = (quantity * lossPercentage) / 100
       
       await this.db.query(
-        `INSERT INTO bom_line (bom_id, component_code, quantity, uom, rate, amount, component_description, component_type, sequence, notes, loss_percentage, scrap_qty)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO bom_line (bom_id, component_code, quantity, uom, rate, amount, component_description, component_type, sequence, notes, loss_percentage, scrap_qty, operation)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [bom_id, line.component_code, quantity, line.uom, rate, amount,
-         line.component_name || line.component_description, line.type || line.component_type, line.sequence, line.notes, lossPercentage, scrapQty]
+         line.component_name || line.component_description, line.type || line.component_type, line.sequence, line.notes, lossPercentage, scrapQty, line.operation]
       )
     } catch (error) {
       throw error
@@ -1236,6 +1262,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       if (line.type || line.component_type) { fields.push('component_type = ?'); values.push(line.type || line.component_type) }
       if (line.sequence) { fields.push('sequence = ?'); values.push(line.sequence) }
       if (line.notes !== undefined) { fields.push('notes = ?'); values.push(line.notes) }
+      if (line.operation !== undefined) { fields.push('operation = ?'); values.push(line.operation) }
       fields.push('loss_percentage = ?'); values.push(lossPercentage)
       fields.push('scrap_qty = ?'); values.push(scrapQty)
       
@@ -1321,10 +1348,11 @@ async deleteAllBOMRawMaterials(bom_id) {
   async addBOMOperation(bom_id, operation) {
     try {
       await this.db.query(
-        `INSERT INTO bom_operation (bom_id, operation_name, workstation_type, operation_time, setup_time, hourly_rate, fixed_time, operating_cost, operation_type, sequence, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO bom_operation (bom_id, operation_name, workstation_type, operation_time, setup_time, hourly_rate, fixed_time, operating_cost, operation_type, execution_mode, vendor_id, vendor_rate_per_unit, sequence, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [bom_id, operation.operation_name, operation.workstation_type, operation.operation_time, operation.setup_time || 0,
-         operation.hourly_rate || 0, operation.fixed_time, operation.operating_cost || 0, operation.operation_type || 'IN_HOUSE', operation.sequence, operation.notes]
+         operation.hourly_rate || 0, operation.fixed_time, operation.operating_cost || 0, operation.operation_type || 'IN_HOUSE', 
+         operation.execution_mode || 'IN_HOUSE', operation.vendor_id || null, operation.vendor_rate_per_unit || 0, operation.sequence, operation.notes]
       )
     } catch (error) {
       throw error
@@ -1497,10 +1525,11 @@ async deleteAllBOMRawMaterials(bom_id) {
       
       const statusNormalized = ((data.status || 'draft').toLowerCase().replace(/\s+/g, '-')).trim()
       await this.db.query(
-        `INSERT INTO job_card (job_card_id, work_order_id, machine_id, operator_id, operation, operation_sequence, operation_type, planned_quantity, produced_quantity, rejected_quantity, accepted_quantity, scrap_quantity, operation_time, hourly_rate, operating_cost, scheduled_start_date, scheduled_end_date, actual_start_date, actual_end_date, status, created_by, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [data.job_card_id, data.work_order_id, data.machine_id, data.operator_id, data.operation || null, data.operation_sequence || null,
-         data.operation_type || 'IN_HOUSE',
+        `INSERT INTO job_card (job_card_id, work_order_id, machine_id, operator_id, operation, operation_sequence, operation_type, execution_mode, vendor_id, vendor_rate_per_unit, subcontract_status, sent_qty, received_qty, accepted_qty, rejected_qty, planned_quantity, produced_quantity, rejected_quantity, accepted_quantity, scrap_quantity, operation_time, hourly_rate, operating_cost, scheduled_start_date, scheduled_end_date, actual_start_date, actual_end_date, status, created_by, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [data.job_card_id, data.work_order_id, data.machine_id || null, data.operator_id || null, data.operation || null, data.operation_sequence || null,
+         data.operation_type || 'IN_HOUSE', data.execution_mode || 'IN_HOUSE', data.vendor_id || null, parseFloat(data.vendor_rate_per_unit) || 0, data.subcontract_status || (data.execution_mode === 'OUTSOURCE' ? 'DRAFT' : null),
+         data.sent_qty || 0, data.received_qty || 0, data.accepted_qty || 0, data.rejected_qty || 0,
          data.planned_quantity, data.produced_quantity || 0, data.rejected_quantity || 0, data.accepted_quantity || 0, data.scrap_quantity || 0,
          data.operation_time || 0, data.hourly_rate || 0, data.operating_cost || 0, 
          this._formatMySQLDate(data.scheduled_start_date), 
@@ -1543,6 +1572,14 @@ async deleteAllBOMRawMaterials(bom_id) {
       }
       if (data.operator_id) { fields.push('operator_id = ?'); values.push(data.operator_id) }
       if (data.machine_id) { fields.push('machine_id = ?'); values.push(data.machine_id) }
+      if (data.execution_mode) { fields.push('execution_mode = ?'); values.push(data.execution_mode) }
+      if (data.vendor_id !== undefined) { fields.push('vendor_id = ?'); values.push(data.vendor_id) }
+      if (data.vendor_rate_per_unit !== undefined) { fields.push('vendor_rate_per_unit = ?'); values.push(data.vendor_rate_per_unit) }
+      if (data.subcontract_status) { fields.push('subcontract_status = ?'); values.push(data.subcontract_status) }
+      if (data.sent_qty !== undefined && data.sent_qty !== null) { fields.push('sent_qty = ?'); values.push(data.sent_qty) }
+      if (data.received_qty !== undefined && data.received_qty !== null) { fields.push('received_qty = ?'); values.push(data.received_qty) }
+      if (data.accepted_qty !== undefined && data.accepted_qty !== null) { fields.push('accepted_qty = ?'); values.push(data.accepted_qty) }
+      if (data.rejected_qty !== undefined && data.rejected_qty !== null) { fields.push('rejected_qty = ?'); values.push(data.rejected_qty) }
       if (data.planned_quantity !== undefined && data.planned_quantity !== null) { fields.push('planned_quantity = ?'); values.push(data.planned_quantity) }
       if (data.produced_quantity !== undefined && data.produced_quantity !== null) { fields.push('produced_quantity = ?'); values.push(data.produced_quantity) }
       if (data.rejected_quantity !== undefined && data.rejected_quantity !== null) { fields.push('rejected_quantity = ?'); values.push(data.rejected_quantity) }
@@ -1761,6 +1798,252 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
+  async ensureSubcontractWarehouse() {
+    const [rows] = await this.db.query('SELECT id FROM warehouses WHERE warehouse_code = ?', ['SUBCONTRACT_WIP']);
+    if (rows.length === 0) {
+      const [result] = await this.db.query(
+        `INSERT INTO warehouses (warehouse_code, warehouse_name, warehouse_type, is_active, created_by) 
+         VALUES (?, ?, ?, TRUE, 1)`,
+        ['SUBCONTRACT_WIP', 'Subcontracting WIP', 'Work in Progress']
+      );
+      return result.insertId;
+    }
+    return rows[0].id;
+  }
+
+  async handleSubcontractDispatch(job_card_id, user_id, dispatchItems = [], outward_challan_id = null) {
+    let connection;
+    try {
+      connection = await this.db.getConnection();
+      await connection.beginTransaction();
+
+      const jobCard = await this.getJobCardDetails(job_card_id);
+      if (!jobCard) throw new Error('Job card not found');
+      if (jobCard.execution_mode !== 'OUTSOURCE') throw new Error('Job card is not an outsource operation');
+
+      const workOrder = await this.getWorkOrderById(jobCard.work_order_id);
+      const mainItemCode = workOrder.item_code;
+      const mainQuantity = jobCard.planned_quantity;
+
+      const subcontractWH = await this.ensureSubcontractWarehouse();
+      
+      const StockBalanceModel = (await import('./StockBalanceModel.js')).default;
+      const StockLedgerModel = (await import('./StockLedgerModel.js')).default;
+
+      // Items to move: either provided specific materials or the main item
+      const itemsToMove = (dispatchItems && dispatchItems.length > 0) 
+        ? dispatchItems 
+        : [{ item_code: mainItemCode, release_qty: mainQuantity, source_warehouse: 'WH-WIP' }];
+
+      for (const item of itemsToMove) {
+        const itemCode = item.item_code;
+        const quantity = parseFloat(item.release_qty || item.quantity || 0);
+        
+        if (quantity <= 0) continue;
+
+        // Resolve source warehouse
+        let sourceWHId = 5; // Default WIP
+        if (item.source_warehouse) {
+          sourceWHId = await this.getWarehouseId(item.source_warehouse);
+        } else {
+          const [sourceWHRows] = await connection.query('SELECT id FROM warehouses WHERE warehouse_code = ?', ['WH-WIP']);
+          if (sourceWHRows.length > 0) sourceWHId = sourceWHRows[0].id;
+        }
+
+        // 1. Deduct from Source
+        await StockBalanceModel.upsert(itemCode, sourceWHId, {
+          current_qty: -quantity,
+          is_increment: true
+        }, connection);
+
+        await StockLedgerModel.create({
+          item_code: itemCode,
+          warehouse_id: sourceWHId,
+          transaction_date: new Date(),
+          transaction_type: 'Subcontract Dispatch',
+          qty_in: 0,
+          qty_out: quantity,
+          reference_doctype: 'Job Card',
+          reference_name: job_card_id,
+          remarks: `Dispatched to vendor for ${jobCard.operation}`,
+          created_by: user_id || 1
+        }, connection);
+
+        // 2. Add to Subcontract WIP
+        await StockBalanceModel.upsert(itemCode, subcontractWH, {
+          current_qty: quantity,
+          is_increment: true
+        }, connection);
+
+        await StockLedgerModel.create({
+          item_code: itemCode,
+          warehouse_id: subcontractWH,
+          transaction_date: new Date(),
+          transaction_type: 'Subcontract Dispatch',
+          qty_in: quantity,
+          qty_out: 0,
+          reference_doctype: 'Job Card',
+          reference_name: job_card_id,
+          remarks: `Received at Subcontract WIP for ${jobCard.operation}`,
+          created_by: user_id || 1
+        }, connection);
+      }
+
+      // Record dispatch in job_card
+      await connection.query(
+        'UPDATE job_card SET sent_qty = ?, subcontract_status = ?, status = ?, outward_challan_id = ?, updated_at = NOW() WHERE job_card_id = ?',
+        [mainQuantity, 'SENT_TO_VENDOR', 'in-progress', outward_challan_id, job_card_id]
+      );
+
+      await connection.commit();
+      return true;
+    } catch (error) {
+      if (connection) await connection.rollback();
+      throw error;
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+
+  async handleSubcontractReceipt(job_card_id, data, user_id) {
+    try {
+      const { received_qty, accepted_qty, rejected_qty } = data;
+      const jobCard = await this.getJobCardDetails(job_card_id);
+      if (!jobCard) throw new Error('Job card not found');
+
+      if (parseFloat(accepted_qty) + parseFloat(rejected_qty) > parseFloat(received_qty)) {
+        throw new Error('Accepted + Rejected quantity cannot exceed Received quantity');
+      }
+      if (parseFloat(received_qty) > (parseFloat(jobCard.sent_qty) - (parseFloat(jobCard.received_qty) || 0))) {
+        throw new Error('Received quantity cannot exceed remaining Sent quantity');
+      }
+
+      const workOrder = await this.getWorkOrderById(jobCard.work_order_id);
+      const itemCode = workOrder.item_code;
+      const subcontractWH = await this.ensureSubcontractWarehouse();
+
+      // Identify if it's the last operation
+      const [opRows] = await this.db.query(
+        'SELECT MAX(operation_sequence) as last_seq FROM job_card WHERE work_order_id = ?',
+        [jobCard.work_order_id]
+      );
+      const isLastOp = jobCard.operation_sequence === opRows[0].last_seq;
+
+      // Target Warehouse
+      const [fgWHRows] = await this.db.query('SELECT id FROM warehouses WHERE warehouse_code = ?', ['WH-FG']);
+      const [wipWHRows] = await this.db.query('SELECT id FROM warehouses WHERE warehouse_code = ?', ['WH-WIP']);
+      const targetWH = isLastOp ? (fgWHRows[0]?.id || 1) : (wipWHRows[0]?.id || 5);
+
+      const StockBalanceModel = (await import('./StockBalanceModel.js')).default;
+      const StockLedgerModel = (await import('./StockLedgerModel.js')).default;
+
+      // Stock Movement: SUBCONTRACT_WIP -> Target/Scrap
+      // Deduct from Subcontract WIP
+      await StockBalanceModel.upsert(itemCode, subcontractWH, {
+        current_qty: -received_qty,
+        is_increment: true
+      }, this.db);
+
+      await StockLedgerModel.create({
+        item_code: itemCode,
+        warehouse_id: subcontractWH,
+        transaction_date: new Date(),
+        transaction_type: 'Subcontract Receipt',
+        qty_in: 0,
+        qty_out: received_qty,
+        reference_doctype: 'Job Card',
+        reference_name: job_card_id,
+        remarks: `Received back from vendor for ${jobCard.operation}`,
+        created_by: user_id || 1
+      }, this.db);
+
+      // Add to Target (Accepted items)
+      if (accepted_qty > 0) {
+        await StockBalanceModel.upsert(itemCode, targetWH, {
+          current_qty: accepted_qty,
+          is_increment: true
+        }, this.db);
+
+        await StockLedgerModel.create({
+          item_code: itemCode,
+          warehouse_id: targetWH,
+          transaction_date: new Date(),
+          transaction_type: 'Subcontract Receipt',
+          qty_in: accepted_qty,
+          qty_out: 0,
+          reference_doctype: 'Job Card',
+          reference_name: job_card_id,
+          remarks: `Accepted items from vendor for ${jobCard.operation}`,
+          created_by: user_id || 1
+        }, this.db);
+      }
+
+      // Add to Scrap (Rejected items)
+      if (rejected_qty > 0) {
+        const [scrapWHRows] = await this.db.query('SELECT id FROM warehouses WHERE warehouse_code = ?', ['WH-SCRAP']);
+        const scrapWH = scrapWHRows[0]?.id || 4;
+
+        await StockBalanceModel.upsert(itemCode, scrapWH, {
+          current_qty: rejected_qty,
+          is_increment: true
+        }, this.db);
+
+        await StockLedgerModel.create({
+          item_code: itemCode,
+          warehouse_id: scrapWH,
+          transaction_date: new Date(),
+          transaction_type: 'Subcontract Rejection',
+          qty_in: rejected_qty,
+          qty_out: 0,
+          reference_doctype: 'Job Card',
+          reference_name: job_card_id,
+          remarks: `Rejected items from vendor for ${jobCard.operation}`,
+          created_by: user_id || 1
+        }, this.db);
+      }
+
+      const vendorRate = parseFloat(jobCard.vendor_rate_per_unit) || 0;
+      const operatingCost = parseFloat(accepted_qty) * vendorRate;
+
+      const newTotalReceived = (parseFloat(jobCard.received_qty) || 0) + parseFloat(received_qty);
+      const isFullyReceived = newTotalReceived >= parseFloat(jobCard.sent_qty);
+
+      await this.updateJobCard(job_card_id, {
+        received_qty: newTotalReceived,
+        accepted_qty: (parseFloat(jobCard.accepted_qty) || 0) + parseFloat(accepted_qty),
+        rejected_qty: (parseFloat(jobCard.rejected_qty) || 0) + parseFloat(rejected_qty),
+        produced_quantity: (parseFloat(jobCard.produced_quantity) || 0) + parseFloat(accepted_qty),
+        operating_cost: (parseFloat(jobCard.operating_cost) || 0) + operatingCost,
+        subcontract_status: isFullyReceived ? 'RECEIVED' : 'PARTIALLY_RECEIVED',
+        status: isFullyReceived ? 'completed' : 'in-progress'
+      });
+
+      // Update next job card if this one is completed
+      if (isFullyReceived) {
+        await this._activateNextJobCard(jobCard.work_order_id, jobCard.operation_sequence, (parseFloat(jobCard.accepted_qty) || 0) + parseFloat(accepted_qty));
+        await this.checkAndUpdateWorkOrderCompletion(jobCard.work_order_id);
+      }
+
+      return true;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async _activateNextJobCard(work_order_id, currentSequence, acceptedQty) {
+    const [nextJobCards] = await this.db.query(
+      'SELECT job_card_id FROM job_card WHERE work_order_id = ? AND operation_sequence > ? ORDER BY operation_sequence ASC LIMIT 1',
+      [work_order_id, currentSequence]
+    );
+
+    if (nextJobCards && nextJobCards.length > 0) {
+      await this.updateJobCard(nextJobCards[0].job_card_id, {
+        status: 'ready',
+        planned_quantity: acceptedQty
+      });
+    }
+  }
+
   async deleteJobCard(job_card_id) {
     try {
       // Get work_order_id before deletion for status sync
@@ -1894,13 +2177,17 @@ async deleteAllBOMRawMaterials(bom_id) {
           planned_quantity: plannedQty,
           operation_time: operationTime,
           hourly_rate: hourlyRate,
-          operating_cost: effectiveCostPerUnit * plannedQty, // Store total operating cost for the Job Card
+          operating_cost: operation.execution_mode === 'OUTSOURCE' ? (operation.vendor_rate_per_unit * plannedQty) : (effectiveCostPerUnit * plannedQty), 
           operation_type: operation.operation_type || 'IN_HOUSE',
+          execution_mode: operation.execution_mode || 'IN_HOUSE',
+          vendor_rate_per_unit: operation.vendor_rate_per_unit || 0,
+          vendor_id: operation.vendor_id || null,
+          subcontract_status: operation.execution_mode === 'OUTSOURCE' ? 'DRAFT' : null,
           scheduled_start_date: null,
           scheduled_end_date: null,
           status: (isFirst && (parseInt(workOrder.incomplete_sub_assemblies) || 0) === 0) ? 'ready' : 'draft',
           created_by,
-          notes: null
+          notes: operation.notes || null
         }
 
         await this.createJobCard(jobCardData)
@@ -1923,13 +2210,16 @@ async deleteAllBOMRawMaterials(bom_id) {
       }
 
       const statusWorkflow = {
-        'draft': ['ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled'],
-        'ready': ['pending', 'in-progress', 'hold', 'completed', 'cancelled'],
+        'draft': ['ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor'],
+        'ready': ['pending', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor'],
+        'sent-to-vendor': ['partially-received', 'received', 'completed', 'hold', 'cancelled'],
+        'partially-received': ['received', 'completed', 'hold', 'cancelled'],
+        'received': ['completed', 'hold', 'cancelled'],
         'in-progress': ['completed', 'hold', 'cancelled'],
-        'hold': ['in-progress', 'completed', 'cancelled'],
+        'hold': ['in-progress', 'completed', 'cancelled', 'sent-to-vendor', 'received'],
         'completed': ['completed'],
-        'open': ['ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled'],
-        'pending': ['ready', 'in-progress', 'hold', 'completed', 'cancelled'],
+        'open': ['ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor'],
+        'pending': ['ready', 'in-progress', 'hold', 'completed', 'cancelled', 'sent-to-vendor'],
         'cancelled': ['cancelled']
       }
 
@@ -1983,9 +2273,9 @@ async deleteAllBOMRawMaterials(bom_id) {
   async createWorkstation(data) {
     try {
       const response = await this.db.query(
-        `INSERT INTO workstation (name, workstation_name, description, location, capacity_per_hour, is_active, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [data.name, data.workstation_name, data.description, data.location, data.capacity_per_hour, data.is_active !== false, 'active']
+        `INSERT INTO workstation (name, workstation_name, description, location, capacity_per_hour, rate_per_hour, is_active, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [data.name, data.workstation_name, data.description, data.location, data.capacity_per_hour, data.rate_per_hour || 0, data.is_active !== false, 'active']
       )
       return { ...data }
     } catch (error) {
@@ -2020,6 +2310,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       if (data.description) { fields.push('description = ?'); values.push(data.description) }
       if (data.location) { fields.push('location = ?'); values.push(data.location) }
       if (data.capacity_per_hour !== undefined) { fields.push('capacity_per_hour = ?'); values.push(data.capacity_per_hour) }
+      if (data.rate_per_hour !== undefined) { fields.push('rate_per_hour = ?'); values.push(data.rate_per_hour) }
       if (data.is_active !== undefined) { fields.push('is_active = ?'); values.push(data.is_active) }
 
       if (fields.length === 0) return false
@@ -3239,11 +3530,15 @@ async deleteAllBOMRawMaterials(bom_id) {
   }
 
   async createOutwardChallan(data) {
+    let connection;
     try {
-      const challanNumber = `OC-${Date.now()}`
-      const query = `INSERT INTO outward_challan (challan_number, job_card_id, vendor_id, vendor_name, expected_return_date, notes, status, created_by)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-      await this.db.query(query, [
+      connection = await this.db.getConnection();
+      await connection.beginTransaction();
+
+      const challanNumber = `OC-${Date.now()}`;
+      const query = `INSERT INTO outward_challan (challan_number, job_card_id, vendor_id, vendor_name, expected_return_date, notes, status, created_by, dispatch_quantity)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      const [result] = await connection.query(query, [
         challanNumber,
         data.job_card_id,
         data.vendor_id || null,
@@ -3251,11 +3546,29 @@ async deleteAllBOMRawMaterials(bom_id) {
         data.expected_return_date || null,
         data.notes || null,
         'issued',
-        data.created_by || null
-      ])
-      return { challan_number: challanNumber, ...data }
+        data.created_by || null,
+        data.dispatch_quantity || 0
+      ]);
+
+      const challanId = result.insertId;
+
+      if (data.items && Array.isArray(data.items)) {
+        for (const item of data.items) {
+          await connection.query(
+            `INSERT INTO outward_challan_item (challan_id, item_code, required_qty, release_qty, uom)
+             VALUES (?, ?, ?, ?, ?)`,
+            [challanId, item.item_code, item.required_qty || 0, item.release_qty || 0, item.uom || null]
+          );
+        }
+      }
+
+      await connection.commit();
+      return { id: challanId, challan_number: challanNumber, ...data };
     } catch (error) {
-      throw error
+      if (connection) await connection.rollback();
+      throw error;
+    } finally {
+      if (connection) connection.release();
     }
   }
 

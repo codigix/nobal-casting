@@ -41,6 +41,7 @@ export default function WorkstationForm() {
     description: '',
     location: '',
     capacity_per_hour: 0,
+    rate_per_hour: 0,
     capacity_utilization: 80,
     equipment_type: '',
     equipment_code: '',
@@ -318,7 +319,7 @@ export default function WorkstationForm() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-2">
                     <label className="text-xs  text-slate-500  ml-1">Units / Hour</label>
                     <input 
@@ -328,6 +329,18 @@ export default function WorkstationForm() {
                       onChange={handleInputChange}
                       min="0"
                       step="0.1"
+                      className="w-full p-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs  text-slate-700"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs  text-slate-500  ml-1">Rate / Hour (₹)</label>
+                    <input 
+                      type="number"
+                      name="rate_per_hour"
+                      value={formData.rate_per_hour}
+                      onChange={handleInputChange}
+                      min="0"
+                      step="0.01"
                       className="w-full p-2 rounded bg-slate-50 border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all text-xs  text-slate-700"
                     />
                   </div>
