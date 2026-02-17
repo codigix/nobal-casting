@@ -30,26 +30,26 @@ const StatCard = ({ label, value, icon: Icon, color, onClick, isActive, trend })
   return (
     <div
       onClick={onClick}
-      className={`bg-white p-6 rounded-none border transition-all duration-300 group cursor-pointer ${
+      className={`bg-white p-2 rounded border transition-all duration-300 group cursor-pointer ${
         isActive 
-          ? `border-${theme}-500 shadow-sm ring-1 ring-${theme}-500` 
+          ? `border-${theme}-500   ring-1 ring-${theme}-500` 
           : 'border-neutral-200 hover:border-neutral-300'
       }`}
     >
       <div className="flex items-start justify-between mb-2">
-        <div className={`p-2.5 bg-neutral-50 rounded-none border border-neutral-100 text-neutral-400 group-hover:text-${theme}-600 group-hover:border-${theme}-100 transition-colors`}>
+        <div className={`p-2.5 bg-neutral-50 rounded  border border-neutral-100 text-neutral-400 group-hover:text-${theme}-600 group-hover:border-${theme}-100 transition-colors`}>
           <Icon size={20} />
         </div>
         {trend && (
-          <div className="flex items-center gap-1 text-[10px] font-black tracking-widest text-emerald-600  bg-emerald-50/50 px-2 py-1 border border-emerald-100">
+          <div className="flex items-center gap-1 text-[10px]   text-emerald-600  bg-emerald-50/50 px-2 py-1 border border-emerald-100">
             <TrendingUp size={10} strokeWidth={3} />
             {trend}
           </div>
         )}
       </div>
       <div>
-        <p className="text-2xl font-black text-neutral-900 tracking-tight leading-none mb-2 ">{value}</p>
-        <p className="text-[10px] font-black text-neutral-400  tracking-widest">{label}</p>
+        <p className="text-xl  text-neutral-900  leading-none mb-2 ">{value}</p>
+        <p className="text-[10px]  text-neutral-400  ">{label}</p>
       </div>
     </div>
   )
@@ -219,7 +219,7 @@ export default function PurchaseInvoices() {
       label: 'Invoice Number', 
       width: '12%',
       render: (val) => (
-        <span className="font-black tracking-widest text-indigo-600 ">
+        <span className="  text-indigo-600 ">
           {val}
         </span>
       )
@@ -229,7 +229,7 @@ export default function PurchaseInvoices() {
       label: 'Supplier', 
       width: '20%',
       render: (val) => (
-        <span className="font-black tracking-widest text-neutral-900 ">
+        <span className="  text-neutral-900 ">
           {val || 'N/A'}
         </span>
       )
@@ -239,7 +239,7 @@ export default function PurchaseInvoices() {
       label: 'Date', 
       width: '10%',
       render: (val) => (
-        <div className="flex items-center gap-2 text-neutral-400 font-black tracking-widest ">
+        <div className="flex items-center gap-2 text-neutral-400   ">
           <Calendar size={14} strokeWidth={3} />
           {val ? new Date(val).toLocaleDateString() : 'N/A'}
         </div>
@@ -251,11 +251,11 @@ export default function PurchaseInvoices() {
       width: '12%',
       render: (_, row) => row.po_no ? (
         <div className="flex items-center gap-2">
-          <Badge className="bg-neutral-100 text-neutral-600 border-neutral-200 font-black tracking-widest  rounded-none">
+          <Badge className="bg-neutral-100 text-neutral-600 border-neutral-200    rounded ">
             {row.po_no}
           </Badge>
           {row.grn_no && (
-            <Badge className="bg-indigo-50 text-indigo-600 border-indigo-100 font-black tracking-widest  rounded-none">
+            <Badge className="bg-indigo-50 text-indigo-600 border-indigo-100    rounded ">
               {row.grn_no}
             </Badge>
           )}
@@ -267,7 +267,7 @@ export default function PurchaseInvoices() {
       label: 'Total Amount', 
       width: '12%',
       render: (val) => (
-        <span className="font-black tracking-widest text-neutral-900 ">
+        <span className="  text-neutral-900 ">
           ₹{(parseFloat(val) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
         </span>
       )
@@ -279,7 +279,7 @@ export default function PurchaseInvoices() {
       render: (val) => {
         const config = getStatusConfig(val)
         return (
-          <Badge className={`${config.badge} font-black tracking-widest  rounded-none px-3 py-1.5`}>
+          <Badge className={`${config.badge}    rounded  px-3 py-1.5`}>
             {config.label}
           </Badge>
         )
@@ -296,7 +296,7 @@ export default function PurchaseInvoices() {
           e.stopPropagation()
           navigate(`/buying/purchase-invoice/${row.purchase_invoice_no}`)
         }}
-        className="h-8 w-8 rounded-none border-neutral-200 text-neutral-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50/30"
+        className="h-8 w-8 rounded  border-neutral-200 text-neutral-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50/30"
         title="View Details"
       >
         <Eye size={14} strokeWidth={3} />
@@ -311,7 +311,7 @@ export default function PurchaseInvoices() {
               e.stopPropagation()
               handleSubmitInvoice(row.purchase_invoice_no)
             }}
-            className="h-8 w-8 rounded-none bg-emerald-50/50 border-emerald-100 text-emerald-600 hover:bg-emerald-600 hover:text-white"
+            className="h-8 w-8 rounded  bg-emerald-50/50 border-emerald-100 text-emerald-600 hover:bg-emerald-600 hover:text-white"
             title="Submit Invoice"
           >
             <CheckCircle size={14} strokeWidth={3} />
@@ -323,7 +323,7 @@ export default function PurchaseInvoices() {
               e.stopPropagation()
               handleDeleteInvoice(row.purchase_invoice_no)
             }}
-            className="h-8 w-8 rounded-none bg-rose-50/50 border-rose-100 text-rose-600 hover:bg-rose-600 hover:text-white"
+            className="h-8 w-8 rounded  bg-rose-50/50 border-rose-100 text-rose-600 hover:bg-rose-600 hover:text-white"
             title="Delete Draft"
           >
             <XCircle size={14} strokeWidth={3} />
@@ -332,18 +332,40 @@ export default function PurchaseInvoices() {
       )}
 
       {row.status === 'submitted' && (
-        <Button
-          size="sm"
-          variant="icon"
-          onClick={(e) => {
-            e.stopPropagation()
-            handleCancelInvoice(row.purchase_invoice_no)
-          }}
-          className="h-8 w-8 rounded-none bg-amber-50/50 border-amber-100 text-amber-600 hover:bg-amber-600 hover:text-white"
-          title="Cancel Invoice"
-        >
-          <RefreshCw size={14} strokeWidth={3} />
-        </Button>
+        <>
+          <Button
+            size="sm"
+            variant="icon"
+            onClick={(e) => {
+              e.stopPropagation()
+              navigate('/accounts/payments', { 
+                state: { 
+                  type: 'vendor',
+                  party_id: row.supplier_id,
+                  order_id: row.po_no,
+                  amount: row.gross_amount,
+                  reference: row.purchase_invoice_no
+                } 
+              })
+            }}
+            className="h-8 w-8 rounded  bg-indigo-50/50 border-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white"
+            title="Make Payment"
+          >
+            <IndianRupee size={14} strokeWidth={3} />
+          </Button>
+          <Button
+            size="sm"
+            variant="icon"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleCancelInvoice(row.purchase_invoice_no)
+            }}
+            className="h-8 w-8 rounded  bg-amber-50/50 border-amber-100 text-amber-600 hover:bg-amber-600 hover:text-white"
+            title="Cancel Invoice"
+          >
+            <RefreshCw size={14} strokeWidth={3} />
+          </Button>
+        </>
       )}
     </div>
   )
@@ -352,22 +374,22 @@ export default function PurchaseInvoices() {
     <div className="min-h-screen bg-neutral-50 flex flex-col">
       {/* Dynamic Header */}
       <header className="bg-white border-b border-neutral-200 sticky top-0 z-40">
-        <div className="max-w-[1600px] mx-auto px-4 lg:px-8 py-4">
+        <div className=" mx-auto p-2">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-[10px] font-black  tracking-[0.2em] text-neutral-400">
+              <div className="flex items-center gap-2 text-[10px]    text-neutral-400">
                 <Building2 size={12} strokeWidth={3} className="text-indigo-500" />
                 <span>Buying</span>
                 <ChevronRight size={10} strokeWidth={3} />
                 <span className="text-neutral-900">Accounts Payable</span>
               </div>
               <div className="flex items-center gap-4">
-                <div className="p-2.5 bg-neutral-900 text-white rounded-none">
+                <div className="p-2.5 bg-neutral-900 text-white rounded ">
                   <CreditCard size={24} strokeWidth={2.5} />
                 </div>
                 <div>
-                  <h1 className="text-xl font-black text-neutral-900 tracking-tight  leading-none">Purchase Invoices</h1>
-                  <div className="flex items-center gap-2 text-neutral-400 text-[10px] font-black  tracking-widest mt-1">
+                  <h1 className="text-xl  text-neutral-900   leading-none">Purchase Invoices</h1>
+                  <div className="flex items-center gap-2 text-neutral-400 text-[10px]    mt-1">
                     <History size={12} strokeWidth={3} className="text-indigo-500" />
                     <span>Last Refreshed {refreshTime.toLocaleTimeString()}</span>
                   </div>
@@ -376,12 +398,12 @@ export default function PurchaseInvoices() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <div className="bg-neutral-100 p-1 rounded-none border border-neutral-200 flex items-center">
+              <div className="bg-neutral-100 p-1 rounded  border border-neutral-200 flex items-center">
                 <button
                   onClick={() => setViewMode('kanban')}
-                  className={`flex items-center gap-2 px-4 py-1.5 rounded-none text-[10px] font-black  tracking-widest transition-all ${
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded  text-[10px]    transition-all ${
                     viewMode === 'kanban' 
-                      ? 'bg-white text-indigo-600 shadow-sm border border-neutral-200' 
+                      ? 'bg-white text-indigo-600   border border-neutral-200' 
                       : 'text-neutral-500 hover:text-neutral-900'
                   }`}
                 >
@@ -390,9 +412,9 @@ export default function PurchaseInvoices() {
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-2 px-4 py-1.5 rounded-none text-[10px] font-black  tracking-widest transition-all ${
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded  text-[10px]    transition-all ${
                     viewMode === 'list' 
-                      ? 'bg-white text-indigo-600 shadow-sm border border-neutral-200' 
+                      ? 'bg-white text-indigo-600   border border-neutral-200' 
                       : 'text-neutral-500 hover:text-neutral-900'
                   }`}
                 >
@@ -405,7 +427,7 @@ export default function PurchaseInvoices() {
 
               <Button 
                 onClick={() => setShowCreateModal(true)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-none shadow-md flex items-center gap-2 transition-all border-none text-[10px] font-black  tracking-widest"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white p-2  rounded   flex items-center gap-2 transition-all border-none text-[10px]   "
               >
                 <Plus size={16} strokeWidth={3} />
                 <span>New Invoice</span>
@@ -470,7 +492,7 @@ export default function PurchaseInvoices() {
               placeholder="SEARCH BY INVOICE, SUPPLIER OR PO..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 bg-white border border-neutral-200 rounded-none focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-[10px] font-black  tracking-widest placeholder:text-neutral-300"
+              className="w-full pl-11 pr-4 py-2  bg-white border border-neutral-200 rounded  focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-[10px]    placeholder:text-neutral-300"
             />
           </div>
           
@@ -478,11 +500,11 @@ export default function PurchaseInvoices() {
             <div className="flex items-center gap-2 px-3 py-2 bg-white border border-neutral-200">
               <div className="flex items-center gap-2">
                 <Filter size={12} strokeWidth={3} className="text-neutral-400" />
-                <span className="text-[10px] font-black text-neutral-400  tracking-widest">Status:</span>
+                <span className="text-[10px]  text-neutral-400  ">Status:</span>
               </div>
               <div className="h-4 w-[1px] bg-neutral-200 mx-1"></div>
               <select 
-                className="bg-transparent text-[10px] font-black text-indigo-600 focus:outline-none cursor-pointer  tracking-widest"
+                className="bg-transparent text-[10px]  text-indigo-600 focus:outline-none cursor-pointer  "
                 value={activeFilter}
                 onChange={(e) => setActiveFilter(e.target.value)}
               >
@@ -497,7 +519,7 @@ export default function PurchaseInvoices() {
             <div className="relative">
               <button
                 onClick={() => setShowColumnMenu(!showColumnMenu)}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 text-[10px] font-black text-neutral-600 hover:border-indigo-500 hover:text-indigo-600 transition-all  tracking-widest"
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 text-[10px]  text-neutral-600 hover:border-indigo-500 hover:text-indigo-600 transition-all  "
               >
                 <Eye size={12} strokeWidth={3} />
                 <span>Columns</span>
@@ -505,20 +527,20 @@ export default function PurchaseInvoices() {
               </button>
 
               {showColumnMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-white border border-neutral-900 shadow-2xl z-50 py-0">
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-neutral-900  z-50 py-0">
                   <div className="p-2  border-b border-neutral-100 flex justify-between items-center bg-neutral-50">
-                    <span className="text-[10px] font-black text-neutral-900  tracking-widest">Visible Columns</span>
+                    <span className="text-[10px]  text-neutral-900  ">Visible Columns</span>
                   </div>
                   <div className="p-2 border-b border-neutral-100 flex gap-2">
                     <button 
                       onClick={() => setVisibleColumns(new Set(columns.map(c => c.key)))}
-                      className="flex-1 py-1.5 text-[9px] font-black text-indigo-600 hover:bg-indigo-50  tracking-widest border border-indigo-100"
+                      className="flex-1 py-1.5 text-[9px]  text-indigo-600 hover:bg-indigo-50   border border-indigo-100"
                     >
                       Show All
                     </button>
                     <button 
                       onClick={() => setVisibleColumns(new Set())}
-                      className="flex-1 py-1.5 text-[9px] font-black text-rose-600 hover:bg-rose-50  tracking-widest border border-rose-100"
+                      className="flex-1 py-1.5 text-[9px]  text-rose-600 hover:bg-rose-50   border border-rose-100"
                     >
                       Hide All
                     </button>
@@ -528,7 +550,7 @@ export default function PurchaseInvoices() {
                       <label key={col.key} className="flex items-center gap-3 px-3 py-2 hover:bg-neutral-50 cursor-pointer group">
                         <input
                           type="checkbox"
-                          className="rounded-none border-neutral-300 text-indigo-600 focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5"
+                          className="rounded  border-neutral-300 text-indigo-600 focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5"
                           checked={visibleColumns?.has(col.key) ?? true}
                           onChange={() => {
                             const newSet = new Set(visibleColumns || columns.map(c => c.key))
@@ -537,7 +559,7 @@ export default function PurchaseInvoices() {
                             setVisibleColumns(newSet)
                           }}
                         />
-                        <span className="text-[10px] font-black text-neutral-600 group-hover:text-neutral-900  tracking-widest">{col.label}</span>
+                        <span className="text-[10px]  text-neutral-600 group-hover:text-neutral-900  ">{col.label}</span>
                       </label>
                     ))}
                   </div>
@@ -573,16 +595,16 @@ export default function PurchaseInvoices() {
             <div className="inline-flex p-6 bg-neutral-50 mb-6">
               <RefreshCw size={40} strokeWidth={3} className="text-indigo-600 animate-spin" />
             </div>
-            <h3 className="text-xl font-black text-neutral-900  tracking-widest mb-2">Syncing Ledger</h3>
-            <p className="text-neutral-400 text-[10px] font-black  tracking-[0.2em]">Updating real-time financial records...</p>
+            <h3 className="text-xl  text-neutral-900   mb-2">Syncing Ledger</h3>
+            <p className="text-neutral-400 text-[10px]   ">Updating real-time financial records...</p>
           </div>
         ) : filteredInvoices.length === 0 ? (
           <div className="py-24 text-center bg-white border border-neutral-200 flex flex-col items-center">
             <div className="w-16 h-16 bg-neutral-50 flex items-center justify-center mb-8 border border-neutral-100">
               <Search size={32} strokeWidth={3} className="text-neutral-200" />
             </div>
-            <h3 className="text-xl font-black text-neutral-900  tracking-widest mb-2">No Matching Records</h3>
-            <p className="text-neutral-400 text-[10px] font-black  tracking-[0.2em] mb-8 max-w-sm leading-loose">
+            <h3 className="text-xl  text-neutral-900   mb-2">No Matching Records</h3>
+            <p className="text-neutral-400 text-[10px]    mb-8 max-w-sm leading-loose">
               We couldn't find any invoices matching your search criteria. Try a different ID or supplier name.
             </p>
             <Button 
@@ -592,7 +614,7 @@ export default function PurchaseInvoices() {
                 setActiveFilter('');
               }}
               variant="secondary"
-              className="rounded-none px-12 py-3 border-neutral-900 text-neutral-900 hover:bg-neutral-900 hover:text-white font-black text-[10px]  tracking-widest transition-all"
+              className="rounded  px-12 py-3 border-neutral-900 text-neutral-900 hover:bg-neutral-900 hover:text-white  text-[10px]   transition-all"
             >
               Reset All Filters
             </Button>
@@ -608,9 +630,9 @@ export default function PurchaseInvoices() {
                       <div className={`p-1.5 bg-${column.theme === 'neutral' ? 'neutral-100' : `${column.theme}-50`} text-${column.theme === 'neutral' ? 'neutral-600' : `${column.theme}-600`} border border-${column.theme === 'neutral' ? 'neutral-200' : `${column.theme}-100`}`}>
                         <column.icon size={14} strokeWidth={3} />
                       </div>
-                      <h3 className="text-[10px] font-black text-neutral-900  tracking-widest">{column.title}</h3>
+                      <h3 className="text-[10px]  text-neutral-900  ">{column.title}</h3>
                     </div>
-                    <span className="bg-neutral-900 text-white px-2 py-0.5 text-[10px] font-black tracking-widest">
+                    <span className="bg-neutral-900 text-white px-2 py-0.5 text-[10px]  ">
                       {columnInvoices.length}
                     </span>
                   </div>
@@ -624,10 +646,10 @@ export default function PurchaseInvoices() {
                       >
                         <div className="flex justify-between items-start mb-4">
                           <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-indigo-500  tracking-widest mb-1">
+                            <span className="text-[9px]  text-indigo-500   mb-1">
                               Invoice ID
                             </span>
-                            <span className="text-xs font-black text-neutral-900  tracking-widest group-hover:text-indigo-600 transition-colors">
+                            <span className="text-xs  text-neutral-900   group-hover:text-indigo-600 transition-colors">
                               {inv.purchase_invoice_no}
                             </span>
                           </div>
@@ -641,17 +663,17 @@ export default function PurchaseInvoices() {
                             <div className="p-1.5 bg-neutral-50 border border-neutral-100">
                               <User size={12} strokeWidth={3} className="text-neutral-400" />
                             </div>
-                            <h4 className="font-black text-neutral-700 text-[10px]  tracking-widest truncate">
+                            <h4 className=" text-neutral-700 text-[10px]   truncate">
                               {inv.supplier_name || 'Anonymous Supplier'}
                             </h4>
                           </div>
                           <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-1.5 text-neutral-400 text-[9px] font-black  tracking-widest">
+                            <div className="flex items-center gap-1.5 text-neutral-400 text-[9px]   ">
                               <Calendar size={10} strokeWidth={3} />
                               <span>{inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString() : 'N/A'}</span>
                             </div>
                             {inv.po_no && (
-                              <div className="flex items-center gap-1.5 text-indigo-400 text-[9px] font-black  tracking-widest">
+                              <div className="flex items-center gap-1.5 text-indigo-400 text-[9px]   ">
                                 <FileText size={10} strokeWidth={3} />
                                 <span>{inv.po_no}</span>
                               </div>
@@ -661,8 +683,8 @@ export default function PurchaseInvoices() {
 
                         <div className="flex items-center justify-between pt-4 border-t border-neutral-100">
                           <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-neutral-400  tracking-widest mb-0.5">Gross Payable</span>
-                            <div className="text-sm font-black text-neutral-900 group-hover:text-indigo-600 transition-colors  tracking-widest">
+                            <span className="text-[9px]  text-neutral-400   mb-0.5">Gross Payable</span>
+                            <div className="text-sm  text-neutral-900 group-hover:text-indigo-600 transition-colors  ">
                               ₹{(parseFloat(inv.gross_amount) || 0).toLocaleString('en-IN')}
                             </div>
                           </div>
@@ -680,16 +702,36 @@ export default function PurchaseInvoices() {
                               </button>
                             )}
                             {inv.status === 'submitted' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCancelInvoice(inv.purchase_invoice_no);
-                                }}
-                                className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition-all border border-rose-100"
-                                title="Annul"
-                              >
-                                <XCircle size={14} strokeWidth={3} />
-                              </button>
+                              <>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate('/accounts/payments', { 
+                                      state: { 
+                                        type: 'vendor',
+                                        party_id: inv.supplier_id,
+                                        order_id: inv.po_no,
+                                        amount: inv.gross_amount,
+                                        reference: inv.purchase_invoice_no
+                                      } 
+                                    });
+                                  }}
+                                  className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all border border-indigo-100"
+                                  title="Pay Now"
+                                >
+                                  <IndianRupee size={14} strokeWidth={3} />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCancelInvoice(inv.purchase_invoice_no);
+                                  }}
+                                  className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition-all border border-rose-100"
+                                  title="Annul"
+                                >
+                                  <XCircle size={14} strokeWidth={3} />
+                                </button>
+                              </>
                             )}
                           </div>
                         </div>

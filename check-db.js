@@ -1,29 +1,24 @@
-
 import mysql from 'mysql2/promise';
 
-const dbConfig = {
-  host: '127.0.0.1',
-  user: 'nobalcasting_user',
-  password: 'C0digix$309',
-  database: 'nobalcasting',
-  port: 3307
-};
-
 async function check() {
-  const connection = await mysql.createConnection(dbConfig);
   try {
-    const [jobCards] = await connection.query('SELECT job_card_id, work_order_id, operation, operation_sequence, planned_quantity, produced_quantity, accepted_quantity FROM job_card ORDER BY created_at DESC LIMIT 5');
-    console.log('--- Recent Job Cards ---');
-    console.table(jobCards);
+    const db = await mysql.createConnection({
+      host: 'localhost',
+      user: 'root',
+      password: 'root',
+      database: 'nobalcasting',
+      port: 3306
+    });
 
-    const [workOrders] = await connection.query('SELECT wo_id, item_code, quantity, status FROM work_order ORDER BY created_at DESC LIMIT 5');
-    console.log('--- Recent Work Orders ---');
-    console.table(workOrders);
+    const [wo] = await db.query('SELECT * FROM work_order LIMIT 1');
+    console.log('Work orders sample:', JSON.stringify(wo, null, 2));
 
-  } catch (err) {
-    console.error(err);
-  } finally {
-    await connection.end();
+    const [ws] = await db.query('SELECT * FROM workstation LIMIT 1');
+    console.log('Workstations sample:', JSON.stringify(ws, null, 2));
+
+    await db.end();
+  } catch (error) {
+    console.error(error);
   }
 }
 

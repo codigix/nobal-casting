@@ -140,20 +140,20 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
       title={editingId ? 'Edit Production Plan' : 'Create Master Production Plan'} 
       size="3xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-2">
         {error && <Alert type="error" message={error} />}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Plan Scope */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-slate-800 font-bold uppercase tracking-tight border-b border-slate-100 pb-2">
+            <div className="flex items-center gap-2 text-slate-800    border-b border-slate-100 pb-2">
               <Target size={18} className="text-emerald-500" />
               Plan Scope
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                   Bill of Materials (BOM) *
                 </label>
                 <div className="relative">
@@ -163,7 +163,7 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
                     value={formData.bom_id}
                     onChange={handleInputChange}
                     required
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm"
                   >
                     <option value="">Select BOM</option>
                     {boms.map(bom => (
@@ -176,7 +176,7 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                   Product Name
                 </label>
                 <div className="relative">
@@ -187,7 +187,7 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
                     value={formData.product_name}
                     onChange={handleInputChange}
                     placeholder="Auto-filled from BOM"
-                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 text-sm italic"
+                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded  text-slate-600 text-sm italic"
                     readOnly
                   />
                 </div>
@@ -195,7 +195,7 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                     Planned Qty *
                   </label>
                   <div className="relative">
@@ -207,19 +207,19 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
                       onChange={handleInputChange}
                       required
                       min="1"
-                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                     Priority
                   </label>
                   <select
                     name="priority"
                     value={formData.priority}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm"
+                    className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -233,14 +233,14 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
 
           {/* Timeline & Status */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-slate-800 font-bold uppercase tracking-tight border-b border-slate-100 pb-2">
+            <div className="flex items-center gap-2 text-slate-800    border-b border-slate-100 pb-2">
               <Clock size={18} className="text-blue-500" />
               Timeline & Execution
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                   Planned Start Date *
                 </label>
                 <div className="relative">
@@ -251,13 +251,13 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
                     value={formData.start_date}
                     onChange={handleInputChange}
                     required
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                   Planned End Date *
                 </label>
                 <div className="relative">
@@ -268,24 +268,24 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
                     value={formData.end_date}
                     onChange={handleInputChange}
                     required
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                   Plan Status
                 </label>
-                <div className="flex gap-2 p-1 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="flex gap-2 p-1 bg-slate-50 rounded  border border-slate-200">
                   {['draft', 'planned', 'in-progress'].map(s => (
                     <button
                       key={s}
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, status: s }))}
-                      className={`flex-1 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${
+                      className={`flex-1 py-1.5 text-[10px]   rounded-md transition-all ${
                         formData.status === s 
-                          ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200' 
+                          ? 'bg-white text-slate-900   ring-1 ring-slate-200' 
                           : 'text-slate-400 hover:text-slate-600'
                       }`}
                     >
@@ -298,7 +298,7 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
           </div>
 
           <div className="md:col-span-2 space-y-2">
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+            <label className="block text-xs  text-slate-500  tracking-wider mb-1">
               Planning Notes & Strategy
             </label>
             <div className="relative">
@@ -309,7 +309,7 @@ export default function CreateProductionPlanModal({ isOpen, onClose, onSuccess, 
                 onChange={handleInputChange}
                 rows="3"
                 placeholder="Capacity constraints, procurement requirements, or customer-specific delivery notes..."
-                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm resize-none"
+                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-sm resize-none"
               />
             </div>
           </div>

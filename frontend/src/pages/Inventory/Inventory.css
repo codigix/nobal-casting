@@ -76,7 +76,7 @@
   color: var(--text-secondary);
   margin-bottom: 4px;
   font-weight: 600;
-  text-transform: ;
+  text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 
@@ -538,7 +538,7 @@
 .inv-kpi-label {
   font-size: 12px;
   font-weight: 600;
-  text-transform: ;
+  text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-secondary);
 }
@@ -637,7 +637,7 @@
 .inv-stat-card-label {
   font-size: 11px;
   font-weight: 600;
-  text-transform: ;
+  text-transform: uppercase;
   letter-spacing: 0.4px;
   color: var(--text-secondary);
 }

@@ -25,13 +25,13 @@ const StatCard = ({ label, value, icon: Icon, color, onClick, isActive }) => {
       }`}
     >
       <div className="flex items-start justify-between mb-3">
-        <span className="text-[10px]  text-neutral-500  tracking-widest">{label}</span>
+        <span className="text-[10px]  text-neutral-500  ">{label}</span>
         <div className={`p-1.5 rounded ${isActive ? 'bg-indigo-50 text-indigo-600' : 'bg-neutral-50 text-neutral-400 group-hover:text-neutral-600'}`}>
           <Icon size={14} />
         </div>
       </div>
       <div>
-        <p className="text-2xl font-black text-neutral-900 tracking-tight">{value}</p>
+        <p className="text-2xl  text-neutral-900 ">{value}</p>
       </div>
       {isActive && (
         <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600" />
@@ -53,11 +53,11 @@ const KanbanView = ({ data, onAction, getStatusColor }) => {
       {columns.map(column => (
         <div key={column.id} className="flex-1 min-w-[320px] bg-neutral-50/50 rounded border border-neutral-200 flex flex-col h-[calc(100vh-320px)]">
           <div className="p-3 border-b border-neutral-200 bg-white flex items-center justify-between">
-            <h3 className="text-[11px]  text-neutral-600 flex items-center gap-2 tracking-[0.2em]">
+            <h3 className="text-[11px]  text-neutral-600 flex items-center gap-2 ">
               <span className={`w-1.5 h-1.5 rounded-full bg-${column.color}-500`} />
               {column.title}
             </h3>
-            <span className="text-[10px] font-black bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded">
+            <span className="text-[10px]  bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded">
               {data.filter(q => q.status === column.id).length}
             </span>
           </div>
@@ -66,11 +66,11 @@ const KanbanView = ({ data, onAction, getStatusColor }) => {
             {data.filter(q => q.status === column.id).map(q => (
               <div 
                 key={q.supplier_quotation_id} 
-                className="bg-white p-4 rounded border border-neutral-200 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer group"
+                className="bg-white p-4 rounded border border-neutral-200 hover:border-indigo-300 hover:  transition-all cursor-pointer group"
                 onClick={() => onAction(q, 'view')}
               >
                 <div className="flex justify-between items-start mb-3">
-                  <span className="text-[11px] font-black text-indigo-600 tracking-wider">
+                  <span className="text-[11px]  text-indigo-600 tracking-wider">
                     {q.supplier_quotation_id?.toUpperCase()}
                   </span>
                   <span className="text-[10px] font-medium text-neutral-400">
@@ -88,8 +88,8 @@ const KanbanView = ({ data, onAction, getStatusColor }) => {
                 
                 <div className="pt-3 border-t border-neutral-100 flex items-center justify-between">
                   <div className="flex flex-col">
-                    <span className="text-[9px]  text-neutral-400  tracking-widest">Total Value</span>
-                    <span className="text-sm font-black text-neutral-900">₹{(parseFloat(q.total_value) || 0).toLocaleString('en-IN')}</span>
+                    <span className="text-[9px]  text-neutral-400  ">Total Value</span>
+                    <span className="text-sm  text-neutral-900">₹{(parseFloat(q.total_value) || 0).toLocaleString('en-IN')}</span>
                   </div>
                   
                   <div className="flex gap-1">
@@ -275,7 +275,7 @@ export default function SupplierQuotations() {
     { 
       key: 'supplier_quotation_id', 
       label: 'QUOTE ID', 
-      render: (val) => <span className="text-indigo-600 font-black tracking-wider">{val?.toUpperCase()}</span>
+      render: (val) => <span className="text-indigo-600  tracking-wider">{val?.toUpperCase()}</span>
     },
     { 
       key: 'supplier_name', 
@@ -290,7 +290,7 @@ export default function SupplierQuotations() {
           {val}
         </span>
       ) : (
-        <span className="text-[10px]  text-neutral-400  tracking-widest">Direct</span>
+        <span className="text-[10px]  text-neutral-400  ">Direct</span>
       )
     },
     { 
@@ -305,7 +305,7 @@ export default function SupplierQuotations() {
       label: 'TOTAL VALUE', 
       render: (val) => (
         <div className="text-right">
-          <span className="text-neutral-900 font-black">
+          <span className="text-neutral-900 ">
             ₹{(parseFloat(val) || 0).toLocaleString('en-IN')}
           </span>
         </div>
@@ -315,7 +315,7 @@ export default function SupplierQuotations() {
       key: 'status', 
       label: 'STATUS', 
       render: (val) => (
-        <Badge color={getStatusColor(val)} variant="solid" className="font-black tracking-widest text-[9px]">
+        <Badge color={getStatusColor(val)} variant="solid" className="  text-[9px]">
           {val?.toUpperCase()}
         </Badge>
       )
@@ -338,7 +338,7 @@ export default function SupplierQuotations() {
         variant="secondary"
         onClick={() => navigate(`/buying/quotation/${row.supplier_quotation_id}`)}
         title="View Quotation"
-        className="p-1.5 h-8 w-8 rounded-none border-neutral-200"
+        className="p-1.5 h-8 w-8 rounded  border-neutral-200"
       >
         <Eye size={14} className="text-neutral-600" />
       </Button>
@@ -349,7 +349,7 @@ export default function SupplierQuotations() {
             variant="secondary"
             onClick={() => handleSubmit(row.supplier_quotation_id)}
             title="Submit Quotation"
-            className="p-1.5 h-8 w-8 rounded-none border-neutral-200 hover:border-emerald-500 group"
+            className="p-1.5 h-8 w-8 rounded  border-neutral-200 hover:border-emerald-500 group"
           >
             <Send size={14} className="text-neutral-500 group-hover:text-emerald-600" />
           </Button>
@@ -358,7 +358,7 @@ export default function SupplierQuotations() {
             variant="secondary"
             onClick={() => handleDelete(row.supplier_quotation_id)}
             title="Delete Quotation"
-            className="p-1.5 h-8 w-8 rounded-none border-neutral-200 hover:border-rose-500 group"
+            className="p-1.5 h-8 w-8 rounded  border-neutral-200 hover:border-rose-500 group"
           >
             <Trash2 size={14} className="text-neutral-500 group-hover:text-rose-600" />
           </Button>
@@ -371,7 +371,7 @@ export default function SupplierQuotations() {
             variant="secondary"
             onClick={() => handleAccept(row.supplier_quotation_id)}
             title="Accept Quotation"
-            className="p-1.5 h-8 w-8 rounded-none border-neutral-200 hover:border-emerald-500 group"
+            className="p-1.5 h-8 w-8 rounded  border-neutral-200 hover:border-emerald-500 group"
           >
             <CheckCircle size={14} className="text-neutral-500 group-hover:text-emerald-600" />
           </Button>
@@ -380,7 +380,7 @@ export default function SupplierQuotations() {
             variant="secondary"
             onClick={() => handleReject(row.supplier_quotation_id)}
             title="Reject Quotation"
-            className="p-1.5 h-8 w-8 rounded-none border-neutral-200 hover:border-rose-500 group"
+            className="p-1.5 h-8 w-8 rounded  border-neutral-200 hover:border-rose-500 group"
           >
             <XCircle size={14} className="text-neutral-500 group-hover:text-rose-600" />
           </Button>
@@ -391,19 +391,19 @@ export default function SupplierQuotations() {
 
   return (
     <div className="w-full bg-neutral-50 min-h-screen p-6">
-      <div className="max-w-[1600px] mx-auto space-y-6">
+      <div className="max-w-[1600px] mx-auto space-y-2">
         {/* Modern Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-4 rounded border border-neutral-200 relative overflow-hidden shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-4 rounded border border-neutral-200 relative overflow-hidden  ">
           <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-600" />
           <div className="flex items-center gap-4">
             <div className="p-3 bg-neutral-900 rounded">
               <ClipboardList className="text-white" size={24} />
             </div>
             <div>
-              <h1 className="text-xl font-black text-neutral-900 tracking-tight ">
+              <h1 className="text-xl  text-neutral-900  ">
                 Supplier Quotations
               </h1>
-              <p className="text-[10px]  text-neutral-400 mt-0.5 tracking-widest ">Compare and manage quotes from suppliers</p>
+              <p className="text-[10px]  text-neutral-400 mt-0.5  ">Compare and manage quotes from suppliers</p>
             </div>
           </div>
           
@@ -411,14 +411,14 @@ export default function SupplierQuotations() {
             <div className="flex items-center bg-neutral-100 p-1 rounded border border-neutral-200">
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-indigo-600' : 'text-neutral-400 hover:text-neutral-600'}`}
+                className={`p-2 rounded transition-all ${viewMode === 'list' ? 'bg-white   text-indigo-600' : 'text-neutral-400 hover:text-neutral-600'}`}
                 title="List View"
               >
                 <List size={18} />
               </button>
               <button
                 onClick={() => setViewMode('kanban')}
-                className={`p-2 rounded transition-all ${viewMode === 'kanban' ? 'bg-white shadow-sm text-indigo-600' : 'text-neutral-400 hover:text-neutral-600'}`}
+                className={`p-2 rounded transition-all ${viewMode === 'kanban' ? 'bg-white   text-indigo-600' : 'text-neutral-400 hover:text-neutral-600'}`}
                 title="Kanban View"
               >
                 <LayoutGrid size={18} />
@@ -439,7 +439,7 @@ export default function SupplierQuotations() {
               className="bg-neutral-900 hover:bg-neutral-800 text-white flex items-center gap-2 px-4 py-2 rounded h-10 border-0"
             >
               <Plus size={16} strokeWidth={3} /> 
-              <span className="text-xs font-black tracking-widest ">New Quotation</span>
+              <span className="text-xs   ">New Quotation</span>
             </Button>
           </div>
         </div>
@@ -499,18 +499,18 @@ export default function SupplierQuotations() {
               placeholder="SEARCH QUOTATIONS..."
               value={filters.search}
               onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              className="w-full pl-11 pr-4 py-2.5 bg-white border border-neutral-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 transition-all text-[11px]  tracking-widest "
+              className="w-full pl-11 pr-4 py-2  bg-white border border-neutral-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 transition-all text-[11px]   "
             />
           </div>
           
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-3 bg-white border border-neutral-200 px-3 py-2 rounded">
               <Filter size={14} className="text-neutral-400" />
-              <span className="text-[10px] font-black text-neutral-400  tracking-widest">Status:</span>
+              <span className="text-[10px]  text-neutral-400  ">Status:</span>
               <select 
                 value={activeFilter}
                 onChange={(e) => setActiveFilter(e.target.value)}
-                className="bg-transparent text-[11px] font-black text-indigo-600 focus:outline-none cursor-pointer  tracking-widest"
+                className="bg-transparent text-[11px]  text-indigo-600 focus:outline-none cursor-pointer  "
               >
                 <option value="all">ALL STATUS</option>
                 <option value="draft">DRAFT</option>
@@ -523,7 +523,7 @@ export default function SupplierQuotations() {
             <div className="relative">
               <button
                 onClick={() => setShowColumnMenu(!showColumnMenu)}
-                className="flex items-center gap-2 text-[10px] font-black text-neutral-600 hover:border-indigo-600 hover:text-indigo-600 transition-all px-4 py-2.5 border border-neutral-200 rounded bg-white  tracking-widest"
+                className="flex items-center gap-2 text-[10px]  text-neutral-600 hover:border-indigo-600 hover:text-indigo-600 transition-all px-4 py-2  border border-neutral-200 rounded bg-white  "
               >
                 <Eye size={14} />
                 <span>Columns</span>
@@ -535,13 +535,13 @@ export default function SupplierQuotations() {
                   <div className="px-4 py-2 border-b border-neutral-100 flex justify-between bg-neutral-50 mb-2">
                     <button 
                       onClick={() => setVisibleColumns(new Set(columns.map(c => c.key)))}
-                      className="text-[9px] font-black text-indigo-600 hover:underline  tracking-widest"
+                      className="text-[9px]  text-indigo-600 hover:underline  "
                     >
                       Show All
                     </button>
                     <button 
                       onClick={() => setVisibleColumns(new Set())}
-                      className="text-[9px] font-black text-rose-600 hover:underline  tracking-widest"
+                      className="text-[9px]  text-rose-600 hover:underline  "
                     >
                       Hide All
                     </button>
@@ -570,24 +570,24 @@ export default function SupplierQuotations() {
           </div>
         </div>
 
-        <div className="bg-white rounded border border-neutral-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded border border-neutral-200   overflow-hidden">
           {loading ? (
             <div className="py-24 text-center">
               <RefreshCw size={40} className="text-indigo-600 animate-spin mx-auto mb-4 stroke-[1.5]" />
-              <p className="text-[10px] font-black text-neutral-400  tracking-[0.2em]">Syncing Quotations...</p>
+              <p className="text-[10px]  text-neutral-400  ">Syncing Quotations...</p>
             </div>
           ) : filteredQuotations.length === 0 ? (
             <div className="py-24 text-center px-4 bg-neutral-50/50">
               <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6 border border-neutral-200">
                 <ClipboardList size={32} className="text-neutral-300" />
               </div>
-              <h3 className="text-sm font-black text-neutral-900 mb-2  tracking-widest">No Quotations Found</h3>
+              <h3 className="text-sm  text-neutral-900 mb-2  ">No Quotations Found</h3>
               <p className="text-[11px] font-medium text-neutral-500 mb-8 max-w-xs mx-auto">Start by creating a new quotation or adjusting your search filters.</p>
               <Button 
                 onClick={() => { setFilters({ status: '', search: '' }); setActiveFilter('all'); }}
                 variant="secondary" 
                 size="sm"
-                className="px-6 py-2 rounded-none font-black text-[10px] tracking-widest  border-neutral-300"
+                className="p-2  rounded   text-[10px]   border-neutral-300"
               >
                 Clear Filters
               </Button>

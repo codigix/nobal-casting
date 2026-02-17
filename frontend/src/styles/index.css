@@ -82,7 +82,7 @@
   }
 
   .card-hover {
-    @apply card hover:shadow-lg transition-shadow duration-200 cursor-pointer;
+    @apply card hover: transition-shadow duration-200 cursor-pointer;
   }
 
   .table-responsive {

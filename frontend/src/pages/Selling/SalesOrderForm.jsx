@@ -42,7 +42,7 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
       onClick={onToggle}
     >
       <div className="flex items-center gap-4">
-        <div className={`p-2 rounded shadow-lg transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
+        <div className={`p-2 rounded  transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
           <Icon size={15} strokeWidth={2.5} />
         </div>
         <div>
@@ -53,7 +53,7 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
           {subtitle && <p className="text-xs font-medium text-slate-400">{subtitle}</p>}
         </div>
         {badge && (
-          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-[10px]  rounded-full border ${theme.border} uppercase tracking-widest`}>
+          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-[10px]  rounded-full border ${theme.border}  `}>
             {badge}
           </span>
         )}
@@ -93,7 +93,7 @@ const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = '
       <div className={`p-1.5 rounded transition-all duration-300 ${isActive ? 'bg-white scale-110' : 'bg-slate-50 group-hover:bg-white'}`}>
         <Icon size={14} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
       </div>
-      <span className="text-xs  tracking-tight uppercase">{label}</span>
+      <span className="text-xs   ">{label}</span>
       {isActive && <div className="w-1 h-1 rounded bg-current animate-pulse ml-0.5" />}
     </button>
   )
@@ -155,12 +155,12 @@ const InfoRow = ({ label, value, icon: Icon, className = "", color = "indigo" })
   const themeClass = themes[color] || themes.indigo
 
   return (
-    <div className={`flex flex-col p-2 rounded border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 ${className}`}>
+    <div className={`flex flex-col p-2 rounded border border-slate-100 bg-white   hover: transition-all duration-300 ${className}`}>
       <div className="flex items-center gap-2 mb-2">
         <div className={`p-1.5 rounded  ${themeClass}`}>
           {Icon && <Icon size={12} />}
         </div>
-        <span className="text-[10px]  text-slate-400 uppercase tracking-widest">{label}</span>
+        <span className="text-[10px]  text-slate-400  ">{label}</span>
       </div>
       <span className="text-xs  text-slate-700 truncate pl-1">
         {value || <span className="text-slate-300 font-normal italic">Not specified</span>}
@@ -327,7 +327,7 @@ export default function SalesOrderForm() {
       const bomsData = bomRes.data.data || []
 
       const finishedGoodsBoms = bomsData.filter(b =>
-        !b.items_group || b.items_group === 'Finished Goods' || b.item_code?.startsWith('FG-')
+        b.item_group === 'Finished Goods' || b.item_code?.startsWith('FG-')
       )
 
       console.log('BOMs Data:', bomsData)
@@ -1113,7 +1113,7 @@ export default function SalesOrderForm() {
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-600 text-white rounded  shadow-lg shadow-blue-100">
+                <div className="p-2 bg-blue-600 text-white rounded   shadow-blue-100">
                   <Package size={18} />
                 </div>
                 <div>
@@ -1126,7 +1126,7 @@ export default function SalesOrderForm() {
               </span>
             </div>
 
-            <div className="bg-white/50 backdrop-blur-md rounded border border-slate-100 overflow-hidden   hover:shadow-md transition-all duration-500">
+            <div className="bg-white/50 backdrop-blur-md rounded border border-slate-100 overflow-hidden   hover: transition-all duration-500">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -1193,7 +1193,7 @@ export default function SalesOrderForm() {
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-500 text-white rounded  shadow-lg shadow-amber-100">
+                <div className="p-2 bg-amber-500 text-white rounded   shadow-amber-100">
                   <Layers size={18} />
                 </div>
                 <div>
@@ -1206,7 +1206,7 @@ export default function SalesOrderForm() {
               </span>
             </div>
 
-            <div className="bg-white/50 backdrop-blur-md rounded-3xl border border-slate-100 overflow-hidden   hover:shadow-md transition-all duration-500">
+            <div className="bg-white/50 backdrop-blur-md rounded-3xl border border-slate-100 overflow-hidden   hover: transition-all duration-500">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -1258,7 +1258,7 @@ export default function SalesOrderForm() {
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-600 text-white rounded  shadow-lg shadow-emerald-100">
+                <div className="p-2 bg-emerald-600 text-white rounded   shadow-emerald-100">
                   <Database size={18} />
                 </div>
                 <div>
@@ -1284,7 +1284,7 @@ export default function SalesOrderForm() {
               </div>
             </div>
 
-            <div className="bg-white/50 backdrop-blur-md rounded-3xl border border-slate-100 overflow-hidden   hover:shadow-md transition-all duration-500">
+            <div className="bg-white/50 backdrop-blur-md rounded-3xl border border-slate-100 overflow-hidden   hover: transition-all duration-500">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -1349,7 +1349,7 @@ export default function SalesOrderForm() {
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-600 text-white rounded  shadow-lg shadow-indigo-100">
+                <div className="p-2 bg-indigo-600 text-white rounded   shadow-indigo-100">
                   <Activity size={18} />
                 </div>
                 <div>
@@ -1362,7 +1362,7 @@ export default function SalesOrderForm() {
               </span>
             </div>
 
-            <div className="bg-white/50 backdrop-blur-md rounded-3xl border border-slate-100 overflow-hidden   hover:shadow-md transition-all duration-500">
+            <div className="bg-white/50 backdrop-blur-md rounded-3xl border border-slate-100 overflow-hidden   hover: transition-all duration-500">
               {bomOperations.some(op => !op.hourly_rate || parseFloat(op.hourly_rate) === 0) && (
                 <div className="bg-rose-50 border-b border-rose-100 p-3 flex items-center gap-3">
                   <AlertTriangle size={14} className="text-rose-500" />
@@ -1538,7 +1538,7 @@ export default function SalesOrderForm() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-xl  text-slate-900 tracking-tighter drop- ">
+                  <span className="text-xl  text-slate-900 er drop- ">
                     {formatCurrency(grandTotal)}
                   </span>
                 </div>
@@ -1601,7 +1601,7 @@ export default function SalesOrderForm() {
                 <>
                   <button
                     onClick={() => window.print()}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded  bg-white border border-slate-200 text-slate-600 text-xs   hover:bg-slate-50 transition-all  "
+                    className="flex items-center gap-2 px-5 py-2  rounded  bg-white border border-slate-200 text-slate-600 text-xs   hover:bg-slate-50 transition-all  "
                   >
                     <FileText size={16} />
                     Print
@@ -1625,7 +1625,7 @@ export default function SalesOrderForm() {
                   <button
                     onClick={handleSubmit}
                     disabled={loading}
-                    className="flex items-center gap-2 p-2  rounded bg-blue-600 text-white text-xs   hover:bg-blue-700 disabled:bg-slate-300 transition-all shadow-lg shadow-blue-100 hover:shadow-blue-200 hover:-translate-y-0.5 active:translate-y-0"
+                    className="flex items-center gap-2 p-2  rounded bg-blue-600 text-white text-xs   hover:bg-blue-700 disabled:bg-slate-300 transition-all  shadow-blue-100 hover:shadow-blue-200 hover:-translate-y-0.5 active:translate-y-0"
                   >
                     {loading ? (
                       <RotateCcw size={16} className="animate-spin" />
@@ -1642,12 +1642,12 @@ export default function SalesOrderForm() {
       </div>
 
       <div className="w-full mt-8 px-4">
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="max-w-7xl mx-auto space-y-2">
           {/* 2. Horizontal Navigation & Metrics Bar */}
           <div className="sticky top-[80px] z-30 bg-white/80 backdrop-blur-md border border-slate-200/60 rounded p-2  flex items-center justify-between gap-4 overflow-x-auto no-scrollbar">
             <div className="flex items-center gap-2">
               <NavItem 
-                label="01 FOUNDATION" 
+                label="01 Foundation" 
                 icon={Database} 
                 section="foundation" 
                 isActive={activeSection === 'foundation'} 
@@ -1655,7 +1655,7 @@ export default function SalesOrderForm() {
                 themeColor="blue"
               />
               <NavItem 
-                label="02 CLIENT" 
+                label="02 Clients" 
                 icon={Users} 
                 section="client" 
                 isActive={activeSection === 'client'} 
@@ -1663,7 +1663,7 @@ export default function SalesOrderForm() {
                 themeColor="indigo"
               />
               <NavItem 
-                label="03 OPS" 
+                label="03 Operation" 
                 icon={Activity} 
                 section="operational" 
                 isActive={activeSection === 'operational'} 
@@ -1671,7 +1671,7 @@ export default function SalesOrderForm() {
                 themeColor="emerald"
               />
               <NavItem 
-                label="04 ENGINEERING" 
+                label="04 Engineering" 
                 icon={Layers} 
                 section="engineering" 
                 isActive={activeSection === 'engineering'} 
@@ -1679,7 +1679,7 @@ export default function SalesOrderForm() {
                 themeColor="amber"
               />
               <NavItem 
-                label="05 REVENUE" 
+                label="05 Revenue" 
                 icon={CreditCard} 
                 section="taxation" 
                 isActive={activeSection === 'taxation'} 
@@ -1689,13 +1689,13 @@ export default function SalesOrderForm() {
             </div>
 
             {/* Quick Metrics Integrated */}
-            <div className="hidden lg:flex items-center gap-4 bg-slate-900 p-2 rounded shrink-0 shadow-lg shadow-slate-900/20">
+            <div className="hidden lg:flex items-center gap-4 bg-slate-900 p-2 rounded shrink-0  shadow-slate-900/20">
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px]  text-slate-400 uppercase tracking-widest">Order Valuation</span>
+                  <span className="text-[10px]  text-slate-400  ">Order Valuation</span>
                 </div>
-                <div className="text-sm font-black text-white tracking-tight">
+                <div className="text-sm  text-white ">
                   {formatCurrency(calculateBomGrandTotal())}
                 </div>
               </div>
@@ -1703,14 +1703,14 @@ export default function SalesOrderForm() {
           </div>
 
           {/* 3. High-Fidelity Content Area */}
-          <div className="space-y-6">
+          <div className="space-y-2">
             {error && <Alert variant="danger">{error}</Alert>}
             {success && <Alert variant="success">{success}</Alert>}
 
             {/* A. Order Foundation Section */}
             <Card className="!p-0 border-slate-200/60  bg-white group ">
               <SectionHeader 
-                title="01 FOUNDATION" 
+                title="01 Foundation" 
                 icon={Database} 
                 subtitle="Core Identity & Scheduling" 
                 isExpanded={expandedSections.foundation}
@@ -1766,7 +1766,7 @@ export default function SalesOrderForm() {
             {/* B. Client Intelligence Section */}
             <Card className="!p-0 border-slate-200/60  bg-white group ">
               <SectionHeader 
-                title="02 CLIENT INTELLIGENCE" 
+                title="02 Client Inteligient" 
                 icon={Users} 
                 subtitle="Customer Metadata & Contact" 
                 isExpanded={expandedSections.client}
@@ -1790,7 +1790,7 @@ export default function SalesOrderForm() {
             {/* C. Operational Section */}
             <Card className="!p-0 border-slate-200/60  bg-white group ">
               <SectionHeader 
-                title="03 OPERATIONAL METADATA" 
+                title="03 Operational Metadata" 
                 icon={Activity} 
                 subtitle="Logistics & Production Metrics" 
                 isExpanded={expandedSections.operational}
@@ -1840,7 +1840,7 @@ export default function SalesOrderForm() {
             {/* D. Engineering Section */}
             <Card className="!p-0 border-slate-200/60  bg-white group ">
               <SectionHeader 
-                title="04 PRODUCT ENGINEERING" 
+                title="04 Product Engineering" 
                 icon={Layers} 
                 subtitle="BOM & Manufacturing Specs" 
                 isExpanded={expandedSections.engineering}
@@ -1891,7 +1891,7 @@ export default function SalesOrderForm() {
             {/* E. Taxation Section */}
             <Card className="!p-0 border-slate-200/60  bg-white group ">
               <SectionHeader 
-                title="05 TAXATION & REVENUE" 
+                title="05 Taxation & Revenue" 
                 icon={CreditCard} 
                 subtitle="GST Configuration & Margins" 
                 isExpanded={expandedSections.taxation}

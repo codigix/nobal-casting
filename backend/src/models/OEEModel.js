@@ -4,12 +4,51 @@ class OEEModel {
     this.db = db
   }
 
+  _cleanFilters(filters) {
+    const cleaned = { ...filters }
+    Object.keys(cleaned).forEach(key => {
+      if (cleaned[key] === 'undefined' || cleaned[key] === 'null') {
+        cleaned[key] = undefined
+      }
+    })
+    return cleaned
+  }
+
   /**
    * Calculate OEE metrics for a given set of parameters
    * @param {Object} filters - filters like startDate, endDate, machineId, lineId, workOrderId, shift
    */
   async getOEEMetrics(filters = {}) {
+    const cleanedFilters = this._cleanFilters(filters)
     try {
+      // Start with a base WHERE clause to ensure dynamic ANDs work correctly
+      let whereClause = ' WHERE 1=1'
+      
+      const startDate = cleanedFilters.startDate || new Date().toISOString().split('T')[0]
+      const endDate = cleanedFilters.endDate || new Date().toISOString().split('T')[0]
+      const params = [startDate, endDate] // For the idle machine downtime subquery
+
+      // Add conditions to the LEFT JOIN's ON clause to filter production entries
+      // This MUST be part of the ON clause to keep all workstations in result
+      let joinConditions = ''
+      if (cleanedFilters.startDate) {
+        joinConditions += ' AND pe.entry_date >= ?'
+        params.push(cleanedFilters.startDate)
+      }
+      if (cleanedFilters.endDate) {
+        joinConditions += ' AND pe.entry_date <= ?'
+        params.push(cleanedFilters.endDate)
+      }
+      if (cleanedFilters.shift) {
+        joinConditions += ' AND pe.shift_no = ?'
+        params.push(cleanedFilters.shift)
+      }
+      if (cleanedFilters.workOrderId) {
+        joinConditions += ' AND pe.work_order_id = ?'
+        params.push(cleanedFilters.workOrderId)
+      }
+
+      // Re-build query with explicit ON conditions
       let query = `
         SELECT 
           w.workstation_name as machine_name,
@@ -40,45 +79,27 @@ class OEEModel {
             FROM job_card jc
             WHERE jc.work_order_id = pe.work_order_id 
             AND jc.machine_id = w.name
-          ) as ideal_cycle_time_mins
+          ) as ideal_cycle_time_mins,
+          (
+            SELECT COUNT(*)
+            FROM job_card jc_count
+            WHERE jc_count.machine_id = w.name
+            AND jc_count.status = 'in-progress'
+          ) as active_jobs
         FROM workstation w
-        LEFT JOIN production_entry pe ON w.name = pe.machine_id
+        LEFT JOIN production_entry pe ON w.name = pe.machine_id ${joinConditions}
       `
-      const params = []
-      const startDate = filters.startDate || new Date().toISOString().split('T')[0]
-      const endDate = filters.endDate || new Date().toISOString().split('T')[0]
-      
-      params.push(startDate, endDate) // For the idle machine downtime subquery
 
-      let whereClause = ''
-      if (filters.startDate) {
-        whereClause += ' AND pe.entry_date >= ?'
-        params.push(filters.startDate)
-      }
-      if (filters.endDate) {
-        whereClause += ' AND pe.entry_date <= ?'
-        params.push(filters.endDate)
-      }
-      if (filters.machineId) {
+      if (cleanedFilters.machineId) {
         whereClause += ' AND w.name = ?'
-        params.push(filters.machineId)
+        params.push(cleanedFilters.machineId)
       }
-      if (filters.lineId) {
+      if (cleanedFilters.lineId) {
         whereClause += ' AND w.location = ?'
-        params.push(filters.lineId)
-      }
-      if (filters.workOrderId) {
-        whereClause += ' AND pe.work_order_id = ?'
-        params.push(filters.workOrderId)
-      }
-      if (filters.shift) {
-        whereClause += ' AND pe.shift_no = ?'
-        params.push(filters.shift)
+        params.push(cleanedFilters.lineId)
       }
 
-      if (whereClause) {
-        query += ' WHERE 1=1' + whereClause
-      }
+      query += whereClause
 
       const [rows] = await this.db.query(query, params)
 
@@ -134,7 +155,9 @@ class OEEModel {
           oee: Math.min(oee, 100),
           load: Number(load.toFixed(1)),
           temperature: Number(temperature.toFixed(1)),
-          health: Number(Math.max(0, health).toFixed(1))
+          health: Number(Math.max(0, health).toFixed(1)),
+          active_jobs: row.active_jobs || 0,
+          bottleneck_score: (oee < 60 && row.active_jobs > 0) ? 100 : (oee < 75 ? 50 : 0)
         }
       })
 
@@ -161,30 +184,61 @@ class OEEModel {
       }
     }
 
-    const summary = data.reduce((acc, curr) => {
-      acc.availability += Number(curr.availability) || 0
-      acc.performance += Number(curr.performance) || 0
-      acc.quality += Number(curr.quality) || 0
-      acc.oee += Number(curr.oee) || 0
-      acc.total_units += Number(curr.total_units) || 0
-      acc.good_units += Number(curr.good_units) || 0
-      acc.rejected_units += Number(curr.rejected_units) || 0
-      acc.downtime_mins += Number(curr.downtime_mins) || 0
-      acc.operating_time_mins += Number(curr.operating_time_mins) || 0
+    // Group by machine first to avoid skewing by number of production entries
+    const machineGroups = data.reduce((acc, curr) => {
+      const mid = curr.machine_id
+      if (!acc[mid]) {
+        acc[mid] = {
+          availability: [], performance: [], quality: [], oee: [],
+          total_units: 0, good_units: 0, rejected_units: 0, 
+          downtime_mins: 0, operating_time_mins: 0
+        }
+      }
+      acc[mid].availability.push(Number(curr.availability) || 0)
+      acc[mid].performance.push(Number(curr.performance) || 0)
+      acc[mid].quality.push(Number(curr.quality) || 0)
+      acc[mid].oee.push(Number(curr.oee) || 0)
+      acc[mid].total_units += Number(curr.total_units) || 0
+      acc[mid].good_units += Number(curr.good_units) || 0
+      acc[mid].rejected_units += Number(curr.rejected_units) || 0
+      acc[mid].downtime_mins += Number(curr.downtime_mins) || 0
+      acc[mid].operating_time_mins += Number(curr.operating_time_mins) || 0
       return acc
-    }, {
-      availability: 0,
-      performance: 0,
-      quality: 0,
-      oee: 0,
-      total_units: 0,
-      good_units: 0,
-      rejected_units: 0,
-      downtime_mins: 0,
-      operating_time_mins: 0
+    }, {})
+
+    const machineMetrics = Object.values(machineGroups).map(m => {
+      const avg = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0
+      return {
+        availability: avg(m.availability),
+        performance: avg(m.performance),
+        quality: avg(m.quality),
+        oee: avg(m.oee),
+        total_units: m.total_units,
+        good_units: m.good_units,
+        rejected_units: m.rejected_units,
+        downtime_mins: m.downtime_mins,
+        operating_time_mins: m.operating_time_mins
+      }
     })
 
-    const count = data.length
+    const summary = machineMetrics.reduce((acc, curr) => {
+      acc.availability += curr.availability
+      acc.performance += curr.performance
+      acc.quality += curr.quality
+      acc.oee += curr.oee
+      acc.total_units += curr.total_units
+      acc.good_units += curr.good_units
+      acc.rejected_units += curr.rejected_units
+      acc.downtime_mins += curr.downtime_mins
+      acc.operating_time_mins += curr.operating_time_mins
+      return acc
+    }, {
+      availability: 0, performance: 0, quality: 0, oee: 0,
+      total_units: 0, good_units: 0, rejected_units: 0,
+      downtime_mins: 0, operating_time_mins: 0
+    })
+
+    const count = machineMetrics.length
     return {
       availability: Number((summary.availability / count).toFixed(2)),
       performance: Number((summary.performance / count).toFixed(2)),
@@ -210,12 +264,25 @@ class OEEModel {
         : new Date(curr.entry_date).toISOString().split('T')[0]
         
       if (!acc[date]) {
-        acc[date] = { date, oee: 0, availability: 0, performance: 0, quality: 0, count: 0 }
+        acc[date] = { 
+          date, 
+          oee: 0, 
+          availability: 0, 
+          performance: 0, 
+          quality: 0, 
+          working_time: 0, 
+          downtime: 0, 
+          total_units: 0,
+          count: 0 
+        }
       }
       acc[date].oee += curr.oee
       acc[date].availability += curr.availability
       acc[date].performance += curr.performance
       acc[date].quality += curr.quality
+      acc[date].working_time += (curr.operating_time_mins || 0)
+      acc[date].downtime += (curr.downtime_mins || 0)
+      acc[date].total_units += (curr.total_units || 0)
       acc[date].count += 1
       return acc
     }, {})
@@ -225,11 +292,15 @@ class OEEModel {
       oee: Number((t.oee / t.count).toFixed(2)),
       availability: Number((t.availability / t.count).toFixed(2)),
       performance: Number((t.performance / t.count).toFixed(2)),
-      quality: Number((t.quality / t.count).toFixed(2))
+      quality: Number((t.quality / t.count).toFixed(2)),
+      working_time: Number(t.working_time.toFixed(2)),
+      downtime: Number(t.downtime.toFixed(2)),
+      total_units: t.total_units
     })).sort((a, b) => a.date.localeCompare(b.date))
   }
 
   async getDowntimeReasons(filters = {}) {
+    const cleanedFilters = this._cleanFilters(filters)
     try {
       let query = `
         SELECT 
@@ -245,27 +316,120 @@ class OEEModel {
       `
       const params = []
 
-      if (filters.startDate) {
+      if (cleanedFilters.startDate) {
         query += ' AND DATE(de.created_at) >= ?'
-        params.push(filters.startDate)
+        params.push(cleanedFilters.startDate)
       }
-      if (filters.endDate) {
+      if (cleanedFilters.endDate) {
         query += ' AND DATE(de.created_at) <= ?'
-        params.push(filters.endDate)
+        params.push(cleanedFilters.endDate)
       }
-      if (filters.machineId) {
+      if (cleanedFilters.machineId) {
         query += ' AND w.name = ?'
-        params.push(filters.machineId)
+        params.push(cleanedFilters.machineId)
       }
-      if (filters.lineId) {
+      if (cleanedFilters.lineId) {
         query += ' AND w.location = ?'
-        params.push(filters.lineId)
+        params.push(cleanedFilters.lineId)
       }
 
       query += ' GROUP BY de.downtime_reason, w.location, w.name ORDER BY duration DESC'
 
       const [rows] = await this.db.query(query, params)
       return rows
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async getAllMachinesComprehensiveAnalysis(filters = {}) {
+    try {
+      const startDate = filters.startDate || (() => {
+        const d = new Date()
+        d.setDate(d.getDate() - 30)
+        return d.toISOString().split('T')[0]
+      })()
+      const endDate = filters.endDate || new Date().toISOString().split('T')[0]
+
+      const data = await this.getOEEMetrics({ ...filters, startDate, endDate })
+
+      // Group by machine
+      const machines = data.reduce((acc, curr) => {
+        const mId = curr.machine_id
+        if (!acc[mId]) {
+          acc[mId] = {
+            id: mId,
+            name: curr.machine_name,
+            type: curr.workstation_type,
+            line: curr.line_id,
+            status: curr.machine_status,
+            total_produced: 0,
+            total_rejected: 0,
+            total_working_time: 0,
+            total_downtime: 0,
+            oee_sum: 0,
+            oee_count: 0,
+            daily: {},
+            monthly: {}
+          }
+        }
+
+        const m = acc[mId]
+        if (curr.entry_date) {
+          const date = curr.entry_date instanceof Date ? curr.entry_date.toISOString().split('T')[0] : new Date(curr.entry_date).toISOString().split('T')[0]
+          const month = date.substring(0, 7)
+
+          m.total_produced += curr.total_units
+          m.total_rejected += curr.rejected_units
+          m.total_working_time += curr.operating_time_mins
+          m.total_downtime += (curr.downtime_mins || 0)
+          m.oee_sum += curr.oee
+          m.oee_count += 1
+
+          // Daily
+          if (!m.daily[date]) m.daily[date] = { date, produced: 0, rejected: 0, working: 0, downtime: 0, oee: 0, count: 0 }
+          m.daily[date].produced += curr.total_units
+          m.daily[date].rejected += curr.rejected_units
+          m.daily[date].working += curr.operating_time_mins
+          m.daily[date].downtime += (curr.downtime_mins || 0)
+          m.daily[date].oee += curr.oee
+          m.daily[date].count += 1
+
+          // Monthly
+          if (!m.monthly[month]) m.monthly[month] = { month, produced: 0, rejected: 0, working: 0, downtime: 0, oee: 0, count: 0 }
+          m.monthly[month].produced += curr.total_units
+          m.monthly[month].rejected += curr.rejected_units
+          m.monthly[month].working += curr.operating_time_mins
+          m.monthly[month].downtime += (curr.downtime_mins || 0)
+          m.monthly[month].oee += curr.oee
+          m.monthly[month].count += 1
+        }
+        return acc
+      }, {})
+
+      // Finalize metrics
+      return Object.values(machines).map(m => {
+        const avgOEE = m.oee_count > 0 ? (m.oee_sum / m.oee_count) : 0
+        const totalTime = m.total_working_time + m.total_downtime
+        
+        return {
+          ...m,
+          oee: Number(avgOEE.toFixed(2)),
+          downtime_rate: totalTime > 0 ? Number(((m.total_downtime / totalTime) * 100).toFixed(2)) : 0,
+          working_hours: Number((m.total_working_time / 60).toFixed(2)),
+          downtime_hours: Number((m.total_downtime / 60).toFixed(2)),
+          daily: Object.values(m.daily).sort((a, b) => a.date.localeCompare(b.date)).map(d => ({ 
+            ...d, 
+            oee: Number((d.oee / d.count).toFixed(2)),
+            downtime_rate: (d.working + d.downtime) > 0 ? Number(((d.downtime / (d.working + d.downtime)) * 100).toFixed(2)) : 0
+          })),
+          monthly: Object.values(m.monthly).sort((a, b) => a.month.localeCompare(b.month)).map(mo => ({ 
+            ...mo, 
+            oee: Number((mo.oee / mo.count).toFixed(2)),
+            downtime_rate: (mo.working + mo.downtime) > 0 ? Number(((mo.downtime / (mo.working + mo.downtime)) * 100).toFixed(2)) : 0
+          }))
+        }
+      })
     } catch (error) {
       throw error
     }

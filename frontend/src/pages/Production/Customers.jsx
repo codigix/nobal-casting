@@ -305,7 +305,7 @@ export default function Customers() {
                             </div>
                             <div>
                               <p className="text-xs text-slate-900">{customer.customer_name}</p>
-                              <p className="text-xs  text-slate-500  text-xstracking-tight">ID: {customer.customer_id}</p>
+                              <p className="text-xs  text-slate-500  text-xs">ID: {customer.customer_id}</p>
                             </div>
                           </div>
                         </td>

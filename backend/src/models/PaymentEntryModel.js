@@ -74,7 +74,7 @@ export class PaymentEntryModel {
       // Debit Bank/Cash (Increase Asset)
       await accountsModel.recordLedgerEntry({
         transaction_date: payment.payment_date,
-        account_type: 'income', // Using income as placeholder for Cash/Bank if specific account not provided
+        account_type: 'asset', // Standardized to asset
         account_id: 'Bank Account',
         debit: payment.amount,
         credit: 0,
@@ -192,7 +192,7 @@ export class PaymentEntryModel {
       // Credit Bank/Cash (Decrease Asset)
       await accountsModel.recordLedgerEntry({
         transaction_date: payment.payment_date,
-        account_type: 'expense', // Placeholder for Cash/Bank
+        account_type: 'asset', // Standardized to asset
         account_id: 'Bank Account',
         debit: 0,
         credit: payment.amount,

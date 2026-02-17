@@ -16,7 +16,7 @@ export default function Modal({ isOpen, onClose, title, children, footer, size =
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center z-[999] p-4" onClick={onClose}>
       <div 
-        className={`bg-white rounded shadow-2xl ${sizes[size]} p-2 w-full flex flex-col max-h-[30pc]   overflow-hidden animate-in fade-in zoom-in-95 duration-200`}
+        className={`bg-white rounded  ${sizes[size]} p-2 w-full flex flex-col max-h-[30pc]   overflow-hidden animate-in fade-in zoom-in-95 duration-200`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

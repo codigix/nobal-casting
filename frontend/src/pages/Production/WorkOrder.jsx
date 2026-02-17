@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ChevronRight, ChevronDown, AlertCircle, TrendingUp, BarChart3, Layers, ClipboardList,
-  CheckCircle2, Factory, Clock, Package, MoreVertical, Plus, Edit2, Trash2, Eye, Trash, Search, Filter, Calendar, Activity,
-  Truck, Download, ExternalLink, Printer
+  ChevronRight, ChevronDown, AlertCircle, Layers, ClipboardList,
+  CheckCircle2, Factory, Clock, Package, Plus, Edit2, Trash2, Eye, Trash, Search, Filter, Calendar, Activity,
+  Truck, Download, Printer
 } from 'lucide-react'
 import * as productionService from '../../services/productionService'
-import Card from '../../components/Card/Card'
 import api from '../../services/api'
+import DataTable from '../../components/Table/DataTable'
 
 // --- Helpers & Sub-components (Moved outside to prevent re-mount issues) ---
 
@@ -21,21 +21,50 @@ const getPriorityInfo = (priority) => {
   }
 }
 
+// --- Hierarchy & Sorting Helpers ---
+const getDepth = (order, allOrders) => {
+  let depth = 0
+  let current = order
+  const visited = new Set()
+  const ordersMap = Object.fromEntries(allOrders.map(o => [o.wo_id, o]))
+  
+  while (current && current.parent_wo_id && ordersMap[current.parent_wo_id] && !visited.has(current.wo_id)) {
+    visited.add(current.wo_id)
+    depth++
+    current = ordersMap[current.parent_wo_id]
+  }
+  return depth
+}
+
+const sortWorkOrders = (ordersData) => {
+  return [...ordersData].sort((a, b) => {
+    const depthA = getDepth(a, ordersData)
+    const depthB = getDepth(b, ordersData)
+    if (depthA !== depthB) {
+      return depthB - depthA // Deepest/Low-level first
+    }
+    return (a.created_at || '').localeCompare(b.created_at || '') // Oldest/Created first for same depth
+  })
+}
+
 const StatusBadge = ({ status }) => {
   const config = {
-    draft: { color: 'text-slate-600 bg-slate-50 border-slate-100', icon: Clock },
-    planned: { color: 'text-indigo-600 bg-indigo-50 border-indigo-100', icon: Calendar },
-    'in-progress': { color: 'text-amber-600 bg-amber-50 border-amber-100', icon: Activity },
-    completed: { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: CheckCircle2 },
-    cancelled: { color: 'text-rose-600 bg-rose-50 border-rose-100', icon: AlertCircle }
+    draft: { color: 'text-slate-600 bg-slate-50 border-slate-100', icon: Clock, label: 'Draft' },
+    ready: { color: 'text-blue-600 bg-blue-50 border-blue-100', icon: CheckCircle2, label: 'Ready' },
+    planned: { color: 'text-indigo-600 bg-indigo-50 border-indigo-100', icon: Calendar, label: 'Planned' },
+    'in-progress': { color: 'text-amber-600 bg-amber-50 border-amber-100', icon: Activity, label: 'In-Progress' },
+    in_progress: { color: 'text-amber-600 bg-amber-50 border-amber-100', icon: Activity, label: 'In-Progress' },
+    completed: { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: CheckCircle2, label: 'Completed' },
+    cancelled: { color: 'text-rose-600 bg-rose-50 border-rose-100', icon: AlertCircle, label: 'Cancelled' }
   }
-  const s = (status || 'draft').toLowerCase()
-  const { color, icon: Icon } = config[s] || config.draft
+  const s = (status || 'draft').toLowerCase().replace('_', '-')
+  const statusKey = (status || 'draft').toLowerCase()
+  const { color, icon: Icon, label } = config[statusKey] || config[s] || config.draft
 
   return (
-    <span className={`inline-flex items-center gap-1 p-2  py-1 rounded w-fit text-xs    border ${color}`}>
-      <Icon size={12} />
-      {s}
+    <span className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border ${color}`}>
+      <Icon size={10} className="stroke-[2.5]" />
+      {label || status}
     </span>
   )
 }
@@ -51,7 +80,7 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
   }
 
   return (
-    <div className="bg-white p-2 rounded border border-gray-100   hover:shadow-md transition-all group overflow-hidden relative">
+    <div className="bg-white p-2 rounded border border-gray-100   hover: transition-all group overflow-hidden relative">
       <div className="absolute -right-4 -top-4 w-24 h-24 bg-gray-50 rounded-full opacity-50 group-hover:scale-110 transition-transform" />
       
       <div className="relative flex justify-between items-start">
@@ -66,7 +95,7 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
             )}
           </div>
           {subtitle && (
-            <p className="text-xs   text-gray-500 tracking-tight">{subtitle}</p>
+            <p className="text-xs   text-gray-500 ">{subtitle}</p>
           )}
         </div>
         <div className={`p-2 roundedl ${colorMap[color] || colorMap.blue}   group-hover:scale-110 transition-transform`}>
@@ -88,45 +117,40 @@ const WorkOrderRow = React.memo(({
 }) => {
   const [rowExpanded, setRowExpanded] = useState(false)
   const hasSubAssemblies = order.subAssemblies && order.subAssemblies.length > 0
-  const priority = getPriorityInfo(order.priority)
 
   if (layout === 'flat') {
     return (
       <div className="group/row">
         <div className="flex items-center gap-4 p-4 hover:bg-indigo-50/30 transition-all border-b border-gray-50">
-          <div className="flex items-center gap-4 flex-1 min-w-[200px]">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100 group-hover/row:scale-110 transition-transform shadow-sm">
-              <ClipboardList size={14} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-gray-900">{order.wo_id}</span>
-              </div>
-              <div className="flex items-center gap-2 mt-0.5 text-[10px] text-gray-400">
-                <Calendar size={10} />
-                <span>{new Date(order.created_at || new Date()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</span>
-              </div>
-            </div>
-          </div>
+          
 
-          <div className="flex-1 min-w-[200px]">
+          <div className="flex-1">
             <p className="text-xs font-medium text-gray-900">{order.item_name}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">
+            {/* <p className="text-[10px] text-gray-400 mt-0.5">
               {(order.bom_no || '').startsWith('BOM-') ? order.bom_no : `BOM-${order.bom_no || order.wo_id.split('-')[1] || 'STANDARD'}`}
-            </p>
+            </p> */}
           </div>
 
-          <div className="w-32">
+          <div className=" flex justify-center">
             <StatusBadge status={order.status} />
-            <div className="flex items-center gap-1.5 mt-1.5 px-1">
-              <div className={`w-1.5 h-1.5 rounded-full ${priority.dot}`} />
-              <span className={`text-[10px] ${priority.color} font-medium`}>{priority.label}</span>
+          </div>
+
+          <div className="">
+            <span className="text-xs font-semibold text-gray-900">{parseFloat(order.quantity).toFixed(2)}</span>
+            <span className="text-[10px] text-gray-400 ml-1">units</span>
+          </div>
+
+          <div className="">
+            <div className="flex items-center gap-2 text-[10px] text-gray-500">
+              <Calendar size={10} className="text-gray-400" />
+              <span>{order.planned_start_date ? new Date(order.planned_start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</span>
             </div>
           </div>
 
-          <div className="w-40">
+          <div className="w-20">
             <div className="flex justify-between text-[10px] mb-1.5">
-              <span className="font-medium text-gray-700">{order.produced_qty || 0} / {Math.round(((order.produced_qty || 0) / (order.quantity || 1)) * 100)}%</span>
+              <span className="font-medium text-gray-700">{parseFloat(order.produced_qty || 0).toFixed(2)} / {parseFloat(order.quantity).toFixed(2)}</span>
+              <span className="text-indigo-600 font-semibold">{Math.round(((order.produced_qty || 0) / (order.quantity || 1)) * 100)}%</span>
             </div>
             <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden shadow-inner">
               <div 
@@ -136,31 +160,43 @@ const WorkOrderRow = React.memo(({
             </div>
           </div>
 
-          <div className="w-28 flex items-center justify-end gap-1">
+          <div className="w-24">
+            <span className={`text-xs font-medium ${parseFloat(order.scrap_qty) > 0 ? 'text-rose-500' : 'text-gray-400'}`}>
+              {parseFloat(order.scrap_qty).toFixed(2)}
+            </span>
+          </div>
+
+          <div className="">
+            <span className="text-[10px] font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+              {order.wo_id}
+            </span>
+          </div>
+
+          <div className=" flex items-center justify-end gap-1">
             <button
               onClick={(e) => { e.stopPropagation(); handleView(order); }}
-              className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+              className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all"
               title="View"
             >
-              <Eye size={14} />
+              <Eye size={12} />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); navigate(`/manufacturing/job-cards?filter_work_order=${order.wo_id}`); }}
-              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+              className="p-1 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded  transition-all"
               title="Track"
             >
               <Activity size={14} />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); handleEdit(order); }}
-              className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+              className="p-1 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded  transition-all"
               title="Edit"
             >
               <Edit2 size={14} />
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); handleDelete(order.wo_id); }}
-              className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+              className="p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded  transition-all"
               title="Delete"
             >
               <Trash size={14} />
@@ -191,12 +227,20 @@ const WorkOrderRow = React.memo(({
           ) : depth > 0 ? (
             <div className="w-6" />
           ) : null}
-          <div className="w-8 h-8 rounded border border-gray-100 flex items-center justify-center text-gray-400 bg-white shadow-sm">
+          <div className="w-8 h-8 rounded border border-gray-100 flex items-center justify-center text-gray-400 bg-white  ">
             <ClipboardList size={16} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">{order.wo_id}</span>
+              {(() => {
+                const parts = (order.wo_id || '').split('-')
+                const displayId = parts.length > 3 ? `${parts[0]}-${parts[1]}-..-${parts[parts.length-1]}` : order.wo_id
+                return (
+                  <span className="text-[10px] font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded" title={order.wo_id}>
+                    {displayId}
+                  </span>
+                )
+              })()}
               <span className="text-sm font-medium text-gray-900 truncate">{order.item_name}</span>
               {hasSubAssemblies && (
                 <span className="text-[10px] text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-full font-medium">
@@ -220,17 +264,17 @@ const WorkOrderRow = React.memo(({
               <span>Progress</span>
               <span>{Math.round((order.produced_qty / order.quantity) * 100)}%</span>
             </div>
-            <div className="w-32 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className=" h-1.5 bg-gray-100 rounded-full overflow-hidden">
               <div 
                 className={`h-full ${order.status === 'completed' ? 'bg-emerald-500' : 'bg-indigo-500'} transition-all duration-500`}
                 style={{ width: `${Math.min((order.produced_qty / order.quantity) * 100, 100)}%` }}
               />
             </div>
             <div className="text-[10px] text-gray-400 mt-1 flex justify-between">
-              <span>{order.produced_qty} / {order.quantity} units</span>
+              <span>{parseFloat(order.produced_qty).toFixed(2)} / {parseFloat(order.quantity).toFixed(2)} units</span>
               {(parseFloat(order.scrap_qty) > 0 || parseFloat(order.rejected_qty) > 0) && (
                 <span className="text-rose-500 font-medium">
-                  Loss: {(parseFloat(order.scrap_qty) + parseFloat(order.rejected_qty)).toFixed(0)} units
+                  Loss: {(parseFloat(order.scrap_qty) + parseFloat(order.rejected_qty)).toFixed(2)} units
                 </span>
               )}
             </div>
@@ -262,6 +306,13 @@ const WorkOrderRow = React.memo(({
             >
               <Edit2 size={14} />
             </button>
+            <button
+              onClick={() => handleDelete(order.wo_id)}
+              className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
+              title="Delete"
+            >
+              <Trash size={14} />
+            </button>
           </div>
         </div>
       </div>
@@ -287,10 +338,11 @@ const WorkOrderRow = React.memo(({
 })
 
 const groupOrdersBySalesOrder = (ordersData) => {
+  const sortedOrders = sortWorkOrders(ordersData)
   const groups = {}
   
   const ordersMap = {}
-  ordersData.forEach(order => {
+  sortedOrders.forEach(order => {
     ordersMap[order.wo_id] = { ...order, subAssemblies: [] }
   })
 
@@ -310,7 +362,7 @@ const groupOrdersBySalesOrder = (ordersData) => {
     }
   }
 
-  ordersData.forEach(order => {
+  sortedOrders.forEach(order => {
     const { id: soId, customer_name: custName } = getEffectiveSOData(order)
     
     if (!groups[soId]) {
@@ -416,8 +468,9 @@ export default function WorkOrder() {
       )
       const response = await productionService.getWorkOrders({ ...cleanFilters, limit: 1000 })
       const ordersData = response.data || []
-      setOrders(ordersData)
-      calculateStats(ordersData)
+      const sortedData = sortWorkOrders(ordersData)
+      setOrders(sortedData)
+      calculateStats(sortedData)
       setError(null)
     } catch (err) {
       setError(err.message || 'Failed to fetch work orders')
@@ -609,6 +662,122 @@ export default function WorkOrder() {
 
   const memoizedGroups = useMemo(() => groupOrdersBySalesOrder(orders), [orders])
 
+  const columns = useMemo(() => [
+    {
+      key: 'item_name',
+      label: 'Item To Manufacture',
+      render: (val, row) => (
+        <div className="flex flex-col">
+          <span className="text-xs font-medium text-gray-900">{val}</span>
+          <span className="text-[10px] text-gray-400 truncate">
+            {(row.bom_no || '').startsWith('BOM-') ? row.bom_no : `BOM-${row.bom_no || row.wo_id.split('-')[1] || 'STANDARD'}`}
+          </span>
+        </div>
+      )
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (val) => <StatusBadge status={val} />
+    },
+    {
+      key: 'quantity',
+      label: 'Qty To Manufacture',
+      render: (val) => (
+        <div className="flex items-baseline gap-1">
+          <span className="text-xs font-semibold text-gray-900">{val}</span>
+          <span className="text-[10px] text-gray-400">units</span>
+        </div>
+      )
+    },
+    {
+      key: 'planned_start_date',
+      label: 'Planned Start Date',
+      render: (val) => (
+        <div className="flex items-center gap-2 text-[10px] text-gray-500">
+          <Calendar size={10} className="text-gray-400" />
+          <span>{val ? new Date(val).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</span>
+        </div>
+      )
+    },
+    {
+      key: 'progress',
+      label: 'Manufacturing Progress',
+      render: (_, row) => (
+        <div className="w-25">
+          <div className="flex justify-between text-[10px] mb-1.5">
+            <span className="font-medium text-gray-700">{row.produced_qty || 0} / {row.quantity}</span>
+            <span className="text-indigo-600 font-semibold">{Math.round(((row.produced_qty || 0) / (row.quantity || 1)) * 100)}%</span>
+          </div>
+          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+            <div 
+              className={`h-full transition-all duration-700 ${(row.status || '').toLowerCase() === 'completed' ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+              style={{ width: `${Math.min(((row.produced_qty || 0) / (row.quantity || 1)) * 100, 100)}%` }}
+            />
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'scrap_qty',
+      label: 'Process Loss',
+      render: (val) => (
+        <span className={`text-xs font-medium ${parseFloat(val) > 0 ? 'text-rose-500' : 'text-gray-400'}`}>
+          {parseFloat(val || 0).toFixed(1)}
+        </span>
+      )
+    },
+    {
+      key: 'wo_id',
+      label: 'ID',
+      render: (val) => {
+        const parts = (val || '').split('-')
+        const displayId = parts.length > 3 ? `${parts[0]}-${parts[1]}-..-${parts[parts.length-1]}` : val
+        return (
+          <span className="text-[10px] font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100" title={val}>
+            {displayId}
+          </span>
+        )
+      }
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (_, row) => (
+        <div className="flex items-center " onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => handleView(row)}
+            className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
+            title="View"
+          >
+            <Eye size={12} />
+          </button>
+          <button
+            onClick={() => navigate(`/manufacturing/job-cards?filter_work_order=${row.wo_id}`)}
+            className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-all"
+            title="Track"
+          >
+            <Activity size={12} />
+          </button>
+          <button
+            onClick={() => handleEdit(row)}
+            className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all"
+            title="Edit"
+          >
+            <Edit2 size={12} />
+          </button>
+          <button
+            onClick={() => handleDelete(row.wo_id)}
+            className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
+            title="Delete"
+          >
+            <Trash size={12} />
+          </button>
+        </div>
+      )
+    }
+  ], [navigate, handleView, handleEdit, handleDelete])
+
   return (
     <div className="min-h-screen bg-white p-2">
       {/* Modern Header */}
@@ -637,7 +806,7 @@ export default function WorkOrder() {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate('/manufacturing/work-orders/new')}
-                className="group flex items-center gap-2  p-2 bg-gray-900 text-white rounded hover:bg-indigo-600 transition-all duration-500 shadow-lg shadow-gray-200 hover:shadow-indigo-200"
+                className="group flex items-center gap-2  p-2 bg-gray-900 text-white rounded hover:bg-indigo-600 transition-all duration-500  shadow-gray-200 hover:shadow-indigo-200"
               >
                 <Plus size={20} className="group-hover:rotate-90 transition-transform duration-500" />
                 <span className="text-xs  ">Create Order</span>
@@ -658,7 +827,7 @@ export default function WorkOrder() {
         {/* Alerts */}
         {success && (
           <div className="mb-10 p-2  bg-emerald-50 border border-emerald-100 rounded flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
-            <div className="w-6 h-6 rounded bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-200">
+            <div className="w-6 h-6 rounded bg-emerald-500 flex items-center justify-center text-white  shadow-emerald-200">
               <CheckCircle2 size={24} />
             </div>
             <div>
@@ -670,7 +839,7 @@ export default function WorkOrder() {
 
         {error && (
           <div className="mb-10 p-2  bg-rose-50 border border-rose-100 rounded flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
-            <div className="w-6 h-6 rounded bg-rose-500 flex items-center justify-center text-white shadow-lg shadow-rose-200">
+            <div className="w-6 h-6 rounded bg-rose-500 flex items-center justify-center text-white  shadow-rose-200">
               <AlertCircle size={24} />
             </div>
             <div>
@@ -775,75 +944,7 @@ export default function WorkOrder() {
         </div>
 
         {/* Scheduling Analyzer Section */}
-        {!loading && orders.length > 0 && (
-          <div className="mb-6 p-2 rounded bg-gray-900  shadow-gray-200  relative group">
-            <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:scale-110 transition-transform duration-700">
-              <BarChart3 size={180} className="text-white" />
-            </div>
-            
-            <div className="relative z-10">
-              <div className="flex items-center gap-2  mb-4">
-                <div className="p-2 bg-indigo-500/20 rounded ">
-                  <TrendingUp size={10} className="text-indigo-400" />
-                </div>
-                <h2 className="text-lg  text-white ">Scheduling Analyzer</h2>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-2 ">
-                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-2  rounded hover:bg-white/10 transition-colors">
-                  <p className="text-gray-400 text-xs    mb-2">High Priority Pending</p>
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-xl  text-white">
-                      {orders.filter(o => o.priority === 'high' && ['draft', 'planned'].includes((o.status || '').toLowerCase())).length}
-                    </p>
-                    <span className="text-xs   text-rose-400">Critical</span>
-                  </div>
-                  <div className="mt-4 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]" 
-                      style={{ width: `${(orders.filter(o => o.priority === 'high').length / Math.max(orders.length, 1)) * 100}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-2  rounded hover:bg-white/10 transition-colors">
-                  <p className="text-gray-400 text-xs    mb-2">Due This Week</p>
-                  <p className="text-xl  text-white">
-                    {orders.filter(o => {
-                      if (!o.planned_end_date) return false
-                      const dueDate = new Date(o.planned_end_date)
-                      const today = new Date()
-                      const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
-                      return dueDate >= today && dueDate <= weekFromNow
-                    }).length}
-                  </p>
-                  <div className="mt-4 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" style={{ width: '45%' }} />
-                  </div>
-                </div>
-
-                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-2  rounded hover:bg-white/10 transition-colors">
-                  <p className="text-gray-400 text-xs    mb-2">Completion Rate</p>
-                  <p className="text-xl  text-white">{stats.completionRate}<span className="text-lg text-indigo-400">%</span></p>
-                  <div className="mt-4 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" style={{ width: `${stats.completionRate}%` }} />
-                  </div>
-                </div>
-
-                <div className="bg-white/5 backdrop-blur-md border border-white/10 p-2  rounded hover:bg-white/10 transition-colors">
-                  <p className="text-gray-400 text-xs    mb-2">Ready for QC</p>
-                  <p className="text-xl  text-white">
-                    {orders.filter(o => (o.status || '').toLowerCase() === 'in-progress').length}
-                  </p>
-                  <div className="mt-4 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" style={{ width: '62%' }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
+        
         {/* Orders Grouped View */}
         <div className="space-y-8">
           {loading ? (
@@ -857,7 +958,7 @@ export default function WorkOrder() {
               </div>
             ))
           ) : orders.length === 0 ? (
-            <div className="bg-white rounded border border-gray-100 p-20 text-center">
+            <div className="bg-white rounded border border-gray-100 p-2 text-center">
               <div className="w-20 h-20 bg-gray-50 rounded flex items-center justify-center text-gray-300 mx-auto mb-6">
                 <Package size={40} />
               </div>
@@ -865,7 +966,7 @@ export default function WorkOrder() {
               <p className="text-xs text-gray-400 mb-8">Try adjusting filters or create a new order.</p>
               <button
                 onClick={() => navigate('/manufacturing/work-orders/new')}
-                className="px-6 py-2 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 transition-colors"
+                className="p-2  bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 transition-colors"
               >
                 Create First Order
               </button>
@@ -874,7 +975,7 @@ export default function WorkOrder() {
             <>
               {/* Active Work Orders Section */}
               {(() => {
-                const groups = groupOrdersBySalesOrder(orders);
+                const groups = memoizedGroups;
                 const completedGroups = groups.filter(g => g.allCompleted);
                 const completedOrderIds = new Set(completedGroups.flatMap(g => g.orders.map(o => o.wo_id)));
                 const activeOrders = orders.filter(o => !completedOrderIds.has(o.wo_id));
@@ -882,11 +983,11 @@ export default function WorkOrder() {
                 return (
                   <>
                     {activeOrders.length > 0 && (
-                      <div className="bg-white rounded border border-gray-100 shadow-sm overflow-hidden">
-                        <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+                      <div className="bg-white rounded border border-gray-100 overflow-hidden">
+                        <div className="p-2 border-b border-gray-100 bg-gray-50/50">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h2 className="text-sm font-bold text-gray-900">Active Work Orders</h2>
+                              <h2 className="text-sm font-semibold text-gray-900">Active Work Orders</h2>
                               <p className="text-[10px] text-gray-500 mt-0.5">Real-time production tracking</p>
                             </div>
                             <div className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-medium flex items-center gap-1.5">
@@ -896,29 +997,12 @@ export default function WorkOrder() {
                           </div>
                         </div>
                         
-                        {/* Table Header */}
-                        <div className="hidden md:flex items-center gap-4 px-4 py-2 text-[10px] font-bold text-gray-400 border-b border-gray-100 bg-gray-50/30 uppercase tracking-wider">
-                          <div className="w-8" />
-                          <div className="flex-1 min-w-[200px]">Order Identity</div>
-                          <div className="flex-1 min-w-[200px]">Item</div>
-                          <div className="w-32">Status & Priority</div>
-                          <div className="w-40">Progress</div>
-                          <div className="w-28 text-right pr-4">Actions</div>
-                        </div>
-
-                        <div className="divide-y divide-gray-50">
-                          {activeOrders.map(order => (
-                            <WorkOrderRow 
-                              key={order.wo_id} 
-                              order={order} 
-                              layout="flat" 
-                              navigate={navigate}
-                              handleView={handleView}
-                              handleEdit={handleEdit}
-                              handleDelete={handleDelete}
-                            />
-                          ))}
-                        </div>
+                        <DataTable 
+                          columns={columns}
+                          data={activeOrders}
+                          pageSize={50}
+                          sortable={true}
+                        />
                       </div>
                     )}
 
@@ -927,14 +1011,14 @@ export default function WorkOrder() {
                       <div className="space-y-4">
                         <div className="flex items-center gap-3 px-1">
                           <div className="h-px flex-1 bg-gray-100" />
-                          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Completed Production Flow</h2>
+                          <h2 className="text-[10px]  text-gray-400  ">Completed Production Flow</h2>
                           <div className="h-px flex-1 bg-gray-100" />
                         </div>
                         
                         {completedGroups.map((group) => {
                           const isExpanded = expandedGroups[group.id]
                           return (
-                            <div key={group.id} className="bg-white rounded border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                            <div key={group.id} className="bg-white rounded border border-gray-100 overflow-hidden   hover: transition-shadow">
                               {/* Group Header */}
                               <div 
                                 onClick={(e) => {
@@ -947,13 +1031,13 @@ export default function WorkOrder() {
                                   <div className="text-gray-400">
                                     {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
                                   </div>
-                                  <div className={`p-2 rounded-lg ${group.allCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'} shadow-sm border ${group.allCompleted ? 'border-emerald-100' : 'border-indigo-100'}`}>
+                                  <div className={`p-2 rounded  ${group.allCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}   border ${group.allCompleted ? 'border-emerald-100' : 'border-indigo-100'}`}>
                                     {group.allCompleted ? <CheckCircle2 size={24} /> : <Layers size={24} />}
                                   </div>
                                   <div>
                                     <div className="flex items-center gap-2">
                                       <h3 className="text-sm font-semibold text-gray-900">{group.customer_name}</h3>
-                                      <span className="text-[10px] font-mono bg-white px-2 py-0.5 rounded border border-gray-200 text-gray-500 shadow-sm">
+                                      <span className="text-[10px] font-mono bg-white px-2 py-0.5 rounded border border-gray-200 text-gray-500  ">
                                         {group.id === 'NO_SALES_ORDER' ? 'Direct Production' : group.id}
                                       </span>
                                     </div>
@@ -973,14 +1057,14 @@ export default function WorkOrder() {
                                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                                   <button
                                     onClick={() => handlePrintReport(group.id, group.orders)}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded text-[10px] font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded text-[10px] font-medium text-gray-600 hover:bg-gray-50 transition-colors  "
                                   >
                                     <Printer size={12} />
                                     Print
                                   </button>
                                   <button
                                     onClick={() => handleDownloadReport(group.id, group.orders)}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded text-[10px] font-medium text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded text-[10px] font-medium text-gray-600 hover:bg-gray-50 transition-colors  "
                                   >
                                     <Download size={12} />
                                     CSV
@@ -988,7 +1072,7 @@ export default function WorkOrder() {
                                   {group.allCompleted && group.id !== 'NO_SALES_ORDER' && (
                                     <button
                                       onClick={() => handleShipment(group.id, group.orders)}
-                                      className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded text-[10px] font-medium hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-100"
+                                      className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded text-[10px] font-medium hover:bg-indigo-700 transition-colors  shadow-indigo-100"
                                     >
                                       <Truck size={12} />
                                       Send to Shipment

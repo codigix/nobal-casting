@@ -536,14 +536,14 @@ export default function Suppliers() {
             <div className="flex bg-slate-100 p-1 rounded border border-slate-200 shadow-inner">
               <button
                 onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded transition-all ${viewMode === 'table' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-indigo-600'}`}
+                className={`p-1.5 rounded transition-all ${viewMode === 'table' ? 'bg-white text-indigo-600  ' : 'text-slate-500 hover:text-indigo-600'}`}
                 title="Table view"
               >
                 <List size={16} />
               </button>
               <button
                 onClick={() => setViewMode('card')}
-                className={`p-1.5 rounded transition-all ${viewMode === 'card' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-indigo-600'}`}
+                className={`p-1.5 rounded transition-all ${viewMode === 'card' ? 'bg-white text-indigo-600  ' : 'text-slate-500 hover:text-indigo-600'}`}
                 title="Card view"
               >
                 <Grid3x3 size={16} />
@@ -642,7 +642,7 @@ export default function Suppliers() {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {paginatedData.map((supplier) => (
-                <div key={supplier.supplier_id} className={`bg-white dark:bg-neutral-800 rounded-xs border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-lg transition-shadow`}>
+                <div key={supplier.supplier_id} className={`bg-white dark:bg-neutral-800 rounded-xs border border-neutral-200 dark:border-neutral-700 overflow-hidden hover: transition-shadow`}>
                   <div className={`bg-gradient-to-r ${getGroupColor(supplier.supplier_group)} p-3 border-b border-neutral-200 dark:border-neutral-700`}>
                     <h3 className=" text-neutral-900 dark:text-white">{supplier.name}</h3>
                     <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">{supplier.supplier_id}</p>

@@ -199,7 +199,7 @@ export default function GRNRequestDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-3">
-      <div className="mx-auto space-y-6">
+      <div className="mx-auto space-y-2">
         {/* Header Section */}
         <div className="flex items-center gap-4 mb-3">
           <Button
@@ -241,7 +241,7 @@ export default function GRNRequestDetail() {
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           {/* Left Column - Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-2">
             {/* Workflow Progress - Timeline */}
             <div className="bg-white rounded-xs border border-gray-200  overflow-hidden">
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 p-2">
@@ -298,7 +298,7 @@ export default function GRNRequestDetail() {
 
             {/* Key Info Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-white border border-gray-200 rounded-xs p-2  hover:shadow-md transition-all">
+              <div className="bg-white border border-gray-200 rounded-xs p-2  hover: transition-all">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <p className="text-xs  text-gray-500  tracking-wide mb-2">Total Items</p>
@@ -308,7 +308,7 @@ export default function GRNRequestDetail() {
                 </div>
               </div>
 
-              <div className="bg-white border border-gray-200 rounded-xs p-2  hover:shadow-md transition-all">
+              <div className="bg-white border border-gray-200 rounded-xs p-2  hover: transition-all">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <p className="text-xs  text-gray-500  tracking-wide mb-2">Receipt Date</p>
@@ -320,7 +320,7 @@ export default function GRNRequestDetail() {
                 </div>
               </div>
 
-              <div className="bg-white border border-gray-200 rounded-xs p-2  hover:shadow-md transition-all">
+              <div className="bg-white border border-gray-200 rounded-xs p-2  hover: transition-all">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <p className="text-xs  text-gray-500  tracking-wide mb-2">Assigned To</p>
@@ -332,7 +332,7 @@ export default function GRNRequestDetail() {
                 </div>
               </div>
 
-              <div className="bg-white border border-gray-200 rounded-xs p-2  hover:shadow-md transition-all">
+              <div className="bg-white border border-gray-200 rounded-xs p-2  hover: transition-all">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <p className="text-xs  text-gray-500  tracking-wide mb-2">Created By</p>
@@ -462,7 +462,7 @@ export default function GRNRequestDetail() {
                       <Button
                         variant="success"
                         onClick={handleQCApproval}
-                        className="flex items-center justify-center gap-2 py-2 text-xs  h-auto shadow-lg hover: transition-all"
+                        className="flex items-center justify-center gap-2 py-2 text-xs  h-auto  hover: transition-all"
                       >
                         <CheckCircle size={18} />
                         QC Approval
@@ -470,7 +470,7 @@ export default function GRNRequestDetail() {
                       <Button
                         variant="danger"
                         onClick={() => setShowApprovalModal(true)}
-                        className="flex items-center justify-center gap-2 py-2 text-xs  h-auto shadow-lg hover: transition-all"
+                        className="flex items-center justify-center gap-2 py-2 text-xs  h-auto  hover: transition-all"
                       >
                         <XCircle size={18} />
                         Send Back
@@ -482,7 +482,7 @@ export default function GRNRequestDetail() {
                       <Button
                         variant="success"
                         onClick={() => setShowInventoryApprovalModal(true)}
-                        className="flex items-center justify-center gap-2 py-2 text-xs  h-auto shadow-lg hover: transition-all"
+                        className="flex items-center justify-center gap-2 py-2 text-xs  h-auto  hover: transition-all"
                       >
                         <Home size={18} />
                         Approve & Store
@@ -490,7 +490,7 @@ export default function GRNRequestDetail() {
                       <Button
                         variant="warning"
                         onClick={() => setShowApprovalModal(true)}
-                        className="flex items-center justify-center gap-2 py-2 text-xs  h-auto shadow-lg hover: transition-all"
+                        className="flex items-center justify-center gap-2 py-2 text-xs  h-auto  hover: transition-all"
                       >
                         <ArrowLeft size={18} />
                         Send Back to QC
@@ -547,7 +547,7 @@ export default function GRNRequestDetail() {
           </div>
 
           {/* Right Column - Side Panel */}
-          <div className="space-y-6">
+          <div className="space-y-2">
             {/* GRN Details Card */}
             {(grn.approved_by_user || grn.notes) && (
               <div className="bg-white rounded-xs border border-gray-200  overflow-hidden">

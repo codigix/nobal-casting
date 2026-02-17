@@ -295,7 +295,7 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
         job_card_id: jobCardId,
         employee_id: timeLogForm.employee_id,
         operator_name: timeLogForm.operator_name,
-        machine_id: timeLogForm.machine_id,
+        workstation_name: timeLogForm.machine_id,
         shift: timeLogForm.shift,
         from_time: timeLogForm.from_time,
         to_time: timeLogForm.to_time,
@@ -305,7 +305,8 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
         scrap_qty: scrapQty,
         inhouse: timeLogForm.inhouse ? 1 : 0,
         outsource: timeLogForm.outsource ? 1 : 0,
-        time_in_minutes: calculateTimeDuration()
+        time_in_minutes: calculateTimeDuration(),
+        log_date: new Date().toISOString().split('T')[0]
       }
 
       await productionService.createTimeLog(payload)
@@ -376,11 +377,15 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
     try {
       setLoading(true)
       const payload = {
-  job_card_id: jobCardId,
-  rejection_reason: rejectionForm.reason,
-  quantity: rejectionForm.rejected_qty,
-  notes: rejectionForm.notes
-}
+        job_card_id: jobCardId,
+        rejection_reason: rejectionForm.reason,
+        rejected_qty: parseFloat(rejectionForm.rejected_qty) || 0,
+        accepted_qty: 0, // Default to 0 as it's primarily a rejection log
+        scrap_qty: 0,
+        notes: rejectionForm.notes,
+        shift: timeLogForm.shift, // Use current active shift
+        log_date: new Date().toISOString().split('T')[0]
+      }
 
 
       await productionService.createRejection(payload)
@@ -623,7 +628,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
           )
         })()}
 
-        <div className="max-h-[70vh] overflow-y-auto space-y-6">
+        <div className="max-h-[70vh] overflow-y-auto space-y-2">
           {/* Operation Execution Section */}
           <div className="p-4 bg-gradient-to-br from-green-50 to-blue-50 border border-green-200 rounded-xs">
             <h3 className="text-xs  text-gray-900 mb-4">Operation Execution</h3>
@@ -836,15 +841,15 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                         ? 'bg-green-50 border-green-300 text-green-700' 
                         : 'bg-red-50 border-red-300 text-red-700'
                     }`}>
-                      <p className="font-bold mb-1">Quality & Plan Summary</p>
+                      <p className=" mb-1">Quality & Plan Summary</p>
                       <p>Accepted ({accepted.toFixed(2)}) + Rejected ({rejected.toFixed(2)}) + Scrap ({scrap.toFixed(2)}) = {total.toFixed(2)}</p>
                       <p className="mt-1">Cumulative Production: {(currentTotalProduced + completed).toFixed(2)} / {planned.toFixed(2)}</p>
                       
                       {total > completed && (
-                        <p className="mt-1 font-bold italic">⚠️ Total exceeds completed quantity!</p>
+                        <p className="mt-1  italic">⚠️ Total exceeds completed quantity!</p>
                       )}
                       {exceedsPlan && (
-                        <p className="mt-1 font-bold italic">⚠️ Cumulative production exceeds planned quantity!</p>
+                        <p className="mt-1  italic">⚠️ Cumulative production exceeds planned quantity!</p>
                       )}
                       {total === 0 && completed > 0 && (
                         <p className="mt-1 ">⚠️ Please specify accepted, rejected, or scrap quantities</p>
@@ -911,7 +916,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                     <tbody className="divide-y divide-gray-200">
                       {timeLogs.map(log => (
                         <tr key={log.time_log_id} className="hover:bg-gray-50 transition">
-                          <td className="p-2  py-2 text-center text-gray-900 font-bold bg-gray-50/50">
+                          <td className="p-2  py-2 text-center text-gray-900  bg-gray-50/50">
                             {log.day_number || '-'}
                           </td>
                           <td className="p-2  py-2 text-gray-900">{log.operator_name}</td>
@@ -1026,14 +1031,14 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                     <tbody className="divide-y divide-gray-200">
                       {rejections.map(r => (
                         <tr key={r.rejection_id} className="hover:bg-gray-50 transition">
-                          <td className="p-2  py-2 text-center text-gray-900 font-bold bg-gray-50/50">
+                          <td className="p-2  py-2 text-center text-gray-900  bg-gray-50/50">
                             {r.day_number || '-'}
                           </td>
                           <td className="p-2  py-2">
                             {r.status === 'Approved' ? (
-                              <span className="text-emerald-600 font-bold uppercase text-[9px]">Approved</span>
+                              <span className="text-emerald-600   text-[9px]">Approved</span>
                             ) : (
-                              <span className="text-amber-600 font-bold uppercase text-[9px]">Pending</span>
+                              <span className="text-amber-600   text-[9px]">Pending</span>
                             )}
                           </td>
                           <td className="p-2  py-2 text-gray-900">{r.rejection_reason}</td>
@@ -1173,7 +1178,7 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                     <tbody className="divide-y divide-gray-200">
                       {downtimes.map(d => (
                         <tr key={d.downtime_id} className="hover:bg-gray-50 transition">
-                          <td className="p-2  py-2 text-center text-gray-900 font-bold bg-gray-50/50">
+                          <td className="p-2  py-2 text-center text-gray-900  bg-gray-50/50">
                             {d.day_number || '-'}
                           </td>
                           <td className="p-2  py-2 text-gray-900">{d.downtime_type}</td>

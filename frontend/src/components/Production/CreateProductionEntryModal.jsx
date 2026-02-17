@@ -110,13 +110,13 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
       title="Record Daily Production" 
       size="4xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-2">
         {error && <Alert type="error" message={error} />}
 
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Pane - Context */}
           <div className="lg:w-5/12 space-y-4">
-            <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+            <div className="bg-slate-50 p-5 rounded  border border-slate-200 space-y-4">
               <div className="flex items-center gap-2 text-slate-800 font-semibold border-b border-slate-200 pb-3 mb-2">
                 <ClipboardList size={18} className="text-blue-500" />
                 Execution Context
@@ -124,7 +124,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1.5">
                     Work Order *
                   </label>
                   <div className="relative">
@@ -134,7 +134,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
                       value={formData.work_order_id}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
                     >
                       <option value="">Select Work Order</option>
                       {workOrders.map(wo => (
@@ -147,7 +147,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1.5">
                     Machine/Workstation *
                   </label>
                   <div className="relative">
@@ -157,7 +157,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
                       value={formData.machine_id}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
                     >
                       <option value="">Select Workstation</option>
                       {machines.map(m => (
@@ -170,7 +170,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1.5">
                     Operator
                   </label>
                   <div className="relative">
@@ -179,7 +179,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
                       name="operator_id"
                       value={formData.operator_id}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
                     >
                       <option value="">Select Operator</option>
                       {operators.map(op => (
@@ -193,7 +193,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
               </div>
             </div>
 
-            <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 space-y-4">
+            <div className="bg-blue-50 p-5 rounded  border border-blue-100 space-y-4">
               <div className="flex items-center gap-2 text-blue-800 font-semibold mb-1">
                 <Clock size={18} />
                 Timing & Shift
@@ -201,7 +201,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Entry Date</label>
+                  <label className="block text-[10px]  text-blue-600  mb-1">Entry Date</label>
                   <div className="relative">
                     <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-blue-400" size={14} />
                     <input
@@ -210,17 +210,17 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
                       value={formData.entry_date}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-8 pr-3 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full pl-8 pr-3 py-2 bg-white border border-blue-200 rounded  text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Shift</label>
+                  <label className="block text-[10px]  text-blue-600  mb-1">Shift</label>
                   <select
                     name="shift_no"
                     value={formData.shift_no}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3 py-2 bg-white border border-blue-200 rounded  text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="1">Shift 1</option>
                     <option value="2">Shift 2</option>
@@ -233,7 +233,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
 
           {/* Right Pane - Output & Quality */}
           <div className="lg:w-7/12 space-y-4">
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white border border-slate-200 rounded  overflow-hidden  ">
               <div className="bg-slate-50 px-5 py-3 border-b border-slate-200 flex justify-between items-center">
                 <div className="flex items-center gap-2 font-semibold text-slate-800">
                   <Activity size={18} className="text-blue-500" />
@@ -246,7 +246,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
                 )}
               </div>
 
-              <div className="p-5 space-y-6">
+              <div className="p-5 space-y-2">
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-slate-700">Quantity Produced *</label>
@@ -260,7 +260,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
                         placeholder="0"
                         required
                         min="0"
-                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded  text-lg  text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -276,7 +276,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
                         onChange={handleInputChange}
                         placeholder="0"
                         min="0"
-                        className="w-full pl-10 pr-4 py-3 bg-red-50/30 border border-red-100 rounded-xl text-lg font-bold text-red-700 focus:bg-white focus:ring-2 focus:ring-red-500 outline-none transition-all"
+                        className="w-full pl-10 pr-4 py-3 bg-red-50/30 border border-red-100 rounded  text-lg  text-red-700 focus:bg-white focus:ring-2 focus:ring-red-500 outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -293,7 +293,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
                     onChange={handleInputChange}
                     placeholder="Describe any issues, downtime causes, or quality observations..."
                     rows="3"
-                    className="w-full p-2  bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm resize-none"
+                    className="w-full p-2  bg-slate-50 border border-slate-200 rounded  focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm resize-none"
                   />
                 </div>
               </div>

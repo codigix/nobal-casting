@@ -70,7 +70,7 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
             </p>
           )}
         </div>
-        <div className={`p-3 rounded shadow-lg transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 ${colorStyle}`}>
+        <div className={`p-3 rounded  transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 ${colorStyle}`}>
           <Icon size={24} strokeWidth={2.5} />
         </div>
       </div>
@@ -396,14 +396,14 @@ export default function BOM() {
     <div className="flex items-center justify-end gap-1 pr-4">
       <button 
         onClick={() => handleEdit(row)}
-        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all duration-300 hover:shadow-lg hover:shadow-indigo-100"
+        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all duration-300 hover: hover:shadow-indigo-100"
         title="Analyze & Edit"
       >
         <Edit2 size={16} strokeWidth={2.5} />
       </button>
       <button 
         onClick={() => handleDelete(row.bom_id)}
-        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all duration-300 hover:shadow-lg hover:shadow-rose-100"
+        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all duration-300 hover: hover:shadow-rose-100"
         title="Remove Formulation"
       >
         <Trash2 size={16} strokeWidth={2.5} />
@@ -451,7 +451,7 @@ export default function BOM() {
           <button 
             onClick={handleSyncStatuses}
             disabled={loading}
-            className="inline-flex items-center gap-2 rounded bg-white p-2 text-xs  text-slate-700 ring-1 ring-inset ring-slate-200 hover:bg-slate-50 transition-all active:scale-95   hover:shadow-md disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded bg-white p-2 text-xs  text-slate-700 ring-1 ring-inset ring-slate-200 hover:bg-slate-50 transition-all active:scale-95   hover: disabled:opacity-50"
           >
             <RefreshCw size={18} className={`text-amber-500 ${loading ? 'animate-spin' : ''}`} />
             Sync Lifecycle
@@ -459,7 +459,7 @@ export default function BOM() {
           
           <button 
             onClick={() => navigate('/manufacturing/bom/new')}
-            className="inline-flex items-center gap-2 rounded bg-indigo-600 p-6  py-2.5 text-xs  text-white hover:bg-indigo-700 transition-all active:scale-95 shadow  shadow-indigo-100"
+            className="inline-flex items-center gap-2 rounded bg-indigo-600 p-6  py-2  text-xs  text-white hover:bg-indigo-700 transition-all active:scale-95 shadow  shadow-indigo-100"
           >
             <Plus size={18} strokeWidth={3} />
             Initialize BOM
@@ -511,7 +511,7 @@ export default function BOM() {
       {/* Strategic Intelligence Widgets */}
       {intelligence && !loading && boms.length > 0 && (
         <div className="mb-8 grid gap-4 lg:grid-cols-3">
-          <Card className="bg-slate-900 border-slate-800 p-2 rounded lg:col-span-2 relative overflow-hidden group shadow-2xl shadow-indigo-900/10">
+          <Card className="bg-slate-900 border-slate-800 p-2 rounded lg:col-span-2 relative overflow-hidden group  shadow-indigo-900/10">
             <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity duration-700">
               <TrendingUp size={120} className="text-indigo-400" />
             </div>
@@ -559,7 +559,7 @@ export default function BOM() {
               <h3 className="text-xs  text-slate-800 ">Strategic Composition</h3>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-2">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -601,7 +601,7 @@ export default function BOM() {
       {/* Dynamic Alerts */}
       <div className="">
         {success && (
-          <div className="flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 text-xs text-emerald-800   animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center gap-3 rounded  border border-emerald-100 bg-emerald-50/50 p-4 text-xs text-emerald-800   animate-in fade-in slide-in-from-top-4 duration-500">
             <div className="rounded bg-white p-2   text-emerald-600"><Check size={18} strokeWidth={3} /></div>
             <div>
               <p className="  text-xs">Strategic Success</p>
@@ -611,7 +611,7 @@ export default function BOM() {
         )}
 
         {error && (
-          <div className="flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50/50 p-4 text-xs text-rose-800   animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex items-center gap-3 rounded  border border-rose-100 bg-rose-50/50 p-4 text-xs text-rose-800   animate-in fade-in slide-in-from-top-4 duration-500">
             <div className="rounded bg-white p-2   text-rose-600"><AlertCircle size={18} strokeWidth={3} /></div>
             <div>
               <p className="  text-xs">Operational ror</p>
@@ -621,7 +621,7 @@ export default function BOM() {
         )}
       </div>
 
-      <Card className="bg-white border-slate-200 rounded-2xl overflow-hidden shadow  shadow-slate-200/40">
+      <Card className="bg-white border-slate-200 rounded  overflow-hidden shadow  shadow-slate-200/40">
         {/* Intelligence Filter Bar */}
         <div className="p-4 border-b border-slate-100 bg-slate-50/30">
           <div className="flex flex-col lg:flex-row gap-6 items-end">
@@ -635,7 +635,7 @@ export default function BOM() {
                     placeholder="Search by ID, Product, or Item Code..." 
                     value={filters.search} 
                     onChange={handleFilterChange}
-                    className="w-full bg-white border border-slate-200 rounded pl-10 pr-4 py-2.5 text-xs  text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
+                    className="w-full bg-white border border-slate-200 rounded pl-10 pr-4 py-2  text-xs  text-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
                   />
                 </div>
               </FieldWrapper>
@@ -712,11 +712,11 @@ export default function BOM() {
               <div className="w-20 h-20 bg-white rounded-3xl border border-slate-100   flex items-center justify-center mb-6 group hover:scale-110 transition-transform duration-500">
                 <FileText size={40} className="text-slate-200 group-hover:text-indigo-200 transition-colors" />
               </div>
-              <p className="text-xs  text-slate-400 tracking-[0.2em]">No Formulations Found</p>
+              <p className="text-xs  text-slate-400 ">No Formulations Found</p>
               <p className="mt-2 text-xs text-slate-400 font-medium text-xs">Initialize your first BOM to begin manufacturing intelligence</p>
               <button 
                 onClick={() => navigate('/manufacturing/bom/new')}
-                className="mt-6 inline-flex items-center gap-2 rounded bg-white p-6  py-2.5 text-xs  text-indigo-600 border border-indigo-100 hover:bg-indigo-50 transition-all  "
+                className="mt-6 inline-flex items-center gap-2 rounded bg-white p-6  py-2  text-xs  text-indigo-600 border border-indigo-100 hover:bg-indigo-50 transition-all  "
               >
                 <Plus size={14} strokeWidth={3} />
                 Create New Specification

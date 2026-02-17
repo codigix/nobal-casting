@@ -8,16 +8,21 @@ export default function Dashboard() {
     return <Navigate to="/login" replace />
   }
 
-  const department = user.department?.toLowerCase() || 'manufacturing'
+  const department = user.department?.toLowerCase() || ''
 
   const departmentRoutes = {
     'manufacturing': '/manufacturing/dashboard',
     'inventory': '/inventory/dashboard',
     'admin': '/admin/project-analysis',
     'production': '/manufacturing/dashboard',
+    'accounts': '/accounts/dashboard',
   }
 
-  const dashboardRoute = departmentRoutes[department] || '/manufacturing/dashboard'
+  const dashboardRoute = departmentRoutes[department] || '/login'
+  
+  if (dashboardRoute === '/login') {
+    console.error('[Dashboard] Unknown department:', user.department)
+  }
 
   return <Navigate to={dashboardRoute} replace />
 }

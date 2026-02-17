@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Save, X, AlertCircle, CheckCircle, Factory,
   Boxes, Edit2, Settings, Calendar,
   Database, Layers, Clock,
   ArrowRight, ShieldCheck, Zap, Activity, Filter, Info,
-  BarChart3, TrendingUp, FileText, ChevronRight
+  BarChart3, TrendingUp, FileText, RefreshCw, Package
 } from 'lucide-react'
 import SearchableSelect from '../../components/SearchableSelect'
 import * as productionService from '../../services/productionService'
@@ -92,10 +92,8 @@ export default function WorkOrderForm() {
   const [bomMaterials, setBomMaterials] = useState([])
   const [availableBoms, setAvailableBoms] = useState([])
   const [jobCards, setJobCards] = useState([])
-  const [bomQuantity, setBomQuantity] = useState(1)
   const [workstations, setWorkstations] = useState([])
-  const [productionStages, setProductionStages] = useState([])
-  const [isEditMode, setIsEditMode] = useState(!id)
+  const [isEditMode] = useState(!id)
   const [editingJobCardId, setEditingJobCardId] = useState(null)
   const [showReceiptModal, setShowReceiptModal] = useState(false)
   const [receivingJobCard, setReceivingJobCard] = useState(null)
@@ -154,6 +152,7 @@ export default function WorkOrderForm() {
   const [allTimeLogs, setAllTimeLogs] = useState([])
   const [allRejections, setAllRejections] = useState([])
   const [allDowntimes, setAllDowntimes] = useState([])
+  const [operationWiseConsumption, setOperationWiseConsumption] = useState([])
 
   const [formData, setFormData] = useState({
     work_order_id: '',
@@ -168,7 +167,7 @@ export default function WorkOrderForm() {
     actual_end_date: '',
     expected_delivery_date: '',
     priority: 'medium',
-    status: 'draft',
+    status: 'Draft',
     notes: '',
     production_stage_id: null
   })
@@ -247,8 +246,7 @@ export default function WorkOrderForm() {
 
   const fetchProductionStages = async () => {
     try {
-      const response = await api.get(`${import.meta.env.VITE_API_URL}/production-stages/active`)
-      if (response.data.success) setProductionStages(response.data.data || [])
+      await api.get(`${import.meta.env.VITE_API_URL}/production-stages/active`)
     } catch (err) { console.error('Failed to fetch production stages:', err) }
   }
 
@@ -280,10 +278,22 @@ export default function WorkOrderForm() {
       const rawCards = response.data || []
       const enrichedCards = await calculateCompletionMetrics(rawCards)
       setJobCards(enrichedCards)
+      
+      // Fetch operation-wise consumption
+      await fetchOperationWiseConsumption(workOrderId)
     } catch (err) { 
       console.error('Failed to fetch job cards:', err) 
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchOperationWiseConsumption = async (workOrderId) => {
+    try {
+      const response = await productionService.getMaterialConsumptionByOperation(workOrderId)
+      setOperationWiseConsumption(response.data || [])
+    } catch (err) {
+      console.error('Failed to fetch operation-wise consumption:', err)
     }
   }
 
@@ -578,6 +588,48 @@ export default function WorkOrderForm() {
           returned_qty: item.returned_qty
         })))
       }
+
+      // Fetch material allocations to ensure transferred_qty is up to date
+      try {
+        const allocationRes = await productionService.getMaterialAllocationForWorkOrder(workOrderId)
+        const allocations = allocationRes.data || allocationRes || []
+        
+        if (allocations.length > 0) {
+          setBomMaterials(prev => {
+            if (prev.length === 0) {
+              // If no items were found in WO or BOM, use allocations as the base
+              return allocations.map((alloc, idx) => ({
+                id: alloc.allocation_id || idx,
+                item_code: alloc.item_code,
+                item_name: alloc.item_name || '',
+                quantity: alloc.allocated_qty,
+                uom: alloc.uom || '',
+                required_qty: alloc.allocated_qty,
+                source_warehouse: alloc.warehouse_code,
+                transferred_qty: alloc.allocated_qty,
+                consumed_qty: alloc.consumed_qty || 0,
+                returned_qty: alloc.returned_qty || 0
+              }))
+            } else {
+              // Merge allocations into existing items
+              return prev.map(item => {
+                const alloc = allocations.find(a => a.item_code === item.item_code)
+                if (alloc) {
+                  return {
+                    ...item,
+                    transferred_qty: alloc.allocated_qty,
+                    consumed_qty: alloc.consumed_qty || item.consumed_qty || 0,
+                    returned_qty: alloc.returned_qty || item.returned_qty || 0
+                  }
+                }
+                return item
+              })
+            }
+          })
+        }
+      } catch (allocErr) {
+        console.error('Failed to fetch allocations:', allocErr)
+      }
     } catch (err) { console.error('Failed to fetch work order:', err); setError(`Failed to load work order: ${err.message}`) }
     finally { setLoading(false) }
   }
@@ -588,7 +640,6 @@ export default function WorkOrderForm() {
       setLoading(true)
       const response = await productionService.getBOMDetails(bomId)
       const bomData = response.data || response
-      setBomQuantity(bomData.quantity || 1)
       const workOrderQty = parseFloat(formData.qty_to_manufacture) || 1
 
       const operations = (bomData.operations || []).map((op, idx) => {
@@ -633,6 +684,80 @@ export default function WorkOrderForm() {
       if (jobCards.length > 0 && operations.length > 0) populateWorkstationsForJobCards(jobCards, operations)
     } catch (err) { console.error('Failed to fetch BOM details:', err) }
     finally { setLoading(false) }
+  }
+
+  const syncInventory = async () => {
+    if (!id) return
+    try {
+      setLoading(true)
+      const allocationRes = await productionService.getMaterialAllocationForWorkOrder(id)
+      const allocations = allocationRes.data || allocationRes || []
+      
+      if (allocations.length > 0) {
+        setBomMaterials(prev => {
+          if (prev.length === 0) {
+            return allocations.map((alloc, idx) => ({
+              id: alloc.allocation_id || idx,
+              item_code: alloc.item_code,
+              item_name: alloc.item_name || '',
+              quantity: alloc.allocated_qty,
+              uom: alloc.uom || '',
+              required_qty: alloc.allocated_qty,
+              source_warehouse: alloc.warehouse_code,
+              transferred_qty: alloc.allocated_qty,
+              consumed_qty: alloc.consumed_qty || 0,
+              returned_qty: alloc.returned_qty || 0
+            }))
+          } else {
+            return prev.map(item => {
+              const alloc = allocations.find(a => a.item_code === item.item_code)
+              if (alloc) {
+                return {
+                  ...item,
+                  transferred_qty: alloc.allocated_qty,
+                  consumed_qty: alloc.consumed_qty || item.consumed_qty || 0,
+                  returned_qty: alloc.returned_qty || item.returned_qty || 0
+                }
+              }
+              return item
+            })
+          }
+        })
+        setSuccess('Inventory data synchronized')
+        setTimeout(() => setSuccess(null), 3000)
+      } else {
+        setError('No allocated materials found for this work order')
+        setTimeout(() => setError(null), 3000)
+      }
+    } catch (err) {
+      console.error('Failed to sync inventory:', err)
+      setError('Failed to synchronize inventory data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleFinalizeInventory = async () => {
+    if (!id) return
+    if (!window.confirm('Are you sure you want to finalize material consumption? This will deduct used materials from stock and return remaining items to inventory stores.')) return
+    
+    try {
+      setLoading(true)
+      // 1. Call backend to finalize and return unused
+      const response = await productionService.finalizeWorkOrderMaterials(id)
+      
+      if (response.success) {
+        setSuccess('Inventory finalized and balanced successfully')
+        await fetchWorkOrderDetails(id) // Refresh to see updated returned_qty etc
+      } else {
+        setError(response.message || 'Failed to finalize inventory')
+      }
+    } catch (err) {
+      console.error('Finalization error:', err)
+      setError(`Finalization failed: ${err.message}`)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleInputChange = (e) => {
@@ -799,6 +924,7 @@ export default function WorkOrderForm() {
         item_code: formData.item_to_manufacture,
         bom_no: formData.bom_id,
         quantity: parseFloat(formData.qty_to_manufacture),
+        status: formData.status,
         priority: formData.priority,
         notes: formData.notes,
         planned_start_date: formData.planned_start_date,
@@ -807,7 +933,10 @@ export default function WorkOrderForm() {
         required_items: bomMaterials.map(mat => ({
           item_code: mat.item_code,
           source_warehouse: mat.source_warehouse || 'Stores - NC',
-          required_qty: mat.required_qty
+          required_qty: mat.required_qty,
+          transferred_qty: mat.transferred_qty || 0,
+          consumed_qty: mat.consumed_qty || 0,
+          returned_qty: mat.returned_qty || 0
         })),
         operations: bomOperations.map(op => ({
           operation_name: op.operation_name,
@@ -850,27 +979,22 @@ export default function WorkOrderForm() {
     return ws ? (ws.workstation_name || ws.name) : (id || '-')
   }
 
-  const getPriorityColor = (p) => {
-    if (p === 'high') return 'bg-rose-50 text-rose-600 border-rose-100'
-    if (p === 'medium') return 'bg-amber-50 text-amber-600 border-amber-100'
-    return 'bg-emerald-50 text-emerald-600 border-emerald-100'
-  }
-
   const getStatusColor = (s) => {
-    const status = (s || 'draft').toLowerCase()
+    const status = (s || 'Draft').toLowerCase().replace('_', '-')
     if (status === 'completed') return 'bg-emerald-50 text-emerald-700 border-emerald-100'
-    if (status === 'in-progress') return 'bg-indigo-50 text-indigo-700 border-indigo-100'
-    if (status === 'planned') return 'bg-blue-50 text-blue-700 border-blue-100'
+    if (status === 'in-progress') return 'bg-amber-50 text-amber-700 border-amber-100'
+    if (status === 'ready') return 'bg-blue-50 text-blue-700 border-blue-100'
+    if (status === 'planned') return 'bg-indigo-50 text-indigo-700 border-indigo-100'
     return 'bg-slate-50 text-slate-600 border-slate-200'
   }
 
   return (
     <div className="min-h-screen bg-[#f8fafc] p-4 pb-20">
 
-      <div className="sticky top-0 z-40 bg-white/80 ">
+      <div className="sticky top-0 bg-white/80 ">
         <div className="p-2 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-2 bg-indigo-600 rounded shadow-lg shadow-indigo-200">
+            <div className="p-2 bg-indigo-600 rounded  shadow-indigo-200">
               <Factory className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -899,7 +1023,7 @@ export default function WorkOrderForm() {
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="flex items-center gap-2 p-2 bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50  hover:shadow-lg hover:-translate-y-0.5 transition-all text-xs "
+                className="flex items-center gap-2 p-2 bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50  hover: hover:-translate-y-0.5 transition-all text-xs "
               >
                 {loading ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={14} />}
                 {id ? 'Update Order' : 'Release to Production'}
@@ -955,7 +1079,7 @@ export default function WorkOrderForm() {
 
         <div className="hidden lg:flex items-center gap-4 bg-slate-900 p-2 rounded shadow-xl shrink-0">
           <div className="flex flex-col">
-            <div className="flex items-center justify-between text-[9px] uppercase tracking-widest text-slate-400  mb-1">
+            <div className="flex items-center justify-between text-[9px]   text-slate-400  mb-1">
               <span className="opacity-60 ">Execution Pulse</span>
               <span className="text-indigo-400 ml-2">{((completionMetrics.totalCompleted / (formData.qty_to_manufacture || 1)) * 100).toFixed(0)}%</span>
             </div>
@@ -1172,7 +1296,7 @@ export default function WorkOrderForm() {
                         </button>
                       )}
                       {jobCards.length > 0 && (
-                        <div className="flex items-center gap-2 p-2  py-1 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-100">
+                        <div className="flex items-center gap-2 p-2  py-1 bg-indigo-600 text-white rounded-full  shadow-indigo-100">
                           <Activity size={12} className="animate-pulse" />
                           <span className="text-xs ">{jobCards.length} Tasks active</span>
                         </div>
@@ -1181,7 +1305,7 @@ export default function WorkOrderForm() {
                   </div>
 
                   {jobCards.length > 0 ? (
-                    <div className="overflow-x-auto">
+                    <div className="">
                       <table className="w-full text-left bg-white">
                         <thead>
                           <tr className="bg-slate-50/30">
@@ -1238,13 +1362,6 @@ export default function WorkOrderForm() {
                                     </div>
                                   )}
                                 </td>
-                                <td className="p-2 ">
-                                  <div className="flex justify-center">
-                                    <span className={`p-2  py-1 rounded-full text-xs  border   ${getStatusColor(jc.status)}`}>
-                                      {(jc.status || 'pending').toUpperCase()}
-                                    </span>
-                                  </div>
-                                </td>
                                 <td className="p-2  text-right">
                                   <div className="flex flex-col items-end gap-0.5">
                                     <span className="text-xs text-slate-900 font-medium">{jc.operation_time || 0}m</span>
@@ -1281,7 +1398,7 @@ export default function WorkOrderForm() {
                                           <>
                                             {(jc.status || '').toLowerCase() === 'ready' || (jc.status || '').toLowerCase() === 'draft' ? (
                                               <button
-                                                className="flex items-center gap-1.5 px-2 py-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded text-[10px] font-bold transition-all"
+                                                className="flex items-center gap-1.5 px-2 py-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded text-[10px]  transition-all"
                                                 onClick={() => handleDispatch(jc.job_card_id || jc.id)}
                                               >
                                                 <Package size={12} />
@@ -1289,7 +1406,7 @@ export default function WorkOrderForm() {
                                               </button>
                                             ) : jc.subcontract_status === 'SENT_TO_VENDOR' || jc.subcontract_status === 'PARTIALLY_RECEIVED' ? (
                                               <button
-                                                className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded text-[10px] font-bold transition-all"
+                                                className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded text-[10px]  transition-all"
                                                 onClick={() => handleOpenReceiptModal(jc)}
                                               >
                                                 <Package size={12} />
@@ -1350,7 +1467,7 @@ export default function WorkOrderForm() {
                         <div className="p-4 flex justify-center border-t border-slate-100">
                           <button
                             onClick={createJobCardsFromOperations}
-                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all text-xs shadow-lg shadow-indigo-100"
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all text-xs  shadow-indigo-100"
                           >
                             <Zap size={14} />
                             Generate Job Cards
@@ -1360,7 +1477,7 @@ export default function WorkOrderForm() {
                     </div>
                   ) : (
                     <div className="p-2 text-center">
-                      <div className="w-8 h-8 bg-slate-50 text-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-100">
+                      <div className="w-8 h-8 bg-slate-50 text-slate-200 rounded  flex items-center justify-center mx-auto mb-6 border border-slate-100">
                         <Activity size={16} />
                       </div>
                       <h4 className="text-sm  text-slate-900 mb-2 ">Production Logic Not Found</h4>
@@ -1372,7 +1489,7 @@ export default function WorkOrderForm() {
                 </Card>
               </div>
 
-              <div className="col-span-12 lg:col-span-3 space-y-6">
+              <div className="col-span-12 lg:col-span-3 space-y-2">
                 <Card className="bg-slate-900 border-none shadow  overflow-hidden relative group">
                   <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
                     <BarChart3 size={100} className="text-white" />
@@ -1439,6 +1556,13 @@ export default function WorkOrderForm() {
                       <h3 className="text-xs  text-slate-900  ">04 Required Inventory</h3>
                     </div>
                     <div className="flex items-center gap-2">
+                      <button 
+                        onClick={syncInventory}
+                        title="Sync with Inventory Allocations"
+                        className={`p-2 transition-all bg-white rounded border border-slate-100 ${loading ? 'text-indigo-600 animate-spin' : 'text-slate-400 hover:text-indigo-600'}`}
+                      >
+                        <RefreshCw size={14} />
+                      </button>
                       <button className="p-2 text-slate-400 hover:text-indigo-600 transition-all bg-white rounded border border-slate-100  ">
                         <Filter size={14} />
                       </button>
@@ -1515,7 +1639,7 @@ export default function WorkOrderForm() {
                     </div>
                   ) : (
                     <div className="p-2 text-center bg-slate-50/10">
-                      <div className="w-8 h-8 bg-white border border-slate-100 text-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-6  ">
+                      <div className="w-8 h-8 bg-white border border-slate-100 text-slate-200 rounded  flex items-center justify-center mx-auto mb-6  ">
                         <Boxes size={16} />
                       </div>
                       <h4 className="text-sm  text-slate-900 mb-2">Stock Requirements Empty</h4>
@@ -1525,8 +1649,75 @@ export default function WorkOrderForm() {
                     </div>
                   )}
                 </Card>
+
+                {/* Operation-wise Material Consumption */}
+                {operationWiseConsumption.length > 0 && (
+                  <Card className="border-none bg-white mt-4">
+                    <div className="p-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-1.5 bg-white text-indigo-600 rounded border border-slate-100">
+                          <Activity size={16} />
+                        </div>
+                        <h3 className="text-xs text-slate-900">Used Material (Operation-wise)</h3>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left bg-white">
+                        <thead>
+                          <tr className="bg-slate-50/30">
+                            <th className="p-2 text-xs text-slate-400">Operation</th>
+                            <th className="p-2 text-xs text-slate-400">Material</th>
+                            <th className="p-2 text-xs text-slate-400 text-right">Consumed</th>
+                            <th className="p-2 text-xs text-slate-400 text-right">Wasted</th>
+                            <th className="p-2 text-xs text-slate-400">Reason</th>
+                            <th className="p-2 text-xs text-slate-400">Date</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {operationWiseConsumption.map((usage, idx) => (
+                            <tr key={usage.consumption_id || idx} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="p-2">
+                                <span className="text-xs font-medium text-slate-900">{usage.operation_name}</span>
+                                <div className="text-[10px] text-slate-400 font-mono">{usage.job_card_id}</div>
+                              </td>
+                              <td className="p-2">
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-slate-900 font-medium">{usage.item_code}</span>
+                                  <span className="text-[10px] text-slate-400 truncate max-w-[180px]">{usage.item_name}</span>
+                                </div>
+                              </td>
+                              <td className="p-2 text-right">
+                                <span className="text-xs font-semibold text-emerald-600">
+                                  {parseFloat(usage.consumed_qty).toFixed(2)}
+                                </span>
+                              </td>
+                              <td className="p-2 text-right">
+                                <span className={`text-xs font-medium ${parseFloat(usage.wasted_qty) > 0 ? 'text-rose-500' : 'text-slate-400'}`}>
+                                  {parseFloat(usage.wasted_qty).toFixed(2)}
+                                </span>
+                              </td>
+                              <td className="p-2">
+                                <span className="text-[10px] text-slate-500 italic">
+                                  {usage.waste_reason || '-'}
+                                </span>
+                              </td>
+                              <td className="p-2">
+                                <div className="text-[10px] text-slate-500">
+                                  {new Date(usage.tracked_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                                </div>
+                                <div className="text-[9px] text-slate-400">
+                                  {new Date(usage.tracked_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </Card>
+                )}
               </div>
-              <Card className="p-2 border-none  col-span-12 lg:col-span-3 space-y-6 ">
+              <Card className="p-2 border-none  col-span-12 lg:col-span-3 space-y-2 ">
                 <SectionTitle title="Operational Panel" icon={Zap} />
                 <div className="space-y-3">
                   <button
@@ -1541,10 +1732,24 @@ export default function WorkOrderForm() {
                     <ArrowRight size={14} className=" group-hover:translate-x-1 transition-all" />
                   </button>
 
+                  {id && (
+                    <button
+                      onClick={handleFinalizeInventory}
+                      disabled={loading || isReadOnly || formData.status === 'Completed'}
+                      className="w-full flex items-center justify-between p-2  bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 rounded  border border-emerald-100 transition-all group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <ShieldCheck size={16} />
+                        <span className="text-xs">Finalize Inventory</span>
+                      </div>
+                      <CheckCircle size={14} className="group-hover:scale-110 transition-all" />
+                    </button>
+                  )}
+
                   <button
                     onClick={createJobCardsFromOperations}
                     disabled={loading || jobCards.length > 0 || isReadOnly}
-                    className="w-full flex items-center justify-between p-2  bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30 rounded  transition-all group shadow-lg shadow-slate-200"
+                    className="w-full flex items-center justify-between p-2  bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30 rounded  transition-all group  shadow-slate-200"
                   >
                     <div className="flex items-center gap-3">
                       <Layers size={16} />
@@ -1561,7 +1766,7 @@ export default function WorkOrderForm() {
                   )}
                 </div>
               </Card>
-              <div className="col-span-12 lg:col-span-6 space-y-6">
+              <div className="col-span-12 lg:col-span-6 space-y-2">
                 <div className="p-2 rounded bg-indigo-600 text-white shadow  shadow-indigo-100 relative overflow-hidden group">
                   <div className="absolute -right-8 -bottom-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
                     <Database size={160} />
@@ -1591,7 +1796,7 @@ export default function WorkOrderForm() {
 
                
               </div>
-              <div className='col-span-12 lg:col-span-6 space-y-6'>
+              <div className='col-span-12 lg:col-span-6 space-y-2'>
                  <div className="p-2 rounded bg-white border border-slate-200   relative overflow-hidden group">
                   <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform">
                     <Info size={80} className="text-slate-900" />
@@ -1624,7 +1829,7 @@ export default function WorkOrderForm() {
                     </div>
                     <button
                       onClick={downloadReport}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all text-xs font-medium shadow-sm"
+                      className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all text-xs font-medium  "
                     >
                       <FileText size={14} />
                       Export CSV
@@ -1679,15 +1884,15 @@ export default function WorkOrderForm() {
       {/* Subcontract Receipt Modal */}
       {showReceiptModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded   w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl">
+                <div className="p-2 bg-emerald-100 text-emerald-600 rounded ">
                   <Package size={20} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 text-xs">Subcontract Receipt</h3>
-                  <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">{receivingJobCard?.job_card_id || receivingJobCard?.id}</p>
+                  <h3 className="text-lg  text-slate-900 text-xs">Subcontract Receipt</h3>
+                  <p className="text-[10px] text-emerald-600   tracking-wider">{receivingJobCard?.job_card_id || receivingJobCard?.id}</p>
                 </div>
               </div>
               <button onClick={() => setShowReceiptModal(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-full transition-all">
@@ -1696,19 +1901,19 @@ export default function WorkOrderForm() {
             </div>
             
             <div className="p-6 space-y-5">
-              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded  border border-slate-100">
                 <div>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">Total Sent</p>
-                  <p className="text-sm font-bold text-slate-900">{receivingJobCard?.sent_qty || receivingJobCard?.planned_quantity} Units</p>
+                  <p className="text-[10px] text-slate-400    mb-1">Total Sent</p>
+                  <p className="text-sm  text-slate-900">{receivingJobCard?.sent_qty || receivingJobCard?.planned_quantity} Units</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">Already Received</p>
-                  <p className="text-sm font-bold text-slate-900">{receivingJobCard?.received_qty || 0} Units</p>
+                  <p className="text-[10px] text-slate-400    mb-1">Already Received</p>
+                  <p className="text-sm  text-slate-900">{receivingJobCard?.received_qty || 0} Units</p>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Received Quantity</label>
+                <label className="text-[10px]  text-slate-500  tracking-wider ml-1">Received Quantity</label>
                 <div className="relative">
                   <input
                     type="number"
@@ -1717,7 +1922,7 @@ export default function WorkOrderForm() {
                       const val = parseFloat(e.target.value) || 0;
                       setReceiptData(prev => ({ ...prev, received_qty: val, accepted_qty: val }));
                     }}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-medium"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded  text-sm focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-medium"
                     placeholder="0.00"
                   />
                 </div>
@@ -1725,31 +1930,31 @@ export default function WorkOrderForm() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Accepted</label>
+                  <label className="text-[10px]  text-slate-500  tracking-wider ml-1">Accepted</label>
                   <input
                     type="number"
                     value={receiptData.accepted_qty}
                     onChange={(e) => setReceiptData(prev => ({ ...prev, accepted_qty: parseFloat(e.target.value) || 0 }))}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-medium"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded  text-sm focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-medium"
                     placeholder="0.00"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Rejected</label>
+                  <label className="text-[10px]  text-slate-500  tracking-wider ml-1">Rejected</label>
                   <input
                     type="number"
                     value={receiptData.rejected_qty}
                     onChange={(e) => setReceiptData(prev => ({ ...prev, rejected_qty: parseFloat(e.target.value) || 0 }))}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 outline-none transition-all font-medium text-rose-600"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded  text-sm focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 outline-none transition-all font-medium text-rose-600"
                     placeholder="0.00"
                   />
                 </div>
               </div>
 
               {receiptData.accepted_qty + receiptData.rejected_qty > receiptData.received_qty && (
-                <div className="p-3 bg-rose-50 rounded-xl border border-rose-100 flex items-center gap-2 text-rose-600 animate-pulse">
+                <div className="p-3 bg-rose-50 rounded  border border-rose-100 flex items-center gap-2 text-rose-600 animate-pulse">
                   <AlertCircle size={14} />
-                  <p className="text-[10px] font-bold uppercase tracking-tight">Accepted + Rejected cannot exceed Received</p>
+                  <p className="text-[10px]   ">Accepted + Rejected cannot exceed Received</p>
                 </div>
               )}
             </div>
@@ -1757,14 +1962,14 @@ export default function WorkOrderForm() {
             <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex gap-3">
               <button
                 onClick={() => setShowReceiptModal(false)}
-                className="flex-1 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-500 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all active:scale-95"
+                className="flex-1 py-3 text-[11px]    text-slate-500 bg-white border border-slate-200 rounded  hover:bg-slate-50 transition-all active:scale-95"
               >
                 Cancel
               </button>
               <button
                 onClick={handleReceive}
                 disabled={loading || (receiptData.accepted_qty + receiptData.rejected_qty > receiptData.received_qty) || receiptData.received_qty <= 0}
-                className="flex-1 py-3 text-[11px] font-bold uppercase tracking-widest text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-100 transition-all active:scale-95"
+                className="flex-1 py-3 text-[11px]    text-white bg-emerald-600 rounded  hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed  shadow-emerald-100 transition-all active:scale-95"
               >
                 {loading ? 'Processing...' : 'Confirm Receipt'}
               </button>

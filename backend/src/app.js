@@ -48,7 +48,8 @@ const corsOptions = {
 }
 
 app.use(cors(corsOptions))
-app.use(express.json())
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 let db = null
 
@@ -90,6 +91,10 @@ async function initializeDatabase() {
 
     await createProductionPlanningTables()
 
+    await enhanceProductionPlanTable()
+    await enhanceProductionPlanRawMaterialTable()
+    await enhanceProductionPlanOperationsTable()
+
     await createHRPayrollTables()
 
     await createStockMovementTable()
@@ -99,8 +104,6 @@ async function initializeDatabase() {
     await enhanceWorkOrderOperationTable()
     
     await enhanceBOMOperationTable()
-    
-    await enhanceProductionPlanOperationsTable()
     
     await createTimeLogTable()
     
@@ -268,10 +271,13 @@ async function createProductionPlanningTables() {
         plan_id VARCHAR(100) PRIMARY KEY,
         naming_series VARCHAR(50),
         company VARCHAR(100),
-        posting_date DATE NOT NULL,
+        posting_date DATE,
+        plan_date DATE,
+        week_number VARCHAR(20),
         sales_order_id VARCHAR(100),
         bom_id VARCHAR(100),
         status VARCHAR(50) DEFAULT 'draft',
+        planned_by_id INT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         deleted_at TIMESTAMP NULL,
@@ -344,6 +350,7 @@ async function createProductionPlanningTables() {
         item_group VARCHAR(100),
         plan_to_request_qty DECIMAL(18,6),
         qty_as_per_bom DECIMAL(18,6),
+        rate DECIMAL(15,2) DEFAULT 0,
         required_by DATE,
         bom_no VARCHAR(100),
         revision VARCHAR(50),
@@ -364,10 +371,16 @@ async function createProductionPlanningTables() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         plan_id VARCHAR(100) NOT NULL,
         operation_name VARCHAR(255),
+        workstation_type VARCHAR(255),
         total_time_minutes DECIMAL(18,6),
         total_hours DECIMAL(18,6),
         hourly_rate DECIMAL(15,2),
         total_cost DECIMAL(15,2),
+        operation_type VARCHAR(50),
+        execution_mode VARCHAR(50),
+        vendor_id INT,
+        vendor_rate_per_unit DECIMAL(15,2) DEFAULT 0,
+        notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (plan_id) REFERENCES production_plan(plan_id) ON DELETE CASCADE,
@@ -514,6 +527,74 @@ async function enhanceJobCardTable() {
   }
 }
 
+async function enhanceProductionPlanTable() {
+  try {
+    const columns = [
+      { name: 'plan_date', sql: 'DATE' },
+      { name: 'week_number', sql: 'VARCHAR(20)' },
+      { name: 'planned_by_id', sql: 'INT' }
+    ]
+
+    for (const column of columns) {
+      try {
+        await db.execute(`ALTER TABLE production_plan ADD COLUMN ${column.name} ${column.sql}`)
+      } catch (error) {
+        // Ignore if column already exists
+      }
+    }
+    console.log('✓ Production plan table enhanced')
+  } catch (error) {
+    console.error('Error enhancing production plan table:', error.message)
+  }
+}
+
+async function enhanceProductionPlanRawMaterialTable() {
+  try {
+    const columns = [
+      { name: 'rate', sql: 'DECIMAL(15,2) DEFAULT 0' }
+    ]
+
+    for (const column of columns) {
+      try {
+        await db.execute(`ALTER TABLE production_plan_raw_material ADD COLUMN ${column.name} ${column.sql}`)
+      } catch (error) {
+        // Ignore if column already exists
+      }
+    }
+    console.log('✓ Production plan raw material table enhanced')
+  } catch (error) {
+    console.error('Error enhancing production plan raw material table:', error.message)
+  }
+}
+
+async function enhanceProductionPlanOperationsTable() {
+  try {
+    const columnsToAdd = [
+      { name: 'workstation_type', sql: 'workstation_type VARCHAR(255)' },
+      { name: 'operation_type', sql: 'operation_type VARCHAR(50)' },
+      { name: 'execution_mode', sql: "execution_mode ENUM('IN_HOUSE', 'OUTSOURCE') DEFAULT 'IN_HOUSE'" },
+      { name: 'vendor_id', sql: 'vendor_id VARCHAR(50) DEFAULT NULL' },
+      { name: 'vendor_rate_per_unit', sql: 'vendor_rate_per_unit DECIMAL(18,2) DEFAULT 0' },
+      { name: 'notes', sql: 'notes TEXT' }
+    ]
+
+    for (const column of columnsToAdd) {
+      try {
+        await db.execute(`ALTER TABLE production_plan_operations ADD COLUMN ${column.sql}`)
+        console.log(`✓ Added column ${column.name} to production_plan_operations`)
+      } catch (error) {
+        if (error.message.includes('Duplicate column')) {
+          // console.log(`→ Column ${column.name} already exists in production_plan_operations`)
+        } else {
+          console.error(`Error adding column ${column.name} to production_plan_operations:`, error.message)
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error enhancing production_plan_operations:', error.message)
+  }
+}
+
 async function enhanceWorkOrderOperationTable() {
   try {
     const columnsToAdd = [
@@ -560,31 +641,6 @@ async function enhanceBOMOperationTable() {
           console.log(`→ Column ${column.name} already exists in bom_operation`)
         } else {
           console.log('Error enhancing bom_operation:', error.message)
-        }
-      }
-    }
-  } catch (error) {
-    console.log('Note:', error.message)
-  }
-}
-
-async function enhanceProductionPlanOperationsTable() {
-  try {
-    const columnsToAdd = [
-      { name: 'execution_mode', sql: "execution_mode ENUM('IN_HOUSE', 'OUTSOURCE') DEFAULT 'IN_HOUSE'" },
-      { name: 'vendor_id', sql: 'vendor_id VARCHAR(50) DEFAULT NULL' },
-      { name: 'vendor_rate_per_unit', sql: 'vendor_rate_per_unit DECIMAL(18,2) DEFAULT 0' }
-    ]
-
-    for (const column of columnsToAdd) {
-      try {
-        await db.execute(`ALTER TABLE production_plan_operations ADD COLUMN ${column.sql}`)
-        console.log(`✓ Added column ${column.name} to production_plan_operations`)
-      } catch (error) {
-        if (error.message.includes('Duplicate column')) {
-          console.log(`→ Column ${column.name} already exists in production_plan_operations`)
-        } else {
-          console.log('Error enhancing production_plan_operations:', error.message)
         }
       }
     }

@@ -55,7 +55,7 @@ const ToolRoomAnalytics = () => {
         </div>
 
         {/* Date Range Filter */}
-        <div className="bg-whitep-3   rounded-xs shadow-lg mb-3">
+        <div className="bg-whitep-3   rounded-xs  mb-3">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-gray-600" />
@@ -248,7 +248,7 @@ const ToolRoomAnalytics = () => {
 }
 
 const SummaryCard = ({ title, value, subtitle, icon }) => (
-  <div className="bg-whitep-3   rounded-xs shadow-lg hover: transition">
+  <div className="bg-whitep-3   rounded-xs  hover: transition">
     <div className="flex items-start justify-between">
       <div>
         <p className="text-gray-600 text-xs">{title}</p>

@@ -178,15 +178,15 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded   w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+            <div className="p-2 bg-indigo-50 text-indigo-600 rounded ">
               <Package size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Outward Challan</h2>
+              <h2 className="text-lg  text-gray-900">Outward Challan</h2>
               <p className="text-xs text-gray-500">Dispatch Job Card {jobCard?.job_card_id} to Vendor</p>
             </div>
           </div>
@@ -199,21 +199,21 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
+          <div className="p-6 space-y-2">
             {/* Operation Info */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-                <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">Operation</p>
+              <div className="p-4 bg-slate-50 rounded  border border-slate-100">
+                <p className="text-[10px]  tracking-wider  text-slate-400 mb-1">Operation</p>
                 <p className="text-sm font-semibold text-slate-700">{jobCard?.operation}</p>
               </div>
-              <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-                <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-1">Quantity</p>
+              <div className="p-4 bg-slate-50 rounded  border border-slate-100">
+                <p className="text-[10px]  tracking-wider  text-slate-400 mb-1">Quantity</p>
                 <p className="text-sm font-semibold text-slate-700">{jobCard?.planned_quantity} {workOrder?.uom || 'units'}</p>
               </div>
             </div>
 
             {/* Vendor Info */}
-            <div className="p-4 bg-amber-50 rounded-lg border border-amber-100 space-y-3">
+            <div className="p-4 bg-amber-50 rounded  border border-amber-100 space-y-3">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-amber-100 text-amber-600 rounded-full">
                   <User size={16} />
@@ -238,12 +238,12 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-gray-700">
                   <List size={18} className="text-gray-400" />
-                  <h3 className="text-sm font-bold">Required Material Release</h3>
+                  <h3 className="text-sm ">Required Material Release</h3>
                 </div>
                 <button
                   type="button"
                   onClick={handleAddItem}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-[11px] font-bold hover:bg-indigo-100 transition-all border border-indigo-100"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded  text-[11px]  hover:bg-indigo-100 transition-all border border-indigo-100"
                 >
                   <Plus size={14} />
                   Add Item
@@ -254,10 +254,10 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
                 <table className="w-full text-left text-xs">
                   <thead className="bg-gray-50 text-gray-500 font-medium">
                     <tr>
-                      <th className="px-4 py-2 text-[10px] uppercase">Item Code</th>
-                      <th className="px-4 py-2 text-right text-[10px] uppercase">Required Qty</th>
-                      <th className="px-4 py-2 text-right text-[10px] uppercase">Release Qty</th>
-                      <th className="px-4 py-2 text-center text-[10px] uppercase w-10">Action</th>
+                      <th className="px-4 py-2 text-[10px] ">Item Code</th>
+                      <th className="px-4 py-2 text-right text-[10px] ">Required Qty</th>
+                      <th className="px-4 py-2 text-right text-[10px] ">Release Qty</th>
+                      <th className="px-4 py-2 text-center text-[10px]  w-10">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -292,11 +292,11 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
                           <div className="flex items-center justify-end gap-1">
                             <input
                               type="number"
-                              className="w-24 p-1 bg-indigo-50/50 border border-indigo-100 rounded text-right font-bold text-indigo-600 outline-none focus:ring-1 focus:ring-indigo-500"
+                              className="w-24 p-1 bg-indigo-50/50 border border-indigo-100 rounded text-right  text-indigo-600 outline-none focus:ring-1 focus:ring-indigo-500"
                               value={item.release_qty}
                               onChange={(e) => handleUpdateItem(idx, 'release_qty', e.target.value)}
                             />
-                            <span className="text-[10px] text-gray-400 font-medium uppercase w-8">{item.uom}</span>
+                            <span className="text-[10px] text-gray-400 font-medium  w-8">{item.uom}</span>
                           </div>
                         </td>
                         <td className="px-4 py-2 text-center">
@@ -329,14 +329,14 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
             {/* Form Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-700 flex items-center gap-1">
+                <label className="text-xs  text-gray-700 flex items-center gap-1">
                   <Calendar size={14} className="text-gray-400" />
                   Expected Return Date
                 </label>
                 <input
                   type="date"
                   required
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
                   value={formData.expected_return_date}
                   onChange={(e) => setFormData({...formData, expected_return_date: e.target.value})}
                   min={new Date().toISOString().split('T')[0]}
@@ -344,24 +344,24 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-700">Dispatch Quantity</label>
+                <label className="text-xs  text-gray-700">Dispatch Quantity</label>
                 <div className="relative">
                   <input
                     type="number"
                     disabled
-                    className="w-full p-2.5 bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-500 cursor-not-allowed"
+                    className="w-full p-2.5 bg-gray-100 border border-gray-200 rounded  text-sm text-gray-500 cursor-not-allowed"
                     value={formData.release_quantity}
                   />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 uppercase">
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px]  text-gray-400 ">
                     {workOrder?.uom || 'Units'}
                   </div>
                 </div>
               </div>
 
               <div className="md:col-span-2 space-y-1.5">
-                <label className="text-xs font-bold text-gray-700">Dispatch Notes</label>
+                <label className="text-xs  text-gray-700">Dispatch Notes</label>
                 <textarea
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all resize-none h-20"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded  text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all resize-none h-20"
                   placeholder="Any specific instructions for the vendor..."
                   value={formData.notes}
                   onChange={(e) => setFormData({...formData, notes: e.target.value})}
@@ -375,14 +375,14 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 transition-colors"
+              className="px-4 py-2 text-sm  text-gray-500 hover:text-gray-700 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+              className="flex items-center gap-2 p-2  bg-indigo-600 text-white rounded  text-sm  hover:bg-indigo-700 transition-all  shadow-indigo-100 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
             >
               {loading ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

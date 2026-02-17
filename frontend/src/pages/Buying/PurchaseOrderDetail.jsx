@@ -6,11 +6,12 @@ import Badge from '../../components/Badge/Badge'
 import Alert from '../../components/Alert/Alert'
 import api from '../../services/api'
 import CreateGRNModal from '../../components/Buying/CreateGRNModal'
+import CreatePurchaseInvoiceModal from '../../components/Buying/CreatePurchaseInvoiceModal'
 import { useToast } from '../../components/ToastContainer'
 import { 
   ArrowLeft, CheckCircle, XCircle, Clock, Package, User, ChevronRight, 
   Truck, FileCheck, IndianRupee, Send, Printer, Download, Edit2, 
-  Calendar, Building2, MapPin, CreditCard, Info
+  Calendar, Building2, MapPin, CreditCard, Info, Receipt
 } from 'lucide-react'
 import './Buying.css'
 
@@ -23,6 +24,7 @@ export default function PurchaseOrderDetail() {
   const [error, setError] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [showGRNModal, setShowGRNModal] = useState(false)
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false)
 
   useEffect(() => {
     if (po_no) {
@@ -126,7 +128,7 @@ export default function PurchaseOrderDetail() {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-4 transition-colors duration-300 font-sans">
-      <div className="max-w-[1400px] mx-auto space-y-6">
+      <div className="max-w-[1400px] mx-auto space-y-2">
         {/* Modern Header Section */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 bg-white dark:bg-neutral-900  ">
           <div className="flex items-center gap-4">
@@ -138,7 +140,7 @@ export default function PurchaseOrderDetail() {
               <ArrowLeft size={15} />
             </Button>
             <div>
-              <div className="flex items-center gap-2 text-[10px]  tracking-widest text-neutral-500 dark:text-neutral-400 ">
+              <div className="flex items-center gap-2 text-[10px]   text-neutral-500 dark:text-neutral-400 ">
                 <span>Buying</span>
                 <ChevronRight size={12} />
                 <span>Purchase Orders</span>
@@ -147,7 +149,7 @@ export default function PurchaseOrderDetail() {
               </div>
               <div className="flex items-center gap-3 mt-1">
                 <h1 className="text-xl  text-neutral-900 dark:text-white ">{po.po_no}</h1>
-                <Badge color={getStatusColor(po.status)} variant="solid" className="flex items-center gap-1.5 px-2.5 py-1 text-[10px]  tracking-widest  rounded ">
+                <Badge color={getStatusColor(po.status)} variant="solid" className="flex items-center gap-1.5 px-2.5 py-1 text-[10px]    rounded ">
                   {getStatusIcon(po.status)}
                   {po.status.replace('_', ' ')}
                 </Badge>
@@ -167,11 +169,22 @@ export default function PurchaseOrderDetail() {
             
             <div className="h-8 w-[1px] bg-neutral-200 dark:bg-neutral-800 mx-1 hidden sm:block"></div>
             
+            {['submitted', 'to_receive', 'partially_received', 'completed'].includes(po.status) && (
+              <Button 
+                variant="secondary" 
+                size="sm"
+                className="bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900 px-6 py-3 rounded text-[10px]  "
+                onClick={() => setShowInvoiceModal(true)}
+              >
+                <Receipt size={18} strokeWidth={3} />
+                CREATE INVOICE
+              </Button>
+            )}
             {['submitted', 'to_receive', 'partially_received'].includes(po.status) && (
               <Button 
                 variant="primary" 
                 size="sm"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded  shadow-lg shadow-indigo-600/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] border-none text-[10px]  tracking-widest"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded   shadow-indigo-600/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] border-none text-[10px]  "
                 onClick={() => setShowGRNModal(true)}
               >
                 <Package size={18} strokeWidth={3} />
@@ -183,7 +196,7 @@ export default function PurchaseOrderDetail() {
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  className="bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 px-6 py-3 rounded  hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all text-[10px]  tracking-widest "
+                  className="bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 px-6 py-3 rounded  hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all text-[10px]   "
                   onClick={() => navigate(`/buying/purchase-orders/${po_no}/edit`)}
                 >
                   <Edit2 size={18} />
@@ -192,7 +205,7 @@ export default function PurchaseOrderDetail() {
                 <Button 
                   variant="primary" 
                   size="sm"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded  shadow-lg shadow-indigo-600/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] border-none text-[10px]  tracking-widest"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded   shadow-indigo-600/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] border-none text-[10px]  "
                   onClick={handleSubmit}
                   loading={actionLoading}
                 >
@@ -227,13 +240,13 @@ export default function PurchaseOrderDetail() {
               return (
                 <div key={idx} className="flex flex-col items-center gap-3 relative z-10 bg-white dark:bg-neutral-900 px-4">
                   <div className={`w-8 h-8 rounded flex items-center justify-center border-2 transition-all duration-500 ${
-                    isActive ? 'bg-indigo-600 border-indigo-200 dark:border-indigo-500/50 text-white shadow-lg shadow-indigo-600/20 rotate-12' : 
+                    isActive ? 'bg-indigo-600 border-indigo-200 dark:border-indigo-500/50 text-white  shadow-indigo-600/20 rotate-12' : 
                     isCompleted ? 'bg-emerald-500 border-emerald-100 dark:border-emerald-500/50 text-white' : 
                     'bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-400 dark:text-neutral-500'
                   }`}>
                     <step.icon size={15} strokeWidth={isActive ? 3 : 2} />
                   </div>
-                  <span className={`text-[10px]  tracking-widest  ${isActive ? 'text-indigo-600 dark:text-indigo-400' : isCompleted ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-400 dark:text-neutral-500'}`}>
+                  <span className={`text-[10px]    ${isActive ? 'text-indigo-600 dark:text-indigo-400' : isCompleted ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-400 dark:text-neutral-500'}`}>
                     {step.label}
                   </span>
                 </div>
@@ -268,7 +281,7 @@ export default function PurchaseOrderDetail() {
                     }`}>
                       <step.icon size={14} />
                     </div>
-                    <p className={`text-[8px]  tracking-widest  ${isActive ? 'text-indigo-600 dark:text-indigo-400' : isCompleted ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-400 dark:text-neutral-500'}`}>
+                    <p className={`text-[8px]    ${isActive ? 'text-indigo-600 dark:text-indigo-400' : isCompleted ? 'text-neutral-900 dark:text-neutral-100' : 'text-neutral-400 dark:text-neutral-500'}`}>
                       {step.label}
                     </p>
                   </div>
@@ -280,7 +293,7 @@ export default function PurchaseOrderDetail() {
 
         {/* KPI Summary Grid - Full Width */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <Card className="relative overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:shadow-lg transition-all duration-300 group">
+          <Card className="relative overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover: transition-all duration-300 group">
             <div className="absolute -right-4 -top-4 p-3 text-neutral-500/10 dark:text-neutral-400/10 group-hover:scale-110 transition-transform duration-500">
               <Building2 size={84} />
             </div>
@@ -294,7 +307,7 @@ export default function PurchaseOrderDetail() {
             </div>
           </Card>
 
-          <Card className="relative overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:shadow-lg transition-all duration-300 group">
+          <Card className="relative overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover: transition-all duration-300 group">
             <div className="absolute -right-4 -top-4 p-3 text-neutral-500/10 dark:text-neutral-400/10 group-hover:scale-110 transition-transform duration-500">
               <IndianRupee size={84} />
             </div>
@@ -307,7 +320,7 @@ export default function PurchaseOrderDetail() {
             </div>
           </Card>
 
-          <Card className="relative overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:shadow-lg transition-all duration-300 group">
+          <Card className="relative overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover: transition-all duration-300 group">
             <div className="absolute -right-4 -top-4 p-3 text-neutral-500/10 dark:text-neutral-400/10 group-hover:scale-110 transition-transform duration-500">
               <Calendar size={84} />
             </div>
@@ -334,7 +347,7 @@ export default function PurchaseOrderDetail() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-2">
             {/* Additional Info Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
               <Card className="p-0 overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 ">
@@ -395,7 +408,7 @@ export default function PurchaseOrderDetail() {
             </div>
 
             {/* Items Table */}
-            <Card className="overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-0 shadow-sm">
+            <Card className="overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-0  ">
               <div className="bg-neutral-50 dark:bg-neutral-800/50 p-2 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center">
                 <h2 className="text-[10px]  text-neutral-900 dark:text-white flex items-center gap-2 ">
                   <Package size={18} className="text-indigo-600 dark:text-indigo-400" /> Items List
@@ -436,7 +449,7 @@ export default function PurchaseOrderDetail() {
                             <div className="max-w-[140px] mx-auto">
                               <div className="flex justify-between items-end mb-1.5">
                                 <div className="flex flex-col">
-                                  <span className={`text-[10px]  tracking-widest  ${received > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-400 dark:text-neutral-500'}`}>
+                                  <span className={`text-[10px]    ${received > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-400 dark:text-neutral-500'}`}>
                                     {(received || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {item.uom}
                                   </span>
                                 </div>
@@ -485,7 +498,7 @@ export default function PurchaseOrderDetail() {
           </div>
 
           {/* Right Column - Meta & Quick Actions */}
-          <div className="space-y-6">
+          <div className="space-y-2">
             <Card className="p-0 overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 ">
               <div className="bg-neutral-50 dark:bg-neutral-800/50 p-2 border-b border-neutral-200 dark:border-neutral-800">
                 <h3 className="text-[10px]  text-neutral-900 dark:text-white flex items-center gap-2 ">

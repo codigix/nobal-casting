@@ -203,7 +203,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
         </div>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-2">
         {error && (
           <Alert variant="danger">
             <div className="flex items-center gap-2">
@@ -215,7 +215,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Supplier & RFQ Selection */}
-          <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
             <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
               <User size={18} className="text-primary-600" />
               <h3 className="font-semibold text-neutral-800">Source Information</h3>
@@ -229,7 +229,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
                   onChange={handleChange}
                   required
                   disabled={loading}
-                  className="w-full h-10 px-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
+                  className="w-full h-10 px-3 rounded  border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
                 >
                   <option value="">Select Supplier</option>
                   {suppliers.map(supplier => (
@@ -246,7 +246,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
                   value={formData.rfq_id}
                   onChange={handleRFQSelect}
                   disabled={loading}
-                  className="w-full h-10 px-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
+                  className="w-full h-10 px-3 rounded  border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
                 >
                   <option value="">Select RFQ</option>
                   {rfqs.map(rfq => (
@@ -266,7 +266,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
           </section>
 
           {/* Quotation Summary */}
-          <section className="bg-primary-600 rounded-xl border border-primary-700 overflow-hidden text-white flex flex-col justify-center p-6 shadow-md shadow-primary-200">
+          <section className="bg-primary-600 rounded  border border-primary-700 overflow-hidden text-white flex flex-col justify-center p-6  shadow-primary-200">
             <div className="space-y-4">
               <div className="flex justify-between items-center border-b border-primary-500/50 pb-3">
                 <span className="text-primary-100 text-sm">Total Items</span>
@@ -274,12 +274,12 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
               </div>
               <div className="flex justify-between items-center pt-2">
                 <span className="text-primary-100 font-medium">Quotation Value</span>
-                <span className="text-3xl font-bold">
+                <span className="text-3xl ">
                   ₹{calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>
-            <div className="mt-6 flex items-center gap-2 text-primary-100 text-[10px] uppercase tracking-wider font-bold">
+            <div className="mt-6 flex items-center gap-2 text-primary-100 text-[10px]  tracking-wider ">
               <Tag size={14} />
               <span>Quoted Price (Excl. Tax)</span>
             </div>
@@ -288,14 +288,14 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
 
         {/* Quotation Items */}
         {formData.items.length > 0 && (
-          <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
             <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
               <ShoppingBag size={18} className="text-primary-600" />
               <h3 className="font-semibold text-neutral-800">Quotation Items</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="text-xs text-neutral-500 uppercase bg-neutral-50/50 border-b border-neutral-200">
+                <thead className="text-xs text-neutral-500  bg-neutral-50/50 border-b border-neutral-200">
                   <tr>
                     <th className="p-2  font-semibold">Item Details</th>
                     <th className="p-2  font-semibold w-24 text-center">Qty</th>
@@ -329,7 +329,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
                           }`}
                         />
                       </td>
-                      <td className="p-2  text-right font-bold text-primary-600">
+                      <td className="p-2  text-right  text-primary-600">
                         ₹{((item.qty || 0) * (item.rate || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="p-2 ">
@@ -365,7 +365,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
         )}
 
         {/* Notes Section */}
-        <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+        <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
           <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
             <FileText size={18} className="text-primary-600" />
             <h3 className="font-semibold text-neutral-800">Notes & Comments</h3>
@@ -377,13 +377,13 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
               onChange={handleChange}
               placeholder="Add any additional notes or comments about this quotation..."
               rows="3"
-              className="w-full p-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm min-h-[100px]"
+              className="w-full p-3 rounded  border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm min-h-[100px]"
             />
           </div>
         </section>
 
         {!formData.rfq_id && (
-          <div className="flex items-center gap-2 p-4 bg-amber-50 rounded-lg border border-amber-200 text-amber-700 text-sm">
+          <div className="flex items-center gap-2 p-4 bg-amber-50 rounded  border border-amber-200 text-amber-700 text-sm">
             <Info size={18} />
             <span>Select an RFQ request from the source information to load quotation items.</span>
           </div>

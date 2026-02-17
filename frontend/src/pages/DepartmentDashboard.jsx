@@ -230,7 +230,7 @@ export default function DepartmentDashboard() {
         <div className="p-3">
           <div className=" mx-auto">
             <div className="mb-7">
-              <h1 className="text-xl  text-gray-900 -tracking-tight">
+              <h1 className="text-xl  text-gray-900 -">
                 Stock Overview
               </h1>
               <p className="text-xs text-gray-500 font-medium">
@@ -247,7 +247,7 @@ export default function DepartmentDashboard() {
               ].map((stat, idx) => (
                 <div 
                   key={idx} 
-                  className={`bg-gradient-to-br ${stat.color} p-2 rounded  border-2 transition-all duration-300 hover:shadow-lg hover:scale-105 hover:border-opacity-100`}
+                  className={`bg-gradient-to-br ${stat.color} p-2 rounded  border-2 transition-all duration-300 hover: hover:scale-105 hover:border-opacity-100`}
                   style={{ borderColor: stat.borderColor }}
                 >
                   <div className="flex items-start justify-between">
@@ -269,7 +269,7 @@ export default function DepartmentDashboard() {
               <h2 className="text-lg  mb-3 text-gray-900">
                 Stock Movement Analysis
               </h2>
-              <div className="bg-white rounded border border-gray-200 p-3   hover:shadow-lg transition-shadow duration-300">
+              <div className="bg-white rounded border border-gray-200 p-3   hover: transition-shadow duration-300">
                 <div className="flex gap-5 border-b border-gray-200 mb-6 pb-0 ">
                   {['Overview', 'Inbound', 'Outbound'].map((tab) => (
                     <button
@@ -380,7 +380,7 @@ export default function DepartmentDashboard() {
                 <h2 className="text-lg  mb-3 text-gray-900">
                   Warehouse Analysis
                 </h2>
-                <div className="bg-white rounded border border-gray-200 p-3   hover:shadow-lg transition-shadow duration-300">
+                <div className="bg-white rounded border border-gray-200 p-3   hover: transition-shadow duration-300">
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex gap-5 border-b border-gray-200 pb-0">
                       {['Distribution', 'Stock Value'].map((tab) => (
@@ -495,13 +495,13 @@ export default function DepartmentDashboard() {
                 <h2 className="text-lg  mb-3 text-gray-900">
                   Low Stock Alerts
                 </h2>
-                <div className="bg-white rounded border border-gray-200 p-3   max-h-96 overflow-auto hover:shadow-lg transition-shadow duration-300">
+                <div className="bg-white rounded border border-gray-200 p-3   max-h-96 overflow-auto hover: transition-shadow duration-300">
                   {chartData.lowStockItems && chartData.lowStockItems.length > 0 ? (
                     <div className="space-y-3">
                       {chartData.lowStockItems.map((item, idx) => (
                         <div 
                           key={idx} 
-                          className="p-2 rounded-sm bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border border-red-200 flex justify-between items-center hover:shadow-md hover:scale-102 transition-all duration-300 group"
+                          className="p-2 rounded-sm bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border border-red-200 flex justify-between items-center hover: hover:scale-102 transition-all duration-300 group"
                           style={{ borderLeftColor: '#dc2626' }}
                         >
                           <div>

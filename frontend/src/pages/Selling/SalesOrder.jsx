@@ -1,38 +1,17 @@
 import { useState, useEffect } from 'react'
-import Card from '../../components/Card/Card'
-import Button from '../../components/Button/Button'
-import Badge from '../../components/Badge/Badge'
 import DataTable from '../../components/Table/DataTable'
 import { useNavigate } from 'react-router-dom'
 import { 
-  Edit2, Eye, Package, CheckCircle, Trash2, Plus, TrendingUp, AlertTriangle, AlertCircle,
-  Truck, Clock, Calendar, DollarSign, Check, Search, Trash, Factory, ChevronDown,
-  Filter, Download, RefreshCcw, MoreHorizontal, ArrowUpRight, ArrowDownRight,
-  TrendingDown, ShoppingCart, Activity
+  Eye, Package, Trash2, Plus, 
+  Calendar, DollarSign, Factory,
+  RefreshCcw, ArrowUpRight, ShoppingCart, Activity, Receipt, Truck,
+  AlertTriangle, CheckCircle, TrendingUp, Search, Filter, ChevronDown, Download, AlertCircle, Clock
 } from 'lucide-react'
 import ViewSalesOrderModal from '../../components/Selling/ViewSalesOrderModal'
 import ProductionPlanGenerationModal from '../../components/Production/ProductionPlanGenerationModal'
-import api, { salesOrdersAPI } from '../../services/api'
+import CreateInvoiceModal from '../../components/Selling/CreateInvoiceModal'
+import api from '../../services/api'
 import './Selling.css'
-
-const iconColorMap = {
-  primary: '#2563eb',
-  warning: '#f97316',
-  success: '#10b981',
-  danger: '#ef4444'
-}
-
-const statusConfig = {
-  draft: { icon: Edit2, color: '#f97316', bg: '#fef3c7', text: '#92400e', label: 'Draft' },
-  confirmed: { icon: CheckCircle, color: '#2563eb', bg: '#dbeafe', text: '#1e40af', label: 'Confirmed' },
-  ready_for_production: { icon: Package, color: '#6366f1', bg: '#e0e7ff', text: '#3730a3', label: 'Ready for production' },
-  production: { icon: Truck, color: '#06b6d4', bg: '#cffafe', text: '#164e63', label: 'Production' },
-  complete: { icon: CheckCircle, color: '#10b981', bg: '#d1fae5', text: '#065f46', label: 'Complete' },
-  on_hold: { icon: AlertCircle, color: '#f59e0b', bg: '#fef3c7', text: '#92400e', label: 'On Hold' },
-  dispatched: { icon: Truck, color: '#8b5cf6', bg: '#ede9fe', text: '#5b21b6', label: 'Dispatched' },
-  delivered: { icon: Package, color: '#059669', bg: '#d1fae5', text: '#065f46', label: 'Delivered' },
-  overdue: { icon: AlertTriangle, color: '#ef4444', bg: '#fee2e2', text: '#991b1b', label: 'Overdue' }
-}
 
 export default function SalesOrder() {
   const navigate = useNavigate()
@@ -40,6 +19,8 @@ export default function SalesOrder() {
   const [filteredOrders, setFilteredOrders] = useState([])
   const [viewOrderId, setViewOrderId] = useState(null)
   const [generatingPlanForOrder, setGeneratingPlanForOrder] = useState(null)
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false)
+  const [selectedOrderIdForInvoice, setSelectedOrderIdForInvoice] = useState(null)
   const [stats, setStats] = useState({
     total: 0,
     draft: 0,
@@ -228,123 +209,6 @@ export default function SalesOrder() {
     setStats(newStats)
   }
 
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'draft':
-        return 'warning'
-      case 'ready_for_production':
-        return 'indigo'
-      case 'production':
-        return 'info'
-      case 'complete':
-        return 'success'
-      case 'on_hold':
-        return 'warning'
-      case 'dispatched':
-        return 'info'
-      case 'delivered':
-        return 'success'
-      default:
-        return 'secondary'
-    }
-  }
-
-  const handleConfirmOrder = async (id) => {
-    try {
-      const res = await api.put(`/selling/sales-orders/${id}/confirm`)
-      if (res.data.success) {
-        fetchOrders()
-      } else {
-        alert('Failed to confirm order')
-      }
-    } catch (error) {
-      console.error('Error confirming order:', error)
-      alert('Error confirming order')
-    }
-  }
-
-  const handleStatusChange = async (orderId, newStatus) => {
-    try {
-      let res;
-      if (newStatus === 'confirmed') {
-        res = await api.put(`/selling/sales-orders/${orderId}/confirm`)
-      } else {
-        res = await api.put(`/selling/sales-orders/${orderId}`, { status: newStatus })
-      }
-      
-      if (res.data.success) {
-        fetchOrders()
-      } else {
-        alert('Failed to update order status')
-      }
-    } catch (error) {
-      console.error('Error updating order status:', error)
-      alert('Error updating order status')
-    }
-  }
-
-  const StatusDropdown = ({ currentStatus, orderId }) => {
-    const statuses = ['draft', 'confirmed', 'ready_for_production', 'production', 'complete', 'on_hold', 'dispatched', 'delivered']
-    const [isOpen, setIsOpen] = useState(false)
-    const config = statusConfig[currentStatus?.toLowerCase()] || statusConfig.draft
-
-    return (
-      <div className="relative inline-block w-full min-w-[120px]">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between p-2  py-1.5 text-xs  text-xs rounded border transition-all  hover:shadow-md active:scale-95"
-          style={{
-            backgroundColor: config.bg,
-            borderColor: `${config.color}40`,
-            color: config.text
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <config.icon size={12} style={{ color: config.color }} />
-            <span>{config.label}</span>
-          </div>
-          <ChevronDown size={12} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} style={{ opacity: 0.5 }} />
-        </button>
-        
-        {isOpen && (
-          <>
-            <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)}></div>
-            <div className="absolute top-full mt-2 left-0 right-0 bg-white/90 backdrop-blur-md border border-slate-200 rounded  z-20 overflow-hidden min-w-[160px] animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="p-1">
-                {statuses.map((status) => {
-                  const cfg = statusConfig[status]
-                  const isSelected = currentStatus?.toLowerCase() === status
-                  return (
-                    <button
-                      key={status}
-                      onClick={() => {
-                        handleStatusChange(orderId, status)
-                        setIsOpen(false)
-                      }}
-                      className={`w-full flex items-center gap-3 p-2  py-2 text-[11px] font-medium transition-all rounded mb-0.5 last:mb-0 ${
-                        isSelected 
-                          ? 'bg-slate-100 text-slate-900 shadow-inner' 
-                          : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      <div className="p-1 rounded " style={{ backgroundColor: `${cfg.color}15` }}>
-                        <cfg.icon size={12} style={{ color: cfg.color }} />
-                      </div>
-                      <span className="flex-1 text-left">{cfg.label}</span>
-                      {isSelected && (
-                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cfg.color }}></div>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    )
-  }
-
   const handleDeleteOrder = async (id) => {
     if (!window.confirm('Are you sure you want to delete this sales order?')) return
     try {
@@ -436,18 +300,6 @@ export default function SalesOrder() {
         </div>
       )
     },
-    { 
-      label: 'Status', 
-      key: 'status',
-      render: (val, row) => (
-        <div className="p-2 w-fit">
-          <StatusDropdown 
-            currentStatus={row.production_plan_status || val || 'draft'} 
-            orderId={row.sales_order_id} 
-          />
-        </div>
-      )
-    },
     {
       label: 'Delivary Vectors',
       key: 'delivery_date',
@@ -472,7 +324,7 @@ export default function SalesOrder() {
     {
       label: 'Financial Values',
       key: 'total_amount',
-      render: (value, row) => (
+      render: (value) => (
         <div className="p-2 text-right">
           <div className="text-xs  text-slate-900">
             ₹{parseFloat(value || 0).toLocaleString('en-IN')}
@@ -486,7 +338,7 @@ export default function SalesOrder() {
     {
       label: 'Actions',
       key: 'actions',
-      render: (value, row) => row ? (
+      render: (_, row) => row ? (
         <div className="flex items-center justify-end gap-1 ">
           <button
             onClick={() => navigate(`/manufacturing/sales-orders/${row.sales_order_id}?readonly=true`)}
@@ -496,16 +348,6 @@ export default function SalesOrder() {
             <Eye size={15} />
           </button>
           
-          
-          
-          <button
-            onClick={() => setGeneratingPlanForOrder(row.sales_order_id)}
-            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all"
-            title="Production Planning"
-          >
-            <Factory size={15} />
-          </button>
-          
           <button
             onClick={() => navigate(`/selling/delivery-notes/new?order=${row.sales_order_id}`)}
             className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded  transition-all"
@@ -513,6 +355,19 @@ export default function SalesOrder() {
           >
             <Truck size={15} />
           </button>
+
+          {['confirmed', 'ready_for_production', 'production', 'complete', 'dispatched', 'delivered'].includes(row.status?.toLowerCase()) && (
+            <button
+              onClick={() => {
+                setSelectedOrderIdForInvoice(row.sales_order_id);
+                setShowInvoiceModal(true);
+              }}
+              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all"
+              title="Generate Invoice"
+            >
+              <Receipt size={15} />
+            </button>
+          )}
           
           
           
@@ -534,7 +389,7 @@ export default function SalesOrder() {
         {/* Modern Page Header */}
         <div className="mb-2  flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-200">
+            <div className="p-3 bg-blue-600 rounded   shadow-blue-200">
               <ShoppingCart className="text-white" size={24} />
             </div>
             <div>
@@ -718,7 +573,7 @@ export default function SalesOrder() {
         </div>
 
         {error && (
-          <div className="mb-2  flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50/50 p-4 text-rose-800 animate-in fade-in slide-in-from-top-2 backdrop-blur-sm">
+          <div className="mb-2  flex items-center gap-3 rounded  border border-rose-100 bg-rose-50/50 p-4 text-rose-800 animate-in fade-in slide-in-from-top-2 backdrop-blur-sm">
             <AlertCircle className="h-5 w-5 text-rose-500" />
             <p className="text-xs  tracking-wide">{error}</p>
           </div>
@@ -732,7 +587,7 @@ export default function SalesOrder() {
                 <div className="h-20 w-20 animate-spin rounded-full border-4 border-slate-100 border-t-blue-600 shadow  shadow-blue-50"></div>
                 <ShoppingCart size={32} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-600" />
               </div>
-              <p className="text-xs  tracking-[0.3em] animate-pulse">Syncing Operational Data...</p>
+              <p className="text-xs animate-pulse">Syncing Operational Data...</p>
             </div>
           ) : filteredOrders.length === 0 ? (
             <div className="glass-card flex flex-col items-center justify-center py-22 text-center border-none">
@@ -752,7 +607,7 @@ export default function SalesOrder() {
               </button>
             </div>
           ) : (
-            <div className="glass-table border-none overflow-hidden">
+            <div className="glass-table border-none">
               <DataTable 
                 columns={columns} 
                 data={filteredOrders} 
@@ -774,6 +629,19 @@ export default function SalesOrder() {
         isOpen={!!generatingPlanForOrder}
         onClose={() => setGeneratingPlanForOrder(null)}
         salesOrderId={generatingPlanForOrder}
+      />
+
+      <CreateInvoiceModal
+        isOpen={showInvoiceModal}
+        onClose={() => {
+          setShowInvoiceModal(false);
+          setSelectedOrderIdForInvoice(null);
+        }}
+        onSuccess={() => {
+          fetchOrders();
+          navigate('/selling/sales-invoices');
+        }}
+        initialOrderId={selectedOrderIdForInvoice}
       />
     </div>
   )

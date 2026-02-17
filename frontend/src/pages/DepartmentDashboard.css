@@ -166,7 +166,7 @@
 .prod-kpi-label {
   font-size: 12px;
   font-weight: 600;
-  text-transform: ;
+  text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #6b7280;
 }
@@ -270,7 +270,7 @@
   font-size: 12px;
   color: #6b7280;
   font-weight: 500;
-  text-transform: ;
+  text-transform: uppercase;
   letter-spacing: 0.3px;
   display: block;
   margin-bottom: 4px;
@@ -391,7 +391,7 @@
   display: inline-block;
   font-size: 10px;
   font-weight: 600;
-  text-transform: ;
+  text-transform: uppercase;
   padding: 2px 6px;
   border-radius: 3px;
   letter-spacing: 0.3px;

@@ -87,15 +87,15 @@ export default function CreateGRNRequestModal({ purchaseReceipt, onClose, onSucc
         </div>
       }
     >
-      <div className="space-y-6">
+      <div className="space-y-2">
         {error && <Alert type="danger">{error}</Alert>}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Summary Panel */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg:col-span-1 space-y-2">
             <section className="bg-neutral-50 rounded border border-neutral-200 p-2 space-y-2">
               <div className="flex items-center gap-2 pb-3 border-b border-neutral-200">
-                <div className="p-2 bg-blue-600 rounded-lg text-white">
+                <div className="p-2 bg-blue-600 rounded  text-white">
                   <ClipboardCheck size={20} />
                 </div>
                 <div>
@@ -105,35 +105,35 @@ export default function CreateGRNRequestModal({ purchaseReceipt, onClose, onSucc
               </div>
 
               <div className="space-y-4">
-                <div className="p-3 bg-white rounded-xl border border-neutral-100 shadow-sm">
-                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1">GRN Number</span>
-                  <div className="text-sm font-black text-neutral-900 font-mono">{purchaseReceipt?.grn_no}</div>
+                <div className="p-3 bg-white rounded  border border-neutral-100  ">
+                  <span className="text-[10px]  text-neutral-400   block mb-1">GRN Number</span>
+                  <div className="text-sm  text-neutral-900 font-mono">{purchaseReceipt?.grn_no}</div>
                 </div>
 
-                <div className="p-3 bg-white rounded-xl border border-neutral-100 shadow-sm">
-                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1">Source PO</span>
-                  <div className="text-sm font-bold text-neutral-700">
+                <div className="p-3 bg-white rounded  border border-neutral-100  ">
+                  <span className="text-[10px]  text-neutral-400   block mb-1">Source PO</span>
+                  <div className="text-sm  text-neutral-700">
                     {purchaseReceipt?.po_no || <span className="text-neutral-400 italic font-normal">No Reference</span>}
                   </div>
                 </div>
 
-                <div className="p-3 bg-white rounded-xl border border-neutral-100 shadow-sm">
-                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1">Supplier</span>
-                  <div className="text-sm font-bold text-neutral-900 truncate" title={purchaseReceipt?.supplier_name}>
+                <div className="p-3 bg-white rounded  border border-neutral-100  ">
+                  <span className="text-[10px]  text-neutral-400   block mb-1">Supplier</span>
+                  <div className="text-sm  text-neutral-900 truncate" title={purchaseReceipt?.supplier_name}>
                     {purchaseReceipt?.supplier_name}
                   </div>
                 </div>
 
-                <div className="p-3 bg-white rounded-xl border border-neutral-100 shadow-sm">
-                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1">Date Received</span>
-                  <div className="text-sm font-bold text-neutral-700">
+                <div className="p-3 bg-white rounded  border border-neutral-100  ">
+                  <span className="text-[10px]  text-neutral-400   block mb-1">Date Received</span>
+                  <div className="text-sm  text-neutral-700">
                     {purchaseReceipt?.receipt_date ? new Date(purchaseReceipt.receipt_date).toLocaleDateString() : '-'}
                   </div>
                 </div>
               </div>
             </section>
 
-            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex gap-3">
+            <div className="bg-blue-50 border border-blue-100 rounded  p-4 flex gap-3">
               <div className="text-blue-500 shrink-0">
                 <Info size={18} />
               </div>
@@ -144,11 +144,11 @@ export default function CreateGRNRequestModal({ purchaseReceipt, onClose, onSucc
           </div>
 
           {/* Right: Items Table & Notes */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="lg:col-span-2 space-y-2">
+            <div className="bg-white rounded  border border-neutral-200   overflow-hidden">
               <div className="px-5 py-4 border-b border-neutral-100 bg-neutral-50/30 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
+                  <div className="p-1.5 bg-blue-100 text-blue-600 rounded ">
                     <Package size={16} />
                   </div>
                   <h3 className="text-xs  text-neutral-800 ">Inspection Queue</h3>
@@ -162,10 +162,10 @@ export default function CreateGRNRequestModal({ purchaseReceipt, onClose, onSucc
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-neutral-50 border-b border-neutral-200">
-                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider">Item Details</th>
-                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider text-center">Received</th>
-                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider">Warehouse</th>
-                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider">Batch Info</th>
+                      <th className="p-2  text-[10px]  text-neutral-400  tracking-wider">Item Details</th>
+                      <th className="p-2  text-[10px]  text-neutral-400  tracking-wider text-center">Received</th>
+                      <th className="p-2  text-[10px]  text-neutral-400  tracking-wider">Warehouse</th>
+                      <th className="p-2  text-[10px]  text-neutral-400  tracking-wider">Batch Info</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100">
@@ -178,12 +178,12 @@ export default function CreateGRNRequestModal({ purchaseReceipt, onClose, onSucc
                           </div>
                         </td>
                         <td className="p-2  text-center">
-                          <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-black bg-blue-50 text-blue-700 border border-blue-100">
+                          <span className="inline-flex items-center px-3 py-1 rounded  text-xs  bg-blue-50 text-blue-700 border border-blue-100">
                             {item.received_qty}
                           </span>
                         </td>
                         <td className="p-2 ">
-                          <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-700">
+                          <div className="flex items-center gap-1.5 text-xs  text-neutral-700">
                             <Warehouse size={12} className="text-neutral-400" />
                             {item.warehouse_name}
                           </div>
@@ -203,7 +203,7 @@ export default function CreateGRNRequestModal({ purchaseReceipt, onClose, onSucc
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-neutral-500 uppercase flex items-center gap-1.5 ml-1">
+              <label className="text-[11px]  text-neutral-500  flex items-center gap-1.5 ml-1">
                 <FileText size={12} /> Special Inspection Instructions
               </label>
               <textarea
@@ -211,7 +211,7 @@ export default function CreateGRNRequestModal({ purchaseReceipt, onClose, onSucc
                 onChange={(e) => setNotes(e.target.value)}
                 rows="4"
                 placeholder="Add any specific instructions for the QC team (e.g., check for moisture, verification of certificates, etc.)..."
-                className="w-full p-4 border border-neutral-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500/10 outline-none transition-all resize-none shadow-sm"
+                className="w-full p-4 border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-blue-500/10 outline-none transition-all resize-none  "
               ></textarea>
             </div>
           </div>

@@ -265,37 +265,37 @@ export default function CreateJobCardModal({
       title={editingId ? 'Edit Job Card' : 'Create New Job Card'} 
       size="3xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-2">
         {error && <Alert type="error" message={error} />}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Assignment Panel */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-slate-800 font-bold uppercase tracking-tight border-b border-slate-100 pb-2">
+            <div className="flex items-center gap-2 text-slate-800    border-b border-slate-100 pb-2">
               <Settings size={18} className="text-blue-500" />
               Resource Assignment
             </div>
 
             <div className="space-y-3">
-              <div className="flex p-1 bg-slate-100 rounded-lg mb-2">
+              <div className="flex p-1 bg-slate-100 rounded  mb-2">
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, execution_mode: 'IN_HOUSE' }))}
-                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${formData.execution_mode === 'IN_HOUSE' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+                  className={`flex-1 py-1.5 text-[10px]  rounded-md transition-all ${formData.execution_mode === 'IN_HOUSE' ? 'bg-white text-indigo-600  ' : 'text-slate-500'}`}
                 >
                   IN-HOUSE
                 </button>
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, execution_mode: 'OUTSOURCE' }))}
-                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${formData.execution_mode === 'OUTSOURCE' ? 'bg-white text-amber-600 shadow-sm' : 'text-slate-500'}`}
+                  className={`flex-1 py-1.5 text-[10px]  rounded-md transition-all ${formData.execution_mode === 'OUTSOURCE' ? 'bg-white text-amber-600  ' : 'text-slate-500'}`}
                 >
                   OUTSOURCE
                 </button>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                   Work Order *
                 </label>
                 <SearchableSelect
@@ -314,7 +314,7 @@ export default function CreateJobCardModal({
 
               {formData.execution_mode === 'IN_HOUSE' ? (
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                     Workstation *
                   </label>
                   <SearchableSelect
@@ -330,7 +330,7 @@ export default function CreateJobCardModal({
               ) : (
                 <>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                       Vendor / Subcontractor *
                     </label>
                     <SearchableSelect
@@ -351,7 +351,7 @@ export default function CreateJobCardModal({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                       Vendor Rate per Unit
                     </label>
                     <div className="relative">
@@ -361,7 +361,7 @@ export default function CreateJobCardModal({
                         name="vendor_rate_per_unit"
                         value={formData.vendor_rate_per_unit}
                         onChange={handleInputChange}
-                        className="w-full pl-8 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+                        className="w-full pl-8 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
                         placeholder="0.00"
                       />
                     </div>
@@ -371,7 +371,7 @@ export default function CreateJobCardModal({
 
               {formData.execution_mode === 'IN_HOUSE' && (
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                     Operator
                   </label>
                   <div className="relative">
@@ -380,7 +380,7 @@ export default function CreateJobCardModal({
                       name="operator_id"
                       value={formData.operator_id}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
                     >
                       <option value="">Select Operator (Optional)</option>
                       {operators.map(emp => (
@@ -397,14 +397,14 @@ export default function CreateJobCardModal({
 
           {/* Operation Panel */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-slate-800 font-bold uppercase tracking-tight border-b border-slate-100 pb-2">
+            <div className="flex items-center gap-2 text-slate-800    border-b border-slate-100 pb-2">
               <Activity size={18} className="text-indigo-500" />
               Operation Details
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                   Operation *
                 </label>
                 <select
@@ -423,7 +423,7 @@ export default function CreateJobCardModal({
                       operation_time: selectedOp?.operation_time || 0
                     }))
                   }}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
+                  className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
                   disabled={!formData.work_order_id}
                 >
                   <option value="">Select Operation</option>
@@ -435,7 +435,7 @@ export default function CreateJobCardModal({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                     Planned Qty *
                   </label>
                   <div className="relative">
@@ -446,19 +446,19 @@ export default function CreateJobCardModal({
                       value={formData.planned_quantity}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                     Status
                   </label>
                   <select
                     name="status"
                     value={formData.status}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
+                    className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
                   >
                     <option value="draft">Draft</option>
                     <option value="pending">Pending</option>
@@ -471,7 +471,7 @@ export default function CreateJobCardModal({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                     Start Date *
                   </label>
                   <input
@@ -480,11 +480,11 @@ export default function CreateJobCardModal({
                     value={formData.scheduled_start_date}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
+                    className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                     End Date
                   </label>
                   <input
@@ -492,7 +492,7 @@ export default function CreateJobCardModal({
                     name="scheduled_end_date"
                     value={formData.scheduled_end_date}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
+                    className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
                   />
                 </div>
               </div>
@@ -500,7 +500,7 @@ export default function CreateJobCardModal({
           </div>
 
           <div className="md:col-span-2 space-y-2">
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+            <label className="block text-xs  text-slate-500  tracking-wider mb-1">
               Instructions & Notes
             </label>
             <div className="relative">
@@ -511,7 +511,7 @@ export default function CreateJobCardModal({
                 onChange={handleInputChange}
                 rows="3"
                 placeholder="Specific instructions for the operator..."
-                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm resize-none"
+                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm resize-none"
               />
             </div>
           </div>

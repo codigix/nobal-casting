@@ -247,7 +247,7 @@ export default function StockLedger() {
             <button
               onClick={fetchLedger}
               disabled={loading}
-              className="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs  rounded-xs transition-all shadow-sm active:transform active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs  rounded-xs transition-all   active:transform active:scale-95 disabled:opacity-50"
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
               Refresh
@@ -345,14 +345,14 @@ export default function StockLedger() {
               <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-1 rounded-xs">
                 <button
                   onClick={() => setViewMode('table')}
-                  className={`p-1.5 rounded-xs transition-all ${viewMode === 'table' ? 'bg-white dark:bg-neutral-700 shadow-sm text-blue-600' : 'text-neutral-500 hover:text-neutral-700'}`}
+                  className={`p-1.5 rounded-xs transition-all ${viewMode === 'table' ? 'bg-white dark:bg-neutral-700   text-blue-600' : 'text-neutral-500 hover:text-neutral-700'}`}
                   title="Table View"
                 >
                   <TableIcon size={14} />
                 </button>
                 <button
                   onClick={() => setViewMode('card')}
-                  className={`p-1.5 rounded-xs transition-all ${viewMode === 'card' ? 'bg-white dark:bg-neutral-700 shadow-sm text-blue-600' : 'text-neutral-500 hover:text-neutral-700'}`}
+                  className={`p-1.5 rounded-xs transition-all ${viewMode === 'card' ? 'bg-white dark:bg-neutral-700   text-blue-600' : 'text-neutral-500 hover:text-neutral-700'}`}
                   title="Grid View"
                 >
                   <LayoutGrid size={14} />
@@ -435,7 +435,7 @@ export default function StockLedger() {
                 {filteredLedgers.map((entry, idx) => (
                   <div
                     key={idx}
-                    className="group bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs overflow-hidden hover:shadow-md transition-all duration-300"
+                    className="group bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs overflow-hidden hover: transition-all duration-300"
                   >
                     <div className={`h-1.5 w-full ${Number(entry.qty_in) > 0 ? 'bg-green-500' : 'bg-red-500'}`} />
                     <div className="p-4">
@@ -479,13 +479,13 @@ export default function StockLedger() {
 
                         <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800">
                           <div className="flex flex-col">
-                            <span className="text-[10px] text-neutral-400  tracking-tight">Movement</span>
+                            <span className="text-[10px] text-neutral-400  ">Movement</span>
                             <span className={`text-xs  ${Number(entry.qty_in) > 0 ? 'text-green-600' : 'text-red-600'}`}>
                               {Number(entry.qty_in) > 0 ? `+${entry.qty_in}` : `-${entry.qty_out}`}
                             </span>
                           </div>
                           <div className="flex flex-col items-end">
-                            <span className="text-[10px] text-neutral-400  tracking-tight">Balance</span>
+                            <span className="text-[10px] text-neutral-400  ">Balance</span>
                             <span className="text-xs  text-blue-600">
                               {Number(entry.balance_qty).toFixed(2)}
                             </span>

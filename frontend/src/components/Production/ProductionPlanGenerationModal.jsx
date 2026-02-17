@@ -129,7 +129,7 @@ export default function ProductionPlanGenerationModal({ isOpen, onClose, salesOr
                 </div>
               )}
 
-              <div className="space-y-6">
+              <div className="space-y-2">
                 {plan.finished_goods && plan.finished_goods.length > 0 && (
                   <div>
                     <h3 className="text-lg  text-gray-900 mb-3">Finished Goods</h3>

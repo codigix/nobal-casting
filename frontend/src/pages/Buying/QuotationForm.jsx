@@ -160,15 +160,15 @@ export default function QuotationForm() {
 
   return (
     <div className="w-full bg-neutral-50 min-h-screen p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-2">
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-4 rounded border border-neutral-200 relative overflow-hidden shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-4 rounded border border-neutral-200 relative overflow-hidden  ">
           <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-600" />
           <div>
-            <h1 className="text-xl font-black text-neutral-900 tracking-tight ">
+            <h1 className="text-xl  text-neutral-900  ">
               {isEditMode ? 'Edit Quotation' : 'New Supplier Quotation'}
             </h1>
-            <p className="text-[10px]  text-neutral-400 mt-0.5 tracking-widest ">
+            <p className="text-[10px]  text-neutral-400 mt-0.5  ">
               {isEditMode ? `ID: ${id?.toUpperCase()}` : 'Record supplier pricing and availability'}
             </p>
           </div>
@@ -176,7 +176,7 @@ export default function QuotationForm() {
             <Button 
               onClick={() => navigate('/buying/quotations')}
               variant="secondary"
-              className="px-4 py-2 h-10 border-neutral-200 font-black text-[10px] tracking-widest  rounded-none"
+              className="px-4 py-2 h-10 border-neutral-200  text-[10px]   rounded "
             >
               Cancel
             </Button>
@@ -184,7 +184,7 @@ export default function QuotationForm() {
               onClick={handleSubmit}
               variant="primary"
               disabled={loading}
-              className="bg-neutral-900 hover:bg-neutral-800 text-white px-6 py-2 h-10 border-0 font-black text-[10px] tracking-widest "
+              className="bg-neutral-900 hover:bg-neutral-800 text-white p-2  h-10 border-0  text-[10px]  "
             >
               {loading ? 'Saving...' : 'Save Quotation'}
             </Button>
@@ -204,7 +204,7 @@ export default function QuotationForm() {
           </div>
         )}
 
-        <div className="bg-white rounded border border-neutral-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded border border-neutral-200   overflow-hidden">
           <div className="p-6">
             <form onSubmit={handleSubmit} className="space-y-8">
               {isEditMode && quotation && (
@@ -221,7 +221,7 @@ export default function QuotationForm() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-neutral-400  tracking-[0.2em]">Supplier *</label>
+                  <label className="text-[10px]  text-neutral-400  ">Supplier *</label>
                   <select 
                     name="supplier_id"
                     value={formData.supplier_id}
@@ -239,7 +239,7 @@ export default function QuotationForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-neutral-400  tracking-[0.2em]">RFQ REFERENCE *</label>
+                  <label className="text-[10px]  text-neutral-400  ">RFQ REFERENCE *</label>
                   <select 
                     value={formData.rfq_id}
                     onChange={handleRFQSelect}
@@ -259,7 +259,7 @@ export default function QuotationForm() {
               {formData.items.length > 0 ? (
                 <div className="space-y-2 pt-4">
                   <div className="flex items-center justify-between border-b border-neutral-900 pb-2">
-                    <h3 className="text-[11px] font-black text-neutral-900  tracking-[0.3em]">Quotation Items</h3>
+                    <h3 className="text-[11px]  text-neutral-900  tracking-[0.3em]">Quotation Items</h3>
                     <span className="text-[10px]  text-neutral-400">{formData.items.length} ITEMS</span>
                   </div>
                   
@@ -267,12 +267,12 @@ export default function QuotationForm() {
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="bg-neutral-50 border-b border-neutral-200">
-                          <th className="p-2  text-left text-[10px] font-black text-neutral-500  tracking-widest">Item Detail</th>
-                          <th className="p-2  text-right text-[10px] font-black text-neutral-500  tracking-widest">Qty</th>
-                          <th className="p-2  text-right text-[10px] font-black text-neutral-500  tracking-widest w-32">Rate (₹)</th>
-                          <th className="p-2  text-right text-[10px] font-black text-neutral-500  tracking-widest">Amount</th>
-                          <th className="p-2  text-right text-[10px] font-black text-neutral-500  tracking-widest w-24">Lead Time</th>
-                          <th className="p-2  text-right text-[10px] font-black text-neutral-500  tracking-widest w-24">Min Qty</th>
+                          <th className="p-2  text-left text-[10px]  text-neutral-500  ">Item Detail</th>
+                          <th className="p-2  text-right text-[10px]  text-neutral-500  ">Qty</th>
+                          <th className="p-2  text-right text-[10px]  text-neutral-500   w-32">Rate (₹)</th>
+                          <th className="p-2  text-right text-[10px]  text-neutral-500  ">Amount</th>
+                          <th className="p-2  text-right text-[10px]  text-neutral-500   w-24">Lead Time</th>
+                          <th className="p-2  text-right text-[10px]  text-neutral-500   w-24">Min Qty</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-neutral-100">
@@ -281,7 +281,7 @@ export default function QuotationForm() {
                           return (
                             <tr key={idx} className="hover:bg-neutral-50 transition-colors">
                               <td className="px-4 py-4">
-                                <div className="text-xs font-black text-neutral-900">{getItemName(item.item_code)}</div>
+                                <div className="text-xs  text-neutral-900">{getItemName(item.item_code)}</div>
                                 <div className="text-[9px]  text-neutral-400 mt-0.5 tracking-wider ">{item.item_code}</div>
                               </td>
                               <td className="px-4 py-4 text-right text-xs  text-neutral-600">{item.qty}</td>
@@ -293,10 +293,10 @@ export default function QuotationForm() {
                                   placeholder="0.00"
                                   step="0.01"
                                   min="0"
-                                  className="w-full bg-white border border-neutral-200 p-2 rounded text-right text-xs font-black text-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 transition-all"
+                                  className="w-full bg-white border border-neutral-200 p-2 rounded text-right text-xs  text-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 transition-all"
                                 />
                               </td>
-                              <td className="px-4 py-4 text-right text-xs font-black text-neutral-900">
+                              <td className="px-4 py-4 text-right text-xs  text-neutral-900">
                                 ₹{amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                               </td>
                               <td className="px-4 py-4">
@@ -328,26 +328,26 @@ export default function QuotationForm() {
                   </div>
 
                   <div className="flex justify-end pt-4">
-                    <div className="bg-neutral-900 text-white p-6 rounded shadow-lg min-w-[300px]">
+                    <div className="bg-neutral-900 text-white p-6 rounded  min-w-[300px]">
                       <div className="flex justify-between items-center border-b border-white/10 pb-4 mb-4">
-                        <span className="text-[10px] font-black  tracking-[0.2em] text-neutral-400">Subtotal</span>
-                        <span className="text-lg font-black tracking-tight">₹{calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        <span className="text-[10px]    text-neutral-400">Subtotal</span>
+                        <span className="text-lg  ">₹{calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-black  tracking-[0.2em] text-indigo-400">Total Value</span>
-                        <span className="text-2xl font-black tracking-tighter text-indigo-400">₹{calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        <span className="text-[10px]    text-indigo-400">Total Value</span>
+                        <span className="text-2xl  er text-indigo-400">₹{calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                       </div>
                     </div>
                   </div>
                 </div>
               ) : (
                 <div className="py-20 text-center bg-neutral-50 rounded border border-dashed border-neutral-300">
-                  <p className="text-[10px] font-black text-neutral-400  tracking-widest">Select an RFQ to load items</p>
+                  <p className="text-[10px]  text-neutral-400  ">Select an RFQ to load items</p>
                 </div>
               )}
 
               <div className="space-y-2 pt-4">
-                <label className="text-[10px] font-black text-neutral-400  tracking-[0.2em]">Notes & Special Instructions</label>
+                <label className="text-[10px]  text-neutral-400  ">Notes & Special Instructions</label>
                 <textarea 
                   name="notes"
                   value={formData.notes}
@@ -363,7 +363,7 @@ export default function QuotationForm() {
                   type="button"
                   variant="secondary"
                   onClick={() => navigate('/buying/quotations')}
-                  className="px-8 py-3 rounded-none font-black text-[10px] tracking-widest  border-neutral-300 h-12"
+                  className="px-8 py-3 rounded   text-[10px]   border-neutral-300 h-12"
                 >
                   Cancel Changes
                 </Button>
@@ -371,7 +371,7 @@ export default function QuotationForm() {
                   type="submit"
                   variant="primary"
                   disabled={loading}
-                  className="bg-neutral-900 hover:bg-neutral-800 text-white px-12 py-3 rounded-none font-black text-[10px] tracking-widest  h-12 shadow  shadow-neutral-900/20"
+                  className="bg-neutral-900 hover:bg-neutral-800 text-white px-12 py-3 rounded   text-[10px]   h-12 shadow  shadow-neutral-900/20"
                 >
                   {loading ? 'PROCESSING...' : 'SAVE QUOTATION'}
                 </Button>

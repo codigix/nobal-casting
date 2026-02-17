@@ -253,7 +253,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
         </div>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-2">
         {error && (
           <Alert variant="danger">
             <div className="flex items-center gap-2">
@@ -265,8 +265,8 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Basic Info & Source */}
-          <div className="space-y-6">
-            <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          <div className="space-y-2">
+            <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
               <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
                 <FileText size={18} className="text-primary-600" />
                 <h3 className="font-semibold text-neutral-800">Basic Information</h3>
@@ -289,7 +289,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
               </div>
             </section>
 
-            <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+            <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
               <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
                 <Building2 size={18} className="text-primary-600" />
                 <h3 className="font-semibold text-neutral-800">Source MR</h3>
@@ -298,7 +298,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
                 <label className="block text-xs font-medium text-neutral-700 mb-1.5">Load from Approved MR</label>
                 <select 
                   onChange={(e) => handleLoadFromMR(e.target.value)}
-                  className="w-full h-10 px-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
+                  className="w-full h-10 px-3 rounded  border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
                 >
                   <option value="">Select Material Request...</option>
                   {approvedMRs.map(mr => (
@@ -312,7 +312,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
           </div>
 
           {/* Suppliers Selection */}
-          <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden flex flex-col">
+          <section className="bg-white rounded  border border-neutral-200 overflow-hidden flex flex-col">
             <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Users size={18} className="text-primary-600" />
@@ -325,7 +325,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
                 <select 
                   value={newSupplier}
                   onChange={(e) => setNewSupplier(e.target.value)}
-                  className="flex-1 h-10 px-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
+                  className="flex-1 h-10 px-3 rounded  border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
                 >
                   <option value="">Choose Supplier...</option>
                   {suppliers.map(sup => (
@@ -339,7 +339,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
                 </Button>
               </div>
               
-              <div className="flex-1 min-h-[150px] border border-neutral-100 rounded-lg p-2 bg-neutral-50/50 space-y-2 overflow-y-auto max-h-[200px]">
+              <div className="flex-1 min-h-[150px] border border-neutral-100 rounded  p-2 bg-neutral-50/50 space-y-2 overflow-y-auto max-h-[200px]">
                 {formData.suppliers.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-neutral-400 py-8">
                     <Users size={24} className="mb-2 opacity-20" />
@@ -347,7 +347,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
                   </div>
                 ) : (
                   formData.suppliers.map(s => (
-                    <div key={s.id} className="flex items-center justify-between bg-white p-2.5 rounded-md border border-neutral-200 shadow-sm transition-all hover:border-primary-200">
+                    <div key={s.id} className="flex items-center justify-between bg-white p-2.5 rounded-md border border-neutral-200   transition-all hover:border-primary-200">
                       <div className="flex flex-col">
                         <span className="text-sm font-medium text-neutral-800">
                           {suppliers.find(sup => sup.supplier_id === s.supplier_id)?.name || s.supplier_id}
@@ -370,7 +370,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
         </div>
 
         {/* Items Section */}
-        <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+        <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
           <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Package size={18} className="text-primary-600" />
@@ -433,7 +433,7 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-xs text-neutral-500 uppercase bg-neutral-50/50 border-b border-neutral-200">
+              <thead className="text-xs text-neutral-500  bg-neutral-50/50 border-b border-neutral-200">
                 <tr>
                   <th className="p-2  font-semibold w-12 text-center">#</th>
                   <th className="p-2  font-semibold">Item Details</th>
@@ -455,10 +455,10 @@ export default function CreateRFQModal({ isOpen, onClose, onSuccess }) {
                       <td className="p-2  text-center text-neutral-400 font-mono text-xs">{idx + 1}</td>
                       <td className="p-2 ">
                         <div className="font-medium text-neutral-900">{getItemName(item.item_code)}</div>
-                        <div className="text-[10px] text-neutral-500 uppercase tracking-tight">{item.item_code}</div>
+                        <div className="text-[10px] text-neutral-500  ">{item.item_code}</div>
                       </td>
                       <td className="p-2  text-right font-medium text-neutral-700">{item.qty}</td>
-                      <td className="p-2  text-neutral-500 uppercase text-xs">{item.uom}</td>
+                      <td className="p-2  text-neutral-500  text-xs">{item.uom}</td>
                       <td className="p-2 ">
                         <div className="flex items-center justify-center gap-1">
                           <button 

@@ -28,7 +28,7 @@ export default function SearchableSelect({
       onSearch(searchTerm)
     } else {
       const filtered = options.filter(opt => 
-        opt.label.toLowerCase().includes(searchTerm.toLowerCase())
+        String(opt.label || '').toLowerCase().includes((searchTerm || '').toLowerCase())
       )
       setFilteredOptions(filtered)
     }
@@ -174,7 +174,7 @@ export default function SearchableSelect({
         {isOpen && (
           <div 
             ref={dropdownRef}
-            className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded shadow-md z-[999] max-h-48 overflow-y-auto">
+            className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded  z-[999] max-h-48 overflow-y-auto">
             {isLoading && (
               <div className="p-2 text-gray-400 text-center text-xs">
                 Loading...

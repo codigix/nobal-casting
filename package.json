@@ -2,6 +2,7 @@
   "name": "aluminium-precision-casting-erp",
   "version": "1.0.0",
   "description": "ERP for aluminium precision casting company",
+  "type": "module",
   "private": true,
   "workspaces": [
     "backend",

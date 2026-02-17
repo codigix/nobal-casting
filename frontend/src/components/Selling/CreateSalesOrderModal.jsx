@@ -232,13 +232,13 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
       title="Create Sales Order" 
       size="5xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-2">
         {error && <Alert type="error" message={error} />}
 
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Sidebar - Context & Configuration */}
           <div className="lg:w-1/3 space-y-4">
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+            <div className="bg-slate-50 p-4 rounded  border border-slate-200 space-y-4">
               <div className="flex items-center gap-2 text-slate-800 font-semibold border-b border-slate-200 pb-2 mb-2">
                 <Info size={18} className="text-blue-500" />
                 Order Context
@@ -246,7 +246,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
 
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                     Customer
                   </label>
                   <div className="relative">
@@ -256,7 +256,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                       value={formData.customer_id}
                       onChange={handleCustomerChange}
                       required
-                      className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                      className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     >
                       <option value="">Select Customer</option>
                       {customers.map(c => (
@@ -267,7 +267,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                     Delivery Date
                   </label>
                   <div className="relative">
@@ -278,13 +278,13 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                       value={formData.delivery_date}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                      className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                     Quotation ID (Optional)
                   </label>
                   <div className="relative">
@@ -295,14 +295,14 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                       value={formData.quotation_id}
                       onChange={handleInputChange}
                       placeholder="QTN-2024-001"
-                      className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                      className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+            <div className="bg-blue-50 p-4 rounded  border border-blue-100">
               <div className="flex items-center gap-2 text-blue-800 font-semibold mb-3">
                 <Calculator size={18} />
                 Financial Summary
@@ -342,7 +342,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                 </div>
 
                 <div className="flex justify-between items-center pt-2 border-t border-blue-200">
-                  <span className="text-xs font-bold text-slate-500 uppercase">Tax Rate %</span>
+                  <span className="text-xs  text-slate-500 ">Tax Rate %</span>
                   <input
                     type="number"
                     name="tax_rate"
@@ -358,16 +358,16 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                 </div>
 
                 <div className="pt-3 border-t-2 border-blue-300 flex justify-between items-center">
-                  <span className="text-sm font-bold text-slate-900">Grand Total</span>
-                  <span className="text-lg font-bold text-blue-600">₹{formData.total_value.toFixed(2)}</span>
+                  <span className="text-sm  text-slate-900">Grand Total</span>
+                  <span className="text-lg  text-blue-600">₹{formData.total_value.toFixed(2)}</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Main Area - Items and Terms */}
-          <div className="lg:w-2/3 space-y-6">
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="lg:w-2/3 space-y-2">
+            <div className="bg-white border border-slate-200 rounded  overflow-hidden  ">
               <div className="bg-slate-50 p-2  border-b border-slate-200 flex justify-between items-center">
                 <div className="flex items-center gap-2 font-semibold text-slate-800">
                   <ShoppingCart size={18} className="text-blue-500" />
@@ -378,9 +378,9 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
 
               <div className="p-4">
                 {/* Item Entry Form */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4 bg-slate-50 p-3 rounded  border border-slate-100">
                   <div className="md:col-span-2">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Select Item</label>
+                    <label className="block text-[10px]  text-slate-400  mb-1">Select Item</label>
                     <select
                       name="item_code"
                       value={newItem.item_code}
@@ -394,7 +394,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Quantity</label>
+                    <label className="block text-[10px]  text-slate-400  mb-1">Quantity</label>
                     <input
                       type="number"
                       name="qty"
@@ -405,7 +405,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Rate (₹)</label>
+                    <label className="block text-[10px]  text-slate-400  mb-1">Rate (₹)</label>
                     <input
                       type="number"
                       name="rate"
@@ -416,7 +416,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                   </div>
                   
                   <div className="md:col-span-1">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Size/Color</label>
+                    <label className="block text-[10px]  text-slate-400  mb-1">Size/Color</label>
                     <div className="flex gap-2">
                       <input
                         type="text"
@@ -512,7 +512,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
               </div>
             </div>
 
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div className="bg-slate-50 p-4 rounded  border border-slate-200">
               <div className="flex items-center gap-2 text-slate-800 font-semibold mb-3">
                 <ClipboardList size={18} className="text-blue-500" />
                 Terms & Conditions
@@ -523,7 +523,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                 onChange={handleInputChange}
                 rows="4"
                 placeholder="Specify payment terms, delivery conditions, or any special instructions..."
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
               />
             </div>
           </div>

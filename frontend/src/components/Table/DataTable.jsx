@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react'
-import { Eye, ChevronDown } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { ChevronDown } from 'lucide-react'
 import '../Table/DataTable.css'
 
 export default function DataTable({ 
@@ -7,11 +7,9 @@ export default function DataTable({
   data, 
   renderActions,
   actions,
-  filterable = true,
   sortable = true,
   pageSize = 10,
   disablePagination = false,
-  hideColumnToggle = false,
   defaultHiddenColumns = [],
   externalVisibleColumns = null,
   onVisibleColumnsChange = null
@@ -30,31 +28,8 @@ export default function DataTable({
   )
   
   const visibleColumns = externalVisibleColumns || internalVisibleColumns
-  const setVisibleColumns = onVisibleColumnsChange || setInternalVisibleColumns
-
-  const [showColumnMenu, setShowColumnMenu] = useState(false)
 
   const filteredColumns = columns.filter(col => visibleColumns.has(col.key))
-
-  const toggleColumnVisibility = (columnKey) => {
-    setVisibleColumns(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(columnKey)) {
-        newSet.delete(columnKey)
-      } else {
-        newSet.add(columnKey)
-      }
-      return newSet
-    })
-  }
-
-  const showAllColumns = () => {
-    setVisibleColumns(new Set(columns.map(col => col.key)))
-  }
-
-  const hideAllColumns = () => {
-    setVisibleColumns(new Set())
-  }
 
   const filteredData = useMemo(() => {
     return data.filter(row => {
@@ -106,11 +81,6 @@ export default function DataTable({
     }))
   }
 
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
-    setCurrentPage(1)
-  }
-
   return (
     <>
      
@@ -119,15 +89,15 @@ export default function DataTable({
 
       
 
-      <div className="table-responsive">
-        <table className="data-table">
+      <div className="table-responsive overflow-x-auto">
+        <table className="data-table ">
           <thead>
             <tr>
               {filteredColumns.map(col => (
                 <th 
                   key={col.key}
                   onClick={() => sortable && handleSort(col.key)}
-                  className={sortable && col.key !== 'actions' ? 'sortable' : ''}
+                  className={`${sortable && col.key !== 'actions' ? 'sortable' : ''} ${col.key}-col`}
                   title={sortable ? 'Click to sort' : ''}
                 >
                   <div className="th-content">
@@ -154,7 +124,7 @@ export default function DataTable({
               paginatedData.map((row, idx) => (
                 <tr key={idx} className="data-row bg-white">
                   {filteredColumns.map(col => (
-                    <td key={col.key} className=" p-2 {col.key === 'status' || col.dropdown ? 'dropdown-col ' : ''}">
+                    <td key={col.key} className={` p-2 ${col.key}-col ${col.key === 'status' || col.dropdown ? 'dropdown-col ' : ''}`}>
                       {col.render ? col.render(row[col.key], row) : row[col.key]}
                     </td>
                   ))}

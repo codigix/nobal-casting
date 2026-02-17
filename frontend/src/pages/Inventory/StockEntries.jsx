@@ -516,7 +516,7 @@ export default function StockEntries() {
           </div>
           <button
             onClick={formModal.open}
-            className="flex items-center justify-center gap-2 p-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white  rounded-xs shadow-lg hover: transition-all duration-300 hover:-translate-y-1 whitespace-nowrap text-xs"
+            className="flex items-center justify-center gap-2 p-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white  rounded-xs  hover: transition-all duration-300 hover:-translate-y-1 whitespace-nowrap text-xs"
           >
             <Plus size={18} />
             Create Entry
@@ -879,7 +879,7 @@ export default function StockEntries() {
             </Button>
           </div>
         ) : (
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs overflow-hidden  ">
             {/* Command Center Filter Bar */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-3 px-4 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
               <div className="relative flex-1 group max-w-md">
@@ -952,14 +952,14 @@ export default function StockEntries() {
                 <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-1 rounded-xs">
                   <button
                     onClick={() => setViewMode('table')}
-                    className={`p-1.5 rounded-xs transition-all ${viewMode === 'table' ? 'bg-white dark:bg-neutral-700 shadow-sm text-amber-600' : 'text-neutral-500 hover:text-neutral-700'}`}
+                    className={`p-1.5 rounded-xs transition-all ${viewMode === 'table' ? 'bg-white dark:bg-neutral-700   text-amber-600' : 'text-neutral-500 hover:text-neutral-700'}`}
                     title="Table View"
                   >
                     <ListIcon size={14} />
                   </button>
                   <button
                     onClick={() => setViewMode('card')}
-                    className={`p-1.5 rounded-xs transition-all ${viewMode === 'card' ? 'bg-white dark:bg-neutral-700 shadow-sm text-amber-600' : 'text-neutral-500 hover:text-neutral-700'}`}
+                    className={`p-1.5 rounded-xs transition-all ${viewMode === 'card' ? 'bg-white dark:bg-neutral-700   text-amber-600' : 'text-neutral-500 hover:text-neutral-700'}`}
                     title="Card View"
                   >
                     <LayoutGrid size={14} />
@@ -1006,7 +1006,7 @@ export default function StockEntries() {
 
                 <button
                   onClick={fetchEntries}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-blue-600 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs transition-all shadow-sm"
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-blue-600 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xs transition-all  "
                   title="Refresh Data"
                 >
                   <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
@@ -1036,7 +1036,7 @@ export default function StockEntries() {
                     {paginatedData.map((entry) => (
                       <div
                         key={entry.entry_id || entry.id}
-                        className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800 hover:shadow-md transition-all duration-200 group flex flex-col"
+                        className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800 hover: transition-all duration-200 group flex flex-col"
                       >
                         <div className={`h-1.5 w-full bg-gradient-to-r ${getTypeColor(entry.entry_type)}`} />
                         <div className="p-4 flex-1">
@@ -1093,7 +1093,7 @@ export default function StockEntries() {
                               <>
                                 <button
                                   onClick={() => handleSubmitEntry(entry.id || entry.entry_id)}
-                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px]  text-white bg-green-600 hover:bg-green-700 rounded-xs transition-all shadow-sm active:scale-95"
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px]  text-white bg-green-600 hover:bg-green-700 rounded-xs transition-all   active:scale-95"
                                 >
                                   <CheckCircle2 size={12} />
                                   SUBMIT
@@ -1109,7 +1109,7 @@ export default function StockEntries() {
                             ) : entry.status === 'Submitted' ? (
                               <button
                                 onClick={() => handleCancelEntry(entry.id || entry.entry_id)}
-                                className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px]  text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-xs transition-all border border-orange-100 shadow-sm active:scale-95"
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px]  text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-xs transition-all border border-orange-100   active:scale-95"
                               >
                                 <RotateCcw size={12} />
                                 CANCEL & REVERSE
@@ -1146,7 +1146,7 @@ export default function StockEntries() {
                                 <button
                                   key={page}
                                   onClick={() => setCurrentPage(page)}
-                                  className={`w-8 h-8 rounded-xs text-[11px]  transition-all ${currentPage === page ? 'bg-amber-500 text-white shadow-md' : 'text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
+                                  className={`w-8 h-8 rounded-xs text-[11px]  transition-all ${currentPage === page ? 'bg-amber-500 text-white ' : 'text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
                                 >
                                   {page}
                                 </button>

@@ -44,6 +44,7 @@ export default function DepartmentProtectedRoute({ children, departments = [] })
   })
 
   if (!allowedDepts.includes(userDept)) {
+    console.warn(`[DepartmentProtectedRoute] Access denied. User department: "${userDept}", Allowed departments: ${JSON.stringify(allowedDepts)}`);
     return (
       <div style={{
         display: 'flex',
@@ -62,9 +63,10 @@ export default function DepartmentProtectedRoute({ children, departments = [] })
           This page is only available for {departments.map(d => {
             const deptMap = {
               'inventory': 'Inventory',
-              'manufacturing': 'Production',
-              'production': 'Production',
-              'admin': 'Administration'
+              'manufacturing': 'Production/Manufacturing',
+              'production': 'Production/Manufacturing',
+              'admin': 'Administration',
+              'accounts': 'Accounts & Finance'
             }
             return deptMap[d.toLowerCase()] || d
           }).join(', ')} department.

@@ -241,7 +241,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
         </div>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-2">
         {error && (
           <Alert variant="danger" className="mb-6">
             <div className="flex items-center gap-2">
@@ -252,7 +252,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
         )}
 
         {/* Basic Information Section */}
-        <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+        <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
           <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
             <Receipt size={18} className="text-primary-600" />
             <h3 className="font-semibold text-neutral-800">Basic Information</h3>
@@ -266,7 +266,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
                 value={formData.supplier_id}
                 onChange={handleSupplierChange}
                 required
-                className="w-full h-10 px-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-sm outline-none bg-white"
+                className="w-full h-10 px-3 rounded  border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-sm outline-none bg-white"
               >
                 <option value="">Select Supplier</option>
                 {suppliers.map(supplier => (
@@ -297,7 +297,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
           </div>
 
           {supplierDetails && (
-            <div className="mx-4 mb-4 p-3 bg-green-50 rounded-lg border border-green-100 flex items-center gap-3">
+            <div className="mx-4 mb-4 p-3 bg-green-50 rounded  border border-green-100 flex items-center gap-3">
               <div className="p-1.5 bg-green-100 rounded-full">
                 <CheckCircle size={14} className="text-green-600" />
               </div>
@@ -311,7 +311,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
         </section>
 
         {/* Items Section */}
-        <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+        <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
           <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Package size={18} className="text-primary-600" />
@@ -324,7 +324,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-xs text-neutral-500 uppercase bg-neutral-50/50 border-b border-neutral-200">
+              <thead className="text-xs text-neutral-500  bg-neutral-50/50 border-b border-neutral-200">
                 <tr>
                   <th className="p-2  font-semibold">Item Details</th>
                   <th className="p-2  font-semibold w-24 text-right">Qty</th>
@@ -405,16 +405,16 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
 
           <div className="p-4 bg-neutral-50/50 border-t border-neutral-100 grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-wider font-bold text-neutral-400 mb-1">Total Items</span>
-              <span className="text-lg font-bold text-neutral-800">{formData.items.length}</span>
+              <span className="text-[10px]  tracking-wider  text-neutral-400 mb-1">Total Items</span>
+              <span className="text-lg  text-neutral-800">{formData.items.length}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-wider font-bold text-neutral-400 mb-1">Total Qty</span>
-              <span className="text-lg font-bold text-neutral-800">{getTotalQty().toLocaleString('en-IN')}</span>
+              <span className="text-[10px]  tracking-wider  text-neutral-400 mb-1">Total Qty</span>
+              <span className="text-lg  text-neutral-800">{getTotalQty().toLocaleString('en-IN')}</span>
             </div>
             <div className="flex flex-col md:items-end">
-              <span className="text-[10px] uppercase tracking-wider font-bold text-neutral-400 mb-1">Item Subtotal</span>
-              <span className="text-lg font-bold text-primary-600">
+              <span className="text-[10px]  tracking-wider  text-neutral-400 mb-1">Item Subtotal</span>
+              <span className="text-lg  text-primary-600">
                 ₹{calculateSubtotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
@@ -423,7 +423,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Tax & Currency */}
-          <section className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          <section className="bg-white rounded  border border-neutral-200 overflow-hidden">
             <div className="bg-neutral-50 p-2  border-b border-neutral-200 flex items-center gap-2">
               <CreditCard size={18} className="text-primary-600" />
               <h3 className="font-semibold text-neutral-800">Tax & Currency</h3>
@@ -435,7 +435,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
                   name="currency"
                   value={formData.currency}
                   onChange={handleInputChange}
-                  className="w-full h-10 px-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
+                  className="w-full h-10 px-3 rounded  border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
                 >
                   <option value="INR">INR (Indian Rupee)</option>
                   <option value="USD">USD (US Dollar)</option>
@@ -449,7 +449,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
                   name="tax_template_id"
                   value={formData.tax_template_id}
                   onChange={handleInputChange}
-                  className="w-full h-10 px-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
+                  className="w-full h-10 px-3 rounded  border border-neutral-300 focus:ring-2 focus:ring-primary-500 outline-none text-sm bg-white"
                 >
                   <option value="">No Tax Template</option>
                   {taxTemplates.map(tax => (
@@ -463,7 +463,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
           </section>
 
           {/* Financial Summary */}
-          <section className="bg-primary-600 rounded-xl border border-primary-700 overflow-hidden text-white flex flex-col justify-center p-6 shadow-md shadow-primary-200">
+          <section className="bg-primary-600 rounded  border border-primary-700 overflow-hidden text-white flex flex-col justify-center p-6  shadow-primary-200">
             <div className="space-y-4">
               <div className="flex justify-between items-center border-b border-primary-500/50 pb-3">
                 <span className="text-primary-100 text-sm">Subtotal</span>
@@ -477,12 +477,12 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
               </div>
               <div className="flex justify-between items-center pt-2">
                 <span className="text-primary-100 font-medium">Grand Total</span>
-                <span className="text-3xl font-bold">
+                <span className="text-3xl ">
                   ₹{calculateSubtotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
             </div>
-            <div className="mt-6 flex items-center gap-2 text-primary-100 text-xs bg-primary-700/50 p-2 rounded-lg">
+            <div className="mt-6 flex items-center gap-2 text-primary-100 text-xs bg-primary-700/50 p-2 rounded ">
               <Calendar size={14} />
               <span>Valid until {new Date(new Date().setDate(new Date().getDate() + 30)).toLocaleDateString()}</span>
             </div>

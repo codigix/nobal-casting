@@ -159,10 +159,10 @@ const SectionTitle = ({ title, icon: Icon, badge, subtitle }) => (
         <div className="p-2 bg-indigo-50 text-indigo-600 rounded">
           <Icon size={15} />
         </div>
-        <h3 className="text-xs  text-slate-900 tracking-tight">{title}</h3>
+        <h3 className="text-xs  text-slate-900 ">{title}</h3>
       </div>
       {badge && (
-        <span className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px]  uppercase rounded-full border border-slate-200">
+        <span className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px]   rounded-full border border-slate-200">
           {badge}
         </span>
       )}
@@ -215,14 +215,14 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle }) => {
   }
 
   return (
-    <Card className="p-2 border-none flex items-center gap-4 transition-all hover:shadow-lg hover:shadow-slate-200/50 bg-white rounded group">
+    <Card className="p-2 border-none flex items-center gap-4 transition-all hover: hover:shadow-slate-200/50 bg-white rounded group">
       <div className={`p-3 rounded  ${colorMap[color] || colorMap.blue} border border-transparent transition-transform group-hover:scale-110 duration-300`}>
         <Icon size={22} strokeWidth={2.5} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-xs  text-slate-400 ">{label}</p>
         <div className="flex items-baseline gap-2">
-          <h3 className="text-lg text-slate-900 tracking-tight">{value}</h3>
+          <h3 className="text-lg text-slate-900 ">{value}</h3>
           {subtitle && (
             <p className="text-[9px]  text-slate-400  truncate">{subtitle}</p>
           )}
@@ -234,19 +234,22 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle }) => {
 
 const StatusBadge = ({ status }) => {
   const config = {
-    draft: { color: 'bg-slate-50 text-slate-600 border-slate-200', icon: Clock },
-    pending: { color: 'bg-indigo-50 text-indigo-700 border-indigo-100', icon: Calendar },
-    'in-progress': { color: 'bg-amber-50 text-amber-700 border-amber-100', icon: Activity },
-    completed: { color: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: CheckCircle2 },
-    cancelled: { color: 'bg-rose-50 text-rose-700 border-rose-100', icon: AlertCircle }
+    draft: { color: 'bg-slate-50 text-slate-600 border-slate-200', icon: Clock, label: 'Draft' },
+    ready: { color: 'bg-blue-50 text-blue-700 border-blue-100', icon: CheckCircle2, label: 'Ready' },
+    pending: { color: 'bg-indigo-50 text-indigo-700 border-indigo-100', icon: Calendar, label: 'Pending' },
+    'in-progress': { color: 'bg-amber-50 text-amber-700 border-amber-100', icon: Activity, label: 'In-Progress' },
+    in_progress: { color: 'bg-amber-50 text-amber-700 border-amber-100', icon: Activity, label: 'In-Progress' },
+    completed: { color: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: CheckCircle2, label: 'Completed' },
+    cancelled: { color: 'bg-rose-50 text-rose-700 border-rose-100', icon: AlertCircle, label: 'Cancelled' }
   }
   const s = normalizeStatus(status)
-  const { color, icon: Icon } = config[s] || config.draft
+  const statusKey = s.replace('-', '_')
+  const { color, icon: Icon, label } = config[s] || config[statusKey] || config.draft
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px]  text-xs  border ${color}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-medium border ${color}`}>
       <Icon size={10} />
-      {s.toUpperCase()}
+      {label || s.toUpperCase()}
     </span>
   )
 }
@@ -356,6 +359,7 @@ export default function ProductionEntry() {
     : parseFloat(jobCardData?.planned_quantity || 0);
 
   const isOperationFinished = totalProducedQty >= (maxAllowedQty - 0.1);
+  const canTransfer = totalAcceptedQty > 0;
 
   const rejectionReasons = [
     'Size/Dimension Error',
@@ -1218,15 +1222,25 @@ export default function ProductionEntry() {
       setIsSubmitting(true)
 
       const totalAccepted = totalAcceptedQty
+      const shouldComplete = isOperationFinished
 
-      await productionService.updateJobCard(jobCardId, {
-        status: 'completed',
-        actual_end_date: new Date().toISOString(),
+      const updatePayload = {
         produced_quantity: totalProducedQty,
         accepted_quantity: totalAcceptedQty,
         rejected_quantity: totalRejectedQty,
         scrap_quantity: totalScrapQty
-      })
+      }
+
+      // Only update status and actual_end_date if finishing or if not already in-progress
+      const currentStatusNormalized = normalizeStatus(jobCardData?.status)
+      if (shouldComplete) {
+        updatePayload.status = 'completed'
+        updatePayload.actual_end_date = new Date().toISOString()
+      } else if (currentStatusNormalized !== 'in-progress') {
+        updatePayload.status = 'in-progress'
+      }
+
+      await productionService.updateJobCard(jobCardId, updatePayload)
 
       if (nextOperationForm.next_operation_id) {
         // Find the selected operation's details to get its sequence
@@ -1252,8 +1266,13 @@ export default function ProductionEntry() {
         }
       }
 
-      toast.addToast('Production stage completed successfully', 'success')
-      navigate('/manufacturing/job-cards')
+      toast.addToast(shouldComplete ? 'Production stage completed successfully' : 'Partial quantity transferred successfully', 'success')
+      
+      if (shouldComplete) {
+        navigate('/manufacturing/job-cards')
+      } else {
+        await fetchAllData()
+      }
     } catch (err) {
       toast.addToast(err.message || 'Failed to complete production', 'error')
     } finally {
@@ -1392,7 +1411,7 @@ export default function ProductionEntry() {
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-8 h-8 bg-slate-900 rounded flex items-center justify-center shadow-lg shadow-slate-200">
+            <div className="w-8 h-8 bg-slate-900 rounded flex items-center justify-center  shadow-slate-200">
               <Activity className="text-white" size={24} />
             </div>
             <div>
@@ -1422,7 +1441,7 @@ export default function ProductionEntry() {
               <button
                 onClick={handleSubmitProduction}
                 disabled={isSubmitting}
-                className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50 shadow-lg shadow-emerald-200 transition-all text-sm font-medium animate-bounce"
+                className="flex items-center gap-2 p-2  bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50  shadow-emerald-200 transition-all text-sm font-medium animate-bounce"
               >
                 {isSubmitting ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -1436,11 +1455,11 @@ export default function ProductionEntry() {
         </div>
 
         {jobCardData?.execution_mode === 'OUTSOURCE' && (
-          <div className="mb-6 p-8 bg-indigo-50 border-2 border-dashed border-indigo-200 rounded-2xl text-center animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-100">
+          <div className="mb-6 p-8 bg-indigo-50 border-2 border-dashed border-indigo-200 rounded  text-center animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4  shadow-indigo-100">
               <Package className="text-indigo-600" size={32} />
             </div>
-            <h2 className="text-xl font-bold text-slate-900 mb-2">Outsource Operation</h2>
+            <h2 className="text-xl  text-slate-900 mb-2">Outsource Operation</h2>
             <p className="text-slate-600 max-w-lg mx-auto mb-6">
               This operation is handled by an external vendor. 
               Production tracking and stock movements for outsourced tasks are managed via 
@@ -1449,7 +1468,7 @@ export default function ProductionEntry() {
             <div className="flex justify-center gap-4">
               <button
                 onClick={() => navigate('/manufacturing/job-cards')}
-                className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center gap-2"
+                className="p-2   bg-indigo-600 text-white rounded  font-semibold  shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center gap-2"
               >
                 <ArrowLeft size={18} />
                 Back to Job Cards
@@ -1466,7 +1485,7 @@ export default function ProductionEntry() {
                 <Package className="text-slate-400" size={24} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Target Item</p>
+                <p className="text-[10px]  tracking-wider text-slate-400 mb-1 font-semibold">Target Item</p>
                 <h2 className="text-base text-slate-900 truncate font-medium" title={itemName || jobCardData?.item_name}>
                   {itemName || jobCardData?.item_name || 'N/A'}
                 </h2>
@@ -1478,7 +1497,7 @@ export default function ProductionEntry() {
 
             <div className="flex items-center gap-8 px-2">
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Planned</p>
+                <p className="text-[10px]  tracking-wider text-slate-400 mb-1 font-semibold">Planned</p>
                 <div className="flex items-baseline gap-1">
                   <span className="text-md text-slate-900 ">
                     {parseFloat(maxAllowedQty || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
@@ -1487,7 +1506,7 @@ export default function ProductionEntry() {
                 </div>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Produced</p>
+                <p className="text-[10px]  tracking-wider text-slate-400 mb-1 font-semibold">Produced</p>
                 <div className="flex items-baseline gap-1">
                   <span className="text-lg text-slate-900 ">
                     {totalProducedQty.toLocaleString()}
@@ -1496,7 +1515,7 @@ export default function ProductionEntry() {
                 </div>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Accepted</p>
+                <p className="text-[10px]  tracking-wider text-slate-400 mb-1 font-semibold">Accepted</p>
                 <div className="flex items-baseline gap-1">
                   <span className="text-lg text-emerald-600 ">
                     {totalAcceptedQty.toLocaleString()}
@@ -1505,7 +1524,25 @@ export default function ProductionEntry() {
                 </div>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Current Op</p>
+                <p className="text-[10px]  tracking-wider text-slate-400 mb-1 font-semibold">Transferred</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg text-indigo-600 ">
+                    {parseFloat(jobCardData?.transferred_quantity || 0).toLocaleString()}
+                  </span>
+                  <span className="text-xs text-indigo-400">Units</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px]  tracking-wider text-slate-400 mb-1 font-semibold">Available</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg text-slate-900 ">
+                    {(totalAcceptedQty - parseFloat(jobCardData?.transferred_quantity || 0)).toLocaleString()}
+                  </span>
+                  <span className="text-xs text-slate-400">Units</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px]  tracking-wider text-slate-400 mb-1 font-semibold">Current Op</p>
                 <div className="flex items-center gap-2 text-indigo-600">
                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
                   <span className="text-sm  truncate max-w-[120px]" title={jobCardData?.operation}>
@@ -1600,30 +1637,30 @@ export default function ProductionEntry() {
         <div className="grid grid-cols-12 gap-2">
           {/* Left Column: Navigation Only */}
           <div className="col-span-12 lg:col-span-2">
-            <div className="sticky top-8 space-y-6">
+            <div className="sticky top-8 space-y-2">
               {/* Quick Navigation Card */}
 
 
               {previousOperationData && (
-                <Card className="p-0 border-none bg-emerald-50/20 rounded-xl overflow-hidden border border-emerald-100/50 ">
+                <Card className="p-0 border-none bg-emerald-50/20 rounded  overflow-hidden border border-emerald-100/50 ">
                   <div className="p-3 bg-emerald-600 text-white flex items-center gap-2">
                     <CheckCircle size={14} />
-                    <h3 className="text-[10px] uppercase tracking-wider  text-white/90">Previous Phase</h3>
+                    <h3 className="text-[10px]  tracking-wider  text-white/90">Previous Phase</h3>
                   </div>
                   <div className="p-3 space-y-3">
                     <div>
-                      <p className="text-[9px] uppercase tracking-wider text-emerald-600/70 mb-1 font-semibold">Operation</p>
+                      <p className="text-[9px]  tracking-wider text-emerald-600/70 mb-1 font-semibold">Operation</p>
                       <p className="text-xs text-slate-900 font-medium">{previousOperationData.operation}</p>
                     </div>
                     <div className="grid grid-cols-2 gap-4 pt-2 border-t border-emerald-100">
                       <div>
-                        <p className="text-[9px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Accepted</p>
+                        <p className="text-[9px]  tracking-wider text-slate-400 mb-1 font-semibold">Accepted</p>
                         <p className="text-sm text-emerald-600 ">
                           {parseFloat(parseFloat(previousOperationData.accepted_quantity) || ((parseFloat(previousOperationData.produced_quantity) || 0) - (parseFloat(previousOperationData.rejected_quantity) || 0))).toLocaleString()}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[9px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">Rejected</p>
+                        <p className="text-[9px]  tracking-wider text-slate-400 mb-1 font-semibold">Rejected</p>
                         <p className="text-sm text-rose-500 ">
                           {parseFloat(previousOperationData.rejected_quantity || 0).toLocaleString()}
                         </p>
@@ -1637,7 +1674,7 @@ export default function ProductionEntry() {
 
           <div className="col-span-12 lg:col-span-12 ">
             {/* Time Logs Section */}
-            <div id="time-logs" className="animate-in fade-in slide-in-from-bottom-2 bg-blue-50/50 duration-300 rounded-xl p-4">
+            <div id="time-logs" className="animate-in fade-in slide-in-from-bottom-2 bg-blue-50/50 duration-300 rounded  p-4">
               <Card className="p-2 border-none bg-white/80 overflow-visible">
                 <SectionTitle title="Add Time Log" icon={Plus} />
                 <form onSubmit={handleAddTimeLog} className="grid grid-cols-12 gap-2  items-end items-end">
@@ -1799,7 +1836,7 @@ export default function ProductionEntry() {
                     <button
                       type="submit"
                       disabled={formLoading}
-                      className="w-full p-2 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
+                      className="w-full p-2 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700 disabled:opacity-50 transition-all  shadow-indigo-100 flex items-center justify-center gap-2"
                     >
                       {formLoading ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={14} />}
                       Record Time
@@ -1808,7 +1845,7 @@ export default function ProductionEntry() {
                 </form>
 
                 {/* Logs Table */}
-                <div className="mt-8 overflow-hidden rounded-xl border border-slate-100">
+                <div className="mt-8 overflow-hidden rounded  border border-slate-100">
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-100">
@@ -1839,7 +1876,7 @@ export default function ProductionEntry() {
                             </td>
                             <td className="p-3">
                               <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px]  text-slate-500 uppercase">
+                                <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px]  text-slate-500 ">
                                   {log.operator_name?.charAt(0) || 'U'}
                                 </div>
                                 <span>{log.operator_name || 'N/A'}</span>
@@ -1853,7 +1890,7 @@ export default function ProductionEntry() {
                             </td>
                             <td className="p-3 text-right">
                               <span className=" text-indigo-600">{parseFloat(log.completed_qty).toLocaleString()}</span>
-                              <span className="ml-1 text-[10px] text-slate-400 uppercase tracking-wider">Units</span>
+                              <span className="ml-1 text-[10px] text-slate-400  tracking-wider">Units</span>
                             </td>
                             <td className="p-3 text-center">
                               <button
@@ -1872,7 +1909,7 @@ export default function ProductionEntry() {
               </Card>
             </div>
 
-            <div id="quality-entry" className="animate-in fade-in slide-in-from-bottom-2 bg-emerald-50/50 duration-300 rounded-xl p-4">
+            <div id="quality-entry" className="animate-in fade-in slide-in-from-bottom-2 bg-emerald-50/50 duration-300 rounded  p-4">
               <Card className="p-3 border-none bg-white/80">
                 <SectionTitle title="Quality & Rejection Entry" icon={ShieldCheck} />
                 <form onSubmit={handleAddRejection} className="grid grid-cols-12 gap-2  items-end">
@@ -2005,7 +2042,7 @@ export default function ProductionEntry() {
                     <button
                       type="submit"
                       disabled={formLoading}
-                      className="w-full p-2 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2"
+                      className="w-full p-2 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-700 disabled:opacity-50 transition-all  shadow-emerald-100 flex items-center justify-center gap-2"
                     >
                       {formLoading ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={14} />}
                       Save Entry
@@ -2013,12 +2050,12 @@ export default function ProductionEntry() {
                   </div>
                 </form>
 
-                <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-lg flex items-start gap-3">
+                <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded  flex items-start gap-3">
                   <div className="p-1.5 bg-amber-100 text-amber-600 rounded">
                     <Info size={14} />
                   </div>
                   <div className="flex-1">
-                    <p className="text-[11px] font-bold text-amber-900 uppercase tracking-tight">Quality Gate Active</p>
+                    <p className="text-[11px]  text-amber-900  ">Quality Gate Active</p>
                     <p className="text-[10px] text-amber-700 leading-relaxed">
                       Only <strong>Approved</strong> quality inspection records contribute to the <strong>Accepted Quantity</strong> of this job card.
                       Pending records will block the progression to subsequent operations.
@@ -2030,14 +2067,14 @@ export default function ProductionEntry() {
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-100">
-                        <th className="p-2 text-slate-400 w-12 text-center uppercase tracking-tighter">Day</th>
-                        <th className="p-2 text-slate-400 uppercase tracking-tighter">Date / Shift</th>
-                        <th className="p-2 text-slate-400 uppercase tracking-tighter">Inspection Status</th>
-                        <th className="p-2 text-slate-400 uppercase tracking-tighter">Quality Notes</th>
-                        <th className="p-2 text-slate-400 text-center uppercase tracking-tighter">Accepted</th>
-                        <th className="p-2 text-slate-400 text-center uppercase tracking-tighter">Rejected</th>
-                        <th className="p-2 text-slate-400 text-center uppercase tracking-tighter">Scrap</th>
-                        <th className="p-2 text-slate-400 text-center w-24 uppercase tracking-tighter">Action</th>
+                        <th className="p-2 text-slate-400 w-12 text-center  er">Day</th>
+                        <th className="p-2 text-slate-400  er">Date / Shift</th>
+                        <th className="p-2 text-slate-400  er">Inspection Status</th>
+                        <th className="p-2 text-slate-400  er">Quality Notes</th>
+                        <th className="p-2 text-slate-400 text-center  er">Accepted</th>
+                        <th className="p-2 text-slate-400 text-center  er">Rejected</th>
+                        <th className="p-2 text-slate-400 text-center  er">Scrap</th>
+                        <th className="p-2 text-slate-400 text-center w-24  er">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
@@ -2055,15 +2092,15 @@ export default function ProductionEntry() {
                             </td>
                             <td className="p-3">
                               <p className="font-medium text-slate-900">{new Date(rej.log_date).toLocaleDateString()}</p>
-                              <p className="text-[10px] text-slate-400 uppercase">Shift {normalizeShift(rej.shift)}</p>
+                              <p className="text-[10px] text-slate-400 ">Shift {normalizeShift(rej.shift)}</p>
                             </td>
                             <td className="p-3">
                               {rej.status === 'Approved' ? (
-                                <span className="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-[10px] font-bold uppercase border border-emerald-100">
+                                <span className="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-[10px]   border border-emerald-100">
                                   <ShieldCheck size={10} /> Approved
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-1 rounded text-[10px] font-bold uppercase border border-amber-100 animate-pulse">
+                                <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-1 rounded text-[10px]   border border-amber-100 animate-pulse">
                                   <Clock size={10} /> Pending Approval
                                 </span>
                               )}
@@ -2071,9 +2108,9 @@ export default function ProductionEntry() {
                             <td className="p-3">
                               <div className="flex flex-col gap-1">
                                 {parseFloat(rej.rejected_qty) > 0 ? (
-                                  <span className="p-1 bg-rose-50 text-rose-600 rounded text-[10px]  w-fit uppercase">Defect Found</span>
+                                  <span className="p-1 bg-rose-50 text-rose-600 rounded text-[10px]  w-fit ">Defect Found</span>
                                 ) : (
-                                  <span className="p-1 bg-emerald-50 text-emerald-600 rounded text-[10px]  w-fit uppercase">Passed</span>
+                                  <span className="p-1 bg-emerald-50 text-emerald-600 rounded text-[10px]  w-fit ">Passed</span>
                                 )}
                                 <span className="text-slate-500">{rej.rejection_reason || 'Standard Inspection'}</span>
                               </div>
@@ -2117,7 +2154,7 @@ export default function ProductionEntry() {
             </div>
 
             {/* Downtime Section */}
-            <div id="downtime" className="animate-in fade-in slide-in-from-bottom-2 bg-rose-50/50 duration-300 rounded-xl p-4">
+            <div id="downtime" className="animate-in fade-in slide-in-from-bottom-2 bg-rose-50/50 duration-300 rounded  p-4">
               <Card className="p-3 border-none bg-white/80">
                 <SectionTitle title="Operational Downtime" icon={AlertTriangle} />
                 <form onSubmit={handleAddDowntime} className="grid grid-cols-12 gap-2">
@@ -2233,7 +2270,7 @@ export default function ProductionEntry() {
                     <button
                       type="submit"
                       disabled={formLoading}
-                      className="w-full p-2 bg-amber-600 text-white rounded text-xs hover:bg-amber-700 disabled:opacity-50 transition-all shadow-lg shadow-amber-100 flex items-center justify-center gap-2"
+                      className="w-full p-2 bg-amber-600 text-white rounded text-xs hover:bg-amber-700 disabled:opacity-50 transition-all  shadow-amber-100 flex items-center justify-center gap-2"
                     >
                       {formLoading ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={14} />}
                       Record Downtime
@@ -2241,7 +2278,7 @@ export default function ProductionEntry() {
                   </div>
                 </form>
 
-                <div className="mt-8 overflow-hidden rounded-xl border border-slate-100">
+                <div className="mt-8 overflow-hidden rounded  border border-slate-100">
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-100">
@@ -2268,7 +2305,7 @@ export default function ProductionEntry() {
                             </td>
                             <td className="p-3">
                               <p className="font-medium text-slate-900">{new Date(down.log_date).toLocaleDateString()}</p>
-                              <p className="text-[10px] text-slate-400 uppercase">Shift {normalizeShift(down.shift)}</p>
+                              <p className="text-[10px] text-slate-400 ">Shift {normalizeShift(down.shift)}</p>
                             </td>
                             <td className="p-3">
                               <p className="font-medium text-slate-900">{down.downtime_type}</p>
@@ -2279,7 +2316,7 @@ export default function ProductionEntry() {
                             </td>
                             <td className="p-3 text-right">
                               <span className=" text-amber-600">{down.duration_minutes}</span>
-                              <span className="ml-1 text-[10px] text-slate-400 uppercase tracking-wider">Mins</span>
+                              <span className="ml-1 text-[10px] text-slate-400  tracking-wider">Mins</span>
                             </td>
                             <td className="p-3 text-center">
                               <button
@@ -2299,7 +2336,7 @@ export default function ProductionEntry() {
             </div>
 
             {/* Next Operation Section */}
-            <div id="next-operation" className="animate-in fade-in slide-in-from-bottom-2 bg-amber-50/50 duration-300 rounded-xl p-4">
+            <div id="next-operation" className="animate-in fade-in slide-in-from-bottom-2 bg-amber-50/50 duration-300 rounded  p-4">
               <Card className="p-0 border-none overflow-hidden bg-white/80 relative">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
                 <div className="p-2 relative">
@@ -2311,9 +2348,15 @@ export default function ProductionEntry() {
                       </h3>
                       <p className="text-xs text-slate-400 mt-1">Specify destination and operational parameters for the next manufacturing phase</p>
                     </div>
-                    <div className="hidden sm:flex items-center gap-2 text-emerald-600 bg-emerald-50 p-2  py-1.5 rounded border border-emerald-100">
-                      <Activity size={14} className="animate-pulse" />
-                      <span className="text-xs ">Ready for Dispatch</span>
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="hidden sm:flex items-center gap-2 text-emerald-600 bg-emerald-50 p-2  py-1.5 rounded border border-emerald-100">
+                        <Activity size={14} className="animate-pulse" />
+                        <span className="text-xs ">Ready for Dispatch</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                        <Package size={10} />
+                        Transferred so far: <span className="font-bold text-slate-700">{totalAcceptedQty.toFixed(2)}</span>
+                      </div>
                     </div>
                   </div>
 
@@ -2394,7 +2437,7 @@ export default function ProductionEntry() {
                             <button
                               type="button"
                               onClick={() => setNextOperationForm({ ...nextOperationForm, inhouse: !nextOperationForm.inhouse, outsource: false })}
-                              className={`flex items-center gap-2 p-2 rounded border-2 transition-all duration-300 ${nextOperationForm.inhouse ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-md shadow-emerald-100' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
+                              className={`flex items-center gap-2 p-2 rounded border-2 transition-all duration-300 ${nextOperationForm.inhouse ? 'bg-emerald-50 border-emerald-500 text-emerald-700  shadow-emerald-100' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
                             >
                               <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${nextOperationForm.inhouse ? 'border-emerald-500 bg-white' : 'border-slate-300'}`}>
                                 {nextOperationForm.inhouse && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
@@ -2405,7 +2448,7 @@ export default function ProductionEntry() {
                             <button
                               type="button"
                               onClick={() => setNextOperationForm({ ...nextOperationForm, outsource: !nextOperationForm.outsource, inhouse: false })}
-                              className={`flex items-center gap-2 p-2 rounded border-2 transition-all duration-300 ${nextOperationForm.outsource ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-md shadow-indigo-100' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
+                              className={`flex items-center gap-2 p-2 rounded border-2 transition-all duration-300 ${nextOperationForm.outsource ? 'bg-indigo-50 border-indigo-500 text-indigo-700  shadow-indigo-100' : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'}`}
                             >
                               <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${nextOperationForm.outsource ? 'border-indigo-500 bg-white' : 'border-slate-300'}`}>
                                 {nextOperationForm.outsource && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
@@ -2421,34 +2464,38 @@ export default function ProductionEntry() {
                   <div className="mt-2 border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
 
 
-                    {isOperationFinished && (
+                    {canTransfer && (
                       <div className="flex flex-col gap-2">
                         {hasPendingApproval && (
-                          <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-3 py-2 rounded-lg border border-amber-100 animate-pulse">
+                          <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-3 py-2 rounded  border border-amber-100 animate-pulse">
                             <AlertTriangle size={14} />
-                            <span className="text-[10px] font-bold uppercase">Pending Quality Approvals - Accepted Quantity may be incomplete</span>
+                            <span className="text-[10px]  ">Pending Quality Approvals - Accepted Quantity may be incomplete</span>
                           </div>
                         )}
                         <button
                           onClick={handleSubmitProduction}
                           disabled={isSubmitting || (hasPendingApproval && totalAcceptedQty === 0)}
-                          className="relative group overflow-hidden p-2 bg-emerald-600 text-white rounded hover:shadow-emerald-200 transition-all duration-500 disabled:opacity-50 flex items-center justify-center gap-4 active:scale-95 animate-pulse"
+                          className={`relative group overflow-hidden p-2 rounded hover:shadow-emerald-200 transition-all duration-500 disabled:opacity-50 flex items-center justify-center gap-4 active:scale-95 ${isOperationFinished ? 'bg-emerald-600 animate-pulse' : 'bg-indigo-600'}`}
                         >
-                          <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-emerald-400 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500"></div>
+                          <div className={`absolute inset-0 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500 ${isOperationFinished ? 'bg-gradient-to-r from-emerald-600 to-emerald-400' : 'bg-gradient-to-r from-indigo-600 to-indigo-400'}`}></div>
                           <div className="relative flex items-center gap-4">
                             {isSubmitting ? (
                               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded animate-spin" />
                             ) : (
                               <div className="p-1.5 bg-white/10 rounded group-hover:bg-white/20 transition-colors">
-                                <CheckCircle size={10} />
+                                {isOperationFinished ? <CheckCircle size={10} /> : <ArrowRight size={10} />}
                               </div>
                             )}
                             <div className="text-left">
                               <p className="text-xs text-white/50 leading-none">
-                                {normalizeStatus(jobCardData?.status) === 'completed' ? 'Synchronize Next Stage' : 'Finalize & Dispatch'}
+                                {normalizeStatus(jobCardData?.status) === 'completed' 
+                                  ? 'Synchronize Next Stage' 
+                                  : isOperationFinished ? 'Finalize & Dispatch' : 'Partial Transfer to Next Stage'}
                               </p>
                               <p className="text-xs">
-                                {normalizeStatus(jobCardData?.status) === 'completed' ? 'Update Stage' : 'Complete Production'}
+                                {normalizeStatus(jobCardData?.status) === 'completed' 
+                                  ? 'Update Stage' 
+                                  : isOperationFinished ? 'Complete Production' : `Transfer ${totalAcceptedQty.toFixed(0)} Units`}
                               </p>
                             </div>
                             <ChevronRight size={10} className="group-hover:translate-x-1 transition-transform" />
@@ -2463,7 +2510,7 @@ export default function ProductionEntry() {
 
             {/* Daily Production Report Section */}
             <div id="daily-report" className="mt-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <Card className="p-4 border-slate-200 bg-white rounded-xl shadow-sm">
+              <Card className="p-4 border-slate-200 bg-white rounded   ">
                 <div className="flex items-center justify-between mb-6">
                   <SectionTitle 
                     title="Daily Production Report" 
@@ -2505,7 +2552,7 @@ export default function ProductionEntry() {
                           <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                             <td className="p-2 font-medium text-slate-900">{row.date.split('-').reverse().join('-')}</td>
                             <td className="p-2">
-                              <span className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px]  rounded uppercase">
+                              <span className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px]  rounded ">
                                 Shift {row.shift}
                               </span>
                             </td>
@@ -2516,7 +2563,7 @@ export default function ProductionEntry() {
                             <td className="p-2 text-right font-medium text-slate-500">{row.scrap.toLocaleString()}</td>
                             <td className="p-2 text-right">
                               <span className="text-amber-600 font-medium">{row.downtime}</span>
-                              <span className="ml-1 text-[10px] text-slate-400 uppercase">min</span>
+                              <span className="ml-1 text-[10px] text-slate-400 ">min</span>
                             </td>
                           </tr>
                         ))

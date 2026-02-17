@@ -184,7 +184,7 @@ export default function MaterialRequestsRedesign() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 my-4 mb-6">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <div className="w-10 h-10 rounded  bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+              <div className="w-10 h-10 rounded  bg-indigo-600 flex items-center justify-center text-white  shadow-indigo-100">
                 <ClipboardList size={24} />
               </div>
               <div>
@@ -211,7 +211,7 @@ export default function MaterialRequestsRedesign() {
             </div>
             <button 
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded   text-sm shadow-lg shadow-indigo-200 transition-all hover:-translate-y-0.5"
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2  rounded   text-sm  shadow-indigo-200 transition-all hover:-translate-y-0.5"
             >
               <Plus size={20} />
               New Request

@@ -176,7 +176,7 @@ export default function InventoryDashboard() {
   }
 
   const StatCard = ({ label, value, icon: Icon, color, trend, trendValue, trendDirection }) => (
-    <div className={`bg-gradient-to-br ${color} p-2 rounded  border-2 transition-all duration-300 hover:shadow-lg hover:scale-105 relative overflow-hidden group`}>
+    <div className={`bg-gradient-to-br ${color} p-2 rounded  border-2 transition-all duration-300 hover: hover:scale-105 relative overflow-hidden group`}>
       <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full group-hover:scale-110 transition-transform" />
       <div className="flex items-start justify-between mb-2">
         <span className="text-xs    text-gray-500 ">{label}</span>
@@ -186,7 +186,7 @@ export default function InventoryDashboard() {
       </div>
       <p className="text-xl   text-gray-900 mb-2">{value}</p>
       <div className="flex items-center justify-between">
-        <p className="text-xs  text-gray-500 font-medium tracking-tighter">{trend}</p>
+        <p className="text-xs  text-gray-500 font-medium er">{trend}</p>
         {trendValue && (
           <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs   ${trendDirection === 'up' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
             {trendDirection === 'up' ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
@@ -215,7 +215,7 @@ export default function InventoryDashboard() {
               </p>
               <button
                 onClick={() => { setLoading(true); fetchInventoryData() }}
-                className="flex items-center gap-2 p-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 text-xs "
+                className="flex items-center gap-2 p-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-all  shadow-blue-600/20 text-xs "
               >
                 <RefreshCw size={14} /> Refresh Intel
               </button>
@@ -282,9 +282,9 @@ export default function InventoryDashboard() {
 
         {/* Overview Tab */}
         {activeTab === 'overview' && (
-          <div className="space-y-6">
+          <div className="space-y-2">
             {/* Stock Movement Trend */}
-            <div className="bg-white rounded border border-gray-200 p-3  hover:shadow-md transition-shadow">
+            <div className="bg-white rounded border border-gray-200 p-3  hover: transition-shadow">
               <h2 className="text-lg  mb-4 flex items-center gap-2 text-gray-900">
                 <TrendingUp size={20} /> Stock Movement Trend
               </h2>
@@ -335,7 +335,7 @@ export default function InventoryDashboard() {
             {/* Movement Type Distribution & Top Items */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {/* Movement Types */}
-              <div className="bg-white rounded border border-gray-200 p-3  hover:shadow-md transition-shadow">
+              <div className="bg-white rounded border border-gray-200 p-3  hover: transition-shadow">
                 <h2 className="text-lg  mb-4 flex items-center gap-2 text-gray-900">
                   <Activity size={20} /> Movement Types
                 </h2>
@@ -361,7 +361,7 @@ export default function InventoryDashboard() {
               </div>
 
               {/* Top Items by Value */}
-              <div className="bg-white rounded border border-gray-200 p-3  hover:shadow-md transition-shadow">
+              <div className="bg-white rounded border border-gray-200 p-3  hover: transition-shadow">
                 <h2 className="text-lg  mb-4 flex items-center gap-2 text-gray-900">
                   <Eye size={20} /> Top Items by Value
                 </h2>
@@ -524,10 +524,10 @@ export default function InventoryDashboard() {
 
         {/* Warehouse Tab */}
         {activeTab === 'warehouse' && (
-          <div className="space-y-6">
+          <div className="space-y-2">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {/* Warehouse Distribution */}
-              <div className="bg-white rounded border border-gray-200 p-3  hover:shadow-md transition-shadow">
+              <div className="bg-white rounded border border-gray-200 p-3  hover: transition-shadow">
                 <h2 className="text-lg  mb-4 flex items-center gap-2 text-gray-900">
                   <PieIcon size={20} /> Items Distribution
                 </h2>
@@ -553,7 +553,7 @@ export default function InventoryDashboard() {
               </div>
 
               {/* Stock Value by Warehouse */}
-              <div className="bg-white rounded border border-gray-200 p-3  hover:shadow-md transition-shadow">
+              <div className="bg-white rounded border border-gray-200 p-3  hover: transition-shadow">
                 <h2 className="text-lg  mb-4 flex items-center gap-2 text-gray-900">
                   <DollarSign size={20} /> Stock Value by Warehouse
                 </h2>
@@ -576,7 +576,7 @@ export default function InventoryDashboard() {
             </div>
 
             {/* Warehouse Utilization */}
-            <div className="bg-white rounded border border-gray-200 p-3  hover:shadow-md transition-shadow">
+            <div className="bg-white rounded border border-gray-200 p-3  hover: transition-shadow">
               <h2 className="text-lg  mb-6 flex items-center gap-2 text-gray-900">
                 <Warehouse size={20} /> Warehouse Utilization
               </h2>
@@ -602,8 +602,8 @@ export default function InventoryDashboard() {
 
         {/* Items Tab */}
         {activeTab === 'items' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded border border-gray-200 p-3  hover:shadow-md transition-shadow">
+          <div className="space-y-2">
+            <div className="bg-white rounded border border-gray-200 p-3  hover: transition-shadow">
               <h2 className="text-lg  mb-4 flex items-center gap-2 text-gray-900">
                 <AlertTriangle size={20} /> Low Stock Items
               </h2>
@@ -645,8 +645,8 @@ export default function InventoryDashboard() {
 
         {/* Movements Tab */}
         {activeTab === 'movements' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded border border-gray-200 p-3  hover:shadow-md transition-shadow">
+          <div className="space-y-2">
+            <div className="bg-white rounded border border-gray-200 p-3  hover: transition-shadow">
               <h2 className="text-lg  mb-4 flex items-center gap-2 text-gray-900">
                 <RefreshCw size={20} /> Movement Analysis
               </h2>
@@ -682,7 +682,7 @@ const WorkflowStep = ({ title, desc, count, icon: Icon, color, link, isLast }) =
     <div className="flex flex-col items-center group relative">
       <div 
         onClick={() => navigate(link)}
-        className={`w-full bg-white border border-gray-200 rounded p-4  hover:shadow-md transition-all cursor-pointer relative z-10 ${count > 0 ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
+        className={`w-full bg-white border border-gray-200 rounded p-4  hover: transition-all cursor-pointer relative z-10 ${count > 0 ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
       >
         <div className="flex items-center gap-3 mb-2">
           <div className={`p-2 rounded ${color}`}>

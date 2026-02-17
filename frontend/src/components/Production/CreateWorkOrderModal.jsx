@@ -142,20 +142,20 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
       title="Create Production Work Order" 
       size="3xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-2">
         {error && <Alert type="error" message={error} />}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Main Context Panel */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-slate-800 font-bold uppercase tracking-tight border-b border-slate-100 pb-2">
+            <div className="flex items-center gap-2 text-slate-800    border-b border-slate-100 pb-2">
               <Layers size={18} className="text-amber-500" />
               Production Target
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                   Item to Produce *
                 </label>
                 <div className="relative">
@@ -165,7 +165,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                     value={formData.item_code}
                     onChange={handleInputChange}
                     required
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
                   >
                     <option value="">Select Item</option>
                     {items.map(item => (
@@ -178,7 +178,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                   Bill of Materials (BOM)
                 </label>
                 <div className="relative">
@@ -187,7 +187,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                     name="bom_no"
                     value={formData.bom_no}
                     onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
                   >
                     <option value="">Select BOM (Optional)</option>
                     {boms.filter(b => b.item_code === formData.item_code).map(bom => (
@@ -201,7 +201,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                     Qty to Manufacture *
                   </label>
                   <div className="relative">
@@ -213,23 +213,23 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                       onChange={handleInputChange}
                       required
                       min="1"
-                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                     Planned Unit Cost
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">₹</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm ">₹</span>
                     <input
                       type="number"
                       name="unit_cost"
                       value={formData.unit_cost}
                       onChange={handleInputChange}
                       placeholder="0.00"
-                      className="w-full pl-8 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+                      className="w-full pl-8 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
                     />
                   </div>
                 </div>
@@ -239,14 +239,14 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
 
           {/* Scheduling Panel */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-slate-800 font-bold uppercase tracking-tight border-b border-slate-100 pb-2">
+            <div className="flex items-center gap-2 text-slate-800    border-b border-slate-100 pb-2">
               <Calendar size={18} className="text-blue-500" />
               Scheduling & Links
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                   Sales Order Reference
                 </label>
                 <div className="relative">
@@ -255,7 +255,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                     name="sales_order_id"
                     value={formData.sales_order_id}
                     onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
                   >
                     <option value="">Direct Production (No SO)</option>
                     {salesOrders.map(so => (
@@ -268,7 +268,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                   Required By Date *
                 </label>
                 <div className="relative">
@@ -279,24 +279,24 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                     value={formData.required_date}
                     onChange={handleInputChange}
                     required
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                   Priority Level
                 </label>
-                <div className="flex gap-2 p-1 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="flex gap-2 p-1 bg-slate-50 rounded  border border-slate-200">
                   {['low', 'medium', 'high', 'critical'].map(p => (
                     <button
                       key={p}
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, priority: p }))}
-                      className={`flex-1 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${
+                      className={`flex-1 py-1.5 text-[10px]   rounded-md transition-all ${
                         formData.priority === p 
-                          ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200' 
+                          ? 'bg-white text-slate-900   ring-1 ring-slate-200' 
                           : 'text-slate-400 hover:text-slate-600'
                       }`}
                     >
@@ -310,7 +310,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
 
           {/* Notes and Detailed Instructions */}
           <div className="md:col-span-2 space-y-2">
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+            <label className="block text-xs  text-slate-500  tracking-wider mb-1">
               Production Notes & Instructions
             </label>
             <div className="relative">
@@ -321,7 +321,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                 onChange={handleInputChange}
                 rows="3"
                 placeholder="Special manufacturing instructions, quality checkpoints, or packaging requirements..."
-                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm resize-none"
+                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm resize-none"
               />
             </div>
           </div>

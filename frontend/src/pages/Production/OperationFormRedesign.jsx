@@ -209,7 +209,7 @@ export default function OperationFormRedesign() {
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h1 className="text-xl   text-slate-900 tracking-tight">
+              <h1 className="text-xl   text-slate-900 ">
                 {id ? 'Edit Operation' : 'New Operation'}
               </h1>
               <p className="text-xs text-slate-500 font-medium text-xs">
@@ -221,14 +221,14 @@ export default function OperationFormRedesign() {
             <button
               type="button"
               onClick={() => navigate('/manufacturing/operations')}
-              className="p-6  py-2.5 rounded text-xs  text-slate-600 hover:bg-slate-100 transition-all"
+              className="p-6  py-2  rounded text-xs  text-slate-600 hover:bg-slate-100 transition-all"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white p-2 .5 rounded  text-xs shadow-lg shadow-indigo-200 transition-all disabled:opacity-70"
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white p-2 .5 rounded  text-xs  shadow-indigo-200 transition-all disabled:opacity-70"
             >
               {loading ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -249,7 +249,7 @@ export default function OperationFormRedesign() {
                 <Settings size={18} className="text-indigo-600" />
                 <h3 className="text-xs  text-slate-900 ">General Configuration</h3>
               </div>
-              <div className="p-3 space-y-6">
+              <div className="p-3 space-y-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <label className="text-xs  text-slate-500  ml-1">Operation Name</label>
@@ -431,7 +431,7 @@ export default function OperationFormRedesign() {
           {/* Sidebar Info */}
           <div className="space-y-8">
             {/* Controls */}
-            <div className="bg-white rounded border border-slate-200  p-3 space-y-6">
+            <div className="bg-white rounded border border-slate-200  p-3 space-y-2">
               <h3 className="text-xs  text-slate-900  border-b border-slate-50 pb-4">Options</h3>
               
               <div className="space-y-2">
@@ -485,7 +485,7 @@ export default function OperationFormRedesign() {
             </div>
 
             {/* Quick Tips */}
-            <div className="bg-indigo-600 rounded p-3 text-white shadow-lg shadow-indigo-200">
+            <div className="bg-indigo-600 rounded p-3 text-white  shadow-indigo-200">
               <div className="flex items-center gap-2 mb-4">
                 <Info size={18} />
                 <h4 className=" text-xs">Design Tip</h4>
@@ -499,7 +499,7 @@ export default function OperationFormRedesign() {
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white p-2  rounded  text-xs shadow-lg shadow-indigo-200 transition-all"
+                className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white p-2  rounded  text-xs  shadow-indigo-200 transition-all"
               >
                 <Save size={18} /> {id ? 'Update' : 'Create'} Operation
               </button>

@@ -113,13 +113,13 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
       title="Record Production Rejection (QA)" 
       size="4xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-2">
         {error && <Alert type="error" message={error} />}
 
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Pane - Source & Reason */}
           <div className="lg:w-1/2 space-y-4">
-            <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-4">
+            <div className="bg-slate-50 p-5 rounded  border border-slate-200 space-y-4">
               <div className="flex items-center gap-2 text-slate-800 font-semibold border-b border-slate-200 pb-3 mb-2">
                 <ShieldAlert size={18} className="text-red-500" />
                 Rejection Context
@@ -127,7 +127,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1.5">
                     Production Entry *
                   </label>
                   <div className="relative">
@@ -137,7 +137,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
                       value={formData.production_entry_id}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
                     >
                       <option value="">Select Entry</option>
                       {entries.map(entry => (
@@ -150,7 +150,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1.5">
                     Reported By *
                   </label>
                   <div className="relative">
@@ -160,7 +160,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
                       value={formData.reported_by_id}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
                     >
                       <option value="">Select Employee</option>
                       {employees.map(emp => (
@@ -174,7 +174,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs  text-slate-500  tracking-wider mb-1.5">
                       Reason *
                     </label>
                     <select
@@ -182,7 +182,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
                       value={formData.rejection_reason}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                      className="w-full px-3 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
                     >
                       <option value="">Select Reason</option>
                       {rejectionReasons.map(reason => (
@@ -191,7 +191,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs  text-slate-500  tracking-wider mb-1.5">
                       Count *
                     </label>
                     <input
@@ -202,17 +202,17 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
                       placeholder="0"
                       required
                       min="1"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-bold text-red-600"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm  text-red-600"
                     />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex items-start gap-3">
+            <div className="bg-amber-50 p-4 rounded  border border-amber-100 flex items-start gap-3">
               <AlertTriangle className="text-amber-500 shrink-0" size={20} />
               <div className="text-xs text-amber-800 leading-relaxed">
-                <span className="font-bold block mb-1 uppercase">Quality Protocol</span>
+                <span className=" block mb-1 ">Quality Protocol</span>
                 All rejections are tracked for CAPA (Corrective and Preventive Action). 
                 Please ensure root cause analysis is accurate to prevent future occurrences.
               </div>
@@ -221,7 +221,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
 
           {/* Right Pane - Analysis */}
           <div className="lg:w-1/2 space-y-4">
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm h-full">
+            <div className="bg-white border border-slate-200 rounded  overflow-hidden   h-full">
               <div className="bg-slate-50 px-5 py-3 border-b border-slate-200 flex items-center gap-2 font-semibold text-slate-800">
                 <BarChart3 size={18} className="text-blue-500" />
                 Root Cause Analysis
@@ -240,7 +240,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
                     placeholder="Why did this rejection happen? (e.g., Machine calibration drift, Material impurity)"
                     required
                     rows="4"
-                    className="w-full p-2  bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm resize-none"
+                    className="w-full p-2  bg-slate-50 border border-slate-200 rounded  focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm resize-none"
                   />
                 </div>
 
@@ -256,7 +256,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
                     placeholder="What was done to fix this? (e.g., Reset machine parameters, Switched material batch)"
                     required
                     rows="4"
-                    className="w-full p-2  bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm resize-none"
+                    className="w-full p-2  bg-slate-50 border border-slate-200 rounded  focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm resize-none"
                   />
                 </div>
               </div>
@@ -277,7 +277,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
             type="submit"
             variant="danger"
             isLoading={loading}
-            className="px-8 shadow-lg shadow-red-100"
+            className="px-8  shadow-red-100"
             icon={<CheckCircle2 size={18} />}
           >
             Record Rejection

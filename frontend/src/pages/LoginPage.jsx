@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/AuthContext'
-import { Lock, Mail, User, Eye, EyeOff, Building2, CheckCircle, AlertCircle, ArrowRight, ShieldCheck, Factory, Zap, Shield } from 'lucide-react'
+import { Lock, Mail, User, Eye, EyeOff, Building2, CheckCircle, AlertCircle, ArrowRight, ShieldCheck, Factory, Zap, Shield, DollarSign } from 'lucide-react'
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true)
@@ -19,6 +19,7 @@ export default function LoginPage() {
   const departments = [
     { value: 'inventory', label: 'Inventory', icon: <Building2 className="w-4 h-4" /> },
     { value: 'manufacturing', label: 'Production', icon: <Factory className="w-4 h-4" /> },
+    { value: 'accounts', label: 'Accounts', icon: <DollarSign className="w-4 h-4" /> },
     { value: 'admin', label: 'Admin', icon: <Shield className="w-4 h-4" /> }
   ]
 
@@ -101,13 +102,13 @@ export default function LoginPage() {
 
           {/* Feedback Messages */}
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 flex items-center gap-3 text-red-700 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="mb-6 p-4 rounded  bg-red-50 border border-red-100 flex items-center gap-3 text-red-700 animate-in fade-in slide-in-from-top-2 duration-300">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
               <span className="text-sm font-medium">{error}</span>
             </div>
           )}
           {success && (
-            <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center gap-3 text-emerald-700 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="mb-6 p-4 rounded  bg-emerald-50 border border-emerald-100 flex items-center gap-3 text-emerald-700 animate-in fade-in slide-in-from-top-2 duration-300">
               <CheckCircle className="w-5 h-5 flex-shrink-0" />
               <span className="text-sm font-medium">{success}</span>
             </div>

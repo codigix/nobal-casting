@@ -190,7 +190,7 @@ export default function OperationForm() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-2">
           
           {/* Basic Information Section */}
           <div className="bg-white rounded  border border-gray-200 p-3  ">
@@ -234,7 +234,7 @@ export default function OperationForm() {
                           className="w-full p-2.5 border border-gray-300 rounded-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                         />
                         {workstationDropdownOpen && (
-                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-xs shadow-lg max-h-60 overflow-y-auto z-50">
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-xs  max-h-60 overflow-y-auto z-50">
                             {workstations.filter(ws => 
                               ws.name.toLowerCase().includes(workstationDropdownSearch.toLowerCase()) ||
                               ws.workstation_name.toLowerCase().includes(workstationDropdownSearch.toLowerCase())
@@ -278,7 +278,7 @@ export default function OperationForm() {
                         setWorkstationManualEntry(!workstationManualEntry)
                         setWorkstationDropdownOpen(false)
                       }}
-                      className="p-2  py-2.5 border border-gray-300 rounded-xs bg-gray-50 hover:bg-gray-100 transition font-medium text-xs"
+                      className="p-2  py-2  border border-gray-300 rounded-xs bg-gray-50 hover:bg-gray-100 transition font-medium text-xs"
                     >
                       {workstationManualEntry ? '📋' : '✏️'}
                     </button>
@@ -480,14 +480,14 @@ export default function OperationForm() {
             <button
               type="button"
               onClick={() => navigate('/manufacturing/operations')}
-              className="p-6  py-2.5 border border-gray-300 text-gray-700 rounded-xs hover:bg-gray-50 font-medium transition"
+              className="p-6  py-2  border border-gray-300 text-gray-700 rounded-xs hover:bg-gray-50 font-medium transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="p-6  py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-xs flex items-center gap-2 font-medium transition"
+              className="p-6  py-2  bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-xs flex items-center gap-2 font-medium transition"
             >
               <Save size={18} /> {loading ? 'Saving...' : 'Save Operation'}
             </button>

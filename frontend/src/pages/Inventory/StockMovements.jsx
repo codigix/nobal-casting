@@ -231,7 +231,7 @@ export default function StockMovements() {
           <div className="flex items-center gap-2">
             <button 
               onClick={fetchMovements}
-              className="flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-4 py-2 rounded-xs text-xs  border border-neutral-200 dark:border-neutral-800 transition-all shadow-sm"
+              className="flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-4 py-2 rounded-xs text-xs  border border-neutral-200 dark:border-neutral-800 transition-all  "
             >
               <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
               Refresh
@@ -239,7 +239,7 @@ export default function StockMovements() {
 
             <button
               onClick={() => { setSelectedMovement(null); setShowModal(true) }}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xs text-xs  shadow-lg shadow-blue-200 dark:shadow-none transition-all"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xs text-xs   shadow-blue-200 dark:shadow-none transition-all"
             >
               <Plus size={16} />
               New Movement
@@ -258,8 +258,8 @@ export default function StockMovements() {
             { label: 'Pending', value: stats.pending, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/30' },
             { label: 'Completed', value: stats.completed, icon: CheckCircle, color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-950/30' }
           ].map((stat, i) => (
-            <div key={i} className="bg-white dark:bg-neutral-900 rounded-xs p-3 border border-neutral-200 dark:border-neutral-800 flex flex-col gap-2 hover:border-blue-100 dark:hover:border-blue-900 transition-colors group shadow-sm">
-              <div className={`w-8 h-8 rounded-xs ${stat.bg} ${stat.color} flex items-center justify-center transition-transform group-hover:scale-110 shadow-sm`}>
+            <div key={i} className="bg-white dark:bg-neutral-900 rounded-xs p-3 border border-neutral-200 dark:border-neutral-800 flex flex-col gap-2 hover:border-blue-100 dark:hover:border-blue-900 transition-colors group  ">
+              <div className={`w-8 h-8 rounded-xs ${stat.bg} ${stat.color} flex items-center justify-center transition-transform group-hover:scale-110  `}>
                 <stat.icon size={16} />
               </div>
               <div>
@@ -271,7 +271,7 @@ export default function StockMovements() {
         </div>
 
         {/* Command Center Toolbar */}
-        <div className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800 shadow-sm mb-4">
+        <div className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800   mb-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between p-2 gap-3">
             <div className="flex flex-1 items-center gap-2">
               <div className="relative flex-1 max-w-md group">
@@ -356,7 +356,7 @@ export default function StockMovements() {
                 Columns
               </button>
               
-              <button className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs text-[11px] font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-sm">
+              <button className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs text-[11px] font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all  ">
                 <Download size={14} />
                 Export
               </button>

@@ -206,13 +206,13 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
         <div className="flex gap-3 justify-between items-center w-full px-4">
           <div className="flex gap-6 items-center">
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Total Quantity</span>
+              <span className="text-[10px]  text-neutral-400  ">Total Quantity</span>
               <span className="text-xs  text-neutral-800">{totalQty.toLocaleString()} Units</span>
             </div>
             <div className="h-8 w-px bg-neutral-200" />
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Total Valuation</span>
-              <span className="text-sm font-black text-blue-600">₹{totalValue.toLocaleString()}</span>
+              <span className="text-[10px]  text-neutral-400  ">Total Valuation</span>
+              <span className="text-sm  text-blue-600">₹{totalValue.toLocaleString()}</span>
             </div>
           </div>
           <div className="flex gap-3">
@@ -221,7 +221,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
               variant="primary" 
               onClick={handleSubmit} 
               disabled={loading}
-              className="px-8 shadow-lg shadow-blue-100 flex items-center gap-2"
+              className="px-8  shadow-blue-100 flex items-center gap-2"
             >
               {loading ? <RefreshCw size={16} className="animate-spin" /> : <Plus size={16} />}
               Create GRN Request
@@ -230,15 +230,15 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
         </div>
       }
     >
-      <div className="space-y-6">
+      <div className="space-y-2">
         {error && <Alert type="danger">{error}</Alert>}
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
           {/* Sidebar: Configuration */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="lg:col-span-1 space-y-2">
             <section className="bg-neutral-50 rounded border border-neutral-200 p-2 space-y-2">
               <div className="flex items-center gap-2 pb-3 border-b border-neutral-200">
-                <div className="p-2 bg-blue-600 rounded-lg text-white">
+                <div className="p-2 bg-blue-600 rounded  text-white">
                   <Package size={20} />
                 </div>
                 <div>
@@ -249,25 +249,25 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
 
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-neutral-500 uppercase flex items-center gap-1">
+                  <label className="text-[11px]  text-neutral-500  flex items-center gap-1">
                     <Hash size={12} /> GRN Number
                   </label>
                   <input 
                     type="text" 
                     value={formData.grn_no} 
                     readOnly 
-                    className="w-full p-2.5 bg-neutral-100 border border-neutral-200 rounded-xl text-sm font-mono text-neutral-600"
+                    className="w-full p-2.5 bg-neutral-100 border border-neutral-200 rounded  text-sm font-mono text-neutral-600"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-neutral-500 uppercase flex items-center gap-1">
+                  <label className="text-[11px]  text-neutral-500  flex items-center gap-1">
                     <FileText size={12} /> Purchase Order
                   </label>
                   <select
                     value={formData.po_no}
                     onChange={(e) => handlePOSelect(e.target.value)}
-                    className="w-full p-2.5 bg-white border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/10 outline-none transition-all"
+                    className="w-full p-2.5 bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-blue-500/10 outline-none transition-all"
                   >
                     <option value="">Select PO (Optional)</option>
                     {purchaseOrders.map(po => (
@@ -277,22 +277,22 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-neutral-500 uppercase flex items-center gap-1">
+                  <label className="text-[11px]  text-neutral-500  flex items-center gap-1">
                     <Calendar size={12} /> Receipt Date
                   </label>
                   <input 
                     type="date" 
                     value={formData.receipt_date}
                     onChange={(e) => setFormData({...formData, receipt_date: e.target.value})}
-                    className="w-full p-2.5 bg-white border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/10 outline-none transition-all"
+                    className="w-full p-2.5 bg-white border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-blue-500/10 outline-none transition-all"
                   />
                 </div>
               </div>
             </section>
 
-            <section className="bg-white rounded-2xl border border-neutral-200 p-5 space-y-5 shadow-sm">
+            <section className="bg-white rounded  border border-neutral-200 p-5 space-y-5  ">
               <div className="flex items-center gap-2 pb-3 border-b border-neutral-200">
-                <div className="p-2 bg-neutral-100 rounded-lg text-neutral-600">
+                <div className="p-2 bg-neutral-100 rounded  text-neutral-600">
                   <User size={20} />
                 </div>
                 <div>
@@ -302,14 +302,14 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
               </div>
 
               <div className="space-y-4">
-                <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100">
-                  <span className="text-[10px] font-bold text-neutral-400 uppercase">Selected Supplier</span>
+                <div className="p-3 bg-neutral-50 rounded  border border-neutral-100">
+                  <span className="text-[10px]  text-neutral-400 ">Selected Supplier</span>
                   <p className="text-xs  text-neutral-800 truncate">{formData.supplier_name || 'No Supplier Linked'}</p>
                   <p className="text-[10px] text-neutral-500 font-medium">ID: {formData.supplier_id || 'N/A'}</p>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-neutral-500 uppercase flex items-center gap-1">
+                  <label className="text-[11px]  text-neutral-500  flex items-center gap-1">
                     <Truck size={12} /> Transporter Notes
                   </label>
                   <textarea 
@@ -317,7 +317,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
                     onChange={(e) => setFormData({...formData, notes: e.target.value})}
                     rows="4"
                     placeholder="Add delivery note, vehicle number, etc..."
-                    className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/10 outline-none transition-all resize-none"
+                    className="w-full p-3 border border-neutral-200 rounded  text-sm focus:ring-2 focus:ring-blue-500/10 outline-none transition-all resize-none"
                   />
                 </div>
               </div>
@@ -325,21 +325,21 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
           </div>
 
           {/* Main Content: Items Table */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-3 space-y-2">
             <div className="bg-white rounded border border-neutral-200  overflow-hidden flex flex-col h-full">
               <div className="p-2 border-b border-neutral-100 bg-neutral-50/30 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                  <div className="p-2 bg-blue-100 text-blue-600 rounded ">
                     <ClipboardList size={18} />
                   </div>
                   <div>
-                    <h3 className="text-xs  text-neutral-800 uppercase tracking-tight">Receipt Items</h3>
+                    <h3 className="text-xs  text-neutral-800  ">Receipt Items</h3>
                     <p className="text-[10px] text-neutral-500 font-medium">Verify received quantities against PO</p>
                   </div>
                 </div>
                 <button 
                   onClick={handleAddItem}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors border border-blue-200"
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded  text-xs  hover:bg-blue-100 transition-colors border border-blue-200"
                 >
                   <Plus size={14} /> Add Line Item
                 </button>
@@ -349,13 +349,13 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-neutral-50/50 border-b border-neutral-100">
-                      <th className="p-2 text-xs font-black text-neutral-400 ">Item Details</th>
-                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider text-center">Warehouse</th>
-                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider text-center">PO Qty</th>
-                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider text-center">Received</th>
-                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider text-right">Rate</th>
-                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider text-right">Total</th>
-                      <th className="p-2  text-[10px] font-black text-neutral-400 uppercase tracking-wider text-center">Action</th>
+                      <th className="p-2 text-xs  text-neutral-400 ">Item Details</th>
+                      <th className="p-2  text-[10px]  text-neutral-400  tracking-wider text-center">Warehouse</th>
+                      <th className="p-2  text-[10px]  text-neutral-400  tracking-wider text-center">PO Qty</th>
+                      <th className="p-2  text-[10px]  text-neutral-400  tracking-wider text-center">Received</th>
+                      <th className="p-2  text-[10px]  text-neutral-400  tracking-wider text-right">Rate</th>
+                      <th className="p-2  text-[10px]  text-neutral-400  tracking-wider text-right">Total</th>
+                      <th className="p-2  text-[10px]  text-neutral-400  tracking-wider text-center">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-50">
@@ -417,7 +417,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
                         <td className="p-2  text-center">
                           <button 
                             onClick={() => handleRemoveItem(idx)}
-                            className="p-2 text-neutral-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all "
+                            className="p-2 text-neutral-300 hover:text-red-500 hover:bg-red-50 rounded  transition-all "
                           >
                             <Trash2 size={16} />
                           </button>
@@ -433,7 +433,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
                   <div className="w-16 h-16 bg-neutral-50 rounded-full flex items-center justify-center mb-4 border border-neutral-100">
                     <ClipboardList size={32} className="text-neutral-300" />
                   </div>
-                  <h4 className="text-sm font-bold text-neutral-800 mb-1">No Items Added</h4>
+                  <h4 className="text-sm  text-neutral-800 mb-1">No Items Added</h4>
                   <p className="text-xs text-neutral-500">Click the 'Add Line Item' button or select a PO to begin.</p>
                 </div>
               )}

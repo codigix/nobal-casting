@@ -228,7 +228,7 @@ export default function PurchaseOrders() {
       width: '15%',
       render: (_, row) => (
         <div className="flex flex-col gap-1.5 py-1">
-          <span className="text-xs  text-indigo-600 dark:text-indigo-400 tracking-tight leading-none group-hover:scale-105 transition-transform origin-left">
+          <span className="text-xs  text-indigo-600 dark:text-indigo-400  leading-none group-hover:scale-105 transition-transform origin-left">
             {row.po_no}
           </span>
           {row.mr_id ? (
@@ -309,7 +309,7 @@ export default function PurchaseOrders() {
       width: '10%',
       render: (val) => (
         <div className="flex flex-col">
-          <span className="text-sm  text-neutral-900 dark:text-white tracking-tight">
+          <span className="text-sm  text-neutral-900 dark:text-white ">
             ₹{(parseFloat(val) || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
           </span>
           <span className="text-xs  text-emerald-600 dark:text-emerald-400  ">Net Value</span>
@@ -429,11 +429,11 @@ export default function PurchaseOrders() {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-4 transition-colors duration-300 font-sans">
-      <div className="max-w-[1600px] mx-auto space-y-6">
+      <div className="max-w-[1600px] mx-auto space-y-2">
         {/* Modern Header Section */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 bg-white dark:bg-neutral-900  ">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded  bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
+            <div className="w-12 h-12 rounded  bg-indigo-600 flex items-center justify-center text-white  shadow-indigo-600/20">
               <Package size={28} />
             </div>
             <div>
@@ -452,7 +452,7 @@ export default function PurchaseOrders() {
               <button
                 onClick={() => setViewMode('kanban')}
                 className={`flex items-center gap-2 p-2 rounded text-xs   transition-all ${viewMode === 'kanban'
-                  ? 'bg-white dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400 shadow-md ring-1 ring-black/5'
+                  ? 'bg-white dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400  ring-1 ring-black/5'
                   : 'text-neutral-500 dark:text-neutral-400 hover:text-indigo-600'
                   }`}
               >
@@ -462,7 +462,7 @@ export default function PurchaseOrders() {
               <button
                 onClick={() => setViewMode('list')}
                 className={`flex items-center gap-2 p-2 rounded text-xs   transition-all ${viewMode === 'list'
-                  ? 'bg-white dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400 shadow-md ring-1 ring-black/5'
+                  ? 'bg-white dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400  ring-1 ring-black/5'
                   : 'text-neutral-500 dark:text-neutral-400 hover:text-indigo-600'
                   }`}
               >
@@ -483,7 +483,7 @@ export default function PurchaseOrders() {
 
             <Button
               onClick={() => setShowCreateModal(true)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded shadow-lg shadow-indigo-600/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] border-none text-xs  "
+              className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded  shadow-indigo-600/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] border-none text-xs  "
             >
               <Plus size={18} strokeWidth={3} />
               Create Order
@@ -553,7 +553,7 @@ export default function PurchaseOrders() {
                 </Button>
 
                 {showColumnMenu && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-neutral-800 rounded  border border-neutral-200 dark:border-neutral-700 shadow-2xl z-50 p-3 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-neutral-800 rounded  border border-neutral-200 dark:border-neutral-700  z-50 p-3 animate-in fade-in zoom-in-95 duration-200">
                     <div className="flex items-center justify-between mb-3 px-1">
                       <span className="text-xs  text-neutral-400  ">Display Columns</span>
                       <button onClick={() => setShowColumnMenu(false)} className="text-neutral-400 hover:text-neutral-600"><X size={14} /></button>
@@ -588,7 +588,7 @@ export default function PurchaseOrders() {
     loading && orders.length === 0 ? (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[1, 2, 3, 4].map(n => (
-          <div key={n} className="bg-white dark:bg-neutral-900 h-64 rounded-2xl border border-neutral-100 dark:border-neutral-800 animate-pulse"></div>
+          <div key={n} className="bg-white dark:bg-neutral-900 h-64 rounded  border border-neutral-100 dark:border-neutral-800 animate-pulse"></div>
         ))}
       </div>
     ) : viewMode === 'kanban' ? (
@@ -616,12 +616,12 @@ export default function PurchaseOrders() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-4 min-h-[500px] p-2 bg-neutral-100/50 dark:bg-neutral-900/50 rounded-2xl border border-neutral-200/50 dark:border-neutral-800/50 border-dashed">
+              <div className="flex flex-col gap-4 min-h-[500px] p-2 bg-neutral-100/50 dark:bg-neutral-900/50 rounded  border border-neutral-200/50 dark:border-neutral-800/50 border-dashed">
                 {columnOrders.map(order => (
                   <div
                     key={order.id}
                     onClick={() => navigate(`/buying/purchase-orders/${order.po_no}`)}
-                    className="group bg-white dark:bg-neutral-900 p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 hover:shadow  hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden"
+                    className="group bg-white dark:bg-neutral-900 p-5 rounded  border border-neutral-200 dark:border-neutral-800 hover:shadow  hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden"
                   >
                     <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${config.color.replace('from-', 'bg-').split(' ')[0]}`}></div>
 
@@ -657,7 +657,7 @@ export default function PurchaseOrders() {
                         <Button
                           variant="primary"
                           size="sm"
-                          className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded  text-xs  "
+                          className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2  rounded  text-xs  "
                           onClick={(e) => {
                             e.stopPropagation()
                             handleSubmitPO(order.po_no)
@@ -671,7 +671,7 @@ export default function PurchaseOrders() {
                         <Button
                           variant="success"
                           size="sm"
-                          className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded  text-xs  "
+                          className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-2  rounded  text-xs  "
                           onClick={(e) => {
                             e.stopPropagation()
                             handleReceiveMaterial(order)
@@ -681,7 +681,7 @@ export default function PurchaseOrders() {
                           RECEIVE
                         </Button>
                       ) : (
-                        <div className="w-full text-center py-2.5 text-xs   text-neutral-400 dark:text-neutral-500 bg-neutral-50 dark:bg-neutral-800/50 rounded  border border-neutral-100 dark:border-neutral-800 ">
+                        <div className="w-full text-center py-2  text-xs   text-neutral-400 dark:text-neutral-500 bg-neutral-50 dark:bg-neutral-800/50 rounded  border border-neutral-100 dark:border-neutral-800 ">
                           View Details
                         </div>
                       )}

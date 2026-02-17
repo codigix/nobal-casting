@@ -4,7 +4,7 @@ import { Star, TrendingUp, DollarSign, Users, Award, Target, ArrowUpRight, Arrow
 import { getCustomerStats, getCustomerDetailedStats } from '../../services/adminService'
 
 const StatCard = ({ label, value, icon: Icon, trend, trendValue, bgColor, iconColor }) => (
-  <div className="bg-white rounded p-3 border border-slate-200  hover:shadow-md transition-all group relative overflow-hidden">
+  <div className="bg-white rounded p-3 border border-slate-200  hover: transition-all group relative overflow-hidden">
     <div className={`absolute -right-8 -bottom-8 w-32 h-32 rounded-full ${bgColor} opacity-10 group-hover:scale-110 transition-transform duration-700`} />
     <div className="relative z-10">
       <div className="flex items-center justify-between mb-4">
@@ -28,55 +28,81 @@ const DetailModal = ({ isOpen, item, onClose, detailedData, loading }) => {
   if (!isOpen || !item) return null
 
   const monthlyData = detailedData?.trends || []
+  const profile = detailedData?.profile || {}
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-      <div className="bg-slate-50 rounded   shadow-2xl max-w-4xl w-full  overflow-hidden flex flex-col border border-white/20">
-        <div className="bg-slate-900 p-3 flex items-center justify-between text-white">
+      <div className="bg-slate-50 rounded    max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-white/20">
+        <div className="bg-slate-900 p-4 flex items-center justify-between text-white">
           <div className="flex items-center gap-4">
-            <div className="w-6 h-6  bg-blue-600 rounded flex items-center justify-center text-xl shadow-lg shadow-blue-500/30">
+            <div className="w-10 h-10 bg-blue-600 rounded  flex items-center justify-center text-xl  shadow-blue-500/30">
               <Building2 />
             </div>
             <div>
-              <h2 className="text-xl  m-0">{item.name}</h2>
+              <h2 className="text-xl  m-0">{profile.name || item.name}</h2>
               <p className="text-slate-400 text-xs m-0">Customer ID: {item.id} | Segment: <span className="text-blue-400 ">{item.segment}</span></p>
             </div>
           </div>
           <button onClick={onClose} className="w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-all">✕</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3">
+        <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
             <div className="h-96 flex flex-col items-center justify-center">
-              <div className="w-6 h-6  border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-              <p className="text-slate-400   text-xs ">Retrieving Partner Intel...</p>
+              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+              <p className="text-slate-400 text-xs font-medium">Retrieving Partner Intel...</p>
             </div>
           ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                <div className="bg-white p-2 rounded  border border-slate-200 ">
-                  <p className="text-xs   text-slate-400  mb-1">Total Revenue</p>
-                  <h4 className="text-xl ftext-slate-900">₹{parseFloat(item.revenue).toLocaleString()}</h4>
+            <div className="space-y-4">
+              {/* Profile Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white p-3 rounded border border-slate-200  ">
+                  <p className="text-[10px] text-slate-400  uppercase mb-1">Contact Details</p>
+                  <p className="text-xs text-slate-700 font-medium mb-1">{profile.email || 'N/A'}</p>
+                  <p className="text-xs text-slate-700 font-medium">{profile.phone || 'N/A'}</p>
                 </div>
-                <div className="bg-white p-2 rounded  border border-slate-200 ">
-                  <p className="text-xs   text-slate-400  mb-1">Total Orders</p>
-                  <h4 className="text-xl ftext-slate-900">{item.orders}</h4>
+                <div className="bg-white p-3 rounded border border-slate-200  ">
+                  <p className="text-[10px] text-slate-400  uppercase mb-1">Tax Info (GSTIN)</p>
+                  <p className="text-xs text-slate-900 ">{profile.gstin || 'NOT REGISTERED'}</p>
                 </div>
-                <div className="bg-white p-2 rounded  border border-slate-200 ">
-                  <p className="text-xs   text-slate-400  mb-1">Avg Order Value</p>
-                  <h4 className="text-xl ftext-slate-900">₹{item.orders > 0 ? Math.round(item.revenue / item.orders).toLocaleString() : 0}</h4>
+                <div className="bg-white p-3 rounded border border-slate-200  ">
+                  <p className="text-[10px] text-slate-400  uppercase mb-1">Relationship Since</p>
+                  <p className="text-xs text-slate-700 font-medium">{profile.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}</p>
+                </div>
+                <div className="bg-white p-3 rounded border border-slate-200  ">
+                  <p className="text-[10px] text-slate-400  uppercase mb-1">Status</p>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px]  ${profile.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                    {profile.status?.toUpperCase() || 'ACTIVE'}
+                  </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
-                <div className="bg-white p-2 rounded  border border-slate-200 ">
-                  <h4 className="text-xs  text-slate-900 mb-6 ">Revenue Performance (6M)</h4>
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-blue-600 p-4  text-white  shadow-blue-600/20">
+                  <p className="text-xs opacity-80 mb-1">Lifetime Revenue</p>
+                  <h4 className="text-2xl ">₹{parseFloat(item.revenue).toLocaleString()}</h4>
+                </div>
+                <div className="bg-white p-4  border border-slate-200  ">
+                  <p className="text-xs text-slate-400 mb-1">Order Frequency</p>
+                  <h4 className="text-2xl  text-slate-900">{item.orders} <span className="text-xs font-normal text-slate-400">Total Orders</span></h4>
+                </div>
+                <div className="bg-white p-4  border border-slate-200  ">
+                  <p className="text-xs text-slate-400 mb-1">Avg Ticket Size</p>
+                  <h4 className="text-2xl  text-slate-900">₹{item.orders > 0 ? Math.round(item.revenue / item.orders).toLocaleString() : 0}</h4>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Revenue Chart */}
+                <div className="bg-white p-4  border border-slate-200  ">
+                  <h4 className="text-sm  text-slate-900 mb-6">Revenue Performance (6M)</h4>
                   <div className="h-64">
                     {monthlyData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={monthlyData}>
                           <defs>
-                            <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                            <linearGradient id="colorRevModal" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
                               <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                             </linearGradient>
@@ -84,18 +110,22 @@ const DetailModal = ({ isOpen, item, onClose, detailedData, loading }) => {
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                           <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
                           <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
-                          <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                          <Area type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                          <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                          <Area type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorRevModal)" />
                         </AreaChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="h-full flex flex-col items-center justify-center text-slate-400 italic text-xs">No historical revenue data</div>
+                      <div className="h-full flex flex-col items-center justify-center bg-slate-50 rounded  border border-dashed border-slate-200">
+                        <TrendingUp size={32} className="text-slate-300 mb-2" />
+                        <p className="text-slate-400 italic text-xs">No historical revenue data available</p>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                <div className="bg-white p-2 rounded  border border-slate-200 ">
-                  <h4 className="text-xs  text-slate-900 mb-6 ">Order Velocity</h4>
+                {/* Order Chart */}
+                <div className="bg-white p-4  border border-slate-200  ">
+                  <h4 className="text-sm  text-slate-900 mb-6">Order Velocity</h4>
                   <div className="h-64">
                     {monthlyData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
@@ -103,47 +133,80 @@ const DetailModal = ({ isOpen, item, onClose, detailedData, loading }) => {
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                           <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
                           <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
-                          <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                          <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                           <Line type="monotone" dataKey="orders" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4, fill: '#8b5cf6', strokeWidth: 2, stroke: '#fff' }} />
                         </LineChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="h-full flex flex-col items-center justify-center text-slate-400 italic text-xs">No historical order data</div>
+                      <div className="h-full flex flex-col items-center justify-center bg-slate-50 rounded  border border-dashed border-slate-200">
+                        <Package size={32} className="text-slate-300 mb-2" />
+                        <p className="text-slate-400 italic text-xs">No order frequency data</p>
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              {detailedData?.recentOrders?.length > 0 && (
-                <div className="bg-white p-2 rounded  border border-slate-200 ">
-                  <h4 className="text-xs  text-slate-900 mb-6 ">Recent Transactions</h4>
-                  <div className="">
-                    <table className="w-full text-left bg-white">
-                      <thead>
-                        <tr>
-                          <th className="pb-4 text-xs   text-slate-400 ">Order ID</th>
-                          <th className="pb-4 text-xs   text-slate-400  text-right">Amount</th>
-                          <th className="pb-4 text-xs   text-slate-400  text-center">Status</th>
-                          <th className="pb-4 text-xs   text-slate-400  text-right">Date</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50">
-                        {detailedData.recentOrders.map((order) => (
-                          <tr key={order.id}>
-                            <td className="py-2 text-xs  text-slate-700">{order.name}</td>
-                            <td className="py-2 text-xs  text-slate-900 text-right">₹{parseFloat(order.amount).toLocaleString()}</td>
-                            <td className="py-2 text-center">
-                              <span className="px-2 py-0.5 rounded-full text-xs   bg-blue-50 text-blue-600 ">{order.status}</span>
-                            </td>
-                            <td className="py-2 text-xs text-slate-500 text-right">{new Date(order.date).toLocaleDateString()}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+              {/* Address and Transactions */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <div className="lg:col-span-4 bg-white p-4  border border-slate-200  ">
+                  <h4 className="text-xs  text-slate-400 uppercase tracking-wider mb-4">Location Intel</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-[10px] text-slate-400  uppercase mb-1">Billing Address</p>
+                      <p className="text-xs text-slate-700 leading-relaxed">{profile.billing_address || 'No billing address on file'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400  uppercase mb-1">Shipping Logistics</p>
+                      <p className="text-xs text-slate-700 leading-relaxed">{profile.shipping_address || 'No shipping address on file'}</p>
+                    </div>
                   </div>
                 </div>
-              )}
-            </>
+
+                <div className="lg:col-span-8 bg-white p-4  border border-slate-200  ">
+                  <h4 className="text-xs  text-slate-400 uppercase tracking-wider mb-4">Strategic Transaction History</h4>
+                  <div className="overflow-x-auto">
+                    {detailedData?.recentOrders?.length > 0 ? (
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr>
+                            <th className="pb-4 text-xs  text-slate-400">Order Reference</th>
+                            <th className="pb-4 text-xs  text-slate-400 text-right">Volume (Amount)</th>
+                            <th className="pb-4 text-xs  text-slate-400 text-center">Status</th>
+                            <th className="pb-4 text-xs  text-slate-400 text-right">Execution Date</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {detailedData.recentOrders.map((order) => (
+                            <tr key={order.id}>
+                              <td className="py-3">
+                                <p className="text-xs  text-slate-900 m-0">{order.id}</p>
+                                <p className="text-[10px] text-slate-400 m-0">{order.name}</p>
+                              </td>
+                              <td className="py-3 text-xs  text-slate-900 text-right">₹{parseFloat(order.amount).toLocaleString()}</td>
+                              <td className="py-3 text-center">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px]  ${
+                                  order.status === 'confirmed' ? 'bg-emerald-50 text-emerald-600' : 
+                                  order.status === 'draft' ? 'bg-slate-50 text-slate-600' : 'bg-blue-50 text-blue-600'
+                                }`}>
+                                  {order.status?.toUpperCase()}
+                                </span>
+                              </td>
+                              <td className="py-3 text-[10px]  text-slate-500 text-right">{new Date(order.date).toLocaleDateString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div className="py-12 flex flex-col items-center justify-center">
+                        <Search size={32} className="text-slate-200 mb-2" />
+                        <p className="text-slate-400 text-xs italic">No transactions found for this partner</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -229,7 +292,7 @@ export default function CustomerStatistics() {
           <button className="flex items-center gap-2 p-1.5 bg-white border border-slate-200 rounded text-[10px]  text-slate-700 hover:bg-slate-50 transition-all ">
             <Download size={14} /> Export
           </button>
-          <button onClick={fetchStats} className="flex items-center gap-2 p-1.5 bg-blue-600 rounded text-[10px]  text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">
+          <button onClick={fetchStats} className="flex items-center gap-2 p-1.5 bg-blue-600 rounded text-[10px]  text-white hover:bg-blue-700 transition-all  shadow-blue-600/20">
             <Zap size={14} /> Refresh
           </button>
         </div>
@@ -292,8 +355,8 @@ export default function CustomerStatistics() {
                 />
               </div>
               <div className="flex gap-0.5 p-0.5 bg-slate-50 rounded border border-slate-200">
-                <button onClick={() => setActiveTab('premium')} className={`px-2 py-1 rounded text-[10px] transition-all font-medium ${activeTab === 'premium' ? 'bg-white text-amber-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>PREMIUM</button>
-                <button onClick={() => setActiveTab('regular')} className={`px-2 py-1 rounded text-[10px] transition-all font-medium ${activeTab === 'regular' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>REGULAR</button>
+                <button onClick={() => setActiveTab('premium')} className={`px-2 py-1 rounded text-[10px] transition-all font-medium ${activeTab === 'premium' ? 'bg-white text-amber-600  ' : 'text-slate-400 hover:text-slate-600'}`}>PREMIUM</button>
+                <button onClick={() => setActiveTab('regular')} className={`px-2 py-1 rounded text-[10px] transition-all font-medium ${activeTab === 'regular' ? 'bg-white text-blue-600  ' : 'text-slate-400 hover:text-slate-600'}`}>REGULAR</button>
               </div>
             </div>
             <p className="text-[10px] text-slate-400 font-medium">{filteredCustomers.length} Entities identified</p>
@@ -301,7 +364,7 @@ export default function CustomerStatistics() {
 
           <div className="overflow-x-auto max-h-[400px]">
             <table className="w-full text-left bg-white">
-              <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm">
+              <thead className="sticky top-0 z-10 bg-slate-50  ">
                 <tr>
                   <th className="p-2 text-[10px]  text-slate-400 ">Customer Profile</th>
                   <th className="p-2 text-[10px]  text-slate-400  text-center">Orders</th>
@@ -331,7 +394,7 @@ export default function CustomerStatistics() {
                     </td>
                     <td className="p-2">
                       <p className="text-[11px]  text-slate-900 m-0">₹{parseFloat(customer.revenue).toLocaleString()}</p>
-                      <p className="text-[9px] text-emerald-600  tracking-tight">VERIFIED</p>
+                      <p className="text-[9px] text-emerald-600  ">VERIFIED</p>
                     </td>
                     <td className="p-2">
                       <span className={`px-1.5 py-0.5 rounded-full text-[9px]  ${customer.segment === 'Premium' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>

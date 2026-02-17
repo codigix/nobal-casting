@@ -70,7 +70,7 @@ const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = '
       <div className={`p-1.5 rounded transition-all duration-300 ${isActive ? 'bg-white scale-110' : 'bg-slate-50 group-hover:bg-white'}`}>
         <Icon size={14} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
       </div>
-      <span className="text-xs  tracking-tight uppercase">{label}</span>
+      <span className="text-xs   ">{label}</span>
       {isActive && <div className="w-1 h-1 rounded bg-current animate-pulse ml-0.5" />}
     </button>
   )
@@ -96,7 +96,7 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
       onClick={onToggle}
     >
       <div className="flex items-center gap-4">
-        <div className={`p-2 rounded shadow-lg transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
+        <div className={`p-2 rounded  transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
           <Icon size={20} strokeWidth={2.5} />
         </div>
         <div>
@@ -135,7 +135,7 @@ const InfoRow = ({ label, value, icon: Icon, className = "", color = "indigo" })
   const themeClass = themes[color] || themes.indigo
 
   return (
-    <div className={`flex flex-col p-2 rounded border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 ${className}`}>
+    <div className={`flex flex-col p-2 rounded border border-slate-100 bg-white   hover: transition-all duration-300 ${className}`}>
       <div className="flex items-center gap-2 mb-2">
         <div className={`p-1.5 rounded ${themeClass}`}>
           {Icon && <Icon size={12} />}
@@ -425,7 +425,7 @@ export default function PurchaseOrderForm() {
                 <ChevronRight size={10} />
                 <span>Purchase Order</span>
               </div>
-              <h1 className="text-sm font-extrabold text-slate-900 uppercase tracking-tight">
+              <h1 className="text-sm font-extrabold text-slate-900  ">
                 {isEdit ? po_no : 'Draft Purchase Order'}
               </h1>
             </div>
@@ -445,7 +445,7 @@ export default function PurchaseOrderForm() {
               form="po-form"
               variant="primary"
               disabled={loading}
-              className="flex items-center gap-2 px-6 shadow-lg shadow-indigo-200 text-xs   h-10"
+              className="flex items-center gap-2 px-6  shadow-indigo-200 text-xs   h-10"
             >
               {loading ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -504,7 +504,7 @@ export default function PurchaseOrderForm() {
                 themeColor="rose"
               />
 
-              <div className="mt-8 p-4 bg-white rounded border border-slate-100 shadow-sm">
+              <div className="mt-8 p-4 bg-white rounded border border-slate-100  ">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
                   <span className="text-xs  text-slate-400 ">Order Summary</span>
@@ -525,7 +525,7 @@ export default function PurchaseOrderForm() {
 
           {/* Form Content */}
           <main className="flex-1 min-w-0 pb-24">
-            <form id="po-form" onSubmit={handleSubmit} className="space-y-6">
+            <form id="po-form" onSubmit={handleSubmit} className="space-y-2">
               {/* Foundation Section */}
               <div id="foundation" className="scroll-mt-28 bg-white rounded border border-slate-200  ">
                 <SectionHeader
@@ -693,7 +693,7 @@ export default function PurchaseOrderForm() {
                               </div>
                             </td>
                             <td className="px-4 py-4 text-right">
-                              <span className="text-xs font-extrabold text-slate-700 tracking-tight">
+                              <span className="text-xs font-extrabold text-slate-700 ">
                                 ₹{(item.qty * item.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                               </span>
                             </td>
@@ -712,11 +712,11 @@ export default function PurchaseOrderForm() {
                     </table>
                     {po.items.length === 0 && (
                       <div className="py-20 flex flex-col items-center justify-center text-slate-400 space-y-2 bg-slate-50/30">
-                        <div className="p-4 bg-white rounded-full border border-slate-100 shadow-sm">
+                        <div className="p-4 bg-white rounded-full border border-slate-100  ">
                           <Package size={32} strokeWidth={1.5} />
                         </div>
-                        <p className="text-xs  uppercase tracking-[0.2em]">No Items Configured</p>
-                        <Button type="button" onClick={handleAddItem} variant="ghost" className="text-indigo-600  uppercase text-xs">
+                        <p className="text-xs   ">No Items Configured</p>
+                        <Button type="button" onClick={handleAddItem} variant="ghost" className="text-indigo-600   text-xs">
                           Click here to add items
                         </Button>
                       </div>
@@ -738,7 +738,7 @@ export default function PurchaseOrderForm() {
                 {expandedSections.logistics && (
                   <div className="p-8 space-y-8 bg-gradient-to-b from-amber-50/30 to-white">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="space-y-6">
+                      <div className="space-y-2">
                         <div className="flex items-center gap-2 mb-2">
                           <MapPin size={16} className="text-amber-500" />
                           <h4 className="text-xs font-extrabold text-slate-400 ">Shipping Address</h4>
@@ -772,7 +772,7 @@ export default function PurchaseOrderForm() {
                         </div>
                       </div>
 
-                      <div className="space-y-6">
+                      <div className="space-y-2">
                         <div className="flex items-center gap-2 mb-2">
                           <Settings size={16} className="text-amber-500" />
                           <h4 className="text-xs font-extrabold text-slate-400 ">Trade Controls</h4>
@@ -873,7 +873,7 @@ export default function PurchaseOrderForm() {
                       <div className="bg-slate-900 rounded p-2 text-white  relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-rose-500/20 transition-all duration-700" />
                         
-                        <div className="relative space-y-6">
+                        <div className="relative space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="text-xs  text-slate-400 ">Purchase Valuation</span>
                             <Calculator size={20} className="text-rose-400" />

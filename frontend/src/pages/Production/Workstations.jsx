@@ -106,7 +106,7 @@ export default function Workstations() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-6 h-6  rounded bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+              <div className="w-6 h-6  rounded bg-indigo-600 flex items-center justify-center text-white  shadow-indigo-200">
                 <Monitor size={24} />
               </div>
               <div>
@@ -133,7 +133,7 @@ export default function Workstations() {
             </div>
             <button 
               onClick={() => navigate('/manufacturing/workstations/new')}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded  text-xs shadow-lg shadow-indigo-200 transition-all hover:-translate-y-0.5"
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2  rounded  text-xs  shadow-indigo-200 transition-all hover:-translate-y-0.5"
             >
               <Plus size={18} />
               New Workstation
@@ -270,7 +270,6 @@ export default function Workstations() {
                       <th className="p-2 text-left  text-slate-400 ">Identification</th>
                       <th className="p-2 text-left  text-slate-400 ">Type / Class</th>
                       <th className="p-2 text-left  text-slate-400 ">Location</th>
-                      <th className="p-2 text-left  text-slate-400 ">Status</th>
                       <th className="p-2 text-left  text-slate-400 ">Actions</th>
                     </tr>
                   </thead>
@@ -295,14 +294,6 @@ export default function Workstations() {
                         </td>
                         <td className="p-2">
                           <span className="text-slate-600 ">{ws.location || '-'}</span>
-                        </td>
-                        <td className="p-2">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${ws.is_active === false ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                            <span className="text-xs   text-slate-500 ">
-                              {ws.is_active === false ? 'Maintenance' : 'Active'}
-                            </span>
-                          </div>
                         </td>
                         <td className="p-2 text-left">
                           <div className="flex  gap-2">
@@ -346,7 +337,7 @@ export default function Workstations() {
                       <button
                         key={i}
                         onClick={() => setCurrentPage(i + 1)}
-                        className={`w-8 h-8 rounded text-xs  transition-all ${currentPage === i + 1 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-400 hover:bg-white hover:text-slate-600'}`}
+                        className={`w-8 h-8 rounded text-xs  transition-all ${currentPage === i + 1 ? 'bg-indigo-600 text-white  shadow-indigo-200' : 'text-slate-400 hover:bg-white hover:text-slate-600'}`}
                       >
                         {i + 1}
                       </button>
@@ -375,7 +366,7 @@ export default function Workstations() {
             {!search && (
               <button 
                 onClick={() => navigate('/manufacturing/workstations/new')}
-                className="flex items-center gap-2 bg-indigo-600 text-white p-6  py-2 rounded  text-xs shadow-lg shadow-indigo-200"
+                className="flex items-center gap-2 bg-indigo-600 text-white p-6  py-2 rounded  text-xs  shadow-indigo-200"
               >
                 <Plus size={18} /> Add First Workstation
               </button>

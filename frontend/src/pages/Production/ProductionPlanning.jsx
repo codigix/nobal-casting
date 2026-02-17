@@ -50,7 +50,7 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
   }
 
   return (
-    <div className="bg-slate-50/50 p-2 rounded  border border-gray-100   hover:shadow-md transition-all group  relative">
+    <div className="bg-slate-50/50 p-2 rounded  border border-gray-100   hover: transition-all group  relative">
       <div className="absolute -right-4 -top-4 w-24 h-24 bg-white rounded-full opacity-50 group-hover:scale-110 transition-transform" />
       <div className="relative flex justify-between items-start">
         <div className="">
@@ -81,8 +81,16 @@ const isSubAssemblyGroup = (itemGroup, itemCode = '') => {
   const normalizedGroup = (itemGroup || '').toLowerCase().replace(/[-\s]/g, '').trim()
   if (normalizedGroup === 'consumable') return false
   
-  const isSAGroup = normalizedGroup === 'subassemblies' || normalizedGroup === 'subassembly' || normalizedGroup === 'intermediates'
-  const isSACode = (itemCode || '').toUpperCase().startsWith('SA-') || (itemCode || '').toUpperCase().startsWith('SA')
+  const isSAGroup = normalizedGroup === 'subassemblies' || 
+                    normalizedGroup === 'subassembly' || 
+                    normalizedGroup === 'intermediates' ||
+                    normalizedGroup.includes('subassembly') ||
+                    normalizedGroup.includes('sub-assembly')
+
+  const isSACode = (itemCode || '').toUpperCase().startsWith('SA-') || 
+                   (itemCode || '').toUpperCase().startsWith('SA') ||
+                   (itemCode || '').toUpperCase().startsWith('S-') ||
+                   (itemCode || '').toUpperCase().includes('SUBASM')
   
   return isSAGroup || isSACode
 }
@@ -328,7 +336,57 @@ export default function ProductionPlanning() {
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const [selectedPlanForHistory, setSelectedPlanForHistory] = useState(null)
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [activeTab, setActiveTab] = useState('all')
   const [currentTime, setCurrentTime] = useState(new Date())
+
+  const renderHistoryCard = (mr, idx) => (
+    <div key={mr.mr_id} className="border border-gray-100 rounded  overflow-hidden hover: transition-shadow">
+      <div className="bg-gray-50/50 p-2 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center border border-gray-200 text-indigo-600   text-xs">
+            {idx + 1}
+          </div>
+          <div>
+            <h3 className="text-sm   text-gray-900">{mr.mr_id}</h3>
+            <p className="text-xs text-gray-400 font-medium">Requested: {new Date(mr.request_date).toLocaleDateString()}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className={`px-2 py-1 rounded-full text-xs tracking-wider border ${
+            mr.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+            mr.status === 'approved' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+            mr.status === 'draft' ? 'bg-gray-50 text-gray-600 border-gray-100' :
+            'bg-amber-50 text-amber-600 border-amber-100'
+          }`}>
+            {mr.status}
+          </span>
+        </div>
+      </div>
+      <div className="p-4 bg-white">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="text-xs text-gray-400 border-b border-gray-50">
+              <th className="pb-2   ">Item Details</th>
+              <th className="pb-2 text-right">Requested Qty</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {mr.items && mr.items.map((item, itemIdx) => (
+              <tr key={itemIdx} className="text-xs">
+                <td className="py-2">
+                  <p className="  text-gray-800">{item.item_code}</p>
+                  <p className="text-xs text-gray-400">{item.item_name}</p>
+                </td>
+                <td className="py-2 text-right font-medium text-gray-900">
+                  {item.qty} {item.uom}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -993,12 +1051,23 @@ export default function ProductionPlanning() {
   }, [plans])
 
   const filteredPlans = useMemo(() => {
-    return plans.filter(plan =>
-      plan.plan_id.toLowerCase().includes(search.toLowerCase()) ||
-      plan.company?.toLowerCase().includes(search.toLowerCase()) ||
-      (plan.bom_id && plan.bom_id.toLowerCase().includes(search.toLowerCase()))
-    )
-  }, [plans, search])
+    return plans.filter(plan => {
+      // Search filter
+      const matchesSearch = plan.plan_id.toLowerCase().includes(search.toLowerCase()) ||
+        plan.company?.toLowerCase().includes(search.toLowerCase()) ||
+        (plan.bom_id && plan.bom_id.toLowerCase().includes(search.toLowerCase()))
+
+      if (!matchesSearch) return false
+
+      // Tab filter
+      if (activeTab === 'pending_mr') {
+        const history = mrHistory[plan.plan_id] || []
+        return history.some(mr => mr.status !== 'completed')
+      }
+
+      return true
+    })
+  }, [plans, search, activeTab, mrHistory])
 
   const getStatusBadge = (status) => {
     const configs = {
@@ -1114,7 +1183,7 @@ export default function ProductionPlanning() {
             </button>
             <button
               onClick={() => navigate('/manufacturing/production-planning/new')}
-              className="flex items-center gap-2 p-2  bg-slate-900 text-white rounded hover:bg-slate-800 shadow  shadow-slate-200 hover:shadow-2xl hover:-translate-y-1 transition-all text-xs   "
+              className="flex items-center gap-2 p-2  bg-slate-900 text-white rounded hover:bg-slate-800 shadow  shadow-slate-200 hover: hover:-translate-y-1 transition-all text-xs   "
             >
               <Plus size={18} />
               New Strategic Plan
@@ -1156,6 +1225,43 @@ export default function ProductionPlanning() {
 
         {/* Main Content Board */}
         <div className="bg-white rounded  border border-gray-100   overflow-hidden">
+          {/* Dashboard Tabs */}
+          <div className="flex border-b border-gray-100 bg-white">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-8 py-4 text-xs font-bold transition-all relative ${
+                activeTab === 'all' 
+                  ? 'text-indigo-600 bg-indigo-50/30' 
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              All Plans
+              {activeTab === 'all' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('pending_mr')}
+              className={`px-8 py-4 text-xs font-bold transition-all relative flex items-center gap-2 ${
+                activeTab === 'pending_mr' 
+                  ? 'text-amber-600 bg-amber-50/30' 
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              Pending Requests
+              {Object.values(mrHistory).flat().filter(mr => mr.status !== 'completed').length > 0 && (
+                <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+                  activeTab === 'pending_mr' ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {Object.values(mrHistory).flat().filter(mr => mr.status !== 'completed').length}
+                </span>
+              )}
+              {activeTab === 'pending_mr' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-600" />
+              )}
+            </button>
+          </div>
+
           {/* Dashboard Control Bar */}
           <div className="p-2 border-b border-gray-50 bg-gray-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4 ">
             <div className="flex items-center gap-4">
@@ -1215,7 +1321,7 @@ export default function ProductionPlanning() {
                       <tr key={plan.plan_id} className="hover:bg-indigo-50/30 transition-colors group">
                         <td className="p-2 ">
                           <div className="flex items-center gap-4">
-                            <div className="w-6 h-6 p-2  rounded  bg-slate-900 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                            <div className="w-6 h-6 p-2  rounded  bg-slate-900 flex items-center justify-center text-white  group-hover:scale-110 transition-transform">
                               <Package size={15} />
                             </div>
                             <div>
@@ -1278,7 +1384,7 @@ export default function ProductionPlanning() {
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => navigate(`/manufacturing/production-planning/${plan.plan_id}`)}
-                              className=" p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all   hover:shadow-md bg-white border border-gray-50"
+                              className=" p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all   hover: bg-white border border-gray-50"
                               title="View Strategy"
                             >
                               <Eye size={15} />
@@ -1286,7 +1392,7 @@ export default function ProductionPlanning() {
                             {isEffectiveCompleted && (
                               <button
                                 onClick={() => handleDownloadReport(plan)}
-                                className=" p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded  transition-all   hover:shadow-md bg-white border border-gray-50"
+                                className=" p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded  transition-all   hover: bg-white border border-gray-50"
                                 title="Download Production Report"
                               >
                                 <Download size={15} />
@@ -1295,7 +1401,7 @@ export default function ProductionPlanning() {
                             {!isEffectiveCompleted && (
                               <button
                                 onClick={() => fetchPlanOperationProgress(plan.plan_id)}
-                                className="p-2 rounded transition-all hover:shadow-md bg-white border border-gray-50 text-gray-400 hover:text-amber-600 hover:bg-amber-50"
+                                className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-amber-600 hover:bg-amber-50"
                                 title="Sync Progress"
                               >
                                 <TrendingUp size={15} />
@@ -1304,7 +1410,7 @@ export default function ProductionPlanning() {
                             {!isEffectiveCompleted && planProgress[plan.plan_id]?.woCount === 0 && (
                               <button
                                 onClick={() => handleCreateWorkOrder(plan)}
-                                className="p-2 rounded transition-all hover:shadow-md bg-white border border-gray-50 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"
+                                className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"
                                 title="Configure Strategy"
                               >
                                 <Settings size={15} />
@@ -1314,7 +1420,7 @@ export default function ProductionPlanning() {
                               <button
                                 onClick={() => handleSendMaterialRequest(plan)}
                                 disabled={sendingMaterialRequest}
-                                className="p-2 rounded transition-all hover:shadow-md bg-white border border-gray-50 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
+                                className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
                                 title="Request Materials"
                               >
                                 {sendingMaterialRequest ? <Loader size={15} className="animate-spin" /> : <Send size={15} />}
@@ -1323,7 +1429,7 @@ export default function ProductionPlanning() {
                             {!isEffectiveCompleted && (
                               <button
                                 onClick={() => handleEdit(plan)}
-                                className="p-2 rounded transition-all hover:shadow-md bg-white border border-gray-50 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                                className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
                                 title="Modify Strategy"
                               >
                                 <Edit2 size={15} />
@@ -1331,7 +1437,7 @@ export default function ProductionPlanning() {
                             )}
                             <button
                               onClick={() => handleShowHistory(plan)}
-                              className=" p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all   hover:shadow-md bg-white border border-gray-50 relative"
+                              className=" p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all   hover: bg-white border border-gray-50 relative"
                               title="View Request History"
                             >
                               <FileText size={15} />
@@ -1344,7 +1450,7 @@ export default function ProductionPlanning() {
                             {!isEffectiveCompleted && (
                               <button
                                 onClick={() => handleDelete(plan.plan_id)}
-                                className="p-2 rounded transition-all hover:shadow-md bg-white border border-gray-50 text-gray-400 hover:text-rose-600 hover:bg-rose-50"
+                                className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-rose-600 hover:bg-rose-50"
                                 title="Discard Plan"
                               >
                                 <Trash2 size={15} />
@@ -1393,10 +1499,10 @@ export default function ProductionPlanning() {
 
       {showWorkOrderModal && workOrderData && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded  shadow-2xl max-w-4xl w-full  overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300 border border-gray-100 max-h-[30pc] overflow-hidden">
+          <div className="bg-white rounded   max-w-4xl w-full  overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300 border border-gray-100 max-h-[30pc] overflow-hidden">
             <div className="p-2 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
               <div className="flex items-center gap-4">
-                <div className="bg-indigo-600 p-2 rounded  shadow-lg shadow-indigo-200">
+                <div className="bg-indigo-600 p-2 rounded   shadow-indigo-200">
                   <Zap className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -1472,7 +1578,7 @@ export default function ProductionPlanning() {
                               <React.Fragment key={idx}>
                                 {isNewGroup && (
                                   <tr className="bg-slate-50/50">
-                                    <td colSpan="3" className="p-2 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                    <td colSpan="3" className="p-2 py-1 text-[10px]  text-slate-500  tracking-wider flex items-center gap-2">
                                       <div className={`w-2 h-2 rounded-full ${op.depth === 0 ? 'bg-indigo-500' : 'bg-amber-500'}`} />
                                       {op.item_name || op.item_code} {op.depth === 0 ? '(Finished Good)' : '(Sub-Assembly)'}
                                     </td>
@@ -1521,7 +1627,7 @@ export default function ProductionPlanning() {
                           return (
                             <tr key={idx} className={`hover:bg-indigo-50/30 transition-colors ${isLow ? 'bg-rose-50/50' : ''}`}>
                               <td className="p-2 ">
-                                <p className="text-xs  text-gray-900 tracking-tight">{item.item_code}</p>
+                                <p className="text-xs  text-gray-900 ">{item.item_code}</p>
                                 <p className="text-xs   text-gray-400 mt-0.5">{item.item_name}</p>
                               </td>
                               <td className="p-2  text-right text-xs  text-gray-900">
@@ -1590,10 +1696,10 @@ export default function ProductionPlanning() {
 
       {showMaterialRequestModal && materialRequestData && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300 border border-gray-100 max-h-[35pc] overflow-hidden">
+          <div className="bg-white rounded  max-w-4xl w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300 border border-gray-100 max-h-[35pc] overflow-hidden">
             <div className="p-2 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
               <div className="flex items-center gap-4">
-                <div className="bg-blue-600 p-2 rounded shadow-lg shadow-blue-200 transition-colors">
+                <div className="bg-blue-600 p-2 rounded  shadow-blue-200 transition-colors">
                   <Send className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -1665,7 +1771,7 @@ export default function ProductionPlanning() {
                         return (
                           <tr key={idx} className={`hover:bg-blue-50/30 transition-colors ${isLow ? 'bg-rose-50/50' : ''}`}>
                             <td className="p-2 ">
-                              <p className="text-xs text-gray-900 tracking-tight">{item.item_code}</p>
+                              <p className="text-xs text-gray-900 ">{item.item_code}</p>
                               <p className="text-xs text-gray-400 mt-0.5">{item.item_name}</p>
                             </td>
                             <td className="p-2 text-right">
@@ -1728,10 +1834,10 @@ export default function ProductionPlanning() {
 
       {showHistoryModal && selectedPlanForHistory && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300 border border-gray-100 max-h-[90vh]">
+          <div className="bg-white rounded  max-w-4xl w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300 border border-gray-100 max-h-[90vh]">
             <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/30">
               <div className="flex items-center gap-4">
-                <div className="bg-indigo-600 p-2 rounded shadow-lg shadow-indigo-200">
+                <div className="bg-indigo-600 p-2 rounded  shadow-indigo-200">
                   <FileText className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -1753,62 +1859,51 @@ export default function ProductionPlanning() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2">
+            <div className="flex-1 overflow-y-auto p-4">
               {loadingHistory ? (
                 <div className="flex flex-col items-center justify-center py-20">
                   <Loader size={48} className="text-indigo-500 animate-spin mb-4" />
                   <p className="text-sm text-gray-500">Retrieving historical data from vault...</p>
                 </div>
               ) : mrHistory[selectedPlanForHistory.plan_id] && mrHistory[selectedPlanForHistory.plan_id].length > 0 ? (
-                <div className="space-y-2">
-                  {mrHistory[selectedPlanForHistory.plan_id].map((mr, idx) => (
-                    <div key={mr.mr_id} className="border border-gray-100 rounded  overflow-hidden hover:shadow-md transition-shadow">
-                      <div className="bg-gray-50/50 p-2 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center border border-gray-200 text-indigo-600   text-xs">
-                            {idx + 1}
-                          </div>
-                          <div>
-                            <h3 className="text-sm   text-gray-900">{mr.mr_id}</h3>
-                            <p className="text-xs text-gray-400 font-medium">Requested: {new Date(mr.request_date).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className={`px-2 py-1 rounded-full text-xs tracking-wider border ${
-                            mr.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                            mr.status === 'approved' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                            mr.status === 'draft' ? 'bg-gray-50 text-gray-600 border-gray-100' :
-                            'bg-amber-50 text-amber-600 border-amber-100'
-                          }`}>
-                            {mr.status}
-                          </span>
-                        </div>
+                <div className="space-y-8">
+                  {/* Pending/Active Requests Section */}
+                  {mrHistory[selectedPlanForHistory.plan_id].some(mr => mr.status !== 'completed') && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-amber-600 px-1">
+                        <Clock size={16} className="animate-pulse" />
+                        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em]">Active Requests</h3>
+                        <div className="flex-1 h-px bg-amber-100/50 ml-2" />
+                        <span className="text-[10px] bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 font-bold">
+                          {mrHistory[selectedPlanForHistory.plan_id].filter(mr => mr.status !== 'completed').length}
+                        </span>
                       </div>
-                      <div className="p-4 bg-white">
-                        <table className="w-full text-left">
-                          <thead>
-                            <tr className="text-xs text-gray-400 border-b border-gray-50">
-                              <th className="pb-2   ">Item Details</th>
-                              <th className="pb-2 text-right">Requested Qty</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-50">
-                            {mr.items && mr.items.map((item, itemIdx) => (
-                              <tr key={itemIdx} className="text-xs">
-                                <td className="py-2">
-                                  <p className="  text-gray-800">{item.item_code}</p>
-                                  <p className="text-xs text-gray-400">{item.item_name}</p>
-                                </td>
-                                <td className="py-2 text-right font-medium text-gray-900">
-                                  {item.qty} {item.uom}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                      <div className="space-y-3">
+                        {mrHistory[selectedPlanForHistory.plan_id]
+                          .filter(mr => mr.status !== 'completed')
+                          .map((mr, idx) => renderHistoryCard(mr, idx))}
                       </div>
                     </div>
-                  ))}
+                  )}
+
+                  {/* Completed History Section */}
+                  {mrHistory[selectedPlanForHistory.plan_id].some(mr => mr.status === 'completed') && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-emerald-600 px-1">
+                        <CheckCircle2 size={16} />
+                        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em]">Completed Archive</h3>
+                        <div className="flex-1 h-px bg-emerald-100/50 ml-2" />
+                        <span className="text-[10px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 font-bold">
+                          {mrHistory[selectedPlanForHistory.plan_id].filter(mr => mr.status === 'completed').length}
+                        </span>
+                      </div>
+                      <div className="space-y-3">
+                        {mrHistory[selectedPlanForHistory.plan_id]
+                          .filter(mr => mr.status === 'completed')
+                          .map((mr, idx) => renderHistoryCard(mr, idx))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-20 bg-gray-50/50 rounded  border border-dashed border-gray-200">
@@ -1827,7 +1922,7 @@ export default function ProductionPlanning() {
                   setShowHistoryModal(false)
                   setSelectedPlanForHistory(null)
                 }}
-                className="px-6 py-2 bg-slate-900 text-white text-xs   rounded hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+                className="p-2  bg-slate-900 text-white text-xs   rounded hover:bg-slate-800 transition-all  shadow-slate-200"
               >
                 Close Archive
               </button>

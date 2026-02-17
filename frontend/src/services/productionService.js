@@ -267,6 +267,31 @@ export const getOperatorEfficiency = async (date_from, date_to) => {
   return response.data
 }
 
+// OEE Analytics
+export const getOEEDashboardData = async (filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/oee/dashboard?${params}`)
+  return response.data
+}
+
+export const getAllMachinesAnalysis = async (filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/oee/all-machines-analysis?${params}`)
+  return response.data
+}
+
+export const getMachineOEEMetrics = async (machineId, filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/oee/machine/${machineId}?${params}`)
+  return response.data
+}
+
+export const getMachineHistoricalMetrics = async (machineId, filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/oee/machine/${machineId}/historical-metrics?${params}`)
+  return response.data
+}
+
 // Master Data for Searchable Selects
 export const getCompanies = async () => {
   const response = await api.get('/company-info')
@@ -408,26 +433,27 @@ export const receiveFromVendor = async (job_card_id, data) => {
   return response.data
 }
 
-// OEE Analytics
-export const getOEEDashboardData = async (filters = {}) => {
-  const params = new URLSearchParams(filters)
-  const response = await api.get(`/oee/dashboard?${params}`)
-  return response.data
-}
-
-export const getMachineOEEMetrics = async (machineId, filters = {}) => {
-  const params = new URLSearchParams(filters)
-  const response = await api.get(`/oee/machine/${machineId}?${params}`)
-  return response.data
-}
-
-export const getMachineHistoricalMetrics = async (machineId, filters = {}) => {
-  const params = new URLSearchParams(filters)
-  const response = await api.get(`/oee/machine/${machineId}/historical-metrics?${params}`)
-  return response.data
-}
-
 export const getItemGroups = async () => {
   const response = await api.get('/item-groups')
+  return response.data
+}
+
+export const getMaterialConsumptionByOperation = async (work_order_id) => {
+  const response = await api.get(`/production/inventory/consumption-by-operation/${work_order_id}`)
+  return response.data
+}
+
+export const getMaterialAllocationForWorkOrder = async (work_order_id) => {
+  const response = await api.get(`/production/inventory/allocations/${work_order_id}`)
+  return response.data
+}
+
+export const finalizeWorkOrderMaterials = async (work_order_id) => {
+  const response = await api.post(`/production/inventory/finalize/${work_order_id}`)
+  return response.data
+}
+
+export const trackMaterialConsumption = async (data) => {
+  const response = await api.post('/production/inventory/track-consumption', data)
   return response.data
 }

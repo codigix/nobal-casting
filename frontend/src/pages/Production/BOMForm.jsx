@@ -10,14 +10,14 @@ import { useDraftSave } from '../../hooks/useDraftSave'
 
 const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, themeColor = 'blue', id, badge, actions }) => {
   const themes = {
-    blue: { text: 'text-blue-600', bg: 'bg-blue-50/50', border: 'border-blue-100/50', icon: 'bg-blue-600 text-white shadow-lg shadow-blue-100' },
-    emerald: { text: 'text-emerald-600', bg: 'bg-emerald-50/50', border: 'border-emerald-100/50', icon: 'bg-emerald-600 text-white shadow-lg shadow-emerald-100' },
-    amber: { text: 'text-amber-600', bg: 'bg-amber-50/50', border: 'border-amber-100/50', icon: 'bg-amber-600 text-white shadow-lg shadow-amber-100' },
-    rose: { text: 'text-rose-600', bg: 'bg-rose-50/50', border: 'border-rose-100/50', icon: 'bg-rose-600 text-white shadow-lg shadow-rose-100' },
-    indigo: { text: 'text-indigo-600', bg: 'bg-indigo-50/50', border: 'border-indigo-100/50', icon: 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' },
-    slate: { text: 'text-slate-600', bg: 'bg-slate-50/50', border: 'border-slate-100/50', icon: 'bg-slate-900 text-white shadow-lg shadow-slate-200' },
-    cyan: { text: 'text-cyan-600', bg: 'bg-cyan-50/50', border: 'border-cyan-100/50', icon: 'bg-cyan-600 text-white shadow-lg shadow-cyan-100' },
-    gray: { text: 'text-slate-600', bg: 'bg-slate-50/50', border: 'border-slate-100/50', icon: 'bg-slate-600 text-white shadow-lg shadow-slate-100' }
+    blue: { text: 'text-blue-600', bg: 'bg-blue-50/50', border: 'border-blue-100/50', icon: 'bg-blue-600 text-white  shadow-blue-100' },
+    emerald: { text: 'text-emerald-600', bg: 'bg-emerald-50/50', border: 'border-emerald-100/50', icon: 'bg-emerald-600 text-white  shadow-emerald-100' },
+    amber: { text: 'text-amber-600', bg: 'bg-amber-50/50', border: 'border-amber-100/50', icon: 'bg-amber-600 text-white  shadow-amber-100' },
+    rose: { text: 'text-rose-600', bg: 'bg-rose-50/50', border: 'border-rose-100/50', icon: 'bg-rose-600 text-white  shadow-rose-100' },
+    indigo: { text: 'text-indigo-600', bg: 'bg-indigo-50/50', border: 'border-indigo-100/50', icon: 'bg-indigo-600 text-white  shadow-indigo-100' },
+    slate: { text: 'text-slate-600', bg: 'bg-slate-50/50', border: 'border-slate-100/50', icon: 'bg-slate-900 text-white  shadow-slate-200' },
+    cyan: { text: 'text-cyan-600', bg: 'bg-cyan-50/50', border: 'border-cyan-100/50', icon: 'bg-cyan-600 text-white  shadow-cyan-100' },
+    gray: { text: 'text-slate-600', bg: 'bg-slate-50/50', border: 'border-slate-100/50', icon: 'bg-slate-600 text-white  shadow-slate-100' }
   }
 
   const theme = themes[themeColor] || themes.blue
@@ -29,7 +29,7 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
       onClick={onToggle}
     >
       <div className="flex items-center gap-2">
-        <div className={` p-2 rounded transition-all duration-500 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3 ' : 'scale-100 shadow-md'}`}>
+        <div className={` p-2 rounded transition-all duration-500 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3 ' : 'scale-100 '}`}>
           <Icon size={10} strokeWidth={2.2} />
         </div>
         <div>
@@ -206,7 +206,210 @@ export default function BOMForm() {
     scrap_qty: '0',
     rate: '0'
   })
-  const [uomList, setUomList] = useState([])
+  const [uomList, setUomList] = useState([
+    { label: 'Unit', value: 'Unit' },
+    { label: 'Box', value: 'Box' },
+    { label: 'Pair', value: 'Pair' },
+    { label: 'Set', value: 'Set' },
+    { label: 'Meter', value: 'Meter' },
+    { label: 'Barleycorn', value: 'Barleycorn' },
+    { label: 'Calibre', value: 'Calibre' },
+    { label: 'Cable Length (UK)', value: 'Cable Length (UK)' },
+    { label: 'Cable Length (US)', value: 'Cable Length (US)' },
+    { label: 'Cable Length', value: 'Cable Length' },
+    { label: 'Centimeter', value: 'Centimeter' },
+    { label: 'Chain', value: 'Chain' },
+    { label: 'Decimeter', value: 'Decimeter' },
+    { label: 'Ells (UK)', value: 'Ells (UK)' },
+    { label: 'Ems(Pica)', value: 'Ems(Pica)' },
+    { label: 'Fathom', value: 'Fathom' },
+    { label: 'Foot', value: 'Foot' },
+    { label: 'Furlong', value: 'Furlong' },
+    { label: 'Hand', value: 'Hand' },
+    { label: 'Hectometer', value: 'Hectometer' },
+    { label: 'Inch', value: 'Inch' },
+    { label: 'Kilometer', value: 'Kilometer' },
+    { label: 'Link', value: 'Link' },
+    { label: 'Micrometer', value: 'Micrometer' },
+    { label: 'Mile', value: 'Mile' },
+    { label: 'Mile (Nautical)', value: 'Mile (Nautical)' },
+    { label: 'Millimeter', value: 'Millimeter' },
+    { label: 'Nanometer', value: 'Nanometer' },
+    { label: 'Rod', value: 'Rod' },
+    { label: 'Vara', value: 'Vara' },
+    { label: 'Versta', value: 'Versta' },
+    { label: 'Yard', value: 'Yard' },
+    { label: 'Arshin', value: 'Arshin' },
+    { label: 'Sazhen', value: 'Sazhen' },
+    { label: 'Medio Metro', value: 'Medio Metro' },
+    { label: 'Square Meter', value: 'Square Meter' },
+    { label: 'Centiarea', value: 'Centiarea' },
+    { label: 'Area', value: 'Area' },
+    { label: 'Manzana', value: 'Manzana' },
+    { label: 'Caballeria', value: 'Caballeria' },
+    { label: 'Square Kilometer', value: 'Square Kilometer' },
+    { label: 'Are', value: 'Are' },
+    { label: 'Acre', value: 'Acre' },
+    { label: 'Acre (US)', value: 'Acre (US)' },
+    { label: 'Hectare', value: 'Hectare' },
+    { label: 'Square Yard', value: 'Square Yard' },
+    { label: 'Square Foot', value: 'Square Foot' },
+    { label: 'Square Inch', value: 'Square Inch' },
+    { label: 'Square Centimeter', value: 'Square Centimeter' },
+    { label: 'Square Mile', value: 'Square Mile' },
+    { label: 'Meter/Second', value: 'Meter/Second' },
+    { label: 'Inch/Minute', value: 'Inch/Minute' },
+    { label: 'Foot/Minute', value: 'Foot/Minute' },
+    { label: 'Inch/Second', value: 'Inch/Second' },
+    { label: 'Kilometer/Hour', value: 'Kilometer/Hour' },
+    { label: 'Foot/Second', value: 'Foot/Second' },
+    { label: 'Mile/Hour', value: 'Mile/Hour' },
+    { label: 'Knot', value: 'Knot' },
+    { label: 'Mile/Minute', value: 'Mile/Minute' },
+    { label: 'Mile/Second', value: 'Mile/Second' },
+    { label: 'Carat', value: 'Carat' },
+    { label: 'Cental', value: 'Cental' },
+    { label: 'Dram', value: 'Dram' },
+    { label: 'Grain', value: 'Grain' },
+    { label: 'Gram', value: 'Gram' },
+    { label: 'Hundredweight (UK)', value: 'Hundredweight (UK)' },
+    { label: 'Hundredweight (US)', value: 'Hundredweight (US)' },
+    { label: 'Quintal', value: 'Quintal' },
+    { label: 'Microgram', value: 'Microgram' },
+    { label: 'Milligram', value: 'Milligram' },
+    { label: 'Ounce', value: 'Ounce' },
+    { label: 'Pood', value: 'Pood' },
+    { label: 'Pound', value: 'Pound' },
+    { label: 'Slug', value: 'Slug' },
+    { label: 'Stone', value: 'Stone' },
+    { label: 'Tonne', value: 'Tonne' },
+    { label: 'Kip', value: 'Kip' },
+    { label: 'Barrel(Beer)', value: 'Barrel(Beer)' },
+    { label: 'Barrel (Oil)', value: 'Barrel (Oil)' },
+    { label: 'Bushel (UK)', value: 'Bushel (UK)' },
+    { label: 'Bushel (US Dry Level)', value: 'Bushel (US Dry Level)' },
+    { label: 'Centilitre', value: 'Centilitre' },
+    { label: 'Cubic Centimeter', value: 'Cubic Centimeter' },
+    { label: 'Cubic Decimeter', value: 'Cubic Decimeter' },
+    { label: 'Cubic Foot', value: 'Cubic Foot' },
+    { label: 'Cubic Inch', value: 'Cubic Inch' },
+    { label: 'Cubic Meter', value: 'Cubic Meter' },
+    { label: 'Cubic Millimeter', value: 'Cubic Millimeter' },
+    { label: 'Cubic Yard', value: 'Cubic Yard' },
+    { label: 'Cup', value: 'Cup' },
+    { label: 'Decilitre', value: 'Decilitre' },
+    { label: 'Fluid Ounce (UK)', value: 'Fluid Ounce (UK)' },
+    { label: 'Fluid Ounce (US)', value: 'Fluid Ounce (US)' },
+    { label: 'Gallon (UK)', value: 'Gallon (UK)' },
+    { label: 'Gallon Dry (US)', value: 'Gallon Dry (US)' },
+    { label: 'Gallon Liquid (US)', value: 'Gallon Liquid (US)' },
+    { label: 'Litre', value: 'Litre' },
+    { label: 'Millilitre', value: 'Millilitre' },
+    { label: 'Peck', value: 'Peck' },
+    { label: 'Pint (UK)', value: 'Pint (UK)' },
+    { label: 'Pint, Dry (US)', value: 'Pint, Dry (US)' },
+    { label: 'Pint, Liquid (US)', value: 'Pint, Liquid (US)' },
+    { label: 'Quart (UK)', value: 'Quart (UK)' },
+    { label: 'Quart Dry (US)', value: 'Quart Dry (US)' },
+    { label: 'Quart Liquid (US)', value: 'Quart Liquid (US)' },
+    { label: 'Tablespoon (US)', value: 'Tablespoon (US)' },
+    { label: 'Teaspoon', value: 'Teaspoon' },
+    { label: 'Day', value: 'Day' },
+    { label: 'Hour', value: 'Hour' },
+    { label: 'Minute', value: 'Minute' },
+    { label: 'Second', value: 'Second' },
+    { label: 'Millisecond', value: 'Millisecond' },
+    { label: 'Microsecond', value: 'Microsecond' },
+    { label: 'Nanosecond', value: 'Nanosecond' },
+    { label: 'Week', value: 'Week' },
+    { label: 'Atmosphere', value: 'Atmosphere' },
+    { label: 'Pascal', value: 'Pascal' },
+    { label: 'Bar', value: 'Bar' },
+    { label: 'Foot Of Water', value: 'Foot Of Water' },
+    { label: 'Hectopascal', value: 'Hectopascal' },
+    { label: 'Inches Of Water', value: 'Inches Of Water' },
+    { label: 'Inches Of Mercury', value: 'Inches Of Mercury' },
+    { label: 'Kilopascal', value: 'Kilopascal' },
+    { label: 'Meter Of Water', value: 'Meter Of Water' },
+    { label: 'Microbar', value: 'Microbar' },
+    { label: 'Millibar', value: 'Millibar' },
+    { label: 'Millimeter Of Mercury', value: 'Millimeter Of Mercury' },
+    { label: 'Millimeter Of Water', value: 'Millimeter Of Water' },
+    { label: 'Technical Atmosphere', value: 'Technical Atmosphere' },
+    { label: 'Torr', value: 'Torr' },
+    { label: 'Dyne', value: 'Dyne' },
+    { label: 'Gram-Force', value: 'Gram-Force' },
+    { label: 'Joule/Meter', value: 'Joule/Meter' },
+    { label: 'Kilogram-Force', value: 'Kilogram-Force' },
+    { label: 'Kilopond', value: 'Kilopond' },
+    { label: 'Kilopound-Force', value: 'Kilopound-Force' },
+    { label: 'Newton', value: 'Newton' },
+    { label: 'Ounce-Force', value: 'Ounce-Force' },
+    { label: 'Pond', value: 'Pond' },
+    { label: 'Pound-Force', value: 'Pound-Force' },
+    { label: 'Poundal', value: 'Poundal' },
+    { label: 'Tonne-Force(Metric)', value: 'Tonne-Force(Metric)' },
+    { label: 'Ton-Force (UK)', value: 'Ton-Force (UK)' },
+    { label: 'Ton-Force (US)', value: 'Ton-Force (US)' },
+    { label: 'Btu (It)', value: 'Btu (It)' },
+    { label: 'Btu (Th)', value: 'Btu (Th)' },
+    { label: 'Btu (Mean)', value: 'Btu (Mean)' },
+    { label: 'Calorie (It)', value: 'Calorie (It)' },
+    { label: 'Calorie (Th)', value: 'Calorie (Th)' },
+    { label: 'Calorie (Mean)', value: 'Calorie (Mean)' },
+    { label: 'Calorie (Food)', value: 'Calorie (Food)' },
+    { label: 'Erg', value: 'Erg' },
+    { label: 'Horsepower-Hours', value: 'Horsepower-Hours' },
+    { label: 'Inch Pound-Force', value: 'Inch Pound-Force' },
+    { label: 'Joule', value: 'Joule' },
+    { label: 'Kilojoule', value: 'Kilojoule' },
+    { label: 'Kilocalorie', value: 'Kilocalorie' },
+    { label: 'Kilowatt-Hour', value: 'Kilowatt-Hour' },
+    { label: 'Litre-Atmosphere', value: 'Litre-Atmosphere' },
+    { label: 'Megajoule', value: 'Megajoule' },
+    { label: 'Watt-Hour', value: 'Watt-Hour' },
+    { label: 'Btu/Hour', value: 'Btu/Hour' },
+    { label: 'Btu/Minutes', value: 'Btu/Minutes' },
+    { label: 'Btu/Seconds', value: 'Btu/Seconds' },
+    { label: 'Calorie/Seconds', value: 'Calorie/Seconds' },
+    { label: 'Horsepower', value: 'Horsepower' },
+    { label: 'Kilowatt', value: 'Kilowatt' },
+    { label: 'Megawatt', value: 'Megawatt' },
+    { label: 'Volt-Ampere', value: 'Volt-Ampere' },
+    { label: 'Watt', value: 'Watt' },
+    { label: 'Centigram/Litre', value: 'Centigram/Litre' },
+    { label: 'Decigram/Litre', value: 'Decigram/Litre' },
+    { label: 'Dekagram/Litre', value: 'Dekagram/Litre' },
+    { label: 'Hectogram/Litre', value: 'Hectogram/Litre' },
+    { label: 'Gram/Cubic Meter', value: 'Gram/Cubic Meter' },
+    { label: 'Gram/Cubic Centimeter', value: 'Gram/Cubic Centimeter' },
+    { label: 'Gram/Cubic Millimeter', value: 'Gram/Cubic Millimeter' },
+    { label: 'Gram/Litre', value: 'Gram/Litre' },
+    { label: 'Grain/Gallon (US)', value: 'Grain/Gallon (US)' },
+    { label: 'Grain/Gallon (UK)', value: 'Grain/Gallon (UK)' },
+    { label: 'Grain/Cubic Foot', value: 'Grain/Cubic Foot' },
+    { label: 'Kilogram/Cubic Meter', value: 'Kilogram/Cubic Meter' },
+    { label: 'Kilogram/Cubic Centimeter', value: 'Kilogram/Cubic Centimeter' },
+    { label: 'Kilogram/Litre', value: 'Kilogram/Litre' },
+    { label: 'Milligram/Cubic Meter', value: 'Milligram/Cubic Meter' },
+    { label: 'Milligram/Cubic Centimeter', value: 'Milligram/Cubic Centimeter' },
+    { label: 'Milligram/Cubic Millimeter', value: 'Milligram/Cubic Millimeter' },
+    { label: 'Megagram/Litre', value: 'Megagram/Litre' },
+    { label: 'Milligram/Litre', value: 'Milligram/Litre' },
+    { label: 'Microgram/Litre', value: 'Microgram/Litre' },
+    { label: 'Nanogram/Litre', value: 'Nanogram/Litre' },
+    { label: 'Ounce/Cubic Inch', value: 'Ounce/Cubic Inch' },
+    { label: 'Ounce/Cubic Foot', value: 'Ounce/Cubic Foot' },
+    { label: 'Ounce/Gallon (US)', value: 'Ounce/Gallon (US)' },
+    { label: 'Ounce/Gallon (UK)', value: 'Ounce/Gallon (UK)' },
+    { label: 'Pound/Cubic Inch', value: 'Pound/Cubic Inch' },
+    { label: 'Pound/Cubic Foot', value: 'Pound/Cubic Foot' },
+    { label: 'Pound/Cubic Yard', value: 'Pound/Cubic Yard' },
+    { label: 'Pound/Gallon (US)', value: 'Pound/Gallon (US)' },
+    { label: 'Pound/Gallon (UK)', value: 'Pound/Gallon (UK)' },
+    { label: 'Nos', value: 'Nos' },
+    { label: 'Kg', value: 'Kg' }
+  ])
   const [itemGroups, setItemGroups] = useState([])
   const [expandedSections, setExpandedSections] = useState({
     product: true,
@@ -1203,7 +1406,7 @@ export default function BOMForm() {
         </div>
 
         <form id="bom-form" onSubmit={handleSubmit} className="relative">
-          <div className="space-y-6">
+          <div className="space-y-2">
             {/* Horizontal Header Navigation */}
             <div className="flex flex-col md:flex-row gap-4 items-stretch">
               {/* BOM Intelligence Widget */}
@@ -1218,7 +1421,7 @@ export default function BOMForm() {
                         <div className="w-2 h-2 rounded bg-indigo-500 animate-ping absolute inset-0" />
                         <div className="w-2 h-2 rounded bg-indigo-500 relative z-10" />
                       </div>
-                      <span className="text-white text-[10px] opacity-70  tracking-[0.2em] uppercase">Neural Core</span>
+                      <span className="text-white text-[10px] opacity-70   ">Neural Core</span>
                     </div>
                     <div className="flex -space-x-1.5">
                       {[1, 2, 3].map(i => (
@@ -1231,7 +1434,7 @@ export default function BOMForm() {
 
                   <div className="grid grid-cols-3 gap-2">
                     <div className="bg-white/5 rounded p-2 border border-white/5 backdrop-blur-md">
-                      <p className="text-slate-500 text-[8px] uppercase  mb-1 tracking-widest">Protocol</p>
+                      <p className="text-slate-500 text-[8px]   mb-1 ">Protocol</p>
                       <div className="flex items-center gap-1.5 overflow-hidden">
                         <Activity size={12} className="text-indigo-400 shrink-0" />
                         <p className="text-white text-[10px] truncate capitalize">
@@ -1241,7 +1444,7 @@ export default function BOMForm() {
                     </div>
 
                     <div className="bg-white/5 rounded  p-2.5 border border-white/5 backdrop-blur-sm hover:border-indigo-500/20 transition-all">
-                      <p className="text-slate-500 text-[8px] uppercase  mb-1 tracking-widest">Nodes</p>
+                      <p className="text-slate-500 text-[8px]   mb-1 ">Nodes</p>
                       <div className="flex items-center gap-1.5">
                         <Database size={12} className="text-slate-400" />
                         <p className="text-white text-sm  ">
@@ -1251,7 +1454,7 @@ export default function BOMForm() {
                     </div>
 
                     <div className="bg-white/5 rounded  p-2.5 border border-white/5 backdrop-blur-sm hover:border-emerald-500/20 transition-all">
-                      <p className="text-slate-500 text-[8px] uppercase  mb-1 tracking-widest">Ops</p>
+                      <p className="text-slate-500 text-[8px]   mb-1 ">Ops</p>
                       <div className="flex items-center gap-1.5">
                         <Settings size={12} className="text-slate-400" />
                         <p className="text-white text-sm  ">
@@ -1506,7 +1709,7 @@ export default function BOMForm() {
 
                         <div className="flex col-span-12 items-center gap-2 pt-4">
                           <label className="flex items-center gap-4 cursor-pointer group">
-                            <div className={`w-12 h-7 rounded transition-all duration-500 relative ${formData.is_active ? 'bg-emerald-500 shadow-lg shadow-emerald-100' : 'bg-slate-200'}`}>
+                            <div className={`w-12 h-7 rounded transition-all duration-500 relative ${formData.is_active ? 'bg-emerald-500  shadow-emerald-100' : 'bg-slate-200'}`}>
                               <input
                                 type="checkbox"
                                 checked={formData.is_active}
@@ -1519,7 +1722,7 @@ export default function BOMForm() {
                           </label>
 
                           <label className="flex items-center gap-4 cursor-pointer group">
-                            <div className={`w-12 h-7 rounded transition-all duration-500 relative ${formData.is_default ? 'bg-blue-600 shadow-lg shadow-blue-100' : 'bg-slate-200'}`}>
+                            <div className={`w-12 h-7 rounded transition-all duration-500 relative ${formData.is_default ? 'bg-blue-600  shadow-blue-100' : 'bg-slate-200'}`}>
                               <input
                                 type="checkbox"
                                 checked={formData.is_default}
@@ -1632,7 +1835,7 @@ export default function BOMForm() {
                       </div>
                       <div className="flex flex-wrap items-center col-span-2 gap-6 pt-4">
                           <label className="flex items-center gap-4 cursor-pointer group">
-                            <div className={`w-12 h-7 rounded transition-all duration-500 relative ${formData.with_operations ? 'bg-indigo-600 shadow-lg shadow-indigo-100' : 'bg-slate-200'}`}>
+                            <div className={`w-12 h-7 rounded transition-all duration-500 relative ${formData.with_operations ? 'bg-indigo-600  shadow-indigo-100' : 'bg-slate-200'}`}>
                               <input
                                 type="checkbox"
                                 checked={formData.with_operations}
@@ -1645,7 +1848,7 @@ export default function BOMForm() {
                           </label>
 
                           <label className="flex items-center gap-4 cursor-pointer group">
-                            <div className={`w-12 h-7 rounded transition-all duration-500 relative ${formData.allow_alternative_item ? 'bg-indigo-600 shadow-lg shadow-indigo-100' : 'bg-slate-200'}`}>
+                            <div className={`w-12 h-7 rounded transition-all duration-500 relative ${formData.allow_alternative_item ? 'bg-indigo-600  shadow-indigo-100' : 'bg-slate-200'}`}>
                               <input
                                 type="checkbox"
                                 checked={formData.allow_alternative_item}
@@ -1658,7 +1861,7 @@ export default function BOMForm() {
                           </label>
 
                           <label className="flex items-center gap-4 cursor-pointer group">
-                            <div className={`w-12 h-7 rounded transition-all duration-500 relative ${formData.auto_sub_assembly_rate ? 'bg-indigo-600 shadow-lg shadow-indigo-100' : 'bg-slate-200'}`}>
+                            <div className={`w-12 h-7 rounded transition-all duration-500 relative ${formData.auto_sub_assembly_rate ? 'bg-indigo-600  shadow-indigo-100' : 'bg-slate-200'}`}>
                               <input
                                 type="checkbox"
                                 checked={formData.auto_sub_assembly_rate}
@@ -1776,7 +1979,7 @@ export default function BOMForm() {
                             <button
                               type="button"
                               onClick={addBomLine}
-                              className="w-full flex items-center justify-center gap-1 bg-indigo-600 text-white rounded p-2 text-xs  shadow-md hover:bg-indigo-700 transition-all hover:-translate-y-1 active:scale-95"
+                              className="w-full flex items-center justify-center gap-1 bg-indigo-600 text-white rounded p-2 text-xs   hover:bg-indigo-700 transition-all hover:-translate-y-1 active:scale-95"
                             >
                               <Plus size={14} strokeWidth={3} />
                               Add
@@ -1883,7 +2086,7 @@ export default function BOMForm() {
                               <tr className="bg-indigo-50/30 border-t border-indigo-100/30">
                                 <td colSpan="5" className="p-2 text-right  text-xs    text-indigo-900/50  ">Aggregate Component Value</td>
                                 <td className="p-2 text-right">
-                                  <span className="p-2 bg-indigo-600 text-white rounded    text-xs  shadow-lg shadow-indigo-100">
+                                  <span className="p-2 bg-indigo-600 text-white rounded    text-xs   shadow-indigo-100">
                                     ₹{totalComponentCost.toLocaleString()}
                                   </span>
                                 </td>
@@ -2063,7 +2266,7 @@ export default function BOMForm() {
                               <button
                                 type="button"
                                 onClick={addNewRawMaterial}
-                                className="w-full flex items-center justify-center gap-1 bg-rose-600 text-white rounded p-2 text-xs  shadow-md hover:bg-rose-700 transition-all hover:-translate-y-1 active:scale-95"
+                                className="w-full flex items-center justify-center gap-1 bg-rose-600 text-white rounded p-2 text-xs   hover:bg-rose-700 transition-all hover:-translate-y-1 active:scale-95"
                               >
                                 <Plus size={14} strokeWidth={3} />
                                 Add
@@ -2073,7 +2276,7 @@ export default function BOMForm() {
                         </div>
 
                         {rawMaterials.length > 0 ? (
-                          <div className="space-y-6">
+                          <div className="space-y-2">
                             <div className="flex items-center justify-between px-2">
                               <div className="flex items-center gap-3">
                                 <div className="w-1.5 h-6 bg-amber-500 rounded" />
@@ -2459,7 +2662,7 @@ export default function BOMForm() {
                               <button
                                 type="button"
                                 onClick={addOperation}
-                                className="w-full flex items-center justify-center gap-1 bg-indigo-600 text-white rounded p-2 text-xs shadow-md hover:bg-indigo-700 transition-all hover:-translate-y-1 active:scale-95"
+                                className="w-full flex items-center justify-center gap-1 bg-indigo-600 text-white rounded p-2 text-xs  hover:bg-indigo-700 transition-all hover:-translate-y-1 active:scale-95"
                               >
                                 <Plus size={14} strokeWidth={3} />
                                 Add
@@ -2702,7 +2905,7 @@ export default function BOMForm() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                       <div className="relative group bg-blue-50/40 rounded p-2 border border-blue-100/50 transition-all hover: hover:shadow-blue-100/20">
                         <div className="flex items-center gap-2 relative z-10">
-                          <div className="p-2 bg-white shadow-lg shadow-blue-100/50 text-blue-600 rounded  group-hover:scale-110 transition-transform duration-500">
+                          <div className="p-2 bg-white  shadow-blue-100/50 text-blue-600 rounded  group-hover:scale-110 transition-transform duration-500">
                             <Package size={14} />
                           </div>
                           <div>
@@ -2715,7 +2918,7 @@ export default function BOMForm() {
 
                       <div className="relative group bg-emerald-50/40 rounded p-2 border border-emerald-100/50 transition-all hover: hover:shadow-emerald-100/20">
                         <div className="flex items-center gap-2 relative z-10">
-                          <div className="p-2 bg-white shadow-lg shadow-emerald-100/50 text-emerald-600 rounded  group-hover:scale-110 transition-transform duration-500">
+                          <div className="p-2 bg-white  shadow-emerald-100/50 text-emerald-600 rounded  group-hover:scale-110 transition-transform duration-500">
                             <Users size={14} />
                           </div>
                           <div>
@@ -2728,7 +2931,7 @@ export default function BOMForm() {
 
                       <div className="relative group bg-cyan-50/40 rounded p-2 border border-cyan-100/50 transition-all hover: hover:shadow-cyan-100/20">
                         <div className="flex items-center gap-2 relative z-10">
-                          <div className="p-2 bg-white shadow-lg shadow-cyan-100/50 text-cyan-600 rounded  group-hover:scale-110 transition-transform duration-500">
+                          <div className="p-2 bg-white  shadow-cyan-100/50 text-cyan-600 rounded  group-hover:scale-110 transition-transform duration-500">
                             <TrendingDown size={14} />
                           </div>
                           <div>
@@ -2742,7 +2945,7 @@ export default function BOMForm() {
 
                     {/* Detailed Breakdown Grid */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 px-2">
-                      <div className="space-y-6">
+                      <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <div className="w-1 h-4 bg-blue-500 rounded" />
                           <h5 className="text-xs  text-slate-400 ">Material Resource Breakdown</h5>
@@ -2763,7 +2966,7 @@ export default function BOMForm() {
                         </div>
                       </div>
 
-                      <div className="space-y-6">
+                      <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <div className="w-1 h-4 bg-emerald-500 rounded" />
                           <h5 className="text-xs  text-slate-400 ">Operational Efficiency</h5>
@@ -2844,7 +3047,7 @@ export default function BOMForm() {
                     </div>
                   </div>
                 </Card>
-              </div> {/* END OF space-y-6 */}
+              </div> {/* END OF space-y-2 */}
 
             </div>
             {/* BOM Costing Intelligence - Strategic Summary */}

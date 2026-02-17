@@ -11,16 +11,18 @@ export class SalesInvoiceModel {
     try {
       await this.db.execute(
         `INSERT INTO selling_invoice 
-         (invoice_id, delivery_note_id, invoice_date, amount, due_date, tax_rate, invoice_type, status, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (invoice_id, delivery_note_id, sales_order_id, invoice_date, amount, due_date, tax_rate, invoice_type, notes, status, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           invoice_id,
-          data.delivery_note_id,
+          data.delivery_note_id || null,
+          data.sales_order_id || null,
           data.invoice_date || new Date(),
           data.amount || 0,
           data.due_date || null,
           data.tax_rate || 0,
           data.invoice_type || 'standard',
+          data.notes || null,
           'draft',
           data.created_by || 'System'
         ]
@@ -35,11 +37,12 @@ export class SalesInvoiceModel {
   async getById(invoice_id) {
     try {
       const [invoices] = await this.db.execute(
-        `SELECT si.*, sc.name as customer_name, sc.customer_id, dn.sales_order_id
+        `SELECT si.*, sc.name as customer_name, sc.customer_id, 
+                COALESCE(dn.sales_order_id, si.sales_order_id) as sales_order_id
          FROM selling_invoice si
-         JOIN selling_delivery_note dn ON si.delivery_note_id = dn.delivery_note_id
-         JOIN selling_sales_order so ON dn.sales_order_id = so.sales_order_id
-         JOIN selling_customer sc ON so.customer_id = sc.customer_id
+         LEFT JOIN selling_delivery_note dn ON si.delivery_note_id = dn.delivery_note_id
+         LEFT JOIN selling_sales_order so ON COALESCE(dn.sales_order_id, si.sales_order_id) = so.sales_order_id
+         LEFT JOIN selling_customer sc ON so.customer_id = sc.customer_id
          WHERE si.invoice_id = ?`,
         [invoice_id]
       )
@@ -53,11 +56,12 @@ export class SalesInvoiceModel {
 
   async getAll(filters = {}) {
     try {
-      let query = `SELECT si.*, sc.name as customer_name
+      let query = `SELECT si.*, sc.name as customer_name,
+                          COALESCE(dn.sales_order_id, si.sales_order_id) as sales_order_id
                    FROM selling_invoice si
-                   JOIN selling_delivery_note dn ON si.delivery_note_id = dn.delivery_note_id
-                   JOIN selling_sales_order so ON dn.sales_order_id = so.sales_order_id
-                   JOIN selling_customer sc ON so.customer_id = sc.customer_id
+                   LEFT JOIN selling_delivery_note dn ON si.delivery_note_id = dn.delivery_note_id
+                   LEFT JOIN selling_sales_order so ON COALESCE(dn.sales_order_id, si.sales_order_id) = so.sales_order_id
+                   LEFT JOIN selling_customer sc ON so.customer_id = sc.customer_id
                    WHERE si.deleted_at IS NULL`
       const params = []
 
@@ -203,6 +207,22 @@ export class SalesInvoiceModel {
       throw new Error(`Failed to cancel sales invoice: ${error.message}`)
     } finally {
       connection.release()
+    }
+  }
+
+  async delete(invoice_id) {
+    try {
+      const invoice = await this.getById(invoice_id)
+      if (!invoice) throw new Error('Invoice not found')
+      if (invoice.status !== 'draft') throw new Error('Only draft invoices can be deleted')
+
+      await this.db.execute(
+        `UPDATE selling_invoice SET deleted_at = NOW() WHERE invoice_id = ?`,
+        [invoice_id]
+      )
+      return { success: true }
+    } catch (error) {
+      throw new Error(`Failed to delete sales invoice: ${error.message}`)
     }
   }
 }

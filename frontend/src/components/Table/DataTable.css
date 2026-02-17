@@ -107,7 +107,7 @@
   font-size: 10px;
   font-weight: 700;
   color:  rgb(75 85 99);
-  text-transform: ;
+  text-transform: uppercase;
   letter-spacing: 0.8px;
 }
 
@@ -132,36 +132,39 @@
 }
 
 .table-responsive {
-  
   -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border-color, #e5e7eb);
-  overflow-y: visible;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 70vh; /* Allow internal scrolling if table is long */
+  position: relative;
 }
 
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate; /* Required for consistent sticky header behavior */
+  border-spacing: 0;
   font-size: 14px;
 }
 
 .data-table thead {
-  background: linear-gradient(180deg, var(--bg-tertiary, #f3f4f6) 0%, var(--bg-tertiary, #e5e7eb) 100%);
-  border-bottom: 2px solid var(--border-color, #d1d5db);
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
-th{
-  font-weight: 300 !important;;
-}
+
 .data-table th {
-  padding: 10px;
+  background: linear-gradient(180deg, var(--bg-tertiary, #f3f4f6) 0%, var(--bg-tertiary, #e5e7eb) 100%);
+  padding: 12px 10px;
   text-align: left;
-  font-weight: 300 !important;
+  font-weight: 600 !important; /* Made slightly bolder for readability */
   font-size: 12px;
   color: var(--text-primary, #374151);
-  border: none;
+  border-bottom: 2px solid var(--border-color, #d1d5db);
   user-select: none;
-  letter-spacing: 0.6px;
-  text-transform: ;
+  position: sticky;
+  top: 0;
+  box-shadow: inset 0 -1px 0 var(--border-color, #d1d5db); /* Ensure border stays with sticky header */
 }
 
 .data-table th.sortable {
@@ -179,7 +182,7 @@ th{
   display: flex;
   align-items: center;
   gap: 8px;
-  white-space: nowrap;
+  
   font-size: 10px;
 }
 
@@ -209,7 +212,7 @@ th{
   color: var(--text-primary, #374151);
   vertical-align: middle;
   white-space: nowrap;
-  overflow: hidden;
+
   text-overflow: ellipsis;
   font-size: 12px;
 }
@@ -229,8 +232,52 @@ th{
 
 .data-table .actions-col {
   text-align: center;
-  min-width: 120px;
+  min-width: 160px;
   white-space: normal;
+  overflow: visible !important;
+}
+
+/* Fix for tooltips in actions column being cut off */
+.data-table .actions-col button[title] {
+  position: relative;
+}
+
+.data-table .actions-col button[title]:hover::after {
+  left: auto;
+  right: 0;
+  transform: translateY(0);
+  top: auto;
+  bottom: 125%;
+  animation: slideInDownActions 0.2s ease-out forwards;
+}
+
+.data-table .actions-col button[title]:hover::before {
+  left: auto;
+  right: 10px;
+  transform: translateY(0);
+  top: auto;
+  bottom: 120%;
+  border-bottom-color: transparent;
+  border-top-color: rgba(0, 0, 0, 0.9);
+  animation: slideInDownActions 0.2s ease-out forwards;
+}
+
+@keyframes slideInDownActions {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dark mode adjustment for triangle */
+@media (prefers-color-scheme: dark) {
+  :root.dark .data-table .actions-col button[title]:hover::before {
+    border-top-color: rgba(255, 255, 255, 0.95);
+  }
 }
 
 .table-pagination {
@@ -302,12 +349,14 @@ th{
   }
 
   .data-table thead {
-    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
     border-bottom-color: var(--border-color, #374151);
   }
 
   .data-table th {
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
     color: var(--text-primary, #f3f4f6);
+    border-bottom-color: var(--border-color, #374151);
+    box-shadow: inset 0 -1px 0 var(--border-color, #374151);
   }
 
   .data-table th.sortable:hover {

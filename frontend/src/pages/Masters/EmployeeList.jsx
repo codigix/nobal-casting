@@ -481,7 +481,7 @@ export default function EmployeeList() {
 
 function EmployeeForm({ formData, setFormData, formError }) {
   return (
-    <div className="space-y-6 max-h-96 overflow-y-auto">
+    <div className="space-y-2 max-h-96 overflow-y-auto">
       {formError && (
         <Alert variant="danger">{formError}</Alert>
       )}

@@ -248,9 +248,10 @@ class ProductionController {
   async updateWorkOrder(req, res) {
     try {
       const { wo_id } = req.params
-      const { item_code, bom_no, quantity, priority, notes, sales_order_id, planned_start_date, planned_end_date, actual_start_date, actual_end_date, expected_delivery_date, required_items, operations } = req.body
+      const { status, item_code, bom_no, quantity, priority, notes, sales_order_id, planned_start_date, planned_end_date, actual_start_date, actual_end_date, expected_delivery_date, required_items, operations } = req.body
 
       const success = await this.productionModel.updateWorkOrder(wo_id, {
+        status,
         item_code,
         bom_no,
         quantity: parseFloat(quantity) || 0,

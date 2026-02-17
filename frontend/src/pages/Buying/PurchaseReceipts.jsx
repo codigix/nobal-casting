@@ -41,7 +41,7 @@ const StatCard = ({ label, value, icon: Icon, color, onClick, isActive, descript
           <p className="text-xl  mt-1 text-neutral-900 dark:text-white">{value}</p>
           {description && <p className="text-xs  mt-1 text-neutral-400 dark:text-neutral-500  ">{description}</p>}
         </div>
-        <div className={`p-2 rounded bg-white dark:bg-neutral-900 shadow-sm border border-inherit transition-transform group-hover:rotate-12`}>
+        <div className={`p-2 rounded bg-white dark:bg-neutral-900   border border-inherit transition-transform group-hover:rotate-12`}>
           <Icon size={20} className="text-inherit" />
         </div>
       </div>
@@ -487,7 +487,7 @@ export default function PurchaseReceipts() {
       label: 'Item Details',
       render: (_, row) => (
         <div className="flex flex-col gap-1 py-1">
-          <span className="text-sm  text-indigo-600 dark:text-indigo-400 tracking-tight leading-none">
+          <span className="text-sm  text-indigo-600 dark:text-indigo-400  leading-none">
             {row.item_code}
           </span>
           <span className="text-xs  text-neutral-400 dark:text-neutral-500   truncate max-w-[200px]">
@@ -523,7 +523,7 @@ export default function PurchaseReceipts() {
       label: 'Valuation',
       render: (value) => (
         <div className="flex flex-col text-right">
-          <span className="text-sm  text-neutral-900 dark:text-white tracking-tight">
+          <span className="text-sm  text-neutral-900 dark:text-white ">
             ₹{(parseFloat(value) || 0).toLocaleString('en-IN')}
           </span>
           <span className="text-xs  text-neutral-400 dark:text-neutral-500  ">Per Unit</span>
@@ -537,7 +537,7 @@ export default function PurchaseReceipts() {
         const total = (parseFloat(row.current_qty) || 0) * (parseFloat(row.valuation_rate) || 0)
         return (
           <div className="flex flex-col text-right">
-            <span className="text-sm  text-indigo-600 dark:text-indigo-400 tracking-tight">
+            <span className="text-sm  text-indigo-600 dark:text-indigo-400 ">
               ₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </span>
             <span className="text-xs  text-neutral-400 dark:text-neutral-500  ">Inv. Value</span>
@@ -629,11 +629,11 @@ export default function PurchaseReceipts() {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-2 transition-colors duration-300 font-sans">
-      <div className="max-w-[1600px] mx-auto space-y-6">
+      <div className="max-w-[1600px] mx-auto space-y-2">
         {/* Modern Header Section */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 bg-white dark:bg-neutral-900   dark:border-neutral-800 ">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
+            <div className="w-12 h-12 rounded bg-indigo-600 flex items-center justify-center text-white  shadow-indigo-600/20">
               <Truck size={28} />
             </div>
             <div>
@@ -653,7 +653,7 @@ export default function PurchaseReceipts() {
                 onClick={() => setViewMode('kanban')}
                 className={`flex items-center gap-2 p-2 rounded text-xs   transition-all ${
                   viewMode === 'kanban' 
-                    ? 'bg-white dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400 shadow-md ring-1 ring-black/5' 
+                    ? 'bg-white dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400  ring-1 ring-black/5' 
                     : 'text-neutral-500 dark:text-neutral-400 hover:text-indigo-600'
                 }`}
               >
@@ -664,7 +664,7 @@ export default function PurchaseReceipts() {
                 onClick={() => setViewMode('table')}
                 className={`flex items-center gap-2 p-2 rounded text-xs   transition-all ${
                   viewMode === 'table' 
-                    ? 'bg-white dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400 shadow-md ring-1 ring-black/5' 
+                    ? 'bg-white dark:bg-neutral-700 text-indigo-600 dark:text-indigo-400  ring-1 ring-black/5' 
                     : 'text-neutral-500 dark:text-neutral-400 hover:text-indigo-600'
                 }`}
               >
@@ -677,7 +677,7 @@ export default function PurchaseReceipts() {
             
             <button 
               onClick={fetchGRNRequests}
-              className="p-3 bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded border border-slate-200 dark:border-neutral-700 transition-all hover:shadow-md active:scale-95"
+              className="p-3 bg-white dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded border border-slate-200 dark:border-neutral-700 transition-all hover: active:scale-95"
               title="Refresh Data"
             >
               <RefreshCcw size={18} className={loading ? 'animate-spin' : ''} />
@@ -760,7 +760,7 @@ export default function PurchaseReceipts() {
             onClick={() => setCurrentTab('grn-requests')}
             className={`flex items-center gap-2 p-2 rounded text-xs   transition-all ${
               currentTab === 'grn-requests'
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                ? 'bg-indigo-600 text-white  shadow-indigo-600/30'
                 : 'text-neutral-500 dark:text-neutral-400 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
@@ -774,7 +774,7 @@ export default function PurchaseReceipts() {
             }}
             className={`flex items-center gap-2 p-2 rounded text-xs   transition-all ${
               currentTab === 'available-items'
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                ? 'bg-indigo-600 text-white  shadow-indigo-600/30'
                 : 'text-neutral-500 dark:text-neutral-400 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
@@ -785,21 +785,21 @@ export default function PurchaseReceipts() {
 
         {/* Alerts */}
         {error && (
-          <Alert type="danger" className="rounded-2xl border-2 animate-in fade-in slide-in-from-top-4 duration-300">
+          <Alert type="danger" className="rounded  border-2 animate-in fade-in slide-in-from-top-4 duration-300">
             {error}
           </Alert>
         )}
         {success && (
-          <Alert type="success" className="rounded-2xl border-2 animate-in fade-in slide-in-from-top-4 duration-300">
+          <Alert type="success" className="rounded  border-2 animate-in fade-in slide-in-from-top-4 duration-300">
             {success}
           </Alert>
         )}
 
         {/* Main Content Area */}
         {currentTab === 'grn-requests' && (
-          <div className="space-y-6">
+          <div className="space-y-2">
             {/* Filters Bar */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-neutral-900 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-neutral-900 p-4 rounded  border border-neutral-200 dark:border-neutral-800  ">
               <div className="relative flex-1 group max-w-md">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
                 <input 
@@ -840,7 +840,7 @@ export default function PurchaseReceipts() {
                   </Button>
 
                   {showColumnMenu && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-neutral-800 rounded border border-slate-200 dark:border-neutral-700 shadow-2xl z-50 p-2 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-neutral-800 rounded border border-slate-200 dark:border-neutral-700  z-50 p-2 animate-in fade-in zoom-in-95 duration-200">
                       <div className="flex items-center justify-between mb-3 px-1">
                         <span className="text-xs  text-slate-400  ">Display Columns</span>
                         <button onClick={() => setShowColumnMenu(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button>
@@ -900,7 +900,7 @@ export default function PurchaseReceipts() {
                               <div 
                                 key={grn.grn_no} 
                                 onClick={() => handleViewGRN(grn.grn_no)}
-                                className="bg-white border border-slate-200 rounded-2xl p-5 hover:shadow  hover:border-indigo-200 transition-all cursor-pointer group animate-in fade-in slide-in-from-bottom-2 duration-300 relative overflow-hidden"
+                                className="bg-white border border-slate-200 rounded  p-5 hover:shadow  hover:border-indigo-200 transition-all cursor-pointer group animate-in fade-in slide-in-from-bottom-2 duration-300 relative overflow-hidden"
                               >
                                 <div className={`absolute top-0 left-0 w-1 h-full ${config.badge.split(' ')[0].replace('bg-', 'bg-')}`}></div>
                                 
@@ -957,7 +957,7 @@ export default function PurchaseReceipts() {
                             )
                           })
                         ) : (
-                          <div className="border-2 border-dashed border-slate-200 rounded-2xl py-12 flex flex-col items-center justify-center bg-slate-50/30">
+                          <div className="border-2 border-dashed border-slate-200 rounded  py-12 flex flex-col items-center justify-center bg-slate-50/30">
                             <Package className="text-slate-300 mb-2" size={32} />
                             <p className="text-slate-400 text-xs  ">No Requests</p>
                           </div>
@@ -983,7 +983,7 @@ export default function PurchaseReceipts() {
 
         {/* Available Items Section */}
         {currentTab === 'available-items' && (
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800   overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="p-6 border-b border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl  text-neutral-900 dark:text-white flex items-center gap-3">
@@ -1086,8 +1086,8 @@ export default function PurchaseReceipts() {
         }
       >
         {selectedGRN && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between bg-slate-50 p-4 rounded  border border-slate-100">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded  bg-white   flex items-center justify-center text-indigo-600">
                   <ClipboardList size={20} />
@@ -1104,14 +1104,14 @@ export default function PurchaseReceipts() {
             </div>
 
             <div className="grid grid-cols-2 gap-6">
-              <div className="bg-white p-2 rounded-2xl border border-slate-100  ">
+              <div className="bg-white p-2 rounded  border border-slate-100  ">
                 <p className="text-xs  text-slate-400  leading-none mb-2">PO Reference</p>
                 <p className="text-base  text-slate-900 flex items-center gap-2">
                   <Truck size={16} className="text-indigo-500" />
                   {selectedGRN.po_no}
                 </p>
               </div>
-              <div className="bg-white p-2 rounded-2xl border border-slate-100  ">
+              <div className="bg-white p-2 rounded  border border-slate-100  ">
                 <p className="text-xs  text-slate-400  leading-none mb-2">Supplier</p>
                 <p className="text-base  text-slate-900 flex items-center gap-2">
                   <Building2 size={16} className="text-indigo-500" />
@@ -1121,7 +1121,7 @@ export default function PurchaseReceipts() {
             </div>
 
             {selectedGRN.rejection_reason && (
-              <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 flex gap-3 items-start">
+              <div className="bg-rose-50 border border-rose-100 rounded  p-4 flex gap-3 items-start">
                 <AlertCircle className="text-rose-500 shrink-0" size={20} />
                 <div>
                   <p className="text-xs  text-rose-400  leading-none mb-1">Rejection Reason</p>
@@ -1135,7 +1135,7 @@ export default function PurchaseReceipts() {
                 <Package size={14} className="text-indigo-500" />
                 Received Items
               </h4>
-              <div className="border border-slate-100 rounded-2xl overflow-hidden">
+              <div className="border border-slate-100 rounded  overflow-hidden">
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 text-xs  text-slate-400 ">
                     <tr>
@@ -1171,7 +1171,7 @@ export default function PurchaseReceipts() {
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   placeholder="Provide feedback or reason for rejection..."
-                  className="w-full min-h-[100px] p-4 rounded-2xl bg-slate-50 border-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium text-slate-700 transition-all placeholder:text-slate-300"
+                  className="w-full min-h-[100px] p-4 rounded  bg-slate-50 border-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium text-slate-700 transition-all placeholder:text-slate-300"
                 />
               </div>
             )}
@@ -1229,8 +1229,8 @@ export default function PurchaseReceipts() {
         }
       >
         {selectedGRN && (
-          <div className="space-y-6">
-            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex gap-3 items-start">
+          <div className="space-y-2">
+            <div className="bg-amber-50 border border-amber-100 rounded  p-4 flex gap-3 items-start">
               <AlertCircle className="text-amber-500 shrink-0" size={20} />
               <div className="text-xs  text-amber-700  leading-none mt-1">
                 Quantity Review & Storage Assignment
@@ -1238,14 +1238,14 @@ export default function PurchaseReceipts() {
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+              <h4 className="text-xs  text-slate-900 flex items-center gap-2">
                 <ClipboardCheck size={14} className="text-indigo-500" />
                 Material Receipt & Storage Assignment
               </h4>
-              <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+              <div className="border border-slate-100 rounded  overflow-hidden  ">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-[11px]">
-                    <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
+                    <thead className="bg-slate-50 text-slate-500   tracking-wider border-b border-slate-100">
                       <tr>
                         <th className="p-2  min-w-[180px]">Item Details</th>
                         <th className="px-2 py-3 text-center w-20">Recv.</th>
@@ -1265,10 +1265,10 @@ export default function PurchaseReceipts() {
                         return (
                           <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                             <td className="p-2 ">
-                              <div className="font-bold text-slate-900">{item.item_code}</div>
+                              <div className=" text-slate-900">{item.item_code}</div>
                               <div className="text-[10px] text-slate-400 font-medium truncate max-w-[150px]">{item.item_name}</div>
                             </td>
-                            <td className="px-2 py-3 text-center font-bold text-slate-700 bg-slate-50/30">
+                            <td className="px-2 py-3 text-center  text-slate-700 bg-slate-50/30">
                               {item.received_qty}
                             </td>
                             <td className="px-2 py-3">
@@ -1278,7 +1278,7 @@ export default function PurchaseReceipts() {
                                 max={item.received_qty}
                                 value={approvalItem.accepted_qty || 0}
                                 onChange={(e) => handleApprovalItemChange(item.id, 'accepted_qty', e.target.value)}
-                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-center font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-center  text-indigo-600 focus:ring-2 focus:ring-indigo-500 outline-none"
                               />
                             </td>
                             <td className="px-2 py-3">
@@ -1288,14 +1288,14 @@ export default function PurchaseReceipts() {
                                 max={item.received_qty}
                                 value={approvalItem.rejected_qty || 0}
                                 onChange={(e) => handleApprovalItemChange(item.id, 'rejected_qty', e.target.value)}
-                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-center font-bold text-rose-500 focus:ring-2 focus:ring-rose-500 outline-none"
+                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-center  text-rose-500 focus:ring-2 focus:ring-rose-500 outline-none"
                               />
                             </td>
                             <td className="px-2 py-3">
                               <select
                                 value={approvalItem.qc_status || 'pass'}
                                 onChange={(e) => handleApprovalItemChange(item.id, 'qc_status', e.target.value)}
-                                className={`w-full px-2 py-1.5 border rounded text-[10px] font-bold outline-none cursor-pointer transition-colors ${
+                                className={`w-full px-2 py-1.5 border rounded text-[10px]  outline-none cursor-pointer transition-colors ${
                                   approvalItem.qc_status === 'fail' ? 'bg-rose-50 border-rose-200 text-rose-600' : 
                                   approvalItem.qc_status === 'rework' ? 'bg-amber-50 border-amber-200 text-amber-600' :
                                   'bg-emerald-50 border-emerald-200 text-emerald-600'
@@ -1307,7 +1307,7 @@ export default function PurchaseReceipts() {
                               </select>
                             </td>
                             <td className="px-2 py-3">
-                              <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-100 w-fit text-[10px] font-bold">
+                              <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-100 w-fit text-[10px] ">
                                 <MapPin size={10} />
                                 {item.warehouse_name || 'Main'}
                               </div>
@@ -1336,7 +1336,7 @@ export default function PurchaseReceipts() {
                                 placeholder="0.00"
                                 value={storage.valuation_rate || ''}
                                 onChange={(e) => handleStorageDataChange(item.id, 'valuation_rate', e.target.value)}
-                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-right font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-right  text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"
                               />
                             </td>
                           </tr>

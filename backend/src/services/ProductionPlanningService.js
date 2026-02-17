@@ -492,12 +492,12 @@ export class ProductionPlanningService {
 
       for (const rm of planData.raw_materials) {
         await this.db.execute(
-          'INSERT INTO production_plan_raw_material (plan_id, item_code, item_name, item_group, qty, rate) VALUES (?, ?, ?, ?, ?, ?)',
+          'INSERT INTO production_plan_raw_material (plan_id, item_code, item_name, item_group, plan_to_request_qty, rate) VALUES (?, ?, ?, ?, ?, ?)',
           [planId, rm.item_code, rm.item_name, rm.item_group, rm.total_qty, rm.rate]
         )
       }
 
-      for (const op of [...planData.fg_operations, ...planData.operations]) {
+      for (const op of [...planData.operations, ...planData.fg_operations]) {
         await this.db.execute(
           'INSERT INTO production_plan_operations (plan_id, operation_name, total_time_minutes, total_hours, hourly_rate, total_cost, operation_type, execution_mode, vendor_id, vendor_rate_per_unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [planId, op.operation_name, op.total_time, op.total_hours || (op.total_time / 60), op.hourly_rate, op.total_cost, op.operation_type, op.execution_mode || 'IN_HOUSE', op.vendor_id || null, op.vendor_rate_per_unit || 0]
@@ -542,9 +542,18 @@ export class ProductionPlanningService {
 
       // Use all sub-assemblies directly to ensure each plan row gets its own Work Order
       // This supports detailed tracking for each branch of the manufacturing process
-      const sortedSubAsmList = [...allSubAsms].sort((a, b) => (b.explosion_level || 0) - (a.explosion_level || 0))
+      // Sort DESCENDING (Level 3, 2, 1...) to ensure children (base components) exist BEFORE parents
+      // Using stable sort to keep discovery order (BOM sequence) within the same level
+      const sortedSubAsmList = [...allSubAsms].sort((a, b) => (parseInt(b.explosion_level || 0)) - (parseInt(a.explosion_level || 0)))
 
-      // Generate IDs for SAs first (Lower sequence numbers)
+      // Generate IDs for FGs first (to have references)
+      allFGItems.forEach(item => {
+        const id = `WO-FG-${batchTimestamp}-${++woCounter}`
+        fgCodeToWoIdMap[item.item_code] = id
+        item.generated_wo_id = id
+      })
+
+      // Generate IDs for SAs next
       sortedSubAsmList.forEach(item => {
         const id = `WO-SA-${batchTimestamp}-${++woCounter}`
         if (item.id) {
@@ -553,15 +562,11 @@ export class ProductionPlanningService {
         item.generated_wo_id = id
       })
 
-      // Generate IDs for FGs (Higher sequence numbers)
-      allFGItems.forEach(item => {
-        const id = `WO-FG-${batchTimestamp}-${++woCounter}`
-        fgCodeToWoIdMap[item.item_code] = id
-        item.generated_wo_id = id
-      })
-
+      // 2. CREATE WORK ORDERS
+      // Logic: Create Deepest Sub-assemblies FIRST (High explosion level), then parents, then Finished Goods LAST.
       const createdWorkOrders = []
-
+      const dependenciesToCreate = []
+      
       // Helper to process items
       const processBatch = async (items, isFG = false) => {
         for (const item of items) {
@@ -574,18 +579,28 @@ export class ProductionPlanningService {
 
           if (parentItemCode) {
             // Attempt to link to the correct parent Work Order
-            // First check if parent is another sub-assembly at the next higher level
-            const parentRow = allSubAsms.find(sa => 
-              sa.item_code === parentItemCode && 
-              (parseInt(sa.explosion_level || 0) === parseInt(item.explosion_level || 0) - 1)
-            )
+            // First check if parent is the Finished Good
+            parentWoId = fgCodeToWoIdMap[parentItemCode]
 
-            if (parentRow && rowIdToWoIdMap[parentRow.id]) {
-              parentWoId = rowIdToWoIdMap[parentRow.id]
-            } else {
-              // Otherwise, check if it's the Finished Good
-              parentWoId = fgCodeToWoIdMap[parentItemCode] || null
+            if (!parentWoId) {
+              // Otherwise, check if it's another sub-assembly at the next higher level
+              const parentRow = allSubAsms.find(sa => 
+                sa.item_code === parentItemCode && 
+                (parseInt(sa.explosion_level || 0) === parseInt(item.explosion_level || 0) - 1)
+              )
+              if (parentRow && rowIdToWoIdMap[parentRow.id]) {
+                parentWoId = rowIdToWoIdMap[parentRow.id]
+              }
             }
+          }
+
+          if (parentWoId) {
+            dependenciesToCreate.push({
+              parent: parentWoId,
+              child: wo_id,
+              item: item.item_code,
+              qty: plannedQty
+            })
           }
 
           // Fetch operations for this item (BOM or overridden in plan)
@@ -645,7 +660,8 @@ export class ProductionPlanningService {
 
           console.log(`[ProductionPlanningService] Generating WO: ${wo_id} for ${item.item_code} | Parent: ${parentWoId || 'None'}`)
           
-          const createdIds = await productionModel.createWorkOrderRecursive(woData, userId || 1, false)
+          // Pass skipDependency: true because we will create them manually after all WOs exist
+          const createdIds = await productionModel.createWorkOrderRecursive(woData, userId || 1, false, true)
           createdWorkOrders.push(...createdIds)
           
           // Add a 100ms delay to ensure unique timestamps and sequential creation
@@ -653,10 +669,14 @@ export class ProductionPlanningService {
         }
       }
 
-      // 2. CREATE WORK ORDERS
-      // Logic: Create Sub-assemblies FIRST (deepest level first), then Finished Goods LAST.
       await processBatch(sortedSubAsmList, false)
       await processBatch(allFGItems, true)
+
+      // 2.5 CREATE DEPENDENCIES
+      console.log(`[ProductionPlanningService] Linking ${dependenciesToCreate.length} dependencies...`)
+      for (const dep of dependenciesToCreate) {
+        await productionModel.addWorkOrderDependency(dep.parent, dep.child, dep.item, dep.qty)
+      }
 
       // 3. Update Plan Status
       await productionPlanningModel.updatePlanStatus(planId, 'in_progress')

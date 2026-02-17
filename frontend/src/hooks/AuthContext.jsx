@@ -12,12 +12,14 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       const currentUser = authService.getCurrentUser()
+      console.log('[AuthContext] currentUser on mount:', currentUser)
       if (currentUser) {
         // Verify token is still valid
         const verified = await authService.verifyToken()
         if (verified) {
           setUser(currentUser)
         } else {
+          console.warn('[AuthContext] token verification failed, logging out')
           authService.logout()
         }
       }
@@ -31,9 +33,11 @@ export const AuthProvider = ({ children }) => {
     try {
       setError(null)
       const response = await authService.login(email, password)
+      console.log('[AuthContext] login success, user:', response.user)
       setUser(response.user)
       return response
     } catch (err) {
+      console.error('[AuthContext] login error:', err.message)
       setError(err.message)
       throw err
     }

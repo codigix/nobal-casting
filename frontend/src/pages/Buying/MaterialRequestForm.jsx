@@ -64,12 +64,11 @@ const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = '
       className={`flex items-center gap-2 p-2 rounded transition-all duration-300 group ${isActive
         ? `${activeTheme} border`
         : 'text-slate-500 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-100'
-        }`}
-    >
+        }`}>
       <div className={`p-1.5 rounded transition-all duration-300 ${isActive ? 'bg-white scale-110' : 'bg-slate-50 group-hover:bg-white'}`}>
         <Icon size={14} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
       </div>
-      <span className="text-xs  tracking-tight uppercase">{label.split(' ').slice(1).join(' ')}</span>
+      <span className="text-xs   ">{label.split(' ').slice(1).join(' ')}</span>
       {isActive && <div className="w-1 h-1 rounded bg-current animate-pulse ml-0.5" />}
     </button>
   )
@@ -95,7 +94,7 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
       onClick={onToggle}
     >
       <div className="flex items-center gap-4">
-        <div className={`p-2 rounded shadow-lg transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
+        <div className={`p-2 rounded  transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
           <Icon size={20} strokeWidth={2.5} />
         </div>
         <div>
@@ -106,7 +105,7 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
           {subtitle && <p className="text-xs font-medium text-slate-400">{subtitle}</p>}
         </div>
         {badge && (
-          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-[10px]  rounded-full border ${theme.border} uppercase tracking-widest`}>
+          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-[10px]  rounded-full border ${theme.border}  `}>
             {badge}
           </span>
         )}
@@ -371,17 +370,17 @@ export default function MaterialRequestForm() {
   return (
     <div className="min-h-screen bg-[#f8fafc] pb-20">
       {/* Sticky Header Nav */}
-      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm px-6 py-3">
+      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200   px-6 py-3">
         <div className="flex items-center justify-between max-w-[1600px] mx-auto">
           <div className="flex items-center gap-6">
             <div className="flex flex-col">
-              <h1 className="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+              <h1 className="text-lg font-extrabold text-slate-900  flex items-center gap-3">
                 {isEditMode ? 'EDIT' : 'CREATE'} MATERIAL REQUEST
-                <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px]  rounded border border-indigo-100 uppercase tracking-widest">
+                <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px]  rounded border border-indigo-100  ">
                   {formData.series_no || 'DRAFT'}
                 </span>
               </h1>
-              <div className="flex items-center gap-4 text-[10px]  text-slate-400 uppercase tracking-widest mt-0.5">
+              <div className="flex items-center gap-4 text-[10px]  text-slate-400   mt-0.5">
                 <span className="flex items-center gap-1"><Clock size={10} /> AUTO-SAVING...</span>
                 <span className="w-1 h-1 rounded bg-slate-300" />
                 <span className="flex items-center gap-1 text-indigo-500"><Activity size={10} /> SYSTEM READY</span>
@@ -390,7 +389,7 @@ export default function MaterialRequestForm() {
 
             <nav className="hidden lg:flex items-center bg-slate-50 p-1 rounded  border border-slate-100 ml-4">
               <NavItem
-                label="01 FOUNDATION"
+                label="01 Foundation"
                 icon={Landmark}
                 section="foundation"
                 isActive={activeSection === 'foundation'}
@@ -398,7 +397,7 @@ export default function MaterialRequestForm() {
                 themeColor="indigo"
               />
               <NavItem
-                label="02 LOGISTICS"
+                label="02 Logistics"
                 icon={Database}
                 section="logistics"
                 isActive={activeSection === 'logistics'}
@@ -406,7 +405,7 @@ export default function MaterialRequestForm() {
                 themeColor="emerald"
               />
               <NavItem
-                label="03 ITEMS"
+                label="03 Items"
                 icon={Boxes}
                 section="items"
                 isActive={activeSection === 'items'}
@@ -420,21 +419,21 @@ export default function MaterialRequestForm() {
             <button
               type="button"
               onClick={() => navigate('/buying/material-requests')}
-              className="px-4 py-2 text-[11px]  text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded uppercase tracking-widest transition-all hover:bg-slate-50 shadow-sm"
+              className="px-4 py-2 text-[11px]  text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded   transition-all hover:bg-slate-50  "
             >
               Cancel
             </button>
             <button
               onClick={(e) => handleSubmit(e, 'draft')}
               disabled={loading || isFormDisabled}
-              className="px-4 py-2 text-[11px]  text-indigo-600 bg-indigo-50 border border-indigo-100 rounded uppercase tracking-widest transition-all hover:bg-indigo-100 shadow-sm disabled:opacity-50"
+              className="px-4 py-2 text-[11px]  text-indigo-600 bg-indigo-50 border border-indigo-100 rounded   transition-all hover:bg-indigo-100   disabled:opacity-50"
             >
               {loading ? 'SAVING...' : 'SAVE DRAFT'}
             </button>
             <button
               onClick={(e) => handleSubmit(e, 'pending')}
               disabled={loading || isFormDisabled || formData.items.length === 0}
-              className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded text-[11px]  uppercase tracking-widest transition-all hover:bg-slate-800 shadow-lg shadow-slate-200 active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 p-2  bg-slate-900 text-white rounded text-[11px]    transition-all hover:bg-slate-800  shadow-slate-200 active:scale-95 disabled:opacity-50"
             >
               <Save size={14} />
               {loading ? 'PROCESSING...' : 'SUBMIT REQUEST'}
@@ -472,7 +471,7 @@ export default function MaterialRequestForm() {
           <div id="foundation">
             <Card className="overflow-hidden border-none shadow-xl shadow-slate-200/50">
               <SectionHeader
-                title="01 FOUNDATION"
+                title="01 Foundation"
                 icon={Landmark}
                 subtitle="Core identity and requester details"
                 isExpanded={expandedSections.foundation}
@@ -481,7 +480,7 @@ export default function MaterialRequestForm() {
                 badge="MANDATORY"
               />
               {expandedSections.foundation && (
-                <div className="p-6 space-y-6 animate-in fade-in duration-300">
+                <div className="p-6 space-y-2 animate-in fade-in duration-300">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <FieldWrapper label="Series Number">
                       <input
@@ -501,7 +500,7 @@ export default function MaterialRequestForm() {
                           value={formData.transition_date}
                           onChange={handleChange}
                           disabled={isFormDisabled}
-                          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
+                          className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
                         />
                       </div>
                     </FieldWrapper>
@@ -516,7 +515,7 @@ export default function MaterialRequestForm() {
                           onChange={handleChange}
                           disabled={isFormDisabled}
                           required
-                          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
+                          className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
                         />
                       </div>
                     </FieldWrapper>
@@ -557,7 +556,7 @@ export default function MaterialRequestForm() {
           <div id="logistics">
             <Card className="overflow-hidden border-none shadow-xl shadow-slate-200/50">
               <SectionHeader
-                title="02 LOGISTICS"
+                title="02 Logistics"
                 icon={Database}
                 subtitle="Fulfillment strategy and warehouse routing"
                 isExpanded={expandedSections.logistics}
@@ -566,7 +565,7 @@ export default function MaterialRequestForm() {
                 badge="EXECUTION"
               />
               {expandedSections.logistics && (
-                <div className="p-6 space-y-6 animate-in fade-in duration-300">
+                <div className="p-6 space-y-2 animate-in fade-in duration-300">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <FieldWrapper label="Purpose" required>
                       <SearchableSelect
@@ -627,7 +626,7 @@ export default function MaterialRequestForm() {
           <div id="items">
             <Card className="overflow-hidden border-none shadow-xl shadow-slate-200/50">
               <SectionHeader
-                title="03 ITEMS"
+                title="03 Items"
                 icon={Boxes}
                 subtitle="Material specification and quantification"
                 isExpanded={expandedSections.items}
@@ -638,12 +637,12 @@ export default function MaterialRequestForm() {
               {expandedSections.items && (
                 <div className="p-6 space-y-8 animate-in fade-in duration-300">
                   {/* Add/Edit Item Interface */}
-                  <div className="p-6 bg-slate-50 rounded-xl border border-slate-200 shadow-inner">
+                  <div className="p-6 bg-slate-50 rounded  border border-slate-200 shadow-inner">
                     <div className="flex items-center gap-3 mb-6">
                       <div className="p-1.5 bg-amber-500 text-white rounded">
                         <Plus size={16} strokeWidth={3} />
                       </div>
-                      <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-widest">
+                      <h4 className="text-xs font-extrabold text-slate-900  ">
                         {editingItemIndex !== null ? 'UPDATE MATERIAL ITEM' : 'ADD MATERIAL ITEM'}
                       </h4>
                     </div>
@@ -677,7 +676,7 @@ export default function MaterialRequestForm() {
                               disabled={isFormDisabled}
                               className="w-full p-2.5 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all "
                             />
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300 group-focus-within:text-amber-500 transition-colors uppercase tracking-widest">
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px]  text-slate-300 group-focus-within:text-amber-500 transition-colors  ">
                               {newItem.uom}
                             </div>
                           </div>
@@ -689,7 +688,7 @@ export default function MaterialRequestForm() {
                           type="button"
                           onClick={handleAddItem}
                           disabled={isFormDisabled}
-                          className="flex-1 p-2.5 bg-amber-500 text-white rounded text-[11px]  uppercase tracking-widest hover:bg-amber-600 transition-all shadow-lg shadow-amber-100 active:scale-95 disabled:opacity-50"
+                          className="flex-1 p-2.5 bg-amber-500 text-white rounded text-[11px]    hover:bg-amber-600 transition-all  shadow-amber-100 active:scale-95 disabled:opacity-50"
                         >
                           {editingItemIndex !== null ? 'UPDATE' : 'ADD ITEM'}
                         </button>
@@ -697,7 +696,7 @@ export default function MaterialRequestForm() {
                           <button
                             type="button"
                             onClick={handleCancelEdit}
-                            className="p-2.5 bg-white text-slate-500 border border-slate-200 rounded text-[11px]  uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
+                            className="p-2.5 bg-white text-slate-500 border border-slate-200 rounded text-[11px]    hover:bg-slate-50 transition-all active:scale-95"
                           >
                             <X size={16} />
                           </button>
@@ -708,14 +707,14 @@ export default function MaterialRequestForm() {
 
                   {/* Items List */}
                   {formData.items.length > 0 ? (
-                    <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
+                    <div className="overflow-x-auto rounded  border border-slate-200   bg-white">
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-slate-50/50 border-b border-slate-200">
-                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">No.</th>
-                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Material Specification</th>
-                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Quantity</th>
-                            <th className="p-2  text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Actions</th>
+                            <th className="p-2  text-[10px]  text-slate-400  ">No.</th>
+                            <th className="p-2  text-[10px]  text-slate-400  ">Material Specification</th>
+                            <th className="p-2  text-[10px]  text-slate-400  ">Quantity</th>
+                            <th className="p-2  text-right text-[10px]  text-slate-400  ">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -731,8 +730,8 @@ export default function MaterialRequestForm() {
                                     <Package size={16} />
                                   </div>
                                   <div>
-                                    <p className="text-xs font-black text-slate-900 ">{item.item_code}</p>
-                                    <p className="text-[10px]  text-slate-400 uppercase tracking-tight mt-0.5">
+                                    <p className="text-xs  text-slate-900 ">{item.item_code}</p>
+                                    <p className="text-[10px]  text-slate-400   mt-0.5">
                                       {items.find(i => i.item_code === item.item_code)?.name || 'N/A'}
                                     </p>
                                   </div>
@@ -740,8 +739,8 @@ export default function MaterialRequestForm() {
                               </td>
                               <td className="p-2 ">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-xs font-black text-slate-900">{item.qty}</span>
-                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-1.5 py-0.5 rounded">{item.uom}</span>
+                                  <span className="text-xs  text-slate-900">{item.qty}</span>
+                                  <span className="text-[10px]  text-slate-400   bg-slate-100 px-1.5 py-0.5 rounded">{item.uom}</span>
                                 </div>
                               </td>
                               <td className="p-2 ">
@@ -770,12 +769,12 @@ export default function MaterialRequestForm() {
                       </table>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-20 bg-slate-50/50 rounded-xl border-2 border-dashed border-slate-200">
-                      <div className="p-4 bg-white rounded-2xl shadow-xl shadow-slate-200/50 text-slate-200 mb-6 scale-110">
+                    <div className="flex flex-col items-center justify-center py-20 bg-slate-50/50 rounded  border-2 border-dashed border-slate-200">
+                      <div className="p-4 bg-white rounded  shadow-xl shadow-slate-200/50 text-slate-200 mb-6 scale-110">
                         <Boxes size={48} strokeWidth={1} />
                       </div>
-                      <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">Payload Empty</h3>
-                      <p className="text-[10px]  text-slate-400 uppercase tracking-widest mt-2">Add items above to initialize material request</p>
+                      <h3 className="text-xs  text-slate-900  ">Payload Empty</h3>
+                      <p className="text-[10px]  text-slate-400   mt-2">Add items above to initialize material request</p>
                     </div>
                   )}
                 </div>

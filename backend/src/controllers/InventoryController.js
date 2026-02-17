@@ -252,6 +252,32 @@ class InventoryController {
       })
     }
   }
+
+  async getMaterialConsumptionByOperation(req, res) {
+    try {
+      const { work_order_id } = req.params
+
+      if (!work_order_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'work_order_id is required'
+        })
+      }
+
+      const consumptions = await this.inventoryModel.getMaterialConsumptionByOperation(work_order_id)
+
+      res.status(200).json({
+        success: true,
+        data: consumptions
+      })
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        message: 'Error fetching material consumption by operation',
+        error: error.message
+      })
+    }
+  }
 }
 
 export default InventoryController

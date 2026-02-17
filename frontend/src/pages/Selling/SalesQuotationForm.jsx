@@ -71,7 +71,7 @@ const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = '
       <div className={`p-1.5 rounded transition-all duration-300 ${isActive ? 'bg-white scale-110' : 'bg-slate-50 group-hover:bg-white'}`}>
         <Icon size={14} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
       </div>
-      <span className="text-xs  tracking-tight uppercase">{label.split(' ').slice(1).join(' ')}</span>
+      <span className="text-xs   ">{label.split(' ').slice(1).join(' ')}</span>
       {isActive && <div className="w-1 h-1 rounded bg-current animate-pulse ml-0.5" />}
     </button>
   )
@@ -97,7 +97,7 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
       onClick={onToggle}
     >
       <div className="flex items-center gap-4">
-        <div className={`p-2 rounded shadow-lg transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
+        <div className={`p-2 rounded  transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
           <Icon size={20} strokeWidth={2.5} />
         </div>
         <div>
@@ -108,7 +108,7 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
           {subtitle && <p className="text-xs font-medium text-slate-400">{subtitle}</p>}
         </div>
         {badge && (
-          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-[10px]  rounded-full border ${theme.border} uppercase tracking-widest`}>
+          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-[10px]  rounded-full border ${theme.border}  `}>
             {badge}
           </span>
         )}
@@ -453,17 +453,17 @@ export default function SalesQuotationForm() {
   return (
     <div className="min-h-screen bg-[#f8fafc] pb-20">
       {/* Sticky Header Nav */}
-      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm px-6 py-3">
+      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200   px-6 py-3">
         <div className="flex items-center justify-between max-w-[1600px] mx-auto">
           <div className="flex items-center gap-6">
             <div className="flex flex-col">
-              <h1 className="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+              <h1 className="text-lg font-extrabold text-slate-900  flex items-center gap-3">
                 {isEditMode ? 'EDIT' : 'CREATE'} SALES QUOTATION
-                <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px]  rounded border border-blue-100 uppercase tracking-widest">
+                <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px]  rounded border border-blue-100  ">
                   {isEditMode ? id : 'DRAFT'}
                 </span>
               </h1>
-              <div className="flex items-center gap-4 text-[10px]  text-slate-400 uppercase tracking-widest mt-0.5">
+              <div className="flex items-center gap-4 text-[10px]  text-slate-400   mt-0.5">
                 <span className="flex items-center gap-1"><Clock size={10} /> AUTO-SAVING...</span>
                 <span className="w-1 h-1 rounded bg-slate-300" />
                 <span className="flex items-center gap-1 text-blue-500"><Activity size={10} /> SYSTEM READY</span>
@@ -471,12 +471,12 @@ export default function SalesQuotationForm() {
             </div>
 
             <nav className="hidden lg:flex items-center bg-slate-50 p-1 rounded  border border-slate-100 ml-4 overflow-x-auto max-w-[600px] no-scrollbar">
-              <NavItem label="01 FOUNDATION" icon={Landmark} section="foundation" isActive={activeSection === 'foundation'} onClick={scrollToSection} themeColor="blue" />
-              <NavItem label="02 LOGISTICS" icon={MapPin} section="address" isActive={activeSection === 'address'} onClick={scrollToSection} themeColor="emerald" />
-              <NavItem label="03 ITEMS" icon={Boxes} section="items" isActive={activeSection === 'items'} onClick={scrollToSection} themeColor="amber" />
-              <NavItem label="04 TAXES" icon={Calculator} section="taxes" isActive={activeSection === 'taxes'} onClick={scrollToSection} themeColor="rose" />
-              <NavItem label="05 TOTALS" icon={Tag} section="totals" isActive={activeSection === 'totals'} onClick={scrollToSection} themeColor="cyan" />
-              <NavItem label="06 TERMS" icon={Settings} section="terms" isActive={activeSection === 'terms'} onClick={scrollToSection} themeColor="slate" />
+              <NavItem label="01 Foundation" icon={Landmark} section="foundation" isActive={activeSection === 'foundation'} onClick={scrollToSection} themeColor="blue" />
+              <NavItem label="02 Logistics" icon={MapPin} section="address" isActive={activeSection === 'address'} onClick={scrollToSection} themeColor="emerald" />
+              <NavItem label="03 Items" icon={Boxes} section="items" isActive={activeSection === 'items'} onClick={scrollToSection} themeColor="amber" />
+              <NavItem label="04 Taxes" icon={Calculator} section="taxes" isActive={activeSection === 'taxes'} onClick={scrollToSection} themeColor="rose" />
+              <NavItem label="05 Total" icon={Tag} section="totals" isActive={activeSection === 'totals'} onClick={scrollToSection} themeColor="cyan" />
+              <NavItem label="06 Terms" icon={Settings} section="terms" isActive={activeSection === 'terms'} onClick={scrollToSection} themeColor="slate" />
             </nav>
           </div>
 
@@ -484,14 +484,14 @@ export default function SalesQuotationForm() {
             <button
               type="button"
               onClick={() => navigate('/selling/quotations')}
-              className="px-4 py-2 text-[11px]  text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded uppercase tracking-widest transition-all hover:bg-slate-50 shadow-sm"
+              className="px-4 py-2 text-[11px]  text-slate-500 hover:text-slate-700 bg-white border border-slate-200 rounded   transition-all hover:bg-slate-50  "
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded text-[11px]  uppercase tracking-widest transition-all hover:bg-slate-800 shadow-lg shadow-slate-200 active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 p-2  bg-slate-900 text-white rounded text-[11px]    transition-all hover:bg-slate-800  shadow-slate-200 active:scale-95 disabled:opacity-50"
             >
               <Save size={14} />
               {loading ? 'PROCESSING...' : 'SAVE QUOTATION'}
@@ -523,7 +523,7 @@ export default function SalesQuotationForm() {
           <div id="foundation">
             <Card className="overflow-hidden border-none shadow-xl shadow-slate-200/50">
               <SectionHeader
-                title="01 FOUNDATION"
+                title="01 Foundation"
                 icon={Landmark}
                 subtitle="Core identity and customer parameters"
                 isExpanded={expandedSections.foundation}
@@ -532,7 +532,7 @@ export default function SalesQuotationForm() {
                 badge="MANDATORY"
               />
               {expandedSections.foundation && (
-                <div className="p-6 space-y-6 animate-in fade-in duration-300">
+                <div className="p-6 space-y-2 animate-in fade-in duration-300">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FieldWrapper label="Customer" required>
                       <SearchableSelect
@@ -552,7 +552,7 @@ export default function SalesQuotationForm() {
                           value={formData.valid_till}
                           onChange={handleChange}
                           required
-                          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                          className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                         />
                       </div>
                     </FieldWrapper>
@@ -612,7 +612,7 @@ export default function SalesQuotationForm() {
                 badge="LOGISTICS"
               />
               {expandedSections.address && (
-                <div className="p-6 space-y-6 animate-in fade-in duration-300">
+                <div className="p-6 space-y-2 animate-in fade-in duration-300">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FieldWrapper label="Customer Address">
                       <textarea
@@ -675,7 +675,7 @@ export default function SalesQuotationForm() {
                   <button
                     type="button"
                     onClick={handleAddItem}
-                    className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded text-[10px] font-black uppercase tracking-[0.1em] hover:bg-amber-600 transition-all shadow-lg shadow-amber-100 active:scale-95"
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded text-[10px]   tracking-[0.1em] hover:bg-amber-600 transition-all  shadow-amber-100 active:scale-95"
                   >
                     <Plus size={14} strokeWidth={3} />
                     ADD ITEM
@@ -683,17 +683,17 @@ export default function SalesQuotationForm() {
                 }
               />
               {expandedSections.items && (
-                <div className="p-6 space-y-6 animate-in fade-in duration-300">
+                <div className="p-6 space-y-2 animate-in fade-in duration-300">
                   {formData.items.length > 0 ? (
-                    <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
+                    <div className="overflow-x-auto rounded  border border-slate-200   bg-white">
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-slate-50/50 border-b border-slate-200">
-                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Item </th>
-                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[120px]">Quantity</th>
-                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Rate (₹)</th>
-                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Amount (₹)</th>
-                            <th className="p-2  text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[80px]">Action</th>
+                            <th className="p-2  text-[10px]  text-slate-400  ">Item </th>
+                            <th className="p-2  text-[10px]  text-slate-400   w-[120px]">Quantity</th>
+                            <th className="p-2  text-[10px]  text-slate-400   w-[150px]">Rate (₹)</th>
+                            <th className="p-2  text-[10px]  text-slate-400   w-[150px]">Amount (₹)</th>
+                            <th className="p-2  text-right text-[10px]  text-slate-400   w-[80px]">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -726,7 +726,7 @@ export default function SalesQuotationForm() {
                                   />
                                 </td>
                                 <td className="p-2 ">
-                                  <span className="text-xs font-black text-slate-900">₹{amount.toFixed(2)}</span>
+                                  <span className="text-xs  text-slate-900">₹{amount.toFixed(2)}</span>
                                 </td>
                                 <td className="p-2  text-right">
                                   <button
@@ -742,8 +742,8 @@ export default function SalesQuotationForm() {
                           })}
                         </tbody>
                         <tfoot>
-                          <tr className="bg-slate-50/50 font-black">
-                            <td colSpan="3" className="p-2  text-[10px] text-slate-400 uppercase tracking-widest text-right">Net Total</td>
+                          <tr className="bg-slate-50/50 ">
+                            <td colSpan="3" className="p-2  text-[10px] text-slate-400   text-right">Net Total</td>
                             <td className="p-2  text-xs text-emerald-600">₹{calculateTotal().toFixed(2)}</td>
                             <td></td>
                           </tr>
@@ -751,11 +751,11 @@ export default function SalesQuotationForm() {
                       </table>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-16 bg-slate-50/50 rounded-xl border-2 border-dashed border-slate-200">
-                      <div className="p-4 bg-white rounded-2xl shadow-xl shadow-slate-200/50 text-slate-200 mb-4">
+                    <div className="flex flex-col items-center justify-center py-16 bg-slate-50/50 rounded  border-2 border-dashed border-slate-200">
+                      <div className="p-4 bg-white rounded  shadow-xl shadow-slate-200/50 text-slate-200 mb-4">
                         <Package size={40} />
                       </div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">No Items Added</p>
+                      <p className="text-[10px]  text-slate-400  ">No Items Added</p>
                     </div>
                   )}
                 </div>
@@ -778,7 +778,7 @@ export default function SalesQuotationForm() {
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, taxes_charges: [...formData.taxes_charges, { type: 'Add', account_head: '', rate: 0, amount: 0, id: Date.now() }] })}
-                    className="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded text-[10px] font-black uppercase tracking-[0.1em] hover:bg-rose-600 transition-all shadow-lg shadow-rose-100 active:scale-95"
+                    className="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded text-[10px]   tracking-[0.1em] hover:bg-rose-600 transition-all  shadow-rose-100 active:scale-95"
                   >
                     <Plus size={14} strokeWidth={3} />
                     ADD TAX
@@ -786,7 +786,7 @@ export default function SalesQuotationForm() {
                 }
               />
               {expandedSections.taxes && (
-                <div className="p-6 space-y-6 animate-in fade-in duration-300">
+                <div className="p-6 space-y-2 animate-in fade-in duration-300">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <FieldWrapper label="Tax Category">
                       <SearchableSelect
@@ -808,15 +808,15 @@ export default function SalesQuotationForm() {
                   </div>
 
                   {formData.taxes_charges.length > 0 && (
-                    <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
+                    <div className="overflow-x-auto rounded  border border-slate-200   bg-white">
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-slate-50/50 border-b border-slate-200">
-                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Type</th>
-                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Account Head</th>
-                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[120px]">Rate (%)</th>
-                            <th className="p-2  text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[150px]">Amount (₹)</th>
-                            <th className="p-2  text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-[80px]">Action</th>
+                            <th className="p-2  text-[10px]  text-slate-400   w-[150px]">Type</th>
+                            <th className="p-2  text-[10px]  text-slate-400  ">Account Head</th>
+                            <th className="p-2  text-[10px]  text-slate-400   w-[120px]">Rate (%)</th>
+                            <th className="p-2  text-[10px]  text-slate-400   w-[150px]">Amount (₹)</th>
+                            <th className="p-2  text-right text-[10px]  text-slate-400   w-[80px]">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -859,7 +859,7 @@ export default function SalesQuotationForm() {
                                 />
                               </td>
                               <td className="p-2 ">
-                                <span className="text-xs font-black text-slate-900">₹{(tax.amount || 0).toFixed(2)}</span>
+                                <span className="text-xs  text-slate-900">₹{(tax.amount || 0).toFixed(2)}</span>
                               </td>
                               <td className="p-2  text-right">
                                 <button
@@ -897,7 +897,7 @@ export default function SalesQuotationForm() {
                 badge="VALUATION"
               />
               {expandedSections.totals && (
-                <div className="p-6 space-y-6 animate-in fade-in duration-300">
+                <div className="p-6 space-y-2 animate-in fade-in duration-300">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <FieldWrapper label="Apply Discount On">
                       <select
@@ -940,7 +940,7 @@ export default function SalesQuotationForm() {
                             name="additional_discount_percentage"
                             value={formData.additional_discount_percentage}
                             onChange={handleChange}
-                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all"
+                            className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded text-xs  text-slate-900 focus:ring-4 focus:ring-cyan-500/10 focus:border-cyan-500 outline-none transition-all"
                           />
                         </div>
                       </FieldWrapper>
@@ -956,19 +956,19 @@ export default function SalesQuotationForm() {
                       </FieldWrapper>
                     </div>
 
-                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-2">
+                    <div className="bg-slate-50 p-6 rounded  border border-slate-100 space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Net Value</span>
-                        <span className="text-sm font-black text-slate-900">₹{calculateTotal().toFixed(2)}</span>
+                        <span className="text-[10px]  text-slate-400  ">Total Net Value</span>
+                        <span className="text-sm  text-slate-900">₹{calculateTotal().toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between items-center text-rose-500">
-                        <span className="text-[10px] font-black uppercase tracking-widest">Discount Applied</span>
-                        <span className="text-sm font-black">-₹{(formData.additional_discount_amount || 0).toFixed(2)}</span>
+                        <span className="text-[10px]   ">Discount Applied</span>
+                        <span className="text-sm ">-₹{(formData.additional_discount_amount || 0).toFixed(2)}</span>
                       </div>
                       <div className="h-px bg-slate-200 my-2"></div>
                       <div className="flex justify-between items-center pt-2">
-                        <span className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">Grand Total</span>
-                        <span className="text-xl font-black text-cyan-600">₹{(calculateTotal() - (formData.additional_discount_amount || 0) + formData.taxes_charges.reduce((s, t) => s + (t.amount || 0), 0)).toFixed(2)}</span>
+                        <span className="text-xs  text-slate-900  ">Grand Total</span>
+                        <span className="text-xl  text-cyan-600">₹{(calculateTotal() - (formData.additional_discount_amount || 0) + formData.taxes_charges.reduce((s, t) => s + (t.amount || 0), 0)).toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -990,7 +990,7 @@ export default function SalesQuotationForm() {
                 badge="CONFIG"
               />
               {expandedSections.terms && (
-                <div className="p-6 space-y-6 animate-in fade-in duration-300">
+                <div className="p-6 space-y-2 animate-in fade-in duration-300">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <FieldWrapper label="Payment Template">
                       <SearchableSelect

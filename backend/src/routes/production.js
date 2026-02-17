@@ -453,6 +453,13 @@ router.delete(
     inventoryController.getMaterialDeductionAuditLog.bind(inventoryController)
   )
 
+  // Reports: Material consumption by operation
+  router.get(
+    '/inventory/consumption-by-operation/:work_order_id',
+    authMiddleware,
+    inventoryController.getMaterialConsumptionByOperation.bind(inventoryController)
+  )
+
   return router
 }
 

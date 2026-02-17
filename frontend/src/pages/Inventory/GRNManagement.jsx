@@ -571,17 +571,17 @@ export default function GRNManagement() {
           </div>
           
           <div className="flex items-center gap-2">
-             <div className="flex items-center bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs p-1 shadow-sm">
+             <div className="flex items-center bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs p-1  ">
                 <button
                   onClick={() => setViewMode('table')}
-                  className={`p-1.5 rounded-xs transition-all ${viewMode === 'table' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
+                  className={`p-1.5 rounded-xs transition-all ${viewMode === 'table' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400  ' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
                   title="Table View"
                 >
                   <ListIcon size={16} />
                 </button>
                 <button
                   onClick={() => setViewMode('kanban')}
-                  className={`p-1.5 rounded-xs transition-all ${viewMode === 'kanban' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
+                  className={`p-1.5 rounded-xs transition-all ${viewMode === 'kanban' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400  ' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
                   title="Kanban View"
                 >
                   <Grid3x3 size={16} />
@@ -590,7 +590,7 @@ export default function GRNManagement() {
             
             <button 
               onClick={fetchGRNs}
-              className="flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-4 py-2 rounded-xs text-xs  border border-neutral-200 dark:border-neutral-800 transition-all active:scale-95 shadow-sm"
+              className="flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-4 py-2 rounded-xs text-xs  border border-neutral-200 dark:border-neutral-800 transition-all active:scale-95  "
             >
               <RefreshCcw size={15} className={loading ? 'animate-spin' : ''} />
               Refresh
@@ -610,7 +610,7 @@ export default function GRNManagement() {
             { label: 'Completed', value: stats.approved, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-950/30' },
             { label: 'Rejected', value: stats.rejected, icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50 dark:bg-rose-950/30' }
           ].map((stat, i) => (
-            <div key={i} className="bg-white dark:bg-neutral-900 rounded-xs p-3 border border-neutral-200 dark:border-neutral-800 flex flex-col gap-2 hover:border-indigo-100 dark:hover:border-indigo-900 transition-colors group shadow-sm">
+            <div key={i} className="bg-white dark:bg-neutral-900 rounded-xs p-3 border border-neutral-200 dark:border-neutral-800 flex flex-col gap-2 hover:border-indigo-100 dark:hover:border-indigo-900 transition-colors group  ">
               <div className={`w-8 h-8 rounded-xs ${stat.bg} ${stat.color} flex items-center justify-center transition-transform group-hover:scale-110`}>
                 <stat.icon size={16} />
               </div>
@@ -623,7 +623,7 @@ export default function GRNManagement() {
         </div>
 
         {/* Command Center Toolbar */}
-        <div className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800 shadow-sm mb-4">
+        <div className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800   mb-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between p-2 gap-3">
             <div className="flex flex-1 items-center gap-2">
               <div className="relative flex-1 max-w-md group">
@@ -677,7 +677,7 @@ export default function GRNManagement() {
                 Columns
               </button>
               
-              <button className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs text-[11px] font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-sm">
+              <button className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs text-[11px] font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all  ">
                 <Download size={14} />
                 Export
               </button>
@@ -727,12 +727,12 @@ export default function GRNManagement() {
 
               return (
                 <div key={column.status} className="flex flex-col gap-3 h-full min-h-[500px]">
-                  <div className={`flex items-center justify-between p-2 px-3 rounded-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 border-l-4 ${config.badge.split(' ')[0].replace('bg-', 'border-l-')} shadow-sm`}>
+                  <div className={`flex items-center justify-between p-2 px-3 rounded-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 border-l-4 ${config.badge.split(' ')[0].replace('bg-', 'border-l-')}  `}>
                     <div className="flex items-center gap-2">
-                      <div className={`w-7 h-7 rounded-xs ${config.badge.split(' ')[0]} ${config.badge.split(' ')[1]} flex items-center justify-center shadow-sm`}>
+                      <div className={`w-7 h-7 rounded-xs ${config.badge.split(' ')[0]} ${config.badge.split(' ')[1]} flex items-center justify-center  `}>
                         <Icon size={14} />
                       </div>
-                      <h2 className=" text-neutral-800 dark:text-neutral-200 text-xs tracking-tight ">{column.title}</h2>
+                      <h2 className=" text-neutral-800 dark:text-neutral-200 text-xs  ">{column.title}</h2>
                     </div>
                     <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-1.5 py-0.5 rounded-xs text-[10px] ">
                       {columnGrns.length}
@@ -749,7 +749,7 @@ export default function GRNManagement() {
                           <div 
                             key={grn.grn_no} 
                             onClick={() => handleViewGRN(grn.grn_no)}
-                            className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs p-4 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-800 transition-all cursor-pointer group relative overflow-hidden shadow-sm"
+                            className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs p-4 hover: hover:border-indigo-300 dark:hover:border-indigo-800 transition-all cursor-pointer group relative overflow-hidden  "
                           >
                             <div className="flex justify-between items-start mb-3">
                               <div>
@@ -802,7 +802,7 @@ export default function GRNManagement() {
                     ) : (
                       <div className="flex flex-col items-center justify-center py-10 px-4 bg-neutral-50/50 dark:bg-neutral-900/30 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xs text-neutral-400">
                         <Activity size={24} className="mb-2 opacity-20" />
-                        <p className="text-[10px] font-medium  tracking-widest">Empty</p>
+                        <p className="text-[10px] font-medium  ">Empty</p>
                       </div>
                     )}
                   </div>
@@ -871,36 +871,36 @@ export default function GRNManagement() {
         }
       >
         {selectedGRN && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between bg-neutral-50 dark:bg-neutral-800/50 p-4 rounded-xl border border-neutral-100 dark:border-neutral-800">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between bg-neutral-50 dark:bg-neutral-800/50 p-4 rounded  border border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded bg-white dark:bg-neutral-900 flex items-center justify-center text-indigo-600 border border-neutral-200 dark:border-neutral-700">
                   <ClipboardList size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] text-neutral-400 uppercase tracking-wider leading-none mb-1.5">Status</p>
+                  <p className="text-[10px] text-neutral-400  tracking-wider leading-none mb-1.5">Status</p>
                   {getStatusBadge(selectedGRN.status)}
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-[10px] text-neutral-400 uppercase tracking-wider leading-none mb-1.5">Receipt Date</p>
-                <p className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
+                <p className="text-[10px] text-neutral-400  tracking-wider leading-none mb-1.5">Receipt Date</p>
+                <p className="text-sm  text-neutral-700 dark:text-neutral-300">
                   {new Date(selectedGRN.receipt_date || selectedGRN.created_at).toLocaleDateString()}
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-neutral-900 p-4 rounded-xl border border-neutral-100 dark:border-neutral-800 shadow-sm">
-                <p className="text-[10px] text-neutral-400 uppercase tracking-wider leading-none mb-2">PO Reference</p>
-                <p className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+              <div className="bg-white dark:bg-neutral-900 p-4 rounded  border border-neutral-100 dark:border-neutral-800  ">
+                <p className="text-[10px] text-neutral-400  tracking-wider leading-none mb-2">PO Reference</p>
+                <p className="text-sm  text-neutral-900 dark:text-white flex items-center gap-2">
                   <Truck size={16} className="text-indigo-500" />
                   {selectedGRN.po_no || 'Manual Entry'}
                 </p>
               </div>
-              <div className="bg-white dark:bg-neutral-900 p-4 rounded-xl border border-neutral-100 dark:border-neutral-800 shadow-sm">
-                <p className="text-[10px] text-neutral-400 uppercase tracking-wider leading-none mb-2">Supplier</p>
-                <p className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+              <div className="bg-white dark:bg-neutral-900 p-4 rounded  border border-neutral-100 dark:border-neutral-800  ">
+                <p className="text-[10px] text-neutral-400  tracking-wider leading-none mb-2">Supplier</p>
+                <p className="text-sm  text-neutral-900 dark:text-white flex items-center gap-2">
                   <Building2 size={16} className="text-indigo-500" />
                   {selectedGRN.supplier_name}
                 </p>
@@ -908,23 +908,23 @@ export default function GRNManagement() {
             </div>
 
             {selectedGRN.rejection_reason && (
-              <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/30 rounded-xl p-4 flex gap-3 items-start">
+              <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/30 rounded  p-4 flex gap-3 items-start">
                 <AlertCircle className="text-rose-500 shrink-0" size={20} />
                 <div>
-                  <p className="text-[10px] text-rose-500 uppercase tracking-wider leading-none mb-1">Rejection Reason</p>
+                  <p className="text-[10px] text-rose-500  tracking-wider leading-none mb-1">Rejection Reason</p>
                   <p className="text-sm font-medium text-rose-700 dark:text-rose-400 mt-1">{selectedGRN.rejection_reason}</p>
                 </div>
               </div>
             )}
 
             <div className="space-y-3">
-              <h4 className="text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+              <h4 className="text-xs  text-neutral-900 dark:text-white flex items-center gap-2">
                 <Package size={14} className="text-indigo-500" />
                 Received Items ({selectedGRN.items?.length || 0})
               </h4>
-              <div className="border border-neutral-100 dark:border-neutral-800 rounded-xl overflow-hidden shadow-sm">
+              <div className="border border-neutral-100 dark:border-neutral-800 rounded  overflow-hidden  ">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 dark:text-neutral-400 font-bold uppercase tracking-wider">
+                  <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 dark:text-neutral-400   tracking-wider">
                     <tr>
                       <th className="p-3">Item</th>
                       <th className="p-3 text-right">Received Qty</th>
@@ -936,10 +936,10 @@ export default function GRNManagement() {
                     {(selectedGRN.items || []).map((item, idx) => (
                       <tr key={idx} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">
                         <td className="p-3">
-                          <div className="font-bold text-neutral-900 dark:text-white">{item.item_code}</div>
+                          <div className=" text-neutral-900 dark:text-white">{item.item_code}</div>
                           <div className="text-[10px] text-neutral-400 font-medium">{item.item_name}</div>
                         </td>
-                        <td className="p-3 text-right font-bold text-neutral-700 dark:text-neutral-300">
+                        <td className="p-3 text-right  text-neutral-700 dark:text-neutral-300">
                           {item.received_qty}
                         </td>
                         <td className="p-3 text-neutral-500 dark:text-neutral-400 font-medium">{item.unit}</td>
@@ -961,14 +961,14 @@ export default function GRNManagement() {
 
             {selectedGRN.status === 'inspecting' && (
               <div className="space-y-3 pt-2">
-                <h4 className="text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                <h4 className="text-xs  text-neutral-900 dark:text-white flex items-center gap-2">
                   QC Decision & Feedback
                 </h4>
                 <textarea
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   placeholder="Provide feedback or reason for rejection if necessary..."
-                  className="w-full min-h-[100px] p-4 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-indigo-500 text-sm font-medium text-neutral-700 dark:text-neutral-300 transition-all"
+                  className="w-full min-h-[100px] p-4 rounded  bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 focus:ring-2 focus:ring-indigo-500 text-sm font-medium text-neutral-700 dark:text-neutral-300 transition-all"
                 />
               </div>
             )}
@@ -1001,7 +1001,7 @@ export default function GRNManagement() {
             </Button>
             <Button
               variant="primary"
-              className={`${selectedGRN?.status === 'inspecting' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white border-none px-6 shadow-lg shadow-indigo-500/20`}
+              className={`${selectedGRN?.status === 'inspecting' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white border-none px-6  shadow-indigo-500/20`}
               onClick={() => {
                 if (selectedGRN.status === 'inspecting') {
                   handleApprove(selectedGRN.id)
@@ -1027,23 +1027,23 @@ export default function GRNManagement() {
         }
       >
         {selectedGRN && (
-          <div className="space-y-6">
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 rounded-xl p-4 flex gap-3 items-start">
+          <div className="space-y-2">
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 rounded  p-4 flex gap-3 items-start">
               <AlertCircle className="text-amber-500 shrink-0" size={20} />
               <div className="text-xs font-medium text-amber-700 dark:text-amber-400 leading-relaxed">
-                <span className="font-bold">Important:</span> Review the quantities accepted and rejected. Ensure the valuation rates and storage locations (Warehouse/Bin) are correctly assigned before final approval.
+                <span className="">Important:</span> Review the quantities accepted and rejected. Ensure the valuation rates and storage locations (Warehouse/Bin) are correctly assigned before final approval.
               </div>
             </div>
 
             <div className="space-y-3">
-              <h4 className="text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+              <h4 className="text-xs  text-neutral-900 dark:text-white flex items-center gap-2">
                 <ClipboardCheck size={14} className="text-indigo-500" />
                 Material Receipt & Storage Assignment
               </h4>
-              <div className="border border-neutral-100 dark:border-neutral-800 rounded-xl overflow-hidden shadow-sm">
+              <div className="border border-neutral-100 dark:border-neutral-800 rounded  overflow-hidden  ">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-[11px]">
-                    <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 dark:text-neutral-400 font-bold uppercase tracking-wider border-b border-neutral-100 dark:border-neutral-800">
+                    <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 dark:text-neutral-400   tracking-wider border-b border-neutral-100 dark:border-neutral-800">
                       <tr>
                         <th className="p-3 min-w-[180px]">Item Details</th>
                         <th className="px-2 py-3 text-center w-20">Recv.</th>
@@ -1063,10 +1063,10 @@ export default function GRNManagement() {
                         return (
                           <tr key={idx} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">
                             <td className="p-3">
-                              <div className="font-bold text-neutral-900 dark:text-white">{item.item_code}</div>
+                              <div className=" text-neutral-900 dark:text-white">{item.item_code}</div>
                               <div className="text-[10px] text-neutral-400 font-medium truncate max-w-[150px]">{item.item_name}</div>
                             </td>
-                            <td className="px-2 py-3 text-center font-bold text-neutral-700 dark:text-neutral-300 bg-neutral-50/30 dark:bg-neutral-800/30">
+                            <td className="px-2 py-3 text-center  text-neutral-700 dark:text-neutral-300 bg-neutral-50/30 dark:bg-neutral-800/30">
                               {item.received_qty}
                             </td>
                             <td className="px-2 py-3">
@@ -1076,7 +1076,7 @@ export default function GRNManagement() {
                                 max={item.received_qty}
                                 value={approvalItem.accepted_qty || 0}
                                 onChange={(e) => handleApprovalItemChange(item.id, 'accepted_qty', e.target.value)}
-                                className="w-full px-2 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-center font-bold text-indigo-600 dark:text-indigo-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                className="w-full px-2 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-center  text-indigo-600 dark:text-indigo-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                               />
                             </td>
                             <td className="px-2 py-3">
@@ -1086,14 +1086,14 @@ export default function GRNManagement() {
                                 max={item.received_qty}
                                 value={approvalItem.rejected_qty || 0}
                                 onChange={(e) => handleApprovalItemChange(item.id, 'rejected_qty', e.target.value)}
-                                className="w-full px-2 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-center font-bold text-rose-500 focus:ring-2 focus:ring-rose-500 outline-none transition-all"
+                                className="w-full px-2 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-center  text-rose-500 focus:ring-2 focus:ring-rose-500 outline-none transition-all"
                               />
                             </td>
                             <td className="px-2 py-3">
                               <select
                                 value={approvalItem.qc_status || 'pass'}
                                 onChange={(e) => handleApprovalItemChange(item.id, 'qc_status', e.target.value)}
-                                className={`w-full px-2 py-1.5 border rounded text-[10px] font-bold outline-none cursor-pointer transition-colors ${
+                                className={`w-full px-2 py-1.5 border rounded text-[10px]  outline-none cursor-pointer transition-colors ${
                                   approvalItem.qc_status === 'fail' ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-900/30 text-rose-600' : 
                                   approvalItem.qc_status === 'rework' ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-900/30 text-amber-600' :
                                   'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-900/30 text-emerald-600'
@@ -1105,7 +1105,7 @@ export default function GRNManagement() {
                               </select>
                             </td>
                             <td className="px-2 py-3">
-                              <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 px-2 py-1 rounded border border-blue-100 dark:border-blue-900/30 w-fit text-[10px] font-bold">
+                              <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 px-2 py-1 rounded border border-blue-100 dark:border-blue-900/30 w-fit text-[10px] ">
                                 <MapPin size={10} />
                                 {item.warehouse_name || 'Main'}
                               </div>
@@ -1134,7 +1134,7 @@ export default function GRNManagement() {
                                 placeholder="0.00"
                                 value={storage.valuation_rate || ''}
                                 onChange={(e) => handleStorageDataChange(item.id, 'valuation_rate', e.target.value)}
-                                className="w-full px-2 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-right font-bold text-neutral-700 dark:text-neutral-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                className="w-full px-2 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-right  text-neutral-700 dark:text-neutral-300 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                               />
                             </td>
                           </tr>

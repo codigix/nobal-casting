@@ -51,7 +51,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-neutral-200">
+      <div className="bg-white rounded   max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-neutral-200">
         {/* Modal Header */}
         <div className="p-2 border-b border-neutral-100 flex items-center justify-between bg-white">
           <div className="flex items-center gap-4">
@@ -87,7 +87,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
               { label: 'Quality', value: machine.quality, color: '#10b981', icon: CheckCircle2 },
               { label: 'Overall OEE', value: machine.oee, color: '#6366f1', icon: BarChart3 }
             ].map((kpi) => (
-              <div key={kpi.label} className="bg-white rounded-xl p-2 border border-neutral-200  relative overflow-hidden group">
+              <div key={kpi.label} className="bg-white rounded  p-2 border border-neutral-200  relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: kpi.color }}></div>
                 <div className="flex justify-between items-start mb-2">
                   <div>
@@ -122,7 +122,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
               { label: 'Downtime', value: `${machine.downtime}h`, icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-50' },
               { label: 'Rejection', value: `${machine.rejectionRate}%`, icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50' }
             ].map((stat) => (
-              <div key={stat.label} className="bg-white rounded-xl p-4 border border-neutral-200  flex items-center gap-4 transition-all hover:border-neutral-300">
+              <div key={stat.label} className="bg-white rounded  p-4 border border-neutral-200  flex items-center gap-4 transition-all hover:border-neutral-300">
                 <div className={`w-10 h-10 rounded ${stat.bg} ${stat.color} flex items-center justify-center shrink-0`}>
                   <stat.icon size={20} />
                 </div>
@@ -266,14 +266,14 @@ const LineDetailsModal = ({ isOpen, line, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-neutral-200">
+      <div className="bg-white rounded   max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-neutral-200">
         <div className="p-4 border-b border-neutral-100 flex items-center justify-between bg-white">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded bg-indigo-50 flex items-center justify-center text-indigo-600">
               <Factory size={24} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-neutral-900 m-0">Line Details: {line.id}</h2>
+              <h2 className="text-lg  text-neutral-900 m-0">Line Details: {line.id}</h2>
               <p className="text-xs text-neutral-500 m-0">{line.machines.length} Machines in this Line</p>
             </div>
           </div>
@@ -290,12 +290,12 @@ const LineDetailsModal = ({ isOpen, line, onClose }) => {
               { label: 'Avg Quality', value: line.quality, color: '#10b981', icon: CheckCircle2 },
               { label: 'Overall OEE', value: line.oee, color: '#6366f1', icon: BarChart3 }
             ].map((kpi) => (
-              <div key={kpi.label} className="bg-white rounded-xl p-4 border border-neutral-200 relative overflow-hidden group shadow-sm">
+              <div key={kpi.label} className="bg-white rounded  p-4 border border-neutral-200 relative overflow-hidden group  ">
                 <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: kpi.color }}></div>
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <p className="text-xs font-semibold text-neutral-400 mb-1 m-0">{kpi.label}</p>
-                    <p className="text-xl font-bold text-neutral-900 m-0">{kpi.value}%</p>
+                    <p className="text-xl  text-neutral-900 m-0">{kpi.value}%</p>
                   </div>
                   <div className="p-2 rounded" style={{ backgroundColor: `${kpi.color}10`, color: kpi.color }}>
                     <kpi.icon size={18} />
@@ -308,48 +308,48 @@ const LineDetailsModal = ({ isOpen, line, onClose }) => {
             ))}
           </div>
 
-          <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
+          <div className="bg-white rounded  border border-neutral-200 overflow-hidden  ">
             <div className="p-4 border-b border-neutral-100 bg-neutral-50/50">
-              <h3 className="text-sm font-bold text-neutral-900 m-0">Machines Performance in {line.id}</h3>
+              <h3 className="text-sm  text-neutral-900 m-0">Machines Performance in {line.id}</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-neutral-50/30 border-b border-neutral-200">
-                    <th className="p-4 text-xs  text-neutral-400 uppercase tracking-widest">Machine</th>
-                    <th className="p-4 text-xs  text-neutral-400 uppercase tracking-widest text-center">Availability</th>
-                    <th className="p-4 text-xs  text-neutral-400 uppercase tracking-widest text-center">Performance</th>
-                    <th className="p-4 text-xs  text-neutral-400 uppercase tracking-widest text-center">Quality</th>
-                    <th className="p-4 text-xs  text-neutral-400 uppercase tracking-widest text-center">OEE</th>
-                    <th className="p-4 text-xs  text-neutral-400 uppercase tracking-widest text-center">Status</th>
+                    <th className="p-4 text-xs  text-neutral-400  ">Machine</th>
+                    <th className="p-4 text-xs  text-neutral-400   text-center">Availability</th>
+                    <th className="p-4 text-xs  text-neutral-400   text-center">Performance</th>
+                    <th className="p-4 text-xs  text-neutral-400   text-center">Quality</th>
+                    <th className="p-4 text-xs  text-neutral-400   text-center">OEE</th>
+                    <th className="p-4 text-xs  text-neutral-400   text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
                   {line.machines.map((m) => (
                     <tr key={m.id} className="hover:bg-neutral-50/50 transition-colors group">
                       <td className="p-4">
-                        <p className="text-sm font-bold text-neutral-900 m-0">{m.name}</p>
+                        <p className="text-sm  text-neutral-900 m-0">{m.name}</p>
                         <p className="text-xs text-neutral-400 m-0">{m.id}</p>
                       </td>
                       <td className="p-4 text-center">
-                        <span className={`text-xs font-bold ${m.availability > 80 ? 'text-emerald-600' : 'text-amber-600'}`}>{m.availability}%</span>
+                        <span className={`text-xs  ${m.availability > 80 ? 'text-emerald-600' : 'text-amber-600'}`}>{m.availability}%</span>
                       </td>
                       <td className="p-4 text-center">
-                        <span className={`text-xs font-bold ${m.performance > 80 ? 'text-emerald-600' : 'text-amber-600'}`}>{m.performance}%</span>
+                        <span className={`text-xs  ${m.performance > 80 ? 'text-emerald-600' : 'text-amber-600'}`}>{m.performance}%</span>
                       </td>
                       <td className="p-4 text-center">
-                        <span className={`text-xs font-bold ${m.quality > 95 ? 'text-emerald-600' : 'text-amber-600'}`}>{m.quality}%</span>
+                        <span className={`text-xs  ${m.quality > 95 ? 'text-emerald-600' : 'text-amber-600'}`}>{m.quality}%</span>
                       </td>
                       <td className="p-4 text-center">
                         <div className="flex flex-col items-center gap-1">
-                          <span className="text-xs font-bold text-neutral-900">{m.oee}%</span>
+                          <span className="text-xs  text-neutral-900">{m.oee}%</span>
                           <div className="w-16 h-1 bg-neutral-100 rounded-full overflow-hidden">
                             <div className={`h-full ${m.oee > 85 ? 'bg-emerald-500' : m.oee > 70 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${m.oee}%` }} />
                           </div>
                         </div>
                       </td>
                       <td className="p-4 text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px]  ${
                           m.status === 'Operational' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 
                           m.status === 'Maintenance' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-neutral-50 text-neutral-600 border border-neutral-100'
                         }`}>
@@ -369,7 +369,7 @@ const LineDetailsModal = ({ isOpen, line, onClose }) => {
 }
 
 const StatCard = ({ label, value, icon: Icon, color, accentColor, trend }) => (
-  <div className="bg-white p-2 rounded border border-neutral-200  transition-all duration-300 hover:shadow-md hover:-translate-y-1 relative overflow-hidden group">
+  <div className="bg-white p-2 rounded border border-neutral-200  transition-all duration-300 hover: hover:-translate-y-1 relative overflow-hidden group">
     <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: accentColor }} />
     <div className="flex items-start justify-between mb-2">
       <div className="p-2 rounded" style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
@@ -602,7 +602,7 @@ const MachineAnalysis = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-4">
           <div>
             <h1 className="text-xl  text-neutral-900 flex items-center gap-3 m-0">
-              <div className="w-10 h-10 rounded bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
+              <div className="w-10 h-10 rounded bg-blue-600 flex items-center justify-center text-white  shadow-blue-200">
                 <Monitor size={15} />
               </div>
               Machine Analysis
@@ -613,13 +613,13 @@ const MachineAnalysis = () => {
           </div>
           <div className="flex items-center gap-4">
             <div className="hidden sm:block text-right">
-              <p className="text-xs  text-neutral-400  tracking-widest m-0">Last Synchronized</p>
+              <p className="text-xs  text-neutral-400   m-0">Last Synchronized</p>
               <p className="text-xs  text-neutral-700 m-0">{refreshTime.toLocaleTimeString()}</p>
             </div>
             <button
               onClick={() => fetchData(true)}
               disabled={syncLoading}
-              className={`flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded hover:bg-neutral-800 transition-all shadow-xl shadow-neutral-900/10 text-xs  ${syncLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className={`flex items-center gap-2 px-5 py-2  bg-neutral-900 text-white rounded hover:bg-neutral-800 transition-all shadow-xl shadow-neutral-900/10 text-xs  ${syncLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
               <RefreshCw size={14} className={syncLoading ? 'animate-spin' : ''} /> 
               {syncLoading ? 'Syncing...' : 'Refresh Data'}
@@ -672,7 +672,7 @@ const MachineAnalysis = () => {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-4 text-xs   tracking-widest transition-all relative ${
+              className={`pb-4 text-xs    transition-all relative ${
                 activeTab === tab
                   ? 'text-blue-600'
                   : 'text-neutral-400 hover:text-neutral-600'
@@ -688,11 +688,11 @@ const MachineAnalysis = () => {
 
         {/* Overview Content */}
         {activeTab === 'overview' && (
-          <div className="space-y-6">
+          <div className="space-y-2">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Status Distribution */}
-              <div className="bg-white rounded-xl border border-neutral-200 p-2 ">
-                <h3 className="text-xs  text-neutral-400  tracking-widest mb-6 flex items-center gap-2">
+              <div className="bg-white rounded  border border-neutral-200 p-2 ">
+                <h3 className="text-xs  text-neutral-400   mb-6 flex items-center gap-2">
                   <PieIcon size={16} className="text-neutral-400" /> Status Distribution
                 </h3>
                 <div className="h-[250px]">
@@ -721,8 +721,8 @@ const MachineAnalysis = () => {
               </div>
 
               {/* Work Time vs Downtime */}
-              <div className="lg:col-span-2 bg-white rounded-xl border border-neutral-200 p-2 ">
-                <h3 className="text-xs  text-neutral-400  tracking-widest mb-6 flex items-center gap-2">
+              <div className="lg:col-span-2 bg-white rounded  border border-neutral-200 p-2 ">
+                <h3 className="text-xs  text-neutral-400   mb-6 flex items-center gap-2">
                   <BarChart3 size={16} className="text-neutral-400" /> Work Time vs Downtime (h)
                 </h3>
                 <div className="h-[250px]">
@@ -744,8 +744,8 @@ const MachineAnalysis = () => {
             </div>
 
             {/* Overall Efficiency Area Chart */}
-            <div className="bg-white rounded-xl border border-neutral-200 p-2 ">
-              <h3 className="text-xs  text-neutral-400  tracking-widest mb-6 flex items-center gap-2">
+            <div className="bg-white rounded  border border-neutral-200 p-2 ">
+              <h3 className="text-xs  text-neutral-400   mb-6 flex items-center gap-2">
                 <TrendingUp size={16} className="text-neutral-400" /> Factory Efficiency Trend
               </h3>
               <div className="h-[300px]">
@@ -777,7 +777,7 @@ const MachineAnalysis = () => {
             {lineDetails.map((line) => (
               <div 
                 key={line.id} 
-                className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                className="bg-white rounded  border border-neutral-200 overflow-hidden   hover: transition-all cursor-pointer group"
                 onClick={() => { setSelectedLine(line); setLineModalOpen(true); }}
               >
                 <div className="p-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/30">
@@ -786,13 +786,13 @@ const MachineAnalysis = () => {
                       <Factory size={20} />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-neutral-900 m-0">Line: {line.id}</h3>
+                      <h3 className="text-sm  text-neutral-900 m-0">Line: {line.id}</h3>
                       <p className="text-[10px] text-neutral-500 m-0">{line.machines.length} Machines</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] text-neutral-400 uppercase tracking-widest m-0">Line OEE</p>
-                    <p className={`text-lg font-bold m-0 ${line.oee > 85 ? 'text-emerald-600' : line.oee > 70 ? 'text-amber-600' : 'text-rose-600'}`}>
+                    <p className="text-[10px] text-neutral-400   m-0">Line OEE</p>
+                    <p className={`text-lg  m-0 ${line.oee > 85 ? 'text-emerald-600' : line.oee > 70 ? 'text-amber-600' : 'text-rose-600'}`}>
                       {line.oee}%
                     </p>
                   </div>
@@ -802,15 +802,15 @@ const MachineAnalysis = () => {
                   <div className="grid grid-cols-3 gap-2">
                     <div className="text-center">
                       <p className="text-[10px] text-neutral-400 mb-1">Avail.</p>
-                      <p className="text-xs font-bold text-neutral-700">{line.availability}%</p>
+                      <p className="text-xs  text-neutral-700">{line.availability}%</p>
                     </div>
                     <div className="text-center border-x border-neutral-100">
                       <p className="text-[10px] text-neutral-400 mb-1">Perf.</p>
-                      <p className="text-xs font-bold text-neutral-700">{line.performance}%</p>
+                      <p className="text-xs  text-neutral-700">{line.performance}%</p>
                     </div>
                     <div className="text-center">
                       <p className="text-[10px] text-neutral-400 mb-1">Qual.</p>
-                      <p className="text-xs font-bold text-neutral-700">{line.quality}%</p>
+                      <p className="text-xs  text-neutral-700">{line.quality}%</p>
                     </div>
                   </div>
 
@@ -832,19 +832,19 @@ const MachineAnalysis = () => {
                       {line.machines.slice(0, 4).map((m, i) => (
                         <div 
                           key={i}
-                          className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-neutral-100 flex items-center justify-center text-[10px] font-bold text-neutral-500"
+                          className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-neutral-100 flex items-center justify-center text-[10px]  text-neutral-500"
                           title={m.name}
                         >
                           {m.name.charAt(0)}
                         </div>
                       ))}
                       {line.machines.length > 4 && (
-                        <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-neutral-50 flex items-center justify-center text-[8px] font-bold text-neutral-400">
+                        <div className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-neutral-50 flex items-center justify-center text-[8px]  text-neutral-400">
                           +{line.machines.length - 4}
                         </div>
                       )}
                     </div>
-                    <button className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 uppercase tracking-widest">
+                    <button className="text-[10px]  text-indigo-600 hover:text-indigo-800 flex items-center gap-1  ">
                       View Details <ArrowUpRight size={12} />
                     </button>
                   </div>
@@ -937,7 +937,7 @@ const MachineAnalysis = () => {
 
             {/* Pagination */}
             <div className="p-2 bg-neutral-50/30 border-t border-neutral-200 flex items-center justify-between">
-              <p className="text-xs  text-neutral-400  tracking-widest">
+              <p className="text-xs  text-neutral-400  ">
                 Showing {(currentMachinePage-1)*itemsPerPage + 1} - {Math.min(currentMachinePage*itemsPerPage, filteredMachines.length)} of {filteredMachines.length}
               </p>
               <div className="flex gap-2">
@@ -962,8 +962,8 @@ const MachineAnalysis = () => {
 
         {/* Efficiency Tab Content */}
         {activeTab === 'efficiency' && (
-          <div className="bg-white rounded-xl border border-neutral-200 p-6 ">
-            <h3 className="text-xs  text-neutral-400  tracking-widest mb-6 flex items-center gap-2">
+          <div className="bg-white rounded  border border-neutral-200 p-6 ">
+            <h3 className="text-xs  text-neutral-400   mb-6 flex items-center gap-2">
               <Activity size={16} className="text-neutral-400" /> Multi-Metric Performance Analysis
             </h3>
             <div className="h-[450px]">

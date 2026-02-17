@@ -172,7 +172,7 @@ const KPICard = ({ title, value, icon, color }) => {
   }[color]
 
   return (
-    <div className="bg-whitep-3   rounded-xs shadow-md hover:shadow-lg transition">
+    <div className="bg-whitep-3   rounded-xs  hover: transition">
       <div className={`${colorClass} w-6 h-6  rounded-xs flex items-center justify-center mb-4`}>
         {icon}
       </div>

@@ -63,7 +63,7 @@ export class ProductionPlanningModel {
       const [operations] = await this.db.execute(
         `SELECT * FROM production_plan_operations 
          WHERE plan_id = ? 
-         ORDER BY FIELD(operation_type, 'FG', 'SA', 'IN_HOUSE') ASC, id ASC`,
+         ORDER BY FIELD(operation_type, 'SA', 'IN_HOUSE', 'FG') ASC, CAST(SUBSTRING_INDEX(job_card_id, "-", -1) AS UNSIGNED) ASC`,
         [plan_id]
       ).catch(() => [])
 
@@ -352,6 +352,39 @@ export class ProductionPlanningModel {
     }
   }
 
+  async clearOperationItems(plan_id) {
+    try {
+      await this.db.execute(`DELETE FROM production_plan_operations WHERE plan_id = ?`, [plan_id])
+      return true
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async addOperationItem(plan_id, op) {
+    try {
+      await this.db.execute(
+        'INSERT INTO production_plan_operations (plan_id, operation_name, workstation_type, total_time_minutes, total_hours, hourly_rate, total_cost, operation_type, execution_mode, vendor_id, vendor_rate_per_unit, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          plan_id, 
+          op.operation_name || op.operation || '', 
+          op.workstation_type || op.workstation || '', 
+          op.total_time || op.total_time_minutes || 0, 
+          op.total_hours || 0, 
+          op.hourly_rate || 0, 
+          op.total_cost || 0, 
+          op.operation_type || 'SA', 
+          op.execution_mode || 'IN_HOUSE', 
+          op.vendor_id || null, 
+          op.vendor_rate_per_unit || 0,
+          op.notes || ''
+        ]
+      )
+    } catch (error) {
+      throw error
+    }
+  }
+
   async addFGItem(plan_id, item) {
     try {
       const [plans] = await this.db.execute(
@@ -479,6 +512,7 @@ export class ProductionPlanningModel {
           item_group VARCHAR(100),
           plan_to_request_qty DECIMAL(18,6),
           qty_as_per_bom DECIMAL(18,6),
+          rate DECIMAL(15,2) DEFAULT 0,
           required_by DATE,
           bom_no VARCHAR(100),
           revision VARCHAR(50),
@@ -495,13 +529,14 @@ export class ProductionPlanningModel {
       
       const planToRequestQty = item.plan_to_request_qty || item.qty || 0
       const qtyAsPerBom = item.qty_as_per_bom || item.qty || item.quantity || 0
+      const rate = item.rate || 0
       
       await this.db.execute(
         `INSERT INTO production_plan_raw_material 
-         (plan_id, item_code, item_name, item_type, item_group, plan_to_request_qty, qty_as_per_bom, required_by, bom_no, revision, material_grade, drawing_no, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (plan_id, item_code, item_name, item_type, item_group, plan_to_request_qty, qty_as_per_bom, rate, required_by, bom_no, revision, material_grade, drawing_no, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [plan_id, item.item_code || null, item.item_name || null, item.item_type || null, item.item_group || null, planToRequestQty, 
-         qtyAsPerBom, item.required_by || null, item.bom_no || null, item.revision || null, item.material_grade || null, item.drawing_no || null, item.notes || null]
+         qtyAsPerBom, rate, item.required_by || null, item.bom_no || null, item.revision || null, item.material_grade || null, item.drawing_no || null, item.notes || null]
       )
     } catch (error) {
       throw error
@@ -757,7 +792,7 @@ export class ProductionPlanningModel {
            FROM job_card jc
            LEFT JOIN operation o ON jc.operation = o.name
            WHERE jc.work_order_id IN (${placeholders})
-           ORDER BY jc.work_order_id, jc.operation_sequence`,
+           ORDER BY FIELD(jc.operation_type, "SA", "IN_HOUSE", "FG") ASC, CAST(SUBSTRING_INDEX(jc.job_card_id, "-", -1) AS UNSIGNED) ASC, jc.work_order_id, jc.operation_sequence`,
           woIds
         );
         jobCards = jcRows;

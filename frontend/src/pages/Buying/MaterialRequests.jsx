@@ -171,7 +171,7 @@ export default function MaterialRequests() {
       render: (val, row) => (
         <div className="flex flex-col">
           <span className="font-medium text-neutral-900 dark:text-white">{val}</span>
-          <span className="text-[10px] text-neutral-400  tracking-widest">{row.department}</span>
+          <span className="text-[10px] text-neutral-400  ">{row.department}</span>
         </div>
       )
     },
@@ -279,17 +279,17 @@ export default function MaterialRequests() {
           </div>
           
           <div className="flex items-center gap-2">
-             <div className="flex items-center bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs p-1 shadow-sm">
+             <div className="flex items-center bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs p-1  ">
                 <button
                   onClick={() => setViewMode('table')}
-                  className={`p-1.5 rounded-xs transition-all ${viewMode === 'table' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
+                  className={`p-1.5 rounded-xs transition-all ${viewMode === 'table' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400  ' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
                   title="Table View"
                 >
                   <List size={16} />
                 </button>
                 <button
                   onClick={() => setViewMode('kanban')}
-                  className={`p-1.5 rounded-xs transition-all ${viewMode === 'kanban' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
+                  className={`p-1.5 rounded-xs transition-all ${viewMode === 'kanban' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400  ' : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'}`}
                   title="Kanban View"
                 >
                   <LayoutGrid size={16} />
@@ -298,7 +298,7 @@ export default function MaterialRequests() {
             
             <button 
               onClick={fetchRequests}
-              className="flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-4 py-2 rounded-xs text-xs  border border-neutral-200 dark:border-neutral-800 transition-all active:scale-95 shadow-sm"
+              className="flex items-center gap-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 px-4 py-2 rounded-xs text-xs  border border-neutral-200 dark:border-neutral-800 transition-all active:scale-95  "
             >
               <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
               Refresh
@@ -306,7 +306,7 @@ export default function MaterialRequests() {
 
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xs text-xs  shadow-lg shadow-indigo-200 dark:shadow-none transition-all active:scale-95"
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xs text-xs   shadow-indigo-200 dark:shadow-none transition-all active:scale-95"
             >
               <Plus size={16} />
               New Request
@@ -329,9 +329,9 @@ export default function MaterialRequests() {
             <button
               key={stat.label}
               onClick={() => setActiveFilter(stat.id)}
-              className={`bg-white dark:bg-neutral-900 rounded-xs p-3 border flex flex-col gap-2 transition-all group shadow-sm text-left ${activeFilter === stat.id ? 'border-indigo-500 ring-1 ring-indigo-500/20 shadow-md' : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'}`}
+              className={`bg-white dark:bg-neutral-900 rounded-xs p-3 border flex flex-col gap-2 transition-all group   text-left ${activeFilter === stat.id ? 'border-indigo-500 ring-1 ring-indigo-500/20 ' : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'}`}
             >
-              <div className={`w-8 h-8 rounded-xs ${stat.bg} ${stat.color} flex items-center justify-center transition-transform group-hover:scale-110 shadow-sm`}>
+              <div className={`w-8 h-8 rounded-xs ${stat.bg} ${stat.color} flex items-center justify-center transition-transform group-hover:scale-110  `}>
                 <stat.icon size={16} />
               </div>
               <div>
@@ -343,7 +343,7 @@ export default function MaterialRequests() {
         </div>
 
         {/* Command Center Toolbar */}
-        <div className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800 shadow-sm mb-4">
+        <div className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800   mb-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between p-2 gap-3">
             <div className="flex flex-1 items-center gap-2">
               <div className="relative flex-1 max-w-md group">
@@ -397,7 +397,7 @@ export default function MaterialRequests() {
                 Columns
               </button>
               
-              <button className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs text-[11px] font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all shadow-sm">
+              <button className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs text-[11px] font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all  ">
                 <Download size={14} />
                 Export
               </button>
@@ -446,12 +446,12 @@ export default function MaterialRequests() {
               
               return (
                 <div key={column.status} className="flex-shrink-0 w-[300px] flex flex-col gap-3">
-                  <div className={`flex items-center justify-between p-2 px-3 rounded-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 border-l-4 ${config.badge.split(' ')[0].replace('bg-', 'border-l-')} shadow-sm`}>
+                  <div className={`flex items-center justify-between p-2 px-3 rounded-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 border-l-4 ${config.badge.split(' ')[0].replace('bg-', 'border-l-')}  `}>
                     <div className="flex items-center gap-2">
-                      <div className={`w-7 h-7 rounded-xs ${config.badge.split(' ')[0]} ${config.badge.split(' ')[1]} flex items-center justify-center shadow-sm`}>
+                      <div className={`w-7 h-7 rounded-xs ${config.badge.split(' ')[0]} ${config.badge.split(' ')[1]} flex items-center justify-center  `}>
                         <column.icon size={14} />
                       </div>
-                      <h3 className=" text-neutral-800 dark:text-neutral-200 text-xs tracking-tight ">{column.title}</h3>
+                      <h3 className=" text-neutral-800 dark:text-neutral-200 text-xs  ">{column.title}</h3>
                     </div>
                     <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-1.5 py-0.5 rounded-xs text-[10px] ">
                       {columnRequests.length}
@@ -473,13 +473,13 @@ export default function MaterialRequests() {
                           <div
                             key={req.mr_id}
                             onClick={() => { setSelectedMrId(req.mr_id); setViewModalOpen(true); }}
-                            className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs p-4 hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-800 transition-all cursor-pointer group relative overflow-hidden shadow-sm"
+                            className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xs p-4 hover: hover:border-indigo-300 dark:hover:border-indigo-800 transition-all cursor-pointer group relative overflow-hidden  "
                           >
                             <div className="flex justify-between items-start mb-3">
                               <div>
                                 <span className="text-[10px]  text-indigo-600 dark:text-indigo-400  tracking-wider">MR-{req.mr_id}</span>
                                 <h4 className=" text-neutral-900 dark:text-white leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors text-sm truncate">{req.requested_by_name}</h4>
-                                <p className="text-[10px]  text-neutral-400  tracking-widest mt-0.5">{req.department}</p>
+                                <p className="text-[10px]  text-neutral-400   mt-0.5">{req.department}</p>
                               </div>
                             </div>
 
@@ -511,7 +511,7 @@ export default function MaterialRequests() {
                     ) : (
                       <div className="flex flex-col items-center justify-center py-10 px-4 bg-neutral-50/50 dark:bg-neutral-900/30 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-xs text-neutral-400">
                         <Activity size={24} className="mb-2 opacity-20" />
-                        <p className="text-[10px] font-medium  tracking-widest">Empty</p>
+                        <p className="text-[10px] font-medium  ">Empty</p>
                       </div>
                     )}
                   </div>

@@ -101,7 +101,7 @@ export default function OperationsRedesign() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-6 h-6  rounded bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+              <div className="w-6 h-6  rounded bg-indigo-600 flex items-center justify-center text-white  shadow-indigo-200">
                 <Settings size={24} />
               </div>
               <div>
@@ -128,7 +128,7 @@ export default function OperationsRedesign() {
             </div>
             <button 
               onClick={() => navigate('/manufacturing/operations/new')}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded  text-xs shadow-lg shadow-indigo-200 transition-all hover:-translate-y-0.5"
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2  rounded  text-xs  shadow-indigo-200 transition-all hover:-translate-y-0.5"
             >
               <Plus size={18} />
               New Operation
@@ -361,7 +361,7 @@ export default function OperationsRedesign() {
             <p className="text-slate-500 font-medium text-xs mb-3">Try adjusting your search or create a new operation</p>
             <button 
               onClick={() => navigate('/manufacturing/operations/new')}
-              className="flex items-center gap-2 bg-indigo-600 text-white p-6  py-2 rounded  shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all"
+              className="flex items-center gap-2 bg-indigo-600 text-white p-6  py-2 rounded   shadow-indigo-100 hover:bg-indigo-700 transition-all"
             >
               <Plus size={20} /> Create First Operation
             </button>

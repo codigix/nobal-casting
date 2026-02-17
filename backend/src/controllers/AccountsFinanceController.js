@@ -552,6 +552,23 @@ class AccountsFinanceController {
       })
     }
   }
+
+  async getBalanceSheet(req, res) {
+    try {
+      const statement = await this.accountsFinanceModel.getBalanceSheet()
+
+      res.status(200).json({
+        success: true,
+        data: statement
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching balance sheet',
+        error: error.message
+      })
+    }
+  }
 }
 
 export default AccountsFinanceController

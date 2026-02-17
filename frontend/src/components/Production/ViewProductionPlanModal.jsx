@@ -194,7 +194,7 @@ export default function ViewProductionPlanModal({ isOpen, onClose, planId }) {
                 {/* Finished Goods Section */}
                 {plan?.fg_items?.length > 0 && (
                   <div>
-                    <h4 style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.025em' }}>
+                    <h4 style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b', marginBottom: '10px', textTransform: '', letterSpacing: '0.025em' }}>
                       Finished Goods
                     </h4>
                     <div style={{ background: '#fff', borderRadius: '6px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
@@ -232,7 +232,7 @@ export default function ViewProductionPlanModal({ isOpen, onClose, planId }) {
                 {/* Sub-Assemblies Section */}
                 {plan?.sub_assemblies?.length > 0 && (
                   <div>
-                    <h4 style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.025em' }}>
+                    <h4 style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b', marginBottom: '10px', textTransform: '', letterSpacing: '0.025em' }}>
                       Sub-Assembly Hierarchy
                     </h4>
                     <div style={{ background: '#fff', borderRadius: '6px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>

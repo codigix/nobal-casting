@@ -30,7 +30,11 @@ import {
   Award,
   Zap,
   ArrowRightLeft,
-  Star 
+  Star,
+  CreditCard,
+  Clock,
+  TrendingDown,
+  RefreshCw
 } from 'lucide-react'
 
 /**
@@ -53,7 +57,8 @@ export default function DepartmentLayout({ children }) {
     const deptMenus = {
       'inventory': 'inventory',
       'manufacturing': 'manufacturing',
-      'admin': 'analytics'
+      'admin': 'analytics',
+      'accounts': 'accounts'
     }
     return deptMenus[userDept] || null
   }
@@ -90,7 +95,8 @@ export default function DepartmentLayout({ children }) {
     const dashboardPaths = {
       'inventory': '/inventory/dashboard',
       'manufacturing': '/manufacturing/dashboard',
-      'admin': '/admin/project-analysis'
+      'admin': '/admin/project-analysis',
+      'accounts': '/accounts/dashboard'
     }
     
     const dashboardItem = {
@@ -150,7 +156,28 @@ export default function DepartmentLayout({ children }) {
             { label: 'Operations', path: '/manufacturing/operations', icon: Zap }
           ]
         },
-        
+        {
+          id: 'buying',
+          label: 'Buying',
+          icon: ShoppingCart,
+          section: 'APPS',
+          submenu: [
+            { label: 'Material Requests', path: '/inventory/material-requests', icon: FileText },
+            { label: 'Purchase Orders', path: '/buying/purchase-orders', icon: Package },
+            { label: 'Purchase Receipt', path: '/inventory/purchase-receipts', icon: Receipt },
+            { label: 'Purchase Invoices', path: '/buying/purchase-invoices', icon: Receipt }
+          ]
+        },
+        {
+          id: 'selling',
+          label: 'Selling',
+          icon: Send,
+          section: 'APPS',
+          submenu: [
+            { label: 'Sales Orders', path: '/manufacturing/sales-orders', icon: ShoppingCart },
+            { label: 'Sales Invoices', path: '/selling/sales-invoices', icon: FileText }
+          ]
+        },
         {
           id: 'analytics',
           label: 'Analytics',
@@ -175,11 +202,43 @@ export default function DepartmentLayout({ children }) {
           section: 'APPS',
           submenu: [
             { label: 'Project Analysis', path: '/admin/project-analysis', icon: TrendingUp, state: { filterSegment: 'all' } },
-            { label: 'Premium Projects', path: '/admin/project-analysis', icon: Star, state: { filterSegment: 'Premium' } },
-            { label: 'Machine Analysis', path: '/admin/machine-analysis', icon: TrendingUp },
+                        { label: 'Customer Statistics', path: '/admin/customer-statistics', icon: Award },
+
+            // { label: 'Machine Analysis', path: '/admin/machine-analysis', icon: TrendingUp },
             { label: 'OEE Analysis', path: '/admin/oee', icon: TrendingUp },
-            { label: 'Customer Statistics', path: '/admin/customer-statistics', icon: Award },
             { label: 'Employees & Designations', path: '/admin/employees-designations', icon: Users }
+          ]
+        }
+      ]
+    }
+
+    // ACCOUNTS DEPARTMENT MENU
+    if (userDept === 'accounts') {
+      return [
+        dashboardItem,
+        {
+          id: 'accounts',
+          label: 'Accounts',
+          icon: Building2,
+          section: 'APPS',
+          submenu: [
+            { label: 'Sales Invoices', path: '/selling/sales-invoices', icon: FileText },
+            { label: 'Purchase Invoices', path: '/buying/purchase-invoices', icon: Receipt },
+            { label: 'Payments', path: '/accounts/payments', icon: CreditCard },
+            { label: 'Expenses', path: '/accounts/expenses', icon: TrendingDown },
+            { label: 'Ledger', path: '/accounts/ledger', icon: Clipboard },
+          ]
+        },
+        {
+          id: 'financial_reports',
+          label: 'Reports',
+          icon: BarChart3,
+          section: 'APPS',
+          submenu: [
+            { label: 'Profit & Loss', path: '/accounts/reports/profit-loss', icon: Activity },
+            { label: 'Balance Sheet', path: '/accounts/reports/balance-sheet', icon: FileText },
+            { label: 'Cash Flow', path: '/accounts/reports/cash-flow', icon: RefreshCw },
+            { label: 'Ageing Analysis', path: '/accounts/reports/ageing', icon: Clock }
           ]
         }
       ]
@@ -196,7 +255,8 @@ export default function DepartmentLayout({ children }) {
     const colors = {
       'inventory': '#059669',      // Green
       'manufacturing': '#F59E0B',  // Amber
-      'admin': '#DC2626'           // Red
+      'admin': '#DC2626',           // Red
+      'accounts': '#4F46E5'        // Indigo
     }
     return colors[userDept] || '#4F46E5'
   }
@@ -205,7 +265,8 @@ export default function DepartmentLayout({ children }) {
     const labels = {
       'inventory': 'Inventory',
       'manufacturing': 'Manufacturing',
-      'admin': 'Administration'
+      'admin': 'Administration',
+      'accounts': 'Accounts & Finance'
     }
     return labels[userDept] || 'Unknown'
   }

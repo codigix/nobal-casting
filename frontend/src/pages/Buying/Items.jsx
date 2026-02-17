@@ -107,14 +107,14 @@ export default function Items() {
       label: 'Item Details',
       render: (_, row) => (
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-400 group-hover:border-blue-200 dark:group-hover:border-blue-800 group-hover:text-blue-500 transition-colors shadow-sm">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-400 group-hover:border-blue-200 dark:group-hover:border-blue-800 group-hover:text-blue-500 transition-colors  ">
             <Package size={20} />
           </div>
           <div className="flex flex-col">
             <span className="text-xs  text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate max-w-[200px]">
               {row.name}
             </span>
-            <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400  tracking-tight">
+            <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400  ">
               {row.item_code}
             </span>
           </div>
@@ -140,7 +140,7 @@ export default function Items() {
           <div className="flex items-center gap-2">
             <div className={`h-2 w-2 rounded-full ${(row.quantity || 0) <= 10 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></div>
             <span className="text-xs  text-slate-700 dark:text-slate-300">{row.quantity || 0}</span>
-            <span className="text-[10px]  text-slate-400 dark:text-slate-500  tracking-tighter bg-slate-100 dark:bg-slate-800 px-1 rounded">{row.uom}</span>
+            <span className="text-[10px]  text-slate-400 dark:text-slate-500  er bg-slate-100 dark:bg-slate-800 px-1 rounded">{row.uom}</span>
           </div>
           {(row.quantity || 0) <= 10 && (
             <span className="text-[10px]  text-amber-600 dark:text-amber-400 flex items-center gap-1">
@@ -169,7 +169,7 @@ export default function Items() {
       render: (val) => (
         <div className="flex flex-col">
           <span className="text-xs  text-slate-700 dark:text-slate-300">{val}%</span>
-          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium  tracking-widest">GST Rate</span>
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium  ">GST Rate</span>
         </div>
       )
     }
@@ -192,11 +192,11 @@ export default function Items() {
         <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-current opacity-5 rounded-full group-hover:scale-125 transition-transform" />
         <div className="flex items-start justify-between relative z-10">
           <div>
-            <span className="text-[10px]   tracking-widest text-slate-500 dark:text-slate-400">{label}</span>
-            <p className="text-2xl font-black mt-1 text-slate-900 dark:text-white">{value}</p>
+            <span className="text-[10px]    text-slate-500 dark:text-slate-400">{label}</span>
+            <p className="text-2xl  mt-1 text-slate-900 dark:text-white">{value}</p>
             {description && <p className="text-[10px] mt-1 text-slate-400 dark:text-slate-500">{description}</p>}
           </div>
-          <div className={`p-2 rounded  bg-white dark:bg-slate-900 shadow-sm border border-inherit transition-transform group-hover:rotate-12`}>
+          <div className={`p-2 rounded  bg-white dark:bg-slate-900   border border-inherit transition-transform group-hover:rotate-12`}>
             <Icon size={20} className="text-inherit" />
           </div>
         </div>
@@ -206,16 +206,16 @@ export default function Items() {
 
   return (
     <div className="w-full bg-slate-50 dark:bg-slate-950 min-h-screen p-4 transition-colors duration-300">
-      <div className="mx-auto space-y-6">
+      <div className="mx-auto space-y-2">
         
         {/* Modern Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 dark:bg-slate-900  ">
           <div className="flex items-center gap-4">
-            <div className="bg-blue-600 p-3 rounded  shadow-lg shadow-blue-600/20">
+            <div className="bg-blue-600 p-3 rounded   shadow-blue-600/20">
               <Database className="text-white" size={15} />
             </div>
             <div>
-              <div className="flex items-center gap-2 text-xs  text-blue-600 dark:text-blue-400  tracking-widest">
+              <div className="flex items-center gap-2 text-xs  text-blue-600 dark:text-blue-400  ">
                 <span>Buying</span>
                 <ChevronRight size={12} />
                 <span>Product Management</span>
@@ -229,7 +229,7 @@ export default function Items() {
           
           <div className="flex flex-wrap items-center gap-3">
             <div className="hidden sm:block text-right px-4 border-r border-slate-200 dark:border-slate-800">
-              <p className="text-xs text-slate-400 dark:text-slate-500   tracking-tighter">System Health</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500   er">System Health</p>
               <p className="text-xs  text-emerald-500 flex items-center justify-end gap-1">
                 <Activity size={12} /> Sync Active
               </p>
@@ -251,7 +251,7 @@ export default function Items() {
             <Button 
               onClick={() => navigate('/manufacturing/items/new')}
               variant="primary"
-              className="flex items-center gap-2 p-2 rounded  text-xs font-black shadow  shadow-blue-600/20 active:scale-95 transition-all"
+              className="flex items-center gap-2 p-2 rounded  text-xs  shadow  shadow-blue-600/20 active:scale-95 transition-all"
             >
               <Plus size={18} strokeWidth={3} /> New Item
             </Button>
@@ -300,18 +300,18 @@ export default function Items() {
         <div className=" dark:bg-slate-900  dark:border-slate-800  ">
           <div className="mb-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide no-scrollbar">
-              <div className="flex items-center gap-2 p-1 bg-white dark:bg-slate-800 rounded  border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div className="flex items-center gap-2 p-1 bg-white dark:bg-slate-800 rounded  border border-slate-200 dark:border-slate-700  ">
                 {groups.map(group => (
                   <button
                     key={group}
                     onClick={() => setActiveGroup(group)}
                     className={`p-2 rounded text-[10px] transition-all whitespace-nowrap ${
                       activeGroup === group
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                        ? 'bg-blue-600 text-white  shadow-blue-600/30'
                         : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
                     }`}
                   >
-                    {group.toUpperCase()}
+                    {group}
                   </button>
                 ))}
               </div>
@@ -339,9 +339,9 @@ export default function Items() {
                 </Button>
                 
                 {showColumnMenu && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded  border border-slate-200 dark:border-slate-700 shadow-2xl z-50 p-3 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded  border border-slate-200 dark:border-slate-700  z-50 p-3 animate-in fade-in zoom-in-95 duration-200">
                     <div className="flex items-center justify-between mb-3 px-1">
-                      <span className="text-[10px] font-black text-slate-400  tracking-widest">Display Columns</span>
+                      <span className="text-[10px]  text-slate-400  ">Display Columns</span>
                       <button onClick={() => setShowColumnMenu(false)} className="text-slate-400 hover:text-slate-600"><X size={14}/></button>
                     </div>
                     <div className="space-y-1">
@@ -382,7 +382,7 @@ export default function Items() {
                     size="sm" 
                     variant="secondary" 
                     onClick={() => navigate(`/manufacturing/items/${row.item_code}`)}
-                    className="p-2 rounded  border shadow-sm bg-white dark:bg-slate-800"
+                    className="p-2 rounded  border   bg-white dark:bg-slate-800"
                   >
                     <Edit2 size={14} className="text-slate-600 dark:text-slate-400" />
                   </Button>
@@ -390,7 +390,7 @@ export default function Items() {
                     size="sm" 
                     variant="secondary" 
                     onClick={() => navigate(`/manufacturing/items/${row.item_code}`)}
-                    className="p-2 rounded  border shadow-sm bg-white dark:bg-slate-800"
+                    className="p-2 rounded  border   bg-white dark:bg-slate-800"
                   >
                     <ArrowUpRight size={14} className="text-blue-600" />
                   </Button>
@@ -401,7 +401,7 @@ export default function Items() {
                       e.stopPropagation()
                       handleDelete(row.item_code)
                     }}
-                    className="p-2 rounded  border-2 shadow-sm"
+                    className="p-2 rounded  border-2  "
                   >
                     <Trash2 size={14} />
                   </Button>

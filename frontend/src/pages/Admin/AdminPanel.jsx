@@ -220,7 +220,7 @@ export default function AdminPanel() {
   )
 
   const DepartmentCard = ({ dept }) => (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className="hover: transition-shadow">
       <div className="flex items-start justify-between mb-2">
         <div>
           <h3 className="text-lg  text-gray-800 capitalize">{dept}</h3>
@@ -283,7 +283,7 @@ export default function AdminPanel() {
               onClick={() => setActiveTab(tab)}
               className={`p-2  capitalize transition-all whitespace-nowrap rounded-t-lg text-xs ${
                 activeTab === tab
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30'
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white  shadow-blue-500/30'
                   : 'text-slate-400 hover:text-slate-300 hover:bg-slate-800/50'
               }`}
             >
@@ -379,7 +379,7 @@ export default function AdminPanel() {
             </div>
 
             {/* System Performance Metrics - Modern Gradient Cards */}
-            <div className="space-y-6">
+            <div className="space-y-2">
               <h2 className="text-xl   text-white flex items-center gap-3">
                 <Gauge size={28} className="text-blue-400" />
                 System Performance
@@ -442,7 +442,7 @@ export default function AdminPanel() {
             </div>
 
             {/* Database & Cache Performance */}
-            <div className="space-y-6">
+            <div className="space-y-2">
               <h2 className="text-xl   text-white flex items-center gap-3">
                 <Database size={28} className="text-purple-400" />
                 Database & Infrastructure
@@ -489,7 +489,7 @@ export default function AdminPanel() {
             </div>
 
             {/* Recent Activity - Timeline Style */}
-            <div className="space-y-6">
+            <div className="space-y-2">
               <h2 className="text-xl   text-white flex items-center gap-3">
                 <Activity size={28} className="text-cyan-400" />
                 Recent Activity Log
@@ -543,7 +543,7 @@ export default function AdminPanel() {
             </div>
 
             {/* Quick Actions - Modern Button Grid */}
-            <div className="space-y-6">
+            <div className="space-y-2">
               <h2 className="text-xl   text-white flex items-center gap-3">
                 <Zap size={28} className="text-amber-400" />
                 Quick Actions
@@ -552,7 +552,7 @@ export default function AdminPanel() {
                 {/* Add User Button */}
                 <button
                   onClick={() => navigate('/admin/employees-designations?action=add')}
-                  className="group relative overflow-hidden rounded  bg-gradient-to-br from-blue-600 to-blue-700 p-4 transition-all hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5"
+                  className="group relative overflow-hidden rounded  bg-gradient-to-br from-blue-600 to-blue-700 p-4 transition-all hover: hover:shadow-blue-500/30 hover:-translate-y-0.5"
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
                   <div className="relative z-10 flex items-center gap-3 justify-center">
@@ -564,7 +564,7 @@ export default function AdminPanel() {
                 {/* New Warehouse Button */}
                 <button
                   onClick={() => navigate('/inventory/warehouses')}
-                  className="group relative overflow-hidden rounded  bg-gradient-to-br from-green-600 to-green-700 p-4 transition-all hover:shadow-lg hover:shadow-green-500/30 hover:-translate-y-0.5"
+                  className="group relative overflow-hidden rounded  bg-gradient-to-br from-green-600 to-green-700 p-4 transition-all hover: hover:shadow-green-500/30 hover:-translate-y-0.5"
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
                   <div className="relative z-10 flex items-center gap-3 justify-center">
@@ -576,7 +576,7 @@ export default function AdminPanel() {
                 {/* Master Data Button */}
                 <button
                   onClick={() => setActiveTab('masters')}
-                  className="group relative overflow-hidden rounded  bg-gradient-to-br from-purple-600 to-purple-700 p-4 transition-all hover:shadow-lg hover:shadow-purple-500/30 hover:-translate-y-0.5"
+                  className="group relative overflow-hidden rounded  bg-gradient-to-br from-purple-600 to-purple-700 p-4 transition-all hover: hover:shadow-purple-500/30 hover:-translate-y-0.5"
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
                   <div className="relative z-10 flex items-center gap-3 justify-center">
@@ -588,7 +588,7 @@ export default function AdminPanel() {
                 {/* Audit Logs Button */}
                 <button
                   onClick={() => navigate('/admin/audit-logs')}
-                  className="group relative overflow-hidden rounded  bg-gradient-to-br from-cyan-600 to-cyan-700 p-4 transition-all hover:shadow-lg hover:shadow-cyan-500/30 hover:-translate-y-0.5"
+                  className="group relative overflow-hidden rounded  bg-gradient-to-br from-cyan-600 to-cyan-700 p-4 transition-all hover: hover:shadow-cyan-500/30 hover:-translate-y-0.5"
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
                   <div className="relative z-10 flex items-center gap-3 justify-center">
@@ -935,7 +935,7 @@ export default function AdminPanel() {
 
             {/* Report Metrics */}
             {reportPeriod === 'daily' && (
-              <div className="space-y-6">
+              <div className="space-y-2">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <Card>
                     <div className="flex items-start justify-between">
@@ -1001,7 +1001,7 @@ export default function AdminPanel() {
             )}
 
             {reportPeriod === 'weekly' && (
-              <div className="space-y-6">
+              <div className="space-y-2">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <Card>
                     <div className="flex items-start justify-between">
@@ -1067,7 +1067,7 @@ export default function AdminPanel() {
             )}
 
             {reportPeriod === 'monthly' && (
-              <div className="space-y-6">
+              <div className="space-y-2">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <Card>
                     <div className="flex items-start justify-between">
@@ -1133,7 +1133,7 @@ export default function AdminPanel() {
             )}
 
             {reportPeriod === 'yearly' && (
-              <div className="space-y-6">
+              <div className="space-y-2">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <Card>
                     <div className="flex items-start justify-between">
@@ -1202,7 +1202,7 @@ export default function AdminPanel() {
 
         {/* Departments Tab */}
         {activeTab === 'departments' && (
-          <div className="space-y-6">
+          <div className="space-y-2">
             <h2 className="text-xl  text-gray-800 flex items-center gap-2">
               <Users size={28} className="text-blue-600" />
               Departments
@@ -1226,7 +1226,7 @@ export default function AdminPanel() {
 
         {/* Masters Tab */}
         {activeTab === 'masters' && (
-          <div className="space-y-6">
+          <div className="space-y-2">
             <h2 className="text-xl  text-gray-800 flex items-center gap-2">
               <Wrench size={28} className="text-blue-600" />
               Master Data Management
@@ -1358,7 +1358,7 @@ export default function AdminPanel() {
 
         {/* Security Tab */}
         {activeTab === 'security' && (
-          <div className="space-y-6">
+          <div className="space-y-2">
             <h2 className="text-xl  text-gray-800 flex items-center gap-2">
               <Shield size={28} className="text-red-600" />
               Security & Audit

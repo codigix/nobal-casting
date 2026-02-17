@@ -37,7 +37,7 @@ const SectionLabel = ({ icon: Icon, label, color = 'blue' }) => {
 const FormField = ({ label, children, required, error, hint }) => (
   <div className=".5">
     <div className="flex items-center justify-between">
-      <label className="text-xs text-slate-700 text-xstracking-tight">
+      <label className="text-xs text-slate-700 text-xs">
         {label} {required && <span className="text-rose-500">*</span>}
       </label>
       {hint && <span className="text-[9px] font-medium text-slate-400 italic">{hint}</span>}
@@ -187,7 +187,7 @@ export default function CreateCustomersModal({ isOpen, onClose, onSuccess, editi
       title={editingId ? 'Modify Customer Profile' : 'Register New Customer'} 
       size="lg"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-2">
         {error && (
           <div className="p-3 bg-rose-50 border border-rose-100 rounded flex items-start gap-3 animate-shake">
             <AlertCircle className="w-4 h-4 text-rose-500 mt-0.5" />
@@ -195,7 +195,7 @@ export default function CreateCustomersModal({ isOpen, onClose, onSuccess, editi
           </div>
         )}
 
-        <div className="space-y-6">
+        <div className="space-y-2">
           {/* General Information */}
           <section>
             <SectionLabel icon={Info} label="Core Identity" color="blue" />
@@ -372,7 +372,7 @@ export default function CreateCustomersModal({ isOpen, onClose, onSuccess, editi
           <button 
             type="button" 
             onClick={onClose} 
-            className="p-6  py-2.5 text-xs  text-slate-600 hover:bg-slate-50 rounded transition-all"
+            className="p-6  py-2  text-xs  text-slate-600 hover:bg-slate-50 rounded transition-all"
           >
             Discard Changes
           </button>

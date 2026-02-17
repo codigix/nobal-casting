@@ -59,7 +59,16 @@ import {
 } from './pages/Selling'
 
 import './App.css'
-import { ProjectAnalysis, MachineAnalysis, CustomerStatistics, OEE, OEERedesign, EmployeesDesignations, AdminPanel } from './pages/Admin'
+import { ProjectAnalysis, ProjectDetails, MachineAnalysis, CustomerStatistics, OEE, OEERedesign, EmployeesDesignations, AdminPanel } from './pages/Admin'
+import AccountDashboard from './pages/Accounts/AccountDashboard'
+import Payments from './pages/Accounts/Payments'
+import Expenses from './pages/Accounts/Expenses'
+import Ledger from './pages/Accounts/Ledger'
+import ProfitLoss from './pages/Accounts/ProfitLoss'
+import BalanceSheet from './pages/Accounts/BalanceSheet'
+import CashFlow from './pages/Accounts/CashFlow'
+import AgeingAnalysis from './pages/Accounts/AgeingAnalysis'
+import { SalesInvoice } from './pages/Selling'
 
 function App() {
   return (
@@ -81,17 +90,6 @@ function App() {
               }
             />
             
-            <Route
-              path="/manufacturing/dashboard"
-              element={
-                <ProtectedRoute>
-                  <DepartmentLayout>
-                    <DepartmentDashboard />
-                  </DepartmentLayout>
-                </ProtectedRoute>
-              }
-            />
-
             {/* ===================== */}
             {/* INVENTORY DEPARTMENT */}
             {/* ===================== */}
@@ -295,7 +293,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <DepartmentLayout>
-                    <DepartmentProtectedRoute departments={['inventory', 'admin']}>
+                    <DepartmentProtectedRoute departments={['inventory', 'admin', 'accounts']}>
                       <PurchaseInvoices />
                     </DepartmentProtectedRoute>
                   </DepartmentLayout>
@@ -718,6 +716,19 @@ function App() {
               }
             />
 
+            <Route
+              path="/admin/project-analysis/:id"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['admin']}>
+                      <ProjectDetails />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
             {/* Machine Analysis */}
             <Route
               path="/admin/machine-analysis"
@@ -796,6 +807,136 @@ function App() {
                   <DepartmentLayout>
                     <DepartmentProtectedRoute departments={['admin']}>
                       <AdminPanel />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ==================== */}
+            {/* ACCOUNTS DEPARTMENT */}
+            {/* ==================== */}
+
+            {/* Accounts Dashboard */}
+            <Route
+              path="/accounts/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['accounts', 'admin']}>
+                      <AccountDashboard />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Sales Invoices (Accounts View) */}
+            <Route
+              path="/selling/sales-invoices"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['accounts', 'admin', 'manufacturing']}>
+                      <SalesInvoice />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Payments */}
+            <Route
+              path="/accounts/payments"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['accounts', 'admin']}>
+                      <Payments />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Expenses */}
+            <Route
+              path="/accounts/expenses"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['accounts', 'admin']}>
+                      <Expenses />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Ledger */}
+            <Route
+              path="/accounts/ledger"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['accounts', 'admin']}>
+                      <Ledger />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Profit & Loss */}
+            <Route
+              path="/accounts/reports/profit-loss"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['accounts', 'admin']}>
+                      <ProfitLoss />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Balance Sheet */}
+            <Route
+              path="/accounts/reports/balance-sheet"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['accounts', 'admin']}>
+                      <BalanceSheet />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Cash Flow */}
+            <Route
+              path="/accounts/reports/cash-flow"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['accounts', 'admin']}>
+                      <CashFlow />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Ageing Analysis */}
+            <Route
+              path="/accounts/reports/ageing"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['accounts', 'admin']}>
+                      <AgeingAnalysis />
                     </DepartmentProtectedRoute>
                   </DepartmentLayout>
                 </ProtectedRoute>

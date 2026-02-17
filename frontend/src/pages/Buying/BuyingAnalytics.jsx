@@ -112,7 +112,7 @@ export default function BuyingAnalytics() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-        <div className="bg-white dark:bg-neutral-800 rounded-xsp-3   border-l-4 border-blue-500  hover:shadow-md transition-shadow">
+        <div className="bg-white dark:bg-neutral-800 rounded-xsp-3   border-l-4 border-blue-500  hover: transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs  text-neutral-600 dark:text-neutral-400">Total POs</p>
@@ -123,7 +123,7 @@ export default function BuyingAnalytics() {
           <p className="text-green-600 dark:text-green-400 text-xs mt-4 font-medium">✓ {summary?.purchase_orders?.completed_count || 0} Completed</p>
         </div>
 
-        <div className="bg-white dark:bg-neutral-800 rounded-xsp-3   border-l-4 border-green-500  hover:shadow-md transition-shadow">
+        <div className="bg-white dark:bg-neutral-800 rounded-xsp-3   border-l-4 border-green-500  hover: transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs  text-neutral-600 dark:text-neutral-400">Total PO Value</p>
@@ -134,7 +134,7 @@ export default function BuyingAnalytics() {
           <p className="text-blue-600 dark:text-blue-400 text-xs mt-4 font-medium">Avg: ₹{summary?.purchase_orders?.avg_value?.toLocaleString()}</p>
         </div>
 
-        <div className="bg-white dark:bg-neutral-800 rounded-xsp-3   border-l-4 border-orange-500  hover:shadow-md transition-shadow">
+        <div className="bg-white dark:bg-neutral-800 rounded-xsp-3   border-l-4 border-orange-500  hover: transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs  text-neutral-600 dark:text-neutral-400">Total Invoices</p>
@@ -145,7 +145,7 @@ export default function BuyingAnalytics() {
           <p className="text-red-600 dark:text-red-400 text-xs mt-4 font-medium">⚠ ₹{summary?.invoices?.pending_amount?.toLocaleString()} Pending</p>
         </div>
 
-        <div className="bg-white dark:bg-neutral-800 rounded-xsp-3   border-l-4 border-purple-500  hover:shadow-md transition-shadow">
+        <div className="bg-white dark:bg-neutral-800 rounded-xsp-3   border-l-4 border-purple-500  hover: transition-shadow">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs  text-neutral-600 dark:text-neutral-400">Paid Amount</p>
@@ -171,7 +171,7 @@ export default function BuyingAnalytics() {
             onClick={() => setActiveTab(tab.id)}
             className={`p-2 rounded-xs font-medium transition-all whitespace-nowrap ${
               activeTab === tab.id
-                ? 'bg-primary-600 text-white shadow-md'
+                ? 'bg-primary-600 text-white '
                 : 'bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700'
             }`}
           >
@@ -181,7 +181,7 @@ export default function BuyingAnalytics() {
       </div>
 
       {/* Content by Tab */}
-      <div className="space-y-6">
+      <div className="space-y-2">
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">

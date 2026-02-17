@@ -115,5 +115,11 @@ export function createFinanceRoutes(db) {
     accountsFinanceController.getAgeingAnalysis.bind(accountsFinanceController)
   )
 
+  router.get(
+    '/analytics/balance-sheet',
+    authMiddleware,
+    accountsFinanceController.getBalanceSheet.bind(accountsFinanceController)
+  )
+
   return router
 }

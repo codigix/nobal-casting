@@ -514,7 +514,7 @@ export default function TimeLogsModal({ isOpen, onClose, jobCardId, jobCardData 
                 <tbody className="divide-y divide-gray-200">
                   {timeLogs.map(log => (
                     <tr key={log.time_log_id} className="hover:bg-gray-50 transition">
-                      <td className="p-2 text-center text-gray-900 font-bold bg-gray-50/50">
+                      <td className="p-2 text-center text-gray-900  bg-gray-50/50">
                         {log.day_number || '-'}
                       </td>
                       <td className="p-2 text-gray-900">{log.operator_name}</td>

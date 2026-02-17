@@ -235,15 +235,20 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-2 border-t border-white/10">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-6 pt-2 border-t border-white/10">
                 <div className="">
                   <p className="text-xs   text-gray-500 ">Planned Capacity</p>
-                  <p className="text-sm  ">{parseFloat(jobCard?.planned_quantity || 0).toFixed(0)} <span className="text-xs text-gray-500">Units</span></p>
+                  <p className="text-sm  ">{parseFloat(jobCard?.planned_quantity || 0).toFixed(2)} <span className="text-xs text-gray-500">Units</span></p>
                 </div>
                 <div className="">
                   <p className="text-xs   text-gray-500 ">Accepted Output</p>
-                  <p className="text-sm   text-emerald-400">{parseFloat(jobCard?.accepted_quantity || 0).toFixed(0)} <span className="text-xs text-emerald-500/50">Units</span></p>
-                  <p className="text-[10px] text-gray-500">Total Produced: {parseFloat(jobCard?.produced_quantity || 0).toFixed(0)}</p>
+                  <p className="text-sm   text-emerald-400">{parseFloat(jobCard?.accepted_quantity || 0).toFixed(2)} <span className="text-xs text-emerald-500/50">Units</span></p>
+                  <p className="text-[10px] text-gray-500">Total Produced: {parseFloat(jobCard?.produced_quantity || 0).toFixed(2)}</p>
+                </div>
+                <div className="">
+                  <p className="text-xs   text-gray-500 ">Transferred</p>
+                  <p className="text-sm   text-indigo-400">{parseFloat(jobCard?.transferred_quantity || 0).toFixed(2)} <span className="text-xs text-indigo-500/50">Units</span></p>
+                  <p className="text-[10px] text-gray-500">Available: {parseFloat((jobCard?.accepted_quantity || 0) - (jobCard?.transferred_quantity || 0)).toFixed(2)}</p>
                 </div>
                 <div className="col-span-2">
                   <div className="flex justify-between items-center mb-1">
@@ -263,7 +268,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                     />
                   </div>
                   {parseFloat(jobCard?.produced_quantity || 0) > parseFloat(jobCard?.planned_quantity || 0) && (
-                    <p className="text-[9px] text-rose-400 mt-1 animate-pulse">⚠️ Overproduction detected (+{parseFloat(jobCard?.produced_quantity - jobCard?.planned_quantity).toFixed(0)} units)</p>
+                    <p className="text-[9px] text-rose-400 mt-1 animate-pulse">⚠️ Overproduction detected (+{parseFloat(jobCard?.produced_quantity - jobCard?.planned_quantity).toFixed(2)} units)</p>
                   )}
                 </div>
               </div>
@@ -346,23 +351,23 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                   <div className="bg-amber-50 p-2 rounded text-amber-600">
                     <Package size={18} />
                   </div>
-                  <h4 className="text-xs text-gray-900 font-bold">Subcontracting Intelligence</h4>
+                  <h4 className="text-xs text-gray-900 ">Subcontracting Intelligence</h4>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-2 bg-white rounded border border-amber-100">
-                    <p className="text-[10px] text-amber-600 uppercase font-bold mb-1">Assigned Vendor</p>
+                    <p className="text-[10px] text-amber-600   mb-1">Assigned Vendor</p>
                     <p className="text-xs text-gray-900 font-semibold">{jobCard?.vendor_name || 'N/A'}</p>
                   </div>
                   <div className="p-2 bg-white rounded border border-amber-100">
-                    <p className="text-[10px] text-amber-600 uppercase font-bold mb-1">Dispatch Status</p>
+                    <p className="text-[10px] text-amber-600   mb-1">Dispatch Status</p>
                     <p className="text-xs text-gray-900 font-semibold">{jobCard?.subcontract_status?.replace(/_/g, ' ') || 'DRAFT'}</p>
                   </div>
                   <div className="p-2 bg-white rounded border border-amber-100">
-                    <p className="text-[10px] text-amber-600 uppercase font-bold mb-1">Sent Qty</p>
+                    <p className="text-[10px] text-amber-600   mb-1">Sent Qty</p>
                     <p className="text-xs text-gray-900 font-semibold">{jobCard?.sent_qty || 0} Units</p>
                   </div>
                   <div className="p-2 bg-white rounded border border-amber-100">
-                    <p className="text-[10px] text-amber-600 uppercase font-bold mb-1">Received Qty</p>
+                    <p className="text-[10px] text-amber-600   mb-1">Received Qty</p>
                     <p className="text-xs text-gray-900 font-semibold">{jobCard?.received_qty || 0} Units</p>
                   </div>
                 </div>
@@ -604,7 +609,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                 <button
                   onClick={handleNextStep}
                   disabled={updatingStatus}
-                  className="flex items-center gap-4 px-12 py-2  bg-gray-900 text-white rounded hover:bg-gray-800 transition-all shadow-2xl shadow-gray-200 active:scale-95 group"
+                  className="flex items-center gap-4 px-12 py-2  bg-gray-900 text-white rounded hover:bg-gray-800 transition-all  shadow-gray-200 active:scale-95 group"
                 >
                   <div className="bg-indigo-500 p-1.5 rounded group-hover:rotate-12 transition-transform">
                     <Zap size={18} className="fill-current text-white" />

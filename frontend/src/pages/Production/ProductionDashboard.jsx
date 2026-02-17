@@ -20,7 +20,7 @@ const SectionTitle = ({ title, icon: Icon, badge }) => (
       <div className="p-2 bg-indigo-50 text-indigo-600 rounded">
         <Icon size={18} />
       </div>
-      <h3 className="text-sm  text-slate-900 tracking-tight">{title}</h3>
+      <h3 className="text-sm  text-slate-900 ">{title}</h3>
     </div>
     {badge && (
       <span className="p-2 bg-slate-100 text-slate-500 text-xs rounded-full border border-slate-200 text-xs ">
@@ -32,21 +32,24 @@ const SectionTitle = ({ title, icon: Icon, badge }) => (
 
 const StatusBadge = ({ status }) => {
   const config = {
-    draft: { color: 'bg-slate-50 text-slate-600 border-slate-200', icon: Clock },
-    pending: { color: 'bg-indigo-50 text-indigo-700 border-indigo-100', icon: Calendar },
-    'in-progress': { color: 'bg-amber-50 text-amber-700 border-amber-100', icon: Activity },
-    completed: { color: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: CheckCircle2 },
-    cancelled: { color: 'bg-rose-50 text-rose-700 border-rose-100', icon: AlertCircle },
-    active: { color: 'bg-indigo-50 text-indigo-700 border-indigo-100', icon: CheckCircle2 },
-    idle: { color: 'bg-rose-50 text-rose-700 border-rose-100', icon: AlertCircle }
+    draft: { color: 'bg-slate-50 text-slate-600 border-slate-200', icon: Clock, label: 'Draft' },
+    ready: { color: 'bg-blue-50 text-blue-700 border-blue-100', icon: CheckCircle2, label: 'Ready' },
+    pending: { color: 'bg-indigo-50 text-indigo-700 border-indigo-100', icon: Calendar, label: 'Pending' },
+    'in-progress': { color: 'bg-amber-50 text-amber-700 border-amber-100', icon: Activity, label: 'In-Progress' },
+    in_progress: { color: 'bg-amber-50 text-amber-700 border-amber-100', icon: Activity, label: 'In-Progress' },
+    completed: { color: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: CheckCircle2, label: 'Completed' },
+    cancelled: { color: 'bg-rose-50 text-rose-700 border-rose-100', icon: AlertCircle, label: 'Cancelled' },
+    active: { color: 'bg-indigo-50 text-indigo-700 border-indigo-100', icon: CheckCircle2, label: 'Active' },
+    idle: { color: 'bg-rose-50 text-rose-700 border-rose-100', icon: AlertCircle, label: 'Idle' }
   }
   const s = normalizeStatus(status)
-  const { color, icon: Icon } = config[s] || config.pending
+  const statusKey = s.replace('-', '_')
+  const { color, icon: Icon, label } = config[s] || config[statusKey] || config.pending
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] text-xs  border ${color}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-medium border ${color}`}>
       <Icon size={10} />
-      {s.toUpperCase()}
+      {label || s.toUpperCase()}
     </span>
   )
 }
@@ -64,14 +67,14 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle }) => {
   }
 
   return (
-    <Card className="p-2 border-none flex items-center gap-4 transition-all hover:shadow-lg hover:shadow-slate-200/50 bg-white rounded group">
+    <Card className="p-2 border-none flex items-center gap-4 transition-all hover: hover:shadow-slate-200/50 bg-white rounded group">
       <div className={`p-3 rounded  ${colorMap[color] || colorMap.blue} border border-transparent transition-transform group-hover:scale-110 duration-300`}>
         <Icon size={22} strokeWidth={2.5} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-xs  text-slate-400 ">{label}</p>
         <div className="flex items-baseline gap-2">
-          <h3 className="text-lg text-slate-900 tracking-tight">{value}</h3>
+          <h3 className="text-lg text-slate-900 ">{value}</h3>
           {subtitle && (
             <p className="text-[9px]  text-slate-400  truncate">{subtitle}</p>
           )}
@@ -229,7 +232,7 @@ export default function ProductionDashboard() {
         overdueSalesOrders: so.filter(s => normalizeStatus(s.status) !== 'completed' && new Date(s.delivery_date) < new Date()).length,
         efficiency: analyticsRes.data?.efficiency || 85,
         rejectionRate: analyticsRes.data?.rejection_rate || 2.4,
-        oee: oee.average_oee || 78
+        oee: oee.summary?.oee || 78
       })
 
       setRecentJobCards(jc.slice(0, 6).map(item => ({
@@ -251,6 +254,17 @@ export default function ProductionDashboard() {
 
       // Generate Chart Data
       const trendData = getProductionTrend(jc, timeRange)
+      
+      // Process OEE Trend Data
+      const processedOEETrend = (oee.trends && oee.trends.length > 0) 
+        ? oee.trends.slice(-7).map(t => ({
+            date: new Date(t.date).toLocaleDateString('en-US', { weekday: 'short' }),
+            oee: parseFloat(t.oee) || 0,
+            availability: parseFloat(t.availability) || 0,
+            performance: parseFloat(t.performance) || 0
+          }))
+        : generateOEETrend();
+
       setChartData({
         productionTrend: trendData,
         jobStatus: [
@@ -271,7 +285,7 @@ export default function ProductionDashboard() {
           name: r.reason || 'Other',
           value: r.count || 0
         })),
-        oeeTrend: generateOEETrend(),
+        oeeTrend: processedOEETrend,
         dailyProduction: getProductionChartData(jc),
         workOrderTimeline: getWorkOrderChartData(wo),
         bomTimeline: getBOMChartData(bom),
@@ -773,14 +787,14 @@ export default function ProductionDashboard() {
 
 const EntryCard = ({ item, statusKey = 'status' }) => {
   return (
-    <Card className="p-4 border-none hover:shadow-lg hover:shadow-slate-200/50 bg-white rounded-2xl group transition-all">
+    <Card className="p-4 border-none hover: hover:shadow-slate-200/50 bg-white rounded  group transition-all">
       <div className="flex justify-between items-start gap-3 mb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded  bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
             <Package size={20} />
           </div>
           <div>
-            <h4 className="text-xs  text-slate-900 tracking-tight">{item.name || item.id}</h4>
+            <h4 className="text-xs  text-slate-900 ">{item.name || item.id}</h4>
             <p className="text-xs font-medium text-slate-400  ">{item.id}</p>
           </div>
         </div>
@@ -813,7 +827,7 @@ const CustomTooltip = ({ active, payload, label }) => {
             <div key={index} className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                <span className="text-xs   text-slate-500 text-xstracking-tight">{entry.name}</span>
+                <span className="text-xs   text-slate-500 text-xs">{entry.name}</span>
               </div>
               <span className="text-xs  text-slate-900">{entry.value}</span>
             </div>
@@ -826,10 +840,10 @@ const CustomTooltip = ({ active, payload, label }) => {
 }
 
 const ChartContainer = ({ children, title, subtitle }) => (
-  <Card className="border-none hover:shadow-lg hover:shadow-slate-200/50 bg-white rounded-2xl overflow-hidden transition-all">
+  <Card className="border-none hover: hover:shadow-slate-200/50 bg-white rounded  overflow-hidden transition-all">
     <div className="p-4 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
       <div>
-        <h3 className="text-sm  text-slate-900 tracking-tight">{title}</h3>
+        <h3 className="text-sm  text-slate-900 ">{title}</h3>
         {subtitle && <p className="text-xs  text-slate-400  mt-0.5">{subtitle}</p>}
       </div>
       <div className="w-10 h-10 rounded  bg-white border border-slate-100 flex items-center justify-center text-indigo-600  ">
@@ -924,33 +938,33 @@ const ChartContainer = ({ children, title, subtitle }) => (
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white p-2 rounded border border-rose-100  transition-all hover:shadow-md">
+            <div className="bg-white p-2 rounded border border-rose-100  transition-all hover:">
               <p className="text-xs   text-slate-400 text-xs mb-1 text-center">Jobs at Risk</p>
               <div className="text-xl   text-rose-600 text-center">
                 {rawJobCards.filter(jc => normalizeStatus(jc.status) === 'in-progress' && jc.actual_hours > jc.expected_hours * 1.2).length}
               </div>
               <div className=" border-t border-slate-50">
-                <p className="text-[9px] text-slate-500 font-medium text-xs text-center text-xstracking-tighter">Running 20%+ over expected time</p>
+                <p className="text-[9px] text-slate-500 font-medium text-xs text-center text-xser">Running 20%+ over expected time</p>
               </div>
             </div>
 
-            <div className="bg-white p-2 rounded border border-blue-100  transition-all hover:shadow-md">
+            <div className="bg-white p-2 rounded border border-blue-100  transition-all hover:">
               <p className="text-xs   text-slate-400 text-xs mb-1 text-center">On Track</p>
               <div className="text-xl   text-blue-600 text-center">
                 {rawJobCards.filter(jc => normalizeStatus(jc.status) === 'in-progress' && jc.actual_hours <= jc.expected_hours).length}
               </div>
               <div className=" border-t border-slate-50">
-                <p className="text-[9px] text-slate-500 font-medium text-xs text-center text-xstracking-tighter">Within expected duration</p>
+                <p className="text-[9px] text-slate-500 font-medium text-xs text-center text-xser">Within expected duration</p>
               </div>
             </div>
 
-            <div className="bg-white p-2 rounded border border-emerald-100  transition-all hover:shadow-md">
+            <div className="bg-white p-2 rounded border border-emerald-100  transition-all hover:">
               <p className="text-xs   text-slate-400 text-xs mb-1 text-center">Completed</p>
               <div className="text-xl   text-emerald-600 text-center">
                 {rawJobCards.filter(jc => normalizeStatus(jc.status) === 'completed').length}
               </div>
               <div className=" border-t border-slate-50">
-                <p className="text-[9px] text-slate-500 font-medium text-xs text-center text-xstracking-tighter">Successfully finished</p>
+                <p className="text-[9px] text-slate-500 font-medium text-xs text-center text-xser">Successfully finished</p>
               </div>
             </div>
           </div>
@@ -1025,7 +1039,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
                 key={type}
                 onClick={() => setScheduleType(type)}
                 className={`p-2 text-xs font-medium rounded transition-all ${scheduleType === type
-                    ? 'bg-blue-600 text-white shadow-md'
+                    ? 'bg-blue-600 text-white '
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
               >
@@ -1114,7 +1128,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
       )}
 
       {activeTab === 'workorders' && (
-        <div className="space-y-6">
+        <div className="space-y-2">
           <div className="space-y-2">
             <div className="flex gap-2 items-center">
               <span className="text-xs  text-gray-600 mr-2">Schedule:</span>
@@ -1123,7 +1137,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
                   key={type}
                   onClick={() => setWoScheduleType(type)}
                   className={`p-2 text-xs font-medium rounded transition-all ${woScheduleType === type
-                      ? 'bg-blue-600 text-white shadow-md'
+                      ? 'bg-blue-600 text-white '
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
@@ -1227,7 +1241,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
             </ResponsiveContainer>
           </ChartContainer>
           {dataEntries.workOrders.length > 0 && (
-            <div className="space-y-6">
+            <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <div className="w-1 h-4 bg-indigo-600 rounded-full" />
                 <h3 className="text-xs   text-slate-900 ">Work Order Registry ({dataEntries.workOrders.length})</h3>
@@ -1243,7 +1257,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
       )}
 
       {activeTab === 'boms' && (
-        <div className="space-y-6">
+        <div className="space-y-2">
           <div className="space-y-2">
             <div className="flex gap-2 items-center">
               <span className="text-xs  text-gray-600 mr-2">Schedule:</span>
@@ -1252,7 +1266,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
                   key={type}
                   onClick={() => setBomScheduleType(type)}
                   className={`p-2 text-xs font-medium rounded transition-all ${bomScheduleType === type
-                      ? 'bg-blue-600 text-white shadow-md'
+                      ? 'bg-blue-600 text-white '
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
@@ -1316,7 +1330,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
             </ChartContainer>
           </div>
           {dataEntries.boms.length > 0 && (
-            <div className="space-y-6">
+            <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <div className="w-1 h-4 bg-indigo-600 rounded-full" />
                 <h3 className="text-xs   text-slate-900 ">BOM Repository ({dataEntries.boms.length})</h3>
@@ -1332,7 +1346,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
       )}
 
       {activeTab === 'prodplans' && (
-        <div className="space-y-6">
+        <div className="space-y-2">
           <div className="space-y-2">
             <div className="flex gap-2 items-center">
               <span className="text-xs  text-gray-600 mr-2">Schedule:</span>
@@ -1341,7 +1355,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
                   key={type}
                   onClick={() => setPpScheduleType(type)}
                   className={`p-2 text-xs font-medium rounded transition-all ${ppScheduleType === type
-                      ? 'bg-blue-600 text-white shadow-md'
+                      ? 'bg-blue-600 text-white '
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
@@ -1417,7 +1431,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
             </ChartContainer>
           </div>
           {dataEntries.productionPlans.length > 0 && (
-            <div className="space-y-6">
+            <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <div className="w-1 h-4 bg-indigo-600 rounded-full" />
                 <h3 className="text-xs   text-slate-900 ">Strategy Catalog ({dataEntries.productionPlans.length})</h3>
@@ -1433,7 +1447,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
       )}
 
       {activeTab === 'jobcards' && (
-        <div className="space-y-6">
+        <div className="space-y-2">
           <div className="space-y-2">
             <div className="flex gap-2 items-center">
               <span className="text-xs  text-gray-600 mr-2">Schedule:</span>
@@ -1442,7 +1456,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
                   key={type}
                   onClick={() => setJcScheduleType(type)}
                   className={`p-2 text-xs font-medium rounded transition-all ${jcScheduleType === type
-                      ? 'bg-blue-600 text-white shadow-md'
+                      ? 'bg-blue-600 text-white '
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
@@ -1529,7 +1543,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
             </ChartContainer>
           </div>
           {dataEntries.jobCards.length > 0 && (
-            <div className="space-y-6">
+            <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <div className="w-1 h-4 bg-indigo-600 rounded-full" />
                 <h3 className="text-xs   text-slate-900 ">Job Card Ledger ({dataEntries.jobCards.length})</h3>

@@ -164,49 +164,49 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
       size="3xl"
       footer={footer}
     >
-      <div className="space-y-6">
+      <div className="space-y-2">
         {error && <Alert type="danger">{error}</Alert>}
 
         {/* Quick Stats Summary */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+          <div className="bg-blue-50 p-3 rounded  border border-blue-100">
             <div className="flex items-center gap-2 text-blue-600 mb-1">
               <Package size={16} />
-              <span className="text-xs font-semibold uppercase tracking-wider">PO Qty</span>
+              <span className="text-xs font-semibold  tracking-wider">PO Qty</span>
             </div>
-            <div className="text-xl font-bold text-blue-700">{item.po_qty}</div>
+            <div className="text-xl  text-blue-700">{item.po_qty}</div>
           </div>
           
-          <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
+          <div className="bg-orange-50 p-3 rounded  border border-orange-100">
             <div className="flex items-center gap-2 text-orange-600 mb-1">
               <ClipboardCheck size={16} />
-              <span className="text-xs font-semibold uppercase tracking-wider">Received</span>
+              <span className="text-xs font-semibold  tracking-wider">Received</span>
             </div>
-            <div className="text-xl font-bold text-orange-700">{item.received_qty}</div>
+            <div className="text-xl  text-orange-700">{item.received_qty}</div>
           </div>
 
-          <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+          <div className="bg-green-50 p-3 rounded  border border-green-100">
             <div className="flex items-center gap-2 text-green-600 mb-1">
               <CheckCircle size={16} />
-              <span className="text-xs font-semibold uppercase tracking-wider">Accepted</span>
+              <span className="text-xs font-semibold  tracking-wider">Accepted</span>
             </div>
-            <div className="text-xl font-bold text-green-700">{acceptedQty}</div>
+            <div className="text-xl  text-green-700">{acceptedQty}</div>
           </div>
 
-          <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+          <div className="bg-red-50 p-3 rounded  border border-red-100">
             <div className="flex items-center gap-2 text-red-600 mb-1">
               <AlertCircle size={16} />
-              <span className="text-xs font-semibold uppercase tracking-wider">Rejected</span>
+              <span className="text-xs font-semibold  tracking-wider">Rejected</span>
             </div>
-            <div className="text-xl font-bold text-red-700">{rejectedQty}</div>
+            <div className="text-xl  text-red-700">{rejectedQty}</div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Column: Details & QC */}
-          <div className="space-y-6">
-            <section className="bg-neutral-50 p-4 rounded-xl border border-neutral-200">
-              <h4 className="text-sm font-bold text-neutral-800 mb-4 flex items-center gap-2">
+          <div className="space-y-2">
+            <section className="bg-neutral-50 p-4 rounded  border border-neutral-200">
+              <h4 className="text-sm  text-neutral-800 mb-4 flex items-center gap-2">
                 <Info size={16} className="text-neutral-500" />
                 Item Information
               </h4>
@@ -228,16 +228,16 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-neutral-200">
                   <span className="text-xs text-neutral-500">Variance</span>
-                  <span className={`text-sm font-bold ${item.received_qty - item.po_qty >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <span className={`text-sm  ${item.received_qty - item.po_qty >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {item.received_qty - item.po_qty > 0 ? '+' : ''}{item.received_qty - item.po_qty}
                   </span>
                 </div>
               </div>
             </section>
 
-            <section className="bg-white p-4 rounded-xl border border-neutral-200">
+            <section className="bg-white p-4 rounded  border border-neutral-200">
               <div className="flex justify-between items-center mb-4">
-                <h4 className="text-sm font-bold text-neutral-800 flex items-center gap-2">
+                <h4 className="text-sm  text-neutral-800 flex items-center gap-2">
                   <ShieldCheck size={16} className="text-blue-500" />
                   Quality Assurance
                 </h4>
@@ -249,7 +249,7 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
                 {qcItems.map((qc) => (
                   <label 
                     key={qc.key} 
-                    className={`flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                    className={`flex items-start gap-3 p-3 rounded  border transition-all cursor-pointer ${
                       qcChecksPassed[qc.key] 
                         ? 'bg-green-50 border-green-200' 
                         : 'bg-white border-neutral-200 hover:border-neutral-300'
@@ -274,15 +274,15 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
           </div>
 
           {/* Right Column: Quantities & Notes */}
-          <div className="space-y-6">
-            <section className="bg-white p-4 rounded-xl border border-neutral-200">
-              <h4 className="text-sm font-bold text-neutral-800 mb-4 flex items-center gap-2">
+          <div className="space-y-2">
+            <section className="bg-white p-4 rounded  border border-neutral-200">
+              <h4 className="text-sm  text-neutral-800 mb-4 flex items-center gap-2">
                 <FileText size={16} className="text-neutral-500" />
                 Quantity Breakdown
               </h4>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1.5">
+                  <label className="block text-xs font-semibold text-neutral-500  mb-1.5">
                     Accepted Quantity
                   </label>
                   <input
@@ -297,11 +297,11 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
                       setAcceptedQty(finalVal)
                       setRejectedQty(max - finalVal)
                     }}
-                    className="w-full px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-green-900 font-bold focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-2 bg-green-50 border border-green-200 rounded  text-green-900  focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-500 uppercase mb-1.5">
+                  <label className="block text-xs font-semibold text-neutral-500  mb-1.5">
                     Rejected Quantity
                   </label>
                   <input
@@ -316,18 +316,18 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
                       setRejectedQty(finalVal)
                       setAcceptedQty(max - finalVal)
                     }}
-                    className="w-full px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-red-900 font-bold focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-2 bg-red-50 border border-red-200 rounded  text-red-900  focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
                   />
                 </div>
                 
-                <div className={`mt-4 p-3 rounded-lg border flex items-center justify-between ${
+                <div className={`mt-4 p-3 rounded  border flex items-center justify-between ${
                   acceptedQty + rejectedQty === item.received_qty 
                     ? 'bg-neutral-50 border-neutral-200' 
                     : 'bg-red-50 border-red-200'
                 }`}>
                   <span className="text-sm font-medium text-neutral-600">Total Accounted</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-neutral-900">{acceptedQty + rejectedQty}</span>
+                    <span className="text-lg  text-neutral-900">{acceptedQty + rejectedQty}</span>
                     {acceptedQty + rejectedQty === item.received_qty ? (
                       <CheckCircle2 size={18} className="text-green-500" />
                     ) : (
@@ -338,8 +338,8 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
               </div>
             </section>
 
-            <section className="bg-neutral-50 p-4 rounded-xl border border-neutral-200">
-              <label className="block text-sm font-bold text-neutral-800 mb-2">
+            <section className="bg-neutral-50 p-4 rounded  border border-neutral-200">
+              <label className="block text-sm  text-neutral-800 mb-2">
                 Inspection Notes
               </label>
               <textarea
@@ -347,7 +347,7 @@ export default function ItemInspectionModal({ item, grnId, onClose, onSuccess })
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Add any defects, discrepancies, or observations..."
                 rows={4}
-                className="w-full p-3 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
+                className="w-full p-3 bg-white border border-neutral-200 rounded  text-sm text-neutral-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
               />
             </section>
           </div>

@@ -458,6 +458,31 @@ class InventoryModel {
       throw error
     }
   }
+
+  async getMaterialConsumptionByOperation(work_order_id) {
+    try {
+      const [consumptions] = await this.db.query(
+        `SELECT 
+           consumption_id,
+           job_card_id,
+           operation_name,
+           item_code,
+           item_name,
+           consumed_qty,
+           wasted_qty,
+           waste_reason,
+           tracked_at,
+           tracked_by
+         FROM job_card_material_consumption
+         WHERE work_order_id = ?
+         ORDER BY operation_name, tracked_at DESC`,
+        [work_order_id]
+      )
+      return consumptions || []
+    } catch (error) {
+      throw error
+    }
+  }
 }
 
 export default InventoryModel

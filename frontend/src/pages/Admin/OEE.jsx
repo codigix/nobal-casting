@@ -1,177 +1,370 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import {
-  PieChart, Pie, Cell, Bar, XAxis, YAxis, CartesianGrid,
+  PieChart, Pie, Cell, Bar, XAxis, YAxis, CartesianGrid, BarChart, LineChart,
   Tooltip, Legend, ResponsiveContainer, Line, AreaChart, Area,
-  ComposedChart
+  ComposedChart, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts'
 import {
   AlertTriangle, X, TrendingUp, Clipboard,
   Rocket, Filter, Download, Calendar, Clock, Settings, Layers,
   Activity, ArrowDownCircle, ArrowUpCircle, CheckCircle2,
   Zap, Gauge, Box, Cpu, RefreshCcw, ChevronRight,
-  Monitor, Thermometer, ZapOff, AlertCircle, Loader2
+  Monitor, Thermometer, ZapOff, AlertCircle, Loader2,
+  Eye, PieChart as PieChartIcon, ShieldCheck
 } from 'lucide-react'
-import Badge from '../../components/Badge/Badge'
-import { getOEEDashboardData, getMachineHistoricalMetrics } from '../../services/productionService'
+import { getOEEDashboardData, getMachineHistoricalMetrics, getAllMachinesAnalysis } from '../../services/productionService'
 
-// --- Advanced Mock Data Removed for Real-time Integration ---
+// --- High Density UI Components ---
 
+const DetailModal = ({ isOpen, machine, onClose }) => {
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyData, setHistoryData] = useState({ daily: [], weekly: [], monthly: [], yearly: [] })
+  const [activeTab, setActiveTab] = useState('daily')
+  const [error, setError] = useState(null)
 
-// --- Sub-components ---
+  useEffect(() => {
+    if (isOpen && machine?.id) {
+      setError(null)
+      fetchHistoricalMetrics()
+    }
+  }, [isOpen, machine?.id])
 
-const OEEGauge = ({ value, label }) => {
-  const color = value >= 85 ? '#10b981' : value >= 70 ? '#f59e0b' : '#ef4444';
-  const data = [
-    { name: 'OEE', value: value },
-    { name: 'Remaining', value: 100 - value }
-  ];
+  const fetchHistoricalMetrics = async () => {
+    try {
+      setHistoryLoading(true)
+      const data = await getMachineHistoricalMetrics(machine.id)
 
-  return (
-    <div className="relative flex flex-col items-center justify-center">
-      <ResponsiveContainer width={240} height={140}>
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%" cy="100%"
-            startAngle={180} endAngle={0}
-            innerRadius={80} outerRadius={110}
-            paddingAngle={0} dataKey="value"
-            stroke="none"
-          >
-            <Cell fill={color} />
-            <Cell fill="#f1f5f9" />
-          </Pie>
-        </PieChart>
-      </ResponsiveContainer>
-      <div className="absolute top-[65%] flex flex-col items-center">
-        <span className="text-5xl  text-slate-900 leading-none">{value.toFixed(1)}%</span>
-        <span className="text-xs   text-slate-400 tracking-[0.2em] mt-3">{label}</span>
-      </div>
-    </div>
-  );
-};
+      if (data.success && data.data) {
+        setHistoryData(data.data || { daily: [], weekly: [], monthly: [], yearly: [] })
+        setError(null)
+      } else {
+        setError('API returned unsuccessful response')
+      }
+    } catch (error) {
+      console.error('[DetailModal] Error fetching historical metrics:', error)
+      setError(`Error: ${error.message}`)
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
 
-const StatCard = ({ label, value, subValue, icon: Icon, color, trend, unit = "%" }) => (
-  <div className="bg-white rounded p-3 border border-slate-200  hover:shadow-md transition-all group relative overflow-hidden">
-    <div className={`absolute top-0 right-0 w-24 h-24 ${color} opacity-[0.03] rounded-bl-full -mr-8 -mt-8 transition-all group-hover:scale-150`}></div>
-    <div className="flex flex-col items-center text-center relative z-10">
-      <div className="flex items-center gap-2 mb-4">
-        {Icon && <Icon size={16} className="text-slate-400" />}
-        <span className="text-xs font-medium text-slate-500 ">{label}</span>
-      </div>
-      <div className="flex items-baseline gap-1">
-        <h3 className={`text-xl  m-0 ${color.replace('bg-', 'text-')}`}>{value}</h3>
-        {unit && <span className={`text-xl  ${color.replace('bg-', 'text-')}`}>{unit}</span>}
-      </div>
-      <div className="flex items-center gap-1.5 mt-4">
-        {trend === 'up' ? <TrendingUp size={14} className="text-emerald-500" /> : <TrendingUp size={14} className="text-rose-500 rotate-180" />}
-        <span className={`text-xs  ${trend === 'up' ? 'text-emerald-600' : 'text-rose-600'}`}>{subValue}</span>
-      </div>
-    </div>
-  </div>
-);
+  if (!isOpen || !machine) return null
 
-const LineDetailsModal = ({ isOpen, line, onClose }) => {
-  if (!isOpen || !line) return null;
+  const kpis = [
+    { label: 'AVAILABILITY', value: machine.a || machine.availability || 0, color: '#6366f1', icon: Clock },
+    { label: 'PERFORMANCE', value: machine.p || machine.performance || 0, color: '#3b82f6', icon: Activity },
+    { label: 'QUALITY', value: machine.q || machine.quality || 0, color: '#10b981', icon: CheckCircle2 },
+    { label: 'OVERALL OEE', value: machine.oee || 0, color: '#4338ca', icon: Gauge }
+  ]
 
   return (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-      <div className="bg-white rounded shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-slate-200">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+      <div className="bg-white  rounded  max-w-5xl w-full max-h-[95vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200">
+        {/* Modal Header */}
+        <div className="p-6 flex items-center justify-between bg-white">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded bg-indigo-50 flex items-center justify-center text-indigo-600">
-              <Layers size={24} />
+            <div className="w-14 h-14 bg-indigo-50 rounded flex items-center justify-center text-indigo-600 border border-indigo-100 ">
+              <Monitor size={28} strokeWidth={1.5} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 m-0">Line Details: {line.name}</h2>
-              <p className="text-xs text-slate-500 m-0">{line.machines.length} Machines in this Line</p>
+              <h2 className="text-xl  text-slate-900 m-0">
+                {machine.name}
+              </h2>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[10px]  text-slate-400 ">MACHINE ID:</span>
+                <span className="text-xs font-mono font-medium text-indigo-600 bg-indigo-50/50 px-2 py-0.5 rounded border border-indigo-100">{machine.id}</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-300 mx-1"></span>
+                <span className="text-xs  text-slate-500 uppercase tracking-wide">{machine.line}</span>
+              </div>
             </div>
           </div>
-          <button onClick={onClose} className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded transition-all">
-            <X size={20} />
+          <button
+            onClick={onClose}
+            className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all border border-transparent hover:border-rose-100 group"
+          >
+            <X size={24} className="group-hover:rotate-90 transition-transform duration-300" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            {[
-              { label: 'Avg Availability', value: line.a, color: '#6366f1', icon: Clock },
-              { label: 'Avg Performance', value: line.p, color: '#3b82f6', icon: Activity },
-              { label: 'Avg Quality', value: line.q, color: '#10b981', icon: CheckCircle2 },
-              { label: 'Overall OEE', value: line.oee, color: '#f59e0b', icon: Gauge }
-            ].map((kpi) => (
-              <div key={kpi.label} className="bg-white rounded p-4 border border-slate-200 relative overflow-hidden group shadow-sm">
-                <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: kpi.color }}></div>
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <p className="text-[10px] font-semibold text-slate-400 mb-1 m-0">{kpi.label}</p>
-                    <p className="text-xl font-bold text-slate-900 m-0">{kpi.value.toFixed(1)}%</p>
-                  </div>
-                  <div className="p-2 rounded" style={{ backgroundColor: `${kpi.color}10`, color: kpi.color }}>
-                    <kpi.icon size={18} />
-                  </div>
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30 pt-0">
+          {/* Main KPI Section */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            {kpis.map((kpi) => (
+              <div key={kpi.label} className="bg-white p-2 rounded border border-slate-200  relative overflow-hidden group hover:shadow-md transition-all duration-300">
+                <div className="absolute bottom-0 left-0 w-full h-1 bg-slate-100">
+                  <div
+                    className="h-full transition-all duration-1000 ease-out"
+                    style={{ width: `${kpi.value}%`, backgroundColor: kpi.color }}
+                  />
                 </div>
-                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-2">
-                  <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${kpi.value}%`, backgroundColor: kpi.color }} />
+                <div className="flex justify-between items-start ">
+                  <div>
+                    <p className="text-[10px]  text-slate-400  mb-2">{kpi.label}</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-xl  text-slate-900">{kpi.value}</span>
+                      <span className="text-sm  text-slate-400">%</span>
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded transition-transform group-hover:scale-110 duration-300" style={{ backgroundColor: `${kpi.color}10`, color: kpi.color }}>
+                    <kpi.icon size={20} strokeWidth={2} />
+                  </div>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="bg-white rounded border border-slate-200 overflow-hidden shadow-sm">
-            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-sm font-bold text-slate-900 m-0">Machines Performance in {line.name}</h3>
+          {/* Historical Performance Chart Section */}
+          <div className="bg-white  rounded  border border-slate-200  overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 ">
+                  <TrendingUp size={20} />
+                </div>
+                <h3 className="text-sm  text-slate-700 ">Historical Performance</h3>
+              </div>
+
+              <div className="flex bg-slate-100 p-1 rounded gap-1">
+                {['daily', 'weekly', 'monthly'].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-4 py-2 rounded text-xs   transition-all ${activeTab === tab
+                        ? 'bg-white text-indigo-600 '
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                      }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50/30 border-b border-slate-200">
-                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Machine</th>
-                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Availability</th>
-                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Performance</th>
-                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Quality</th>
-                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">OEE</th>
-                    <th className="p-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {line.machines.map((m) => (
-                    <tr key={m.id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="p-4">
-                        <p className="text-sm font-bold text-slate-900 m-0">{m.name}</p>
-                        <p className="text-[10px] text-slate-400 m-0">{m.id}</p>
-                      </td>
-                      <td className="p-4 text-center">
-                        <span className={`text-xs font-bold ${m.a > 80 ? 'text-emerald-600' : 'text-amber-600'}`}>{m.a.toFixed(1)}%</span>
-                      </td>
-                      <td className="p-4 text-center">
-                        <span className={`text-xs font-bold ${m.p > 80 ? 'text-emerald-600' : 'text-amber-600'}`}>{m.p.toFixed(1)}%</span>
-                      </td>
-                      <td className="p-4 text-center">
-                        <span className={`text-xs font-bold ${m.q > 95 ? 'text-emerald-600' : 'text-amber-600'}`}>{m.q.toFixed(1)}%</span>
-                      </td>
-                      <td className="p-4 text-center">
-                        <div className="flex flex-col items-center gap-1">
-                          <span className="text-xs font-bold text-slate-900">{m.oee.toFixed(1)}%</span>
-                          <div className="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
-                            <div className={`h-full ${m.oee > 85 ? 'bg-emerald-500' : m.oee > 70 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${m.oee}%` }} />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4 text-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          m.status === 'Running' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 
-                          m.status === 'Maintenance' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-slate-50 text-slate-600 border border-slate-100'
-                        }`}>
-                          {m.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+            <div className="p-8">
+              {error ? (
+                <div className="flex flex-col items-center justify-center h-[350px] text-center bg-rose-50/30  rounded  border border-dashed border-rose-200">
+                  <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center text-rose-500 mb-4">
+                    <AlertTriangle size={32} />
+                  </div>
+                  <p className="text-rose-900  mb-1">Data Retrieval Error</p>
+                  <p className="text-rose-600 text-xs uppercase tracking-wider">{error}</p>
+                </div>
+              ) : historyLoading ? (
+                <div className="flex flex-col items-center justify-center h-[350px] text-center">
+                  <div className="relative">
+                    <RefreshCcw size={48} className="text-indigo-500 animate-spin mb-6" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-2 h-2 bg-indigo-600 rounded-full animate-ping" />
+                    </div>
+                  </div>
+                  <p className="text-slate-500 text-xs  uppercase tracking-[0.2em] animate-pulse">Analyzing Performance Vectors...</p>
+                </div>
+              ) : (
+                <div className="h-[400px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    {activeTab === 'daily' ? (
+                      <ComposedChart data={historyData.daily} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                        <defs>
+                          <linearGradient id="colorOEE" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1} />
+                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis
+                          dataKey="date"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }}
+                          dy={15}
+                        />
+                        <YAxis
+                          yAxisId="left"
+                          domain={[0, 'auto']}
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }}
+                        />
+                        <YAxis
+                          yAxisId="right"
+                          orientation="right"
+                          domain={[0, 100]}
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }}
+                          label={{ value: 'OEE %', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fontSize: 10, fill: '#94a3b8', fontWeight: 700 } }}
+                        />
+                        <Tooltip
+                          contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', padding: '16px' }}
+                          cursor={{ fill: '#f8fafc' }}
+                        />
+                        <Legend
+                          verticalAlign="top"
+                          align="right"
+                          iconType="circle"
+                          wrapperStyle={{ paddingBottom: '40px', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                        />
+                        <Bar yAxisId="left" dataKey="working_time" fill="#10b981" name="Running Time (min)" radius={[6, 6, 0, 0]} barSize={24} />
+                        <Bar yAxisId="left" dataKey="downtime" fill="#f43f5e" name="Downtime (min)" radius={[6, 6, 0, 0]} barSize={24} />
+                        <Line
+                          yAxisId="right"
+                          type="monotone"
+                          dataKey="oee"
+                          stroke="#6366f1"
+                          strokeWidth={4}
+                          dot={{ r: 6, fill: '#fff', stroke: '#6366f1', strokeWidth: 3 }}
+                          activeDot={{ r: 8, strokeWidth: 0, fill: '#4338ca' }}
+                          name="Overall OEE %"
+                        />
+                      </ComposedChart>
+                    ) : activeTab === 'weekly' ? (
+                      <BarChart data={historyData.weekly} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis
+                          dataKey="week"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }}
+                          dy={15}
+                        />
+                        <YAxis
+                          yAxisId="left"
+                          domain={[0, 'auto']}
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }}
+                        />
+                        <YAxis
+                          yAxisId="right"
+                          orientation="right"
+                          domain={[0, 100]}
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }}
+                        />
+                        <Tooltip
+                          contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', padding: '16px' }}
+                        />
+                        <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: '40px', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase' }} />
+                        <Bar yAxisId="left" dataKey="working_time" fill="#10b981" name="Running Time (min)" radius={[6, 6, 0, 0]} barSize={24} />
+                        <Bar yAxisId="left" dataKey="downtime" fill="#f43f5e" name="Downtime (min)" radius={[6, 6, 0, 0]} barSize={24} />
+                        <Bar yAxisId="right" dataKey="avg_efficiency" fill="#6366f1" name="Avg OEE %" radius={[6, 6, 0, 0]} barSize={24} />
+                      </BarChart>
+                    ) : (
+                      <ComposedChart data={historyData.monthly} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis
+                          dataKey="month"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }}
+                          dy={15}
+                        />
+                        <YAxis
+                          yAxisId="left"
+                          domain={[0, 'auto']}
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }}
+                        />
+                        <YAxis
+                          yAxisId="right"
+                          orientation="right"
+                          domain={[0, 100]}
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 700 }}
+                        />
+                        <Tooltip
+                          contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', padding: '16px' }}
+                        />
+                        <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: '40px', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase' }} />
+                        <Bar yAxisId="left" dataKey="working_time" fill="#10b981" name="Running Time (min)" radius={[8, 8, 0, 0]} barSize={40} />
+                        <Bar yAxisId="left" dataKey="downtime" fill="#f43f5e" name="Downtime (min)" radius={[8, 8, 0, 0]} barSize={40} />
+                        <Line
+                          yAxisId="right"
+                          type="monotone"
+                          dataKey="avg_efficiency_percentage"
+                          stroke="#6366f1"
+                          strokeWidth={4}
+                          dot={{ r: 8, fill: '#fff', stroke: '#6366f1', strokeWidth: 4 }}
+                          name="Avg OEE %"
+                        />
+                      </ComposedChart>
+                    )}
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+         
+
+const StatCard = ({ label, value, subValue, icon: Icon, color, trend, unit = "%" }) => (
+  <div className="bg-white  p-2 border border-slate-200 hover:shadow-xl hover:border-indigo-200 transition-all group relative overflow-hidden">
+    <div className={`absolute top-0 right-0 w-24 h-24 ${color} opacity-[0.03] rounded-bl-full -mr-8 -mt-8 transition-all group-hover:scale-150`}></div>
+    <div className="flex justify-between items-start relative z-10">
+      <div>
+        <span className="text-[10px]  text-slate-400 uppercase tracking-wider mb-1 block">{label}</span>
+        <div className="flex items-baseline gap-1">
+          <h3 className="text-xl  text-slate-900 m-0">{value}</h3>
+          {unit && <span className="text-sm  text-slate-400">{unit}</span>}
+        </div>
+      </div>
+      <div className={`p-2.5 rounded  ${color.replace('bg-', 'bg-opacity-10 ')} ${color.replace('bg-', 'text-')}`}>
+        <Icon size={20} />
+      </div>
+    </div>
+    <div className="flex items-center gap-1.5 border-t border-slate-50">
+      <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px]  ${trend === 'up' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+        {trend === 'up' ? <TrendingUp size={12} /> : <TrendingUp size={12} className="rotate-180" />}
+        {subValue}
+      </div>
+      <span className="text-[10px] text-slate-400 font-medium">vs last period</span>
+    </div>
+  </div>
+);
+
+const LossTree = ({ summary }) => {
+  if (!summary) return null;
+
+  const availabilityLoss = 100 - summary.availability;
+  const performanceLoss = (summary.availability / 100) * (100 - summary.performance);
+  const qualityLoss = (summary.availability / 100) * (summary.performance / 100) * (100 - summary.quality);
+  const totalLoss = 100 - summary.oee;
+
+  return (
+    <div className="bg-white  border border-slate-200 overflow-hidden ">
+      <div className="p-2 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <h3 className="text-sm  text-slate-900 m-0 uppercase tracking-wider">Production Loss Decomposition</h3>
+        <span className="text-[10px]  text-rose-500 bg-rose-50 px-2 py-1 rounded border border-rose-100">Total Loss: {totalLoss.toFixed(1)}%</span>
+      </div>
+      <div className="p-6">
+        <div className="space-y-6">
+          {[
+            { label: 'Availability Gap', val: availabilityLoss, color: 'bg-indigo-500', desc: 'Downtime & Setup' },
+            { label: 'Performance Gap', val: performanceLoss, color: 'bg-blue-500', desc: 'Speed & Minor Stops' },
+            { label: 'Quality Gap', val: qualityLoss, color: 'bg-emerald-500', desc: 'Rejects & Rework' }
+          ].map((loss, i) => (
+            <div key={i} className="group">
+              <div className="flex justify-between items-end mb-2">
+                <div>
+                  <span className="text-xs  text-slate-700 block">{loss.label}</span>
+                  <span className="text-[10px] text-slate-400">{loss.desc}</span>
+                </div>
+                <span className="text-sm  text-slate-900">{loss.val.toFixed(1)}%</span>
+              </div>
+              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full ${loss.color} transition-all duration-1000 group-hover:opacity-80`}
+                  style={{ width: `${(loss.val / totalLoss) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -179,74 +372,70 @@ const LineDetailsModal = ({ isOpen, line, onClose }) => {
 };
 
 const MachineCard = ({ machine, onClick }) => {
-  const statusColors = {
-    'Running': { bg: 'bg-emerald-50', text: 'text-emerald-600', dot: 'bg-emerald-500' },
-    'Minor Stop': { bg: 'bg-amber-50', text: 'text-amber-600', dot: 'bg-amber-500' },
-    'Down': { bg: 'bg-rose-50', text: 'text-rose-600', dot: 'bg-rose-500' },
-    'Maintenance': { bg: 'bg-blue-50', text: 'text-blue-600', dot: 'bg-blue-500' },
-    'Offline': { bg: 'bg-slate-50', text: 'text-slate-500', dot: 'bg-slate-400' }
+  const statusConfig = {
+    'Running': { color: 'text-emerald-500', bg: 'bg-emerald-50', border: 'border-emerald-100' },
+    'active': { color: 'text-indigo-500', bg: 'bg-indigo-50', border: 'border-indigo-100' },
+    'Idle': { color: 'text-amber-500', bg: 'bg-amber-50', border: 'border-amber-100' },
+    'Down': { color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-100' },
+    'Maintenance': { color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-100' },
+    'Offline': { color: 'text-slate-400', bg: 'bg-slate-50', border: 'border-slate-100' }
   };
-  const config = statusColors[machine.status] || statusColors.Running;
+  const config = statusConfig[machine.status] || statusConfig[machine.status?.toLowerCase()] || statusConfig.Offline;
 
   return (
-    <div 
+    <div
       onClick={onClick}
-      className="bg-white rounded p-3 border border-slate-200  hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer group"
+      className="bg-white  border border-slate-200 hover:border-indigo-400 hover:shadow-xl transition-all cursor-pointer group overflow-hidden"
     >
-      <div className="flex justify-between items-start mb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-6 h-6  rounded bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
-            <Cpu size={24} />
+      <div className="p-2 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded  bg-white  border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-colors">
+            <Cpu size={18} />
           </div>
-          <div>
-            <h4 className="text-base  text-slate-800 m-0 group-hover:text-indigo-600 transition-colors">{machine.name}</h4>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs font-medium text-slate-400 ">{machine.id}</span>
-              <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-              <span className="text-xs  text-indigo-500 ">{machine.line}</span>
+          <div className="min-w-0 items-center">
+            <h4 className="text-xs  text-slate-800 m-0 truncate">{machine.name}</h4>
+            <span className="text-[10px] font-medium text-slate-400 tracking-wider uppercase">{machine.id}</span>
+          </div>
+        </div>
+        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px]  border ${config.bg} ${config.color} ${config.border} shrink-0`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${['Running', 'active'].includes(machine.status) ? 'bg-current animate-pulse' : 'bg-current'}`}></div>
+          {machine.status}
+        </div>
+      </div>
+
+      <div className="p-2">
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {[
+            { label: 'A', val: machine.a, color: 'text-indigo-600' },
+            { label: 'P', val: machine.p, color: 'text-blue-600' },
+            { label: 'Q', val: machine.q, color: 'text-emerald-600' }
+          ].map((stat, i) => (
+            <div key={i} className="bg-slate-50/50 rounded  p-2 border border-slate-100 flex flex-col items-center">
+              <span className="text-[9px]  text-slate-400 uppercase mb-1">{stat.label}</span>
+              <span className={`text-xs  ${stat.color}`}>{stat.val}%</span>
             </div>
+          ))}
+        </div>
+
+        {machine.active_jobs > 0 && (
+          <div className="mb-3 px-3 py-1.5 bg-indigo-50 rounded  border border-indigo-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity size={12} className="text-indigo-600" />
+              <span className="text-[10px]  text-indigo-700 uppercase">Active Production</span>
+            </div>
+            <span className="text-[10px]  text-indigo-600">{machine.active_jobs} Jobs</span>
           </div>
-        </div>
-        <div className={`flex items-center gap-2 p-2  py-1.5 rounded ${config.bg}`}>
-          <span className={`w-2 h-2 rounded-full ${config.dot} ${machine.status === 'Running' ? 'animate-pulse' : ''}`}></span>
-          <span className={`text-xs    ${config.text}`}>{machine.status}</span>
-        </div>
-      </div>
+        )}
 
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        {[
-          { label: 'AVAIL', val: machine.a, color: 'text-indigo-600' },
-          { label: 'PERF', val: machine.p, color: 'text-blue-600' },
-          { label: 'QUAL', val: machine.q, color: 'text-emerald-600' }
-        ].map((stat, i) => (
-          <div key={i} className="bg-slate-50/50 rounded p-3 border border-slate-100 flex flex-col items-center">
-            <span className="text-[9px] text-slate-400   mb-1">{stat.label}</span>
-            <span className={`text-xs  ${stat.color}`}>{stat.val}%</span>
+        <div className="flex justify-between items-center pt-3 border-t border-slate-50">
+          <div className="flex flex-col">
+            <span className="text-[9px]  text-slate-400  leading-none mb-1">Overall OEE</span>
+            <span className={`text-lg  ${machine.oee >= 85 ? 'text-emerald-600' : machine.oee >= 70 ? 'text-amber-600' : 'text-rose-600'}`}>{machine.oee}%</span>
           </div>
-        ))}
-      </div>
-
-      <div className="flex flex-col gap-2 mb-6">
-        <div className="flex justify-between items-center">
-          <span className="text-xs  text-slate-400   ">Engagement</span>
-          <span className="text-xs   text-slate-700">{machine.entries > 0 ? 'ACTIVE PRODUCTION' : 'IDLE / NO ENTRIES'}</span>
-        </div>
-        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-          <div 
-            className={`h-full transition-all duration-1000 ${machine.entries > 0 ? 'bg-indigo-500' : 'bg-slate-300'}`} 
-            style={{ width: machine.entries > 0 ? '100%' : '0%' }}
-          ></div>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-        <div className="flex flex-col">
-          <span className="text-xs  text-slate-400   leading-none mb-1">Overall OEE</span>
-          <span className={`text-xl   ${machine.oee >= 85 ? 'text-emerald-600' : machine.oee >= 70 ? 'text-amber-600' : 'text-rose-600'}`}>{machine.oee}%</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-slate-400 group-hover:text-indigo-600 transition-colors">
-          <span className="text-xs    ">Details</span>
-          <ChevronRight size={18} />
+          <div className="flex items-center gap-1 text-slate-400 group-hover:text-indigo-600 transition-colors">
+            <span className="text-[10px]  uppercase tracking-wider">Analysis</span>
+            <ChevronRight size={16} />
+          </div>
         </div>
       </div>
     </div>
@@ -255,11 +444,6 @@ const MachineCard = ({ machine, onClick }) => {
 
 export default function OEE() {
   const [selectedMachine, setSelectedMachine] = useState(null);
-  const [selectedLine, setSelectedLine] = useState(null);
-  const [lineModalOpen, setLineModalOpen] = useState(false);
-  const [modalTab, setModalTab] = useState('Overview');
-  const [machineHistory, setMachineHistory] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('Executive Overview');
   const [filters, setFilters] = useState({
     range: 'Today',
@@ -276,7 +460,8 @@ export default function OEE() {
     summary: null,
     trends: [],
     downtimeReasons: [],
-    machineOEE: []
+    machineOEE: [],
+    comprehensiveAnalysis: []
   });
   const [syncLoading, setSyncLoading] = useState(false);
 
@@ -287,34 +472,10 @@ export default function OEE() {
   useEffect(() => {
     fetchData();
   }, [filters.startDate, filters.endDate, filters.line, filters.shift]);
-  
-  useEffect(() => {
-    if (selectedMachine) {
-      fetchMachineHistory(selectedMachine.id);
-    } else {
-      setModalTab('Overview');
-      setMachineHistory([]);
-    }
-  }, [selectedMachine]);
-
-  const fetchMachineHistory = async (machineId) => {
-    try {
-      setHistoryLoading(true);
-      const response = await getMachineHistoricalMetrics(machineId);
-      if (response.success) {
-        setMachineHistory(response.data.daily || []);
-      }
-    } catch (err) {
-      console.error('Error fetching machine history:', err);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
 
   const updateDateRange = () => {
     const end = new Date();
     let start = new Date();
-
     if (filters.range === 'Yesterday') {
       start.setDate(start.getDate() - 1);
       end.setDate(end.getDate() - 1);
@@ -323,7 +484,6 @@ export default function OEE() {
     } else if (filters.range === 'Monthly') {
       start.setMonth(start.getMonth() - 1);
     }
-
     setFilters(prev => ({
       ...prev,
       startDate: start.toISOString().split('T')[0],
@@ -333,1131 +493,401 @@ export default function OEE() {
 
   const fetchData = async (isSync = false) => {
     try {
-      if (isSync) {
-        setSyncLoading(true);
-      } else {
-        setLoading(true);
-      }
-      const apiFilters = {};
-      if (filters.startDate) apiFilters.startDate = filters.startDate;
-      if (filters.endDate) apiFilters.endDate = filters.endDate;
+      isSync ? setSyncLoading(true) : setLoading(true);
+      const apiFilters = {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+      };
       if (filters.line !== 'All Lines') apiFilters.lineId = filters.line;
       if (filters.shift !== 'All Shifts') apiFilters.shift = filters.shift;
 
-      const response = await getOEEDashboardData(apiFilters);
+      const [response, analysisRes] = await Promise.all([
+        getOEEDashboardData(apiFilters),
+        getAllMachinesAnalysis(apiFilters)
+      ]);
+
+      console.log('OEE Dashboard Data:', response);
+      console.log('Machine Analysis Data:', analysisRes);
+
       if (response.success) {
-        setRealData(response.data);
+        setRealData({
+          ...response.data,
+          machineOEE: response.data.machineOEE || [],
+          comprehensiveAnalysis: analysisRes.success ? analysisRes.data : []
+        });
         setLastSync(new Date());
       }
       setError(null);
     } catch (err) {
       console.error('Error fetching OEE data:', err);
-      setError('Failed to fetch real-time data. Using offline data.');
+      setError('Failed to fetch real-time analytics. Please check connection.');
     } finally {
       setLoading(false);
       setSyncLoading(false);
     }
   };
 
-  const handleExportData = () => {
-    try {
-      // Prepare data for export
-      const exportData = [];
-
-      // Add summary data
-      if (realData.summary) {
-        exportData.push({
-          'Type': 'Summary',
-          'Date': new Date().toISOString().split('T')[0],
-          'OEE': realData.summary.oee,
-          'Availability': realData.summary.availability,
-          'Performance': realData.summary.performance,
-          'Quality': realData.summary.quality,
-          'Total Units': realData.summary.total_units,
-          'Operating Time (mins)': realData.summary.operating_time_mins
-        });
-      }
-
-      // Add machine data
-      filteredMachines.forEach(machine => {
-        exportData.push({
-          'Type': 'Machine',
-          'Machine ID': machine.id,
-          'Machine Name': machine.name,
-          'Line': machine.line,
-          'Status': machine.status,
-          'OEE': machine.oee,
-          'Availability': machine.a,
-          'Performance': machine.p,
-          'Quality': machine.q,
-          'Total Units': machine.total_units,
-          'Rejected Units': machine.rejected_units,
-          'Downtime (mins)': machine.downtime_mins,
-          'Entries': machine.entries
-        });
-      });
-
-      // Add trends data
-      if (realData.trends && realData.trends.length > 0) {
-        realData.trends.forEach(trend => {
-          exportData.push({
-            'Type': 'Trend',
-            'Date': trend.date,
-            'OEE': trend.oee,
-            'Availability': trend.availability,
-            'Performance': trend.performance,
-            'Quality': trend.quality
-          });
-        });
-      }
-
-      // Convert to CSV
-      if (exportData.length === 0) {
-        alert('No data available to export');
-        return;
-      }
-
-      const headers = Object.keys(exportData[0]);
-      const csvContent = [
-        headers.join(','),
-        ...exportData.map(row =>
-          headers.map(header => {
-            const value = row[header];
-            // Escape commas and quotes in CSV
-            if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
-              return `"${value.replace(/"/g, '""')}"`;
-            }
-            return value || '';
-          }).join(',')
-        )
-      ].join('\n');
-
-      // Create and download file
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `OEE_Data_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-    } catch (error) {
-      console.error('Error exporting data:', error);
-      alert('Failed to export data. Please try again.');
-    }
-  };
-
-  const handleSyncDashboard = () => {
-    fetchData(true);
-  };
-
   const filteredMachines = useMemo(() => {
-    if (realData.machineOEE && realData.machineOEE.length > 0) {
-      // Group by machine_id to have one card per asset
-      const grouped = realData.machineOEE.reduce((acc, m) => {
-        if (!acc[m.machine_id]) {
-          acc[m.machine_id] = {
-            id: m.machine_id,
-            name: m.machine_name,
-            line: m.line_id,
-            status: m.machine_status || 'Offline',
-            availability: [],
-            performance: [],
-            quality: [],
-            oee: [],
-            load_vals: [],
-            temp_vals: [],
-            health_vals: [],
-            total_units: 0,
-            rejected_units: 0,
-            downtime_mins: 0,
-            entries: 0,
-            ideal_cycle_time: m.ideal_cycle_time_mins || 1
-          };
-        }
-        
-        // Only include metrics if there's production data
-        if (m.entry_date) {
-          acc[m.machine_id].availability.push(m.availability);
-          acc[m.machine_id].performance.push(m.performance);
-          acc[m.machine_id].quality.push(m.quality);
-          acc[m.machine_id].oee.push(m.oee);
-          acc[m.machine_id].load_vals.push(m.load || 0);
-          acc[m.machine_id].temp_vals.push(m.temperature || 0);
-          acc[m.machine_id].health_vals.push(m.health || 0);
-          acc[m.machine_id].total_units += m.total_units;
-          acc[m.machine_id].rejected_units += m.rejected_units;
-          acc[m.machine_id].downtime_mins += (m.downtime_mins || 0);
-          acc[m.machine_id].entries += 1;
-          acc[m.machine_id].ideal_cycle_time = m.ideal_cycle_time_mins || 1;
-        }
-        
-        return acc;
-      }, {});
+    if (!realData.machineOEE || !Array.isArray(realData.machineOEE)) return [];
 
-      return Object.values(grouped)
-        .filter(m => filters.line === 'All Lines' || m.line === filters.line)
-        .map(m => {
-          const avg = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-          
-          const machineDowntime = (realData.downtimeReasons || [])
-            .filter(dr => dr.machine_id === m.id)
-            .map(dr => ({ reason: dr.reason, minutes: dr.duration }));
-
-          return {
-            ...m,
-            a: Number(avg(m.availability).toFixed(1)),
-            p: Number(avg(m.performance).toFixed(1)),
-            q: Number(avg(m.quality).toFixed(1)),
-            oee: Number(avg(m.oee).toFixed(1)),
-            load: m.entries > 0 ? Number(avg(m.load_vals).toFixed(1)) : 0,
-            temp: m.entries > 0 ? Number(avg(m.temp_vals).toFixed(1)) : 22,
-            health: m.entries > 0 ? Number(avg(m.health_vals).toFixed(1)) : (m.status === 'Running' ? 98 : m.status === 'Down' ? 45 : 85),
-            throughput: m.total_units,
-            rejects: m.rejected_units,
-            planned: m.entries > 0 ? Math.round((m.entries * 480) / m.ideal_cycle_time) : 0,
-            actual: m.total_units,
-            downtime: machineDowntime.length > 0 ? machineDowntime : [{ reason: 'No Specific Downtime Recorded', minutes: m.downtime_mins || 0 }],
-            rejectDistribution: [
-              { label: 'Rejects', val: 100, color: 'bg-rose-500' }
-            ]
-          };
-        });
-    }
-
-    return []; // Return empty instead of mock data to ensure real-time focus
-  }, [filters.line, realData.machineOEE, realData.downtimeReasons]);
-
-  const plantOEE = useMemo(() => {
-    if (realData.summary) return realData.summary.oee;
-    return filteredMachines.length > 0 
-      ? filteredMachines.reduce((acc, m) => acc + m.oee, 0) / filteredMachines.length 
-      : 0;
-  }, [filteredMachines, realData.summary]);
-
-  const plantMetrics = useMemo(() => {
-    const activeMachines = filteredMachines.filter(m => m.entries > 0).length;
-    const totalMachines = filteredMachines.length || 1;
-    const engagement = ((activeMachines / totalMachines) * 100).toFixed(1);
-
-    const metrics = {
-      production: "0",
-      throughput: "0/hr",
-      quality: "0.0",
-      availability: "0.0",
-      performance: "0.0",
-      engagement: engagement,
-      trends: {
-        availability: { val: "+0.0%", trend: 'up' },
-        performance: { val: "+0.0%", trend: 'up' },
-        quality: { val: "+0.0%", trend: 'up' },
-        oee: { val: "+0.0%", trend: 'up' }
-      }
-    };
-
-    if (realData.summary) {
-      const operatingHours = realData.summary.operating_time_mins / 60 || 1;
-      metrics.production = realData.summary.total_units.toLocaleString();
-      metrics.throughput = `${Math.round(realData.summary.total_units / operatingHours)}/hr`;
-      metrics.quality = realData.summary.quality.toFixed(1);
-      metrics.availability = realData.summary.availability.toFixed(1);
-      metrics.performance = realData.summary.performance.toFixed(1);
-    } else if (filteredMachines.length > 0) {
-      const totalProduction = filteredMachines.reduce((acc, m) => acc + m.actual, 0);
-      const avgThroughput = filteredMachines.reduce((acc, m) => acc + (m.actual / (m.planned/60) || 0), 0) / filteredMachines.length;
-      const avgQuality = filteredMachines.reduce((acc, m) => acc + m.q, 0) / filteredMachines.length;
-      const avgAvailability = filteredMachines.reduce((acc, m) => acc + m.a, 0) / filteredMachines.length;
-      const avgPerformance = filteredMachines.reduce((acc, m) => acc + m.p, 0) / filteredMachines.length;
-      
-      metrics.production = totalProduction.toLocaleString();
-      metrics.throughput = `${Math.round(avgThroughput)}/hr`;
-      metrics.quality = avgQuality.toFixed(1);
-      metrics.availability = avgAvailability.toFixed(1);
-      metrics.performance = avgPerformance.toFixed(1);
-    }
-
-    // Dynamic Trend Calculation
-    if (realData.trends && realData.trends.length >= 2) {
-      const latest = realData.trends[realData.trends.length - 1];
-      const previous = realData.trends[realData.trends.length - 2];
-      
-      const calcTrend = (l, p) => {
-        const diff = l - p;
-        return {
-          val: `${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%`,
-          trend: diff >= 0 ? 'up' : 'down'
+    const grouped = realData.machineOEE.reduce((acc, m) => {
+      const mid = m.machine_id || m.name || 'unknown';
+      if (!acc[mid]) {
+        acc[mid] = {
+          id: mid,
+          name: m.machine_name || m.name || mid,
+          line: m.line_id || 'Unassigned',
+          status: m.machine_status || 'Offline',
+          availability: [], performance: [], quality: [], oee: [],
+          total_units: 0, rejected_units: 0, downtime_mins: 0, entries: 0,
+          ideal_cycle_time: Number(m.ideal_cycle_time_mins || 1),
+          active_jobs: Number(m.active_jobs || 0),
+          bottleneck_score: Number(m.bottleneck_score || 0)
         };
-      };
-
-      metrics.trends.availability = calcTrend(latest.availability, previous.availability);
-      metrics.trends.performance = calcTrend(latest.performance, previous.performance);
-      metrics.trends.quality = calcTrend(latest.quality, previous.quality);
-      metrics.trends.oee = calcTrend(latest.oee, previous.oee);
-    }
-
-    return metrics;
-  }, [filteredMachines, realData.summary, realData.trends]);
-
-  const downtimePareto = useMemo(() => {
-    if (realData.downtimeReasons && realData.downtimeReasons.length > 0) {
-      // Group by reason since backend now returns per machine/line
-      const groupedByReason = realData.downtimeReasons.reduce((acc, curr) => {
-        acc[curr.reason] = (acc[curr.reason] || 0) + curr.duration;
-        return acc;
-      }, {});
-
-      const colors = ['#ef4444', '#f59e0b', '#3b82f6', '#6366f1', '#10b981', '#64748b'];
-      return Object.entries(groupedByReason)
-        .sort((a, b) => b[1] - a[1])
-        .map(([reason, minutes], i) => ({
-          reason,
-          minutes,
-          color: colors[i % colors.length]
-        }));
-    }
-
-    const allDowntime = filteredMachines.flatMap(m => m.downtime).filter(d => d.reason !== 'None');
-    const grouped = allDowntime.reduce((acc, d) => {
-      acc[d.reason] = (acc[d.reason] || 0) + d.minutes;
-      return acc;
-    }, {});
-    
-    const colors = ['#ef4444', '#f59e0b', '#3b82f6', '#6366f1', '#10b981', '#64748b'];
-    
-    return Object.entries(grouped)
-      .sort((a, b) => b[1] - a[1])
-      .map(([reason, minutes], i) => ({
-        reason,
-        minutes,
-        color: colors[i % colors.length]
-      }));
-  }, [filteredMachines, realData.downtimeReasons]);
-
-  const trendsData = useMemo(() => {
-    if (realData.trends && realData.trends.length > 0) {
-      return realData.trends.map(t => ({
-        time: t.date,
-        oee: t.oee,
-        a: t.availability,
-        p: t.performance,
-        q: t.quality
-      }));
-    }
-    return [];
-  }, [realData.trends]);
-
-const lineMetrics = useMemo(() => {
-  const dataSource = filteredMachines;
-  if (dataSource.length === 0) return [];
-  
-  const lines = [...new Set(dataSource.map(m => m.line))].sort();
-    
-    const metrics = lines.map(line => {
-      const machinesInLine = dataSource.filter(m => m.line === line);
-      const avgOee = machinesInLine.reduce((acc, m) => acc + m.oee, 0) / machinesInLine.length;
-      const avgA = machinesInLine.reduce((acc, m) => acc + m.a, 0) / machinesInLine.length;
-      const avgP = machinesInLine.reduce((acc, m) => acc + m.p, 0) / machinesInLine.length;
-      const avgQ = machinesInLine.reduce((acc, m) => acc + m.q, 0) / machinesInLine.length;
-      
-      const status = avgOee >= 80 ? 'On Track' : avgOee >= 60 ? 'Warning' : 'Critical';
-      const statusColor = avgOee >= 80 ? 'bg-emerald-100 text-emerald-700' : avgOee >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700';
-      
-      return {
-        name: line,
-        oee: avgOee,
-        a: avgA,
-        p: avgP,
-        q: avgQ,
-        status,
-        statusColor,
-        machines: machinesInLine
-      };
-    });
-    return metrics.filter(m => filters.line === 'All Lines' || m.name === filters.line);
-  }, [filters.line, filteredMachines]);
-
-  const topLosses = useMemo(() => {
-    const allDowntime = filteredMachines.flatMap(m => 
-      m.downtime.map(d => ({ ...d, line: m.line, machine: m.name }))
-    ).filter(d => d.reason !== 'None');
-    
-    const grouped = allDowntime.reduce((acc, d) => {
-      const key = `${d.reason}-${d.line}`;
-      if (!acc[key]) {
-        acc[key] = { name: d.reason, line: d.line, loss: 0 };
       }
-      acc[key].loss += d.minutes;
+      acc[mid].availability.push(Number(m.availability || 0));
+      acc[mid].performance.push(Number(m.performance || 0));
+      acc[mid].quality.push(Number(m.quality || 0));
+      acc[mid].oee.push(Number(m.oee || 0));
+      acc[mid].total_units += Number(m.total_units || 0);
+      acc[mid].rejected_units += Number(m.rejected_units || 0);
+      acc[mid].downtime_mins += Number(m.downtime_mins || 0);
+      if (m.entry_date) {
+        acc[mid].entries += 1;
+      }
       return acc;
     }, {});
-    
+
     return Object.values(grouped)
-      .sort((a, b) => b.loss - a.loss)
-      .slice(0, 3)
-      .map(d => ({
-        ...d,
-        loss: `${d.loss}m`,
-        impact: d.loss > 60 ? 'High' : 'Medium',
-        color: d.loss > 60 ? 'bg-rose-500' : 'bg-amber-500'
-      }));
-  }, [filteredMachines]);
-
-  const aiInsights = useMemo(() => {
-    const insights = [];
-    
-    const criticalMachine = [...filteredMachines].sort((a, b) => a.oee - b.oee)[0];
-    if (criticalMachine && criticalMachine.oee < 75 && criticalMachine.entries > 0) {
-      insights.push({
-        type: 'Critical',
-        message: `${criticalMachine.id} performance is trending ${Math.round(85 - criticalMachine.oee)}% below target. ${criticalMachine.status === 'Down' ? 'Critical failure detected.' : 'Check for material feed issues.'}`,
-        color: 'text-amber-500',
-        icon: AlertTriangle
+      .filter(m => filters.line === 'All Lines' || m.line === filters.line)
+      .map(m => {
+        const avg = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+        return {
+          ...m,
+          a: Number(avg(m.availability).toFixed(1)),
+          p: Number(avg(m.performance).toFixed(1)),
+          q: Number(avg(m.quality).toFixed(1)),
+          oee: Number(avg(m.oee).toFixed(1)),
+          health: m.health || (m.entries > 0 ? 92 : 85),
+          throughput: m.total_units
+        };
       });
-    }
+  }, [filters.line, realData.machineOEE]);
 
-    const highRejectMachine = [...filteredMachines].sort((a, b) => (b.rejects / (b.actual || 1)) - (a.rejects / (a.actual || 1)))[0];
-    if (highRejectMachine && highRejectMachine.rejects > 0 && (highRejectMachine.rejects / (highRejectMachine.actual || 1)) > 0.05) {
-       insights.push({
-         type: 'Quality',
-         message: `Machine ${highRejectMachine.id} showing ${(highRejectMachine.rejects / highRejectMachine.actual * 100).toFixed(1)}% reject rate. Tooling calibration recommended.`,
-         color: 'text-rose-500',
-         icon: AlertCircle
-       });
-    }
-
-    const topMachine = [...filteredMachines].sort((a, b) => b.oee - a.oee)[0];
-    if (topMachine && topMachine.oee > 85 && !insights.find(i => i.type === 'Critical' && i.message.includes(topMachine.id))) {
-      insights.push({
-        type: 'Strategy',
-        message: `Machine ${topMachine.id} reached peak OEE of ${topMachine.oee}%. Current cycle parameters are optimal for ${topMachine.line}.`,
-        color: 'text-emerald-500',
-        icon: CheckCircle2
-      });
-    }
-
-    if (downtimePareto.length > 0 && downtimePareto[0].minutes > 60) {
-       insights.push({
-         type: 'Maintenance',
-         message: `Top loss reason "${downtimePareto[0].reason}" has caused ${downtimePareto[0].minutes}m downtime. Schedule preventive check.`,
-         color: 'text-indigo-400',
-         icon: Clock
-       });
-    }
-
-    if (insights.length < 2) {
-      insights.push({
-        type: 'System',
-        message: 'Neural engine analyzing shift patterns. No immediate corrective actions required.',
-        color: 'text-indigo-400',
-        icon: Activity
-      });
-    }
-
-    return insights.slice(0, 2);
-  }, [filteredMachines, downtimePareto]);
+  const radarData = useMemo(() => {
+    if (!realData.summary) return [];
+    return [
+      { subject: 'Availability', A: realData.summary.availability, fullMark: 100 },
+      { subject: 'Performance', A: realData.summary.performance, fullMark: 100 },
+      { subject: 'Quality', A: realData.summary.quality, fullMark: 100 },
+    ];
+  }, [realData.summary]);
 
   const renderExecutiveOverview = () => (
-    <>
-      {/* Hero Section: Large Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
-        <StatCard label="Availability" value={plantMetrics.availability} subValue={plantMetrics.trends.availability.val} color="bg-indigo-600" trend={plantMetrics.trends.availability.trend} icon={Clock} />
-        <StatCard label="Performance" value={plantMetrics.performance} subValue={plantMetrics.trends.performance.val} color="bg-blue-600" trend={plantMetrics.trends.performance.trend} icon={Activity} />
-        <StatCard label="Quality" value={plantMetrics.quality} subValue={plantMetrics.trends.quality.val} color="bg-emerald-600" trend={plantMetrics.trends.quality.trend} icon={CheckCircle2} />
-        <StatCard label="Engagement" value={plantMetrics.engagement} subValue="Active Assets" color="bg-purple-600" trend="up" icon={Zap} />
-        <div className="bg-gradient-to-br from-amber-400 to-amber-500 rounded p-3 border border-amber-200 shadow-md relative overflow-hidden group col-span-1">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-          <div className="flex flex-col items-center text-center relative z-10">
-            <span className="text-xs font-medium text-white  mb-4">Overall OEE</span>
-            <div className="flex items-baseline gap-1">
-              <h3 className="text-xl  text-white m-0">{Math.round(plantOEE)}</h3>
-              <span className="text-xl  text-white">%</span>
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+        <StatCard label="Plant Availability" value={realData.summary?.availability.toFixed(1) || 0} subValue="+2.1%" color="bg-indigo-600" trend="up" icon={Clock} />
+        <StatCard label="Plant Performance" value={realData.summary?.performance.toFixed(1) || 0} subValue="-0.8%" color="bg-blue-600" trend="down" icon={Activity} />
+        <StatCard label="Plant Quality" value={realData.summary?.quality.toFixed(1) || 0} subValue="+0.4%" color="bg-emerald-600" trend="up" icon={CheckCircle2} />
+        <div className="bg-slate-900  p-2 border border-slate-800 shadow-xl relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+          <div>
+            <span className="text-[10px]  text-slate-400 uppercase tracking-wider mb-1 block">Overall Plant OEE</span>
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-xl  text-white m-0">{Math.round(realData.summary?.oee || 0)}%</h3>
+              <span className="text-xs  text-emerald-400">+3.4%</span>
             </div>
-            <div className="w-full h-2.5 bg-white/20 rounded-full mt-6 overflow-hidden">
-              <div className="h-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.8)]" style={{ width: `${plantOEE}%` }}></div>
-            </div>
+          </div>
+          <div className="h-1.5 w-full bg-slate-800 rounded-full mt-4 overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" style={{ width: `${realData.summary?.oee || 0}%` }}></div>
           </div>
         </div>
       </div>
 
-      {/* AI Insight Bar */}
-      <div className="bg-slate-900 rounded p-1 mb-3 overflow-hidden shadow-2xl shadow-slate-900/20">
-        <div className="bg-slate-800 rounded p-3 flex flex-col md:flex-row items-center justify-between gap-3 border border-slate-700/50">
-          <div className="flex items-center gap-3">
-            <div className="w-20 h-20 rounded bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white  shadow-indigo-500/40 relative">
-              <Rocket size={32} />
-              <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-slate-800"></div>
-            </div>
-            <div>
-              <div className="flex items-center gap-3">
-                <h4 className="text-base  text-white m-0  ">AI Optimization Engine</h4>
-                <span className="p-2  py-1 rounded-full bg-indigo-500/20 text-indigo-400 text-xs    border border-indigo-500/30 ">Active</span>
-              </div>
-              <div className="flex flex-col md:flex-row gap-4 mt-4">
-                {aiInsights.map((insight, i) => (
-                  <div key={i} className="flex items-start gap-3 p-4 rounded bg-slate-900/50 border border-slate-700/50 max-w-md">
-                    <insight.icon size={18} className={`${insight.color} mt-0.5 shrink-0`} />
-                    <p className="text-xs font-medium text-slate-300 m-0 leading-relaxed">
-                      <span className={`${insight.color} `}>{insight.type}:</span> {insight.message}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
+      <div className="bg-slate-900  p-2 flex flex-col md:flex-row items-center justify-between gap-6 border border-slate-800 ">
+        <div className="flex items-center gap-2">
+          <div className="p-2  bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white  shadow-indigo-500/20">
+            <Rocket size={15} />
           </div>
-          <button className="whitespace-nowrap px-8 py-4 bg-white text-slate-900 text-xs  rounded hover:bg-indigo-50 transition-all tracking-[0.2em]  ">
-            Optimize All Lines
-          </button>
+          <div>
+            <h4 className="text-base  text-white m-0">AI Optimization Engine</h4>
+            <p className="text-xs text-slate-400 m-0 mt-1">Found 2 high-impact optimization opportunities for Line 1</p>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <div className="bg-slate-800/50 border border-slate-700 px-3 py-2 rounded ">
+            <span className="text-[10px]  text-indigo-400 block uppercase">Suggestion</span>
+            <span className="text-xs text-slate-300">Adjust feed rate on M-001 (+4% OEE)</span>
+          </div>
+          <button className="p-2 bg-white text-slate-900 text-xs  rounded  hover:bg-indigo-50 transition-all shadow-lg">Apply Auto-Fix</button>
         </div>
       </div>
 
-      {/* Performance Visualization Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 mb-12">
-        {/* Main Performance Trend */}
-        <div className="lg:col-span-7 bg-white rounded p-3 border border-slate-200  relative overflow-hidden">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="text-lg  text-slate-900 m-0 tracking-tight ">OEE Trend Analysis</h3>
-              <span className="text-xs   text-slate-400  mt-1 block">Real-time Performance Indexing</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+        <div className="lg:col-span-2 bg-white  border border-slate-200 p-2">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-sm  text-slate-900 m-0 uppercase tracking-wider">Plant OEE Trend</h3>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                <span className="text-[10px]  text-slate-500 uppercase">Current</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-slate-200"></div>
+                <span className="text-[10px]  text-slate-500 uppercase">Target (85%)</span>
+              </div>
             </div>
           </div>
-
-          <ResponsiveContainer width="100%" height={320}>
-            <AreaChart data={trendsData}>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={realData.trends}>
               <defs>
                 <linearGradient id="colorOee" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15}/>
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="time" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{fontSize: 10, fontWeight: 700, fill: '#94a3b8'}} 
-                dy={10}
-              />
-              <YAxis 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{fontSize: 10, fontWeight: 700, fill: '#94a3b8'}} 
-                domain={[0, 100]}
-              />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px' }}
-              />
+              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} domain={[0, 100]} />
+              <Tooltip contentStyle={{ border: 'none', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
               <Area type="monotone" dataKey="oee" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorOee)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-
-        {/* Production Summary (Planned vs Actual) */}
-        <div className="lg:col-span-5 bg-white rounded  p-3 border border-slate-200 ">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="text-base  text-slate-900 m-0 tracking-tight ">Production Summary</h3>
-              <span className="text-xs   text-slate-400  mt-1 block">Output against target</span>
-            </div>
-          </div>
-
-          <div className="space-y-8 h-[320px] flex flex-col justify-center">
-            {[
-              { label: 'Planned Production', val: filteredMachines.reduce((acc, m) => acc + m.planned, 0), color: 'bg-slate-200', text: 'text-slate-500' },
-              { label: 'Actual Production', val: filteredMachines.reduce((acc, m) => acc + m.actual, 0), color: 'bg-emerald-500', text: 'text-emerald-600' }
-            ].map((item, i) => {
-              const totalPlanned = filteredMachines.reduce((acc, m) => acc + m.planned, 0);
-              const max = totalPlanned > 0 ? totalPlanned * 1.1 : 100;
-              const width = max > 0 ? (item.val / max) * 100 : 0;
-              return (
-                <div key={i}>
-                  <div className="flex justify-between items-end mb-2">
-                    <span className="text-xs  text-slate-500 ">{item.label}</span>
-                    <span className={`text-lg  ${item.text}`}>{item.val.toLocaleString()}</span>
-                  </div>
-                  <div className="h-10 w-full bg-slate-50 rounded  overflow-hidden border border-slate-100 p-1">
-                    <div 
-                      className={`h-full rounded-sm ${item.color} transition-all duration-1000 `} 
-                      style={{ width: `${width}%` }}
-                    ></div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="mt-8 pt-8 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs   text-slate-400 ">Target Achievement</span>
-            <span className="text-xl  text-indigo-600">
-              {filteredMachines.reduce((acc, m) => acc + m.planned, 0) > 0 
-                ? ((filteredMachines.reduce((acc, m) => acc + m.actual, 0) / filteredMachines.reduce((acc, m) => acc + m.planned, 0)) * 100).toFixed(1)
-                : "0.0"}%
-            </span>
+        <div className="bg-white  border border-slate-200 p-2 flex flex-col">
+          <h3 className="text-sm  text-slate-900 m-0 uppercase tracking-wider mb-6">Efficiency Balance</h3>
+          <div className="flex-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={radarData}>
+                <PolarGrid stroke="#f1f5f9" />
+                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fontBold: 700, fill: '#64748b' }} />
+                <Radar name="Plant" dataKey="A" stroke="#6366f1" fill="#6366f1" fillOpacity={0.4} />
+              </RadarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>
-    </>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+        <LossTree summary={realData.summary} />
+        <div className="bg-white  border border-slate-200 p-2">
+          <h3 className="text-sm  text-slate-900 m-0 uppercase tracking-wider mb-4">Top Downtime Reasons (Pareto)</h3>
+          <div className="space-y-3">
+            {realData.downtimeReasons?.slice(0, 5).map((dt, i) => (
+              <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded  border border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded bg-white flex items-center justify-center text-rose-500  text-xs border border-rose-100">{i + 1}</div>
+                  <div>
+                    <span className="text-xs  text-slate-700 block">{dt.reason}</span>
+                    <span className="text-[10px] text-slate-400">{dt.occurrences} occurrences</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs  text-slate-900 block">{dt.duration} min</span>
+                  <div className="h-1 w-24 bg-slate-200 rounded-full mt-1 overflow-hidden">
+                    <div className="h-full bg-rose-500" style={{ width: `${(dt.duration / 480) * 100}%` }}></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'Executive Overview':
-        return renderExecutiveOverview();
-      case 'Line Analytics':
-        return (
-          <div className="bg-white rounded p-3 border border-slate-200  min-h-[400px]">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 bg-indigo-50 rounded flex items-center justify-center text-indigo-600">
-                <Layers size={28} />
-              </div>
-              <div>
-                <h3 className="text-xl  text-slate-800 tracking-tight m-0 ">Line Performance Analytics</h3>
-                <p className="text-slate-500 text-xs  m-0 mt-1 ">Granular breakdown of production line efficiency and cycle times</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {lineMetrics.map(line => (
-                <div 
-                  key={line.name} 
-                  className="p-3 bg-white rounded border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all group cursor-pointer"
-                  onClick={() => { setSelectedLine(line); setLineModalOpen(true); }}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                        <Layers size={18} />
-                      </div>
-                      <h4 className="text-sm font-bold text-slate-800 m-0">{line.name}</h4>
-                    </div>
-                    <span className={`p-2 py-1 rounded-full text-[10px] font-bold ${line.statusColor}`}>{line.status}</span>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { label: 'AVAIL', val: line.a },
-                        { label: 'PERF', val: line.p },
-                        { label: 'QUAL', val: line.q }
-                      ].map((s, i) => (
-                        <div key={i} className="text-center">
-                          <p className="text-[9px] text-slate-400 mb-0.5 uppercase">{s.label}</p>
-                          <p className="text-xs font-bold text-slate-700">{s.val.toFixed(1)}%</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] font-medium text-slate-400">Efficiency Index</span>
-                        <span className={`text-[10px] font-bold ${line.oee >= 80 ? 'text-emerald-600' : 'text-amber-600'}`}>{line.oee.toFixed(1)}%</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full transition-all duration-1000 ${line.oee >= 80 ? 'bg-emerald-500' : line.oee >= 60 ? 'bg-amber-500' : 'bg-rose-500'}`} 
-                          style={{ width: `${line.oee}%` }}
-                        ></div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                      <div className="flex -space-x-2">
-                        {line.machines.slice(0, 3).map((m, i) => (
-                          <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500" title={m.name}>
-                            {m.name.charAt(0)}
-                          </div>
-                        ))}
-                        {line.machines.length > 3 && (
-                          <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-50 flex items-center justify-center text-[8px] font-bold text-slate-400">
-                            +{line.machines.length - 3}
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-[10px] font-bold text-indigo-600 flex items-center gap-1 uppercase tracking-widest group-hover:gap-2 transition-all">
-                        Details <ChevronRight size={14} />
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      case 'Machine Health':
-        return (
-          <div className="space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-2">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center text-white  shadow-indigo-600/20">
-                  <Monitor size={28} />
-                </div>
-                <div>
-                  <h2 className="text-xl   text-slate-800 m-0 tracking-tight ">Asset Monitoring</h2>
-                  <p className="text-xs  text-slate-400  mt-1 ">Real-time telemetry and health status</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3 px-8 py-4 bg-white border border-slate-200 rounded ">
-                {[
-                  { label: 'Running', count: filteredMachines.filter(m => m.status === 'Running').length, color: 'bg-emerald-500' },
-                  { label: 'Stop', count: filteredMachines.filter(m => m.status === 'Minor Stop').length, color: 'bg-amber-500' },
-                  { label: 'Down', count: filteredMachines.filter(m => m.status === 'Down').length, color: 'bg-rose-500' },
-                  { label: 'Offline', count: filteredMachines.filter(m => m.status === 'Offline' || !m.status).length, color: 'bg-slate-400' }
-                ].map((s, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${s.color}`}></span>
-                    <span className="text-xs   text-slate-600  ">{s.count} {s.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-              {filteredMachines.map(m => (
-                <MachineCard key={m.id} machine={m} onClick={() => setSelectedMachine(m)} />
-              ))}
-            </div>
-          </div>
-        );
-      case 'Loss Analysis':
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <div className="bg-white rounded p-3 border border-slate-200 ">
-              <div className="flex items-center gap-4 mb-3">
-                <div className="w-6 h-6  bg-indigo-50 rounded flex items-center justify-center text-indigo-600">
-                  <PieChart size={24} />
-                </div>
-                <h3 className="text-base  text-slate-800 tracking-tight m-0 ">Loss Category Distribution</h3>
-              </div>
-              
-              <ResponsiveContainer width="100%" height={320}>
-                <PieChart>
-                  <Pie
-                    data={downtimePareto}
-                    cx="50%" cy="50%"
-                    innerRadius={80}
-                    outerRadius={110}
-                    paddingAngle={8}
-                    dataKey="minutes"
-                    stroke="none"
-                  >
-                    {downtimePareto.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ border: 'none', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="bg-white rounded p-3 border border-slate-200 ">
-              <div className="flex items-center gap-4 mb-3">
-                <div className="w-6 h-6  bg-rose-50 rounded flex items-center justify-center text-rose-600">
-                  <AlertCircle size={24} />
-                </div>
-                <h3 className="text-base  text-slate-800 tracking-tight m-0 ">Top Bottleneck Insights</h3>
-              </div>
-              
-              <div className="space-y-2">
-                {topLosses.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded border border-slate-100 hover:border-slate-300 transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-2 h-12 rounded-full ${item.color}`}></div>
-                      <div>
-                        <h4 className="text-xs  m-0  text-slate-800 ">{item.name}</h4>
-                        <span className="text-xs   text-slate-400  ">{item.line}</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xs  text-slate-800">{item.loss}</div>
-                      <span className={`text-[9px]  px-2 py-1 rounded  tracking-tighter ${item.impact === 'High' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'}`}>
-                        {item.impact}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <button className="w-full mt-8 py-4 bg-slate-800 text-white text-xs   rounded hover:bg-slate-700 transition-all  shadow-lg shadow-slate-800/20 ">
-                Full Loss Report
-              </button>
-            </div>
-          </div>
-        );
-      default:
-        return renderExecutiveOverview();
-    }
-  };
-
   return (
-    <div className="p-3 bg-slate-50 min-h-screen">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
+    <div className="p-2 bg-slate-50 min-h-screen">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 bg-indigo-100 rounded">
-              <Gauge size={20} className="text-indigo-600" />
-            </div>
-            <h1 className="text-xl  text-slate-800 m-0 tracking-tight ">OEE Intelligence</h1>
-          </div>
-          <p className="text-slate-500 text-xs  ">Real-time manufacturing performance & optimization engine</p>
+          <h1 className="text-xl  text-slate-900 m-0">OEE Intelligence Dashboard</h1>
+          <p className="text-slate-500 text-xs">Real-time manufacturing performance & bottleneck analysis</p>
         </div>
-
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleExportData}
-            className="flex items-center gap-2 p-2  py-2 bg-white border border-slate-200 text-slate-600 text-xs  rounded hover:bg-slate-50 transition-all  "
-          >
-            <Download size={18} />
-            Export Data
+        <div className="flex items-center gap-3">
+          <button onClick={() => fetchData(true)} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs  rounded  hover:bg-slate-50 transition-all">
+            <RefreshCcw size={16} className={syncLoading ? 'animate-spin' : ''} />
+            Sync Dashboard
           </button>
-          <button
-            onClick={handleSyncDashboard}
-            disabled={syncLoading}
-            className={`flex items-center gap-2 px-8 py-4 text-xs  rounded  transition-all tracking-[0.2em] ${
-              syncLoading
-                ? 'bg-indigo-400 cursor-not-allowed'
-                : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/30'
-            } text-white`}
-          >
-            <RefreshCcw size={18} className={syncLoading ? 'animate-spin' : ''} />
-            {syncLoading ? 'Syncing...' : 'Sync Dashboard'}
+          <button className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white text-xs  rounded  hover:bg-indigo-700  shadow-indigo-600/20 transition-all">
+            <Download size={16} />
+            Export Report
           </button>
         </div>
       </div>
 
-      {/* Primary Navigation Tabs */}
-      <div className="flex items-center gap-2 p-1.5 bg-slate-200/50 rounded border border-slate-200 mb-3 w-fit">
-        {['Executive Overview', 'Line Analytics', 'Machine Health', 'Loss Analysis'].map((tab) => (
-          <button 
+      <div className="bg-white rounded border border-slate-200 p-2 mb-6 flex flex-wrap items-center gap-2 ">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded  text-slate-500">
+          <Filter size={16} />
+          <span className="text-[10px]  uppercase tracking-wider">Filters</span>
+        </div>
+        <select value={filters.range} onChange={(e) => setFilters({ ...filters, range: e.target.value })} className="bg-slate-50 border-none text-xs  text-slate-700 rounded  px-3 py-1.5 focus:ring-0 outline-none">
+          {['Today', 'Yesterday', 'Weekly', 'Monthly'].map(opt => <option key={opt}>{opt}</option>)}
+        </select>
+        <div className="h-6 w-[1px] bg-slate-200"></div>
+        <select value={filters.line} onChange={(e) => setFilters({ ...filters, line: e.target.value })} className="bg-slate-50 border-none text-xs  text-slate-700 rounded  px-3 py-1.5 focus:ring-0 outline-none">
+          <option>All Lines</option>
+          {[...new Set((realData.machineOEE || []).map(m => m.line_id || 'Unassigned'))].filter(Boolean).map(l => <option key={l} value={l}>{l}</option>)}
+        </select>
+      </div>
+
+      <div className="flex items-center gap-2 mb-6">
+        {['Executive Overview', 'Machine Analytics', 'Loss Analysis'].map(tab => (
+          <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`p-6  py-2 text-xs  rounded transition-all  ${
-              activeTab === tab 
-                ? 'bg-white text-indigo-600 shadow-md' 
-                : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'
-            }`}
+            className={`px-6 py-2 rounded  text-xs  transition-all ${activeTab === tab ? 'bg-white text-indigo-600  border border-indigo-100' : 'text-slate-400 hover:text-slate-600 hover:bg-white'}`}
           >
             {tab}
+            {tab === 'Machine Analytics' && (
+              <span className="ml-2 px-1.5 py-0.5 rounded-full bg-indigo-50 text-[10px] text-indigo-600 border border-indigo-100">
+                {filteredMachines.length} / {realData.machineOEE?.length || 0}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {/* Error Display */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded p-4 mb-6 flex items-center gap-3">
-          <AlertCircle size={20} className="text-red-500 flex-shrink-0" />
-          <span className="text-red-700 text-xs font-medium">{error}</span>
-          <button
-            onClick={() => setError(null)}
-            className="ml-auto text-red-500 hover:text-red-700"
-          >
-            <X size={16} />
-          </button>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 bg-white  rounded  border border-slate-200 ">
+          <Loader2 className="animate-spin text-indigo-500 mb-4" size={40} />
+          <p className="text-sm  text-slate-500 ">Hydrating Dashboard...</p>
         </div>
-      )}
-
-      {/* Global Filter Bar */}
-      <div className="bg-white rounded border border-slate-200  p-3 mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-4">
-            <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center text-slate-500">
-              <Filter size={18} />
-            </div>
-            <span className="text-xs  text-slate-400  ">Global Filters</span>
-          </div>
-          
-          <div className="h-12 w-[1px] bg-slate-100 hidden md:block"></div>
-
-          {[
-            { label: 'Time Period', icon: Calendar, value: filters.range, options: ['Today', 'Yesterday', 'Weekly', 'Monthly'] },
-            { 
-              label: 'Production Line', 
-              icon: Layers, 
-              value: filters.line, 
-              options: ['All Lines', ...new Set(filteredMachines.map(m => m.line).filter(Boolean))] 
-            },
-            { label: 'Shift', icon: Clock, value: filters.shift, options: ['All Shifts', 'Day Shift', 'Night Shift'] }
-          ].map((f, i) => (
-            <div key={i} className="flex flex-col min-w-[160px]">
-              <span className="text-[9px]   text-slate-400 flex items-center gap-2 ">
-                <f.icon size={14} />
-                {f.label}
-              </span>
-              <select 
-                className="bg-slate-50 text-xs  text-slate-800 border border-slate-200 rounded p-2  focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none cursor-pointer appearance-none"
-                value={f.value}
-                onChange={(e) => setFilters({...filters, [f.label === 'Time Period' ? 'range' : f.label === 'Production Line' ? 'line' : 'shift']: e.target.value})}
-              >
-                {f.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-              </select>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-4 bg-indigo-50 p-6  py-2 rounded border border-indigo-100">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
-          <span className="text-xs   text-indigo-600  ">
-            Last Sync: {lastSync.toLocaleTimeString()}
-          </span>
-        </div>
-      </div>
-
-      <main>
-        {renderTabContent()}
-      </main>
-
-      {/* Modern High-End Detail Modal */}
-      {selectedMachine && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4 lg:p-3">
-          <div className="bg-white rounded  shadow-2xl max-w-[900px] w-full max-h-[30pc] overflow-hidden flex flex-col relative animate-in fade-in zoom-in duration-300 border border-white/20">
-            {/* Close Button */}
-            <button 
-              onClick={() => setSelectedMachine(null)}
-              className="absolute top-3 right-8 p-3 bg-slate-100 hover:bg-rose-500 hover:text-white text-slate-500 rounded transition-all z-20  border border-slate-200"
-            >
-              <X size={20} />
-            </button>
-
-            <div className="flex flex-col lg:flex-row h-full overflow-hidden">
-              {/* --- Sidebar: Asset Identity --- */}
-              <div className="lg:w-[360px] bg-slate-50/80 border-r border-slate-200 p-4 flex flex-col overflow-y-auto">
-                <div className="relative mb-3 w-fit">
-                  <div className="w-10 h-10 rounded  bg-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-indigo-600/30">
-                    <Cpu size={20} />
+      ) : (
+        <main>
+          {activeTab === 'Executive Overview' && renderExecutiveOverview()}
+          {activeTab === 'Machine Analytics' && (
+            <div className="space-y-4">
+              {filteredMachines.length === 0 ? (
+                <div className="bg-white  rounded  border border-slate-200 p-20 flex flex-col items-center justify-center text-center">
+                  <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 mb-4">
+                    <Monitor size={32} />
                   </div>
-                  <div className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-white border-4 border-slate-50 flex items-center justify-center">
-                    <div className={`w-1 h-1 rounded-full ${selectedMachine.status === 'Running' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
-                  </div>
+                  <h3 className="text-lg  text-slate-900 m-0">No Workstations Found</h3>
+                  <p className="text-sm text-slate-500 max-w-xs mt-2">We couldn't find any workstations matching your current filter criteria.</p>
                 </div>
-
-                <div>
-                  <h2 className="text-xl   text-slate-900 m-0 tracking-tight leading-tight ">{selectedMachine.name}</h2>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="px-2 py-0.5 bg-slate-200 rounded text-[9px]  text-slate-600 ">{selectedMachine.id}</span>
-                    <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                    <span className="text-[9px]  text-indigo-500  ">{selectedMachine.line}</span>
-                  </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+                  {filteredMachines.map(m => <MachineCard key={m.id} machine={m} onClick={() => setSelectedMachine(m)} />)}
                 </div>
-                
-                <div className="mt-5">
-                  {/* Health Widget */}
-                  <div className="p-2 rounded  bg-white border border-slate-200  relative overflow-hidden group">
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-xs   text-slate-400 ">Health Index</span>
-                      <span className="text-xs  text-emerald-600">{selectedMachine.health}%</span>
-                    </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500" style={{ width: `${selectedMachine.health}%` }}></div>
-                    </div>
-                    <div className="mt-4 flex items-start gap-2">
-                      <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
-                      <p className="text-xs   text-slate-500 leading-relaxed m-0">
-                        Calibration recommended in <span className="text-slate-900">12h</span>.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Telemetry Grid */}
-                  <div className="grid grid-cols-1 mt-3 gap-3">
-                    {[
-                      { label: 'Core Temp', val: `${selectedMachine.temp}°C`, icon: Thermometer, color: 'text-rose-500', bg: 'bg-rose-50' },
-                      { label: 'Current Load', val: `${selectedMachine.load}%`, icon: Zap, color: 'text-amber-500', bg: 'bg-amber-50' },
-                      { label: 'Velocity', val: `${selectedMachine.throughput}/h`, icon: TrendingUp, color: 'text-indigo-500', bg: 'bg-indigo-50' }
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-center justify-between p-4 rounded bg-white border border-slate-100">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded ${item.bg}`}>
-                            <item.icon size={16} className={item.color} />
+              )}
+            </div>
+          )}
+          {activeTab === 'Loss Analysis' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                <div className="bg-white  border border-slate-200 p-2">
+                  <h3 className="text-sm  text-slate-900 m-0 uppercase tracking-wider mb-6">Loss Category Distribution</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={realData.downtimeReasons}
+                        cx="50%" cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={5}
+                        dataKey="duration"
+                        nameKey="reason"
+                      >
+                        {realData.downtimeReasons?.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={['#6366f1', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'][index % 5]} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ border: 'none', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                      <Legend verticalAlign="bottom" height={36} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="bg-white  border border-slate-200 p-2">
+                  <h3 className="text-sm  text-slate-900 m-0 uppercase tracking-wider mb-6">Production Bottlenecks</h3>
+                  <div className="space-y-4">
+                    {filteredMachines.sort((a, b) => a.oee - b.oee).slice(0, 3).map((m, i) => (
+                      <div key={i} className="p-2 bg-slate-50  border border-slate-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-10 h-10 rounded  bg-white border border-slate-200 flex items-center justify-center text-rose-500 ">
+                            <AlertTriangle size={20} />
                           </div>
-                          <span className="text-xs   text-slate-400  ">{item.label}</span>
+                          <div>
+                            <span className="text-xs  text-slate-800 block">{m.name}</span>
+                            <span className="text-[10px] text-slate-400 font-medium uppercase">{m.line}</span>
+                          </div>
                         </div>
-                        <span className="text-xs  text-slate-900">{item.val}</span>
+                        <div className="text-right">
+                          <span className="text-sm  text-rose-600 block">{m.oee}% OEE</span>
+                          <span className="text-[10px] text-slate-400  uppercase">Critical Asset</span>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
-
-                {/* AI Strategy Card */}
-                <div className="mt-auto pt-8">
-                  <div className="p-2 rounded  bg-slate-900 text-white  relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full -mr-12 -mt-12 blur-2xl"></div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Rocket size={16} className="text-indigo-400" />
-                      <span className="text-[9px]  tracking-[0.2em] ">AI Insight</span>
-                    </div>
-                    <p className="text-[11px] font-medium text-slate-300 leading-relaxed mb-4">
-                      Increase <span className="text-white ">Pressure</span> to <span className="text-indigo-400 ">185 PSI</span> for <span className="text-white ">+4.2%</span> gain.
-                    </p>
-                    <button className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[9px]  rounded transition-all ">
-                      Execute Optimization
-                    </button>
-                  </div>
-                </div>
               </div>
 
-              {/* --- Main Content: Deep-Dive --- */}
-              <div className="flex-1 p-4 lg:p-4 overflow-y-auto bg-white">
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 mb-12">
-                  <div>
-                    <h3 className="text-xl  text-slate-900 tracking-tight m-0">Analytics Hub</h3>
-                    <p className="text-xs text-slate-400 mt-2">Correlation & Loss Decomposition</p>
-                  </div>
-                  <div className="flex items-center gap-1 p-1 bg-slate-100 rounded">
-                    <button 
-                      onClick={() => setModalTab('Overview')}
-                      className={`p-6  py-2 text-xs  rounded   transition-all ${modalTab === 'Overview' ? 'bg-white text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
-                    >
-                      Overview
-                    </button>
-                    <button 
-                      onClick={() => setModalTab('History')}
-                      className={`p-6  py-2 text-xs  rounded   transition-all ${modalTab === 'History' ? 'bg-white text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
-                    >
-                      History
-                    </button>
+              {/* Advanced Intelligence Insights */}
+              <div className="bg-white  border border-slate-200 overflow-hidden">
+                <div className="p-2 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Zap className="text-amber-500" size={18} />
+                    <h3 className="text-sm  text-slate-900 m-0 uppercase tracking-wider">Intelligence Insights & Recommendations</h3>
                   </div>
                 </div>
-
-                {/* KPI Bento Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-12">
-                  {[
-                    { label: 'Availability', val: selectedMachine.a, trend: '+1.2%', color: 'text-indigo-600' },
-                    { label: 'Performance', val: selectedMachine.p, trend: '-0.5%', color: 'text-blue-600' },
-                    { label: 'Quality', val: selectedMachine.q, trend: 'Stable', color: 'text-emerald-600' },
-                    { label: 'OEE Index', val: selectedMachine.oee, trend: '+0.8%', color: 'text-indigo-600', highlight: true }
-                  ].map((stat, i) => (
-                    <div key={i} className={`p-2 rounded ${stat.highlight ? 'bg-indigo-50/50 border-2 border-indigo-100' : 'bg-slate-50/50 border border-slate-100'}`}>
-                      <span className="text-xs   text-slate-400  block mb-3">{stat.label}</span>
-                      <div className="text-xl   text-slate-900 tracking-tighter mb-2">{stat.val}%</div>
-                      <span className={`text-xs   px-2 py-1 rounded  tracking-tighter ${
-                        stat.trend.includes('+') ? 'bg-emerald-100 text-emerald-600' : 
-                        stat.trend.includes('-') ? 'bg-rose-100 text-rose-600' : 'bg-slate-200 text-slate-600'
-                      }`}>
-                        {stat.trend}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Correlation Area */}
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-6">
-                    <h4 className="text-[11px]  text-slate-900  ">
-                      {modalTab === 'Overview' ? 'Cycle Correlation Trend' : 'Historical OEE Trend'}
-                    </h4>
-                    <div className="flex gap-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full bg-indigo-500"></div>
-                        <span className="text-xs   text-slate-400 ">OEE</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-                        <span className="text-xs   text-slate-400 ">Quality</span>
-                      </div>
-                    </div>
-                  </div>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <ComposedChart data={modalTab === 'Overview' ? (realData.trends.length > 0 ? realData.trends.map(t => ({ ...t, time: t.date })) : []) : (machineHistory.length > 0 ? machineHistory : [])}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis 
-                        dataKey={modalTab === 'Overview' ? 'time' : 'date'} 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{fontSize: 10, fontWeight: 800, fill: '#94a3b8'}} 
-                      />
-                      <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 800, fill: '#94a3b8'}} />
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}
-                        formatter={(value) => `${value}%`}
-                      />
-                      <Bar dataKey="oee" fill="#6366f1" radius={[6, 6, 0, 0]} barSize={modalTab === 'Overview' ? 24 : 12} />
-                      <Line type="monotone" dataKey="quality" stroke="#10b981" strokeWidth={3} dot={{r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff'}} name="Quality %" />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                  {((modalTab === 'History' && machineHistory.length === 0) || (modalTab === 'Overview' && realData.trends.length === 0)) && !historyLoading && (
-                    <p className="text-center text-[11px]  text-slate-400 mt-6 italic ">No tracking data found for this analysis.</p>
-                  )}
-                  {historyLoading && (
-                    <p className="text-center text-[11px]  text-indigo-500 mt-6 animate-pulse ">Fetching machine intelligence...</p>
-                  )}
-                </div>
-
-                {/* Bottom Sections: Loss & Rejects */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                  {/* Loss Breakdown */}
-                  <div className="p-2 rounded bg-slate-50 border border-slate-100">
-                    <h5 className="text-[11px]  text-slate-900  mb-3 flex items-center gap-3">
-                      <Layers size={16} className="text-indigo-500" />
-                      Downtime Analytics
-                    </h5>
-                    <div className="space-y-2">
-                      {selectedMachine.downtime.map((d, i) => (
-                        <div key={i} className="flex items-center justify-between p-3 bg-white rounded border border-slate-100 hover:border-indigo-200 transition-all">
-                          <div>
-                            <span className="text-[9px]  text-slate-400  mb-1 block">Event ID-202{i+1}</span>
-                            <span className="text-xs  text-slate-800 ">{d.reason}</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-base  text-slate-900 block">{d.minutes}m</span>
-                            <span className="text-xs   text-rose-500 tracking-tighter">Impact Critical</span>
-                          </div>
+                <div className="p-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    {filteredMachines.filter(m => m.oee < 75).slice(0, 3).map((m, i) => (
+                      <div key={i} className="p-2  border border-indigo-100 bg-indigo-50/30">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Settings className="text-indigo-600" size={16} />
+                          <span className="text-xs  text-slate-800">{m.name} Optimization</span>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Reject Distro */}
-                  <div className="p-2 rounded bg-slate-50 border border-slate-100">
-                    <h5 className="text-[11px]  text-slate-900  mb-3 flex items-center gap-3">
-                      <AlertCircle size={16} className="text-rose-500" />
-                      Yield Intelligence
-                    </h5>
-                    <div className="space-y-8">
-                      {selectedMachine.rejectDistribution.map((r, i) => (
-                        <div key={i}>
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="text-[11px]  text-slate-600 tracking-tight">{r.label}</span>
-                            <span className="text-[11px]  text-slate-900">{r.val}%</span>
-                          </div>
-                          <div className="h-2.5 w-full bg-white rounded-full overflow-hidden border border-slate-100 p-0.5">
-                            <div className={`h-full ${r.color} rounded-full transition-all duration-1000`} style={{ width: `${r.val}%` }}></div>
-                          </div>
+                        <p className="text-[11px] text-slate-600 mb-4">
+                          OEE is currently at {m.oee}%. Bottleneck analysis suggests a {(100 - m.p).toFixed(1)}% performance gap.
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px]  text-indigo-600 uppercase">Recommendation</span>
+                          <span className="px-2 py-0.5 rounded bg-indigo-100 text-[9px]  text-indigo-700">Check Feed Rate</span>
                         </div>
-                      ))}
-                    </div>
-                    <div className="mt-10 p-3 bg-emerald-50 rounded border border-emerald-100 flex items-center gap-4">
-                      <CheckCircle2 size={20} className="text-emerald-500 shrink-0" />
-                      <p className="text-[11px]  text-emerald-700 m-0 leading-relaxed tracking-wide">
-                        Precision stability confirmed. Variance within <span className="">±0.02%</span> tolerance.
+                      </div>
+                    ))}
+                    {realData.summary?.quality < 98 && (
+                      <div className="p-2  border border-emerald-100 bg-emerald-50/30">
+                        <div className="flex items-center gap-2 mb-3">
+                          <ShieldCheck className="text-emerald-600" size={16} />
+                          <span className="text-xs  text-slate-800">Quality Improvement</span>
+                        </div>
+                        <p className="text-[11px] text-slate-600 mb-4">
+                          Plant-wide quality is {(100 - realData.summary.quality).toFixed(1)}% below target. Rejection analysis shows {realData.downtimeReasons[0]?.reason || 'Material Defects'} as primary cause.
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px]  text-emerald-600 uppercase">Recommendation</span>
+                          <span className="px-2 py-0.5 rounded bg-emerald-100 text-[9px]  text-emerald-700">Audit Calibration</span>
+                        </div>
+                      </div>
+                    )}
+                    <div className="p-2  border border-amber-100 bg-amber-50/30">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Activity className="text-amber-600" size={16} />
+                        <span className="text-xs  text-slate-800">Availability Peak</span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 mb-4">
+                        Average downtime per machine is {Math.round(realData.summary?.downtime_mins / filteredMachines.length || 0)} minutes. Target reduction: 15%.
                       </p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px]  text-amber-600 uppercase">Action Item</span>
+                        <span className="px-2 py-0.5 rounded bg-amber-100 text-[9px]  text-amber-700">Schedule PM</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          )}
+        </main>
       )}
 
-      <LineDetailsModal
-        isOpen={lineModalOpen}
-        line={selectedLine}
-        onClose={() => setLineModalOpen(false)}
+      {/* Machine Detail Modal */}
+      <DetailModal
+        isOpen={!!selectedMachine}
+        machine={selectedMachine}
+        onClose={() => setSelectedMachine(null)}
       />
-
-      <style jsx>{`
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-        .animate-shimmer {
-          animation: shimmer 2s infinite linear;
-        }
-      `}</style>
     </div>
   );
 }

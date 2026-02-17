@@ -187,7 +187,7 @@ export default function SupplierList() {
   }
 
   return (
-    <div className="space-y-6 p-5">
+    <div className="space-y-2 p-5">
       {success && (
         <Alert variant="success">{success}</Alert>
       )}
@@ -204,7 +204,7 @@ export default function SupplierList() {
           </div>
           <Button
             onClick={handleAddClick}
-            className="flex items-center gap-2 bg-blue-500 text-white px-5 py-2.5 rounded   text-xs"
+            className="flex items-center gap-2 bg-blue-500 text-white px-5 py-2  rounded   text-xs"
           >
             <Plus size={18} />
             Add New Supplier
@@ -357,13 +357,13 @@ export default function SupplierList() {
               <Button
                 type="button"
                 onClick={handleCancel}
-                className="px-5 py-2.5 bg-gray-200 text-gray-800 border border-gray-300 rounded  text-xs   hover:bg-gray-300"
+                className="px-5 py-2  bg-gray-200 text-gray-800 border border-gray-300 rounded  text-xs   hover:bg-gray-300"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                className="px-5 py-2.5 bg-green-600 text-white rounded  text-xs   hover:bg-green-700"
+                className="px-5 py-2  bg-green-600 text-white rounded  text-xs   hover:bg-green-700"
               >
                 Create Supplier
               </Button>
@@ -378,7 +378,7 @@ export default function SupplierList() {
           <p className="text-xs text-gray-500 mb-5">Try adjusting your filters or create a new supplier</p>
           <Button
             onClick={handleAddClick}
-            className="inline-block px-5 py-2.5 bg-blue-500 text-white rounded  text-xs   hover:bg-blue-600"
+            className="inline-block px-5 py-2  bg-blue-500 text-white rounded  text-xs   hover:bg-blue-600"
           >
             Create First Supplier
           </Button>

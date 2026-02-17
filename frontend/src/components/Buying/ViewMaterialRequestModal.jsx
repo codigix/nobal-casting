@@ -394,6 +394,12 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
         <div className="flex-1 overflow-y-auto space-y-3">
           {error && <Alert type="danger" className="  border-2 mb-4">{error}</Alert>}
           {success && <Alert type="success" className="  border-2 mb-4">{success}</Alert>}
+          {request?.requires_manual_review && (
+            <Alert type="warning" className="border-2 mb-4 font-medium flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              <span>This request requires manual review: {request.review_reason}</span>
+            </Alert>
+          )}
 
           {/* New Header Info Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -457,7 +463,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
             {/* Left Column: Line Items */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-2">
               <div className="bg-white rounded  border border-slate-200   overflow-hidden">
                 <div className="p-2 border-b border-slate-100 flex items-center justify-between bg-white">
                   <div className="flex items-center gap-2">
@@ -487,10 +493,10 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                   <table className="w-full text-sm text-left">
                     <thead>
                       <tr className="bg-slate-50/50 border-b border-slate-100">
-                        <th className="px-6 py-2 text-xs   text-slate-500 tracking-wider">Item Details</th>
-                        <th className="px-6 py-2 text-xs   text-slate-500 tracking-wider text-center">Quantity</th>
-                        <th className="px-6 py-2 text-xs   text-slate-500 tracking-wider text-center">Stock Level</th>
-                        <th className="px-6 py-2 text-xs   text-slate-500 tracking-wider text-right">Status</th>
+                        <th className="p-2  text-xs   text-slate-500 tracking-wider">Item Details</th>
+                        <th className="p-2  text-xs   text-slate-500 tracking-wider text-center">Quantity</th>
+                        <th className="p-2  text-xs   text-slate-500 tracking-wider text-center">Stock Level</th>
+                        <th className="p-2  text-xs   text-slate-500 tracking-wider text-right">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
@@ -586,12 +592,12 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
             </div>
 
             {/* Right Column: Sidebar */}
-            <div className="space-y-6">
+            <div className="space-y-2">
               {/* Source Configuration */}
               {['draft', 'pending', 'partial', 'approved', 'completed'].includes(request?.status) && isTransferOrIssue && (
                 <div className={`bg-white rounded border-2 transition-all duration-300 overflow-hidden ${
                   !selectedSourceWarehouse && anyAvailable 
-                    ? 'border-amber-500 shadow-lg shadow-amber-500/10 scale-[1.02]' 
+                    ? 'border-amber-500  shadow-amber-500/10 scale-[1.02]' 
                     : 'border-slate-200'
                 }`}>
                   <div className={`px-5 py-2 border-b flex items-center justify-between ${
@@ -599,7 +605,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                   }`}>
                     <div className="flex items-center gap-2">
                       <Warehouse size={16} />
-                      <h3 className="text-xs font-bold tracking-wider uppercase">Fulfillment Source</h3>
+                      <h3 className="text-xs  tracking-wider ">Fulfillment Source</h3>
                     </div>
                     {!selectedSourceWarehouse && anyAvailable && (
                       <Badge color="warning" className="text-[10px] animate-bounce bg-white text-amber-600 border-none">
@@ -612,7 +618,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                       <div className="flex justify-between items-center">
                         <label className="text-xs font-semibold text-slate-500">Select Warehouse</label>
                         {anyAvailable && (
-                          <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                          <span className="text-[10px] text-emerald-600  flex items-center gap-1">
                             <CheckCheck size={10} /> Stock Available
                           </span>
                         )}
@@ -621,7 +627,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                         <select
                           value={selectedSourceWarehouse || request.source_warehouse || ''}
                           onChange={(e) => setSelectedSourceWarehouse(e.target.value)}
-                          className={`w-full pl-3 pr-10 py-2.5 border rounded  text-sm bg-white outline-none appearance-none transition-all ${
+                          className={`w-full pl-3 pr-10 py-2  border rounded  text-sm bg-white outline-none appearance-none transition-all ${
                             !selectedSourceWarehouse && anyAvailable 
                               ? 'border-amber-500 ring-2 ring-amber-500/20 text-amber-900 font-medium' 
                               : 'border-slate-200 text-slate-700 focus:ring-2 focus:ring-blue-500'
@@ -755,7 +761,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                 <Button
                   onClick={handleSend}
                   variant="primary"
-                  className="p-2 shadow-lg shadow-blue-600/20  text-xs rounded  flex items-center gap-2"
+                  className="p-2  shadow-blue-600/20  text-xs rounded  flex items-center gap-2"
                 >
                   Send for Approval <ArrowRight size={16} />
                 </Button>
@@ -763,7 +769,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                   onClick={handleApprove}
                   variant="success"
                   disabled={loading || (isTransferOrIssue && !anyAvailable)}
-                  className="p-2  shadow-lg shadow-emerald-600/20  text-xs rounded  flex items-center gap-2"
+                  className="p-2   shadow-emerald-600/20  text-xs rounded  flex items-center gap-2"
                 >
                   {isTransferOrIssue ? 'Release Material' : 'Authorize Request'} <CheckCircle size={16} />
                 </Button>
@@ -785,7 +791,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                   onClick={handleApprove}
                   variant="success"
                   disabled={loading || (isTransferOrIssue && (!anyAvailable || request?.items?.every(item => Number(item.issued_qty) >= Number(item.qty))))}
-                  className="p-2  shadow-lg shadow-emerald-600/20  text-xs rounded  flex items-center gap-2"
+                  className="p-2   shadow-emerald-600/20  text-xs rounded  flex items-center gap-2"
                 >
                   {isTransferOrIssue ? 'Release Material' : 'Authorize Request'} <CheckCircle size={16} />
                 </Button>
@@ -798,7 +804,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                 onClick={handleCreatePO}
                 variant="primary"
                 disabled={loading || !!request?.linked_po_no}
-                className="p-2  shadow-lg shadow-blue-600/20  text-xs rounded  flex items-center gap-2"
+                className="p-2   shadow-blue-600/20  text-xs rounded  flex items-center gap-2"
               >
                 {request?.linked_po_no ? 'PO Already Created' : 'Create Purchase Order'} <ShoppingCart size={16} />
               </Button>

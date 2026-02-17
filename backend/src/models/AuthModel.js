@@ -15,7 +15,7 @@ class AuthModel {
       }
 
       // Validate department
-      const validDepartments = ['inventory', 'manufacturing', 'admin']
+      const validDepartments = ['inventory', 'manufacturing', 'admin', 'accounts']
       if (!validDepartments.includes(department)) {
         throw new Error('Invalid department')
       }

@@ -144,13 +144,13 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
         </div>
       }
     >
-      <div className="space-y-6">
-        <div className="flex items-center gap-4 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-          <div className="p-3 bg-blue-100 rounded-lg text-blue-600">
+      <div className="space-y-2">
+        <div className="flex items-center gap-4 bg-blue-50/50 p-4 rounded  border border-blue-100">
+          <div className="p-3 bg-blue-100 rounded  text-blue-600">
             <ClipboardCheck className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="font-bold text-neutral-800">Final Verification</h3>
+            <h3 className=" text-neutral-800">Final Verification</h3>
             <p className="text-sm text-neutral-500">
               GRN <span className="font-mono text-primary-600">#{grn.grn_no}</span> • Please confirm the inspection outcome and assign storage locations.
             </p>
@@ -171,17 +171,17 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
           <button
             type="button"
             onClick={() => setApprovalStatus('approve')}
-            className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all text-left ${
+            className={`flex items-start gap-4 p-4 rounded  border-2 transition-all text-left ${
               approvalStatus === 'approve' 
               ? 'border-emerald-500 bg-emerald-50/50 ring-4 ring-emerald-50' 
               : 'border-neutral-100 bg-white hover:border-neutral-200 hover:bg-neutral-50'
             }`}
           >
-            <div className={`p-2 rounded-lg ${approvalStatus === 'approve' ? 'bg-emerald-500 text-white' : 'bg-neutral-100 text-neutral-400'}`}>
+            <div className={`p-2 rounded  ${approvalStatus === 'approve' ? 'bg-emerald-500 text-white' : 'bg-neutral-100 text-neutral-400'}`}>
               <CheckCircle className="w-5 h-5" />
             </div>
             <div className="flex-1">
-              <p className={`font-bold ${approvalStatus === 'approve' ? 'text-emerald-900' : 'text-neutral-900'}`}>Approve & Store</p>
+              <p className={` ${approvalStatus === 'approve' ? 'text-emerald-900' : 'text-neutral-900'}`}>Approve & Store</p>
               <p className="text-xs text-neutral-500 mt-1 leading-relaxed">Allocate accepted items to warehouses and update stock.</p>
             </div>
             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${approvalStatus === 'approve' ? 'border-emerald-500 bg-emerald-500' : 'border-neutral-300'}`}>
@@ -192,17 +192,17 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
           <button
             type="button"
             onClick={() => setApprovalStatus('reject')}
-            className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all text-left ${
+            className={`flex items-start gap-4 p-4 rounded  border-2 transition-all text-left ${
               approvalStatus === 'reject' 
               ? 'border-red-500 bg-red-50/50 ring-4 ring-red-50' 
               : 'border-neutral-100 bg-white hover:border-neutral-200 hover:bg-neutral-50'
             }`}
           >
-            <div className={`p-2 rounded-lg ${approvalStatus === 'reject' ? 'bg-red-500 text-white' : 'bg-neutral-100 text-neutral-400'}`}>
+            <div className={`p-2 rounded  ${approvalStatus === 'reject' ? 'bg-red-500 text-white' : 'bg-neutral-100 text-neutral-400'}`}>
               <XCircle className="w-5 h-5" />
             </div>
             <div className="flex-1">
-              <p className={`font-bold ${approvalStatus === 'reject' ? 'text-red-900' : 'text-neutral-900'}`}>Full Rejection</p>
+              <p className={` ${approvalStatus === 'reject' ? 'text-red-900' : 'text-neutral-900'}`}>Full Rejection</p>
               <p className="text-xs text-neutral-500 mt-1 leading-relaxed">Mark the entire GRN as rejected and return items to supplier.</p>
             </div>
             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${approvalStatus === 'reject' ? 'border-red-500 bg-red-500' : 'border-neutral-300'}`}>
@@ -212,42 +212,42 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
         </div>
 
         {approvalStatus === 'approve' ? (
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-2 animate-in fade-in duration-300">
             {/* Stats Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white border border-neutral-200 p-4 rounded-xl flex items-center gap-4">
-                <div className="p-2.5 bg-neutral-100 rounded-lg text-neutral-600">
+              <div className="bg-white border border-neutral-200 p-4 rounded  flex items-center gap-4">
+                <div className="p-2.5 bg-neutral-100 rounded  text-neutral-600">
                   <Info className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Total Items</p>
-                  <p className="text-xl font-bold text-neutral-800">{grn.items?.length || 0}</p>
+                  <p className="text-[10px]  text-neutral-400  tracking-wider">Total Items</p>
+                  <p className="text-xl  text-neutral-800">{grn.items?.length || 0}</p>
                 </div>
               </div>
               
-              <div className="bg-white border border-emerald-100 p-4 rounded-xl flex items-center gap-4 shadow-sm shadow-emerald-50">
-                <div className="p-2.5 bg-emerald-50 rounded-lg text-emerald-600">
+              <div className="bg-white border border-emerald-100 p-4 rounded  flex items-center gap-4   shadow-emerald-50">
+                <div className="p-2.5 bg-emerald-50 rounded  text-emerald-600">
                   <CheckCircle className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Accepted Qty</p>
-                  <p className="text-xl font-bold text-emerald-700">{totalAccepted}</p>
+                  <p className="text-[10px]  text-emerald-600  tracking-wider">Accepted Qty</p>
+                  <p className="text-xl  text-emerald-700">{totalAccepted}</p>
                 </div>
               </div>
 
-              <div className="bg-white border border-red-100 p-4 rounded-xl flex items-center gap-4 shadow-sm shadow-red-50">
-                <div className="p-2.5 bg-red-50 rounded-lg text-red-600">
+              <div className="bg-white border border-red-100 p-4 rounded  flex items-center gap-4   shadow-red-50">
+                <div className="p-2.5 bg-red-50 rounded  text-red-600">
                   <XCircle className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider">Rejected Qty</p>
-                  <p className="text-xl font-bold text-red-700">{totalRejected}</p>
+                  <p className="text-[10px]  text-red-600  tracking-wider">Rejected Qty</p>
+                  <p className="text-xl  text-red-700">{totalRejected}</p>
                 </div>
               </div>
             </div>
 
             {/* Allocation Table */}
-            <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+            <div className="bg-white border border-neutral-200 rounded  overflow-hidden">
               <div className="p-2  bg-neutral-50 border-b border-neutral-200 flex items-center justify-between">
                 <h3 className="font-semibold text-neutral-800 flex items-center gap-2">
                   <MapPin size={16} className="text-primary-600" />
@@ -258,7 +258,7 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
               
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
-                  <thead className="text-xs text-neutral-500 uppercase bg-neutral-50/50 border-b border-neutral-200">
+                  <thead className="text-xs text-neutral-500  bg-neutral-50/50 border-b border-neutral-200">
                     <tr>
                       <th className="p-2  font-semibold">Item Details</th>
                       <th className="p-2  font-semibold text-center w-32">Accepted Qty</th>
@@ -271,10 +271,10 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
                         <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
                           <td className="p-2 ">
                             <div className="font-medium text-neutral-900">{item.item_code}</div>
-                            <div className="text-[10px] text-neutral-500 uppercase truncate max-w-[200px]">{item.item_name}</div>
+                            <div className="text-[10px] text-neutral-500  truncate max-w-[200px]">{item.item_name}</div>
                           </td>
                           <td className="p-2  text-center">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs  bg-emerald-100 text-emerald-700">
                               {item.accepted_qty}
                             </span>
                           </td>
@@ -286,7 +286,7 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
                                   ...prev,
                                   [item.id]: e.target.value
                                 }))}
-                                className="w-full max-w-[200px] h-9 px-3 bg-white border border-neutral-300 rounded-lg text-sm focus:ring-1 focus:ring-primary-500 outline-none"
+                                className="w-full max-w-[200px] h-9 px-3 bg-white border border-neutral-300 rounded  text-sm focus:ring-1 focus:ring-primary-500 outline-none"
                               >
                                 <option value="">Select Warehouse</option>
                                 {warehouses.map(wh => (
@@ -322,14 +322,14 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
                 placeholder="Please explain the reason for rejecting this entire GRN..."
-                className="w-full min-h-[120px] p-4 bg-white border border-neutral-300 rounded-xl text-sm focus:ring-2 focus:ring-red-500 outline-none transition-all"
+                className="w-full min-h-[120px] p-4 bg-white border border-neutral-300 rounded  text-sm focus:ring-2 focus:ring-red-500 outline-none transition-all"
               />
             </div>
 
-            <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex gap-3 items-start">
+            <div className="p-4 bg-red-50 border border-red-100 rounded  flex gap-3 items-start">
               <Info size={18} className="text-red-600 mt-0.5" />
               <div className="text-sm text-red-700">
-                <p className="font-bold">Full Rejection Protocol</p>
+                <p className="">Full Rejection Protocol</p>
                 <p className="mt-1 opacity-90">This will mark all items in this GRN as rejected. The status will be updated, and the procurement team will be notified to handle returns.</p>
               </div>
             </div>

@@ -10,9 +10,12 @@ const dbConfig = {
 async function checkSchema() {
   const conn = await mysql.createConnection(dbConfig);
   try {
-    const [cols] = await conn.query('DESCRIBE production_plan_raw_material');
-    console.log('production_plan_raw_material columns:');
-    console.table(cols);
+    const tables = ['production_plan_raw_material', 'production_plan_sub_assembly', 'production_plan_fg', 'production_plan'];
+    for (const table of tables) {
+      console.log(`\nTable: ${table}`);
+      const [cols] = await conn.query(`DESCRIBE ${table}`);
+      console.table(cols);
+    }
 
     const [triggers] = await conn.query('SHOW TRIGGERS');
     console.log('\nTriggers:');

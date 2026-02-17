@@ -160,7 +160,7 @@ export default function RFQs() {
       key: 'rfq_id', 
       label: 'RFQ ID', 
       render: (val) => (
-        <span className="font-black tracking-widest text-indigo-600 ">
+        <span className="  text-indigo-600 ">
           RFQ-{val}
         </span>
       )
@@ -170,10 +170,10 @@ export default function RFQs() {
       label: 'Created By', 
       render: (val) => (
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-none bg-neutral-100 flex items-center justify-center border border-neutral-200">
+          <div className="w-6 h-6 rounded  bg-neutral-100 flex items-center justify-center border border-neutral-200">
             <User size={12} strokeWidth={3} className="text-neutral-400" />
           </div>
-          <span className="font-black tracking-widest text-neutral-900 ">
+          <span className="  text-neutral-900 ">
             {val || 'System'}
           </span>
         </div>
@@ -183,7 +183,7 @@ export default function RFQs() {
       key: 'created_date', 
       label: 'Created Date', 
       render: (val) => (
-        <div className="font-black tracking-widest text-neutral-400 ">
+        <div className="  text-neutral-400 ">
           {val ? new Date(val).toLocaleDateString() : 'N/A'}
         </div>
       )
@@ -192,7 +192,7 @@ export default function RFQs() {
       key: 'valid_till', 
       label: 'Valid Till', 
       render: (val) => (
-        <div className="font-black tracking-widest text-neutral-400 ">
+        <div className="  text-neutral-400 ">
           {val ? new Date(val).toLocaleDateString() : 'N/A'}
         </div>
       )
@@ -201,7 +201,7 @@ export default function RFQs() {
       key: 'supplier_count', 
       label: 'Suppliers', 
       render: (val) => (
-        <Badge className="bg-neutral-100 text-neutral-600 border-neutral-200 font-black tracking-widest  rounded-none">
+        <Badge className="bg-neutral-100 text-neutral-600 border-neutral-200    rounded ">
           {val || '0'}
         </Badge>
       )
@@ -210,7 +210,7 @@ export default function RFQs() {
       key: 'item_count', 
       label: 'Items', 
       render: (val) => (
-        <Badge className="bg-indigo-50 text-indigo-600 border-indigo-100 font-black tracking-widest  rounded-none">
+        <Badge className="bg-indigo-50 text-indigo-600 border-indigo-100    rounded ">
           {val || '0'}
         </Badge>
       )
@@ -221,7 +221,7 @@ export default function RFQs() {
       render: (val) => {
         const config = getStatusConfig(val)
         return (
-          <Badge className={`${config.badge} font-black tracking-widest  rounded-none px-3 py-1.5`}>
+          <Badge className={`${config.badge}    rounded  px-3 py-1.5`}>
             {config.label}
           </Badge>
         )
@@ -240,7 +240,7 @@ export default function RFQs() {
           e.stopPropagation()
           navigate(`/buying/rfq/${row.rfq_id}`)
         }}
-        className="h-8 w-8 rounded-none border-neutral-200 text-neutral-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50/30"
+        className="h-8 w-8 rounded  border-neutral-200 text-neutral-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50/30"
         title="View Details"
       >
         <Eye size={14} strokeWidth={3} />
@@ -253,7 +253,7 @@ export default function RFQs() {
             e.stopPropagation()
             handleSend(row.rfq_id)
           }}
-          className="h-8 w-8 rounded-none bg-emerald-50/50 border-emerald-100 text-emerald-600 hover:bg-emerald-600 hover:text-white"
+          className="h-8 w-8 rounded  bg-emerald-50/50 border-emerald-100 text-emerald-600 hover:bg-emerald-600 hover:text-white"
           title="Send RFQ"
         >
           <Send size={14} strokeWidth={3} />
@@ -267,7 +267,7 @@ export default function RFQs() {
             e.stopPropagation()
             navigate(`/buying/rfq/${row.rfq_id}/responses`)
           }}
-          className="h-8 w-8 rounded-none bg-indigo-50/50 border-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white"
+          className="h-8 w-8 rounded  bg-indigo-50/50 border-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white"
           title="View Responses"
         >
           <MessageSquare size={14} strokeWidth={3} />
@@ -280,22 +280,22 @@ export default function RFQs() {
     <div className="min-h-screen bg-neutral-50 flex flex-col">
       {/* Modern Header Section */}
       <header className="bg-white border-b border-neutral-200 sticky top-0 z-40">
-        <div className="max-w-[1600px] mx-auto px-4 lg:px-8 py-4">
+        <div className=" mx-auto p-2">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-[10px] font-black  tracking-[0.2em] text-neutral-400">
+              <div className="flex items-center gap-2 text-[10px]    text-neutral-400">
                 <Building2 size={12} strokeWidth={3} className="text-indigo-500" />
                 <span>Buying</span>
                 <ChevronRight size={10} strokeWidth={3} />
                 <span className="text-neutral-900">RFQs</span>
               </div>
               <div className="flex items-center gap-4">
-                <div className="p-2.5 bg-neutral-900 text-white rounded-none">
+                <div className="p-2.5 bg-neutral-900 text-white rounded ">
                   <Mail size={24} strokeWidth={2.5} />
                 </div>
                 <div>
-                  <h1 className="text-xl font-black text-neutral-900 tracking-tight  leading-none">Request for Quotation</h1>
-                  <div className="flex items-center gap-2 text-neutral-400 text-[10px] font-black  tracking-widest mt-1">
+                  <h1 className="text-xl  text-neutral-900   leading-none">Request for Quotation</h1>
+                  <div className="flex items-center gap-2 text-neutral-400 text-[10px]    mt-1">
                     <History size={12} strokeWidth={3} className="text-indigo-500" />
                     <span>Last Refreshed {refreshTime.toLocaleTimeString()}</span>
                   </div>
@@ -304,12 +304,12 @@ export default function RFQs() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <div className="bg-neutral-100 p-1 rounded-none border border-neutral-200 flex items-center">
+              <div className="bg-neutral-100 p-1 rounded  border border-neutral-200 flex items-center">
                 <button
                   onClick={() => setViewMode('kanban')}
-                  className={`flex items-center gap-2 px-4 py-1.5 rounded-none text-[10px] font-black  tracking-widest transition-all ${
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded  text-[10px]    transition-all ${
                     viewMode === 'kanban' 
-                      ? 'bg-white text-indigo-600 shadow-sm border border-neutral-200' 
+                      ? 'bg-white text-indigo-600   border border-neutral-200' 
                       : 'text-neutral-500 hover:text-neutral-900'
                   }`}
                 >
@@ -318,9 +318,9 @@ export default function RFQs() {
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-2 px-4 py-1.5 rounded-none text-[10px] font-black  tracking-widest transition-all ${
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded  text-[10px]    transition-all ${
                     viewMode === 'list' 
-                      ? 'bg-white text-indigo-600 shadow-sm border border-neutral-200' 
+                      ? 'bg-white text-indigo-600   border border-neutral-200' 
                       : 'text-neutral-500 hover:text-neutral-900'
                   }`}
                 >
@@ -341,7 +341,7 @@ export default function RFQs() {
 
               <Button 
                 onClick={() => setIsModalOpen(true)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-none shadow-md flex items-center gap-2 transition-all border-none text-[10px] font-black  tracking-widest"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white p-2  rounded   flex items-center gap-2 transition-all border-none text-[10px]   "
               >
                 <Plus size={16} strokeWidth={3} />
                 <span>New RFQ</span>
@@ -364,14 +364,14 @@ export default function RFQs() {
             <button
               key={stat.label}
               onClick={() => setActiveFilter(stat.id)}
-              className={`bg-white p-6 rounded-none border transition-all duration-300 group text-left ${
+              className={`bg-white p-2 rounded border transition-all duration-300 group text-left ${
                 activeFilter === stat.id 
-                ? `border-indigo-500 shadow-sm ring-1 ring-indigo-500` 
+                ? `border-indigo-500   ring-1 ring-indigo-500` 
                 : 'border-neutral-200 hover:border-neutral-300'
               }`}
             >
               <div className="flex items-start justify-between mb-2">
-                <div className={`p-2.5 bg-neutral-50 rounded-none border border-neutral-100 text-neutral-400 group-hover:text-indigo-600 group-hover:border-indigo-100 transition-colors`}>
+                <div className={`p-2.5 bg-neutral-50 rounded  border border-neutral-100 text-neutral-400 group-hover:text-indigo-600 group-hover:border-indigo-100 transition-colors`}>
                   <stat.icon size={20} />
                 </div>
                 {activeFilter === stat.id && (
@@ -379,8 +379,8 @@ export default function RFQs() {
                 )}
               </div>
               <div>
-                <p className="text-2xl font-black text-neutral-900 tracking-tight leading-none mb-2 ">{stat.value}</p>
-                <p className="text-[10px] font-black text-neutral-400  tracking-widest">{stat.label}</p>
+                <p className="text-xl  text-neutral-900  leading-none mb-2 ">{stat.value}</p>
+                <p className="text-[10px]  text-neutral-400  ">{stat.label}</p>
               </div>
             </button>
           ))}
@@ -395,7 +395,7 @@ export default function RFQs() {
               placeholder="SEARCH BY RFQ ID OR CREATOR..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 bg-white border border-neutral-200 rounded-none focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-[10px] font-black  tracking-widest placeholder:text-neutral-300"
+              className="w-full pl-11 pr-4 py-2  bg-white border border-neutral-200 rounded  focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-[10px]    placeholder:text-neutral-300"
             />
           </div>
           
@@ -403,13 +403,13 @@ export default function RFQs() {
             <div className="flex items-center gap-2 px-3 py-2 bg-white border border-neutral-200">
               <div className="flex items-center gap-2">
                 <Filter size={12} strokeWidth={3} className="text-neutral-400" />
-                <span className="text-[10px] font-black text-neutral-400  tracking-widest">Status:</span>
+                <span className="text-[10px]  text-neutral-400  ">Status:</span>
               </div>
               <div className="h-4 w-[1px] bg-neutral-200 mx-1"></div>
               <select 
                 value={activeFilter}
                 onChange={(e) => setActiveFilter(e.target.value)}
-                className="bg-transparent text-[10px] font-black text-indigo-600 focus:outline-none cursor-pointer  tracking-widest"
+                className="bg-transparent text-[10px]  text-indigo-600 focus:outline-none cursor-pointer  "
               >
                 <option value="">ALL STATUS</option>
                 <option value="draft">DRAFT</option>
@@ -422,7 +422,7 @@ export default function RFQs() {
             <div className="relative">
               <button
                 onClick={() => setShowColumnMenu(!showColumnMenu)}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 text-[10px] font-black text-neutral-600 hover:border-indigo-500 hover:text-indigo-600 transition-all  tracking-widest"
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 text-[10px]  text-neutral-600 hover:border-indigo-500 hover:text-indigo-600 transition-all  "
               >
                 <Eye size={12} strokeWidth={3} />
                 <span>Columns</span>
@@ -430,20 +430,20 @@ export default function RFQs() {
               </button>
 
               {showColumnMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-white border border-neutral-900 shadow-2xl z-50 py-0">
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-neutral-900  z-50 py-0">
                   <div className="p-2  border-b border-neutral-100 flex justify-between items-center bg-neutral-50">
-                    <span className="text-[10px] font-black text-neutral-900  tracking-widest">Visible Columns</span>
+                    <span className="text-[10px]  text-neutral-900  ">Visible Columns</span>
                   </div>
                   <div className="p-2 border-b border-neutral-100 flex gap-2">
                     <button 
                       onClick={() => setVisibleColumns(new Set(columns.map(c => c.key)))}
-                      className="flex-1 py-1.5 text-[9px] font-black text-indigo-600 hover:bg-indigo-50  tracking-widest border border-indigo-100"
+                      className="flex-1 py-1.5 text-[9px]  text-indigo-600 hover:bg-indigo-50   border border-indigo-100"
                     >
                       Show All
                     </button>
                     <button 
                       onClick={() => setVisibleColumns(new Set())}
-                      className="flex-1 py-1.5 text-[9px] font-black text-rose-600 hover:bg-rose-50  tracking-widest border border-rose-100"
+                      className="flex-1 py-1.5 text-[9px]  text-rose-600 hover:bg-rose-50   border border-rose-100"
                     >
                       Hide All
                     </button>
@@ -453,7 +453,7 @@ export default function RFQs() {
                       <label key={col.key} className="flex items-center gap-3 px-3 py-2 hover:bg-neutral-50 cursor-pointer group">
                         <input
                           type="checkbox"
-                          className="rounded-none border-neutral-300 text-indigo-600 focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5"
+                          className="rounded  border-neutral-300 text-indigo-600 focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5"
                           checked={visibleColumns.has(col.key)}
                           onChange={() => {
                             const newSet = new Set(visibleColumns)
@@ -462,7 +462,7 @@ export default function RFQs() {
                             setVisibleColumns(newSet)
                           }}
                         />
-                        <span className="text-[10px] font-black text-neutral-600 group-hover:text-neutral-900  tracking-widest">{col.label}</span>
+                        <span className="text-[10px]  text-neutral-600 group-hover:text-neutral-900  ">{col.label}</span>
                       </label>
                     ))}
                   </div>
@@ -478,16 +478,16 @@ export default function RFQs() {
             <div className="inline-flex p-6 bg-neutral-50 mb-6">
               <RefreshCw size={40} strokeWidth={3} className="text-indigo-600 animate-spin" />
             </div>
-            <h3 className="text-xl font-black text-neutral-900  tracking-widest mb-2">Synchronizing RFQs</h3>
-            <p className="text-neutral-400 text-[10px] font-black  tracking-[0.2em]">Please wait while we fetch the latest requests...</p>
+            <h3 className="text-xl  text-neutral-900   mb-2">Synchronizing RFQs</h3>
+            <p className="text-neutral-400 text-[10px]   ">Please wait while we fetch the latest requests...</p>
           </div>
         ) : filteredRFQs.length === 0 ? (
           <div className="py-24 text-center bg-white border border-neutral-200 flex flex-col items-center">
             <div className="w-16 h-16 bg-neutral-50 flex items-center justify-center mb-8 border border-neutral-100">
               <Search size={32} strokeWidth={3} className="text-neutral-200" />
             </div>
-            <h3 className="text-xl font-black text-neutral-900  tracking-widest mb-2">No RFQs Found</h3>
-            <p className="text-neutral-400 text-[10px] font-black  tracking-[0.2em] mb-8 max-w-sm leading-loose">
+            <h3 className="text-xl  text-neutral-900   mb-2">No RFQs Found</h3>
+            <p className="text-neutral-400 text-[10px]    mb-8 max-w-sm leading-loose">
               We couldn't find any RFQs matching your current filters. Try adjusting your search or filters.
             </p>
             <Button 
@@ -497,7 +497,7 @@ export default function RFQs() {
                 setActiveFilter('');
               }}
               variant="secondary"
-              className="rounded-none px-12 py-3 border-neutral-900 text-neutral-900 hover:bg-neutral-900 hover:text-white font-black text-[10px]  tracking-widest transition-all"
+              className="rounded  px-12 py-3 border-neutral-900 text-neutral-900 hover:bg-neutral-900 hover:text-white  text-[10px]   transition-all"
             >
               Clear All Filters
             </Button>
@@ -513,9 +513,9 @@ export default function RFQs() {
                       <div className={`p-1.5 bg-${column.theme === 'neutral' ? 'neutral-100' : `${column.theme}-50`} text-${column.theme === 'neutral' ? 'neutral-600' : `${column.theme}-600`} border border-${column.theme === 'neutral' ? 'neutral-200' : `${column.theme}-100`}`}>
                         <column.icon size={14} strokeWidth={3} />
                       </div>
-                      <h3 className="text-[10px] font-black text-neutral-900  tracking-widest">{column.title}</h3>
+                      <h3 className="text-[10px]  text-neutral-900  ">{column.title}</h3>
                     </div>
-                    <span className="bg-neutral-900 text-white px-2 py-0.5 text-[10px] font-black tracking-widest">
+                    <span className="bg-neutral-900 text-white px-2 py-0.5 text-[10px]  ">
                       {columnRFQs.length}
                     </span>
                   </div>
@@ -529,10 +529,10 @@ export default function RFQs() {
                       >
                         <div className="flex justify-between items-start mb-4">
                           <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-indigo-500  tracking-widest mb-1">
+                            <span className="text-[9px]  text-indigo-500   mb-1">
                               RFQ ID
                             </span>
-                            <span className="text-xs font-black text-neutral-900  tracking-widest group-hover:text-indigo-600 transition-colors">
+                            <span className="text-xs  text-neutral-900   group-hover:text-indigo-600 transition-colors">
                               RFQ-{rfq.rfq_id}
                             </span>
                           </div>
@@ -551,23 +551,23 @@ export default function RFQs() {
                             </div>
                           </div>
                         </div>
-                        <h4 className="font-black text-neutral-700 text-[10px]  tracking-widest mb-4 line-clamp-1 group-hover:text-indigo-600 transition-colors">
+                        <h4 className=" text-neutral-700 text-[10px]   mb-4 line-clamp-1 group-hover:text-indigo-600 transition-colors">
                           {rfq.created_by_name || 'System'}
                         </h4>
                         <div className="flex flex-col gap-2 mb-5">
-                          <div className="flex items-center gap-2 text-neutral-400 text-[9px] font-black  tracking-widest">
+                          <div className="flex items-center gap-2 text-neutral-400 text-[9px]   ">
                             <Calendar size={12} strokeWidth={3} />
                             <span>Created: {rfq.created_date ? new Date(rfq.created_date).toLocaleDateString() : 'N/A'}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-neutral-400 text-[9px] font-black  tracking-widest">
+                          <div className="flex items-center gap-2 text-neutral-400 text-[9px]   ">
                             <Clock size={12} strokeWidth={3} />
                             <span>Expires: {rfq.valid_till ? new Date(rfq.valid_till).toLocaleDateString() : 'N/A'}</span>
                           </div>
                         </div>
                         <div className="flex items-center justify-between pt-4 border-t border-neutral-100">
                           <div className="flex gap-2">
-                            <Badge className="bg-neutral-100 text-neutral-600 border-neutral-200 font-black tracking-widest  rounded-none text-[9px] px-2 py-0.5">{rfq.supplier_count || 0} Suppliers</Badge>
-                            <Badge className="bg-indigo-50 text-indigo-600 border-indigo-100 font-black tracking-widest  rounded-none text-[9px] px-2 py-0.5">{rfq.item_count || 0} Items</Badge>
+                            <Badge className="bg-neutral-100 text-neutral-600 border-neutral-200    rounded  text-[9px] px-2 py-0.5">{rfq.supplier_count || 0} Suppliers</Badge>
+                            <Badge className="bg-indigo-50 text-indigo-600 border-indigo-100    rounded  text-[9px] px-2 py-0.5">{rfq.item_count || 0} Items</Badge>
                           </div>
                         </div>
                       </div>

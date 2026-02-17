@@ -40,7 +40,7 @@ class ProductionAnalyticsController {
          FROM job_card jc
          LEFT JOIN production_stages ps ON jc.operation = ps.stage_code OR jc.operation = ps.stage_name
          WHERE jc.work_order_id IN (SELECT wo_id FROM work_order WHERE sales_order_id = ?)
-         ORDER BY ps.stage_sequence ASC, jc.operation_sequence ASC`,
+         ORDER BY FIELD(jc.operation_type, 'SA', 'IN_HOUSE', 'FG') ASC, CAST(SUBSTRING_INDEX(jc.job_card_id, "-", -1) AS UNSIGNED) ASC, ps.stage_sequence ASC, jc.operation_sequence ASC`,
         [soId]
       )
 

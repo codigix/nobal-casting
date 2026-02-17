@@ -237,13 +237,13 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
       title={`Edit Sales Order: ${formData.sales_order_id}`} 
       size="5xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-2">
         {error && <Alert type="error" message={error} />}
 
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Sidebar */}
           <div className="lg:w-1/3 space-y-4">
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+            <div className="bg-slate-50 p-4 rounded  border border-slate-200 space-y-4">
               <div className="flex items-center gap-2 text-slate-800 font-semibold border-b border-slate-200 pb-2 mb-2">
                 <Info size={18} className="text-blue-500" />
                 Order Context
@@ -251,17 +251,17 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
 
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                     Customer
                   </label>
-                  <div className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-lg text-slate-600">
+                  <div className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded  text-slate-600">
                     <User size={16} className="text-slate-400" />
                     <span className="text-sm font-medium">{formData.customer_name}</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                     Delivery Date
                   </label>
                   <div className="relative">
@@ -272,20 +272,20 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
                       value={formData.delivery_date}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                      className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                     Order Status
                   </label>
                   <select
                     name="status"
                     value={formData.status}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
                   >
                     <option value="draft">Draft</option>
                     <option value="confirmed">Confirmed</option>
@@ -301,7 +301,7 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
               </div>
             </div>
 
-            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+            <div className="bg-blue-50 p-4 rounded  border border-blue-100">
               <div className="flex items-center gap-2 text-blue-800 font-semibold mb-3">
                 <Calculator size={18} />
                 Financial Summary
@@ -344,16 +344,16 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
                 </div>
 
                 <div className="pt-3 border-t-2 border-blue-300 flex justify-between items-center">
-                  <span className="text-sm font-bold text-slate-900">Grand Total</span>
-                  <span className="text-lg font-bold text-blue-600">₹{formData.total_value.toFixed(2)}</span>
+                  <span className="text-sm  text-slate-900">Grand Total</span>
+                  <span className="text-lg  text-blue-600">₹{formData.total_value.toFixed(2)}</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Main Area */}
-          <div className="lg:w-2/3 space-y-6">
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="lg:w-2/3 space-y-2">
+            <div className="bg-white border border-slate-200 rounded  overflow-hidden  ">
               <div className="bg-slate-50 p-2  border-b border-slate-200 flex justify-between items-center">
                 <div className="flex items-center gap-2 font-semibold text-slate-800">
                   <ShoppingCart size={18} className="text-blue-500" />
@@ -363,9 +363,9 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
               </div>
 
               <div className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4 bg-slate-50 p-3 rounded  border border-slate-100">
                   <div className="md:col-span-2">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Select Item</label>
+                    <label className="block text-[10px]  text-slate-400  mb-1">Select Item</label>
                     <select
                       name="item_code"
                       value={newItem.item_code}
@@ -434,7 +434,7 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
               </div>
             </div>
 
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div className="bg-slate-50 p-4 rounded  border border-slate-200">
               <div className="flex items-center gap-2 text-slate-800 font-semibold mb-3">
                 <ClipboardList size={18} className="text-blue-500" />
                 Terms & Conditions
@@ -444,7 +444,7 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
                 value={formData.order_terms}
                 onChange={handleInputChange}
                 rows="4"
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
               />
             </div>
           </div>
