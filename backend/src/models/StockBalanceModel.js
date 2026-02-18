@@ -143,6 +143,10 @@ class StockBalanceModel {
         incoming_rate = null  // Used for Moving Average Calculation if is_increment is true
       } = data
 
+      // Get item's valuation method
+      const [itemRows] = await db.query('SELECT valuation_method FROM item WHERE item_code = ?', [itemCode])
+      const valuation_method = itemRows.length > 0 ? itemRows[0].valuation_method : 'FIFO'
+
       // Get existing record for valuation and reserved quantity calculation
       const [existing] = await db.query(
         'SELECT current_qty, reserved_qty, valuation_rate FROM stock_balance WHERE item_code = ? AND warehouse_id = ?',
@@ -161,9 +165,39 @@ class StockBalanceModel {
         if (is_increment) {
           final_qty = old_qty + current_qty
           final_reserved = Math.max(0, old_reserved + reserved_qty)
-          // Moving Average Valuation: ((old_qty * old_rate) + (incoming_qty * incoming_rate)) / (old_qty + incoming_qty)
-          if (incoming_rate !== null && final_qty > 0) {
-            final_valuation = ((old_qty * old_rate) + (current_qty * incoming_rate)) / final_qty
+          
+          if (current_qty > 0) {
+            // INWARD: Always Moving Average regardless of method for the summary rate
+            if (incoming_rate !== null && final_qty > 0) {
+              final_valuation = ((old_qty * old_rate) + (current_qty * incoming_rate)) / final_qty
+            } else {
+              final_valuation = old_rate
+            }
+          } else if (current_qty < 0) {
+            // OUTWARD: Depends on method
+            if (valuation_method === 'Moving Average') {
+              final_valuation = old_rate
+            } else {
+              // FIFO/LIFO
+              // Import StockLedgerModel dynamically to avoid circular dependency if any
+              const StockLedgerModel = (await import('./StockLedgerModel.js')).default
+              const issueRate = await StockLedgerModel.getValuationRate(
+                itemCode, 
+                warehouseId, 
+                Math.abs(current_qty), 
+                valuation_method, 
+                db
+              )
+              
+              const old_total_value = old_qty * old_rate
+              const issue_value = Math.abs(current_qty) * issueRate
+              
+              if (final_qty > 0) {
+                final_valuation = (old_total_value - issue_value) / final_qty
+              } else {
+                final_valuation = old_rate
+              }
+            }
           } else {
             final_valuation = old_rate
           }

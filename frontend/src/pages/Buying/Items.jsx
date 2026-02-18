@@ -107,9 +107,7 @@ export default function Items() {
       label: 'Item Details',
       render: (_, row) => (
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-400 group-hover:border-blue-200 dark:group-hover:border-blue-800 group-hover:text-blue-500 transition-colors  ">
-            <Package size={20} />
-          </div>
+         
           <div className="flex flex-col">
             <span className="text-xs  text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate max-w-[200px]">
               {row.name}
@@ -190,7 +188,7 @@ export default function Items() {
         className={`bg-gradient-to-br ${colorMap[color] || colorMap.primary} p-2 border-1 transition-all duration-300 hover:shadow  hover:-translate-y-1 relative overflow-hidden group cursor-pointer ${isActive ? 'ring-2 ring-blue-500 border-transparent shadow-blue-500/20' : ''}`}
       >
         <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-current opacity-5 rounded-full group-hover:scale-125 transition-transform" />
-        <div className="flex items-start justify-between relative z-10">
+        <div className="flex items-start justify-between relative z-0">
           <div>
             <span className="text-[10px]    text-slate-500 dark:text-slate-400">{label}</span>
             <p className="text-2xl  mt-1 text-slate-900 dark:text-white">{value}</p>
@@ -325,7 +323,7 @@ export default function Items() {
                   placeholder="Search by name or item code..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded  text-xs font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all dark:text-white"
+                  className="w-full pl-12 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded  text-xs font-medium focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all dark:text-white"
                 />
               </div>
               
@@ -333,7 +331,7 @@ export default function Items() {
                 <Button
                   variant="secondary"
                   onClick={() => setShowColumnMenu(!showColumnMenu)}
-                  className="flex items-center gap-2 p-3 rounded  border-2"
+                  className="flex items-center gap-2 p-2 rounded  border-2"
                 >
                   <Settings2 size={15} />
                 </Button>

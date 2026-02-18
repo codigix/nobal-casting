@@ -362,7 +362,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSuccess, initial
                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
                     <Calculator size={120} />
                   </div>
-                  <div className="relative z-10">
+                  <div className="relative z-0">
                     <div className="flex items-center gap-2 mb-6">
                       <div className="p-1 bg-white/10 rounded ">
                         <TrendingUp size={16} className="text-indigo-200" />

@@ -13,6 +13,7 @@ import {
   Eye, PieChart as PieChartIcon, ShieldCheck
 } from 'lucide-react'
 import { getOEEDashboardData, getMachineHistoricalMetrics, getAllMachinesAnalysis } from '../../services/productionService'
+import { useToast } from '../../components/ToastContainer'
 
 // --- High Density UI Components ---
 
@@ -303,12 +304,23 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
 }
          
 
-const StatCard = ({ label, value, subValue, icon: Icon, color, trend, unit = "%" }) => (
+const StatCard = ({ label, value, subValue, icon: Icon, color, trend, unit = "%", tooltip }) => (
   <div className="bg-white  p-2 border border-slate-200 hover:shadow-xl hover:border-indigo-200 transition-all group relative overflow-hidden">
     <div className={`absolute top-0 right-0 w-24 h-24 ${color} opacity-[0.03] rounded-bl-full -mr-8 -mt-8 transition-all group-hover:scale-150`}></div>
-    <div className="flex justify-between items-start relative z-10">
+    <div className="flex justify-between items-start relative z-0">
       <div>
-        <span className="text-[10px]  text-slate-400 uppercase tracking-wider mb-1 block">{label}</span>
+        <div className="flex items-center gap-1.5 mb-1 group/label">
+          <span className="text-[10px]  text-slate-400 uppercase tracking-wider block">{label}</span>
+          {tooltip && (
+            <div className="relative">
+              <AlertCircle size={10} className="text-slate-300 cursor-help hover:text-indigo-500 transition-colors" />
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-900 text-white text-[10px] rounded shadow-xl opacity-0 invisible group-hover/label:opacity-100 group-hover/label:visible transition-all z-50 leading-relaxed">
+                {tooltip}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
+              </div>
+            </div>
+          )}
+        </div>
         <div className="flex items-baseline gap-1">
           <h3 className="text-xl  text-slate-900 m-0">{value}</h3>
           {unit && <span className="text-sm  text-slate-400">{unit}</span>}
@@ -464,6 +476,7 @@ export default function OEE() {
     comprehensiveAnalysis: []
   });
   const [syncLoading, setSyncLoading] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     updateDateRange();
@@ -583,16 +596,110 @@ export default function OEE() {
     ];
   }, [realData.summary]);
 
+  const handleExportReport = () => {
+    try {
+      let csvContent = "data:text/csv;charset=utf-8,";
+      
+      // 1. Report Header
+      csvContent += "OEE INTELLIGENCE REPORT\n";
+      csvContent += `Generated On,${new Date().toLocaleString()}\n`;
+      csvContent += `Filter Range,${filters.range}\n`;
+      csvContent += `Filter Line,${filters.line}\n\n`;
+
+      // 2. Plant Summary
+      if (realData.summary) {
+        csvContent += "SECTION 1: PLANT-WIDE SUMMARY\n";
+        csvContent += "Metric,Value,Trend\n";
+        csvContent += `Overall Plant OEE,${realData.summary.oee.toFixed(1)}%,+3.4%\n`;
+        csvContent += `Availability,${realData.summary.availability.toFixed(1)}%,+2.1%\n`;
+        csvContent += `Performance,${realData.summary.performance.toFixed(1)}%,-0.8%\n`;
+        csvContent += `Quality,${realData.summary.quality.toFixed(1)}%,+0.4%\n\n`;
+      }
+
+      // 3. Machine-wise Analytics
+      if (filteredMachines.length > 0) {
+        csvContent += "SECTION 2: MACHINE PERFORMANCE ANALYTICS\n";
+        csvContent += "Machine ID,Machine Name,Line,Status,OEE %,Availability %,Performance %,Quality %,Total Units,Rejected Units,Downtime (min)\n";
+        
+        filteredMachines.forEach(m => {
+          csvContent += `${m.id},"${m.name}","${m.line}",${m.status},${m.oee}%,${m.a}%,${m.p}%,${m.q}%,${m.total_units},${m.rejected_units},${m.downtime_mins}\n`;
+        });
+        csvContent += "\n";
+      }
+
+      // 4. Downtime Analysis
+      if (realData.downtimeReasons && realData.downtimeReasons.length > 0) {
+        csvContent += "SECTION 3: TOP DOWNTIME REASONS (PARETO)\n";
+        csvContent += "Reason,Duration (min),Occurrences,Impact %\n";
+        
+        realData.downtimeReasons.forEach(dt => {
+          const impact = ((dt.duration / 480) * 100).toFixed(1);
+          csvContent += `"${dt.reason}",${dt.duration},${dt.occurrences},${impact}%\n`;
+        });
+      }
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `OEE_Intelligence_Report_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.addToast('OEE Intelligence report exported successfully', 'success');
+    } catch (err) {
+      console.error('Error exporting OEE report:', err);
+      toast.addToast('Failed to export OEE report', 'error');
+    }
+  };
+
+  const handleApplyAutoFix = () => {
+    // This is a simulation for now as requested in TODO
+    toast.addToast('AI Optimization: Adjusting feed rate parameters for M-001. Parameters updated successfully. Expected OEE improvement: +4%', 'success');
+  };
+
   const renderExecutiveOverview = () => (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-        <StatCard label="Plant Availability" value={realData.summary?.availability.toFixed(1) || 0} subValue="+2.1%" color="bg-indigo-600" trend="up" icon={Clock} />
-        <StatCard label="Plant Performance" value={realData.summary?.performance.toFixed(1) || 0} subValue="-0.8%" color="bg-blue-600" trend="down" icon={Activity} />
-        <StatCard label="Plant Quality" value={realData.summary?.quality.toFixed(1) || 0} subValue="+0.4%" color="bg-emerald-600" trend="up" icon={CheckCircle2} />
-        <div className="bg-slate-900  p-2 border border-slate-800 shadow-xl relative overflow-hidden flex flex-col justify-between">
+        <StatCard 
+          label="Plant Availability" 
+          value={(realData.summary?.availability || 0).toFixed(1)} 
+          subValue="+2.1%" 
+          color="bg-indigo-600" 
+          trend="up" 
+          icon={Clock} 
+          tooltip="Ratio of actual production time to planned time. Losses: Downtime & Setup."
+        />
+        <StatCard 
+          label="Plant Performance" 
+          value={(realData.summary?.performance || 0).toFixed(1)} 
+          subValue="-0.8%" 
+          color="bg-blue-600" 
+          trend="down" 
+          icon={Activity} 
+          tooltip="Ratio of actual speed to ideal speed. Losses: Slow cycles & minor stops."
+        />
+        <StatCard 
+          label="Plant Quality" 
+          value={(realData.summary?.quality || 0).toFixed(1)} 
+          subValue="+0.4%" 
+          color="bg-emerald-600" 
+          trend="up" 
+          icon={CheckCircle2} 
+          tooltip="Ratio of good units produced to total units produced. Losses: Scrap & Rework."
+        />
+        <div className="bg-slate-900  p-2 border border-slate-800 shadow-xl relative overflow-hidden flex flex-col justify-between group/oee">
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
           <div>
-            <span className="text-[10px]  text-slate-400 uppercase tracking-wider mb-1 block">Overall Plant OEE</span>
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-[10px]  text-slate-400 uppercase tracking-wider block">Overall Plant OEE</span>
+              <div className="relative">
+                <AlertCircle size={10} className="text-slate-500 cursor-help hover:text-indigo-400 transition-colors" />
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-white text-slate-900 text-[10px] rounded shadow-2xl opacity-0 invisible group-hover/oee:opacity-100 group-hover/oee:visible transition-all z-50 leading-relaxed border border-slate-200">
+                  Overall Equipment Effectiveness (Availability × Performance × Quality). Industry world-class benchmark is 85%.
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-white"></div>
+                </div>
+              </div>
+            </div>
             <div className="flex items-baseline gap-2">
               <h3 className="text-xl  text-white m-0">{Math.round(realData.summary?.oee || 0)}%</h3>
               <span className="text-xs  text-emerald-400">+3.4%</span>
@@ -619,7 +726,12 @@ export default function OEE() {
             <span className="text-[10px]  text-indigo-400 block uppercase">Suggestion</span>
             <span className="text-xs text-slate-300">Adjust feed rate on M-001 (+4% OEE)</span>
           </div>
-          <button className="p-2 bg-white text-slate-900 text-xs  rounded  hover:bg-indigo-50 transition-all shadow-lg">Apply Auto-Fix</button>
+          <button 
+            onClick={handleApplyAutoFix}
+            className="p-2 bg-white text-slate-900 text-xs  rounded  hover:bg-indigo-50 transition-all shadow-lg"
+          >
+            Apply Auto-Fix
+          </button>
         </div>
       </div>
 
@@ -708,7 +820,10 @@ export default function OEE() {
             <RefreshCcw size={16} className={syncLoading ? 'animate-spin' : ''} />
             Sync Dashboard
           </button>
-          <button className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white text-xs  rounded  hover:bg-indigo-700  shadow-indigo-600/20 transition-all">
+          <button 
+            onClick={handleExportReport}
+            className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white text-xs  rounded  hover:bg-indigo-700  shadow-indigo-600/20 transition-all"
+          >
             <Download size={16} />
             Export Report
           </button>

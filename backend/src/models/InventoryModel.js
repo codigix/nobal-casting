@@ -162,14 +162,51 @@ class InventoryModel {
   // ============================================================================
   async finalizeWorkOrderMaterials(work_order_id, finalized_by = 1) {
     try {
-      // Get all allocations for this work order
+      // 0. Verify Work Order exists
+      const [wo] = await this.db.query(
+        'SELECT wo_id, status FROM work_order WHERE wo_id = ?',
+        [work_order_id]
+      )
+
+      if (!wo || wo.length === 0) {
+        throw new Error(`Work Order ${work_order_id} not found`)
+      }
+
+      // 1. Get all allocations for this work order
       const [allocations] = await this.db.query(
         `SELECT * FROM material_allocation WHERE work_order_id = ?`,
         [work_order_id]
       )
 
       if (!allocations || allocations.length === 0) {
-        throw new Error('No materials allocated for this work order')
+        // Check if there are any items in work_order_item
+        const [items] = await this.db.query(
+          `SELECT * FROM work_order_item WHERE wo_id = ?`,
+          [work_order_id]
+        )
+
+        if (!items || items.length === 0) {
+          return [] // Success: No materials defined for this work order
+        }
+
+        // If items exist but no allocations, check if they were already deducted via fallback
+        const totalConsumed = items.reduce((sum, item) => sum + (parseFloat(item.consumed_qty) || 0), 0)
+        if (totalConsumed > 0) {
+          // They were already deducted via fallback logic in ProductionModel
+          // Return a pseudo-update list to satisfy the frontend
+          return items.map(i => ({
+            item_code: i.item_code,
+            status: 'completed',
+            remarks: 'Already finalized via fallback deduction'
+          }))
+        } else {
+          // If in Draft/Ready but not allocated, this is a valid state where finalize is just too early
+          if (['Draft', 'Ready'].includes(wo[0].status)) {
+            throw new Error(`Work Order ${work_order_id} is in ${wo[0].status} state and materials have not been allocated yet.`)
+          }
+          
+          throw new Error('No materials allocated or consumed for this work order')
+        }
       }
 
       const updates = []

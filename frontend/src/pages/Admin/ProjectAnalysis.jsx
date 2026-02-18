@@ -41,7 +41,7 @@ const StatusBadge = ({ status }) => {
 const StatCard = ({ label, value, icon: Icon, trend, trendValue, bgColor, iconColor, textColor }) => (
   <div className="bg-white rounded p-2 border border-slate-200 hover: hover:border-blue-200 transition-all group relative overflow-hidden">
     <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full ${bgColor} opacity-5 group-hover:opacity-10 transition-opacity`} />
-    <div className="relative z-10">
+    <div className="relative z-0">
       <div className="flex items-center justify-between mb-3">
         <div className={`w-10 h-10  ${bgColor} ${iconColor} flex items-center justify-center `}>
           <Icon size={20} />

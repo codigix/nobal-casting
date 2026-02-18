@@ -24,8 +24,8 @@ import Card from '../../components/Card/Card'
 const StatCard = ({ label, value, icon: Icon, color, trend }) => {
   const colorMap = {
     blue: 'text-blue-600 bg-blue-50 border-blue-100',
-    emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
-    amber: 'text-amber-600 bg-amber-50 border-amber-100',
+    emerald: 'text-emerald-600 ',
+    amber: 'text-amber-600',
     slate: 'text-slate-600 bg-slate-50 border-slate-100'
   }
   
@@ -137,9 +137,9 @@ export default function Customers() {
 
   const getStatusBadge = (status) => {
     const configs = {
-      active: { color: 'text-emerald-700 bg-emerald-50 border-emerald-100', icon: CheckCircle2 },
+      active: { color: 'text-emerald-700 ', icon: CheckCircle2 },
       inactive: { color: 'text-rose-700 bg-rose-50 border-rose-100', icon: XCircle },
-      pending: { color: 'text-amber-700 bg-amber-50 border-amber-100', icon: Clock }
+      pending: { color: 'text-amber-700', icon: Clock }
     }
     const config = configs[status] || configs.pending
     const Icon = config.icon
@@ -155,13 +155,10 @@ export default function Customers() {
   return (
     <div className="min-h-screen bg-[#f8fafc] p-4 pb-12">
       {/* Sticky Top Header */}
-      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200">
-        <div className=" p-6 ">
+      <div className="sticky top-0  bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <div className=" p-2 ">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="bg-blue-600 p-2 rounded ">
-                <Users className="w-5 h-5 text-white" />
-              </div>
               <div>
                 <h1 className="text-lg  text-slate-900">Customer Directory</h1>
                 <div className="flex items-center gap-2 text-xs  text-slate-500 font-medium text-xs ">
@@ -188,7 +185,7 @@ export default function Customers() {
         </div>
       </div>
 
-      <div className=" p-6">
+      <div className="mt-2">
         {/* Alerts */}
         {success && (
           <div className="mb-6 p-4 bg-emerald-50 border border-emerald-100 rounded flex items-center gap-3 animate-in fade-in slide-in-from-top-2">

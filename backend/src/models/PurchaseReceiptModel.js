@@ -1,6 +1,7 @@
 import { PeriodClosingModel } from './PeriodClosingModel.js'
 import StockBalanceModel from './StockBalanceModel.js'
 import StockLedgerModel from './StockLedgerModel.js'
+import StockMovementModel from './StockMovementModel.js'
 
 export class PurchaseReceiptModel {
   generateId() {
@@ -281,6 +282,31 @@ export class PurchaseReceiptModel {
         remarks: `${voucher_type} for GRN ${voucher_no}`,
         created_by: 1 // Should be passed if available
       }, this.db)
+
+      // Create Stock Movement entry for visibility in Inventory Dashboard
+      try {
+        const transaction_no = await StockMovementModel.generateTransactionNo()
+        
+        await this.db.execute(
+          `INSERT INTO stock_movements (
+            transaction_no, item_code, warehouse_id, 
+            movement_type, purpose, quantity, reference_type, reference_name, notes, status, created_by, approved_by, approved_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Approved', 1, 1, NOW())`,
+          [
+            transaction_no, 
+            item_code, 
+            warehouse_id, 
+            'IN',
+            'Purchase Receipt',
+            qty,
+            'Purchase Receipt',
+            voucher_no,
+            `${voucher_type} for GRN ${voucher_no}`
+          ]
+        )
+      } catch (smError) {
+        console.error('Failed to create stock movement entry:', smError)
+      }
 
       return { success: true }
     } catch (error) {

@@ -434,6 +434,387 @@ class OEEModel {
       throw error
     }
   }
+
+  /**
+   * Calculate and save OEE for a Job Card on a specific date and shift
+   */
+  async calculateAndSaveJobCardOEE(jobCardId, logDate, shift) {
+    try {
+      // 1. Get Job Card and BOM Ideal Cycle Time
+      // We look for operation_time in bom_operation or job_card itself
+      const [jcRows] = await this.db.query(`
+        SELECT jc.*, bo.operation_time as bom_ideal_cycle_time
+        FROM job_card jc
+        LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id
+        LEFT JOIN bom_operation bo ON wo.bom_no = bo.bom_id AND jc.operation = bo.operation_name
+        WHERE jc.job_card_id = ?
+      `, [jobCardId]);
+      
+      if (jcRows.length === 0) return null;
+      const jobCard = jcRows[0];
+      const idealCycleTime = parseFloat(jobCard.bom_ideal_cycle_time || jobCard.operation_time || 1);
+
+      // 2. Get Production and Time Logs for this shift
+      const [timeLogs] = await this.db.query(`
+        SELECT SUM(time_in_minutes) as actual_time, 
+               SUM(completed_qty) as total_produced,
+               SUM(accepted_qty) as total_accepted
+        FROM time_log
+        WHERE job_card_id = ? AND (DATE(created_at) = ? OR log_date = ?) AND (shift = ? OR shift_no = ?)
+      `, [jobCardId, logDate, logDate, shift, shift]);
+      
+      const stats = timeLogs[0];
+      const totalProduced = parseFloat(stats.total_produced || 0);
+      const totalAccepted = parseFloat(stats.total_accepted || 0);
+
+      // 3. Get Downtime for this shift
+      const [downtimes] = await this.db.query(`
+        SELECT downtime_type, SUM(duration_minutes) as duration
+        FROM downtime_entry
+        WHERE job_card_id = ? AND (DATE(created_at) = ? OR log_date = ?)
+        GROUP BY downtime_type
+      `, [jobCardId, logDate, logDate]);
+
+      let totalDowntime = 0;
+      let availabilityLoss = 0;
+      let performanceLoss = 0;
+      
+      downtimes.forEach(dt => {
+        totalDowntime += parseFloat(dt.duration || 0);
+        // Categorize losses (basic mapping)
+        const type = (dt.downtime_type || '').toLowerCase();
+        if (type.includes('breakdown') || type.includes('setup') || type.includes('waiting')) {
+          availabilityLoss += parseFloat(dt.duration || 0);
+        } else if (type.includes('minor') || type.includes('slow')) {
+          performanceLoss += parseFloat(dt.duration || 0);
+        } else {
+          availabilityLoss += parseFloat(dt.duration || 0); // Default to availability loss
+        }
+      });
+
+      // 4. Constants and Formulas
+      const PLANNED_PRODUCTION_TIME = 480; // Standard 8 hour shift
+      const actualRunTime = Math.max(0, PLANNED_PRODUCTION_TIME - totalDowntime);
+      
+      // Availability = (Planned Production Time − Downtime) ÷ Planned Production Time
+      const availability = PLANNED_PRODUCTION_TIME > 0 
+        ? ((PLANNED_PRODUCTION_TIME - totalDowntime) / PLANNED_PRODUCTION_TIME) * 100 
+        : 0;
+
+      // Performance = (Ideal Cycle Time × Total Produced Quantity) ÷ Actual Run Time
+      const performance = (actualRunTime > 0 && totalProduced > 0)
+        ? ((idealCycleTime * totalProduced) / actualRunTime) * 100
+        : 0;
+
+      // Quality = Accepted Quantity ÷ Total Produced Quantity
+      const quality = totalProduced > 0
+        ? (totalAccepted / totalProduced) * 100
+        : 0;
+
+      const oee = (availability / 100) * (performance / 100) * (quality / 100) * 100;
+
+      // 5. Save results
+      const oeeData = {
+        level: 'job_card',
+        reference_id: jobCardId,
+        log_date: logDate,
+        shift: shift,
+        availability: Math.min(100, Math.max(0, availability)),
+        performance: Math.min(100, Math.max(0, performance)),
+        quality: Math.min(100, Math.max(0, quality)),
+        oee: Math.min(100, Math.max(0, oee)),
+        planned_production_time: PLANNED_PRODUCTION_TIME,
+        downtime: totalDowntime,
+        actual_run_time: actualRunTime,
+        ideal_cycle_time: idealCycleTime,
+        total_produced_qty: totalProduced,
+        accepted_qty: totalAccepted,
+        availability_loss: availabilityLoss,
+        performance_loss: performanceLoss,
+        quality_loss_qty: totalProduced - totalAccepted
+      };
+
+      await this.db.query(`
+        INSERT INTO oee_analysis (
+          level, reference_id, log_date, shift, availability, performance, quality, oee,
+          planned_production_time, downtime, actual_run_time, ideal_cycle_time,
+          total_produced_qty, accepted_qty, availability_loss, performance_loss, quality_loss_qty
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          availability = VALUES(availability),
+          performance = VALUES(performance),
+          quality = VALUES(quality),
+          oee = VALUES(oee),
+          planned_production_time = VALUES(planned_production_time),
+          downtime = VALUES(downtime),
+          actual_run_time = VALUES(actual_run_time),
+          ideal_cycle_time = VALUES(ideal_cycle_time),
+          total_produced_qty = VALUES(total_produced_qty),
+          accepted_qty = VALUES(accepted_qty),
+          availability_loss = VALUES(availability_loss),
+          performance_loss = VALUES(performance_loss),
+          quality_loss_qty = VALUES(quality_loss_qty)
+      `, Object.values(oeeData));
+
+      // After calculating job card OEE, trigger aggregation for Work Order and Workstation
+      if (jobCard.work_order_id) {
+        await this.calculateAndSaveWorkOrderOEE(jobCard.work_order_id, logDate);
+      }
+      if (jobCard.machine_id) {
+        await this.calculateAndSaveWorkstationOEE(jobCard.machine_id, logDate);
+      }
+
+      return oeeData;
+    } catch (error) {
+      console.error('Error calculating Job Card OEE:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate aggregated OEE for a Work Order (weighted average)
+   */
+  async calculateAndSaveWorkOrderOEE(workOrderId, logDate) {
+    try {
+      const [rows] = await this.db.query(`
+        SELECT 
+          SUM(availability * actual_run_time) / NULLIF(SUM(actual_run_time), 0) as avg_availability,
+          SUM(performance * actual_run_time) / NULLIF(SUM(actual_run_time), 0) as avg_performance,
+          SUM(quality * actual_run_time) / NULLIF(SUM(actual_run_time), 0) as avg_quality,
+          SUM(oee * actual_run_time) / NULLIF(SUM(actual_run_time), 0) as avg_oee,
+          SUM(planned_production_time) as total_planned,
+          SUM(downtime) as total_downtime,
+          SUM(actual_run_time) as total_run_time,
+          SUM(total_produced_qty) as total_produced,
+          SUM(accepted_qty) as total_accepted,
+          SUM(availability_loss) as total_avail_loss,
+          SUM(performance_loss) as total_perf_loss,
+          SUM(quality_loss_qty) as total_qual_loss
+        FROM oee_analysis
+        WHERE level = 'job_card' AND reference_id IN (
+          SELECT job_card_id FROM job_card WHERE work_order_id = ?
+        ) AND log_date = ?
+      `, [workOrderId, logDate]);
+
+      if (rows.length === 0 || rows[0].avg_oee === null) return null;
+      const summary = rows[0];
+
+      const oeeData = {
+        level: 'work_order',
+        reference_id: workOrderId,
+        log_date: logDate,
+        shift: 'All Day',
+        availability: summary.avg_availability || 0,
+        performance: summary.avg_performance || 0,
+        quality: summary.avg_quality || 0,
+        oee: summary.avg_oee || 0,
+        planned_production_time: summary.total_planned || 0,
+        downtime: summary.total_downtime || 0,
+        actual_run_time: summary.total_run_time || 0,
+        total_produced_qty: summary.total_produced || 0,
+        accepted_qty: summary.total_accepted || 0,
+        availability_loss: summary.total_avail_loss || 0,
+        performance_loss: summary.total_perf_loss || 0,
+        quality_loss_qty: summary.total_qual_loss || 0
+      };
+
+      await this.db.query(`
+        INSERT INTO oee_analysis (
+          level, reference_id, log_date, shift, availability, performance, quality, oee,
+          planned_production_time, downtime, actual_run_time, 
+          total_produced_qty, accepted_qty, availability_loss, performance_loss, quality_loss_qty
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          availability = VALUES(availability),
+          performance = VALUES(performance),
+          quality = VALUES(quality),
+          oee = VALUES(oee),
+          planned_production_time = VALUES(planned_production_time),
+          downtime = VALUES(downtime),
+          actual_run_time = VALUES(actual_run_time),
+          total_produced_qty = VALUES(total_produced_qty),
+          accepted_qty = VALUES(accepted_qty),
+          availability_loss = VALUES(availability_loss),
+          performance_loss = VALUES(performance_loss),
+          quality_loss_qty = VALUES(quality_loss_qty)
+      `, Object.values(oeeData));
+
+      return oeeData;
+    } catch (error) {
+      console.error('Error calculating Work Order OEE:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate consolidated OEE for a Workstation
+   */
+  async calculateAndSaveWorkstationOEE(machineId, logDate) {
+    try {
+      const [rows] = await this.db.query(`
+        SELECT 
+          AVG(availability) as avg_availability,
+          AVG(performance) as avg_performance,
+          AVG(quality) as avg_quality,
+          AVG(oee) as avg_oee,
+          SUM(planned_production_time) as total_planned,
+          SUM(downtime) as total_downtime,
+          SUM(actual_run_time) as total_run_time,
+          SUM(total_produced_qty) as total_produced,
+          SUM(accepted_qty) as total_accepted,
+          SUM(availability_loss) as total_avail_loss,
+          SUM(performance_loss) as total_perf_loss,
+          SUM(quality_loss_qty) as total_qual_loss
+        FROM oee_analysis
+        WHERE level = 'job_card' AND reference_id IN (
+          SELECT job_card_id FROM job_card WHERE machine_id = ?
+        ) AND log_date = ?
+      `, [machineId, logDate]);
+
+      if (rows.length === 0 || rows[0].avg_oee === null) return null;
+      const summary = rows[0];
+
+      const oeeData = {
+        level: 'workstation',
+        reference_id: machineId,
+        log_date: logDate,
+        shift: 'All Day',
+        availability: summary.avg_availability || 0,
+        performance: summary.avg_performance || 0,
+        quality: summary.avg_quality || 0,
+        oee: summary.avg_oee || 0,
+        planned_production_time: summary.total_planned || 0,
+        downtime: summary.total_downtime || 0,
+        actual_run_time: summary.total_run_time || 0,
+        total_produced_qty: summary.total_produced || 0,
+        accepted_qty: summary.total_accepted || 0,
+        availability_loss: summary.total_avail_loss || 0,
+        performance_loss: summary.total_perf_loss || 0,
+        quality_loss_qty: summary.total_qual_loss || 0
+      };
+
+      await this.db.query(`
+        INSERT INTO oee_analysis (
+          level, reference_id, log_date, shift, availability, performance, quality, oee,
+          planned_production_time, downtime, actual_run_time, 
+          total_produced_qty, accepted_qty, availability_loss, performance_loss, quality_loss_qty
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          availability = VALUES(availability),
+          performance = VALUES(performance),
+          quality = VALUES(quality),
+          oee = VALUES(oee),
+          planned_production_time = VALUES(planned_production_time),
+          downtime = VALUES(downtime),
+          actual_run_time = VALUES(actual_run_time),
+          total_produced_qty = VALUES(total_produced_qty),
+          accepted_qty = VALUES(accepted_qty),
+          availability_loss = VALUES(availability_loss),
+          performance_loss = VALUES(performance_loss),
+          quality_loss_qty = VALUES(quality_loss_qty)
+      `, Object.values(oeeData));
+
+      return oeeData;
+    } catch (error) {
+      console.error('Error calculating Workstation OEE:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get OEE analysis records for a specific level and reference
+   */
+  async getAnalysis(level, referenceId, filters = {}) {
+    try {
+      let query = `SELECT * FROM oee_analysis WHERE level = ? AND reference_id = ?`;
+      const params = [level, referenceId];
+
+      if (filters.startDate) {
+        query += ' AND log_date >= ?';
+        params.push(filters.startDate);
+      }
+      if (filters.endDate) {
+        query += ' AND log_date <= ?';
+        params.push(filters.endDate);
+      }
+
+      query += ' ORDER BY log_date DESC, shift ASC';
+
+      const [rows] = await this.db.query(query, params);
+      return rows;
+    } catch (error) {
+      console.error(`Error fetching OEE analysis for ${level}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get work orders for a workstation with their OEE metrics
+   */
+  async getWorkOrdersForWorkstation(machineId, filters = {}) {
+    try {
+      const [rows] = await this.db.query(`
+        SELECT DISTINCT wo.wo_id, wo.item_code, i.name as item_name,
+               oa.oee, oa.availability, oa.performance, oa.quality, oa.log_date
+        FROM work_order wo
+        JOIN job_card jc ON wo.wo_id = jc.work_order_id
+        JOIN item i ON wo.item_code = i.item_code
+        LEFT JOIN oee_analysis oa ON oa.level = 'work_order' AND oa.reference_id = wo.wo_id
+        WHERE jc.machine_id = ?
+        ORDER BY wo.created_at DESC
+      `, [machineId]);
+      return rows;
+    } catch (error) {
+      console.error('Error fetching work orders for workstation OEE:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get job cards for a work order with their OEE metrics
+   */
+  async getJobCardsForWorkOrder(workOrderId, filters = {}) {
+    try {
+      const [rows] = await this.db.query(`
+        SELECT jc.job_card_id, jc.operation, jc.machine_id,
+               oa.oee, oa.availability, oa.performance, oa.quality, oa.log_date, oa.shift
+        FROM job_card jc
+        LEFT JOIN oee_analysis oa ON oa.level = 'job_card' AND oa.reference_id = jc.job_card_id
+        WHERE jc.work_order_id = ?
+        ORDER BY jc.operation_sequence ASC
+      `, [workOrderId]);
+      return rows;
+    } catch (error) {
+      console.error('Error fetching job cards for work order OEE:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get production/time entries for a job card
+   */
+  async getEntriesForJobCard(jobCardId, filters = {}) {
+    try {
+      const [timeLogs] = await this.db.query(`
+        SELECT 'time_log' as entry_type, time_log_id as id, log_date, shift, 
+               completed_qty as produced, accepted_qty, rejected_qty, time_in_minutes as duration
+        FROM time_log
+        WHERE job_card_id = ?
+      `, [jobCardId]);
+
+      const [downtimes] = await this.db.query(`
+        SELECT 'downtime' as entry_type, downtime_id as id, log_date, shift,
+               downtime_type, downtime_reason, duration_minutes as duration
+        FROM downtime_entry
+        WHERE job_card_id = ?
+      `, [jobCardId]);
+
+      return { timeLogs, downtimes };
+    } catch (error) {
+      console.error('Error fetching entries for job card OEE:', error);
+      throw error;
+    }
+  }
 }
 
 export default OEEModel

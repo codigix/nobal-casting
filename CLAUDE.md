@@ -1,3 +1,84 @@
+# Phase 25: OEE Dashboard Intelligence Enhancements ✅
+
+## Overview
+Implemented advanced analytical features in the OEE (Overall Equipment Effectiveness) Intelligence Dashboard. Added reporting capabilities, AI optimization simulation, and educational tooltips to help operators understand and improve plant performance.
+
+## Features Implemented
+
+### 1. OEE Intelligence Reporting
+- Implemented **"Export Report"** functionality in the OEE Dashboard.
+- Generates a comprehensive CSV report including:
+    - **Plant-Wide Summary**: OEE, Availability, Performance, and Quality KPIs with trends.
+    - **Machine Performance Analytics**: Detailed breakdown per machine (Status, OEE, Throughput, Rejections, Downtime).
+    - **Downtime Analysis**: Pareto analysis of top downtime reasons and their impact.
+- Enabled data-driven decision making through portable performance snapshots.
+
+### 2. AI Optimization Simulation
+- Developed the **"Apply Auto-Fix"** functionality for the AI Optimization Engine.
+- Integrated with the toast notification system to simulate real-time parameter adjustments (e.g., feed rate tuning) and provide feedback on expected OEE improvements (+4%).
+
+### 3. Educational KPI Tooltips
+- Added interactive **Tooltips** for all core OEE metrics:
+    - **Availability**: Explains ratio of actual production time vs planned time.
+    - **Performance**: Explains ratio of actual speed vs ideal speed.
+    - **Quality**: Explains ratio of good units vs total units.
+    - **OEE**: Provides the overall formula and the 85% world-class industry benchmark.
+- Improves user engagement and domain knowledge for plant managers.
+
+## Files Modified
+- `frontend/src/pages/Admin/OEE.jsx`
+
+## Test Results
+- ✅ OEE Report generates and downloads correctly with all three analytical sections.
+- ✅ "Apply Auto-Fix" triggers appropriate success notifications with simulated impact.
+- ✅ Tooltips render correctly on hover for both light and dark themed cards.
+
+---
+
+# Phase 24: UI Enhancements for Production and Inventory ✅
+
+## Overview
+Enhanced the visual clarity and data granularity across Job Cards, Production History, and Stock Movements. Improved real-time tracking in Production Planning and added detailed audit views for inventory transactions.
+
+## Features Implemented
+
+### 1. Job Card Visual Distinction
+- Updated the "Execution Mode" column in the **Job Cards** table with color-coded labels:
+    - **In-house**: Blue (`text-blue-600`)
+    - **Subcontract**: Amber (`text-amber-600`)
+- Applied medium font weights to improve readability of operational assignments.
+
+### 2. Operation-wise Production History
+- Refactored the **Daily Production History** table in the Work Order view to group data by Operation, Date, and Shift.
+- Added an "Operation" column to the history table and CSV export.
+- Fixed an issue where multiple operations on the same day would result in overlapping or aggregated quantities, ensuring distinct tracking of units through each manufacturing phase.
+
+### 3. Real-Time Production Planning Tracking
+- Implemented a new **"In Progress"** status badge for Production Plans.
+- Updated the progress bar calculation to use a weighted approach:
+    - **Completed Job Cards**: 100% contribution
+    - **In-Progress Job Cards**: 50% contribution
+- This ensures the progress bar shows immediate movement as soon as work begins on the shop floor.
+
+### 4. Enhanced Stock Movement Visibility
+- Updated the **Stock Movements** table to display a clear "Source → Target" route for warehouse transfers.
+- Integrated the `StockMovementDetailsModal` to provide a comprehensive view of transaction details, including audit trails, purpose, and specific warehouse routing.
+
+## Files Modified
+- `frontend/src/pages/Production/JobCard.jsx`
+- `frontend/src/pages/Production/WorkOrderForm.jsx`
+- `frontend/src/pages/Production/ProductionPlanning.jsx`
+- `frontend/src/pages/Inventory/StockMovements.jsx`
+- `frontend/src/components/Inventory/StockMovementDetailsModal.jsx`
+
+## Test Results
+- ✅ Job card labels correctly reflect execution mode with new color scheme.
+- ✅ Work Order production history now accurately distinguishes between different operations on the same day.
+- ✅ Production Planning progress bars react immediately to "In Progress" job cards.
+- ✅ Stock transfer routes are clearly visible and detailed in the new modal.
+
+---
+
 # Phase 19: Enhanced Inventory Dashboard with Real-Time Statistics ✅
 # Phase 21: Job Card UI Synchronization and Table Redesign ✅
 

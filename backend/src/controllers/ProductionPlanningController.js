@@ -501,4 +501,94 @@ export class ProductionPlanningController {
       res.status(500).json({ success: false, error: error.message });
     }
   }
+
+  async getHierarchyBySalesOrder(req, res) {
+    try {
+      const { sales_order_id } = req.params;
+
+      // 1. Get Sales Order basic info
+      const [salesOrders] = await this.db.query(
+        'SELECT sales_order_id, customer_name, status, order_amount, delivery_date FROM selling_sales_order WHERE sales_order_id = ?',
+        [sales_order_id]
+      );
+
+      if (salesOrders.length === 0) {
+        return res.status(404).json({ success: false, error: 'Sales Order not found' });
+      }
+
+      const salesOrder = salesOrders[0];
+
+      // 2. Get Production Plans for this Sales Order
+      const [plans] = await this.db.query(
+        'SELECT plan_id, status, plan_date, bom_id FROM production_plan WHERE sales_order_id = ?',
+        [sales_order_id]
+      );
+
+      // 3. Get Work Orders linked to this Sales Order or its Production Plans
+      const planIds = plans.map(p => p.plan_id);
+      let workOrders = [];
+      if (planIds.length > 0 || sales_order_id) {
+        // Query Work Orders linked directly to SO or to any of its Plans
+        let query = `
+          SELECT 
+            wo.wo_id, 
+            wo.item_code, 
+            i.name as item_name,
+            wo.quantity, 
+            wo.status, 
+            wo.production_plan_id, 
+            wo.parent_wo_id, 
+            wo.planned_start_date, 
+            wo.expected_delivery_date 
+          FROM work_order wo
+          LEFT JOIN item i ON wo.item_code = i.item_code
+          WHERE wo.sales_order_id = ?
+        `;
+        let params = [sales_order_id];
+        
+        if (planIds.length > 0) {
+          query += ' OR wo.production_plan_id IN (?)';
+          params.push(planIds);
+        }
+        
+        const [woRows] = await this.db.query(query, params);
+        workOrders = woRows;
+      }
+
+      // 4. Get Job Cards for these Work Orders
+      const woIds = workOrders.map(wo => wo.wo_id);
+      let jobCards = [];
+      if (woIds.length > 0) {
+        const [jcRows] = await this.db.query(
+          'SELECT job_card_id, work_order_id, operation, status, planned_quantity, produced_quantity, machine_id, operator_id, actual_start_date, actual_end_date FROM job_card WHERE work_order_id IN (?)',
+          [woIds]
+        );
+        jobCards = jcRows;
+      }
+
+      // 5. Get Work Order Dependencies for dotted lines
+      let dependencies = [];
+      if (woIds.length > 0) {
+        const [depRows] = await this.db.query(
+          'SELECT parent_wo_id, child_wo_id, item_code, required_qty FROM work_order_dependency WHERE parent_wo_id IN (?) OR child_wo_id IN (?)',
+          [woIds, woIds]
+        );
+        dependencies = depRows;
+      }
+
+      res.json({
+        success: true,
+        data: {
+          salesOrder,
+          plans,
+          workOrders,
+          jobCards,
+          dependencies
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching production hierarchy:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
 }

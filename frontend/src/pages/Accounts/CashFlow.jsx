@@ -112,7 +112,7 @@ export default function CashFlow() {
         {/* Net Cash Flow Card */}
         <div className="bg-white border border-neutral-200 rounded  p-8 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full -mr-32 -mt-32 blur-3xl" />
-          <div className="relative z-10">
+          <div className="relative z-0">
             <h2 className="text-[11px]   tracking-[0.3em] text-neutral-400 mb-2">Net Cash Flow</h2>
             <div className="flex items-baseline gap-3">
               <span className={`text-5xl  er ${data.net_cash_flow >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -123,7 +123,7 @@ export default function CashFlow() {
               </Badge>
             </div>
           </div>
-          <div className="relative z-10 flex flex-col items-end gap-1">
+          <div className="relative z-0 flex flex-col items-end gap-1">
              <div className="flex items-center gap-2 text-emerald-600">
                <TrendingUp size={20} />
                <span className="text-sm ">Inflow: ₹{data.cash_inflow.toLocaleString()}</span>

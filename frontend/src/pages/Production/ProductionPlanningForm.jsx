@@ -112,8 +112,8 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
 const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = 'indigo' }) => {
   const themes = {
     blue: 'text-blue-600 bg-blue-50 border-blue-100',
-    emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
-    amber: 'text-amber-600 bg-amber-50 border-amber-100',
+    emerald: 'text-emerald-600 ',
+    amber: 'text-amber-600',
     rose: 'text-rose-600 bg-rose-50 border-rose-100',
     indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100',
     slate: 'text-slate-600 bg-slate-50 border-slate-100',
@@ -1897,7 +1897,7 @@ export default function ProductionPlanningForm() {
   return (
     <div className="min-h-screen bg-slate-50 p-2 pb-3">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200">
+      <div className="sticky top-0  bg-white/80 backdrop-blur-md border-b border-slate-200">
         <div className="">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
@@ -2178,7 +2178,7 @@ export default function ProductionPlanningForm() {
 
                 {expandedSections.subassembly && (
                   <div className="p-2 animate-in fade-in duration-300">
-                    <div className="overflow-x-auto rounded border border-slate-100">
+                    <div className=" rounded border border-slate-100">
                       <table className="w-full text-left border-collapse">
                         <thead className="bg-slate-50 border-b border-slate-100">
                           <tr>
@@ -2239,7 +2239,7 @@ export default function ProductionPlanningForm() {
                                       </div>
                                     </td>
                                     <td className="p-2 text-center">
-                                      <div className="flex items-center justify-center gap-1.5 text-slate-600">
+                                      <div className="flex items-center justify-center gap-1 text-slate-600">
                                         <Calendar size={12} className="text-slate-400" />
                                         <span className="text-[11px] font-medium">
                                           {item.planned_start_date || 'TBD'}
@@ -2255,7 +2255,7 @@ export default function ProductionPlanningForm() {
                                       </div>
                                     </td>
                                     <td className="p-2 text-center">
-                                      <div className="flex items-center justify-center gap-1.5 text-rose-700 bg-rose-50/50 px-2 py-0.5 rounded border border-rose-100/50 w-fit mx-auto">
+                                      <div className="flex items-center justify-center gap-1 text-rose-700 bg-rose-50/50 px-2 py-0.5 rounded border border-rose-100/50 w-fit mx-auto">
                                         <Layers size={12} className="text-rose-500" />
                                         <span className="font-mono text-[10px]">
                                           {item.bom_no || item.bom_id || 'N/A'}
@@ -2368,7 +2368,7 @@ export default function ProductionPlanningForm() {
                 {expandedSections.scope && (
                   <div className="p-2 animate-in fade-in duration-300">
                     {fgItems.length > 0 ? (
-                      <div className="overflow-x-auto rounded border border-slate-100">
+                      <div className=" rounded border border-slate-100">
                         <table className="w-full text-left border-collapse">
                           <thead className="bg-slate-50 border-b border-slate-100">
                             <tr>
@@ -2407,7 +2407,7 @@ export default function ProductionPlanningForm() {
                                     </div>
                                   </td>
                                   <td className="p-2">
-                                    <div className="flex items-center justify-center gap-1.5 text-blue-700 bg-blue-50/50 px-2 py-0.5 rounded border border-blue-100/50 w-fit mx-auto">
+                                    <div className="flex items-center justify-center gap-1 text-blue-700 bg-blue-50/50 px-2 py-0.5 rounded border border-blue-100/50 w-fit mx-auto">
                                       <Layers size={12} className="text-blue-500" />
                                       <span className="font-mono text-[10px]">
                                         {selectedBomId || item.bom_id || item.bom_no || 'N/A'}
@@ -2433,7 +2433,7 @@ export default function ProductionPlanningForm() {
                                     </div>
                                   </td>
                                   <td className="p-2 text-center">
-                                    <div className="flex items-center justify-center gap-1.5 text-slate-600">
+                                    <div className="flex items-center justify-center gap-1 text-slate-600">
                                       <Calendar size={12} className="text-slate-400" />
                                       <span className="text-[11px] font-medium">
                                         {item.planned_start_date || 'TBD'}
@@ -2580,7 +2580,7 @@ export default function ProductionPlanningForm() {
                                     </div>
                                   </td>
                                   <td className="p-2">
-                                    <div className="flex items-center justify-center gap-1.5 text-amber-700 bg-amber-50/50 px-2 py-0.5 rounded border border-amber-100/50 w-fit mx-auto">
+                                    <div className="flex items-center justify-center gap-1 text-amber-700 bg-amber-50/50 px-2 py-0.5 rounded border border-amber-100/50 w-fit mx-auto">
                                       <Layers size={12} className="text-amber-500" />
                                       <span className="font-mono text-[10px]">
                                         {item.bom_id || item.bom_no || '-'}
@@ -2657,7 +2657,7 @@ export default function ProductionPlanningForm() {
                                     </div>
                                   </td>
                                   <td className="p-2">
-                                    <div className="flex items-center justify-center gap-1.5 text-rose-700 bg-rose-50/50 px-2 py-0.5 rounded border border-rose-100/50 w-fit mx-auto">
+                                    <div className="flex items-center justify-center gap-1 text-rose-700 bg-rose-50/50 px-2 py-0.5 rounded border border-rose-100/50 w-fit mx-auto">
                                       <Layers size={12} className="text-rose-500" />
                                       <span className="font-mono text-[10px]">
                                         {item.bom_id || item.bom_no || '-'}
@@ -2895,7 +2895,7 @@ export default function ProductionPlanningForm() {
               </div>
             </div>
 
-            <div className="p-6 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-4">
+            <div className="p-2 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-4">
               <button
                 onClick={() => {
                   setShowMaterialRequestModal(false)

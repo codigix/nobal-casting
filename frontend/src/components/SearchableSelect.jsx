@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, X } from 'lucide-react'
 
 export default function SearchableSelect({ 
   label, 
@@ -13,7 +13,8 @@ export default function SearchableSelect({
   onSearch = null,
   isClearable = true,
   isDisabled = false,
-  containerClassName = ""
+  containerClassName = "",
+  width = "w-full"
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -133,7 +134,7 @@ export default function SearchableSelect({
   }
 
   return (
-    <div className={`w-full relative ${isOpen ? 'z-50' : 'z-0'}`} ref={containerRef}>
+    <div className={`${width} relative ${isOpen ? 'z-50' : 'z-0'}`} ref={containerRef}>
       {label && <label className="block text-xs  text-slate-400  mb-1">{label}{required && ' *'}</label>}
       <div className="relative">
         <div className={`flex  items-center border transition-all  rounded ${containerClassName || ' bg-white border-gray-300'} ${isOpen ? 'ring-2 ring-blue-500/20 border-blue-500' : 'focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500'}`}>
@@ -149,32 +150,34 @@ export default function SearchableSelect({
             }}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className={`flex-1 h-full border-none p-2 outline-none text-xs bg-transparent ${
+            className={`flex-1 h-full border-none w-[100%] p-2 pr-8 outline-none text-xs bg-transparent ${
               isDisabled ? 'cursor-not-allowed' : 'cursor-text'
             }`}
             disabled={isLoading || isDisabled}
           />
-          {isClearable && searchTerm && !isDisabled && (
-            <button
-              type="button"
-              onClick={handleClear}
-              className="mr-1 bg-none border-none cursor-pointer text-gray-500 px-1 py-0 flex items-center hover:text-gray-700 transition"
-            >
-              ×
-            </button>
-          )}
-          <ChevronDown 
-            size={18} 
-            className={`mr-2 text-gray-500 transition-transform duration-200 ${
-              isOpen ? 'rotate-180' : 'rotate-0'
-            }`}
-          />
+          <div className="absolute right-0 top-0 h-full flex items-center pr-1 pointer-events-none">
+            {isClearable && searchTerm && !isDisabled && (
+              <button
+                type="button"
+                onClick={handleClear}
+                className="pointer-events-auto mr-1 bg-none border-none cursor-pointer text-gray-500 p-0.5 flex items-center hover:text-gray-700 transition"
+              >
+                <X size={14} />
+              </button>
+            )}
+            <ChevronDown 
+              size={18} 
+              className={`text-gray-500 transition-transform duration-200 ${
+                isOpen ? 'rotate-180' : 'rotate-0'
+              }`}
+            />
+          </div>
         </div>
 
         {isOpen && (
           <div 
             ref={dropdownRef}
-            className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded  z-[999] max-h-48 overflow-y-auto">
+            className="absolute top-full left-0 w-full mt-1 bg-white border border-gray-300 rounded  z-[999] max-h-48 overflow-y-auto">
             {isLoading && (
               <div className="p-2 text-gray-400 text-center text-xs">
                 Loading...

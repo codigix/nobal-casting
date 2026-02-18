@@ -12,6 +12,7 @@ import SubcontractDispatchModal from '../../components/Production/SubcontractDis
 import SubcontractReceiptModal from '../../components/Production/SubcontractReceiptModal'
 import { useToast } from '../../components/ToastContainer'
 import DataTable from '../../components/Table/DataTable'
+import SearchableSelect from '../../components/SearchableSelect'
 
 export default function JobCard() {
   const navigate = useNavigate()
@@ -48,6 +49,7 @@ export default function JobCard() {
   // Master data state
   const [workstations, setWorkstations] = useState([])
   const [operators, setOperators] = useState([])
+  const [vendors, setVendors] = useState([])
   const [operations, setOperations] = useState([])
 
   // Subcontracting state
@@ -59,16 +61,18 @@ export default function JobCard() {
   // 1. Core Data Fetching
   const fetchData = useCallback(async () => {
     try {
-      const [wsRes, empRes, opsRes] = await Promise.all([
+      const [wsRes, empRes, opsRes, vendorRes] = await Promise.all([
         productionService.getWorkstationsList(),
         productionService.getEmployees(),
-        productionService.getOperationsList()
+        productionService.getOperationsList(),
+        productionService.getVendors()
       ])
       setWorkstations(wsRes.data || [])
       setOperators(empRes.data || [])
       setOperations(opsRes.data || [])
+      setVendors(vendorRes.data || [])
     } catch (err) {
-      console.error('Failed to fetch workstations/operators/operations:', err)
+      console.error('Failed to fetch workstations/operators/operations/vendors:', err)
     }
   }, [])
 
@@ -132,13 +136,30 @@ export default function JobCard() {
   // 3. Inline Editing Handlers
   const handleInlineEdit = useCallback((card) => {
     setInlineEditingId(card.job_card_id)
+    
+    // Parse challan type from notes if it exists
+    let challanType = ''
+    let remainingNotes = card.notes || ''
+    if (card.notes?.startsWith('[Challan Type:')) {
+      const match = card.notes.match(/^\[Challan Type: ([^\]]+)\]\s*(.*)/)
+      if (match) {
+        challanType = match[1]
+        remainingNotes = match[2]
+      }
+    }
+
     setInlineEditData({
       operation: card.operation || '',
       planned_quantity: parseFloat(card.planned_quantity) || 0,
       produced_quantity: parseFloat(card.produced_quantity) || 0,
+      accepted_quantity: parseFloat(card.accepted_quantity) || 0,
       machine_id: card.machine_id || '',
       operator_id: card.operator_id || '',
+      vendor_id: card.vendor_id || '',
+      challan_type: challanType,
+      notes: remainingNotes,
       status: card.status || 'draft',
+      execution_mode: card.execution_mode || 'IN_HOUSE',
       scheduled_start_date: card.scheduled_start_date ? card.scheduled_start_date.split('T')[0] : '',
       scheduled_end_date: card.scheduled_end_date ? card.scheduled_end_date.split('T')[0] : ''
     })
@@ -157,6 +178,17 @@ export default function JobCard() {
       if (!statusChanged) {
         delete updateData.status
       }
+
+      // Convert empty strings to null for database compatibility
+      if (updateData.vendor_id === '') updateData.vendor_id = null
+      if (updateData.machine_id === '') updateData.machine_id = null
+      if (updateData.operator_id === '') updateData.operator_id = null
+
+      // Handle challan type for subcontracting
+      if (updateData.execution_mode === 'OUTSOURCE' && updateData.challan_type) {
+        updateData.notes = `[Challan Type: ${updateData.challan_type}] ${updateData.notes || ''}`
+      }
+      delete updateData.challan_type
 
       await productionService.updateJobCard(jobCardId, updateData)
 
@@ -237,14 +269,25 @@ export default function JobCard() {
   }, [fetchJobCards])
 
   // 5. Helper Functions
-  const getOperatorName = (operatorId) => {
-    const operator = operators.find(op => op.employee_id === operatorId)
-    return operator ? `${operator.first_name} ${operator.last_name}` : 'Unassigned'
+  const getOperatorName = (operatorId, row = null) => {
+    if (row && row.operator_name) return row.operator_name
+    if (!operatorId) return 'Unassigned'
+    const operator = operators.find(op => op.employee_id === operatorId || op.operator_id === operatorId)
+    return operator ? `${operator.first_name} ${operator.last_name}` : operatorId
   }
 
-  const getWorkstationName = (wsId) => {
-    const ws = workstations.find(w => w.name === wsId)
-    return ws ? (ws.workstation_name || ws.name) : 'N/A'
+  const getVendorName = (vendorId, row = null) => {
+    if (row && row.vendor_name) return row.vendor_name
+    if (!vendorId) return 'N/A'
+    const vendor = vendors.find(v => v.supplier_id === vendorId || v.id === vendorId || v.name === vendorId)
+    return vendor ? (vendor.name || vendor.supplier_name) : vendorId
+  }
+
+  const getWorkstationName = (wsId, row = null) => {
+    if (row && row.machine_name) return row.machine_name
+    if (!wsId) return 'N/A'
+    const ws = workstations.find(w => w.name === wsId || w.machine_id === wsId)
+    return ws ? (ws.workstation_name || ws.name) : wsId
   }
 
   const formatQuantity = (qty) => {
@@ -259,6 +302,11 @@ export default function JobCard() {
   const getOperatorOptions = () => operators.map(op => ({
     value: op.employee_id,
     label: `${op.first_name} ${op.last_name}`
+  }))
+
+  const getVendorOptions = () => vendors.map(v => ({
+    value: v.supplier_id || v.id || v.name,
+    label: v.name || v.supplier_name
   }))
 
   const getOperationOptions = () => operations.map(op => ({
@@ -284,7 +332,7 @@ export default function JobCard() {
 
     return (
       <span className={`flex items-center gap-1.5 text-xs font-medium ${config.color}`}>
-        <Icon size={12} className="stroke-[2.5]" />
+        {/* <Icon size={12} className="stroke-[2.5]" /> */}
         {config.label || status}
       </span>
     )
@@ -293,7 +341,7 @@ export default function JobCard() {
   const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
     const colorMap = {
       blue: 'text-blue-600 bg-blue-50 border-blue-100',
-      emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+      emerald: 'text-emerald-600 ',
       amber: 'text-amber-600 ',
       rose: 'text-rose-600 bg-rose-50 border-rose-100',
       indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100',
@@ -335,14 +383,14 @@ export default function JobCard() {
         <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => handleInlineSave(card.job_card_id)}
-            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-all"
+            className="p-1 text-emerald-600 hover:bg-emerald-50 rounded transition-all"
             title="Save"
           >
             <CheckCircle2 size={16} />
           </button>
           <button
             onClick={handleInlineCancel}
-            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-all"
+            className="p-1 text-rose-600 hover:bg-rose-50 rounded transition-all"
             title="Cancel"
           >
             <X size={16} />
@@ -352,10 +400,10 @@ export default function JobCard() {
     }
 
     return (
-      <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={() => handleViewJobCard(card.job_card_id)}
-          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
+          className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
           title="View Intelligence"
         >
           <Eye size={14} />
@@ -363,27 +411,31 @@ export default function JobCard() {
 
         {card.execution_mode === 'OUTSOURCE' && (
           <>
-            <button
-              onClick={() => handleDispatch(card)}
-              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
-              title="Vendor Dispatch"
-            >
-              <Truck size={14} />
-            </button>
-            <button
-              onClick={() => handleOpenReceiptModal(card)}
-              className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all"
-              title="Vendor Receipt"
-            >
-              <Package size={14} />
-            </button>
+            {!card.outward_challan_id && (
+              <button
+                onClick={() => handleDispatch(card)}
+                className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
+                title="Vendor Dispatch"
+              >
+                <Truck size={14} />
+              </button>
+            )}
+            {card.outward_challan_id && (
+              <button
+                onClick={() => handleOpenReceiptModal(card)}
+                className="p-1 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all"
+                title="Vendor Receipt"
+              >
+                <Package size={14} />
+              </button>
+            )}
           </>
         )}
 
         {(card.status || '').toLowerCase() === 'ready' && card.execution_mode !== 'OUTSOURCE' && (
           <button
             onClick={() => handleStartJobCard(card.job_card_id)}
-            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-all"
+            className="p-1 text-emerald-600 hover:bg-emerald-50 rounded transition-all"
             title="Start Operation"
           >
             <Zap size={14} className="fill-current" />
@@ -392,7 +444,7 @@ export default function JobCard() {
         {(card.status || '').toLowerCase() === 'in-progress' && (
           <button
             onClick={() => navigate(`/manufacturing/job-cards/${card.job_card_id}/production-entry`)}
-            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded transition-all"
+            className="p-1 text-indigo-600 hover:bg-indigo-50 rounded transition-all"
             title="Production Entry"
           >
             <Zap size={14} className="fill-current" />
@@ -400,14 +452,14 @@ export default function JobCard() {
         )}
         <button
           onClick={() => handleInlineEdit(card)}
-          className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-all"
+          className="p-1 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-all"
           title="Quick Edit"
         >
           <Edit2 size={14} />
         </button>
         <button
           onClick={() => handleDelete(card.job_card_id)}
-          className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
+          className="p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all"
           title="Remove Entry"
         >
           <Trash2 size={14} />
@@ -417,6 +469,31 @@ export default function JobCard() {
   }, [inlineEditingId, handleInlineSave, handleInlineCancel, handleViewJobCard, navigate, handleInlineEdit, handleDelete, handleStartJobCard, handleDispatch, handleOpenReceiptModal])
 
   const columns = useMemo(() => [
+      {
+      key: 'job_card_id',
+      label: 'ID',
+      render: (val, row) => {
+        const parts = (val || '').split('-')
+        const displayId = parts.length > 4 ? `${parts[0]}-${parts[1]}-..${parts[parts.length-2].slice(-4)}-${parts[parts.length-1]}` : val
+        
+        const woVal = row.work_order_id || ''
+        const woParts = woVal.split('-')
+        const displayWoId = woParts.length >= 4 
+          ? `${woParts[0]}-${woParts[1]}-..${woParts[woParts.length-2].slice(-4)}-${woParts[woParts.length-1]}` 
+          : woVal
+
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[11px] font-mono text-indigo-600 " title={`Job Card: ${val}`}>
+              {displayId}
+            </span>
+            <span className="text-[9px] font-mono text-slate-400 " title={`Work Order: ${woVal}`}>
+              WO: {displayWoId}
+            </span>
+          </div>
+        )
+      }
+    },
     {
       key: 'operation',
       label: 'Operation',
@@ -425,24 +502,23 @@ export default function JobCard() {
         if (isEditing) {
           return (
             <div className="flex flex-col gap-1">
-              <select
+              <SearchableSelect
                 value={inlineEditData.operation}
-                onChange={(e) => handleInlineInputChange('operation', e.target.value)}
-                className="text-xs border border-gray-200 rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500"
-              >
-                <option value="">Select Operation</option>
-                {getOperationOptions().map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-              <span className="text-[10px] text-gray-400 ">{row.item_name || 'Generic Item'}</span>
+                onChange={(val) => handleInlineInputChange('operation', val)}
+                options={getOperationOptions()}
+                placeholder="Select Operation"
+                width="w-32"
+                className="text-xs"
+              />
+              <span className="text-[10px] text-gray-400 truncate ">{row.item_name || 'Generic Item'}</span>
             </div>
           )
         }
+
         return (
           <div className="flex flex-col">
             <span className="text-xs font-medium text-gray-900">{val}</span>
-            <span className="text-[10px] text-gray-400 ">{row.item_name || 'Generic Item'}</span>
+            <span className="text-[10px] text-gray-400 truncate">{row.item_name || 'Generic Item'}</span>
           </div>
         )
       }
@@ -454,18 +530,51 @@ export default function JobCard() {
         const isEditing = inlineEditingId === row.job_card_id
         if (isEditing) {
           return (
-            <select
+            <SearchableSelect
               value={inlineEditData.status}
-              onChange={(e) => handleInlineInputChange('status', e.target.value)}
-              className="text-xs border border-gray-200 rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              {['draft', 'ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled'].map(s => (
-                <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-              ))}
-            </select>
+              onChange={(val) => handleInlineInputChange('status', val)}
+              options={['draft', 'ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled'].map(s => ({
+                value: s,
+                label: s.charAt(0).toUpperCase() + s.slice(1)
+              }))}
+              width="w-32"
+              className="text-xs"
+            />
           )
         }
         return <StatusBadge status={val} />
+      }
+    },
+    {
+      key: 'execution_mode',
+      label: 'Execution Mode',
+      render: (val, row) => {
+        const isEditing = inlineEditingId === row.job_card_id
+        if (isEditing) {
+          return (
+            <SearchableSelect
+              value={inlineEditData.execution_mode}
+              onChange={(val) => handleInlineInputChange('execution_mode', val)}
+              options={[
+                { value: 'IN_HOUSE', label: 'In-house' },
+                { value: 'OUTSOURCE', label: 'Subcontract' }
+              ]}
+              width="w-32"
+              className="text-xs"
+            />
+          )
+        }
+        
+        const isSubcontract = (val || '').toLowerCase() === 'outsource' || (val || '').toLowerCase() === 'subcontract'
+        return (
+          <span className={`text-xs font-medium ${
+            isSubcontract 
+              ? ' text-amber-600 ' 
+              : ' text-blue-600 '
+          }`}>
+            {isSubcontract ? 'Subcontract' : 'In-house'}
+          </span>
+        )
       }
     },
     {
@@ -495,39 +604,89 @@ export default function JobCard() {
       }
     },
     {
-      key: 'work_order_id',
-      label: 'Work Order',
-      render: (val) => {
-        const parts = (val || '').split('-')
-        const displayId = parts.length > 3 ? `${parts[0]}-${parts[1]}-..-${parts[parts.length-1]}` : val
+      key: 'produced_quantity',
+      label: 'Produced Qty',
+      render: (val) => (
+        <div className="flex items-baseline gap-1">
+          <span className="text-xs font-medium text-slate-700">{formatQuantity(val)}</span>
+          <span className="text-[10px] text-slate-400">units</span>
+        </div>
+      )
+    },
+    {
+      key: 'accepted_quantity',
+      label: 'Accepted Qty',
+      render: (val, row) => {
+        const isEditing = inlineEditingId === row.job_card_id
+        if (isEditing) {
+          return (
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                value={inlineEditData.accepted_quantity}
+                onChange={(e) => handleInlineInputChange('accepted_quantity', e.target.value)}
+                className="w-16 text-xs border border-emerald-200 rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+              <span className="text-[10px] text-gray-400">units</span>
+            </div>
+          )
+        }
         return (
-          <span className="text-[10px] font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100" title={val}>
-            {displayId}
-          </span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-xs font-semibold text-emerald-600">{formatQuantity(val)}</span>
+            <span className="text-[10px] text-emerald-400">units</span>
+          </div>
         )
       }
     },
     {
       key: 'machine_name',
-      label: 'Workstation',
+      label: inlineEditingId ? (inlineEditData.execution_mode === 'OUTSOURCE' ? 'Challan Type' : 'Workstation') : 'Workstation / Challan Type',
       render: (val, row) => {
         const isEditing = inlineEditingId === row.job_card_id
         if (isEditing) {
+          const isSubcontract = inlineEditData.execution_mode === 'OUTSOURCE'
+          if (isSubcontract) {
+            return (
+              <SearchableSelect
+                value={inlineEditData.challan_type || ''}
+                onChange={(val) => handleInlineInputChange('challan_type', val)}
+                options={[
+                  { value: 'Outward Challan', label: 'Outward Challan' },
+                  { value: 'Inward Challan', label: 'Inward Challan' }
+                ]}
+                placeholder="Select Challan Type"
+                width="w-32"
+                className="text-xs"
+              />
+            )
+          }
           return (
-            <select
+            <SearchableSelect
               value={inlineEditData.machine_id}
-              onChange={(e) => handleInlineInputChange('machine_id', e.target.value)}
-              className="text-xs border border-gray-200 rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500 w-full"
-            >
-              <option value="">Select Workstation</option>
-              {getWorkstationOptions().map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+              onChange={(val) => handleInlineInputChange('machine_id', val)}
+              options={getWorkstationOptions()}
+              placeholder="Select Workstation"
+              width="w-32"
+              className="text-xs"
+            />
           )
         }
+
+        const isSubcontract = (row.execution_mode || '').toLowerCase() === 'outsource' || (row.execution_mode || '').toLowerCase() === 'subcontract'
+        if (isSubcontract) {
+          let challanType = ''
+          if (row.notes?.startsWith('[Challan Type:')) {
+            const match = row.notes.match(/^\[Challan Type: ([^\]]+)\]/)
+            if (match) challanType = match[1]
+          }
+          return (
+            <span className="text-xs text-purple-600 font-medium">{challanType || 'Subcontract'}</span>
+          )
+        }
+
         return (
-          <span className="text-xs text-gray-700">{getWorkstationName(row.machine_id) || val || 'N/A'}</span>
+          <span className="text-xs text-gray-700">{getWorkstationName(row.machine_id, row) || val || 'N/A'}</span>
         )
       }
     },
@@ -537,37 +696,46 @@ export default function JobCard() {
       render: (val, row) => {
         const isEditing = inlineEditingId === row.job_card_id
         if (isEditing) {
+          const isSubcontract = inlineEditData.execution_mode === 'OUTSOURCE'
+          if (isSubcontract) {
+            return (
+              <SearchableSelect
+                value={inlineEditData.vendor_id}
+                onChange={(val) => handleInlineInputChange('vendor_id', val)}
+                options={getVendorOptions()}
+                placeholder="Select Vendor"
+                width="w-32"
+                className="text-xs"
+              />
+            )
+          }
           return (
-            <select
+            <SearchableSelect
               value={inlineEditData.operator_id}
-              onChange={(e) => handleInlineInputChange('operator_id', e.target.value)}
-              className="text-xs border border-gray-200 rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500 w-full"
-            >
-              <option value="">Select Operator</option>
-              {getOperatorOptions().map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+              onChange={(val) => handleInlineInputChange('operator_id', val)}
+              options={getOperatorOptions()}
+              placeholder="Select Operator"
+              width="w-32"
+              className="text-xs"
+            />
           )
         }
+
+        const isSubcontract = (row.execution_mode || '').toLowerCase() === 'outsource' || (row.execution_mode || '').toLowerCase() === 'subcontract'
+        if (isSubcontract) {
+          return (
+            <span className="text-xs font-medium text-purple-700">
+              {getVendorName(row.vendor_id, row) || 'Unassigned Vendor'}
+            </span>
+          )
+        }
+
         return (
-          <span className="text-xs text-gray-700">{getOperatorName(row.operator_id) || val || 'Unassigned'}</span>
+          <span className="text-xs text-gray-700">{getOperatorName(row.operator_id, row) || val || 'Unassigned'}</span>
         )
       }
     },
-    {
-      key: 'job_card_id',
-      label: 'ID',
-      render: (val) => {
-        const parts = (val || '').split('-')
-        const displayId = parts.length > 3 ? `${parts[0]}-${parts[1]}-..-${parts[parts.length-1]}` : val
-        return (
-          <span className="text-[10px] font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100" title={val}>
-            {displayId}
-          </span>
-        )
-      }
-    },
+  
     {
       key: 'actions',
       label: 'Actions',
@@ -598,14 +766,12 @@ export default function JobCard() {
 
   // 9. Main Render
   return (
-    <div className="h-screen bg-[#fbfcfd] p-3 flex flex-col overflow-hidden">
+    <div className="bg-[#fbfcfd] p-3 flex flex-col ">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-xl border-b border-gray-100 flex-shrink-0">
-        <div className="flex items-center justify-between h-24">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="bg-gray-900 p-2 rounded shadow-gray-200 group transition-all hover:scale-105">
-              <ClipboardList className="w-4 h-4 text-white group-hover:rotate-12 transition-transform" />
-            </div>
+           
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="text-xl text-gray-900">Job Cards</h1>
@@ -701,23 +867,24 @@ export default function JobCard() {
           </div>
           <div className="flex items-center gap-4 w-full md:w-auto">
             <div className="relative min-w-[240px] group">
-              <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
+              <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none z-10">
                 <Filter className="text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
               </div>
-              <select
+              <SearchableSelect
                 name="status"
                 value={filters.status}
-                onChange={handleFilterChange}
-                className="w-full pl-14 pr-12 py-2 bg-white border border-gray-100 rounded text-xs text-gray-900 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-              >
-                <option value="">All Operational States</option>
-                <option value="draft">Draft</option>
-                <option value="pending">Pending</option>
-                <option value="in-progress">In Production</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-              <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+                onChange={(val) => setFilters(prev => ({ ...prev, status: val }))}
+                options={[
+                  { value: 'draft', label: 'Draft' },
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'in-progress', label: 'In Production' },
+                  { value: 'completed', label: 'Completed' },
+                  { value: 'cancelled', label: 'Cancelled' }
+                ]}
+                placeholder="All Operational States"
+                containerClassName="pl-10"
+                className="text-xs"
+              />
             </div>
           </div>
         </div>
@@ -735,13 +902,15 @@ export default function JobCard() {
             <p className="mt-2 text-sm text-gray-400">Retrieving live operational data...</p>
           </div>
         ) : jobCards.length > 0 ? (
-          <div className="flex-1 overflow-auto border border-gray-100 bg-white rounded-xl shadow-sm">
+          <div className="flex-1">
             <DataTable
               data={jobCards}
               columns={columns}
               loading={loading}
               searchable={false}
               pagination={true}
+              pageSize={20}
+              pageSizeOptions={[10, 20, 50, 100]}
             />
           </div>
         ) : (

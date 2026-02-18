@@ -66,7 +66,7 @@ export default function DepartmentLayout({ children }) {
   const [expandedMenu, setExpandedMenu] = useState(getInitialExpandedMenu())
 
   const isActive = (path) => location.pathname.startsWith(path)
-  const sidebarWidth = sidebarCollapsed ? 80 : 280
+  const sidebarWidth = sidebarCollapsed ? 80 : 240
 
   const toggleMenu = (menu) => {
     setExpandedMenu(expandedMenu === menu ? null : menu)
@@ -204,7 +204,7 @@ export default function DepartmentLayout({ children }) {
             { label: 'Project Analysis', path: '/admin/project-analysis', icon: TrendingUp, state: { filterSegment: 'all' } },
                         { label: 'Customer Statistics', path: '/admin/customer-statistics', icon: Award },
 
-            // { label: 'Machine Analysis', path: '/admin/machine-analysis', icon: TrendingUp },
+            { label: 'Machine Analysis', path: '/admin/machine-analysis', icon: TrendingUp },
             { label: 'OEE Analysis', path: '/admin/oee', icon: TrendingUp },
             { label: 'Employees & Designations', path: '/admin/employees-designations', icon: Users }
           ]
@@ -418,12 +418,9 @@ export default function DepartmentLayout({ children }) {
 
         {/* Main Content */}
         <main style={{
-          flex: 1,
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
           marginLeft: `${sidebarWidth}px`,
-          transition: 'margin-left 0.3s ease'
+          width: `calc(100% - ${sidebarWidth}px)`,
+          
         }}>
           {children}
         </main>

@@ -12,6 +12,7 @@ import ProductionPlan from './ProductionPlan'
 import ProductionPlanning from './ProductionPlanning'
 import ProductionPlanningForm from './ProductionPlanningForm'
 import ProductionStages from './ProductionStages'
+import ProductionHierarchy from './ProductionHierarchy'
 import WorkOrder from './WorkOrder'
 import WorkOrderForm from './WorkOrderForm'
 import Workstations from './Workstations'
@@ -32,6 +33,7 @@ export {
   ProductionPlanning,
   ProductionPlanningForm,
   ProductionStages,
+  ProductionHierarchy,
   WorkOrder,
   WorkOrderForm,
   Workstations,
@@ -53,6 +55,7 @@ export default {
   ProductionPlanning,
   ProductionPlanningForm,
   ProductionStages,
+  ProductionHierarchy,
   WorkOrder,
   WorkOrderForm,
   Workstations,

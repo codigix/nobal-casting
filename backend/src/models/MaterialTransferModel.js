@@ -1,5 +1,6 @@
 ﻿import StockBalanceModel from './StockBalanceModel.js'
 import StockLedgerModel from './StockLedgerModel.js'
+import StockMovementModel from './StockMovementModel.js'
 
 class MaterialTransferModel {
   static getDb() {
@@ -221,9 +222,18 @@ class MaterialTransferModel {
           const itemCode = item.item_id // Based on line 97, item_id stores item_code
           const qty = Number(item.qty) || 0
 
-          // Get current valuation from source warehouse
-          const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(itemCode, transfer.from_warehouse_id, connection)
-          const valuationRate = sourceBalance ? Number(sourceBalance.valuation_rate) : 0
+          // Get item's valuation method
+          const [itemRows] = await connection.query('SELECT valuation_method FROM item WHERE item_code = ?', [itemCode])
+          const method = itemRows.length > 0 ? itemRows[0].valuation_method : 'FIFO'
+
+          // Calculate correct valuation rate for this specific issue
+          const valuationRate = await StockLedgerModel.getValuationRate(
+            itemCode, 
+            transfer.from_warehouse_id, 
+            qty, 
+            method, 
+            connection
+          )
 
           // 1. Deduct from source warehouse
           await StockBalanceModel.upsert(itemCode, transfer.from_warehouse_id, {
@@ -269,6 +279,33 @@ class MaterialTransferModel {
             remarks: transfer.transfer_remarks,
             created_by: userId
           }, connection)
+
+          // Create Stock Movement entry for visibility in Inventory Dashboard
+          try {
+            const transaction_no = await StockMovementModel.generateTransactionNo()
+            
+            await connection.execute(
+              `INSERT INTO stock_movements (
+                transaction_no, item_code, source_warehouse_id, target_warehouse_id, 
+                movement_type, purpose, quantity, reference_type, reference_name, notes, status, created_by, approved_by, approved_at
+              ) VALUES (?, ?, ?, ?, 'TRANSFER', ?, ?, ?, ?, ?, 'Approved', ?, ?, NOW())`,
+              [
+                transaction_no, 
+                itemCode, 
+                transfer.from_warehouse_id,
+                transfer.to_warehouse_id,
+                'Material Transfer',
+                qty,
+                'Material Transfer',
+                transfer.transfer_no,
+                transfer.transfer_remarks || `Auto-generated from Material Transfer ${transfer.transfer_no}`,
+                userId,
+                userId
+              ]
+            )
+          } catch (smError) {
+            console.error('Failed to create stock movement entry:', smError)
+          }
         }
 
         await connection.commit()

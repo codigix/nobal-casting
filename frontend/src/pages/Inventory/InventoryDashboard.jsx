@@ -682,7 +682,7 @@ const WorkflowStep = ({ title, desc, count, icon: Icon, color, link, isLast }) =
     <div className="flex flex-col items-center group relative">
       <div 
         onClick={() => navigate(link)}
-        className={`w-full bg-white border border-gray-200 rounded p-4  hover: transition-all cursor-pointer relative z-10 ${count > 0 ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
+        className={`w-full bg-white border border-gray-200 rounded p-4  hover: transition-all cursor-pointer relative z-0 ${count > 0 ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
       >
         <div className="flex items-center gap-3 mb-2">
           <div className={`p-2 rounded ${color}`}>

@@ -608,7 +608,7 @@ export class ProductionPlanningModel {
           woIds
         )
 
-        // 2. Delete Rejections and Production Entries
+      // 2. Delete Rejections and Production Entries
         const [prodEntries] = await this.db.execute(
           `SELECT entry_id FROM production_entry WHERE work_order_id IN (${woPlaceholders})`,
           woIds
@@ -618,8 +618,9 @@ export class ProductionPlanningModel {
           const entryIds = prodEntries.map(pe => pe.entry_id)
           const entryPlaceholders = entryIds.map(() => '?').join(',')
           
+          // Delete production_rejection instead of rejection
           await this.db.execute(
-            `DELETE FROM rejection WHERE production_entry_id IN (${entryPlaceholders})`,
+            `DELETE FROM production_rejection WHERE production_entry_id IN (${entryPlaceholders})`,
             entryIds
           )
           
@@ -629,6 +630,9 @@ export class ProductionPlanningModel {
           )
         }
 
+        // Delete stock ledger entries related to this plan's work orders and job cards
+        await this.db.execute(`DELETE FROM stock_ledger WHERE reference_doctype = 'Work Order' AND reference_name IN (${woPlaceholders})`, woIds)
+        
         // 3. Delete Job Cards and their associated logs
         const [jobCards] = await this.db.execute(
           `SELECT job_card_id FROM job_card WHERE work_order_id IN (${woPlaceholders})`,
@@ -639,15 +643,27 @@ export class ProductionPlanningModel {
           const jcIds = jobCards.map(jc => jc.job_card_id)
           const jcPlaceholders = jcIds.map(() => '?').join(',')
 
+          await this.db.execute(`DELETE FROM stock_ledger WHERE reference_doctype = 'Job Card' AND reference_name IN (${jcPlaceholders})`, jcIds)
           await this.db.execute(`DELETE FROM time_log WHERE job_card_id IN (${jcPlaceholders})`, jcIds)
           await this.db.execute(`DELETE FROM rejection_entry WHERE job_card_id IN (${jcPlaceholders})`, jcIds)
           await this.db.execute(`DELETE FROM inward_challan WHERE job_card_id IN (${jcPlaceholders})`, jcIds)
+          
+          // Delete outward challans and their items
+          const [outChallans] = await this.db.execute(`SELECT id FROM outward_challan WHERE job_card_id IN (${jcPlaceholders})`, jcIds)
+          if (outChallans && outChallans.length > 0) {
+            const outIds = outChallans.map(oc => oc.id)
+            const outPlaceholders = outIds.map(() => '?').join(',')
+            await this.db.execute(`DELETE FROM outward_challan_item WHERE challan_id IN (${outPlaceholders})`, outIds)
+            await this.db.execute(`DELETE FROM outward_challan WHERE job_card_id IN (${jcPlaceholders})`, jcIds)
+          }
+
           await this.db.execute(`DELETE FROM downtime_entry WHERE job_card_id IN (${jcPlaceholders})`, jcIds)
           await this.db.execute(`DELETE FROM inspection_result WHERE reference_type = 'Job Card' AND reference_id IN (${jcPlaceholders})`, jcIds)
           await this.db.execute(`DELETE FROM job_card WHERE work_order_id IN (${woPlaceholders})`, woIds)
         }
 
-        // 4. Delete Work Order Items and Operations
+        // 4. Delete Work Order Items, Operations, and Inspection Results
+        await this.db.execute(`DELETE FROM inspection_result WHERE reference_type = 'Work Order' AND reference_id IN (${woPlaceholders})`, woIds)
         await this.db.execute(
           `DELETE FROM work_order_item WHERE wo_id IN (${woPlaceholders})`,
           woIds

@@ -154,7 +154,7 @@ export default function ItemGroups() {
     
     return (
       <Card className={`bg-gradient-to-br ${colorMap[color] || colorMap.primary} p-4 border-2 transition-all hover:shadow-lg`}>
-        <div className="flex items-start justify-between relative z-10">
+        <div className="flex items-start justify-between relative z-0">
           <div>
             <span className="text-[10px]    text-slate-500 dark:text-slate-400">{label}</span>
             <p className="text-2xl  mt-1 text-slate-900 dark:text-white">{value}</p>
@@ -243,7 +243,7 @@ export default function ItemGroups() {
                 placeholder="Search groups..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded  text-xs font-medium focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all dark:text-white"
+                className="w-full pl-12 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded  text-xs font-medium focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all dark:text-white"
               />
             </div>
             

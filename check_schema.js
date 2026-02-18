@@ -1,28 +1,37 @@
-
-import { createPool } from 'mysql2/promise';
+import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
-dotenv.config({ path: './backend/.env' });
+import path from 'path';
 
-const db = createPool({
-  host: '127.0.0.1',
-  user: 'nobalcasting_user',
-  password: 'C0digix$309',
-  database: 'nobalcasting',
-  port: 3307
-});
+dotenv.config({ path: 'd:/projects/nobal-casting/backend/.env' });
 
 async function checkSchema() {
+  const connection = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT
+  });
+
   try {
-    const [columns] = await db.query('SHOW COLUMNS FROM users');
-    console.log('Users table columns:', columns.map(c => c.Field));
-    
-    const [tables] = await db.query('SHOW TABLES');
-    console.log('Tables:', tables.map(t => Object.values(t)[0]));
-    
-    process.exit(0);
+    const tables = ['production_plan', 'production_plan_fg', 'production_plan_sub_assembly', 'production_plan_raw_material', 'production_plan_operations'];
+    for (const table of tables) {
+      try {
+        const [rows] = await connection.execute(`DESCRIBE ${table}`);
+        console.log(`--- ${table} schema ---`);
+        console.table(rows);
+      } catch (e) {
+        console.log(`Table ${table} not found or error:`, e.message);
+      }
+    }
+
+    const [statusRows] = await connection.execute('SELECT DISTINCT status FROM production_plan');
+    console.log('--- existing statuses ---');
+    console.table(statusRows);
   } catch (error) {
     console.error('Error:', error);
-    process.exit(1);
+  } finally {
+    await connection.end();
   }
 }
 

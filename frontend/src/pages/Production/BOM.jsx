@@ -39,8 +39,8 @@ import Card from '../../components/Card/Card'
 const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
   const colorMap = {
     blue: 'text-blue-600 bg-blue-50 border-blue-100 shadow-blue-100/50',
-    emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100 shadow-emerald-100/50',
-    amber: 'text-amber-600 bg-amber-50 border-amber-100 shadow-amber-100/50',
+    emerald: 'text-emerald-600  shadow-emerald-100/50',
+    amber: 'text-amber-600 shadow-amber-100/50',
     indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100 shadow-indigo-100/50',
     cyan: 'text-cyan-600 bg-cyan-50 border-cyan-100 shadow-cyan-100/50',
     rose: 'text-rose-600 bg-rose-50 border-rose-100 shadow-rose-100/50'
@@ -70,8 +70,8 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
             </p>
           )}
         </div>
-        <div className={`p-3 rounded  transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 ${colorStyle}`}>
-          <Icon size={24} strokeWidth={2.5} />
+        <div className={`p-2 rounded  transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 ${colorStyle}`}>
+          <Icon size={20} strokeWidth={2.5} />
         </div>
       </div>
     </div>
@@ -92,14 +92,14 @@ const FieldWrapper = ({ label, children, icon: Icon }) => (
 
 const StatusBadge = ({ status }) => {
   const configs = {
-    active: { label: 'Active', icon: Check, color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
-    draft: { label: 'Draft', icon: Edit2, color: 'text-amber-600 bg-amber-50 border-amber-100' },
+    active: { label: 'Active', icon: Check, color: 'text-emerald-600 ' },
+    draft: { label: 'Draft', icon: Edit2, color: 'text-amber-600' },
     inactive: { label: 'Archived', icon: X, color: 'text-slate-400 bg-slate-50 border-slate-100' }
   }
   const config = configs[status] || configs.draft
   const Icon = config.icon
   return (
-    <span className={`inline-flex items-center gap-1.5 p-1 rounded text-xs    border   ${config.color}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded text-xs   ${config.color}`}>
       <Icon size={10} strokeWidth={3} />
       {config.label}
     </span>
@@ -109,12 +109,12 @@ const StatusBadge = ({ status }) => {
 const BOMTypeBadge = ({ type }) => {
   const isFG = type === 'Finished Good'
   return (
-    <span className={`inline-flex items-center gap-1.5 p-1 rounded text-[10px]    border   ${
+    <span className={`inline-flex items-center gap-1.5  text-xs ${
       isFG 
-        ? 'bg-indigo-50 text-indigo-700 border-indigo-100' 
-        : 'bg-cyan-50 text-cyan-700 border-cyan-100'
+        ? ' text-indigo-700 ' 
+        : ' text-cyan-700 '
     }`}>
-      {isFG ? <Package size={10} strokeWidth={3} /> : <Layers size={10} strokeWidth={3} />}
+      
       {type}
     </span>
   )
@@ -307,15 +307,13 @@ export default function BOM() {
           className="group cursor-pointer "
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-100 transition-all duration-300  ">
-              <Database size={15} strokeWidth={2.5} />
-            </div>
+            
             <div>
               <div className="text-xs text-slate-800 group-hover:text-indigo-600 transition-colors   flex items-center gap-2">
                 {row.product_name}
                 <ChevronRight size={12} className=" transition-all -translate-x-2 group-hover:translate-x-0" />
               </div>
-              <div className="grid items-center">
+              <div className="flex gap-2 items-center">
                 <span className="text-xs  text-slate-400 font-mono ">{row.bom_id}</span>
                 
                 <span className="text-xs  text-slate-400 font-mono ">{row.item_code}</span>
@@ -360,10 +358,10 @@ export default function BOM() {
               </span>
               <TrendingUp size={10} strokeWidth={3} />
             </div>
-            <div className="flex items-center gap-1 mt-1">
+            {/* <div className="flex items-center gap-1 mt-1">
               <span className="text-xs  text-slate-400 ">Total Value:</span>
               <span className="text-xs  text-slate-500">₹{cost.toLocaleString('en-IN')}</span>
-            </div>
+            </div> */}
           </div>
         )
       }
@@ -381,11 +379,11 @@ export default function BOM() {
           <div className="flex items-center gap-1.5 text-slate-600">
             <Clock size={12} className="text-slate-300" />
             <span className="text-xs ">
-              {row.updated_at ? new Date(row.updated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+              {row.updated_at ? new Date(row.updated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'} 
+               ({row.updated_at ? new Date(row.updated_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : ''})
             </span>
           </div>
           <span className="text-xs  text-slate-400  mt-1 ml-4">
-             {row.updated_at ? new Date(row.updated_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : ''}
           </span>
         </div>
       )
@@ -396,17 +394,17 @@ export default function BOM() {
     <div className="flex items-center justify-end gap-1 pr-4">
       <button 
         onClick={() => handleEdit(row)}
-        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all duration-300 hover: hover:shadow-indigo-100"
+        className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all duration-300 hover: hover:shadow-indigo-100"
         title="Analyze & Edit"
       >
-        <Edit2 size={16} strokeWidth={2.5} />
+        <Edit2 size={15} />
       </button>
       <button 
         onClick={() => handleDelete(row.bom_id)}
-        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all duration-300 hover: hover:shadow-rose-100"
+        className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all duration-300 hover: hover:shadow-rose-100"
         title="Remove Formulation"
       >
-        <Trash2 size={16} strokeWidth={2.5} />
+        <Trash2 size={15} />
       </button>
     </div>
   )
@@ -428,9 +426,10 @@ export default function BOM() {
   }, [boms])
 
   return (
-    <div className="min-h-screen bg-slate-50 p-2/50 p-4 md:p-4">
-      {/* Strategic Header Section */}
-      <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+    <div className=" flex flex-col p-4 overflow-hidden bg-[#fbfcfd]">
+      <div className="flex-shrink-0">
+        {/* Strategic Header Section */}
+        <div className="mb-6 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-4">
           <div className="w-7 h-7 bg-indigo-600 rounded flex items-center justify-center shadow  shadow-indigo-100 rotate-3 group-hover:rotate-0 transition-transform duration-500">
             <Layers size={16} className="text-white" strokeWidth={2.5} />
@@ -476,7 +475,7 @@ export default function BOM() {
       </div>
 
       {/* High-Fidelity Stats Grid */}
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard 
           label="Total Formulations" 
           value={stats.totalBOMs} 
@@ -515,8 +514,8 @@ export default function BOM() {
             <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity duration-700">
               <TrendingUp size={120} className="text-indigo-400" />
             </div>
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-6">
+            <div className="relative z-0">
+              <div className="flex items-center gap-3 mb-2">
                 <div className="p-2 bg-indigo-500/20 rounded border border-indigo-400/30 text-indigo-400">
                   <BarChart3 size={18} strokeWidth={2.5} />
                 </div>
@@ -533,7 +532,7 @@ export default function BOM() {
                         <span className="text-xs  text-indigo-500/50 px-2 py-0.5 rounded bg-white/5">0{idx + 1}</span>
                         <p className="text-xs  text-slate-400 truncate ">{bom.product_name || 'Unnamed Spec'}</p>
                       </div>
-                      <div className="text-xl  text-white  flex items-baseline gap-1">
+                      <div className="text-lg  text-white  flex items-baseline gap-1">
                         <span className="text-xs text-indigo-500">₹</span>
                         {unitCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         <span className="text-xs text-slate-600  ml-1 ">/ {bom.uom || 'unit'}</span>
@@ -552,9 +551,9 @@ export default function BOM() {
           </Card>
           
           <Card className="bg-white border-slate-100 p-2 ">
-            <div className="flex items-center gap-3 mb-8">
+            <div className="flex items-center gap-3 mb-3">
               <div className="p-2 bg-indigo-50 rounded border border-indigo-100 text-indigo-600  ">
-                <Target size={18} strokeWidth={2.5} />
+                <Target size={15} strokeWidth={2.5} />
               </div>
               <h3 className="text-xs  text-slate-800 ">Strategic Composition</h3>
             </div>
@@ -620,13 +619,14 @@ export default function BOM() {
           </div>
         )}
       </div>
+    </div>
 
-      <Card className="bg-white border-slate-200 rounded  overflow-hidden shadow  shadow-slate-200/40">
+    <Card className="flex-1 flex flex-col min-h-0 bg-white border-slate-200 rounded overflow-hidden ">
         {/* Intelligence Filter Bar */}
-        <div className="p-4 border-b border-slate-100 bg-slate-50/30">
-          <div className="flex flex-col lg:flex-row gap-6 items-end">
+        <div className=" mb-2">
+          <div className="flex flex-col lg:flex-row gap-2 items-end">
             <div className="flex-1 w-full lg:max-w-md">
-              <FieldWrapper label="Search Intelligence" icon={Search}>
+              <FieldWrapper >
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                   <input 
@@ -642,7 +642,7 @@ export default function BOM() {
             </div>
 
             <div className="w-full lg:w-48">
-              <FieldWrapper label="Lifecycle Status" icon={Filter}>
+              <FieldWrapper >
                 <div className="relative">
                   <select 
                     name="status" 
@@ -661,7 +661,7 @@ export default function BOM() {
             </div>
 
             <div className="w-full lg:w-48">
-              <FieldWrapper label="Strategic Category" icon={Target}>
+              <FieldWrapper >
                 <div className="relative">
                   <select 
                     name="type" 
@@ -680,7 +680,7 @@ export default function BOM() {
 
             <button
               onClick={() => setFilters({ status: '', search: '', type: '' })}
-              className="flex items-center justify-center gap-2 p-2.5 text-xs  text-slate-400 hover:text-indigo-600 transition-colors  border border-dashed border-slate-200 rounded hover:border-indigo-200 group  min-w-[140px]"
+              className="flex items-center justify-center gap-2 p-2 text-xs  text-slate-400 hover:text-indigo-600 transition-colors  border border-dashed border-slate-200 rounded hover:border-indigo-200 group  min-w-[140px]"
             >
               <RotateCcw size={14} className="group-hover:rotate-180 transition-transform duration-500" />
               Reset Filters
@@ -689,7 +689,7 @@ export default function BOM() {
         </div>
 
         {/* Intelligence Data Table */}
-        <div className="p-0">
+        <div className="flex-1 overflow-auto min-h-0">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 text-slate-400">
               <div className="relative mb-6">

@@ -45,8 +45,8 @@ const FieldWrapper = ({ label, children, error, required }) => (
 const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = 'indigo' }) => {
   const themes = {
     blue: 'text-blue-600 bg-blue-50 border-blue-100',
-    emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
-    amber: 'text-amber-600 bg-amber-50 border-amber-100',
+    emerald: 'text-emerald-600 ',
+    amber: 'text-amber-600',
     rose: 'text-rose-600 bg-rose-50 border-rose-100',
     indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100',
     slate: 'text-slate-600 bg-slate-50 border-slate-100',
@@ -315,7 +315,10 @@ export default function WorkOrderForm() {
           
           // Fetch Time Logs - These represent production attempts
           const timeLogsRes = await productionService.getTimeLogs({ job_card_id: jcId })
-          const logs = timeLogsRes.data || []
+          const logs = (timeLogsRes.data || []).map(l => ({ 
+            ...l, 
+            operation: jc.operation_name || jc.operation 
+          }))
           combinedTimeLogs.push(...logs)
           
           logs.forEach(log => {
@@ -328,7 +331,10 @@ export default function WorkOrderForm() {
 
           // Fetch Rejections - These are finalized quality entries
           const rejectionsRes = await productionService.getRejections({ job_card_id: jcId })
-          const rejs = rejectionsRes.data || []
+          const rejs = (rejectionsRes.data || []).map(r => ({ 
+            ...r, 
+            operation: jc.operation_name || jc.operation 
+          }))
           combinedRejections.push(...rejs)
           
           // If we have rejection entries, they represent the definitive "Accepted" count for that stage
@@ -359,7 +365,11 @@ export default function WorkOrderForm() {
 
           // Fetch Downtimes
           const downtimesRes = await productionService.getDowntimes({ job_card_id: jcId })
-          combinedDowntimes.push(...(downtimesRes.data || []))
+          const dts = (downtimesRes.data || []).map(d => ({ 
+            ...d, 
+            operation: jc.operation_name || jc.operation 
+          }))
+          combinedDowntimes.push(...dts)
 
         } catch (err) { console.error('Failed to fetch logs for job card:', jc.job_card_id || jc.id) }
       }
@@ -431,12 +441,14 @@ export default function WorkOrderForm() {
     allTimeLogs.forEach(log => {
       const dateKey = new Date(log.log_date || log.from_time).toISOString().split('T')[0];
       const shiftKey = log.shift || 'A';
-      const key = `${dateKey}_${shiftKey}`;
+      const opKey = log.operation || 'Unknown';
+      const key = `${dateKey}_${shiftKey}_${opKey}`;
 
       if (!reportData[key]) {
         reportData[key] = {
           date: dateKey,
           shift: shiftKey,
+          operation: opKey,
           operator: log.operator_name || log.operator_id,
           produced: 0,
           accepted: 0,
@@ -452,12 +464,14 @@ export default function WorkOrderForm() {
     allRejections.forEach(rej => {
       const dateKey = new Date(rej.log_date || rej.created_at).toISOString().split('T')[0];
       const shiftKey = rej.shift || '1';
-      const key = `${dateKey}_${shiftKey}`;
+      const opKey = rej.operation || 'Unknown';
+      const key = `${dateKey}_${shiftKey}_${opKey}`;
 
       if (!reportData[key]) {
         reportData[key] = {
           date: dateKey,
           shift: shiftKey,
+          operation: opKey,
           operator: 'N/A',
           produced: 0,
           accepted: 0,
@@ -475,12 +489,14 @@ export default function WorkOrderForm() {
     allDowntimes.forEach(down => {
       const dateKey = new Date(down.log_date || down.start_time).toISOString().split('T')[0];
       const shiftKey = down.shift || '1';
-      const key = `${dateKey}_${shiftKey}`;
+      const opKey = down.operation || 'Unknown';
+      const key = `${dateKey}_${shiftKey}_${opKey}`;
 
       if (!reportData[key]) {
         reportData[key] = {
           date: dateKey,
           shift: shiftKey,
+          operation: opKey,
           operator: 'N/A',
           produced: 0,
           accepted: 0,
@@ -492,17 +508,18 @@ export default function WorkOrderForm() {
       reportData[key].downtime += parseFloat(down.duration_minutes || 0);
     });
 
-    return Object.values(reportData).sort((a, b) => new Date(b.date) - new Date(a.date) || b.shift.localeCompare(a.shift));
+    return Object.values(reportData).sort((a, b) => new Date(b.date) - new Date(a.date) || b.shift.localeCompare(a.shift) || a.operation.localeCompare(b.operation));
   };
 
   const downloadReport = () => {
     const data = generateDailyReport();
-    const headers = ['Date', 'Shift', 'Operator', 'Produced', 'Accepted', 'Rejected', 'Scrap', 'Downtime (min)'];
+    const headers = ['Date', 'Shift', 'Operation', 'Operator', 'Produced', 'Accepted', 'Rejected', 'Scrap', 'Downtime (min)'];
     const csvContent = [
       headers.join(','),
       ...data.map(row => [
         row.date,
         row.shift,
+        `"${row.operation || 'N/A'}"`,
         `"${row.operator || 'N/A'}"`,
         row.produced.toFixed(2),
         row.accepted.toFixed(2),
@@ -570,8 +587,6 @@ export default function WorkOrderForm() {
           vendor_name: op.vendor_name || null,
           vendor_rate_per_unit: op.vendor_rate_per_unit || 0
         })))
-      } else if (woData.bom_id || woData.bom_no) {
-        await fetchBOMDetails(woData.bom_id || woData.bom_no)
       }
 
       if (woData.items && woData.items.length > 0) {
@@ -587,6 +602,81 @@ export default function WorkOrderForm() {
           consumed_qty: item.consumed_qty,
           returned_qty: item.returned_qty
         })))
+      }
+
+      // If either operations or materials are missing from WO, fetch them from BOM
+      if ((!woData.operations || woData.operations.length === 0 || !woData.items || woData.items.length === 0) && (woData.bom_id || woData.bom_no)) {
+        const bomId = woData.bom_id || woData.bom_no
+        try {
+          const bomResponse = await productionService.getBOMDetails(bomId)
+          const bomData = bomResponse.data || bomResponse
+          const workOrderQty = parseFloat(woData.quantity || woData.qty_to_manufacture) || 1
+
+          // Only set operations from BOM if they are missing in WO
+          if (!woData.operations || woData.operations.length === 0) {
+            const operations = (bomData.operations || []).map((op, idx) => {
+              const baseTime = (op.operation_time || op.time_in_hours || 0) / (bomData.quantity || 1)
+              const multipliedTime = baseTime * workOrderQty
+              return {
+                id: Date.now() + idx,
+                operation_name: op.operation_name || op.operation || '',
+                workstation: op.workstation || op.workstation_type || '',
+                base_time: baseTime,
+                operation_time: multipliedTime,
+                operating_cost: (op.operating_cost || op.cost || 0) * (workOrderQty / (bomData.quantity || 1)),
+                operation_type: op.operation_type || 'FG',
+                hourly_rate: op.hourly_rate || 0,
+                execution_mode: op.execution_mode || 'IN_HOUSE',
+                vendor_id: op.vendor_id || null,
+                vendor_name: op.vendor_name || null,
+                vendor_rate_per_unit: op.vendor_rate_per_unit || 0
+              }
+            })
+            setBomOperations(operations)
+          }
+
+          // Only set materials from BOM if they are missing in WO
+          if (!woData.items || woData.items.length === 0) {
+            const rawMaterials = (bomData.bom_raw_materials || bomData.rawMaterials || []).map((rm, idx) => {
+              const baseQty = (rm.qty || rm.quantity || 0) / (bomData.quantity || 1)
+              const multipliedQty = baseQty * workOrderQty
+              return {
+                id: Date.now() + idx,
+                item_code: rm.item_code || '',
+                item_name: rm.item_name || rm.description || '',
+                base_qty: baseQty,
+                quantity: multipliedQty,
+                uom: rm.uom || '',
+                required_qty: multipliedQty,
+                source_warehouse: rm.source_warehouse || '',
+                transferred_qty: 0,
+                consumed_qty: 0,
+                returned_qty: 0
+              }
+            })
+
+            const bomLines = (bomData.bom_lines || bomData.lines || []).map((l, idx) => {
+              const baseQty = (l.qty || l.quantity || 0) / (bomData.quantity || 1)
+              const multipliedQty = baseQty * workOrderQty
+              return {
+                id: `line-${Date.now()}-${idx}`,
+                item_code: l.item_code || l.component_code || '',
+                item_name: l.item_name || l.component_name || l.description || l.component_description || '',
+                base_qty: baseQty,
+                quantity: multipliedQty,
+                uom: l.uom || '',
+                required_qty: multipliedQty,
+                source_warehouse: l.source_warehouse || '',
+                transferred_qty: 0,
+                consumed_qty: 0,
+                returned_qty: 0
+              }
+            })
+            setBomMaterials([...rawMaterials, ...bomLines])
+          }
+        } catch (bomErr) {
+          console.error('Failed to fetch fallback BOM details:', bomErr)
+        }
       }
 
       // Fetch material allocations to ensure transferred_qty is up to date
@@ -679,8 +769,26 @@ export default function WorkOrderForm() {
         }
       })
 
+      const bomLines = (bomData.bom_lines || bomData.lines || []).map((l, idx) => {
+        const baseQty = (l.qty || l.quantity || 0) / (bomData.quantity || 1)
+        const multipliedQty = baseQty * workOrderQty
+        return {
+          id: `line-${Date.now()}-${idx}`,
+          item_code: l.item_code || l.component_code || '',
+          item_name: l.item_name || l.component_name || l.description || l.component_description || '',
+          base_qty: baseQty,
+          quantity: multipliedQty,
+          uom: l.uom || '',
+          required_qty: multipliedQty,
+          source_warehouse: l.source_warehouse || '',
+          transferred_qty: l.transferred_qty || 0,
+          consumed_qty: l.consumed_qty || 0,
+          returned_qty: l.returned_qty || 0
+        }
+      })
+
       setBomOperations(operations)
-      setBomMaterials(rawMaterials)
+      setBomMaterials([...rawMaterials, ...bomLines])
       if (jobCards.length > 0 && operations.length > 0) populateWorkstationsForJobCards(jobCards, operations)
     } catch (err) { console.error('Failed to fetch BOM details:', err) }
     finally { setLoading(false) }
@@ -1494,7 +1602,7 @@ export default function WorkOrderForm() {
                   <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
                     <BarChart3 size={100} className="text-white" />
                   </div>
-                  <div className="p-2 relative z-10">
+                  <div className="p-2 relative z-0">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded border border-indigo-500/30">
                         <TrendingUp size={18} />
@@ -1574,7 +1682,7 @@ export default function WorkOrderForm() {
                       <table className="w-full text-left bg-white">
                         <thead>
                           <tr className="bg-slate-50/30">
-                            <th className="p-2  text-xs  text-slate-400  ">Raw Material</th>
+                            <th className="p-2  text-xs  text-slate-400  ">Item</th>
                             <th className="p-2  text-xs  text-slate-400  text-right">Required</th>
                             <th className="p-2  text-xs  text-slate-400  text-right">Transferred</th>
                             <th className="p-2  text-xs  text-slate-400  text-right">Consumed</th>
@@ -1771,7 +1879,7 @@ export default function WorkOrderForm() {
                   <div className="absolute -right-8 -bottom-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
                     <Database size={160} />
                   </div>
-                  <div className="relative z-10">
+                  <div className="relative z-0">
                     <div className="flex items-center gap-2  text-indigo-100">
                       <ShieldCheck size={20} />
                       <h4 className="text-xs text-white  ">Inventory Advisory</h4>
@@ -1801,7 +1909,7 @@ export default function WorkOrderForm() {
                   <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform">
                     <Info size={80} className="text-slate-900" />
                   </div>
-                  <div className="relative z-10">
+                  <div className="relative z-0">
                     <div className="flex items-center gap-2 mb-3 text-slate-900">
                       <Info size={16} />
                       <h4 className="text-xs  ">Yield Note</h4>
@@ -1842,6 +1950,7 @@ export default function WorkOrderForm() {
                         <tr className="bg-slate-50/30">
                           <th className="p-2 text-xs text-slate-400">Date</th>
                           <th className="p-2 text-xs text-slate-400">Shift</th>
+                          <th className="p-2 text-xs text-slate-400">Operation</th>
                           <th className="p-2 text-xs text-slate-400">Operator</th>
                           <th className="p-2 text-xs text-slate-400 text-right">Produced</th>
                           <th className="p-2 text-xs text-slate-400 text-right">Accepted</th>
@@ -1853,9 +1962,10 @@ export default function WorkOrderForm() {
                       <tbody className="divide-y divide-slate-100">
                         {generateDailyReport().length > 0 ? (
                           generateDailyReport().map((row, idx) => (
-                            <tr key={`${row.date}-${row.shift}-${idx}`} className="hover:bg-slate-50/50 transition-colors">
+                            <tr key={`${row.date}-${row.shift}-${row.operation}-${idx}`} className="hover:bg-slate-50/50 transition-colors">
                               <td className="p-2 text-xs text-slate-900 font-medium">{row.date}</td>
                               <td className="p-2 text-xs text-slate-600">Shift {row.shift}</td>
+                              <td className="p-2 text-xs text-indigo-600 font-medium">{row.operation}</td>
                               <td className="p-2 text-xs text-slate-600">{row.operator || 'N/A'}</td>
                               <td className="p-2 text-xs text-slate-900 text-right">{row.produced.toFixed(2)}</td>
                               <td className="p-2 text-xs text-emerald-600 text-right font-medium">{row.accepted.toFixed(2)}</td>
@@ -1866,7 +1976,7 @@ export default function WorkOrderForm() {
                           ))
                         ) : (
                           <tr>
-                            <td colSpan="8" className="p-8 text-center text-slate-400 text-xs">
+                            <td colSpan="9" className="p-8 text-center text-slate-400 text-xs">
                               No production logs found for this work order yet.
                             </td>
                           </tr>

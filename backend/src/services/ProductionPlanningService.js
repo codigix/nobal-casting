@@ -709,4 +709,61 @@ export class ProductionPlanningService {
       throw error
     }
   }
+
+  async getSalesOrderHierarchy(salesOrderId) {
+    try {
+      // 1. Fetch Sales Order
+      const [soRows] = await this.db.execute(
+        'SELECT sales_order_id, customer_name, status, delivery_date, total_value FROM selling_sales_order WHERE sales_order_id = ?',
+        [salesOrderId]
+      )
+      if (!soRows.length) throw new Error('Sales Order not found')
+      const so = soRows[0]
+
+      // 2. Fetch Production Plans
+      const [ppRows] = await this.db.execute(
+        'SELECT plan_id, status, plan_date, bom_id FROM production_plan WHERE sales_order_id = ?',
+        [salesOrderId]
+      )
+
+      const plans = []
+      for (const pp of ppRows) {
+        // 3. Fetch Work Orders for each Plan
+        const [woRows] = await this.db.execute(
+          'SELECT wo_id, item_code, quantity, status, planned_start_date, expected_delivery_date FROM work_order WHERE production_plan_id = ?',
+          [pp.plan_id]
+        )
+
+        const workOrders = []
+        for (const wo of woRows) {
+          // 4. Fetch Job Cards for each Work Order
+          const [jcRows] = await this.db.execute(
+            'SELECT job_card_id, operation, machine_id, operator_id, planned_quantity, produced_quantity, status, actual_start_date, actual_end_date FROM job_card WHERE work_order_id = ?',
+            [wo.wo_id]
+          )
+
+          workOrders.push({
+            ...wo,
+            type: 'work_order',
+            children: jcRows.map(jc => ({ ...jc, type: 'job_card' }))
+          })
+        }
+
+        plans.push({
+          ...pp,
+          type: 'production_plan',
+          children: workOrders
+        })
+      }
+
+      return {
+        ...so,
+        type: 'sales_order',
+        children: plans
+      }
+    } catch (error) {
+      console.error('Error in getSalesOrderHierarchy:', error)
+      throw error
+    }
+  }
 }

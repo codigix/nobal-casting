@@ -49,8 +49,8 @@ const FieldWrapper = ({ label, children, error, required }) => (
 const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = 'indigo' }) => {
   const themes = {
     blue: 'text-blue-600 bg-blue-50 border-blue-100',
-    emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
-    amber: 'text-amber-600 bg-amber-50 border-amber-100',
+    emerald: 'text-emerald-600 ',
+    amber: 'text-amber-600',
     rose: 'text-rose-600 bg-rose-50 border-rose-100',
     indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100',
     slate: 'text-slate-600 bg-slate-50 border-slate-100',

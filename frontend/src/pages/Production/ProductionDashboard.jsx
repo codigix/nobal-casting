@@ -57,8 +57,8 @@ const StatusBadge = ({ status }) => {
 const StatCard = ({ label, value, icon: Icon, color, subtitle }) => {
   const colorMap = {
     blue: 'text-blue-600 bg-blue-50 border-blue-100/50',
-    emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100/50',
-    amber: 'text-amber-600 bg-amber-50 border-amber-100/50',
+    emerald: 'text-emerald-600 /50',
+    amber: 'text-amber-600/50',
     rose: 'text-rose-600 bg-rose-50 border-rose-100/50',
     indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100/50',
     violet: 'text-violet-600 bg-violet-50 border-violet-100/50',
@@ -870,7 +870,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
   return (
   <div className="min-h-screen bg-[#f8fafc] p-4 pb-12">
     {/* Sticky Top Header */}
-    <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200">
+    <div className="sticky top-0  bg-white/80 backdrop-blur-md border-b border-slate-200">
       <div className=" p-6 ">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-3">

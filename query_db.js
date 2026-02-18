@@ -12,14 +12,24 @@ async function query() {
   });
 
   try {
-    const [items] = await connection.execute("SELECT item_code, name FROM item WHERE name LIKE '%Cooling Rail%'");
-    console.log('Items found:', items);
+    const [rows] = await connection.execute(`
+        SELECT COUNT(*) as count, 
+               SUM(CASE WHEN remarks LIKE '%Auto-synced%' THEN 1 ELSE 0 END) as auto_count,
+               SUM(CASE WHEN remarks NOT LIKE '%Auto-synced%' OR remarks IS NULL THEN 1 ELSE 0 END) as manual_count
+        FROM production_entry
+    `);
+    console.log('Production Entry Stats:', rows[0]);
     
-    const [ops] = await connection.execute("SELECT * FROM bom_operation WHERE bom_id = 'BOM-1770637729524'");
-    console.log('Operations for SA-FINALFRAMEASSEMBLY:', ops);
+    if (rows[0].manual_count > 0) {
+        const [samples] = await connection.execute(`
+            SELECT entry_id, remarks, quantity_produced 
+            FROM production_entry 
+            WHERE remarks NOT LIKE '%Auto-synced%' OR remarks IS NULL 
+            LIMIT 5
+        `);
+        console.log('Manual Samples:', samples);
+    }
 
-    const [ops2] = await connection.execute("SELECT * FROM bom_operation WHERE bom_id = 'BOM-1770637847670'");
-    console.log('Operations for SA-MOUNTINGCLAMPASSEMBLY:', ops2);
   } catch (err) {
     console.error(err);
   } finally {

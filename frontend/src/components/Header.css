@@ -117,7 +117,7 @@
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--);
+  box-shadow: var(--shadow-lg);
   min-width: 280px;
   z-index: 1000;
   overflow: hidden;
@@ -223,7 +223,7 @@
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--);
+  box-shadow: var(--shadow-lg);
   min-width: 160px;
   z-index: 1000;
   overflow: hidden;

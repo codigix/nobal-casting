@@ -1414,12 +1414,12 @@ export default function BOMForm() {
                 <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/10 rounded blur-3xl group-hover:bg-indigo-500/20 transition-all duration-1000" />
                 <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-emerald-500/5 rounded blur-3xl group-hover:bg-emerald-500/10 transition-all duration-1000" />
 
-                <div className="relative z-10">
+                <div className="relative z-0">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <div className="relative">
                         <div className="w-2 h-2 rounded bg-indigo-500 animate-ping absolute inset-0" />
-                        <div className="w-2 h-2 rounded bg-indigo-500 relative z-10" />
+                        <div className="w-2 h-2 rounded bg-indigo-500 relative z-0" />
                       </div>
                       <span className="text-white text-[10px] opacity-70   ">Neural Core</span>
                     </div>
@@ -1902,7 +1902,7 @@ export default function BOMForm() {
                           Add Component Specification
                         </h4>
 
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-2 relative z-10">
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-2 relative z-0">
                           <div className="md:col-span-3">
                             <FieldWrapper label="Subassemblies Name" required>
                               <SearchableSelect
@@ -2130,7 +2130,7 @@ export default function BOMForm() {
                               <div className="w-1.5 h-1.5 rounded bg-amber-500 animate-pulse" />
                               Intelligence Forecast (for {formData.quantity} {formData.uom})
                             </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 relative z-10">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 relative z-0">
                               {calculateRMConsumption(formData.quantity).map((consumption, idx) => (
                                 <div key={idx} className="flex items-center justify-between  p-2 bg-white/80 backdrop-blur-md rounded border border-amber-100   hover: hover:shadow-amber-100/30 hover:-translate-y-1 transition-all group/item">
                                   <div className=".5">
@@ -2153,7 +2153,7 @@ export default function BOMForm() {
                             <Plus size={14} className="text-amber-500" strokeWidth={3} />
                             Add Raw Material
                           </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-12 gap-2 relative z-10">
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-2 relative z-0">
                             <div className="md:col-span-3">
                               <FieldWrapper label="Material Name" required>
                                 <SearchableSelect
@@ -2460,7 +2460,7 @@ export default function BOMForm() {
                             <Plus size={14} className="text-emerald-500" strokeWidth={3} />
                             Operations
                           </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-12 gap-2 relative z-10">
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-2 relative z-0">
                             <div className="md:col-span-3">
                               <FieldWrapper label="Operation *" required>
                                 <SearchableSelect
@@ -2777,7 +2777,7 @@ export default function BOMForm() {
                             <Plus size={14} className="text-rose-500" strokeWidth={3} />
                             Register Material Loss Node
                           </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 relative z-10">
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 relative z-0">
                             <div className="md:col-span-5">
                               <FieldWrapper label="Scrap Specification" required>
                                 <SearchableSelect
@@ -2904,7 +2904,7 @@ export default function BOMForm() {
                     {/* Primary Metrics High-Fidelity Row */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                       <div className="relative group bg-blue-50/40 rounded p-2 border border-blue-100/50 transition-all hover: hover:shadow-blue-100/20">
-                        <div className="flex items-center gap-2 relative z-10">
+                        <div className="flex items-center gap-2 relative z-0">
                           <div className="p-2 bg-white  shadow-blue-100/50 text-blue-600 rounded  group-hover:scale-110 transition-transform duration-500">
                             <Package size={14} />
                           </div>
@@ -2917,7 +2917,7 @@ export default function BOMForm() {
                       </div>
 
                       <div className="relative group bg-emerald-50/40 rounded p-2 border border-emerald-100/50 transition-all hover: hover:shadow-emerald-100/20">
-                        <div className="flex items-center gap-2 relative z-10">
+                        <div className="flex items-center gap-2 relative z-0">
                           <div className="p-2 bg-white  shadow-emerald-100/50 text-emerald-600 rounded  group-hover:scale-110 transition-transform duration-500">
                             <Users size={14} />
                           </div>
@@ -2930,7 +2930,7 @@ export default function BOMForm() {
                       </div>
 
                       <div className="relative group bg-cyan-50/40 rounded p-2 border border-cyan-100/50 transition-all hover: hover:shadow-cyan-100/20">
-                        <div className="flex items-center gap-2 relative z-10">
+                        <div className="flex items-center gap-2 relative z-0">
                           <div className="p-2 bg-white  shadow-cyan-100/50 text-cyan-600 rounded  group-hover:scale-110 transition-transform duration-500">
                             <TrendingDown size={14} />
                           </div>
@@ -2992,7 +2992,7 @@ export default function BOMForm() {
                       <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
                         <Layers size={80} className="text-indigo-400" />
                       </div>
-                      <div className="flex items-center gap-2 relative z-10">
+                      <div className="flex items-center gap-2 relative z-0">
                         <div className="w-10 h-10 bg-indigo-500/20 backdrop-blur-xl rounded flex items-center justify-center border border-white/10 shadow-inner group-hover:scale-110 transition-transform duration-700">
                           <Layers size={36} className="text-indigo-400" />
                         </div>
@@ -3001,7 +3001,7 @@ export default function BOMForm() {
                           <p className="text-sm font-medium text-slate-400 leading-relaxed">Intelligence based on batch size of <span className="text-white ">{formData.quantity} {formData.uom}</span></p>
                         </div>
                       </div>
-                      <div className="text-center md:text-right relative z-10">
+                      <div className="text-center md:text-right relative z-0">
                         <h3 className="text-xl  text-white er mb-2">
                           <span className="text-xl  text-indigo-500 mr-2">₹</span>
                           {(formData.quantity && formData.quantity !== '0' ? (totalBOMCost / parseFloat(formData.quantity)) : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

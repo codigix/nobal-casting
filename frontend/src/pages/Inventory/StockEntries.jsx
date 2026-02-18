@@ -1093,7 +1093,7 @@ export default function StockEntries() {
                               <>
                                 <button
                                   onClick={() => handleSubmitEntry(entry.id || entry.entry_id)}
-                                  className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px]  text-white bg-green-600 hover:bg-green-700 rounded-xs transition-all   active:scale-95"
+                                  className="flex-1 flex items-center justify-center gap-1 py-2 text-[10px]  text-white bg-green-600 hover:bg-green-700 rounded-xs transition-all   active:scale-95"
                                 >
                                   <CheckCircle2 size={12} />
                                   SUBMIT
@@ -1109,7 +1109,7 @@ export default function StockEntries() {
                             ) : entry.status === 'Submitted' ? (
                               <button
                                 onClick={() => handleCancelEntry(entry.id || entry.entry_id)}
-                                className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[10px]  text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-xs transition-all border border-orange-100   active:scale-95"
+                                className="flex-1 flex items-center justify-center gap-1 py-2 text-[10px]  text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-xs transition-all border border-orange-100   active:scale-95"
                               >
                                 <RotateCcw size={12} />
                                 CANCEL & REVERSE

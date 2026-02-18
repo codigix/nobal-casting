@@ -238,7 +238,7 @@ export default function PurchaseOrderDetail() {
               const isActive = po.status === step.status
               
               return (
-                <div key={idx} className="flex flex-col items-center gap-3 relative z-10 bg-white dark:bg-neutral-900 px-4">
+                <div key={idx} className="flex flex-col items-center gap-3 relative z-0 bg-white dark:bg-neutral-900 px-4">
                   <div className={`w-8 h-8 rounded flex items-center justify-center border-2 transition-all duration-500 ${
                     isActive ? 'bg-indigo-600 border-indigo-200 dark:border-indigo-500/50 text-white  shadow-indigo-600/20 rotate-12' : 
                     isCompleted ? 'bg-emerald-500 border-emerald-100 dark:border-emerald-500/50 text-white' : 
@@ -273,7 +273,7 @@ export default function PurchaseOrderDetail() {
                                    (step.status === 'completed' && po.status === 'completed')
                 const isActive = po.status === step.status
                 return (
-                  <div key={idx} className="flex flex-col items-center gap-2 relative z-10 bg-white dark:bg-neutral-900 px-2">
+                  <div key={idx} className="flex flex-col items-center gap-2 relative z-0 bg-white dark:bg-neutral-900 px-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${
                       isActive ? 'bg-indigo-600 border-indigo-200 dark:border-indigo-500/50 text-white' : 
                       isCompleted ? 'bg-emerald-500 border-emerald-100 dark:border-emerald-500/50 text-white' : 
@@ -297,7 +297,7 @@ export default function PurchaseOrderDetail() {
             <div className="absolute -right-4 -top-4 p-3 text-neutral-500/10 dark:text-neutral-400/10 group-hover:scale-110 transition-transform duration-500">
               <Building2 size={84} />
             </div>
-            <div className="p-2 relative z-10">
+            <div className="p-2 relative z-0">
               <p className="text-xs text-neutral-400 dark:text-neutral-500  mb-2">Supplier</p>
               <h3 className="text-xl text-neutral-900 dark:text-white ">{po.supplier_name}</h3>
               <div className="mt-2 flex items-center gap-2 text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 w-fit p-1 rounded border border-indigo-100 dark:border-indigo-900/50 ">
@@ -311,7 +311,7 @@ export default function PurchaseOrderDetail() {
             <div className="absolute -right-4 -top-4 p-3 text-neutral-500/10 dark:text-neutral-400/10 group-hover:scale-110 transition-transform duration-500">
               <IndianRupee size={84} />
             </div>
-            <div className="p-2 relative z-10">
+            <div className="p-2 relative z-0">
               <p className="text-xs text-neutral-400 dark:text-neutral-500  mb-2">Total Value</p>
               <h3 className="text-xl  text-neutral-900 dark:text-white ">₹{total.toLocaleString('en-IN')}</h3>
               <p className="text-xs  text-emerald-600 dark:text-emerald-400 mt-2 flex items-center gap-2 ">
@@ -324,7 +324,7 @@ export default function PurchaseOrderDetail() {
             <div className="absolute -right-4 -top-4 p-3 text-neutral-500/10 dark:text-neutral-400/10 group-hover:scale-110 transition-transform duration-500">
               <Calendar size={84} />
             </div>
-            <div className="p-2 relative z-10">
+            <div className="p-2 relative z-0">
               <p className="text-xs text-neutral-400 dark:text-neutral-500  mb-2">Expected By</p>
               <h3 className="text-lg  text-neutral-900 dark:text-white ">
                 {po.expected_date ? new Date(po.expected_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not Specified'}

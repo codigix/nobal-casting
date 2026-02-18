@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as productionService from '../../services/productionService'
+import DataTable from '../../components/Table/DataTable'
 import {
   Plus,
   Edit2,
@@ -41,8 +42,8 @@ import Card from '../../components/Card/Card'
 const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
   const colorMap = {
     blue: 'text-blue-600 bg-blue-50 border-blue-100',
-    emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
-    amber: 'text-amber-600 bg-amber-50 border-amber-100',
+    emerald: 'text-emerald-600 ',
+    amber: 'text-amber-600',
     rose: 'text-rose-600 bg-rose-50 border-rose-100',
     indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100',
     violet: 'text-violet-600 bg-violet-50 border-violet-100',
@@ -99,36 +100,30 @@ const enrichRequiredItemsWithStock = async (items, token) => {
   if (!items || items.length === 0) return items
 
   try {
-    const stockRes = await fetch(`${import.meta.env.VITE_API_URL}/stock/stock-balance`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    const stockData = await productionService.getStockBalance()
+    const stockByItem = {}
+
+    const stockList = Array.isArray(stockData) ? stockData : (stockData.data || [])
+    stockList.forEach(stock => {
+      if (!stockByItem[stock.item_code]) {
+        stockByItem[stock.item_code] = {
+          quantity: 0,
+          warehouse: stock.warehouse_name || stock.warehouse || '-'
+        }
+      }
+      stockByItem[stock.item_code].quantity += parseFloat(stock.available_qty || stock.qty || stock.quantity || 0)
     })
 
-    if (stockRes.ok) {
-      const stockData = await stockRes.json()
-      const stockByItem = {}
-
-      const stockList = Array.isArray(stockData) ? stockData : (stockData.data || [])
-      stockList.forEach(stock => {
-        if (!stockByItem[stock.item_code]) {
-          stockByItem[stock.item_code] = {
-            quantity: 0,
-            warehouse: stock.warehouse_name || stock.warehouse || '-'
-          }
-        }
-        stockByItem[stock.item_code].quantity += parseFloat(stock.available_qty || stock.qty || stock.quantity || 0)
-      })
-
-      return items.map(item => {
-        const bomQty = item.qty || item.quantity || item.required_qty || item.bom_qty || 0
-        return {
-          ...item,
-          qty: stockByItem[item.item_code]?.quantity || 0,
-          quantity: stockByItem[item.item_code]?.quantity || 0,
-          required_qty: bomQty,
-          source_warehouse: stockByItem[item.item_code]?.warehouse || item.source_warehouse || '-'
-        }
-      })
-    }
+    return items.map(item => {
+      const bomQty = item.qty || item.quantity || item.required_qty || item.bom_qty || 0
+      return {
+        ...item,
+        qty: stockByItem[item.item_code]?.quantity || 0,
+        quantity: stockByItem[item.item_code]?.quantity || 0,
+        required_qty: bomQty,
+        source_warehouse: stockByItem[item.item_code]?.warehouse || item.source_warehouse || '-'
+      }
+    })
   } catch (err) {
     console.error('Error fetching stock data:', err)
   }
@@ -138,21 +133,16 @@ const enrichRequiredItemsWithStock = async (items, token) => {
 
 const findBomForItem = async (itemCode, token, excludeBomId = null) => {
   try {
-    const searchRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+    const data = await productionService.getBOMs()
+    const bomList = Array.isArray(data) ? data : (data.data || [])
+
+    const matchingBom = bomList.find(bom => {
+      const bomItemCode = bom.item_code || bom.product_code || ''
+      return bomItemCode.trim() === itemCode.trim() && bom.bom_id !== excludeBomId
     })
-    if (searchRes.ok) {
-      const data = await searchRes.json()
-      const bomList = Array.isArray(data) ? data : (data.data || [])
 
-      const matchingBom = bomList.find(bom => {
-        const bomItemCode = bom.item_code || bom.product_code || ''
-        return bomItemCode.trim() === itemCode.trim() && bom.bom_id !== excludeBomId
-      })
-
-      if (matchingBom) {
-        return matchingBom.bom_id || matchingBom.id
-      }
+    if (matchingBom) {
+      return matchingBom.bom_id || matchingBom.id
     }
   } catch (err) {
     console.error(`Error searching BOM for item ${itemCode}:`, err)
@@ -169,15 +159,7 @@ const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms 
   const allRawMaterials = {}
 
   try {
-    const bomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${bomId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-
-    if (!bomRes.ok) {
-      return allRawMaterials
-    }
-
-    const bomData = await bomRes.json()
+    const bomData = await productionService.getBOMDetails(bomId)
     const bom = bomData.data || bomData
 
     let materialsToProcess = []
@@ -264,13 +246,7 @@ const collectAllOperations = async (bomId, token, visitedBoms = new Set(), depth
   let allOperations = []
 
   try {
-    const bomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${bomId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-
-    if (!bomRes.ok) return allOperations
-
-    const bomData = await bomRes.json()
+    const bomData = await productionService.getBOMDetails(bomId)
     const bom = bomData.data || bomData
 
     // Collect sub-assembly operations first
@@ -333,6 +309,7 @@ export default function ProductionPlanning() {
   const [checkingStock, setCheckingStock] = useState(false)
   const [planProgress, setPlanProgress] = useState({})
   const [mrHistory, setMrHistory] = useState({})
+  const [mrActiveTab, setMrActiveTab] = useState('pending')
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const [selectedPlanForHistory, setSelectedPlanForHistory] = useState(null)
   const [loadingHistory, setLoadingHistory] = useState(false)
@@ -407,20 +384,7 @@ export default function ProductionPlanning() {
 
   const fetchPlanOperationProgress = async (planId) => {
     try {
-      const token = localStorage.getItem('token')
-      const woRes = await fetch(`${import.meta.env.VITE_API_URL}/production/work-orders?production_plan_id=${planId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-
-      if (!woRes.ok) {
-        setPlanProgress(prev => ({
-          ...prev,
-          [planId]: { progress: 0, currentOp: 'No operations', totalOps: 0, completedOps: 0 }
-        }))
-        return
-      }
-
-      const woData = await woRes.json()
+      const woData = await productionService.getWorkOrders({ production_plan_id: planId })
       const workOrders = Array.isArray(woData) ? woData : (woData.data || [])
 
       if (workOrders.length === 0) {
@@ -433,29 +397,30 @@ export default function ProductionPlanning() {
 
       let totalOps = 0
       let completedOps = 0
+      let weightedProgress = 0
       let lastInProgressOp = 'Not Started'
 
       for (const wo of workOrders) {
-        const jcRes = await fetch(`${import.meta.env.VITE_API_URL}/production/job-cards?work_order_id=${wo.wo_id || wo.work_order_id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-
-        if (jcRes.ok) {
-          const jcData = await jcRes.json()
+        try {
+          const jcData = await productionService.getJobCards({ work_order_id: wo.wo_id || wo.work_order_id })
           const jobCards = Array.isArray(jcData) ? jcData : (jcData.data || [])
 
           jobCards.forEach(jc => {
             totalOps++
             if (jc.status === 'completed') {
               completedOps++
-            } else if (jc.status === 'in-progress') {
+              weightedProgress += 1
+            } else if (jc.status === 'in-progress' || jc.status === 'in_progress') {
               lastInProgressOp = `${jc.operation || 'Operation'} (${jc.operation_sequence || 'Seq'}) - In Progress`
+              weightedProgress += 0.5
             }
           })
+        } catch (jcErr) {
+          console.error(`Error fetching job cards for WO ${wo.wo_id}:`, jcErr)
         }
       }
 
-      const progress = totalOps > 0 ? Math.round((completedOps / totalOps) * 100) : 0
+      const progress = totalOps > 0 ? Math.round((weightedProgress / totalOps) * 100) : 0
 
       setPlanProgress(prev => ({
         ...prev,
@@ -479,16 +444,10 @@ export default function ProductionPlanning() {
   const fetchPlanMRHistory = async (planId) => {
     try {
       setLoadingHistory(true)
-      const token = localStorage.getItem('token')
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/material-requests?production_plan_id=${planId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      if (res.ok) {
-        const data = await res.json()
-        const requests = data.data || data
-        setMrHistory(prev => ({ ...prev, [planId]: requests }))
-        return requests
-      }
+      const data = await productionService.getMaterialRequests({ production_plan_id: planId })
+      const requests = data.data || data
+      setMrHistory(prev => ({ ...prev, [planId]: requests }))
+      return requests
     } catch (err) {
       console.error(`Error fetching MR history for plan ${planId}:`, err)
     } finally {
@@ -506,12 +465,8 @@ export default function ProductionPlanning() {
   const fetchBOMProductName = async (bomId) => {
     if (bomCache[bomId]) return bomCache[bomId]
     try {
-      const token = localStorage.getItem('token')
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${bomId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      const data = await res.json()
-      const bomData = data.data || data
+      const bomData = await productionService.getBOMDetails(bomId)
+      const bom = bomData.data || bomData
       let productName = ''
 
       if (bomData.product_name) {
@@ -524,10 +479,7 @@ export default function ProductionPlanning() {
         productName = bomData.finished_goods[0].product_name || bomData.finished_goods[0].item_name || ''
       } else if (bomData.item_code) {
         try {
-          const itemRes = await fetch(`${import.meta.env.VITE_API_URL}/items/${bomData.item_code}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-          const itemData = await itemRes.json()
+          const itemData = await productionService.getItemDetails(bomData.item_code)
           const item = itemData.data || itemData
           productName = item.item_name || item.product_name || bomData.item_code
         } catch (itemErr) {
@@ -547,60 +499,51 @@ export default function ProductionPlanning() {
   const fetchPlans = async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/production-planning`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
+      const data = await productionService.getProductionPlanningList()
+      let plansData = data.data || []
 
-      if (response.ok) {
-        const data = await response.json()
-        let plansData = data.data || []
+      const newBomCache = { ...bomCache }
 
-        const newBomCache = { ...bomCache }
-
-        for (const plan of plansData) {
-          // If the backend provided BOM info directly, use it
-          if (plan.bom_id && plan.bom_product_name) {
-            newBomCache[plan.bom_id] = plan.bom_product_name
-          }
-
-          let fgItems = plan.fg_items || plan.finished_goods || plan.bom_finished_goods || []
-
-          // If no fg_items but we have BOM info from join, create a virtual fg_item for display
-          if ((!fgItems || fgItems.length === 0) && plan.bom_id && plan.bom_item_code) {
-            fgItems = [{
-              item_code: plan.bom_item_code,
-              item_name: plan.bom_product_name || plan.bom_item_code,
-              quantity: 1,
-              bom_no: plan.bom_id
-            }]
-          }
-
-          if (fgItems && fgItems.length > 0) {
-            const fgItem = fgItems[0]
-            const productName = fgItem.item_name || fgItem.product_name || fgItem.item_code || ''
-            if (plan.bom_id && !newBomCache[plan.bom_id]) {
-              newBomCache[plan.bom_id] = productName
-            }
-
-            for (let i = 0; i < fgItems.length; i++) {
-              if (!fgItems[i].bom_no && plan.bom_id) {
-                fgItems[i].bom_no = plan.bom_id
-              }
-            }
-            plan.fg_items = fgItems
-          }
+      for (const plan of plansData) {
+        // If the backend provided BOM info directly, use it
+        if (plan.bom_id && plan.bom_product_name) {
+          newBomCache[plan.bom_id] = plan.bom_product_name
         }
-        setBomCache(newBomCache)
-        setPlans(plansData)
-        setError(null)
 
-        plansData.forEach(plan => {
-          fetchPlanOperationProgress(plan.plan_id)
-        })
-      } else {
-        setError('Failed to fetch production plans')
+        let fgItems = plan.fg_items || plan.finished_goods || plan.bom_finished_goods || []
+
+        // If no fg_items but we have BOM info from join, create a virtual fg_item for display
+        if ((!fgItems || fgItems.length === 0) && plan.bom_id && plan.bom_item_code) {
+          fgItems = [{
+            item_code: plan.bom_item_code,
+            item_name: plan.bom_product_name || plan.bom_item_code,
+            quantity: 1,
+            bom_no: plan.bom_id
+          }]
+        }
+
+        if (fgItems && fgItems.length > 0) {
+          const fgItem = fgItems[0]
+          const productName = fgItem.item_name || fgItem.product_name || fgItem.item_code || ''
+          if (plan.bom_id && !newBomCache[plan.bom_id]) {
+            newBomCache[plan.bom_id] = productName
+          }
+
+          for (let i = 0; i < fgItems.length; i++) {
+            if (!fgItems[i].bom_no && plan.bom_id) {
+              fgItems[i].bom_no = plan.bom_id
+            }
+          }
+          plan.fg_items = fgItems
+        }
       }
+      setBomCache(newBomCache)
+      setPlans(plansData)
+      setError(null)
+
+      plansData.forEach(plan => {
+        fetchPlanOperationProgress(plan.plan_id)
+      })
     } catch (err) {
       setError('Error loading production plans')
       console.error(err)
@@ -613,19 +556,10 @@ export default function ProductionPlanning() {
     if (!window.confirm('Are you sure you want to delete this production plan?')) return
 
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/production-planning/${planId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-
-      if (response.ok) {
-        setSuccess('Production plan deleted successfully')
-        setTimeout(() => setSuccess(null), 3000)
-        fetchPlans()
-      } else {
-        setError('Failed to delete production plan')
-      }
+      await productionService.deleteProductionPlan(planId)
+      setSuccess('Production plan deleted successfully')
+      setTimeout(() => setSuccess(null), 3000)
+      fetchPlans()
     } catch (err) {
       setError('Error deleting production plan')
       console.error(err)
@@ -637,19 +571,10 @@ export default function ProductionPlanning() {
 
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/production-planning/truncate/all`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-
-      if (response.ok) {
-        setSuccess('All production plans truncated successfully')
-        setTimeout(() => setSuccess(null), 3000)
-        fetchPlans()
-      } else {
-        setError('Failed to truncate production plans')
-      }
+      await productionService.truncateProductionPlanning()
+      setSuccess('All production plans truncated successfully')
+      setTimeout(() => setSuccess(null), 3000)
+      fetchPlans()
     } catch (err) {
       setError('Error truncating production plans')
       console.error(err)
@@ -660,14 +585,7 @@ export default function ProductionPlanning() {
 
   const handleDownloadReport = async (plan) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/production-planning/${plan.plan_id}/report`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch report data');
-
-      const result = await response.json();
+      const result = await productionService.getProductionPlanReport(plan.plan_id)
       const { workOrders, jobCards, productionEntries } = result.data;
       const progressData = planProgress[plan.plan_id] || { progress: 0 };
 
@@ -1042,16 +960,42 @@ export default function ProductionPlanning() {
     }
   }
 
+  const plansWithProgress = useMemo(() => {
+    return plans.map(plan => {
+      const progressData = planProgress[plan.plan_id] || { progress: 0, currentOp: 'Awaiting Start', totalOps: 0, completedOps: 0, woCount: 0 }
+      const isEffectiveCompleted = plan.status === 'completed' || (progressData.progress === 100 && progressData.totalOps > 0)
+      
+      let effectiveStatus = plan.status || 'draft'
+      if (isEffectiveCompleted) {
+        effectiveStatus = 'completed'
+      } else if (progressData.progress > 0 || progressData.currentOp.includes('In Progress')) {
+        effectiveStatus = 'in-progress'
+      } else if (progressData.woCount > 0) {
+        effectiveStatus = 'submitted'
+      }
+
+      return {
+        ...plan,
+        progress: progressData.progress,
+        currentOp: progressData.currentOp,
+        totalOps: progressData.totalOps,
+        completedOps: progressData.completedOps,
+        woCount: progressData.woCount,
+        effectiveStatus
+      }
+    })
+  }, [plans, planProgress])
+
   const stats = useMemo(() => {
-    const total = plans.length
-    const submitted = plans.filter(p => p.status === 'submitted').length
-    const completed = plans.filter(p => p.status === 'completed').length
-    const draft = plans.filter(p => p.status === 'draft').length
+    const total = plansWithProgress.length
+    const submitted = plansWithProgress.filter(p => (p.status === 'submitted' || p.effectiveStatus === 'in-progress') && p.effectiveStatus !== 'completed').length
+    const completed = plansWithProgress.filter(p => p.effectiveStatus === 'completed').length
+    const draft = plansWithProgress.filter(p => p.status === 'draft' && p.effectiveStatus !== 'in-progress').length
     return { total, submitted, completed, draft }
-  }, [plans])
+  }, [plansWithProgress])
 
   const filteredPlans = useMemo(() => {
-    return plans.filter(plan => {
+    return plansWithProgress.filter(plan => {
       // Search filter
       const matchesSearch = plan.plan_id.toLowerCase().includes(search.toLowerCase()) ||
         plan.company?.toLowerCase().includes(search.toLowerCase()) ||
@@ -1067,22 +1011,23 @@ export default function ProductionPlanning() {
 
       return true
     })
-  }, [plans, search, activeTab, mrHistory])
+  }, [plansWithProgress, search, activeTab, mrHistory])
 
   const getStatusBadge = (status) => {
     const configs = {
-      draft: { color: 'text-slate-600 bg-slate-50 border-slate-100', icon: FileText },
-      submitted: { color: 'text-blue-600 bg-blue-50 border-blue-100', icon: Activity },
-      completed: { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: CheckCircle2 },
-      cancelled: { color: 'text-rose-600 bg-rose-50 border-rose-100', icon: XCircle }
+      draft: { color: 'text-slate-600 ', icon: FileText },
+      submitted: { color: 'text-blue-600 ', icon: Activity },
+      'in progress': { color: 'text-amber-600 ', icon: TrendingUp },
+      'in-progress': { color: 'text-amber-600 ', icon: TrendingUp },
+      completed: { color: 'text-emerald-600 ', icon: CheckCircle2 },
+      cancelled: { color: 'text-rose-600 ', icon: XCircle }
     }
     const normalized = (status || 'draft').toLowerCase()
     const config = configs[normalized] || configs.draft
     const Icon = config.icon
 
     return (
-      <span className={`inline-flex items-center gap-1.5 p-1 rounded w-fit text-[8px]    border ${config.color}`}>
-        <Icon size={12} />
+      <span className={`w-fit text-[8px] text-left font-medium uppercase tracking-wider ${config.color}`}>
         {status}
       </span>
     )
@@ -1107,33 +1052,24 @@ export default function ProductionPlanning() {
       const token = localStorage.getItem('token')
       const stockInfo = {}
 
-      for (const item of items || []) {
-        try {
-          const res = await fetch(`${import.meta.env.VITE_API_URL}/stock/stock-balance`, {
-            headers: { 'Authorization': `Bearer ${token}` },
-            method: 'GET'
-          })
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/stock/stock-balance`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        method: 'GET'
+      })
 
-          if (res.ok) {
-            const data = await res.json()
-            const balances = Array.isArray(data) ? data : (data.data || [])
+      if (res.ok) {
+        const data = await res.json()
+        const balances = Array.isArray(data) ? data : (data.data || [])
 
-            const itemBalance = balances.find(b => b.item_code === item.item_code)
-            const availableQty = itemBalance ? parseFloat(itemBalance.available_qty || itemBalance.current_qty || 0) : 0
+        for (const item of items || []) {
+          const itemBalance = balances.find(b => b.item_code === item.item_code)
+          const availableQty = itemBalance ? parseFloat(itemBalance.available_qty || itemBalance.current_qty || 0) : 0
 
-            stockInfo[item.item_code] = {
-              available: availableQty,
-              requested: item.quantity || item.qty || 0,
-              isAvailable: availableQty > 0 && availableQty >= (item.quantity || item.qty || 0),
-              hasStock: availableQty > 0
-            }
-          }
-        } catch (err) {
           stockInfo[item.item_code] = {
-            available: 0,
+            available: availableQty,
             requested: item.quantity || item.qty || 0,
-            isAvailable: false,
-            hasStock: false
+            isAvailable: availableQty > 0 && availableQty >= (item.quantity || item.qty || 0),
+            hasStock: availableQty > 0
           }
         }
       }
@@ -1146,16 +1082,183 @@ export default function ProductionPlanning() {
     }
   }
 
+  const columns = [
+    {
+      key: 'plan_id',
+      label: 'Plan ID',
+      render: (value, plan) => (
+        <div className="flex items-center gap-4">
+          
+          <div>
+            <p className="text-xs text-gray-900">{plan.bom_id && bomCache[plan.bom_id] ? bomCache[plan.bom_id] : (plan.fg_items?.[0]?.item_name || 'Generic Production')}</p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400 truncate max-w-[200px]">
+                {plan.plan_id}
+              </span>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'status',
+      label: 'Origin & Status',
+      render: (value, plan) => {
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-left gap-2 text-[11px] text-gray-600">
+              <Factory size={12} className="text-gray-400" />
+              <span>{plan.company || 'Global Manufacturing'}</span>
+            </div>
+            {getStatusBadge(plan.effectiveStatus)}
+          </div>
+        )
+      }
+    },
+    {
+      key: 'expected_completion_date',
+      label: 'Timeline',
+      render: (value, plan) => {
+        const isOverdue = plan.expected_completion_date && new Date(plan.expected_completion_date) < new Date() && plan.effectiveStatus !== 'completed'
+        return (
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2 text-[11px] text-gray-600">
+              <Calendar size={12} className="text-gray-400" />
+              <span>{formatDate(plan.expected_completion_date)}</span>
+            </div>
+            {plan.expected_completion_date && (
+              <span className={`inline-flex items-center gap-1.5  text-[9px] border ${isOverdue ? 'text-rose-600 bg-rose-50 border-rose-100' : 'text-emerald-600 '}`}>
+                {isOverdue ? <AlertCircle size={12} /> : <CheckCircle2 size={12} />}
+                {isOverdue ? 'Overdue' : 'On Schedule'}
+              </span>
+            )}
+          </div>
+        )
+      }
+    },
+    {
+      key: 'progress',
+      label: 'Production Progress',
+      render: (value, plan) => {
+        const progressValue = plan.progress
+        const currentOp = plan.currentOp
+        const opsInfo = `${plan.completedOps}/${plan.totalOps}`
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-gray-400">{progressValue}% Complete</span>
+              <span className="text-[8px] text-slate-900 bg-slate-100 px-2 py-0.5 rounded">{opsInfo} OPS</span>
+            </div>
+            <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+              <div
+                className={`h-full transition-all duration-700 rounded-full ${progressValue === 0 ? 'bg-gray-200' :
+                  progressValue < 30 ? 'bg-amber-500' :
+                    progressValue < 70 ? 'bg-indigo-500' :
+                      'bg-emerald-500'
+                  }`}
+                style={{ width: `${progressValue}%` }}
+              />
+            </div>
+            <p className="text-[10px] text-gray-500 truncate flex items-center gap-1.5">
+              <Clock size={12} className="text-indigo-500" /> {plan.effectiveStatus === 'completed' ? 'Production Completed' : currentOp}
+            </p>
+          </div>
+        )
+      }
+    }
+  ]
+
+  const renderActions = (plan) => {
+    return (
+      <div className="flex items-center justify-end ">
+        <button
+          onClick={() => navigate(`/manufacturing/production-planning/${plan.plan_id}`)}
+          className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all hover: bg-white border border-gray-50"
+          title="View Strategy"
+        >
+          <Eye size={12} />
+        </button>
+        {plan.effectiveStatus === 'completed' && (
+          <button
+            onClick={() => handleDownloadReport(plan)}
+            className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all hover: bg-white border border-gray-50"
+            title="Download Production Report"
+          >
+            <Download size={12} />
+          </button>
+        )}
+        {plan.effectiveStatus !== 'completed' && (
+          <button
+            onClick={() => fetchPlanOperationProgress(plan.plan_id)}
+            className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-amber-600 hover:bg-amber-50"
+            title="Sync Progress"
+          >
+            <TrendingUp size={12} />
+          </button>
+        )}
+        {plan.effectiveStatus !== 'completed' && plan.woCount === 0 && (
+          <button
+            onClick={() => handleCreateWorkOrder(plan)}
+            className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"
+            title="Configure Strategy"
+          >
+            <Settings size={12} />
+          </button>
+        )}
+        {plan.effectiveStatus !== 'completed' && (
+          <button
+            onClick={() => handleSendMaterialRequest(plan)}
+            disabled={sendingMaterialRequest}
+            className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
+            title="Request Materials"
+          >
+            {sendingMaterialRequest ? <Loader size={12} className="animate-spin" /> : <Send size={12} />}
+          </button>
+        )}
+        {plan.effectiveStatus !== 'completed' && (
+          <button
+            onClick={() => handleEdit(plan)}
+            className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+            title="Modify Strategy"
+          >
+            <Edit2 size={12} />
+          </button>
+        )}
+        <button
+          onClick={() => handleShowHistory(plan)}
+          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all hover: bg-white border border-gray-50 relative"
+          title="View Request History"
+        >
+          <FileText size={12} />
+          {mrHistory[plan.plan_id] && mrHistory[plan.plan_id].length > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-xs text-white animate-in zoom-in duration-300">
+              {mrHistory[plan.plan_id].length}
+            </span>
+          )}
+        </button>
+        {plan.effectiveStatus !== 'completed' && (
+          <button
+            onClick={() => handleDelete(plan.plan_id)}
+            className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-rose-600 hover:bg-rose-50"
+            title="Discard Plan"
+          >
+            <Trash2 size={12} />
+          </button>
+        )}
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-slate-50 p-2/50 p-8">
-      <div className="max-w-5xl mx-auto space-y-8">
+    <div className="min-h-screen bg-slate-50 p-2">
+      <div className="max-w-5xl mx-auto space-y-2">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <div className="bg-slate-900 p-2 rounded  shadow  shadow-slate-200">
+              {/* <div className="bg-slate-900 p-2 rounded  shadow  shadow-slate-200">
                 <Layers className="w-6 h-6 text-white" />
-              </div>
+              </div> */}
               <div>
                 <h1 className=" text-xl  text-slate-900 ">
                   Production <span className="text-indigo-600">Intelligence</span>
@@ -1226,7 +1329,7 @@ export default function ProductionPlanning() {
         {/* Main Content Board */}
         <div className="bg-white rounded  border border-gray-100   overflow-hidden">
           {/* Dashboard Tabs */}
-          <div className="flex border-b border-gray-100 bg-white">
+          {/* <div className="flex border-b border-gray-100 bg-white">
             <button
               onClick={() => setActiveTab('all')}
               className={`px-8 py-4 text-xs font-bold transition-all relative ${
@@ -1260,7 +1363,7 @@ export default function ProductionPlanning() {
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-600" />
               )}
             </button>
-          </div>
+          </div> */}
 
           {/* Dashboard Control Bar */}
           <div className="p-2 border-b border-gray-50 bg-gray-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4 ">
@@ -1276,7 +1379,7 @@ export default function ProductionPlanning() {
 
             <div className="flex items-center gap-4">
               <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={15} />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={12} />
                 <input
                   type="text"
                   placeholder="Search Production Plannings..."
@@ -1285,8 +1388,8 @@ export default function ProductionPlanning() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-              <button className="p-3 bg-white border border-gray-100 rounded  text-gray-400 hover:text-indigo-600 hover:border-indigo-100 transition-all  ">
-                <Filter size={20} />
+              <button className="p-2 bg-white border border-gray-100 rounded  text-gray-400 hover:text-indigo-600 hover:border-indigo-100 transition-all  ">
+                <Filter size={15} />
               </button>
             </div>
           </div>
@@ -1298,175 +1401,16 @@ export default function ProductionPlanning() {
                 <p className="text-xs   text-slate-500  animate-pulse">Synchronizing Production Intelligence...</p>
               </div>
             ) : filteredPlans.length > 0 ? (
-              <table className="w-full text-left border-collapse bg-white">
-                <thead>
-                  <tr className="bg-gray-50/50">
-                    <th className="p-2   text-xs   text-gray-400  border-b border-gray-100">Plan ID</th>
-                    <th className="p-2   text-xs   text-gray-400  border-b border-gray-100 text-center">Origin & Status</th>
-                    <th className="p-2   text-xs   text-gray-400  border-b border-gray-100 text-center">Timeline</th>
-                    <th className="p-2   text-xs   text-gray-400  border-b border-gray-100">Production Progress</th>
-                    <th className="p-2   text-xs   text-gray-400  border-b border-gray-100 text-right">Operations</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {filteredPlans.map((plan) => {
-                    const progressData = planProgress[plan.plan_id] || { progress: 0, currentOp: 'Awaiting Start', totalOps: 0, completedOps: 0 }
-                    const progressValue = progressData.progress
-                    const currentOp = progressData.currentOp
-                    const opsInfo = `${progressData.completedOps}/${progressData.totalOps}`
-                    const isEffectiveCompleted = plan.status === 'completed' || (progressValue === 100 && progressData.totalOps > 0)
-                    const isOverdue = plan.expected_completion_date && new Date(plan.expected_completion_date) < new Date() && !isEffectiveCompleted
-
-                    return (
-                      <tr key={plan.plan_id} className="hover:bg-indigo-50/30 transition-colors group">
-                        <td className="p-2 ">
-                          <div className="flex items-center gap-4">
-                            <div className="w-6 h-6 p-2  rounded  bg-slate-900 flex items-center justify-center text-white  group-hover:scale-110 transition-transform">
-                              <Package size={15} />
-                            </div>
-                            <div>
-                              <p className="text-xs  text-gray-900">{plan.bom_id && bomCache[plan.bom_id] ? bomCache[plan.bom_id] : (plan.fg_items?.[0]?.item_name || 'Generic Production')}</p>
-                              <div className="flex items-center gap-2 ">
-                                
-                                <span className="text-xs   text-gray-400 truncate max-w-[200px]">
-                                  {plan.plan_id}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-2 ">
-                          <div className="flex flex-col items-center gap-2">
-                            <div className="flex items-left gap-2 text-[11px] text-gray-600  ">
-                              <Factory size={12} className="text-gray-400" />
-                              <span>{plan.company || 'Global Manufacturing'}</span>
-                            </div>
-                            {getStatusBadge(isEffectiveCompleted ? 'completed' : (plan.status || 'draft'))}
-                          </div>
-                        </td>
-                        <td className="p-2  text-center">
-                          <div className="flex flex-col items-center gap-2">
-                            <div className="flex items-center gap-2 text-[11px] text-gray-600  ">
-                              <Calendar size={12} className="text-gray-400" />
-                              <span>{formatDate(plan.expected_completion_date)}</span>
-                            </div>
-                            {plan.expected_completion_date && (
-                              <span className={`inline-flex items-center gap-1.5 p-2  py-1 rounded-full text-[9px]   border ${isOverdue ? 'text-rose-600 bg-rose-50 border-rose-100' : 'text-emerald-600 bg-emerald-50 border-emerald-100'
-                                }`}>
-                                {isOverdue ? <AlertCircle size={15} /> : <CheckCircle2 size={15} />}
-                                {isOverdue ? 'Overdue' : 'O Schedule'}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-2 ">
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs   text-gray-400 ">{progressValue}% Complete</span>
-                              <span className="text-xs   text-slate-900 bg-slate-100 px-2 py-0.5 rounded ">{opsInfo} OPS</span>
-                            </div>
-                            <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden shadow-inner">
-                              <div
-                                className={`h-full transition-all duration-700 rounded-full ${progressValue === 0 ? 'bg-gray-200' :
-                                  progressValue < 30 ? 'bg-amber-500' :
-                                    progressValue < 70 ? 'bg-indigo-500' :
-                                      'bg-emerald-500'
-                                  }`}
-                                style={{ width: `${progressValue}%` }}
-                              />
-                            </div>
-                            <p className="text-xs   text-gray-500 truncate flex items-center gap-1.5">
-                              <Clock size={15} className="text-indigo-500" /> {isEffectiveCompleted ? 'Production Completed' : currentOp}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="p-2  text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => navigate(`/manufacturing/production-planning/${plan.plan_id}`)}
-                              className=" p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all   hover: bg-white border border-gray-50"
-                              title="View Strategy"
-                            >
-                              <Eye size={15} />
-                            </button>
-                            {isEffectiveCompleted && (
-                              <button
-                                onClick={() => handleDownloadReport(plan)}
-                                className=" p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded  transition-all   hover: bg-white border border-gray-50"
-                                title="Download Production Report"
-                              >
-                                <Download size={15} />
-                              </button>
-                            )}
-                            {!isEffectiveCompleted && (
-                              <button
-                                onClick={() => fetchPlanOperationProgress(plan.plan_id)}
-                                className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-amber-600 hover:bg-amber-50"
-                                title="Sync Progress"
-                              >
-                                <TrendingUp size={15} />
-                              </button>
-                            )}
-                            {!isEffectiveCompleted && planProgress[plan.plan_id]?.woCount === 0 && (
-                              <button
-                                onClick={() => handleCreateWorkOrder(plan)}
-                                className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"
-                                title="Configure Strategy"
-                              >
-                                <Settings size={15} />
-                              </button>
-                            )}
-                            {!isEffectiveCompleted && (
-                              <button
-                                onClick={() => handleSendMaterialRequest(plan)}
-                                disabled={sendingMaterialRequest}
-                                className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
-                                title="Request Materials"
-                              >
-                                {sendingMaterialRequest ? <Loader size={15} className="animate-spin" /> : <Send size={15} />}
-                              </button>
-                            )}
-                            {!isEffectiveCompleted && (
-                              <button
-                                onClick={() => handleEdit(plan)}
-                                className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                                title="Modify Strategy"
-                              >
-                                <Edit2 size={15} />
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleShowHistory(plan)}
-                              className=" p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-all   hover: bg-white border border-gray-50 relative"
-                              title="View Request History"
-                            >
-                              <FileText size={15} />
-                              {mrHistory[plan.plan_id] && mrHistory[plan.plan_id].length > 0 && (
-                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-xs   text-white   animate-in zoom-in duration-300">
-                                  {mrHistory[plan.plan_id].length}
-                                </span>
-                              )}
-                            </button>
-                            {!isEffectiveCompleted && (
-                              <button
-                                onClick={() => handleDelete(plan.plan_id)}
-                                className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-rose-600 hover:bg-rose-50"
-                                title="Discard Plan"
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+              <DataTable 
+                columns={columns} 
+                data={filteredPlans} 
+                renderActions={renderActions}
+                pageSize={10}
+              />
             ) : (
               <div className="flex flex-col items-center justify-center py-5 text-center bg-gray-50/30">
                 <div className="w-12 h-12 rounded bg-white shadow  shadow-gray-200/50 flex items-center justify-center text-gray-200 mb-6 border border-gray-100">
-                  <Layers size={15} />
+                  <Layers size={12} />
                 </div>
                 <h3 className="text-md  text-gray-900 ">No Strategic Plans Found</h3>
                 <p className="text-xs  text-gray-400 mt-2  leading-relaxed">
@@ -1482,18 +1426,6 @@ export default function ProductionPlanning() {
               </div>
             )}
           </div>
-
-          {filteredPlans.length > 0 && (
-            <div className="p-2  bg-gray-50/50 border-t border-gray-100 flex items-center justify-between">
-              <p className="text-xs   text-gray-400 ">
-                Showing {filteredPlans.length} of {plans.length} strategic formulations
-              </p>
-              <div className="flex items-center gap-2 bg-white p-2 rounded-full border border-gray-100  ">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                <span className="text-xs   text-gray-900 ">Neural Link Active</span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -1696,14 +1628,14 @@ export default function ProductionPlanning() {
 
       {showMaterialRequestModal && materialRequestData && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded  max-w-4xl w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300 border border-gray-100 max-h-[35pc] overflow-hidden">
+          <div className="bg-white rounded  max-w-4xl w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300 border border-gray-100 max-h-[30pc] overflow-hidden">
             <div className="p-2 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
               <div className="flex items-center gap-4">
-                <div className="bg-blue-600 p-2 rounded  shadow-blue-200 transition-colors">
+                {/* <div className="bg-blue-600 p-2 rounded  shadow-blue-200 transition-colors">
                   <Send className="w-6 h-6 text-white" />
-                </div>
+                </div> */}
                 <div>
-                  <h2 className="text-xl text-gray-900 ">Material Request</h2>
+                  <h2 className="text-lg text-gray-900 ">Material Request</h2>
                   <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
                     <Boxes size={12} className="text-blue-500" />
                     Resource Acquisition Phase
@@ -1717,7 +1649,7 @@ export default function ProductionPlanning() {
                 }}
                 className=" p-2 text-gray-400 hover:text-gray-900 hover:bg-white rounded transition-all border border-transparent hover:border-gray-100"
               >
-                <X size={20} />
+                <X size={15} />
               </button>
             </div>
 
@@ -1737,23 +1669,58 @@ export default function ProductionPlanning() {
                 </div>
               </div>
 
-              {materialRequestData.items_notes && (
-                <div className="p-2 mt-3 rounded bg-indigo-50/30 border border-indigo-100 border-l-4 border-l-indigo-600">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileText size={14} className="text-indigo-600" />
-                    <p className="text-xs text-indigo-900 ">Intelligence Strategy Notes</p>
-                  </div>
-                  <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">{materialRequestData.items_notes}</p>
-                </div>
-              )}
+             
 
               <div className="space-y-2 mt-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-1.5 h-6 bg-blue-600 rounded-full transition-colors" />
-                  <h3 className="text-xs text-gray-900 ">
-                    Items to Request ({materialRequestData.items?.length || 0})
-                  </h3>
+                <div className="flex items-center justify-between border-b border-gray-100">
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => setMrActiveTab('pending')}
+                      className={`pb-2 text-xs font-bold transition-all relative ${
+                        mrActiveTab === 'pending'
+                          ? 'text-rose-600'
+                          : 'text-gray-400 hover:text-gray-600'
+                      }`}
+                    >
+                      Pending Request
+                      <span className="ml-2 px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px]">
+                        {materialRequestData.items?.filter(item => {
+                          const stock = materialStockData[item.item_code];
+                          return !stock || !stock.isAvailable;
+                        }).length || 0}
+                      </span>
+                      {mrActiveTab === 'pending' && (
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-600" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setMrActiveTab('complete')}
+                      className={`pb-2 text-xs font-bold transition-all relative ${
+                        mrActiveTab === 'complete'
+                          ? 'text-emerald-600'
+                          : 'text-gray-400 hover:text-gray-600'
+                      }`}
+                    >
+                      Complete Request
+                      <span className="ml-2 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px]">
+                        {materialRequestData.items?.filter(item => {
+                          const stock = materialStockData[item.item_code];
+                          return stock && stock.isAvailable;
+                        }).length || 0}
+                      </span>
+                      {mrActiveTab === 'complete' && (
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600" />
+                      )}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-1.5 h-6 bg-blue-600 rounded-full transition-colors" />
+                    <h3 className="text-xs text-gray-900 ">
+                      Items to Request ({materialRequestData.items?.length || 0})
+                    </h3>
+                  </div>
                 </div>
+
                 <div className="rounded border border-gray-100 overflow-hidden  ">
                   <table className="w-full text-left bg-white border-collapse">
                     <thead>
@@ -1765,14 +1732,18 @@ export default function ProductionPlanning() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                      {materialRequestData.items?.map((item, idx) => {
+                      {materialRequestData.items?.filter(item => {
+                        const stock = materialStockData[item.item_code];
+                        if (mrActiveTab === 'pending') return !stock || !stock.isAvailable;
+                        return stock && stock.isAvailable;
+                      }).map((item, idx) => {
                         const stock = materialStockData[item.item_code]
                         const isLow = stock && !stock.isAvailable
                         return (
                           <tr key={idx} className={`hover:bg-blue-50/30 transition-colors ${isLow ? 'bg-rose-50/50' : ''}`}>
                             <td className="p-2 ">
-                              <p className="text-xs text-gray-900 ">{item.item_code}</p>
-                              <p className="text-xs text-gray-400 mt-0.5">{item.item_name}</p>
+                              <p className="text-xs text-gray-900 ">{item.item_name} ({item.item_code})</p>
+                              
                             </td>
                             <td className="p-2 text-right">
                               <span className="text-xs text-gray-900">{item.qty || item.quantity || 0}</span>
@@ -1784,20 +1755,20 @@ export default function ProductionPlanning() {
                             <td className="p-2 text-center">
                               {stock ? (
                                 stock.isAvailable ? (
-                                  <div className="bg-emerald-50 text-emerald-600 p-2 py-1 rounded-full text-[9px] border border-emerald-100 inline-flex items-center gap-1">
-                                    <Check size={15} /> Fully Stocked
+                                  <div className=" text-emerald-600  text-[9px]  inline-flex items-center gap-1">
+                                    <Check size={12} /> Fully Stocked
                                   </div>
                                 ) : stock.hasStock ? (
-                                  <div className="bg-amber-50 text-amber-600 p-2 py-1 rounded-full text-[9px] border border-amber-100 inline-flex items-center gap-1">
-                                    <AlertCircle size={15} /> Partial Stock
+                                  <div className=" text-amber-600  text-[9px]  inline-flex items-center gap-1">
+                                    <AlertCircle size={12} /> Partial Stock
                                   </div>
                                 ) : (
-                                  <div className="bg-rose-50 text-rose-600 p-2 py-1 rounded-full text-[9px] border border-rose-100 inline-flex items-center gap-1">
-                                    <X size={15} /> Zero Stock
+                                  <div className=" text-rose-600  text-[9px]  inline-flex items-center gap-1">
+                                    <X size={12} /> Zero Stock
                                   </div>
                                 )
                               ) : (
-                                <div className="w-5 h-5 rounded-full border-2 border-slate-200 border-t-emerald-500 animate-spin mx-auto" />
+                                <div className="w-5 h-5 rounded-full  animate-spin mx-auto" />
                               )}
                             </td>
                           </tr>
@@ -1809,7 +1780,7 @@ export default function ProductionPlanning() {
               </div>
             </div>
 
-            <div className="p-6 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-4">
+            <div className="p-2 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-4">
               <button
                 onClick={() => {
                   setShowMaterialRequestModal(false)
@@ -1842,7 +1813,7 @@ export default function ProductionPlanning() {
                 </div>
                 <div>
                   <h2 className="text-xl   text-gray-900">Request Traceability History</h2>
-                  <p className="text-xs font-medium text-gray-400 mt-0.5 flex items-center gap-2">
+                  <p className="text-xs font-medium text-gray-400  mt-0.5 flex items-center gap-2">
                     <Activity size={12} className="text-indigo-500" />
                     Linked Material Requests for Plan: {selectedPlanForHistory.plan_id}
                   </p>

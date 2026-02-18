@@ -94,7 +94,17 @@
 
       const previousBalance = rows.length > 0 ? rows[0].balance_qty : 0
       const balance_qty = Number(previousBalance) + (Number(qty_in) || 0) - (Number(qty_out) || 0)
-      const transaction_value = (Number(qty_in) || Number(qty_out)) * Number(valuation_rate || 0)
+      
+      let final_valuation_rate = valuation_rate
+      if ((!final_valuation_rate || Number(final_valuation_rate) === 0) && Number(qty_out) > 0) {
+        // Fetch item's valuation method
+        const [itemRows] = await db.query('SELECT valuation_method FROM item WHERE item_code = ?', [item_code])
+        const method = itemRows.length > 0 ? itemRows[0].valuation_method : 'FIFO'
+        
+        final_valuation_rate = await this.getValuationRate(item_code, warehouse_id, Number(qty_out), method, db)
+      }
+
+      const transaction_value = (Number(qty_in) || Number(qty_out)) * Number(final_valuation_rate || 0)
 
       const [result] = await db.query(
         `INSERT INTO stock_ledger (
@@ -104,21 +114,21 @@
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           item_code, warehouse_id, transaction_date, transaction_type,
-          qty_in, qty_out, balance_qty, valuation_rate, transaction_value,
+          qty_in, qty_out, balance_qty, final_valuation_rate, transaction_value,
           reference_doctype, reference_name, remarks, created_by
         ]
       )
 
-      return this.getById(result.insertId)
+      return this.getById(result.insertId, db)
     } catch (error) {
       throw new Error(`Failed to create stock ledger entry: ${error.message}`)
     }
   }
 
   // Get stock ledger by ID
-  static async getById(id) {
+  static async getById(id, dbConnection = null) {
     try {
-      const db = this.getDb()
+      const db = dbConnection || this.getDb()
       const [rows] = await db.query(
         `SELECT 
           sl.*,
@@ -288,6 +298,108 @@
       return rows
     } catch (error) {
       throw new Error(`Failed to fetch transaction summary: ${error.message}`)
+    }
+  }
+
+  /**
+   * Calculate valuation rate based on the item's valuation method
+   */
+  static async getValuationRate(itemCode, warehouseId, qtyToIssue, method, dbConnection = null) {
+    try {
+      const db = dbConnection || this.getDb()
+      
+      // Default to item's valuation rate if qty is 0
+      if (qtyToIssue <= 0) {
+        const [rows] = await db.query(
+          'SELECT valuation_rate FROM stock_balance WHERE item_code = ? AND warehouse_id = ?',
+          [itemCode, warehouseId]
+        )
+        if (rows.length > 0) return Number(rows[0].valuation_rate)
+        
+        const [item] = await db.query('SELECT valuation_rate FROM item WHERE item_code = ?', [itemCode])
+        return item.length > 0 ? Number(item[0].valuation_rate) : 0
+      }
+
+      if (method === 'Moving Average') {
+        const [rows] = await db.query(
+          'SELECT valuation_rate FROM stock_balance WHERE item_code = ? AND warehouse_id = ?',
+          [itemCode, warehouseId]
+        )
+        return rows.length > 0 ? Number(rows[0].valuation_rate) : 0
+      }
+
+      // For FIFO and LIFO, we need to traverse the ledger
+      const [inEntries] = await db.query(
+        `SELECT qty_in, valuation_rate, transaction_date, id 
+         FROM stock_ledger 
+         WHERE item_code = ? AND warehouse_id = ? AND qty_in > 0 
+         ORDER BY transaction_date ASC, id ASC`,
+        [itemCode, warehouseId]
+      )
+
+      const [outEntries] = await db.query(
+        `SELECT SUM(qty_out) as total_out 
+         FROM stock_ledger 
+         WHERE item_code = ? AND warehouse_id = ? AND qty_out > 0`,
+        [itemCode, warehouseId]
+      )
+
+      let totalConsumed = Number(outEntries[0].total_out || 0)
+      let remainingQtyToIssue = Number(qtyToIssue)
+      let totalValue = 0
+
+      if (method === 'FIFO') {
+        for (const entry of inEntries) {
+          const availableInBatch = Number(entry.qty_in)
+          
+          if (totalConsumed >= availableInBatch) {
+            totalConsumed -= availableInBatch
+            continue
+          }
+
+          const usableFromBatch = availableInBatch - totalConsumed
+          totalConsumed = 0 
+
+          const taken = Math.min(usableFromBatch, remainingQtyToIssue)
+          totalValue += taken * Number(entry.valuation_rate)
+          remainingQtyToIssue -= taken
+
+          if (remainingQtyToIssue <= 0) break
+        }
+      } else if (method === 'LIFO') {
+        const reversedInEntries = [...inEntries].reverse()
+        // Simplified LIFO: assume total_out consumed the latest ones first
+        let tempTotalConsumed = Number(outEntries[0].total_out || 0)
+        
+        for (const entry of reversedInEntries) {
+          const availableInBatch = Number(entry.qty_in)
+          
+          if (tempTotalConsumed >= availableInBatch) {
+            tempTotalConsumed -= availableInBatch
+            continue
+          }
+          
+          const usableFromBatch = availableInBatch - tempTotalConsumed
+          tempTotalConsumed = 0
+          
+          const taken = Math.min(usableFromBatch, remainingQtyToIssue)
+          totalValue += taken * Number(entry.valuation_rate)
+          remainingQtyToIssue -= taken
+          
+          if (remainingQtyToIssue <= 0) break
+        }
+      }
+
+      if (qtyToIssue > 0 && remainingQtyToIssue < qtyToIssue) {
+        return totalValue / (qtyToIssue - remainingQtyToIssue)
+      }
+
+      // Fallback
+      const [item] = await db.query('SELECT valuation_rate FROM item WHERE item_code = ?', [itemCode])
+      return item.length > 0 ? Number(item[0].valuation_rate) : 0
+    } catch (error) {
+      console.error('Error calculating valuation rate:', error)
+      return 0
     }
   }
 }

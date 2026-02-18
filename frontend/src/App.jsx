@@ -39,6 +39,7 @@ import {
   ProductionPlanning,
   ProductionPlanningForm,
   ProductionStages,
+  ProductionHierarchy,
   WorkOrder,
   WorkOrderForm,
   JobCard,
@@ -464,6 +465,19 @@ function App() {
                   <DepartmentLayout>
                     <DepartmentProtectedRoute departments={['manufacturing', 'admin']}>
                       <SalesOrder />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/manufacturing/sales-orders/:sales_order_id/hierarchy"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['manufacturing', 'admin']}>
+                      <ProductionHierarchy />
                     </DepartmentProtectedRoute>
                   </DepartmentLayout>
                 </ProtectedRoute>

@@ -497,7 +497,8 @@ async function enhanceJobCardTable() {
       { name: 'sent_qty', sql: 'sent_qty DECIMAL(18,6) DEFAULT 0' },
       { name: 'received_qty', sql: 'received_qty DECIMAL(18,6) DEFAULT 0' },
       { name: 'accepted_qty', sql: 'accepted_qty DECIMAL(18,6) DEFAULT 0' },
-      { name: 'rejected_qty', sql: 'rejected_qty DECIMAL(18,6) DEFAULT 0' }
+      { name: 'rejected_qty', sql: 'rejected_qty DECIMAL(18,6) DEFAULT 0' },
+      { name: 'transferred_quantity', sql: 'transferred_quantity DECIMAL(18,6) DEFAULT 0' }
     ]
 
     for (const column of columnsToAdd) {

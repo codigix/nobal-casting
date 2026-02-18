@@ -259,7 +259,7 @@ export default function AdminPanel() {
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500 rounded-full blur-3xl" />
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500 rounded-full blur-3xl" />
         </div>
-        <div className="relative z-10 max-w-5xl mx-auto">
+        <div className="relative z-0 max-w-5xl mx-auto">
           <div className="flex items-center gap-4 mb-2">
             <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded ">
               <Shield size={32} className="text-white" />
@@ -301,8 +301,8 @@ export default function AdminPanel() {
                 {criticalAlerts.map((alert) => (
                   <div key={alert.id} className="relative overflow-hidden p-5 bg-gradient-to-r from-red-900/40 to-red-800/20 border border-red-500/40 rounded  backdrop-blur-sm flex items-start gap-4 hover:border-red-500/60 transition-all">
                     <div className="absolute inset-0 opacity-5 bg-red-600" />
-                    <AlertTriangle size={24} className="text-red-400 flex-shrink-0 mt-0.5 relative z-10" />
-                    <div className="relative z-10 flex-1">
+                    <AlertTriangle size={24} className="text-red-400 flex-shrink-0 mt-0.5 relative z-0" />
+                    <div className="relative z-0 flex-1">
                       <p className="text-xs  text-red-200">{alert.title}</p>
                       <p className="text-xs text-red-300 mt-1">{alert.message}</p>
                     </div>
@@ -316,7 +316,7 @@ export default function AdminPanel() {
               {/* Total Users Card */}
               <div className="group relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-blue-500/50 transition-all hover: hover:shadow-blue-500/10">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br from-blue-500 to-transparent transition-opacity" />
-                <div className="relative z-10">
+                <div className="relative z-0">
                   <div className="flex items-center justify-between mb-4">
                     <Users size={24} className="text-blue-400" />
                     <span className="text-xs  text-blue-400 bg-blue-500/10 p-2  py-1 rounded-full">Users</span>
@@ -332,7 +332,7 @@ export default function AdminPanel() {
               {/* Total Warehouses Card */}
               <div className="group relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-green-500/50 transition-all hover: hover:shadow-green-500/10">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br from-green-500 to-transparent transition-opacity" />
-                <div className="relative z-10">
+                <div className="relative z-0">
                   <div className="flex items-center justify-between mb-4">
                     <Warehouse size={24} className="text-green-400" />
                     <span className="text-xs  text-green-400 bg-green-500/10 p-2  py-1 rounded-full">Warehouses</span>
@@ -348,7 +348,7 @@ export default function AdminPanel() {
               {/* Total Items Card */}
               <div className="group relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-amber-500/50 transition-all hover: hover:shadow-amber-500/10">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br from-amber-500 to-transparent transition-opacity" />
-                <div className="relative z-10">
+                <div className="relative z-0">
                   <div className="flex items-center justify-between mb-4">
                     <Package size={24} className="text-amber-400" />
                     <span className="text-xs  text-amber-400 bg-amber-500/10 p-2  py-1 rounded-full">Items</span>
@@ -364,7 +364,7 @@ export default function AdminPanel() {
               {/* Active Users Card */}
               <div className="group relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-purple-500/50 transition-all hover: hover:shadow-purple-500/10">
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br from-purple-500 to-transparent transition-opacity" />
-                <div className="relative z-10">
+                <div className="relative z-0">
                   <div className="flex items-center justify-between mb-4">
                     <Activity size={24} className="text-purple-400" />
                     <span className="text-xs  text-purple-400 bg-purple-500/10 p-2  py-1 rounded-full">Active</span>
@@ -388,7 +388,7 @@ export default function AdminPanel() {
                 {/* API Performance Card */}
                 <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-blue-500/50 transition-all">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl" />
-                  <div className="relative z-10">
+                  <div className="relative z-0">
                     <div className="flex items-center justify-between mb-6">
                       <h3 className="text-xs  text-slate-200">API Performance</h3>
                       <div className={`w-3 h-3 rounded-full ${systemMetrics.apiResponseTime < 200 ? 'bg-green-500 animate-pulse' : systemMetrics.apiResponseTime < 400 ? 'bg-amber-500 animate-pulse' : 'bg-red-500'}`} />
@@ -407,7 +407,7 @@ export default function AdminPanel() {
                 {/* System Health Card */}
                 <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-green-500/50 transition-all">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-2xl" />
-                  <div className="relative z-10">
+                  <div className="relative z-0">
                     <div className="flex items-center justify-between mb-6">
                       <h3 className="text-xs  text-slate-200">System Health</h3>
                       <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
@@ -423,7 +423,7 @@ export default function AdminPanel() {
                 {/* Error Rate Card */}
                 <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-amber-500/50 transition-all">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl" />
-                  <div className="relative z-10">
+                  <div className="relative z-0">
                     <div className="flex items-center justify-between mb-6">
                       <h3 className="text-xs  text-slate-200">Error Rate</h3>
                       <div className={`w-3 h-3 rounded-full ${systemMetrics.errorRate < 1 ? 'bg-green-500' : systemMetrics.errorRate < 3 ? 'bg-amber-500 animate-pulse' : 'bg-red-500 animate-pulse'}`} />
@@ -451,7 +451,7 @@ export default function AdminPanel() {
                 {/* Database Status Card */}
                 <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-blue-500/50 transition-all">
                   <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl" />
-                  <div className="relative z-10">
+                  <div className="relative z-0">
                     <div className="flex items-center justify-between mb-6">
                       <h3 className="text-xs  text-slate-200">Database Status</h3>
                       <div className={`w-3 h-3 rounded-full ${systemMetrics.databaseConnections < 80 ? 'bg-green-500 animate-pulse' : 'bg-amber-500 animate-pulse'}`} />
@@ -470,7 +470,7 @@ export default function AdminPanel() {
                 {/* Cache Performance Card */}
                 <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-green-500/50 transition-all">
                   <div className="absolute top-0 right-0 w-40 h-40 bg-green-500/10 rounded-full blur-2xl" />
-                  <div className="relative z-10">
+                  <div className="relative z-0">
                     <div className="flex items-center justify-between mb-6">
                       <h3 className="text-xs  text-slate-200">Cache Performance</h3>
                       <div className={`w-3 h-3 rounded-full ${systemMetrics.cacheHitRate > 90 ? 'bg-green-500 animate-pulse' : systemMetrics.cacheHitRate > 80 ? 'bg-amber-500 animate-pulse' : 'bg-red-500'}`} />
@@ -504,7 +504,7 @@ export default function AdminPanel() {
                           <div className="absolute left-[11px] top-12 w-0.5 h-8 bg-gradient-to-b from-slate-500 to-transparent" />
                         )}
                         {/* Timeline dot */}
-                        <div className={`relative z-10 w-6 h-6 rounded-full border-2 border-slate-700 bg-slate-900 flex items-center justify-center flex-shrink-0 mt-1 ${
+                        <div className={`relative z-0 w-6 h-6 rounded-full border-2 border-slate-700 bg-slate-900 flex items-center justify-center flex-shrink-0 mt-1 ${
                           event.severity === 'success' ? 'bg-green-500/20 border-green-500' :
                           event.severity === 'warning' ? 'bg-amber-500/20 border-amber-500' :
                           event.severity === 'error' ? 'bg-red-500/20 border-red-500' :
@@ -555,7 +555,7 @@ export default function AdminPanel() {
                   className="group relative overflow-hidden rounded  bg-gradient-to-br from-blue-600 to-blue-700 p-4 transition-all hover: hover:shadow-blue-500/30 hover:-translate-y-0.5"
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
-                  <div className="relative z-10 flex items-center gap-3 justify-center">
+                  <div className="relative z-0 flex items-center gap-3 justify-center">
                     <Plus size={20} className="text-white" />
                     <span className="text-xs  text-white">Add User</span>
                   </div>
@@ -567,7 +567,7 @@ export default function AdminPanel() {
                   className="group relative overflow-hidden rounded  bg-gradient-to-br from-green-600 to-green-700 p-4 transition-all hover: hover:shadow-green-500/30 hover:-translate-y-0.5"
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
-                  <div className="relative z-10 flex items-center gap-3 justify-center">
+                  <div className="relative z-0 flex items-center gap-3 justify-center">
                     <Warehouse size={20} className="text-white" />
                     <span className="text-xs  text-white">New Warehouse</span>
                   </div>
@@ -579,7 +579,7 @@ export default function AdminPanel() {
                   className="group relative overflow-hidden rounded  bg-gradient-to-br from-purple-600 to-purple-700 p-4 transition-all hover: hover:shadow-purple-500/30 hover:-translate-y-0.5"
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
-                  <div className="relative z-10 flex items-center gap-3 justify-center">
+                  <div className="relative z-0 flex items-center gap-3 justify-center">
                     <Database size={20} className="text-white" />
                     <span className="text-xs  text-white">Master Data</span>
                   </div>
@@ -591,7 +591,7 @@ export default function AdminPanel() {
                   className="group relative overflow-hidden rounded  bg-gradient-to-br from-cyan-600 to-cyan-700 p-4 transition-all hover: hover:shadow-cyan-500/30 hover:-translate-y-0.5"
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity" />
-                  <div className="relative z-10 flex items-center gap-3 justify-center">
+                  <div className="relative z-0 flex items-center gap-3 justify-center">
                     <Wrench size={20} className="text-white" />
                     <span className="text-xs  text-white">Audit Logs</span>
                   </div>
@@ -614,7 +614,7 @@ export default function AdminPanel() {
               {/* Total Machines */}
               <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-blue-500/50 transition-all">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl" />
-                <div className="relative z-10">
+                <div className="relative z-0">
                   <div className="flex items-center justify-between mb-4">
                     <Gauge size={24} className="text-blue-400" />
                     <span className="text-xs  text-blue-400 bg-blue-500/10 p-2  py-1 rounded-full">Machines</span>
@@ -627,7 +627,7 @@ export default function AdminPanel() {
               {/* Operational */}
               <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-green-500/50 transition-all">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 rounded-full blur-2xl" />
-                <div className="relative z-10">
+                <div className="relative z-0">
                   <div className="flex items-center justify-between mb-4">
                     <CheckCircle size={24} className="text-green-400" />
                     <span className="text-xs  text-green-400 bg-green-500/10 p-2  py-1 rounded-full">Active</span>
@@ -640,7 +640,7 @@ export default function AdminPanel() {
               {/* In Maintenance */}
               <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-amber-500/50 transition-all">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl" />
-                <div className="relative z-10">
+                <div className="relative z-0">
                   <div className="flex items-center justify-between mb-4">
                     <Clock size={24} className="text-amber-400" />
                     <span className="text-xs  text-amber-400 bg-amber-500/10 p-2  py-1 rounded-full">Service</span>
@@ -653,7 +653,7 @@ export default function AdminPanel() {
               {/* OEE Status */}
               <div className="relative overflow-hidden rounded  bg-gradient-to-br from-slate-800 to-slate-900p-3   border border-slate-700 hover:border-purple-500/50 transition-all">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl" />
-                <div className="relative z-10">
+                <div className="relative z-0">
                   <div className="flex items-center justify-between mb-4">
                     <TrendingUp size={24} className="text-purple-400" />
                     <span className="text-xs  text-purple-400 bg-purple-500/10 p-2  py-1 rounded-full">OEE</span>

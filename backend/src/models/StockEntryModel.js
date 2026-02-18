@@ -1,6 +1,7 @@
 import StockBalanceModel from './StockBalanceModel.js'
 import StockLedgerModel from './StockLedgerModel.js'
 import { PeriodClosingModel } from './PeriodClosingModel.js'
+import StockMovementModel from './StockMovementModel.js'
 
 class StockEntryModel {
   static getDb() {
@@ -339,7 +340,10 @@ class StockEntryModel {
         for (const item of entry.items) {
           const itemCode = item.item_code
           const itemQty = Number(item.qty) || 0
-          const valuationRate = Number(item.valuation_rate) || 0
+          
+          // Get item's valuation method
+          const [itemRows] = await connection.query('SELECT valuation_method FROM item WHERE item_code = ?', [itemCode])
+          const method = itemRows.length > 0 ? itemRows[0].valuation_method : 'FIFO'
 
           const transactionTypeMap = {
             'Material Receipt': 'Purchase Receipt',
@@ -351,14 +355,21 @@ class StockEntryModel {
           }
           const transactionType = transactionTypeMap[entry.entry_type] || entry.entry_type
 
+          let finalValuationRate = Number(item.valuation_rate) || 0
+
           // 1. Handle Outward movement (Issue, Transfer, Scrap, Repack)
           if (['Material Issue', 'Material Transfer', 'Scrap Entry', 'Repack'].includes(entry.entry_type)) {
             const fromWarehouseId = entry.from_warehouse_id
             if (!fromWarehouseId) throw new Error(`Source warehouse is required for ${entry.entry_type}`)
 
-            // Get current stock at source for valuation
-            const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(itemCode, fromWarehouseId, connection)
-            const currentValuation = sourceBalance ? Number(sourceBalance.valuation_rate) : valuationRate
+            // Calculate correct valuation rate for this specific issue
+            finalValuationRate = await StockLedgerModel.getValuationRate(
+              itemCode, 
+              fromWarehouseId, 
+              itemQty, 
+              method, 
+              connection
+            )
 
             // Deduct from Source
             await StockBalanceModel.upsert(itemCode, fromWarehouseId, {
@@ -375,7 +386,7 @@ class StockEntryModel {
               transaction_type: transactionType,
               qty_in: 0,
               qty_out: itemQty,
-              valuation_rate: currentValuation,
+              valuation_rate: finalValuationRate,
               reference_doctype: 'Stock Entry',
               reference_name: entry.entry_no,
               remarks: entry.remarks,
@@ -388,11 +399,15 @@ class StockEntryModel {
             const toWarehouseId = entry.to_warehouse_id
             if (!toWarehouseId) throw new Error(`Target warehouse is required for ${entry.entry_type}`)
 
+            // If it's a transfer, we use the rate calculated from the OUT side
+            // If it's a receipt, we use the rate provided in the entry
+            const incomingRate = entry.entry_type === 'Material Transfer' ? finalValuationRate : Number(item.valuation_rate)
+
             // Add to Target
             await StockBalanceModel.upsert(itemCode, toWarehouseId, {
               current_qty: itemQty,
               is_increment: true,
-              incoming_rate: valuationRate,
+              incoming_rate: incomingRate,
               last_receipt_date: entry.entry_date
             }, connection)
 
@@ -404,12 +419,46 @@ class StockEntryModel {
               transaction_type: transactionType,
               qty_in: itemQty,
               qty_out: 0,
-              valuation_rate: valuationRate,
+              valuation_rate: incomingRate,
               reference_doctype: 'Stock Entry',
               reference_name: entry.entry_no,
               remarks: entry.remarks,
               created_by: userId
             }, connection)
+          }
+
+          // Create Stock Movement entry for visibility in Inventory Dashboard
+          try {
+            const movement_type = entry.entry_type === 'Material Receipt' ? 'IN' : 
+                                 entry.entry_type === 'Material Issue' ? 'OUT' : 
+                                 entry.entry_type === 'Material Transfer' ? 'TRANSFER' : 
+                                 (entry.to_warehouse_id ? 'IN' : 'OUT')
+            
+            const transaction_no = await StockMovementModel.generateTransactionNo()
+            
+            await connection.execute(
+              `INSERT INTO stock_movements (
+                transaction_no, item_code, warehouse_id, source_warehouse_id, target_warehouse_id, 
+                movement_type, purpose, quantity, reference_type, reference_name, notes, status, created_by, approved_by, approved_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Approved', ?, ?, NOW())`,
+              [
+                transaction_no, 
+                itemCode, 
+                movement_type === 'TRANSFER' ? null : (movement_type === 'IN' ? entry.to_warehouse_id : entry.from_warehouse_id),
+                movement_type === 'TRANSFER' ? entry.from_warehouse_id : null,
+                movement_type === 'TRANSFER' ? entry.to_warehouse_id : null,
+                movement_type,
+                entry.entry_type,
+                itemQty,
+                'Stock Entry',
+                entry.entry_no,
+                entry.remarks || `Auto-generated from Stock Entry ${entry.entry_no}`,
+                userId,
+                userId
+              ]
+            )
+          } catch (smError) {
+            console.error('Failed to create stock movement entry:', smError)
           }
         }
 

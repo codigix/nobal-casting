@@ -337,6 +337,11 @@ router.delete(
     authMiddleware,
     productionController.deleteTimeLog.bind(productionController)
   )
+  router.put(
+    '/time-logs/:id',
+    authMiddleware,
+    productionController.updateTimeLog.bind(productionController)
+  )
 
   router.post(
     '/rejections',
@@ -352,6 +357,11 @@ router.delete(
     '/rejections/:id',
     authMiddleware,
     productionController.deleteRejection.bind(productionController)
+  )
+  router.put(
+    '/rejections/:id',
+    authMiddleware,
+    productionController.updateRejection.bind(productionController)
   )
 
   router.put(
@@ -374,6 +384,11 @@ router.delete(
     '/downtimes/:id',
     authMiddleware,
     productionController.deleteDowntime.bind(productionController)
+  )
+  router.put(
+    '/downtimes/:id',
+    authMiddleware,
+    productionController.updateDowntime.bind(productionController)
   )
 
   router.post(

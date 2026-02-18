@@ -20,7 +20,7 @@ const SectionLabel = ({ icon: Icon, label, color = 'blue' }) => {
   const colorMap = {
     blue: 'text-blue-600 bg-blue-50 border-blue-100',
     purple: 'text-purple-600 bg-purple-50 border-purple-100',
-    amber: 'text-amber-600 bg-amber-50 border-amber-100'
+    amber: 'text-amber-600'
   }
   
   return (

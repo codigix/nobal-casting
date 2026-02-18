@@ -209,7 +209,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
           <div className="bg-gray-900 rounded  p-2 text-white  relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-indigo-500/20 transition-colors duration-700" />
             
-            <div className="relative z-10">
+            <div className="relative z-0">
               <div className="flex justify-between items-start mb-2">
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
@@ -333,13 +333,13 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                 <div className="p-2 bg-gray-50 rounded  border border-gray-100">
                   <p className="text-xs   text-gray-400  mb-1">Assigned Unit</p>
                   <p className="text-xs  text-gray-900  truncate">
-                    {jobCard?.machine_id || 'N/A'}
+                    {jobCard?.machine_name || jobCard?.machine_id || 'N/A'}
                   </p>
                 </div>
                 <div className="p-2 bg-gray-50 rounded  border border-gray-100">
-                  <p className="text-xs   text-gray-400  mb-1">Operator</p>
+                  <p className="text-xs   text-gray-400  mb-1">Operator / Vendor</p>
                   <p className="text-xs  text-gray-900  truncate">
-                    {jobCard?.operator_id || 'Unassigned'}
+                    {jobCard?.operator_name || jobCard?.vendor_name || jobCard?.operator_id || jobCard?.vendor_id || 'Unassigned'}
                   </p>
                 </div>
               </div>

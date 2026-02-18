@@ -1216,16 +1216,61 @@ class MastersController {
          FROM selling_sales_order
          WHERE customer_id = ? AND deleted_at IS NULL
          ORDER BY created_at DESC
-         LIMIT 5`,
+         LIMIT 10`,
         [id]
       )
+
+      // 4. Status Distribution
+      const [statusDistribution] = await database.query(
+        `SELECT status as name, COUNT(*) as value
+         FROM selling_sales_order
+         WHERE customer_id = ? AND deleted_at IS NULL
+         GROUP BY status`,
+        [id]
+      )
+
+      // 5. Calculate Top Items from all orders (parsing JSON)
+      const [allItemsRows] = await database.query(
+        `SELECT items FROM selling_sales_order WHERE customer_id = ? AND deleted_at IS NULL`,
+        [id]
+      )
+
+      const itemStats = {}
+      allItemsRows.forEach(row => {
+        if (!row.items) return
+        try {
+          const items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items
+          if (Array.isArray(items)) {
+            items.forEach(item => {
+              const code = item.item_code || 'Unknown'
+              const name = item.item_name || item.name || code
+              const qty = parseFloat(item.qty || item.bom_qty || 0)
+              const amount = parseFloat(item.amount || 0)
+
+              if (!itemStats[code]) {
+                itemStats[code] = { code, name, qty: 0, revenue: 0 }
+              }
+              itemStats[code].qty += qty
+              itemStats[code].revenue += amount
+            })
+          }
+        } catch (e) {
+          console.warn('Error parsing items for customer stats:', e)
+        }
+      })
+
+      const topItems = Object.values(itemStats)
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 5)
 
       res.json({
         success: true,
         data: {
           profile: customerProfile[0],
           trends: monthlyTrend || [],
-          recentOrders: recentOrders || []
+          recentOrders: recentOrders || [],
+          statusDistribution: statusDistribution || [],
+          topItems: topItems || []
         }
       })
     } catch (error) {

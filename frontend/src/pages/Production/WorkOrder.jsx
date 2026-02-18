@@ -52,9 +52,9 @@ const StatusBadge = ({ status }) => {
     draft: { color: 'text-slate-600 bg-slate-50 border-slate-100', icon: Clock, label: 'Draft' },
     ready: { color: 'text-blue-600 bg-blue-50 border-blue-100', icon: CheckCircle2, label: 'Ready' },
     planned: { color: 'text-indigo-600 bg-indigo-50 border-indigo-100', icon: Calendar, label: 'Planned' },
-    'in-progress': { color: 'text-amber-600 bg-amber-50 border-amber-100', icon: Activity, label: 'In-Progress' },
-    in_progress: { color: 'text-amber-600 bg-amber-50 border-amber-100', icon: Activity, label: 'In-Progress' },
-    completed: { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: CheckCircle2, label: 'Completed' },
+    'in-progress': { color: 'text-amber-600', icon: Activity, label: 'In-Progress' },
+    in_progress: { color: 'text-amber-600', icon: Activity, label: 'In-Progress' },
+    completed: { color: 'text-emerald-600 ', icon: CheckCircle2, label: 'Completed' },
     cancelled: { color: 'text-rose-600 bg-rose-50 border-rose-100', icon: AlertCircle, label: 'Cancelled' }
   }
   const s = (status || 'draft').toLowerCase().replace('_', '-')
@@ -62,8 +62,8 @@ const StatusBadge = ({ status }) => {
   const { color, icon: Icon, label } = config[statusKey] || config[s] || config.draft
 
   return (
-    <span className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border ${color}`}>
-      <Icon size={10} className="stroke-[2.5]" />
+    <span className={` text-xs  ${color}`}>
+      {/* <Icon size={10} className="stroke-[2.5]" /> */}
       {label || status}
     </span>
   )
@@ -72,8 +72,8 @@ const StatusBadge = ({ status }) => {
 const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
   const colorMap = {
     blue: 'text-blue-600 bg-blue-50 border-blue-100',
-    emerald: 'text-emerald-600 bg-emerald-50 border-emerald-100',
-    amber: 'text-amber-600 bg-amber-50 border-amber-100',
+    emerald: 'text-emerald-600 ',
+    amber: 'text-amber-600',
     rose: 'text-rose-600 bg-rose-50 border-rose-100',
     indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100',
     violet: 'text-violet-600 bg-violet-50 border-violet-100'
@@ -167,7 +167,7 @@ const WorkOrderRow = React.memo(({
           </div>
 
           <div className="">
-            <span className="text-[10px] font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+            <span className="text-[10px] text-indigo-600 ">
               {order.wo_id}
             </span>
           </div>
@@ -236,7 +236,7 @@ const WorkOrderRow = React.memo(({
                 const parts = (order.wo_id || '').split('-')
                 const displayId = parts.length > 3 ? `${parts[0]}-${parts[1]}-..-${parts[parts.length-1]}` : order.wo_id
                 return (
-                  <span className="text-[10px] font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded" title={order.wo_id}>
+                  <span className="text-xs font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded" title={order.wo_id}>
                     {displayId}
                   </span>
                 )
@@ -287,7 +287,7 @@ const WorkOrderRow = React.memo(({
           <div className="flex items-center gap-1">
             <button
               onClick={() => handleView(order)}
-              className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
+              className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
               title="View"
             >
               <Eye size={14} />
@@ -729,12 +729,12 @@ export default function WorkOrder() {
     },
     {
       key: 'wo_id',
-      label: 'ID',
+      label: 'Work Order ID',
       render: (val) => {
         const parts = (val || '').split('-')
-        const displayId = parts.length > 3 ? `${parts[0]}-${parts[1]}-..-${parts[parts.length-1]}` : val
+        const displayId = parts.length > 5 ? `${parts[0]}-${parts[1]}-..-${parts[parts.length-1]}` : val
         return (
-          <span className="text-[10px] font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100" title={val}>
+          <span className="text-[10px]  text-indigo-600 " title={val}>
             {displayId}
           </span>
         )
@@ -785,17 +785,15 @@ export default function WorkOrder() {
         <div className="">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 ">
             <div className="flex items-center gap-2 ">
-              <div className="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center text-white shadow  shadow-indigo-100 rotate-3 hover:rotate-0 transition-transform duration-500">
-                <ClipboardList size={15} />
-              </div>
+             
               <div>
                 <h1 className="text-xl  text-gray-900 ">Work Orders</h1>
-                <div className="flex items-center gap-4 mt-2">
-                  <span className="flex items-center gap-2 text-xs   text-indigo-600  bg-indigo-50 p-2  py-1 rounded-full">
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-2 text-xs   text-indigo-600  ">
                     <Factory size={12} />
                     Production
                   </span>
-                  <span className="flex items-center gap-2 text-xs   text-amber-600  bg-amber-50 p-2  py-1 rounded-full">
+                  <span className="flex items-center gap-2 text-xs   text-amber-600 ">
                     <Clock size={12} />
                     {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>

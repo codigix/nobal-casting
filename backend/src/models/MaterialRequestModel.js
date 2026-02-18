@@ -1,6 +1,7 @@
 import StockBalanceModel from './StockBalanceModel.js'
 import StockLedgerModel from './StockLedgerModel.js'
 import { PeriodClosingModel } from './PeriodClosingModel.js'
+import StockMovementModel from './StockMovementModel.js'
 
 export class MaterialRequestModel {
   /**
@@ -345,15 +346,23 @@ export class MaterialRequestModel {
 
           const qtyToIssue = Math.min(pendingQty, availableQty)
 
-          // Get current stock
-          const currentValuation = sourceBalance ? Number(sourceBalance.valuation_rate) : 0
-          const currentQty = sourceBalance ? Number(sourceBalance.current_qty) : 0
+          // Get item's valuation method
+          const [itemRows] = await connection.query('SELECT valuation_method FROM item WHERE item_code = ?', [item.item_code])
+          const method = itemRows.length > 0 ? itemRows[0].valuation_method : 'FIFO'
+
+          // Calculate correct valuation rate for this specific issue
+          const issueRate = await StockLedgerModel.getValuationRate(
+            item.item_code, 
+            sourceWarehouseId, 
+            qtyToIssue, 
+            method, 
+            connection
+          )
           
           // Deduct from Source
           await StockBalanceModel.upsert(item.item_code, sourceWarehouseId, {
-            current_qty: currentQty - qtyToIssue,
-            reserved_qty: sourceBalance ? Number(sourceBalance.reserved_qty) : 0,
-            valuation_rate: currentValuation,
+            current_qty: -qtyToIssue,
+            is_increment: true,
             last_issue_date: new Date()
           }, connection)
 
@@ -365,12 +374,43 @@ export class MaterialRequestModel {
             transaction_type: request.purpose?.toLowerCase() === 'material_transfer' ? 'Transfer' : 'Issue',
             qty_in: 0,
             qty_out: qtyToIssue,
-            valuation_rate: currentValuation,
+            valuation_rate: issueRate,
             reference_doctype: 'Material Request',
             reference_name: mrId,
             remarks: `Partial Release Material Request ${mrId}`,
             created_by: approvedBy
           }, connection)
+
+          // Create Stock Movement entry for visibility in Inventory Dashboard
+          try {
+            const movement_type = request.purpose?.toLowerCase() === 'material_transfer' ? 'TRANSFER' : 'OUT'
+            const transaction_no = await StockMovementModel.generateTransactionNo()
+            
+            await connection.execute(
+              `INSERT INTO stock_movements (
+                transaction_no, item_code, warehouse_id, source_warehouse_id, target_warehouse_id, 
+                movement_type, purpose, quantity, reference_type, reference_name, notes, status, created_by, approved_by, approved_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Approved', ?, ?, NOW())`,
+              [
+                transaction_no, 
+                item.item_code, 
+                movement_type === 'OUT' ? sourceWarehouseId : null,
+                movement_type === 'TRANSFER' ? sourceWarehouseId : null,
+                movement_type === 'TRANSFER' ? targetWarehouseId : null,
+                movement_type,
+                request.purpose,
+                qtyToIssue,
+                'Material Request',
+                mrId,
+                `Material Release for ${mrId}`,
+                approvedBy,
+                approvedBy
+              ]
+            )
+          } catch (smError) {
+            console.error('Failed to create stock movement entry:', smError)
+            // Continue processing as this is for visibility and shouldn't block the actual stock update
+          }
 
           // Update issued_qty and status in material_request_item
           const newIssuedQty = Number(item.issued_qty || 0) + qtyToIssue
@@ -386,7 +426,7 @@ export class MaterialRequestModel {
             await StockBalanceModel.upsert(item.item_code, targetWarehouseId, {
               current_qty: qtyToIssue,
               is_increment: true,
-              incoming_rate: currentValuation,
+              incoming_rate: issueRate,
               last_receipt_date: new Date()
             }, connection)
 
@@ -397,7 +437,7 @@ export class MaterialRequestModel {
               transaction_type: 'Transfer',
               qty_in: qtyToIssue,
               qty_out: 0,
-              valuation_rate: currentValuation,
+              valuation_rate: issueRate,
               reference_doctype: 'Material Request',
               reference_name: mrId,
               remarks: `Incoming Transfer from MR ${mrId}`,

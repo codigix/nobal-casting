@@ -35,7 +35,7 @@ const StatCard = ({ label, value, icon: Icon, color, onClick, isActive, descript
       className={`bg-gradient-to-br ${colorMap[color] || colorMap.primary} p-2 overflow-hidden border-1 transition-all duration-300 hover:shadow  hover:-translate-y-1 relative rounded group cursor-pointer ${isActive ? 'ring-2 ring-indigo-500 border-transparent shadow-indigo-500/20' : ''}`}
     >
       <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-current opacity-5 rounded-full group-hover:scale-125 transition-transform" />
-      <div className="flex items-start justify-between relative z-10">
+      <div className="flex items-start justify-between relative z-0">
         <div>
           <span className="text-xs    text-neutral-500 dark:text-neutral-400">{label}</span>
           <p className="text-xl  mt-1 text-neutral-900 dark:text-white">{value}</p>

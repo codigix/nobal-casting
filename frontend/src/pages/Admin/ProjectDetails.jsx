@@ -389,7 +389,7 @@ export default function ProjectDetails() {
             {detailedData.productionPlan && (
               <div className="bg-blue-600  rounded  p-6 text-white  flex items-center justify-between overflow-hidden relative">
                 <div className="absolute -right-10 -bottom-10 opacity-10 rotate-12"><Cpu size={180} /></div>
-                <div className="relative z-10">
+                <div className="relative z-0">
                   <p className="text-[10px]  uppercase tracking-[0.2em] text-blue-200 mb-1">Production Planning</p>
                   <h3 className="text-xl text-white  m-0">{detailedData.productionPlan.plan_id}</h3>
                   <div className="flex items-center gap-4 mt-3">
@@ -401,7 +401,7 @@ export default function ProjectDetails() {
                     </span>
                   </div>
                 </div>
-                <div className="text-right relative z-10">
+                <div className="text-right relative z-0">
                   <p className="text-[10px]  uppercase tracking-[0.2em] text-blue-200 mb-1">Total Operations</p>
                   <p className="text-4xl text-white m-0">{detailedData.operations?.length || 0}</p>
                 </div>
@@ -768,10 +768,10 @@ export default function ProjectDetails() {
                             <p className="text-[10px]  text-slate-400 m-0 ">{machine.machine_id}</p>
                           </td>
                           <td className="p-4 text-right">
-                            <p className="text-xs  text-slate-900 m-0">{(machine.working_time / 60).toFixed(1)} hrs</p>
+                            <p className="text-xs  text-slate-900 m-0">{(Number(machine.working_time || 0) / 60).toFixed(1)} hrs</p>
                           </td>
                           <td className="p-4 text-right">
-                            <p className="text-xs  text-slate-900 m-0">{(machine.downtime / 60).toFixed(1)} hrs</p>
+                            <p className="text-xs  text-slate-900 m-0">{(Number(machine.downtime || 0) / 60).toFixed(1)} hrs</p>
                           </td>
                           <td className="p-4 text-right">
                             <div className="flex flex-col items-end gap-1">

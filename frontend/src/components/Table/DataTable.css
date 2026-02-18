@@ -136,8 +136,8 @@
   border: 1px solid var(--border-color, #e5e7eb);
   overflow-x: auto;
   overflow-y: auto;
-  max-height: 70vh; /* Allow internal scrolling if table is long */
   position: relative;
+  max-width: 100%;
 }
 
 .data-table {
@@ -155,16 +155,15 @@
 
 .data-table th {
   background: linear-gradient(180deg, var(--bg-tertiary, #f3f4f6) 0%, var(--bg-tertiary, #e5e7eb) 100%);
-  padding: 12px 10px;
-  text-align: left;
-  font-weight: 600 !important; /* Made slightly bolder for readability */
+  padding: 10px;
+  text-align: left; /* Made slightly bolder for readability */
   font-size: 12px;
   color: var(--text-primary, #374151);
-  border-bottom: 2px solid var(--border-color, #d1d5db);
+  /* border-bottom: 2px solid var(--border-color, #d1d5db); */
   user-select: none;
   position: sticky;
   top: 0;
-  box-shadow: inset 0 -1px 0 var(--border-color, #d1d5db); /* Ensure border stays with sticky header */
+  /* Ensure border stays with sticky header */
 }
 
 .data-table th.sortable {
@@ -182,8 +181,16 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  
-  font-size: 10px;
+  font-weight: 400;
+  max-width: 80px;
+}
+
+.th-label {
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
 }
 
 .sort-indicator {
@@ -232,9 +239,41 @@
 
 .data-table .actions-col {
   text-align: center;
-  min-width: 160px;
   white-space: normal;
   overflow: visible !important;
+  position: sticky;
+  right: 0;
+  z-index: 10;
+  /* box-shadow: -4px 0 8px rgba(0, 0, 0, 0.05); */
+  
+}
+
+.data-table thead .actions-col {
+  z-index: 30;
+  background: linear-gradient(180deg, var(--bg-tertiary, #f3f4f6) 0%, var(--bg-tertiary, #e5e7eb) 100%);
+}
+
+.data-table tbody tr .actions-col {
+  background: var(--card-bg, #fff);
+}
+
+.data-table tbody tr:hover .actions-col {
+  background: var(--row-hover, #f9fafb);
+}
+
+/* Dark mode support for sticky actions */
+@media (prefers-color-scheme: dark) {
+  :root.dark .data-table thead .actions-col {
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+  }
+
+  :root.dark .data-table tbody tr .actions-col {
+    background: #1f2937;
+  }
+
+  :root.dark .data-table tbody tr:hover .actions-col {
+    background: #111827;
+  }
 }
 
 /* Fix for tooltips in actions column being cut off */
@@ -284,7 +323,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 5px;
   background: linear-gradient(180deg, var(--secondary-bg, #f9fafb) 0%, var(--secondary-bg, #f3f4f6) 100%);
   border-top: 1px solid var(--border-color, #e5e7eb);
   gap: 16px;
@@ -418,7 +457,7 @@
   .table-pagination {
     flex-direction: column;
     gap: 12px;
-    padding: 12px 16px;
+    padding: 5px;
   }
 
   .page-info {

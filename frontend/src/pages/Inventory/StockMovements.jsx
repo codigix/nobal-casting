@@ -12,6 +12,7 @@ import {
   TrendingUp, TrendingDown, Package
 } from 'lucide-react'
 import StockMovementModal from '../../components/Inventory/StockMovementModal'
+import StockMovementDetailsModal from '../../components/Inventory/StockMovementDetailsModal'
 
 export default function StockMovements() {
   const [movements, setMovements] = useState([])
@@ -22,6 +23,7 @@ export default function StockMovements() {
   const [typeFilter, setTypeFilter] = useState('')
   const [purposeFilter, setPurposeFilter] = useState('')
   const [showModal, setShowModal] = useState(false)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedMovement, setSelectedMovement] = useState(null)
   const [showColumnMenu, setShowColumnMenu] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState(new Set([
@@ -137,9 +139,13 @@ export default function StockMovements() {
             <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
               <ArrowDown size={12} /> IN
             </Badge>
-          ) : (
+          ) : val === 'OUT' ? (
             <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border-rose-200 dark:border-rose-800 flex items-center gap-1">
               <ArrowUp size={12} /> OUT
+            </Badge>
+          ) : (
+            <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800 flex items-center gap-1">
+              <RefreshCw size={12} /> TRANSFER
             </Badge>
           )}
         </div>
@@ -157,8 +163,19 @@ export default function StockMovements() {
     },
     {
       key: 'warehouse_name',
-      label: 'Warehouse',
-      render: (val) => <span className="text-neutral-600 dark:text-neutral-400">{val}</span>
+      label: 'Warehouse / Transfer Route',
+      render: (val, row) => {
+        if (row.movement_type === 'TRANSFER') {
+          return (
+            <div className="flex items-center gap-2 text-neutral-600 dark:text-neutral-400">
+              <span className="font-medium text-neutral-900 dark:text-white bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded-xs text-[10px]">{row.source_warehouse_name}</span>
+              <ArrowRight size={14} className="text-neutral-400" />
+              <span className="font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded-xs text-[10px]">{row.target_warehouse_name}</span>
+            </div>
+          )
+        }
+        return <span className="text-neutral-600 dark:text-neutral-400 font-medium">{val}</span>
+      }
     },
     {
       key: 'status',
@@ -189,6 +206,13 @@ export default function StockMovements() {
       label: 'Actions',
       render: (_, row) => (
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setSelectedMovement(row); setShowDetailsModal(true) }}
+            className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xs transition-colors"
+            title="View Details"
+          >
+            <Eye size={16} />
+          </button>
           {row.status === 'Pending' && (
             <>
               <button
@@ -207,9 +231,6 @@ export default function StockMovements() {
               </button>
             </>
           )}
-          <button className="p-1.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xs transition-colors">
-            <MoreVertical size={16} />
-          </button>
         </div>
       )
     }
@@ -403,6 +424,12 @@ export default function StockMovements() {
         <StockMovementModal
           onClose={() => { setShowModal(false); setSelectedMovement(null) }}
           onSuccess={() => { setShowModal(false); fetchMovements() }}
+        />
+      )}
+      {showDetailsModal && (
+        <StockMovementDetailsModal
+          movement={selectedMovement}
+          onClose={() => { setShowDetailsModal(false); setSelectedMovement(null) }}
         />
       )}
     </div>

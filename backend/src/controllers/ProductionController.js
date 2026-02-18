@@ -302,7 +302,7 @@ class ProductionController {
             
             // Check if this operation already exists in the work order
             const [existingOps] = await this.productionModel.db.query(
-              'SELECT id FROM work_order_operation WHERE wo_id = ? AND operation = ? AND sequence = ?',
+              'SELECT operation_id FROM work_order_operation WHERE wo_id = ? AND operation = ? AND sequence = ?',
               [wo_id, opName, seq]
             )
             
@@ -313,7 +313,7 @@ class ProductionController {
                   workstation = ?, time = ?, hourly_rate = ?, 
                   operation_type = ?, operating_cost = ?,
                   execution_mode = ?, vendor_id = ?, vendor_rate_per_unit = ?
-                 WHERE id = ?`,
+                 WHERE operation_id = ?`,
                 [
                   op.workstation || op.workstation_type || '',
                   op.time || op.operation_time || 0,
@@ -323,7 +323,7 @@ class ProductionController {
                   op.execution_mode || 'IN_HOUSE',
                   op.vendor_id || null,
                   op.vendor_rate_per_unit || 0,
-                  existingOps[0].id
+                  existingOps[0].operation_id
                 ]
               )
             } else {
@@ -1205,7 +1205,8 @@ class ProductionController {
         scheduled_start_date, scheduled_end_date, actual_start_date, actual_end_date, 
         status, notes,
         execution_mode, vendor_id, subcontract_status, sent_qty, received_qty, 
-        accepted_qty, rejected_qty, scrap_quantity, accepted_quantity, rejected_quantity: rejQty
+        accepted_qty, rejected_qty, scrap_quantity, accepted_quantity, rejected_quantity: rejQty,
+        transfer_to_next_op
       } = req.body
 
       if (status) {
@@ -1236,7 +1237,8 @@ class ProductionController {
         accepted_qty,
         rejected_qty,
         scrap_quantity,
-        accepted_quantity
+        accepted_quantity,
+        transfer_to_next_op: transfer_to_next_op === true || transfer_to_next_op === 'true'
       })
 
       if (success) {
@@ -1670,6 +1672,26 @@ class ProductionController {
     }
   }
 
+  async updateTimeLog(req, res) {
+    try {
+      const { id } = req.params
+      const data = req.body
+
+      await this.productionModel.updateTimeLog(id, data)
+
+      res.json({
+        success: true,
+        message: 'Time log updated successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error updating time log',
+        error: error.message
+      })
+    }
+  }
+
   async createRejection(req, res) {
     try {
       const { job_card_id, day_number, log_date, shift, accepted_qty, rejection_reason, rejected_qty, scrap_qty, notes } = req.body
@@ -1741,6 +1763,26 @@ class ProductionController {
       res.status(500).json({
         success: false,
         message: 'Error deleting rejection',
+        error: error.message
+      })
+    }
+  }
+
+  async updateRejection(req, res) {
+    try {
+      const { id } = req.params
+      const data = req.body
+
+      await this.productionModel.updateRejection(id, data)
+
+      res.json({
+        success: true,
+        message: 'Rejection entry updated successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error updating rejection entry',
         error: error.message
       })
     }
@@ -1835,6 +1877,26 @@ class ProductionController {
       res.status(500).json({
         success: false,
         message: 'Error deleting downtime',
+        error: error.message
+      })
+    }
+  }
+
+  async updateDowntime(req, res) {
+    try {
+      const { id } = req.params
+      const data = req.body
+
+      await this.productionModel.updateDowntime(id, data)
+
+      res.json({
+        success: true,
+        message: 'Downtime updated successfully'
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error updating downtime',
         error: error.message
       })
     }

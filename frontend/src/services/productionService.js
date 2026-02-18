@@ -147,8 +147,26 @@ export const generateJobCardsForWorkOrder = async (work_order_id) => {
 }
 
 // Production Planning (extended)
+export const getProductionPlanningList = async (filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/production-planning?${params}`)
+  return response.data
+}
+
 export const getProductionPlanDetails = async (plan_id) => {
   const response = await api.get(`/production-planning/${plan_id}`)
+  return response.data
+}
+
+
+
+export const truncateProductionPlanning = async () => {
+  const response = await api.delete('/production-planning/truncate/all')
+  return response.data
+}
+
+export const getProductionPlanReport = async (plan_id) => {
+  const response = await api.get(`/production-planning/${plan_id}/report`)
   return response.data
 }
 
@@ -333,6 +351,11 @@ export const deleteWarehouse = async (name) => {
   return response.data
 }
 
+export const getStockBalance = async () => {
+  const response = await api.get('/stock/stock-balance')
+  return response.data
+}
+
 // Employees
 export const getEmployees = async () => {
   const response = await api.get('/hr/employees')
@@ -363,6 +386,11 @@ export const deleteTimeLog = async (id) => {
   return response.data
 }
 
+export const updateTimeLog = async (id, data) => {
+  const response = await api.put(`/production/time-logs/${id}`, data)
+  return response.data
+}
+
 // Rejections
 export const getRejections = async (filters = {}) => {
   const params = new URLSearchParams(filters)
@@ -372,6 +400,11 @@ export const getRejections = async (filters = {}) => {
 
 export const createRejection = async (data) => {
   const response = await api.post('/production/rejections', data)
+  return response.data
+}
+
+export const updateRejection = async (id, data) => {
+  const response = await api.put(`/production/rejections/${id}`, data)
   return response.data
 }
 
@@ -399,6 +432,11 @@ export const createDowntime = async (data) => {
 
 export const deleteDowntime = async (id) => {
   const response = await api.delete(`/production/downtimes/${id}`)
+  return response.data
+}
+
+export const updateDowntime = async (id, data) => {
+  const response = await api.put(`/production/downtimes/${id}`, data)
   return response.data
 }
 
@@ -455,5 +493,22 @@ export const finalizeWorkOrderMaterials = async (work_order_id) => {
 
 export const trackMaterialConsumption = async (data) => {
   const response = await api.post('/production/inventory/track-consumption', data)
+  return response.data
+}
+
+// Material Requests
+export const getMaterialRequests = async (filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/material-requests?${params}`)
+  return response.data
+}
+
+export const createMaterialRequest = async (data) => {
+  const response = await api.post('/material-requests', data)
+  return response.data
+}
+
+export const getMaterialRequestDetails = async (mr_id) => {
+  const response = await api.get(`/material-requests/${mr_id}`)
   return response.data
 }
