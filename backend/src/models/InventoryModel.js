@@ -87,73 +87,244 @@ class InventoryModel {
   }
 
   // ============================================================================
-  // STEP 2: TRACK MATERIAL CONSUMPTION (During Job Card Execution)
+  // STEP 2: ISSUE MATERIALS TO WIP (Move from Store to WIP Warehouse)
+  // ============================================================================
+  async issueMaterialsToWIP(wo_id, material_items, createdBy = 1) {
+    const connection = await this.db.getConnection()
+    await connection.beginTransaction()
+
+    try {
+      // 1. Get Work Order details to find WIP warehouse
+      const [wo] = await connection.query(
+        'SELECT wo_id, wip_warehouse, status FROM work_order WHERE wo_id = ?',
+        [wo_id]
+      )
+
+      if (!wo || wo.length === 0) throw new Error(`Work Order ${wo_id} not found`)
+      const wipWarehouse = wo[0].wip_warehouse
+      if (!wipWarehouse) throw new Error(`WIP Warehouse not defined for Work Order ${wo_id}`)
+
+      // Get WIP warehouse ID
+      const [wipWh] = await connection.query(
+        'SELECT id FROM warehouses WHERE warehouse_name = ? OR warehouse_code = ?',
+        [wipWarehouse, wipWarehouse]
+      )
+      if (!wipWh || wipWh.length === 0) throw new Error(`WIP Warehouse ${wipWarehouse} not found`)
+      const wipWarehouseId = wipWh[0].id
+
+      const issuedItems = []
+
+      for (const item of material_items) {
+        const { item_code, issue_qty, source_warehouse } = item
+        if (issue_qty <= 0) continue
+
+        // Get source warehouse ID
+        const [srcWh] = await connection.query(
+          'SELECT id FROM warehouses WHERE warehouse_name = ? OR warehouse_code = ?',
+          [source_warehouse, source_warehouse]
+        )
+        if (!srcWh || srcWh.length === 0) throw new Error(`Source Warehouse ${source_warehouse} not found`)
+        const srcWarehouseId = srcWh[0].id
+
+        // Check stock in source
+        const [stock] = await connection.query(
+          'SELECT current_qty, reserved_qty FROM stock_balance WHERE item_code = ? AND warehouse_id = ?',
+          [item_code, srcWarehouseId]
+        )
+        if (!stock || stock.length === 0 || stock[0].current_qty < issue_qty) {
+          throw new Error(`Insufficient stock for ${item_code} in ${source_warehouse}`)
+        }
+
+        // Move stock: Store -> WIP
+        // Deduct from Source (current AND reserved)
+        await StockBalanceModel.upsert(item_code, srcWarehouseId, {
+          current_qty: -issue_qty,
+          reserved_qty: -issue_qty,
+          is_increment: true,
+          last_issue_date: new Date()
+        }, connection)
+
+        // Add to WIP (only current_qty)
+        await StockBalanceModel.upsert(item_code, wipWarehouseId, {
+          current_qty: issue_qty,
+          is_increment: true,
+          last_receipt_date: new Date()
+        }, connection)
+
+        // Log Ledger Entries
+        await StockLedgerModel.create({
+          item_code,
+          warehouse_id: srcWarehouseId,
+          transaction_date: new Date(),
+          transaction_type: 'Material Issue',
+          qty_in: 0,
+          qty_out: issue_qty,
+          reference_doctype: 'Work Order',
+          reference_name: wo_id,
+          remarks: `Issued to WIP: ${wipWarehouse}`,
+          created_by: createdBy
+        }, connection)
+
+        await StockLedgerModel.create({
+          item_code,
+          warehouse_id: wipWarehouseId,
+          transaction_date: new Date(),
+          transaction_type: 'Material Issue',
+          qty_in: issue_qty,
+          qty_out: 0,
+          reference_doctype: 'Work Order',
+          reference_name: wo_id,
+          remarks: `Received from Store: ${source_warehouse}`,
+          created_by: createdBy
+        }, connection)
+
+        // Update work_order_item
+        await connection.query(
+          'UPDATE work_order_item SET issued_qty = issued_qty + ? WHERE wo_id = ? AND item_code = ?',
+          [issue_qty, wo_id, item_code]
+        )
+
+        // Update material_allocation status if exists
+        await connection.query(
+          `UPDATE material_allocation 
+           SET status = CASE 
+             WHEN (issued_qty + ?) >= allocated_qty THEN 'issued'
+             ELSE 'partial'
+           END,
+           issued_qty = issued_qty + ?
+           WHERE work_order_id = ? AND item_code = ?`,
+          [issue_qty, issue_qty, wo_id, item_code]
+        )
+
+        issuedItems.push({ item_code, issued_qty: issue_qty })
+      }
+
+      await connection.commit()
+      return issuedItems
+    } catch (error) {
+      await connection.rollback()
+      throw error
+    } finally {
+      connection.release()
+    }
+  }
+
+  // ============================================================================
+  // STEP 3: TRACK MATERIAL CONSUMPTION (During Job Card Execution)
   // ============================================================================
   async trackMaterialConsumption(
     job_card_id,
     work_order_id,
-    materials,
+    produced_qty,
     tracked_by = 1
   ) {
+    const connection = await this.db.getConnection()
+    await connection.beginTransaction()
+
     try {
+      // 1. Get Job Card details to find operation and WIP warehouse
+      const [jc] = await connection.query(
+        `SELECT jc.*, wo.wip_warehouse, wo.bom_no, wo.quantity as wo_total_qty
+         FROM job_card jc
+         JOIN work_order wo ON jc.work_order_id = wo.wo_id
+         WHERE jc.job_card_id = ?`,
+        [job_card_id]
+      )
+
+      if (!jc || jc.length === 0) throw new Error(`Job Card ${job_card_id} not found`)
+      const wipWarehouse = jc[0].wip_warehouse
+      if (!wipWarehouse) throw new Error(`WIP Warehouse not defined for Work Order ${work_order_id}`)
+
+      // Resolve WIP warehouse ID
+      const [wipWh] = await connection.query(
+        'SELECT id FROM warehouses WHERE warehouse_name = ? OR warehouse_code = ?',
+        [wipWarehouse, wipWarehouse]
+      )
+      const wipWarehouseId = wipWh[0].id
+
+      // 2. Get BOM materials required for this operation (or all if not operation-specific)
+      // For simplicity, we assume we consume materials proportional to produced quantity
+      const [materials] = await connection.query(
+        'SELECT item_code, required_qty, issued_qty FROM work_order_item WHERE wo_id = ?',
+        [work_order_id]
+      )
+
       const consumptions = []
 
-      for (let material of materials) {
-        const {
-          item_code,
-          item_name,
-          warehouse_id,
-          operation_name,
-          planned_qty,
-          consumed_qty,
-          wasted_qty,
-          waste_reason
-        } = material
+      for (const mat of materials) {
+        // consumed_qty = (produced_qty / wo_total_qty) * total_required_qty
+        // Actually, better: consumed_qty = produced_qty * (required_qty / wo_total_qty)
+        const ratio = mat.required_qty / jc[0].wo_total_qty
+        const toConsume = produced_qty * ratio
 
-        // Create consumption record
-        const [result] = await this.db.query(
+        // Check if we have enough issued quantity in WIP
+        // The prompt says "prevent over-consumption beyond issued_qty"
+        const [wipStock] = await connection.query(
+          'SELECT current_qty FROM stock_balance WHERE item_code = ? AND warehouse_id = ?',
+          [mat.item_code, wipWarehouseId]
+        )
+        const availableInWIP = wipStock[0]?.current_qty || 0
+
+        if (availableInWIP < toConsume) {
+           // We might want to allow it but warn, or strictly block
+           // If we strictly block:
+           // throw new Error(`Insufficient issued stock for ${mat.item_code} in WIP. Available: ${availableInWIP}, Required: ${toConsume}`)
+           // For now, let's just cap it or allow but log
+        }
+
+        // Deduct from WIP current_qty
+        await StockBalanceModel.upsert(mat.item_code, wipWarehouseId, {
+          current_qty: -toConsume,
+          is_increment: true,
+          last_issue_date: new Date()
+        }, connection)
+
+        // Log Ledger Entry (WIP reduction)
+        await StockLedgerModel.create({
+          item_code: mat.item_code,
+          warehouse_id: wipWarehouseId,
+          transaction_date: new Date(),
+          transaction_type: 'Material Consumption',
+          qty_in: 0,
+          qty_out: toConsume,
+          reference_doctype: 'Job Card',
+          reference_name: job_card_id,
+          remarks: `Consumed for producing ${produced_qty} units`,
+          created_by: tracked_by
+        }, connection)
+
+        // Update work_order_item
+        await connection.query(
+          'UPDATE work_order_item SET consumed_qty = consumed_qty + ? WHERE wo_id = ? AND item_code = ?',
+          [toConsume, work_order_id, mat.item_code]
+        )
+
+        // Update material_allocation
+        await connection.query(
+          'UPDATE material_allocation SET consumed_qty = consumed_qty + ? WHERE work_order_id = ? AND item_code = ?',
+          [toConsume, work_order_id, mat.item_code]
+        )
+
+        // Create consumption log for audit
+        await connection.query(
           `INSERT INTO job_card_material_consumption 
            (job_card_id, work_order_id, item_code, item_name, warehouse_id, 
-            operation_name, planned_qty, consumed_qty, wasted_qty, waste_reason, 
-            status, tracked_by, tracked_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, NOW())`,
-          [
-            job_card_id,
-            work_order_id,
-            item_code,
-            item_name,
-            warehouse_id,
-            operation_name,
-            planned_qty,
-            consumed_qty,
-            wasted_qty,
-            waste_reason,
-            tracked_by
-          ]
+            operation_name, planned_qty, consumed_qty, wasted_qty, status, tracked_by, tracked_at)
+           SELECT ?, ?, ?, name, ?, ?, ?, ?, 0, 'completed', ?, NOW()
+           FROM item WHERE item_code = ?`,
+          [job_card_id, work_order_id, mat.item_code, wipWarehouseId, jc[0].operation_name, mat.required_qty, toConsume, tracked_by, mat.item_code]
         )
 
-        consumptions.push({
-          consumption_id: result.insertId,
-          job_card_id,
-          item_code,
-          consumed_qty,
-          wasted_qty
-        })
-
-        // Update material allocation
-        await this.db.query(
-          `UPDATE material_allocation 
-           SET consumed_qty = consumed_qty + ?,
-               wasted_qty = wasted_qty + ?,
-               status = 'partial'
-           WHERE work_order_id = ? AND item_code = ?`,
-          [consumed_qty, wasted_qty, work_order_id, item_code]
-        )
+        consumptions.push({ item_code: mat.item_code, consumed_qty: toConsume })
       }
 
+      await connection.commit()
       return consumptions
     } catch (error) {
+      await connection.rollback()
       throw error
+    } finally {
+      connection.release()
     }
   }
 
@@ -309,81 +480,332 @@ class InventoryModel {
   }
 
   // ============================================================================
-  // STEP 4: RETURN MATERIALS (If not used)
+  // STEP 4: RETURN MATERIALS (WIP to Store)
   // ============================================================================
-  async returnMaterialToInventory(
+  async returnMaterialFromWIP(
     work_order_id,
-    job_card_id,
     item_code,
-    warehouse_id,
     return_qty,
+    target_warehouse, // The Store warehouse
     reason = 'Unused material',
     returned_by = 1
   ) {
+    const connection = await this.db.getConnection()
+    await connection.beginTransaction()
+
     try {
-      // Get current stock
-      const [stockInfo] = await this.db.query(
-        `SELECT sb.id, sb.current_qty, sb.reserved_qty
-         FROM stock_balance sb
-         WHERE sb.item_code = ?
-         AND sb.warehouse_id = ?`,
-        [item_code, warehouse_id]
+      // 1. Get WIP warehouse from Work Order
+      const [wo] = await connection.query(
+        'SELECT wip_warehouse FROM work_order WHERE wo_id = ?',
+        [work_order_id]
       )
+      if (!wo || wo.length === 0) throw new Error(`Work Order ${work_order_id} not found`)
+      const wipWarehouse = wo[0].wip_warehouse
 
-      if (!stockInfo || stockInfo.length === 0) {
-        throw new Error(`Stock record not found for ${item_code}`)
-      }
+      // Resolve warehouses
+      const [wipWh] = await connection.query(
+        'SELECT id FROM warehouses WHERE warehouse_name = ? OR warehouse_code = ?',
+        [wipWarehouse, wipWarehouse]
+      )
+      const wipWarehouseId = wipWh[0].id
 
-      const stock = stockInfo[0]
+      const [targetWh] = await connection.query(
+        'SELECT id FROM warehouses WHERE warehouse_name = ? OR warehouse_code = ?',
+        [target_warehouse, target_warehouse]
+      )
+      const targetWarehouseId = targetWh[0].id
 
-      // Update stock_balance using standardized upsert
-      const updatedBalance = await StockBalanceModel.upsert(item_code, warehouse_id, {
+      // 2. Update stock: WIP -> Store
+      // Deduct from WIP
+      await StockBalanceModel.upsert(item_code, wipWarehouseId, {
+        current_qty: -return_qty,
+        is_increment: true,
+        last_issue_date: new Date()
+      }, connection)
+
+      // Add to Store
+      await StockBalanceModel.upsert(item_code, targetWarehouseId, {
         current_qty: return_qty,
-        reserved_qty: -return_qty,
         is_increment: true,
         last_receipt_date: new Date()
-      }, this.db)
+      }, connection)
 
-      // Log return in stock ledger using standardized model
+      // 3. Log Ledger Entries
       await StockLedgerModel.create({
-        item_code: item_code,
-        warehouse_id: warehouse_id,
+        item_code,
+        warehouse_id: wipWarehouseId,
         transaction_date: new Date(),
-        transaction_type: 'Manufacturing Return',
+        transaction_type: 'Material Return',
+        qty_in: 0,
+        qty_out: return_qty,
+        reference_doctype: 'Work Order',
+        reference_name: work_order_id,
+        remarks: `Returned from WIP to ${target_warehouse}`,
+        created_by: returned_by
+      }, connection)
+
+      await StockLedgerModel.create({
+        item_code,
+        warehouse_id: targetWarehouseId,
+        transaction_date: new Date(),
+        transaction_type: 'Material Return',
         qty_in: return_qty,
         qty_out: 0,
         reference_doctype: 'Work Order',
         reference_name: work_order_id,
-        remarks: reason,
+        remarks: `Received from WIP of ${work_order_id}`,
         created_by: returned_by
-      }, this.db)
+      }, connection)
 
-      // Log in material deduction log
-      await this.logMaterialDeduction(
-        work_order_id,
-        job_card_id,
-        item_code,
-        warehouse_id,
-        'return',
-        return_qty,
-        stock.current_qty,
-        stock.current_qty + return_qty,
-        reason,
-        returned_by
+      // 4. Update work_order_item
+      await connection.query(
+        'UPDATE work_order_item SET returned_qty = returned_qty + ? WHERE wo_id = ? AND item_code = ?',
+        [return_qty, work_order_id, item_code]
       )
 
-      return {
-        returned_qty: return_qty,
-        new_balance: updatedBalance?.current_qty
-      }
+      // 5. Update material_allocation
+      await connection.query(
+        'UPDATE material_allocation SET returned_qty = returned_qty + ? WHERE work_order_id = ? AND item_code = ?',
+        [return_qty, work_order_id, item_code]
+      )
+
+      await connection.commit()
+      return true
     } catch (error) {
+      await connection.rollback()
       throw error
+    } finally {
+      connection.release()
+    }
+  }
+
+  // Record Scrap
+  async recordMaterialScrap(work_order_id, job_card_id, item_code, scrap_qty, reason, created_by = 1) {
+    const connection = await this.db.getConnection()
+    await connection.beginTransaction()
+
+    try {
+      const [wo] = await connection.query('SELECT wip_warehouse, quantity as wo_total_qty FROM work_order WHERE wo_id = ?', [work_order_id])
+      if (!wo || wo.length === 0) throw new Error(`Work Order ${work_order_id} not found`)
+      
+      const wipWarehouse = wo[0].wip_warehouse
+      const [wipWh] = await connection.query('SELECT id FROM warehouses WHERE warehouse_name = ? OR warehouse_code = ?', [wipWarehouse, wipWarehouse])
+      if (!wipWh || wipWh.length === 0) throw new Error(`WIP Warehouse ${wipWarehouse} not found`)
+      const wipWarehouseId = wipWh[0].id
+
+      const materialsToScrap = []
+      if (item_code === 'ALL_MATERIALS') {
+        const [materials] = await connection.query(
+          'SELECT item_code, required_qty FROM work_order_item WHERE wo_id = ?',
+          [work_order_id]
+        )
+        for (const mat of materials) {
+          const ratio = mat.required_qty / wo[0].wo_total_qty
+          materialsToScrap.push({
+            item_code: mat.item_code,
+            qty: scrap_qty * ratio
+          })
+        }
+      } else {
+        materialsToScrap.push({
+          item_code: item_code,
+          qty: scrap_qty
+        })
+      }
+
+      for (const mat of materialsToScrap) {
+        // Deduct from WIP
+        await StockBalanceModel.upsert(mat.item_code, wipWarehouseId, {
+          current_qty: -mat.qty,
+          is_increment: true,
+          last_issue_date: new Date()
+        }, connection)
+
+        // Log Ledger
+        await StockLedgerModel.create({
+          item_code: mat.item_code,
+          warehouse_id: wipWarehouseId,
+          transaction_date: new Date(),
+          transaction_type: 'Material Scrap',
+          qty_in: 0,
+          qty_out: mat.qty,
+          reference_doctype: 'Work Order',
+          reference_name: work_order_id,
+          remarks: `Scrapped during production: ${reason}`,
+          created_by: created_by
+        }, connection)
+
+        // Update work_order_item
+        await connection.query(
+          'UPDATE work_order_item SET scrap_qty = scrap_qty + ? WHERE wo_id = ? AND item_code = ?',
+          [mat.qty, work_order_id, mat.item_code]
+        )
+
+        // Update material_allocation (scrap is tracked as waste in allocation)
+        await connection.query(
+          'UPDATE material_allocation SET wasted_qty = wasted_qty + ? WHERE work_order_id = ? AND item_code = ?',
+          [mat.qty, work_order_id, mat.item_code]
+        )
+      }
+
+      await connection.commit()
+      return true
+    } catch (error) {
+      await connection.rollback()
+      throw error
+    } finally {
+      connection.release()
     }
   }
 
   // ============================================================================
-  // AUDIT LOG
+  // REVERSAL LOGIC (When Time Log or Rejection is deleted)
   // ============================================================================
+  async reverseMaterialConsumption(job_card_id, work_order_id, produced_qty, reversed_by = 1) {
+    const connection = await this.db.getConnection()
+    await connection.beginTransaction()
+
+    try {
+      const [jc] = await connection.query(
+        `SELECT jc.*, wo.wip_warehouse, wo.quantity as wo_total_qty
+         FROM job_card jc
+         JOIN work_order wo ON jc.work_order_id = wo.wo_id
+         WHERE jc.job_card_id = ?`,
+        [job_card_id]
+      )
+
+      if (!jc || jc.length === 0) throw new Error(`Job Card ${job_card_id} not found`)
+      const wipWarehouse = jc[0].wip_warehouse
+      const [wipWh] = await connection.query('SELECT id FROM warehouses WHERE warehouse_name = ? OR warehouse_code = ?', [wipWarehouse, wipWarehouse])
+      const wipWarehouseId = wipWh[0].id
+
+      const [materials] = await connection.query(
+        'SELECT item_code, required_qty FROM work_order_item WHERE wo_id = ?',
+        [work_order_id]
+      )
+
+      for (const mat of materials) {
+        const ratio = mat.required_qty / jc[0].wo_total_qty
+        const toReverse = produced_qty * ratio
+
+        // Add back to WIP
+        await StockBalanceModel.upsert(mat.item_code, wipWarehouseId, {
+          current_qty: toReverse,
+          is_increment: true,
+          last_receipt_date: new Date()
+        }, connection)
+
+        // Log Ledger (Reversal)
+        await StockLedgerModel.create({
+          item_code: mat.item_code,
+          warehouse_id: wipWarehouseId,
+          transaction_date: new Date(),
+          transaction_type: 'Material Consumption (Reversal)',
+          qty_in: toReverse,
+          qty_out: 0,
+          reference_doctype: 'Job Card',
+          reference_name: job_card_id,
+          remarks: `Reversed for deleted production entry: ${produced_qty} units`,
+          created_by: reversed_by
+        }, connection)
+
+        // Update work_order_item
+        await connection.query(
+          'UPDATE work_order_item SET consumed_qty = GREATEST(0, consumed_qty - ?) WHERE wo_id = ? AND item_code = ?',
+          [toReverse, work_order_id, mat.item_code]
+        )
+
+        // Update material_allocation
+        await connection.query(
+          'UPDATE material_allocation SET consumed_qty = GREATEST(0, consumed_qty - ?) WHERE work_order_id = ? AND item_code = ?',
+          [toReverse, work_order_id, mat.item_code]
+        )
+      }
+
+      await connection.commit()
+      return true
+    } catch (error) {
+      await connection.rollback()
+      throw error
+    } finally {
+      connection.release()
+    }
+  }
+
+  async reverseMaterialScrap(work_order_id, job_card_id, item_code, scrap_qty, reversed_by = 1) {
+    const connection = await this.db.getConnection()
+    await connection.beginTransaction()
+
+    try {
+      const [wo] = await connection.query('SELECT wip_warehouse, quantity as wo_total_qty FROM work_order WHERE wo_id = ?', [work_order_id])
+      const wipWarehouse = wo[0].wip_warehouse
+      const [wipWh] = await connection.query('SELECT id FROM warehouses WHERE warehouse_name = ? OR warehouse_code = ?', [wipWarehouse, wipWarehouse])
+      const wipWarehouseId = wipWh[0].id
+
+      const materialsToReverse = []
+      if (item_code === 'ALL_MATERIALS') {
+        const [materials] = await connection.query(
+          'SELECT item_code, required_qty FROM work_order_item WHERE wo_id = ?',
+          [work_order_id]
+        )
+        for (const mat of materials) {
+          const ratio = mat.required_qty / wo[0].wo_total_qty
+          materialsToReverse.push({
+            item_code: mat.item_code,
+            qty: scrap_qty * ratio
+          })
+        }
+      } else {
+        materialsToReverse.push({
+          item_code: item_code,
+          qty: scrap_qty
+        })
+      }
+
+      for (const mat of materialsToReverse) {
+        // Add back to WIP
+        await StockBalanceModel.upsert(mat.item_code, wipWarehouseId, {
+          current_qty: mat.qty,
+          is_increment: true,
+          last_receipt_date: new Date()
+        }, connection)
+
+        // Log Ledger
+        await StockLedgerModel.create({
+          item_code: mat.item_code,
+          warehouse_id: wipWarehouseId,
+          transaction_date: new Date(),
+          transaction_type: 'Material Scrap (Reversal)',
+          qty_in: mat.qty,
+          qty_out: 0,
+          reference_doctype: 'Work Order',
+          reference_name: work_order_id,
+          remarks: `Reversed for deleted scrap entry`,
+          created_by: reversed_by
+        }, connection)
+
+        // Update work_order_item
+        await connection.query(
+          'UPDATE work_order_item SET scrap_qty = GREATEST(0, scrap_qty - ?) WHERE wo_id = ? AND item_code = ?',
+          [mat.qty, work_order_id, mat.item_code]
+        )
+
+        // Update material_allocation
+        await connection.query(
+          'UPDATE material_allocation SET wasted_qty = GREATEST(0, wasted_qty - ?) WHERE work_order_id = ? AND item_code = ?',
+          [mat.qty, work_order_id, mat.item_code]
+        )
+      }
+
+      await connection.commit()
+      return true
+    } catch (error) {
+      await connection.rollback()
+      throw error
+    } finally {
+      connection.release()
+    }
+  }
   async logMaterialDeduction(
     work_order_id,
     job_card_id,

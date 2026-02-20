@@ -5,7 +5,7 @@ import {
   Eye, Package, Trash2, Plus,
   Calendar, DollarSign, Factory,
   RefreshCcw, ArrowUpRight, ShoppingCart, Activity, Receipt, Truck,
-  AlertTriangle, CheckCircle, TrendingUp, Search, Filter, ChevronDown, Download, AlertCircle, Clock, GitBranch
+  AlertTriangle, CheckCircle, TrendingUp, Search, Filter, ChevronDown, Download, AlertCircle, Clock, GitBranch, ClipboardList
 } from 'lucide-react'
 import ViewSalesOrderModal from '../../components/Selling/ViewSalesOrderModal'
 import ProductionPlanGenerationModal from '../../components/Production/ProductionPlanGenerationModal'
@@ -155,7 +155,12 @@ export default function SalesOrder() {
   }
 
   const getDisplayStatus = (order) => {
-    const status = order.status?.toLowerCase() || 'draft'
+    let status = order.status?.toLowerCase() || 'draft'
+
+    // Map legacy status to unified status
+    if (status === 'ready_for_production') {
+      status = 'under_production'
+    }
 
     // Check if overdue: not complete/dispatched/delivered and delivery_date is in the past
     if (order.delivery_date && !['complete', 'dispatched', 'delivered'].includes(status)) {
@@ -176,8 +181,7 @@ export default function SalesOrder() {
       total: data.length,
       draft: 0,
       confirmed: 0,
-      ready_for_production: 0,
-      production: 0,
+      under_production: 0,
       complete: 0,
       on_hold: 0,
       dispatched: 0,
@@ -194,10 +198,9 @@ export default function SalesOrder() {
       const status = getDisplayStatus(order)
       if (status) {
         newStats[status] = (newStats[status] || 0) + 1
-        if (status === 'confirmed') newStats.confirmed += 1
       }
       newStats.total_value += parseFloat(order.total_value || 0)
-      if (['ready_for_production', 'production', 'complete', 'on_hold', 'dispatched', 'overdue'].includes(status)) {
+      if ([ 'under_production', 'complete', 'on_hold', 'dispatched', 'overdue'].includes(status)) {
         newStats.pending_delivery += 1
       }
     })
@@ -265,8 +268,7 @@ export default function SalesOrder() {
           overdue: { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-100', icon: AlertCircle },
           draft: { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-100', icon: Clock },
           confirmed: { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100', icon: CheckCircle },
-          ready_for_production: { bg: 'bg-cyan-50', text: 'text-cyan-600', border: 'border-cyan-100', icon: Activity },
-          production: { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100', icon: Factory },
+          under_production: { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100', icon: Factory },
           complete: { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-100', icon: CheckCircle },
           dispatched: { bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'border-indigo-100', icon: Truck },
           delivered: { bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-200', icon: CheckCircle },
@@ -277,9 +279,9 @@ export default function SalesOrder() {
         const Icon = config.icon
 
         return (
-          <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full border ${config.bg} ${config.text} ${config.border}`}>
+          <div className={`inline-flex items-center gap-1.5   ${config.text} `}>
             <Icon size={12} className={status === 'overdue' ? 'animate-pulse' : ''} />
-            <span className="text-[10px] font-semibold uppercase tracking-wider">
+            <span className="text-xs ">
               {status.replace('_', ' ')}
             </span>
           </div>
@@ -345,7 +347,7 @@ export default function SalesOrder() {
             <Truck size={15} />
           </button>
 
-          {['confirmed', 'ready_for_production', 'production', 'complete', 'dispatched', 'delivered'].includes(row.status?.toLowerCase()) && (
+          {['confirmed', 'under_production', 'complete', 'dispatched', 'delivered'].includes(row.status?.toLowerCase()) && (
             <button
               onClick={() => {
                 setSelectedOrderIdForInvoice(row.sales_order_id);
@@ -447,23 +449,23 @@ export default function SalesOrder() {
             <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
               <Clock size={20} />
             </div>
-            <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-tight">Active</span>
+            <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold  tracking-tight">Active</span>
           </div>
           <div>
             <p className="text-slate-500 text-[10px] ">Active Fulfillment</p>
             <div className="flex items-baseline gap-1.5 mt-1">
-              <span className="text-xl  text-slate-900">{stats.production + stats.confirmed || 0}</span>
+              <span className="text-xl  text-slate-900">{(stats.under_production || 0) + (stats.confirmed || 0)}</span>
               <span className="text-[10px] font-medium text-slate-400">Orders</span>
             </div>
             <div className="mt-4 space-y-1.5">
-              <div className="flex justify-between text-[8px] text-slate-400 font-bold uppercase tracking-tighter">
+              <div className="flex justify-between text-[8px] text-slate-400 font-bold  tracking-tighter">
                 <span>Production Queue</span>
-                <span>{stats.production} Units</span>
+                <span>{stats.under_production || 0} Units</span>
               </div>
               <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                 <div
                   className="bg-amber-500 h-full rounded-full transition-all duration-1000"
-                  style={{ width: `${stats.total > 0 ? (stats.production / stats.total * 100) : 0}%` }}
+                  style={{ width: `${stats.total > 0 ? ((stats.under_production || 0) / stats.total * 100) : 0}%` }}
                 />
               </div>
             </div>
@@ -486,7 +488,7 @@ export default function SalesOrder() {
               <span className={`text-2xl font-bold ${stats.overdue > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{stats.overdue}</span>
               <span className="text-[10px] font-medium text-slate-400">Overdue</span>
             </div>
-            <p className="mt-4 text-[9px] text-slate-400 border-t border-slate-50 pt-3 font-medium uppercase tracking-tight">
+            <p className="mt-4 text-[9px] text-slate-400 border-t border-slate-50 pt-3 font-medium  tracking-tight">
               Requires immediate operational attention
             </p>
           </div>
@@ -498,7 +500,7 @@ export default function SalesOrder() {
             <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
               <CheckCircle size={20} />
             </div>
-            <span className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-tight">Completed</span>
+            <span className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold  tracking-tight">Completed</span>
           </div>
           <div>
             <p className="text-slate-500 text-[10px] ">Successful Deliveries</p>
@@ -506,7 +508,7 @@ export default function SalesOrder() {
               <span className="text-xl  text-slate-900">{stats.delivered + stats.complete || 0}</span>
               <span className="text-[10px] font-medium text-slate-400">Success</span>
             </div>
-            <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-emerald-600 border-t border-slate-50 pt-3 uppercase tracking-tight">
+            <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-emerald-600 border-t border-slate-50 pt-3  tracking-tight">
               <TrendingUp size={12} />
               <span>+5.4% from last period</span>
             </div>
@@ -540,7 +542,7 @@ export default function SalesOrder() {
               <option value="">Strategic Overview</option>
               <option value="draft">Draft Protocol</option>
               <option value="confirmed">Confirmed Pipeline</option>
-              <option value="production">Active Manufacturing</option>
+              <option value="under_production">Active Manufacturing</option>
               <option value="dispatched">Logistics Phase</option>
               <option value="complete">Finalized Execution</option>
               <option value="on_hold">Deferred Action</option>

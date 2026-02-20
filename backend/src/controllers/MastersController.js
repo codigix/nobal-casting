@@ -586,8 +586,25 @@ class MastersController {
           }
 
           const jcStatus = (jc.status || '').toLowerCase().replace(/\s+/g, '-').trim();
-          if (jcStatus === 'in-progress') stage.status = 'in_progress'
-          if (jcStatus === 'completed' && stage.status !== 'in_progress') stage.status = 'completed'
+          
+          if (!stage.jcStatuses) stage.jcStatuses = [];
+          stage.jcStatuses.push(jcStatus);
+
+          // Determine aggregate status
+          const hasInProgress = stage.jcStatuses.some(s => s === 'in-progress');
+          const hasCompleted = stage.jcStatuses.some(s => s === 'completed');
+          const hasPending = stage.jcStatuses.some(s => s === 'pending' || s === 'draft' || s === 'ready');
+          const allCompleted = stage.jcStatuses.every(s => s === 'completed');
+
+          if (hasInProgress || (hasCompleted && hasPending)) {
+            stage.status = 'in_progress';
+          } else if (allCompleted && stage.produced_qty >= stage.planned_qty) {
+            stage.status = 'completed';
+          } else if (hasCompleted || hasInProgress) {
+            stage.status = 'in_progress';
+          } else {
+            stage.status = 'pending';
+          }
           
           return acc;
         }, {});
@@ -648,8 +665,25 @@ class MastersController {
           }
           
           const jcStatus = (jc.status || '').toLowerCase().replace(/\s+/g, '-').trim();
-          if (jcStatus === 'in-progress') stage.status = 'in_progress'
-          if (jcStatus === 'completed' && stage.status !== 'in_progress') stage.status = 'completed'
+          
+          if (!stage.jcStatuses) stage.jcStatuses = [];
+          stage.jcStatuses.push(jcStatus);
+
+          // Determine aggregate status
+          const hasInProgress = stage.jcStatuses.some(s => s === 'in-progress');
+          const hasCompleted = stage.jcStatuses.some(s => s === 'completed');
+          const hasPending = stage.jcStatuses.some(s => s === 'pending' || s === 'draft' || s === 'ready');
+          const allCompleted = stage.jcStatuses.every(s => s === 'completed');
+
+          if (hasInProgress || (hasCompleted && hasPending)) {
+            stage.status = 'in_progress';
+          } else if (allCompleted && stage.produced_qty >= stage.planned_qty) {
+            stage.status = 'completed';
+          } else if (hasCompleted || hasInProgress) {
+            stage.status = 'in_progress';
+          } else {
+            stage.status = 'pending';
+          }
           
           return acc
         }, {})
@@ -886,9 +920,10 @@ class MastersController {
                     WHEN sso.status = 'delivered' THEN 100
                     WHEN sso.status = 'dispatched' THEN 75
                     WHEN sso.status = 'complete' THEN 75
-                    WHEN sso.status = 'production' THEN 50
-                    WHEN sso.status = 'draft' THEN 25
-                    WHEN sso.status = 'on_hold' THEN 25
+                    WHEN sso.status = 'under_production' THEN 50
+                    WHEN sso.status = 'confirmed' THEN 25
+                    WHEN sso.status = 'draft' THEN 15
+                    WHEN sso.status = 'on_hold' THEN 15
                     ELSE 0
                   END
                 ) as progress,

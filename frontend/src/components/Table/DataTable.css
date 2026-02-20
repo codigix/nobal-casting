@@ -232,7 +232,7 @@
 
 .data-table td.no-data {
   text-align: center;
-  padding: 48px 16px;
+  padding: 10px;
   color: var(--text-secondary, #9ca3af);
   font-style: italic;
 }

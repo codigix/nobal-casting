@@ -11,21 +11,23 @@ class OEEController {
       const filters = req.query
       
       console.log('Fetching OEE Data with filters:', filters);
-      const [summary, trends, downtimeReasons, machineOEE] = await Promise.all([
-        this.oeeModel.getOEESummary(filters).catch(e => { console.error('Summary Error:', e); return null; }),
+      const [summary, trends, downtimeReasons, machineOEE, recentJobCards] = await Promise.all([
+        this.oeeModel.getOEESummary(filters).catch(e => { console.error('Summary Error:', e); return { availability: 0, performance: 0, quality: 0, oee: 0 }; }),
         this.oeeModel.getTrends(filters).catch(e => { console.error('Trends Error:', e); return []; }),
         this.oeeModel.getDowntimeReasons(filters).catch(e => { console.error('Downtime Error:', e); return []; }),
-        this.oeeModel.getOEEMetrics(filters).catch(e => { console.error('Metrics Error:', e); return []; })
+        this.oeeModel.getOEEMetrics(filters).catch(e => { console.error('Metrics Error:', e); return []; }),
+        this.oeeModel.getRecentJobCardOEE(10, filters).catch(e => { console.error('Recent JC Error:', e); return []; })
       ])
       
-      console.log(`OEE Dashboard Data: summary=${summary ? 'yes' : 'no'}, trends=${trends?.length || 0}, downtimeReasons=${downtimeReasons?.length || 0}, machineOEE=${machineOEE?.length || 0}`);
+      console.log(`OEE Dashboard Data: summary=${summary ? 'yes' : 'no'}, trends=${trends?.length || 0}, downtimeReasons=${downtimeReasons?.length || 0}, machineOEE=${machineOEE?.length || 0}, recentJobCards=${recentJobCards?.length || 0}`);
       res.status(200).json({
         success: true,
         data: {
           summary,
           trends,
           downtimeReasons,
-          machineOEE
+          machineOEE,
+          recentJobCards
         }
       })
     } catch (error) {
@@ -158,6 +160,191 @@ class OEEController {
         message: 'Error fetching all machines analysis',
         error: error.message
       })
+    }
+  }
+
+  async getWorkstationDrillDown(req, res) {
+    try {
+      const { machine_id } = req.params;
+      const filters = req.query;
+      
+      // 1. Get aggregate metrics for the workstation
+      const analysisRecords = await this.oeeModel.getAnalysis('workstation', machine_id, filters);
+      
+      // 2. Get child work orders
+      const workOrders = await this.oeeModel.getWorkOrdersForWorkstation(machine_id, filters);
+      
+      // Calculate averages from analysis records
+      const metrics = { a: 0, p: 0, q: 0, oee: 0, total_units: 0 };
+      const losses = { availability: 0, performance: 0, quality: 0 };
+      
+      if (analysisRecords.length > 0) {
+        const count = analysisRecords.length;
+        analysisRecords.forEach(r => {
+          metrics.a += Number(r.availability || 0);
+          metrics.p += Number(r.performance || 0);
+          metrics.q += Number(r.quality || 0);
+          metrics.oee += Number(r.oee || 0);
+          metrics.total_units += Number(r.total_produced_qty || 0);
+          losses.availability += Number(r.availability_loss || 0);
+          losses.performance += Number(r.performance_loss || 0);
+          losses.quality += Number(r.quality_loss_qty || 0);
+        });
+        metrics.a /= count;
+        metrics.p /= count;
+        metrics.q /= count;
+        metrics.oee /= count;
+      }
+
+      const formattedSubEntities = workOrders.map(wo => ({
+        id: wo.wo_id,
+        name: `${wo.wo_id} - ${wo.item_name}`,
+        oee: Number(wo.oee || 0),
+        a: Number(wo.availability || 0),
+        p: Number(wo.performance || 0),
+        q: Number(wo.quality || 0),
+        status: wo.log_date ? 'Active' : 'Planned'
+      }));
+
+      res.status(200).json({ 
+        success: true, 
+        data: {
+          metrics,
+          losses,
+          subEntities: formattedSubEntities
+        } 
+      });
+    } catch (error) {
+      console.error('Workstation DrillDown Error:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  async getWorkOrderDrillDown(req, res) {
+    try {
+      const { wo_id } = req.params;
+      const filters = req.query;
+      
+      // 1. Get aggregate metrics for the work order
+      const analysisRecords = await this.oeeModel.getAnalysis('work_order', wo_id, filters);
+      
+      // 2. Get child job cards
+      const jobCards = await this.oeeModel.getJobCardsForWorkOrder(wo_id, filters);
+      
+      const metrics = { a: 0, p: 0, q: 0, oee: 0, total_units: 0 };
+      const losses = { availability: 0, performance: 0, quality: 0 };
+      
+      if (analysisRecords.length > 0) {
+        const count = analysisRecords.length;
+        analysisRecords.forEach(r => {
+          metrics.a += Number(r.availability || 0);
+          metrics.p += Number(r.performance || 0);
+          metrics.q += Number(r.quality || 0);
+          metrics.oee += Number(r.oee || 0);
+          metrics.total_units += Number(r.total_produced_qty || 0);
+          losses.availability += Number(r.availability_loss || 0);
+          losses.performance += Number(r.performance_loss || 0);
+          losses.quality += Number(r.quality_loss_qty || 0);
+        });
+        metrics.a /= count;
+        metrics.p /= count;
+        metrics.q /= count;
+        metrics.oee /= count;
+      }
+
+      const formattedSubEntities = jobCards.map(jc => ({
+        id: jc.job_card_id,
+        name: `${jc.operation} @ ${jc.machine_id}`,
+        oee: Number(jc.oee || 0),
+        a: Number(jc.availability || 0),
+        p: Number(jc.performance || 0),
+        q: Number(jc.quality || 0),
+        status: jc.shift ? `Shift ${jc.shift}` : 'Pending'
+      }));
+
+      res.status(200).json({ 
+        success: true, 
+        data: {
+          metrics,
+          losses,
+          subEntities: formattedSubEntities
+        } 
+      });
+    } catch (error) {
+      console.error('WorkOrder DrillDown Error:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  async getJobCardDrillDown(req, res) {
+    try {
+      const { jc_id } = req.params;
+      const filters = req.query;
+      
+      // 1. Get aggregate metrics for the job card
+      const analysisRecords = await this.oeeModel.getAnalysis('job_card', jc_id, filters);
+      
+      // 2. Get production logs
+      const entries = await this.oeeModel.getEntriesForJobCard(jc_id, filters);
+      
+      const metrics = { a: 0, p: 0, q: 0, oee: 0, total_units: 0 };
+      const losses = { availability: 0, performance: 0, quality: 0 };
+      
+      if (analysisRecords.length > 0) {
+        const count = analysisRecords.length;
+        analysisRecords.forEach(r => {
+          metrics.a += Number(r.availability || 0);
+          metrics.p += Number(r.performance || 0);
+          metrics.q += Number(r.quality || 0);
+          metrics.oee += Number(r.oee || 0);
+          metrics.total_units += Number(r.total_produced_qty || 0);
+          losses.availability += Number(r.availability_loss || 0);
+          losses.performance += Number(r.performance_loss || 0);
+          losses.quality += Number(r.quality_loss_qty || 0);
+        });
+        metrics.a /= count;
+        metrics.p /= count;
+        metrics.q /= count;
+        metrics.oee /= count;
+      }
+
+      const formattedSubEntities = entries.map(e => {
+        const produced = parseFloat(e.produced || 0);
+        const accepted = parseFloat(e.accepted_qty || 0);
+        const quality = produced > 0 ? (accepted / produced) * 100 : 0;
+        
+        return {
+          id: e.id,
+          name: `${e.entry_type === 'time_log' ? 'Time Log' : 'Downtime'} - ${new Date(e.log_date).toLocaleDateString()}`,
+          oee: e.entry_type === 'time_log' ? quality : 0,
+          a: e.entry_type === 'time_log' ? 100 : 0,
+          p: e.entry_type === 'time_log' ? 100 : 0, // Simplified for log level
+          q: e.entry_type === 'time_log' ? quality : 0,
+          status: e.shift ? `Shift ${e.shift}` : 'N/A'
+        };
+      });
+
+      res.status(200).json({ 
+        success: true, 
+        data: {
+          metrics,
+          losses,
+          subEntities: formattedSubEntities
+        } 
+      });
+    } catch (error) {
+      console.error('JobCard DrillDown Error:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  async getAnalysis(req, res) {
+    try {
+      const { level, reference_id } = req.params;
+      const analysis = await this.oeeModel.getAnalysis(level, reference_id, req.query);
+      res.status(200).json({ success: true, data: analysis });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
     }
   }
 }

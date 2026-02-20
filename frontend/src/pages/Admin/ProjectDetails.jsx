@@ -80,11 +80,11 @@ const ProcessFlow = ({ stages }) => {
                 const yieldRate = stage.produced_qty > 0 ? Math.round((stage.accepted_qty / stage.produced_qty) * 100) : 0;
                 
                 return (
-                  <div key={idx} className="bg-white p-4    border border-slate-200 hover: hover:border-blue-400 transition-all group">
-                    <div className="flex justify-between items-start mb-4">
+                  <div key={idx} className="bg-white p-2    border border-slate-200 hover: hover:border-blue-400 transition-all group">
+                    <div className="flex justify-between items-start mb-2">
                       <div>
                         <span className="text-[10px]  text-slate-400  block mb-1">Stage {stage.sequence || idx + 1}</span>
-                        <h5 className=" text-slate-800 m-0">{stage.stage_name}</h5>
+                        <h5 className=" text-slate-800 text-xs m-0">{stage.stage_name}</h5>
                         {stage.start_date && (
                           <span className="text-[9px] text-slate-400 flex items-center gap-1 mt-1 font-medium">
                             <Calendar size={10} /> 
@@ -114,9 +114,9 @@ const ProcessFlow = ({ stages }) => {
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-3 pt-3 border-t border-slate-50">
+                      <div className="flex items-center gap-3 border-t border-slate-50">
                         <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                          <Package size={14} className="text-slate-400" />
+                          <Package size={12} className="text-slate-400 text-xs" />
                           {stage.job_cards_count} Active Jobs
                         </div>
                         {(parseFloat(stage.rejected_qty) > 0 || parseFloat(stage.scrap_qty) > 0) && (
@@ -281,7 +281,7 @@ export default function ProjectDetails() {
                   <p className="text-xs text-slate-400  mb-4">Project Completion</p>
                   <div className="flex items-end justify-between mb-2">
                     <h3 className="text-xl  text-slate-900">{progress}%</h3>
-                    <TrendingUp size={32} className="text-emerald-500 mb-2" />
+                    <TrendingUp size={15} className="text-emerald-500 mb-2" />
                   </div>
                   <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
                     <div className="h-full bg-gradient-to-r from-blue-500 to-blue-600" style={{ width: `${progress}%` }} />
@@ -387,8 +387,8 @@ export default function ProjectDetails() {
         {activeTab === 'workorders' && (
           <div className="space-y-6">
             {detailedData.productionPlan && (
-              <div className="bg-blue-600  rounded  p-6 text-white  flex items-center justify-between overflow-hidden relative">
-                <div className="absolute -right-10 -bottom-10 opacity-10 rotate-12"><Cpu size={180} /></div>
+              <div className="bg-blue-600  rounded  p-2 text-white  flex items-center justify-between overflow-hidden relative">
+                <div className="absolute -right-10 -bottom-10 opacity-10 rotate-12"><Cpu size={90} /></div>
                 <div className="relative z-0">
                   <p className="text-[10px]  uppercase tracking-[0.2em] text-blue-200 mb-1">Production Planning</p>
                   <h3 className="text-xl text-white  m-0">{detailedData.productionPlan.plan_id}</h3>
@@ -409,9 +409,9 @@ export default function ProjectDetails() {
             )}
 
             <div className="bg-white  rounded    border border-slate-200 overflow-hidden">
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div className="p-2 border-b border-slate-100 flex items-center justify-between">
                 <div>
-                  <h4 className="text-xl  text-slate-900 m-0">Manufacturing Work Orders</h4>
+                  <h4 className="text-lg  text-slate-900 m-0">Manufacturing Work Orders</h4>
                   <p className="text-xs text-slate-500 font-medium mt-1">Detailed tracking of item production status</p>
                 </div>
                 <div className="px-3 py-1 bg-slate-100 rounded-full text-[10px]  text-slate-600 ">
@@ -434,20 +434,20 @@ export default function ProjectDetails() {
                     {detailedData.workOrders?.length > 0 ? (
                       detailedData.workOrders.map((wo, idx) => (
                         <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
-                          <td className="p-4">
+                          <td className="p-2">
                             <span className="text-xs  text-slate-900 group-hover:text-blue-600 transition-colors">{wo.wo_id}</span>
                             <div className="flex gap-2 mt-1">
                               {wo.bom_no && <span className="text-[9px]  text-slate-400 uppercase tracking-tighter">BOM: {wo.bom_no}</span>}
                             </div>
                           </td>
-                          <td className="p-4">
+                          <td className="p-2">
                             <p className="text-xs  text-slate-700 m-0">{wo.item_name || wo.item_code}</p>
                             <p className="text-[10px]  text-slate-400 m-0 uppercase">{wo.item_code}</p>
                           </td>
-                          <td className="p-4 text-center">
+                          <td className="p-2 text-center">
                             <span className="text-xs  text-slate-900">{parseFloat(wo.quantity).toLocaleString()}</span>
                           </td>
-                          <td className="p-4 text-center">
+                          <td className="p-2 text-center">
                             <div className="flex flex-col items-center">
                               <span className={`text-xs  ${wo.produced_qty >= wo.quantity ? 'text-emerald-600' : 'text-slate-900'}`}>
                                 {parseFloat(wo.produced_qty).toLocaleString()}
@@ -460,7 +460,7 @@ export default function ProjectDetails() {
                               </div>
                             </div>
                           </td>
-                          <td className="p-4">
+                          <td className="p-2">
                             <span className={`px-2 py-1 rounded text-[10px]   ${
                               wo.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' :
                               wo.status === 'In Progress' ? 'bg-blue-50 text-blue-600' :
@@ -469,7 +469,7 @@ export default function ProjectDetails() {
                               {wo.status}
                             </span>
                           </td>
-                          <td className="p-4">
+                          <td className="p-2">
                             <div className="flex items-center gap-1.5 text-xs  text-slate-600">
                               <Clock size={12} className="text-slate-400" />
                               {wo.expected_delivery_date ? new Date(wo.expected_delivery_date).toLocaleDateString() : 'N/A'}

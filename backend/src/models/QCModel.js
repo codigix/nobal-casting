@@ -17,6 +17,34 @@ class QCModel {
          data.inspection_date, data.inspector_id, data.quantity_inspected, 
          data.quantity_passed, data.quantity_rejected, data.result || 'pass', data.remarks]
       )
+      // Trigger OEE recalculation if reference is Job Card
+      if (data.reference_type === 'Job Card' && data.reference_id) {
+        try {
+          const ProductionModel = (await import('./ProductionModel.js')).default;
+          const prodModel = new ProductionModel(this.db);
+          // We need to infer the shift. Since shift isn't in inspection_result, 
+          // we might need to query the job card or just pass a default.
+          // However, _triggerOEERecalculation in ProductionModel is better.
+          // But it needs shift. 
+          // For now, let's try to find if there are any time logs for this date to get the shift.
+          const [timeLogs] = await this.db.query(
+            'SELECT DISTINCT shift FROM time_log WHERE job_card_id = ? AND log_date = ?',
+            [data.reference_id, data.inspection_date]
+          );
+          
+          for (const tl of timeLogs) {
+            await prodModel._triggerOEERecalculation(data.reference_id, data.inspection_date, tl.shift);
+          }
+          
+          if (timeLogs.length === 0) {
+            // Default to Shift A if no logs found
+            await prodModel._triggerOEERecalculation(data.reference_id, data.inspection_date, 'A');
+          }
+        } catch (oeeErr) {
+          console.error('Error triggering OEE from Inspection:', oeeErr);
+        }
+      }
+
       return { inspection_id, ...data }
     } catch (error) {
       throw error

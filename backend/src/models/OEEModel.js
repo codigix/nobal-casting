@@ -21,34 +21,12 @@ class OEEModel {
   async getOEEMetrics(filters = {}) {
     const cleanedFilters = this._cleanFilters(filters)
     try {
-      // Start with a base WHERE clause to ensure dynamic ANDs work correctly
       let whereClause = ' WHERE 1=1'
+      const params = []
       
       const startDate = cleanedFilters.startDate || new Date().toISOString().split('T')[0]
       const endDate = cleanedFilters.endDate || new Date().toISOString().split('T')[0]
-      const params = [startDate, endDate] // For the idle machine downtime subquery
 
-      // Add conditions to the LEFT JOIN's ON clause to filter production entries
-      // This MUST be part of the ON clause to keep all workstations in result
-      let joinConditions = ''
-      if (cleanedFilters.startDate) {
-        joinConditions += ' AND pe.entry_date >= ?'
-        params.push(cleanedFilters.startDate)
-      }
-      if (cleanedFilters.endDate) {
-        joinConditions += ' AND pe.entry_date <= ?'
-        params.push(cleanedFilters.endDate)
-      }
-      if (cleanedFilters.shift) {
-        joinConditions += ' AND pe.shift_no = ?'
-        params.push(cleanedFilters.shift)
-      }
-      if (cleanedFilters.workOrderId) {
-        joinConditions += ' AND pe.work_order_id = ?'
-        params.push(cleanedFilters.workOrderId)
-      }
-
-      // Re-build query with explicit ON conditions
       let query = `
         SELECT 
           w.workstation_name as machine_name,
@@ -56,30 +34,19 @@ class OEEModel {
           w.location as line_id,
           w.status as machine_status,
           w.workstation_type,
-          pe.entry_date,
-          pe.shift_no,
-          pe.work_order_id,
-          COALESCE(pe.quantity_produced, 0) as total_units,
-          COALESCE(pe.quantity_rejected, 0) as rejected_units,
-          (COALESCE(pe.quantity_produced, 0) - COALESCE(pe.quantity_rejected, 0)) as good_units,
-          COALESCE(pe.hours_worked, 0) * 60 as operating_time_mins,
-          (
-            SELECT SUM(duration_minutes) 
-            FROM downtime_entry de 
-            JOIN job_card jc_de ON de.job_card_id = jc_de.job_card_id
-            WHERE jc_de.machine_id = w.name 
-            AND (
-              (pe.entry_date IS NOT NULL AND DATE(de.created_at) = pe.entry_date)
-              OR 
-              (pe.entry_date IS NULL AND DATE(de.created_at) BETWEEN ? AND ?)
-            )
-          ) as downtime_mins,
-          (
-            SELECT COALESCE(AVG(operation_time), 1)
-            FROM job_card jc
-            WHERE jc.work_order_id = pe.work_order_id 
-            AND jc.machine_id = w.name
-          ) as ideal_cycle_time_mins,
+          oa.log_date as entry_date,
+          oa.shift as shift_no,
+          NULL as work_order_id,
+          COALESCE(oa.total_produced_qty, 0) as total_units,
+          COALESCE(oa.total_produced_qty - oa.accepted_qty, 0) as rejected_units,
+          COALESCE(oa.accepted_qty, 0) as good_units,
+          COALESCE(oa.actual_run_time, 0) as operating_time_mins,
+          COALESCE(oa.downtime, 0) as downtime_mins,
+          COALESCE(oa.ideal_cycle_time, 1) as ideal_cycle_time_mins,
+          oa.availability,
+          oa.performance,
+          oa.quality,
+          oa.oee,
           (
             SELECT COUNT(*)
             FROM job_card jc_count
@@ -87,8 +54,23 @@ class OEEModel {
             AND jc_count.status = 'in-progress'
           ) as active_jobs
         FROM workstation w
-        LEFT JOIN production_entry pe ON w.name = pe.machine_id ${joinConditions}
+        LEFT JOIN oee_analysis oa ON w.name = oa.reference_id AND oa.level = 'workstation'
       `
+
+      if (cleanedFilters.startDate) {
+        query += ' AND oa.log_date >= ?'
+        params.push(cleanedFilters.startDate)
+      }
+      if (cleanedFilters.endDate) {
+        query += ' AND oa.log_date <= ?'
+        params.push(cleanedFilters.endDate)
+      }
+      if (cleanedFilters.shift && cleanedFilters.shift !== 'All Shifts') {
+        // Since workstation OEE is All Day, we might need to handle shift filters differently
+        // If they filter by shift, we might want to show job_card level OEE or just filter the workstation records if they are shift-based
+        query += ' AND (oa.shift = ? OR oa.shift = "All Day")'
+        params.push(cleanedFilters.shift)
+      }
 
       if (cleanedFilters.machineId) {
         whereClause += ' AND w.name = ?'
@@ -103,37 +85,10 @@ class OEEModel {
 
       const [rows] = await this.db.query(query, params)
 
-      // Default planned time per shift (8 hours = 480 mins)
-      const PLANNED_TIME_PER_SHIFT = 480
-
       const processedData = rows.map(row => {
-        const downtime = row.downtime_mins || 0
-        // If we have hours_worked from production_entry, use it. Otherwise, assume based on planned time.
-        const operatingTime = row.entry_date ? (row.operating_time_mins || 0) : (PLANNED_TIME_PER_SHIFT - downtime)
-        const totalUnits = row.total_units || 0
-        const goodUnits = row.good_units || 0
-        const idealCycleTime = row.ideal_cycle_time_mins || 1
-
-        // Availability = Operating Time / Planned Production Time
-        // For actual production entries, we use (Operating Time + Downtime) as the denominator if it's more than PLANNED_TIME_PER_SHIFT (overtime)
-        const plannedTime = Math.max(PLANNED_TIME_PER_SHIFT, (row.operating_time_mins || 0) + downtime)
-        const availability = plannedTime > 0 
-          ? (operatingTime / plannedTime) * 100 
-          : 0
-
-        // Performance = (Ideal Cycle Time × Total Units) / Operating Time
-        const performance = operatingTime > 0 
-          ? ((idealCycleTime * totalUnits) / operatingTime) * 100 
-          : 0
-
-        // Quality = Good Units / Total Units
-        const quality = totalUnits > 0 
-          ? (goodUnits / totalUnits) * 100 
-          : 0
-
-        // OEE = Availability × Performance × Quality
-        const oee = (availability / 100) * (performance / 100) * (quality / 100) * 100
-
+        const oee = parseFloat(row.oee || 0)
+        const performance = parseFloat(row.performance || 0)
+        
         // Map telemetry values based on production data
         const load = performance > 0 ? performance : 0
         const temperature = row.entry_date ? (25 + (performance * 0.4) + (Math.random() * 5)) : 22
@@ -143,15 +98,17 @@ class OEEModel {
         else if (row.machine_status === 'Maintenance') health = 75
         else {
           // Reduce health slightly based on rejection rate
-          const rejectionRate = totalUnits > 0 ? (row.rejected_units / totalUnits) * 100 : 0
+          const totalUnits = parseFloat(row.total_units || 0)
+          const rejectedUnits = parseFloat(row.rejected_units || 0)
+          const rejectionRate = totalUnits > 0 ? (rejectedUnits / totalUnits) * 100 : 0
           health = 100 - (rejectionRate * 0.5)
         }
 
         return {
           ...row,
-          availability: Math.min(availability, 100),
+          availability: Math.min(parseFloat(row.availability || 0), 100),
           performance: Math.min(performance, 100),
-          quality: Math.min(quality, 100),
+          quality: Math.min(parseFloat(row.quality || 0), 100),
           oee: Math.min(oee, 100),
           load: Number(load.toFixed(1)),
           temperature: Number(temperature.toFixed(1)),
@@ -460,45 +417,91 @@ class OEEModel {
                SUM(completed_qty) as total_produced,
                SUM(accepted_qty) as total_accepted
         FROM time_log
-        WHERE job_card_id = ? AND (DATE(created_at) = ? OR log_date = ?) AND (shift = ? OR shift_no = ?)
-      `, [jobCardId, logDate, logDate, shift, shift]);
+        WHERE job_card_id = ? AND (DATE(log_date) = ? OR log_date = ?) AND shift = ?
+      `, [jobCardId, logDate, logDate, shift]);
       
       const stats = timeLogs[0];
-      const totalProduced = parseFloat(stats.total_produced || 0);
-      const totalAccepted = parseFloat(stats.total_accepted || 0);
+      let totalProduced = parseFloat(stats.total_produced || 0);
+      let totalAccepted = parseFloat(stats.total_accepted || 0);
+
+      // 2a. Incorporate Quality Inspection Entries for higher accuracy
+      const [inspectionLogs] = await this.db.query(`
+        SELECT SUM(quantity_inspected) as total_inspected,
+               SUM(quantity_passed) as total_passed
+        FROM inspection_result
+        WHERE reference_type = 'Job Card' AND reference_id = ? 
+        AND (DATE(inspection_date) = ? OR inspection_date = ?)
+      `, [jobCardId, logDate, logDate]);
+
+      if (inspectionLogs[0] && inspectionLogs[0].total_inspected > 0) {
+        totalAccepted = parseFloat(inspectionLogs[0].total_passed || 0);
+        totalProduced = Math.max(totalProduced, parseFloat(inspectionLogs[0].total_inspected || 0));
+      }
 
       // 3. Get Downtime for this shift
       const [downtimes] = await this.db.query(`
-        SELECT downtime_type, SUM(duration_minutes) as duration
+        SELECT downtime_type, downtime_reason, SUM(duration_minutes) as duration
         FROM downtime_entry
-        WHERE job_card_id = ? AND (DATE(created_at) = ? OR log_date = ?)
-        GROUP BY downtime_type
-      `, [jobCardId, logDate, logDate]);
+        WHERE job_card_id = ? AND (DATE(log_date) = ? OR log_date = ?) AND shift = ?
+        GROUP BY downtime_type, downtime_reason
+      `, [jobCardId, logDate, logDate, shift]);
+
+      // NEW: Check if there's ANY data at all for this shift. If not, delete the OEE analysis entry and return.
+      if (totalProduced === 0 && totalAccepted === 0 && (downtimes.length === 0 || downtimes.every(d => parseFloat(d.duration) === 0))) {
+        await this.db.query(`
+          DELETE FROM oee_analysis 
+          WHERE level = 'job_card' AND reference_id = ? AND log_date = ? AND shift = ?
+        `, [jobCardId, logDate, shift]);
+        
+        // Still need to trigger parent aggregations because this might have been the last record
+        if (jobCard.work_order_id) {
+          await this.calculateAndSaveWorkOrderOEE(jobCard.work_order_id, logDate);
+        }
+        if (jobCard.machine_id) {
+          await this.calculateAndSaveWorkstationOEE(jobCard.machine_id, logDate);
+        }
+        return null;
+      }
 
       let totalDowntime = 0;
       let availabilityLoss = 0;
       let performanceLoss = 0;
       
       downtimes.forEach(dt => {
-        totalDowntime += parseFloat(dt.duration || 0);
-        // Categorize losses (basic mapping)
+        const duration = parseFloat(dt.duration || 0);
+        totalDowntime += duration;
+        
+        // Categorize losses as per requirements:
+        // Availability Loss: breakdowns, setup time, waiting
+        // Performance Loss: minor stops, slow cycles
         const type = (dt.downtime_type || '').toLowerCase();
-        if (type.includes('breakdown') || type.includes('setup') || type.includes('waiting')) {
-          availabilityLoss += parseFloat(dt.duration || 0);
-        } else if (type.includes('minor') || type.includes('slow')) {
-          performanceLoss += parseFloat(dt.duration || 0);
+        const reason = (dt.downtime_reason || '').toLowerCase();
+        
+        if (type.includes('breakdown') || type.includes('setup') || type.includes('waiting') || 
+            reason.includes('breakdown') || reason.includes('setup') || reason.includes('waiting')) {
+          availabilityLoss += duration;
+        } else if (type.includes('minor') || type.includes('slow') || type.includes('speed') ||
+                   reason.includes('minor') || reason.includes('slow') || reason.includes('speed')) {
+          performanceLoss += duration;
         } else {
-          availabilityLoss += parseFloat(dt.duration || 0); // Default to availability loss
+          // Default to availability loss for generic categories
+          availabilityLoss += duration;
         }
       });
 
       // 4. Constants and Formulas
       const PLANNED_PRODUCTION_TIME = 480; // Standard 8 hour shift
-      const actualRunTime = Math.max(0, PLANNED_PRODUCTION_TIME - totalDowntime);
       
+      // Validation Rule: downtime <= planned_time
+      const effectiveDowntime = Math.min(totalDowntime, PLANNED_PRODUCTION_TIME);
+      const actualRunTime = Math.max(0, PLANNED_PRODUCTION_TIME - effectiveDowntime);
+      
+      // Validation Rule: produced_qty >= accepted_qty
+      const effectiveAccepted = Math.min(totalAccepted, totalProduced);
+
       // Availability = (Planned Production Time − Downtime) ÷ Planned Production Time
       const availability = PLANNED_PRODUCTION_TIME > 0 
-        ? ((PLANNED_PRODUCTION_TIME - totalDowntime) / PLANNED_PRODUCTION_TIME) * 100 
+        ? ((PLANNED_PRODUCTION_TIME - effectiveDowntime) / PLANNED_PRODUCTION_TIME) * 100 
         : 0;
 
       // Performance = (Ideal Cycle Time × Total Produced Quantity) ÷ Actual Run Time
@@ -508,9 +511,10 @@ class OEEModel {
 
       // Quality = Accepted Quantity ÷ Total Produced Quantity
       const quality = totalProduced > 0
-        ? (totalAccepted / totalProduced) * 100
+        ? (effectiveAccepted / totalProduced) * 100
         : 0;
 
+      // Final OEE = Availability × Performance × Quality
       const oee = (availability / 100) * (performance / 100) * (quality / 100) * 100;
 
       // 5. Save results
@@ -524,14 +528,14 @@ class OEEModel {
         quality: Math.min(100, Math.max(0, quality)),
         oee: Math.min(100, Math.max(0, oee)),
         planned_production_time: PLANNED_PRODUCTION_TIME,
-        downtime: totalDowntime,
+        downtime: effectiveDowntime,
         actual_run_time: actualRunTime,
         ideal_cycle_time: idealCycleTime,
         total_produced_qty: totalProduced,
-        accepted_qty: totalAccepted,
+        accepted_qty: effectiveAccepted,
         availability_loss: availabilityLoss,
         performance_loss: performanceLoss,
-        quality_loss_qty: totalProduced - totalAccepted
+        quality_loss_qty: Math.max(0, totalProduced - effectiveAccepted)
       };
 
       await this.db.query(`
@@ -578,10 +582,9 @@ class OEEModel {
     try {
       const [rows] = await this.db.query(`
         SELECT 
-          SUM(availability * actual_run_time) / NULLIF(SUM(actual_run_time), 0) as avg_availability,
-          SUM(performance * actual_run_time) / NULLIF(SUM(actual_run_time), 0) as avg_performance,
-          SUM(quality * actual_run_time) / NULLIF(SUM(actual_run_time), 0) as avg_quality,
-          SUM(oee * actual_run_time) / NULLIF(SUM(actual_run_time), 0) as avg_oee,
+          SUM(availability * actual_run_time) / NULLIF(SUM(actual_run_time), 0) as weighted_availability,
+          SUM(performance * actual_run_time) / NULLIF(SUM(actual_run_time), 0) as weighted_performance,
+          SUM(quality * actual_run_time) / NULLIF(SUM(actual_run_time), 0) as weighted_quality,
           SUM(planned_production_time) as total_planned,
           SUM(downtime) as total_downtime,
           SUM(actual_run_time) as total_run_time,
@@ -596,18 +599,30 @@ class OEEModel {
         ) AND log_date = ?
       `, [workOrderId, logDate]);
 
-      if (rows.length === 0 || rows[0].avg_oee === null) return null;
+      if (rows.length === 0 || rows[0].total_run_time === null) {
+        // No data, delete work order OEE record
+        await this.db.query(`
+          DELETE FROM oee_analysis 
+          WHERE level = 'work_order' AND reference_id = ? AND log_date = ?
+        `, [workOrderId, logDate]);
+        return null;
+      }
       const summary = rows[0];
+
+      const availability = summary.weighted_availability || 0;
+      const performance = summary.weighted_performance || 0;
+      const quality = summary.weighted_quality || 0;
+      const oee = (availability / 100) * (performance / 100) * (quality / 100) * 100;
 
       const oeeData = {
         level: 'work_order',
         reference_id: workOrderId,
         log_date: logDate,
         shift: 'All Day',
-        availability: summary.avg_availability || 0,
-        performance: summary.avg_performance || 0,
-        quality: summary.avg_quality || 0,
-        oee: summary.avg_oee || 0,
+        availability: Math.min(100, availability),
+        performance: Math.min(100, performance),
+        quality: Math.min(100, quality),
+        oee: Math.min(100, oee),
         planned_production_time: summary.total_planned || 0,
         downtime: summary.total_downtime || 0,
         actual_run_time: summary.total_run_time || 0,
@@ -651,46 +666,81 @@ class OEEModel {
    */
   async calculateAndSaveWorkstationOEE(machineId, logDate) {
     try {
-      const [rows] = await this.db.query(`
+      // 1. Get components consolidated by shift to avoid overcounting planned time
+      // We assume each unique shift on a machine has a fixed planned time (e.g. 480 mins)
+      const [shiftComponents] = await this.db.query(`
         SELECT 
-          AVG(availability) as avg_availability,
-          AVG(performance) as avg_performance,
-          AVG(quality) as avg_quality,
-          AVG(oee) as avg_oee,
-          SUM(planned_production_time) as total_planned,
-          SUM(downtime) as total_downtime,
-          SUM(actual_run_time) as total_run_time,
-          SUM(total_produced_qty) as total_produced,
-          SUM(accepted_qty) as total_accepted,
-          SUM(availability_loss) as total_avail_loss,
-          SUM(performance_loss) as total_perf_loss,
-          SUM(quality_loss_qty) as total_qual_loss
+          shift,
+          MAX(planned_production_time) as shift_planned_time,
+          SUM(downtime) as shift_downtime,
+          SUM(actual_run_time) as shift_run_time,
+          SUM(total_produced_qty) as shift_produced,
+          SUM(accepted_qty) as shift_accepted,
+          SUM(availability_loss) as shift_avail_loss,
+          SUM(performance_loss) as shift_perf_loss,
+          SUM(quality_loss_qty) as shift_qual_loss,
+          SUM(ideal_cycle_time * total_produced_qty) as shift_valuable_time
         FROM oee_analysis
         WHERE level = 'job_card' AND reference_id IN (
           SELECT job_card_id FROM job_card WHERE machine_id = ?
         ) AND log_date = ?
+        GROUP BY shift
       `, [machineId, logDate]);
 
-      if (rows.length === 0 || rows[0].avg_oee === null) return null;
-      const summary = rows[0];
+      if (shiftComponents.length === 0) {
+        // No data, delete workstation OEE record
+        await this.db.query(`
+          DELETE FROM oee_analysis 
+          WHERE level = 'workstation' AND reference_id = ? AND log_date = ?
+        `, [machineId, logDate]);
+        return null;
+      }
+
+      let totalPlanned = 0;
+      let totalDowntime = 0;
+      let totalRunTime = 0;
+      let totalProduced = 0;
+      let totalAccepted = 0;
+      let totalAvailLoss = 0;
+      let totalPerfLoss = 0;
+      let totalQualLoss = 0;
+      let totalValuableTime = 0;
+
+      shiftComponents.forEach(s => {
+        totalPlanned += parseFloat(s.shift_planned_time || 480);
+        totalDowntime += parseFloat(s.shift_downtime || 0);
+        totalRunTime += parseFloat(s.shift_run_time || 0);
+        totalProduced += parseFloat(s.shift_produced || 0);
+        totalAccepted += parseFloat(s.shift_accepted || 0);
+        totalAvailLoss += parseFloat(s.shift_avail_loss || 0);
+        totalPerfLoss += parseFloat(s.shift_perf_loss || 0);
+        totalQualLoss += parseFloat(s.shift_qual_loss || 0);
+        totalValuableTime += parseFloat(s.shift_valuable_time || 0);
+      });
+
+      // 2. Calculate OEE from consolidated components
+      const availability = totalPlanned > 0 ? ((totalPlanned - totalDowntime) / totalPlanned) * 100 : 0;
+      const performance = totalRunTime > 0 ? (totalValuableTime / totalRunTime) * 100 : 0;
+      const quality = totalProduced > 0 ? (totalAccepted / totalProduced) * 100 : 0;
+      const oee = (availability / 100) * (performance / 100) * (quality / 100) * 100;
 
       const oeeData = {
         level: 'workstation',
         reference_id: machineId,
         log_date: logDate,
         shift: 'All Day',
-        availability: summary.avg_availability || 0,
-        performance: summary.avg_performance || 0,
-        quality: summary.avg_quality || 0,
-        oee: summary.avg_oee || 0,
-        planned_production_time: summary.total_planned || 0,
-        downtime: summary.total_downtime || 0,
-        actual_run_time: summary.total_run_time || 0,
-        total_produced_qty: summary.total_produced || 0,
-        accepted_qty: summary.total_accepted || 0,
-        availability_loss: summary.total_avail_loss || 0,
-        performance_loss: summary.total_perf_loss || 0,
-        quality_loss_qty: summary.total_qual_loss || 0
+        availability: Math.min(100, Math.max(0, availability)),
+        performance: Math.min(100, Math.max(0, performance)),
+        quality: Math.min(100, Math.max(0, quality)),
+        oee: Math.min(100, Math.max(0, oee)),
+        planned_production_time: totalPlanned,
+        downtime: totalDowntime,
+        actual_run_time: totalRunTime,
+        total_produced_qty: totalProduced,
+        accepted_qty: totalAccepted,
+        availability_loss: totalAvailLoss,
+        performance_loss: totalPerfLoss,
+        quality_loss_qty: totalQualLoss
       };
 
       await this.db.query(`
@@ -795,24 +845,97 @@ class OEEModel {
    */
   async getEntriesForJobCard(jobCardId, filters = {}) {
     try {
-      const [timeLogs] = await this.db.query(`
+      let timeLogQuery = `
         SELECT 'time_log' as entry_type, time_log_id as id, log_date, shift, 
                completed_qty as produced, accepted_qty, rejected_qty, time_in_minutes as duration
         FROM time_log
         WHERE job_card_id = ?
-      `, [jobCardId]);
-
-      const [downtimes] = await this.db.query(`
+      `;
+      let downtimeQuery = `
         SELECT 'downtime' as entry_type, downtime_id as id, log_date, shift,
                downtime_type, downtime_reason, duration_minutes as duration
         FROM downtime_entry
         WHERE job_card_id = ?
-      `, [jobCardId]);
+      `;
+      const timeLogParams = [jobCardId];
+      const downtimeParams = [jobCardId];
 
-      return { timeLogs, downtimes };
+      if (filters.startDate) {
+        timeLogQuery += ' AND log_date >= ?';
+        downtimeQuery += ' AND log_date >= ?';
+        timeLogParams.push(filters.startDate);
+        downtimeParams.push(filters.startDate);
+      }
+      if (filters.endDate) {
+        timeLogQuery += ' AND log_date <= ?';
+        downtimeQuery += ' AND log_date <= ?';
+        timeLogParams.push(filters.endDate);
+        downtimeParams.push(filters.endDate);
+      }
+
+      const [timeLogs] = await this.db.query(timeLogQuery, timeLogParams);
+      const [downtimes] = await this.db.query(downtimeQuery, downtimeParams);
+
+      // Combine and sort by date/shift
+      return [...timeLogs, ...downtimes].sort((a, b) => {
+        const dateCompare = new Date(b.log_date) - new Date(a.log_date);
+        if (dateCompare !== 0) return dateCompare;
+        return (b.shift || '').localeCompare(a.shift || '');
+      });
     } catch (error) {
       console.error('Error fetching entries for job card OEE:', error);
       throw error;
+    }
+  }
+  async getRecentJobCardOEE(limit = 10, filters = {}) {
+    const cleanedFilters = this._cleanFilters(filters)
+    try {
+      let query = `
+        SELECT 
+          jc.job_card_id as id,
+          jc.machine_id as workstation,
+          w.workstation_name as workstation_desc,
+          jc.operation,
+          jc.planned_quantity as target,
+          oa.total_produced_qty as produced,
+          oa.quality_loss_qty as rejected,
+          oa.oee,
+          oa.log_date,
+          oa.shift
+        FROM job_card jc
+        JOIN oee_analysis oa ON oa.level = 'job_card' AND oa.reference_id = jc.job_card_id
+        LEFT JOIN workstation w ON jc.machine_id = w.name
+        WHERE 1=1
+      `
+      const params = []
+      
+      if (cleanedFilters.startDate) {
+        query += ' AND oa.log_date >= ?'
+        params.push(cleanedFilters.startDate)
+      }
+      if (cleanedFilters.endDate) {
+        query += ' AND oa.log_date <= ?'
+        params.push(cleanedFilters.endDate)
+      }
+      if (cleanedFilters.machineId) {
+        query += ' AND jc.machine_id = ?'
+        params.push(cleanedFilters.machineId)
+      }
+
+      query += ' ORDER BY oa.log_date DESC, oa.shift DESC LIMIT ?'
+      params.push(limit)
+
+      const [rows] = await this.db.query(query, params)
+      return rows.map(r => ({
+        ...r,
+        target: Number(r.target || 0),
+        produced: Number(r.produced || 0),
+        rejected: Number(r.rejected || 0),
+        oee: Number(r.oee || 0)
+      }))
+    } catch (error) {
+      console.error('Error fetching recent job card OEE:', error)
+      throw error
     }
   }
 }

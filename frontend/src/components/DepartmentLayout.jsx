@@ -66,7 +66,7 @@ export default function DepartmentLayout({ children }) {
   const [expandedMenu, setExpandedMenu] = useState(getInitialExpandedMenu())
 
   const isActive = (path) => location.pathname.startsWith(path)
-  const sidebarWidth = sidebarCollapsed ? 80 : 240
+  const sidebarWidth = sidebarCollapsed ? 80 : 275
 
   const toggleMenu = (menu) => {
     setExpandedMenu(expandedMenu === menu ? null : menu)

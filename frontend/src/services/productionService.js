@@ -310,6 +310,31 @@ export const getMachineHistoricalMetrics = async (machineId, filters = {}) => {
   return response.data
 }
 
+// Structured OEE Analysis & Drill-down
+export const getOEEAnalysis = async (level, referenceId, filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/oee/analysis/${level}/${referenceId}?${params}`)
+  return response.data
+}
+
+export const getWorkstationOEEDrillDown = async (machineId, filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/oee/drill-down/workstation/${machineId}?${params}`)
+  return response.data
+}
+
+export const getWorkOrderOEEDrillDown = async (woId, filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/oee/drill-down/work-order/${woId}?${params}`)
+  return response.data
+}
+
+export const getJobCardOEEDrillDown = async (jcId, filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/oee/drill-down/job-card/${jcId}?${params}`)
+  return response.data
+}
+
 // Master Data for Searchable Selects
 export const getCompanies = async () => {
   const response = await api.get('/company-info')

@@ -12,7 +12,8 @@ import { getSalesOrdersAsProjects } from '../../services/adminService'
 
 const statusConfig = {
   draft: { icon: Edit2, color: '#f97316', bg: '#fff7ed', text: '#9a3412', border: '#ffedd5', label: 'Draft' },
-  production: { icon: Truck, color: '#0ea5e9', bg: '#f0f9ff', text: '#0c4a6e', border: '#e0f2fe', label: 'Production' },
+  confirmed: { icon: CheckCircle, color: '#3b82f6', bg: '#eff6ff', text: '#1e40af', border: '#dbeafe', label: 'Confirmed' },
+  under_production: { icon: Factory, color: '#0ea5e9', bg: '#f0f9ff', text: '#0c4a6e', border: '#e0f2fe', label: 'In Production' },
   complete: { icon: CheckCircle, color: '#10b981', bg: '#f0fdf4', text: '#14532d', border: '#dcfce7', label: 'Complete' },
   on_hold: { icon: AlertTriangle, color: '#f59e0b', bg: '#fffbeb', text: '#78350f', border: '#fef3c7', label: 'On Hold' },
   dispatched: { icon: Truck, color: '#8b5cf6', bg: '#f5f3ff', text: '#4c1d95', border: '#ede9fe', label: 'Dispatched' },
@@ -224,31 +225,31 @@ export default function ProjectAnalysis() {
       {/* Main Analysis Area */}
       <div className="bg-white rounded border border-slate-200  mb-8">
         {/* Filter Bar */}
-        <div className="p-2 border-b border-slate-100 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-2 bg-slate-50/50">
-          <div className="flex items-center gap-2">
+        <div className="p-2">
+          <div className="flex items-center gap-2 justify-between">
             <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={15} />
               <input
                 type="text"
                 placeholder="Search by project or customer..."
-                className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 w-full md:w-80 transition-all "
+                className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 w-full md:w-50 transition-all "
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
 
-            <div className=" w-px bg-slate-200 hidden md:block" />
+            <div className=" bg-slate-200 hidden md:block" />
 
             <div className="flex items-center gap-2">
               
-              <div className="flex p-1 bg-white rounded border border-slate-200 ">
-                {['all', 'production', 'complete'].map((tab) => (
+              <div className="flex">
+                {['all', 'draft','under_production', 'complete'].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`py-2 px-4 rounded text-xs transition-all    ${activeTab === tab ? 'bg-blue-600 text-white ' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`py-2 px-4 rounded text-xs transition-all whitespace-nowrap ${activeTab === tab ? 'bg-blue-600 text-white ' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                    {tab}
+                    {tab === 'all' ? 'All Portfolio' : (statusConfig[tab]?.label || tab.replace(/_/g, ' '))}
                   </button>
                 ))}
               </div>
@@ -268,14 +269,15 @@ export default function ProjectAnalysis() {
                 ))}
               </div>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2 text-slate-500  text-[10px]  ">
-            <span className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full border border-blue-100 flex items-center gap-2">
+            <div className="flex items-center gap-2 text-slate-500  text-[10px]  ">
+            <span className="bg-blue-50 text-blue-700 p-1 rounded border border-blue-100 flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
               {filteredProjects.length} RESULTS IDENTIFIED
             </span>
           </div>
+          </div>
+
+          
         </div>
 
         {/* Project Display */}

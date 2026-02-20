@@ -43,8 +43,7 @@ export default function ViewSalesOrderModal({ isOpen, orderId, onClose }) {
     switch (status?.toLowerCase()) {
       case 'draft': return 'warning'
       case 'confirmed': return 'blue'
-      case 'ready_for_production': return 'blue'
-      case 'production': return 'blue'
+      case 'under_production': return 'blue'
       case 'dispatched': return 'blue'
       case 'invoiced': return 'success'
       case 'complete': return 'success'

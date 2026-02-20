@@ -426,25 +426,39 @@ router.delete(
     inventoryController.allocateMaterialsForWorkOrder.bind(inventoryController)
   )
 
-  // Step 2: Track material consumption during job card execution
+  // Step 2: Issue materials to WIP
+  router.post(
+    '/inventory/issue-to-wip',
+    authMiddleware,
+    inventoryController.issueMaterialsToWIP.bind(inventoryController)
+  )
+
+  // Step 3: Track material consumption during job card execution
   router.post(
     '/inventory/track-consumption',
     authMiddleware,
     inventoryController.trackMaterialConsumption.bind(inventoryController)
   )
 
-  // Step 3: Finalize deduction when work order completes
+  // Step 4: Return materials from WIP to store
+  router.post(
+    '/inventory/return-from-wip',
+    authMiddleware,
+    inventoryController.returnMaterialFromWIP.bind(inventoryController)
+  )
+
+  // Record Scrap
+  router.post(
+    '/inventory/record-scrap',
+    authMiddleware,
+    inventoryController.recordMaterialScrap.bind(inventoryController)
+  )
+
+  // Step 5: Finalize deduction when work order completes
   router.post(
     '/inventory/finalize/:work_order_id',
     authMiddleware,
     inventoryController.finalizeWorkOrderMaterials.bind(inventoryController)
-  )
-
-  // Step 4: Return unused materials
-  router.post(
-    '/inventory/return-materials',
-    authMiddleware,
-    inventoryController.returnMaterialToInventory.bind(inventoryController)
   )
 
   // Reports: Material allocation details

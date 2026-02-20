@@ -289,8 +289,7 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
                   >
                     <option value="draft">Draft</option>
                     <option value="confirmed">Confirmed</option>
-                    <option value="ready_for_production">Ready for Production</option>
-                    <option value="production">Production</option>
+                    <option value="under_production">Under Production</option>
                     <option value="dispatched">Dispatched</option>
                     <option value="invoiced">Invoiced</option>
                     <option value="complete">Complete</option>

@@ -1009,7 +1009,7 @@ export default function WorkOrder() {
                       <div className="space-y-4">
                         <div className="flex items-center gap-3 px-1">
                           <div className="h-px flex-1 bg-gray-100" />
-                          <h2 className="text-[10px]  text-gray-400  ">Completed Production Flow</h2>
+                          <h2 className="text-[10px]  text-gray-500-400  ">Completed Production Flow</h2>
                           <div className="h-px flex-1 bg-gray-100" />
                         </div>
                         

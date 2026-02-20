@@ -976,6 +976,148 @@ export default function ProductionEntry() {
     }
   };
 
+  const dailyReportColumns = React.useMemo(() => [
+    {
+      label: 'Date',
+      key: 'date',
+      render: (val) => <span className="text-slate-900 font-medium">{val.split('-').reverse().join('-')}</span>
+    },
+    {
+      label: 'Shift',
+      key: 'shift',
+      render: (val) => (
+        <span className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] rounded border border-slate-200">
+          Shift {val}
+        </span>
+      )
+    },
+    {
+      label: 'Operator',
+      key: 'operator',
+      render: (val) => <span className="text-slate-600">{val || 'N/A'}</span>
+    },
+    {
+      label: 'Mins',
+      key: 'total_mins',
+      align: 'right',
+      render: (val, row) => {
+        const key = `${row.day}_${row.shift}`;
+        const isEditing = editingRowKey === key;
+        return isEditing ? (
+          <input 
+            type="number"
+            className="w-16 p-1 border border-indigo-300 rounded text-right text-xs outline-none focus:ring-2 focus:ring-indigo-500/20"
+            value={editFormData.total_mins}
+            onChange={(e) => handleEditChange('total_mins', e.target.value)}
+          />
+        ) : (
+          <span className="text-indigo-600 font-medium">{val || 0}</span>
+        );
+      }
+    },
+    {
+      label: 'Produced',
+      key: 'produced',
+      align: 'right',
+      render: (val, row) => {
+        const key = `${row.day}_${row.shift}`;
+        const isEditing = editingRowKey === key;
+        return isEditing ? (
+          <input 
+            type="number"
+            className="w-16 p-1 border border-slate-200 rounded text-right text-xs bg-slate-50 outline-none"
+            value={editFormData.produced}
+            readOnly
+          />
+        ) : (
+          <span className="font-semibold text-slate-900">{val.toLocaleString()}</span>
+        );
+      }
+    },
+    {
+      label: 'Accepted',
+      key: 'accepted',
+      align: 'right',
+      render: (val, row) => {
+        const key = `${row.day}_${row.shift}`;
+        const isEditing = editingRowKey === key;
+        return isEditing ? (
+          <input 
+            type="number"
+            className="w-16 p-1 border border-indigo-300 rounded text-right text-xs outline-none focus:ring-2 focus:ring-indigo-500/20"
+            value={editFormData.accepted}
+            onChange={(e) => handleEditChange('accepted', e.target.value)}
+          />
+        ) : (
+          <span className="text-emerald-600 font-medium">{val.toLocaleString()}</span>
+        );
+      }
+    },
+    {
+      label: 'Rejected',
+      key: 'rejected',
+      align: 'right',
+      render: (val, row) => {
+        const key = `${row.day}_${row.shift}`;
+        const isEditing = editingRowKey === key;
+        return isEditing ? (
+          <input 
+            type="number"
+            className="w-16 p-1 border border-indigo-300 rounded text-right text-xs outline-none focus:ring-2 focus:ring-indigo-500/20"
+            value={editFormData.rejected}
+            onChange={(e) => handleEditChange('rejected', e.target.value)}
+          />
+        ) : (
+          <span className="text-rose-500 font-medium">{val.toLocaleString()}</span>
+        );
+      }
+    },
+    {
+      label: 'Scrap',
+      key: 'scrap',
+      align: 'right',
+      render: (val, row) => {
+        const key = `${row.day}_${row.shift}`;
+        const isEditing = editingRowKey === key;
+        return isEditing ? (
+          <input 
+            type="number"
+            className="w-16 p-1 border border-indigo-300 rounded text-right text-xs outline-none focus:ring-2 focus:ring-indigo-500/20"
+            value={editFormData.scrap}
+            onChange={(e) => handleEditChange('scrap', e.target.value)}
+          />
+        ) : (
+          <span className="text-slate-500 font-medium">{val.toLocaleString()}</span>
+        );
+      }
+    },
+    {
+      label: 'Downtime',
+      key: 'downtime',
+      align: 'right',
+      render: (val, row) => {
+        const key = `${row.day}_${row.shift}`;
+        const isEditing = editingRowKey === key;
+        return isEditing ? (
+          <div className="flex items-center justify-end gap-1">
+            <input 
+              type="number"
+              className="w-16 p-1 border border-indigo-300 rounded text-right text-xs outline-none focus:ring-2 focus:ring-indigo-500/20"
+              value={editFormData.downtime}
+              onChange={(e) => handleEditChange('downtime', e.target.value)}
+            />
+            <span className="text-[10px] text-slate-400 font-medium">min</span>
+          </div>
+        ) : (
+          <div className="flex items-center justify-end gap-1">
+            <span className="text-amber-600 font-medium">{val || 0}</span>
+            <span className="text-[10px] text-slate-400 font-medium">min</span>
+          </div>
+        );
+      }
+    }
+  ], [editingRowKey, editFormData, handleEditChange])
+
   // Derive summary stats exclusively from Approved Quality & Rejection Entries
   const approvedRejections = rejections.filter(rej => rej.status === 'Approved');
   
@@ -3108,161 +3250,45 @@ export default function ProductionEntry() {
                 </div>
 
                 <div className=" rounded border border-slate-100">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-100">
-                        <th className="p-2  text-slate-600">Date</th>
-                        <th className="p-2  text-slate-600">Shift</th>
-                        <th className="p-2  text-slate-600">Operator</th>
-                        <th className="p-2  text-slate-600 text-right">Mins</th>
-                        <th className="p-2  text-slate-600 text-right">Produced</th>
-                        <th className="p-2  text-slate-600 text-right">Accepted</th>
-                        <th className="p-2  text-slate-600 text-right text-rose-500">Rejected</th>
-                        <th className="p-2  text-slate-600 text-right">Scrap</th>
-                        <th className="p-2  text-slate-600 text-right">Downtime</th>
-                        <th className="p-2  text-slate-600 text-center">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {generateDailyReport().length === 0 ? (
-                        <tr>
-                          <td colSpan="10" className="p-10 text-center text-slate-400 italic bg-slate-50/30">
-                            No production data available to generate report
-                          </td>
-                        </tr>
-                      ) : (
-                        generateDailyReport().map((row, idx) => {
-                          const key = `${row.day}_${row.shift}`;
-                          const isEditing = editingRowKey === key;
-
-                          return (
-                            <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="p-2  text-slate-900">{row.date.split('-').reverse().join('-')}</td>
-                              <td className="p-2">
-                                <span className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px]  rounded ">
-                                  Shift {row.shift}
-                                </span>
-                              </td>
-                              <td className="p-2 text-slate-600">{row.operator || 'N/A'}</td>
-                              
-                              <td className="p-2 text-right text-indigo-600">
-                                {isEditing ? (
-                                  <input 
-                                    type="number"
-                                    className="w-16 p-1 border rounded text-right text-xs"
-                                    value={editFormData.total_mins}
-                                    onChange={(e) => handleEditChange('total_mins', e.target.value)}
-                                  />
-                                ) : (
-                                  row.total_mins || 0
-                                )}
-                              </td>
-                              
-                              <td className="p-2 text-right font-semibold text-slate-900">
-                                {isEditing ? (
-                                  <input 
-                                    type="number"
-                                    className="w-16 p-1 border rounded text-right text-xs bg-slate-50"
-                                    value={editFormData.produced}
-                                    readOnly
-                                  />
-                                ) : (
-                                  row.produced.toLocaleString()
-                                )}
-                              </td>
-                              
-                              <td className="p-2 text-right  text-emerald-600">
-                                {isEditing ? (
-                                  <input 
-                                    type="number"
-                                    className="w-16 p-1 border rounded text-right text-xs"
-                                    value={editFormData.accepted}
-                                    onChange={(e) => handleEditChange('accepted', e.target.value)}
-                                  />
-                                ) : (
-                                  row.accepted.toLocaleString()
-                                )}
-                              </td>
-                              
-                              <td className="p-2 text-right  text-rose-500">
-                                {isEditing ? (
-                                  <input 
-                                    type="number"
-                                    className="w-16 p-1 border rounded text-right text-xs"
-                                    value={editFormData.rejected}
-                                    onChange={(e) => handleEditChange('rejected', e.target.value)}
-                                  />
-                                ) : (
-                                  row.rejected.toLocaleString()
-                                )}
-                              </td>
-                              
-                              <td className="p-2 text-right  text-slate-500">
-                                {isEditing ? (
-                                  <input 
-                                    type="number"
-                                    className="w-16 p-1 border rounded text-right text-xs"
-                                    value={editFormData.scrap}
-                                    onChange={(e) => handleEditChange('scrap', e.target.value)}
-                                  />
-                                ) : (
-                                  row.scrap.toLocaleString()
-                                )}
-                              </td>
-                              
-                              <td className="p-2 text-right">
-                                {isEditing ? (
-                                  <div className="flex items-center justify-end gap-1">
-                                    <input 
-                                      type="number"
-                                      className="w-16 p-1 border rounded text-right text-xs"
-                                      value={editFormData.downtime}
-                                      onChange={(e) => handleEditChange('downtime', e.target.value)}
-                                    />
-                                    <span className="text-[10px] text-slate-400">min</span>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <span className="text-amber-600 ">{row.downtime}</span>
-                                    <span className="ml-1 text-[10px] text-slate-400 ">min</span>
-                                  </>
-                                )}
-                              </td>
-
-                              <td className="p-2 text-center">
-                                {isEditing ? (
-                                  <div className="flex items-center justify-center gap-2">
-                                    <button 
-                                      onClick={handleSaveRow}
-                                      className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
-                                      title="Save"
-                                    >
-                                      <CheckCircle size={14} />
-                                    </button>
-                                    <button 
-                                      onClick={handleCancelEdit}
-                                      className="p-1 text-rose-600 hover:bg-rose-50 rounded"
-                                      title="Cancel"
-                                    >
-                                      <X size={14} />
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <button 
-                                    onClick={() => handleEditRow(row)}
-                                    className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
-                                    title="Edit Row"
-                                  >
-                                    <Edit2 size={14} />
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
+                  <DataTable
+                    columns={dailyReportColumns}
+                    data={generateDailyReport()}
+                    renderActions={(row) => {
+                      const key = `${row.day}_${row.shift}`;
+                      const isEditing = editingRowKey === key;
+                      return (
+                        <div className="flex items-center justify-center gap-2">
+                          {isEditing ? (
+                            <>
+                              <button 
+                                onClick={handleSaveRow}
+                                className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                                title="Save"
+                              >
+                                <CheckCircle size={14} />
+                              </button>
+                              <button 
+                                onClick={handleCancelEdit}
+                                className="p-1 text-rose-600 hover:bg-rose-50 rounded"
+                                title="Cancel"
+                              >
+                                <X size={14} />
+                              </button>
+                            </>
+                          ) : (
+                            <button 
+                              onClick={() => handleEditRow(row)}
+                              className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all"
+                              title="Edit Row"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      )
+                    }}
+                    emptyMessage="No production data available to generate report"
+                  />
                 </div>
               </Card>
             </div>

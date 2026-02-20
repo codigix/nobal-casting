@@ -598,7 +598,7 @@ export default function WorkOrderForm() {
           uom: item.uom || '',
           required_qty: item.required_qty,
           source_warehouse: item.source_warehouse,
-          transferred_qty: item.transferred_qty,
+          issued_qty: item.issued_qty || 0,
           consumed_qty: item.consumed_qty,
           returned_qty: item.returned_qty
         })))
@@ -649,7 +649,7 @@ export default function WorkOrderForm() {
                 uom: rm.uom || '',
                 required_qty: multipliedQty,
                 source_warehouse: rm.source_warehouse || '',
-                transferred_qty: 0,
+                issued_qty: 0,
                 consumed_qty: 0,
                 returned_qty: 0
               }
@@ -667,7 +667,7 @@ export default function WorkOrderForm() {
                 uom: l.uom || '',
                 required_qty: multipliedQty,
                 source_warehouse: l.source_warehouse || '',
-                transferred_qty: 0,
+                issued_qty: 0,
                 consumed_qty: 0,
                 returned_qty: 0
               }
@@ -679,7 +679,7 @@ export default function WorkOrderForm() {
         }
       }
 
-      // Fetch material allocations to ensure transferred_qty is up to date
+      // Fetch material allocations to ensure issued_qty is up to date
       try {
         const allocationRes = await productionService.getMaterialAllocationForWorkOrder(workOrderId)
         const allocations = allocationRes.data || allocationRes || []
@@ -696,7 +696,7 @@ export default function WorkOrderForm() {
                 uom: alloc.uom || '',
                 required_qty: alloc.allocated_qty,
                 source_warehouse: alloc.warehouse_code,
-                transferred_qty: alloc.allocated_qty,
+                issued_qty: alloc.allocated_qty,
                 consumed_qty: alloc.consumed_qty || 0,
                 returned_qty: alloc.returned_qty || 0
               }))
@@ -707,7 +707,7 @@ export default function WorkOrderForm() {
                 if (alloc) {
                   return {
                     ...item,
-                    transferred_qty: alloc.allocated_qty,
+                    issued_qty: alloc.allocated_qty,
                     consumed_qty: alloc.consumed_qty || item.consumed_qty || 0,
                     returned_qty: alloc.returned_qty || item.returned_qty || 0
                   }
@@ -763,7 +763,7 @@ export default function WorkOrderForm() {
           uom: rm.uom || '',
           required_qty: multipliedQty,
           source_warehouse: rm.source_warehouse || '',
-          transferred_qty: rm.transferred_qty || 0,
+          issued_qty: rm.issued_qty || 0,
           consumed_qty: rm.consumed_qty || 0,
           returned_qty: rm.returned_qty || 0
         }
@@ -781,7 +781,7 @@ export default function WorkOrderForm() {
           uom: l.uom || '',
           required_qty: multipliedQty,
           source_warehouse: l.source_warehouse || '',
-          transferred_qty: l.transferred_qty || 0,
+          issued_qty: l.issued_qty || 0,
           consumed_qty: l.consumed_qty || 0,
           returned_qty: l.returned_qty || 0
         }
@@ -812,7 +812,7 @@ export default function WorkOrderForm() {
               uom: alloc.uom || '',
               required_qty: alloc.allocated_qty,
               source_warehouse: alloc.warehouse_code,
-              transferred_qty: alloc.allocated_qty,
+              issued_qty: alloc.allocated_qty,
               consumed_qty: alloc.consumed_qty || 0,
               returned_qty: alloc.returned_qty || 0
             }))
@@ -822,7 +822,7 @@ export default function WorkOrderForm() {
               if (alloc) {
                 return {
                   ...item,
-                  transferred_qty: alloc.allocated_qty,
+                  issued_qty: alloc.allocated_qty,
                   consumed_qty: alloc.consumed_qty || item.consumed_qty || 0,
                   returned_qty: alloc.returned_qty || item.returned_qty || 0
                 }
@@ -1042,7 +1042,7 @@ export default function WorkOrderForm() {
           item_code: mat.item_code,
           source_warehouse: mat.source_warehouse || 'Stores - NC',
           required_qty: mat.required_qty,
-          transferred_qty: mat.transferred_qty || 0,
+          issued_qty: mat.issued_qty || 0,
           consumed_qty: mat.consumed_qty || 0,
           returned_qty: mat.returned_qty || 0
         })),
@@ -1684,22 +1684,22 @@ export default function WorkOrderForm() {
                           <tr className="bg-slate-50/30">
                             <th className="p-2  text-xs  text-slate-400  ">Item</th>
                             <th className="p-2  text-xs  text-slate-400  text-right">Required</th>
-                            <th className="p-2  text-xs  text-slate-400  text-right">Transferred</th>
+                            <th className="p-2  text-xs  text-slate-400  text-right">Issued</th>
                             <th className="p-2  text-xs  text-slate-400  text-right">Consumed</th>
                             <th className="p-2  text-xs  text-slate-400  text-right">Yield Loss</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {bomMaterials.map((mat) => {
-                            const loss = Math.max(0, (parseFloat(mat.transferred_qty) || 0) - (parseFloat(mat.consumed_qty) || 0) - (parseFloat(mat.returned_qty) || 0))
-                            const isShortage = (parseFloat(mat.transferred_qty) || 0) < (parseFloat(mat.required_qty) || 0)
+                            const loss = Math.max(0, (parseFloat(mat.issued_qty) || 0) - (parseFloat(mat.consumed_qty) || 0) - (parseFloat(mat.returned_qty) || 0))
+                            const isShortage = (parseFloat(mat.issued_qty) || 0) < (parseFloat(mat.required_qty) || 0)
 
                             return (
                               <tr key={mat.id} className="hover:bg-slate-50/50 transition-colors group">
                                 <td className="p-2 ">
                                   <div className="flex flex-col">
-                                    <span className="text-xs  text-slate-900">{mat.item_code}</span>
-                                    <span className="text-xs text-slate-400 font-medium text-xs truncate max-w-[240px]">{mat.item_name || mat.description}</span>
+                                    <span className="text-xs  text-slate-900">{mat.item_name || mat.description}</span>
+                                    <span className="text-xs text-slate-400 font-medium text-xs truncate max-w-[240px]">{mat.item_code}</span>
                                   </div>
                                 </td>
                                 <td className="p-2  text-right">
@@ -1712,8 +1712,8 @@ export default function WorkOrderForm() {
                                   <div className="relative inline-block">
                                     <input
                                       type="number"
-                                      value={mat.transferred_qty || 0}
-                                      onChange={(e) => updateMaterial(mat.id, 'transferred_qty', parseFloat(e.target.value) || 0)}
+                                      value={mat.issued_qty || 0}
+                                      onChange={(e) => updateMaterial(mat.id, 'issued_qty', parseFloat(e.target.value) || 0)}
                                       disabled={isReadOnly}
                                       className={`w-24 p-2  py-1.5 rounded text-right text-xs  outline-none border transition-all ${isShortage ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-slate-50 border-slate-200 focus:border-indigo-500'
                                         }`}
@@ -1889,13 +1889,13 @@ export default function WorkOrderForm() {
                     </p>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs   text-indigo-200">
-                        <span>Transfer Status</span>
-                        <span>{((bomMaterials.filter(m => (m.transferred_qty || 0) >= (m.required_qty || 0)).length / (bomMaterials.length || 1)) * 100).toFixed(0)}%</span>
+                        <span>Issued Status</span>
+                        <span>{((bomMaterials.filter(m => (m.issued_qty || 0) >= (m.required_qty || 0)).length / (bomMaterials.length || 1)) * 100).toFixed(0)}%</span>
                       </div>
                       <div className=" bg-white/20 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-white transition-all duration-1000"
-                          style={{ width: `${(bomMaterials.filter(m => (m.transferred_qty || 0) >= (m.required_qty || 0)).length / (bomMaterials.length || 1)) * 100}%` }}
+                          style={{ width: `${(bomMaterials.filter(m => (m.issued_qty || 0) >= (m.required_qty || 0)).length / (bomMaterials.length || 1)) * 100}%` }}
                         />
                       </div>
                     </div>
@@ -1915,7 +1915,7 @@ export default function WorkOrderForm() {
                       <h4 className="text-xs  ">Yield Note</h4>
                     </div>
                     <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                      Yield loss is automatically calculated as the delta between transferred and consumed quantities.
+                      Yield loss is automatically calculated as the delta between issued and consumed quantities.
                     </p>
                   </div>
                 </div>

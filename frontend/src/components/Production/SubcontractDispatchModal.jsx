@@ -352,7 +352,7 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
                     className="w-full p-2.5 bg-gray-100 border border-gray-200 rounded  text-sm text-gray-500 cursor-not-allowed"
                     value={formData.release_quantity}
                   />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px]  text-gray-400 ">
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px]  text-gray-500-400 ">
                     {workOrder?.uom || 'Units'}
                   </div>
                 </div>

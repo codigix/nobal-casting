@@ -229,7 +229,7 @@ export default function ProductionDashboard() {
         pending: jc.filter(j => ['pending', 'draft', 'open'].includes(normalizeStatus(j.status))).length,
         workstations: ws.length,
         operations: op.length,
-        overdueSalesOrders: so.filter(s => normalizeStatus(s.status) !== 'completed' && new Date(s.delivery_date) < new Date()).length,
+        overdueSalesOrders: so.filter(s => !['completed', 'complete', 'delivered', 'dispatched'].includes(normalizeStatus(s.status)) && new Date(s.delivery_date) < new Date()).length,
         efficiency: analyticsRes.data?.efficiency || 85,
         rejectionRate: analyticsRes.data?.rejection_rate || 2.4,
         oee: oee.summary?.oee || 78

@@ -98,7 +98,7 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div className="bg-white rounded   w-full max-w-lg overflow-hidden flex flex-col">
+      <div className="bg-white rounded   w-full max-w-lg max-h-[30pc] overflow-auto flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
           <div className="flex items-center gap-3">
