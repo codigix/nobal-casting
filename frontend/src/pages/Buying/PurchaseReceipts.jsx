@@ -487,11 +487,11 @@ export default function PurchaseReceipts() {
       label: 'Item Details',
       render: (_, row) => (
         <div className="flex flex-col gap-1 py-1">
-          <span className="text-sm  text-indigo-600 dark:text-indigo-400  leading-none">
-            {row.item_code}
-          </span>
-          <span className="text-xs  text-neutral-400 dark:text-neutral-500   truncate max-w-[200px]">
+          <span className="text-xs  text-indigo-600 dark:text-indigo-400  leading-none">
             {row.item_name}
+          </span>
+          <span className="text-xs  text-neutral-400 dark:text-neutral-500   truncate ">
+            {row.item_code}
           </span>
         </div>
       )
@@ -500,9 +500,9 @@ export default function PurchaseReceipts() {
       key: 'current_qty',
       label: 'Stock Level',
       render: (value) => (
-        <div className="inline-flex flex-col items-center justify-center min-w-[80px] p-2 rounded bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50">
+        <div className="inline-flex gap-1 items-center justify-center  p-1 rounded bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50">
           <span className="text-xs  text-emerald-600 dark:text-emerald-400 leading-none">{(parseFloat(value) || 0).toLocaleString()}</span>
-          <span className="text-xs  text-emerald-500/70   mt-1">Available</span>
+          <span className="text-xs  text-emerald-500/70">Available</span>
         </div>
       )
     },
@@ -510,7 +510,7 @@ export default function PurchaseReceipts() {
       key: 'reserved_qty',
       label: 'Reserved',
       render: (value) => (
-        <div className="flex flex-col text-right pr-4">
+        <div className="flex gap-2">
           <span className="text-xs  text-neutral-600 dark:text-neutral-400">
             {(parseFloat(value) || 0).toLocaleString()}
           </span>
@@ -522,8 +522,8 @@ export default function PurchaseReceipts() {
       key: 'valuation_rate',
       label: 'Valuation',
       render: (value) => (
-        <div className="flex flex-col text-right">
-          <span className="text-sm  text-neutral-900 dark:text-white ">
+        <div className="flex gap-2">
+          <span className="text-xs  text-neutral-900 dark:text-white ">
             ₹{(parseFloat(value) || 0).toLocaleString('en-IN')}
           </span>
           <span className="text-xs  text-neutral-400 dark:text-neutral-500  ">Per Unit</span>
@@ -536,8 +536,8 @@ export default function PurchaseReceipts() {
       render: (_, row) => {
         const total = (parseFloat(row.current_qty) || 0) * (parseFloat(row.valuation_rate) || 0)
         return (
-          <div className="flex flex-col text-right">
-            <span className="text-sm  text-indigo-600 dark:text-indigo-400 ">
+          <div className="flex gap-2">
+            <span className="text  text-indigo-600 dark:text-indigo-400 ">
               ₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </span>
             <span className="text-xs  text-neutral-400 dark:text-neutral-500  ">Inv. Value</span>
@@ -549,7 +549,7 @@ export default function PurchaseReceipts() {
       key: 'warehouse_name',
       label: 'Location',
       render: (value) => (
-        <div className="flex items-center gap-2 text-xs  text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded  border border-neutral-200 dark:border-neutral-700  ">
+        <div className="flex items-center gap-2 text-xs  text-neutral-500 dark:text-neutral-400 ">
           <MapPin size={12} className="text-indigo-500" />
           {value || 'Unassigned'}
         </div>
@@ -983,19 +983,19 @@ export default function PurchaseReceipts() {
 
         {/* Available Items Section */}
         {currentTab === 'available-items' && (
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800   overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="p-6 border-b border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl  text-neutral-900 dark:text-white flex items-center gap-3">
+          <div className="">
+            <div className="  flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className='my-4'>
+                <h2 className="text-lg  text-neutral-900 dark:text-white flex items-center gap-3">
                   <div className="p-2 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                     <Boxes size={24} />
                   </div>
                   Available Stock Balance
                 </h2>
-                <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-1">Real-time inventory levels across all warehouses</p>
+                <p className="text-neutral-500 dark:text-neutral-400 text-xs mt-1">Real-time inventory levels across all warehouses</p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="text-sm  text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-4 py-2 rounded border border-indigo-100 dark:border-indigo-500/20">
+                <div className="text-xs  text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 p-2 rounded border border-indigo-100 dark:border-indigo-500/20">
                   {availableItems.length} Unique Items
                 </div>
                 <button 
@@ -1003,7 +1003,7 @@ export default function PurchaseReceipts() {
                   className="p-2.5 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-neutral-800 rounded transition-all border border-transparent hover:border-indigo-100 dark:hover:border-neutral-700"
                   title="Refresh Stock"
                 >
-                  <RefreshCw size={20} className={availableItemsLoading ? 'animate-spin' : ''} />
+                  <RefreshCw size={15} className={availableItemsLoading ? 'animate-spin' : ''} />
                 </button>
               </div>
             </div>

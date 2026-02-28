@@ -48,7 +48,23 @@ export default function GRNManagement() {
     fetchWarehouses()
   }, [])
 
-  // Pre-populate valuation rates when approval form opens
+  const generateBatchNumber = () => {
+    const date = new Date()
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const timestamp = Date.now().toString().slice(-6)
+    return `BATCH-${year}${month}${day}-${timestamp}`
+  }
+
+  const handleCheckAllQC = () => {
+    selectedGRN.items.forEach(item => {
+      handleApprovalItemChange(item.id, 'qc_status', 'pass')
+    })
+    toast.addToast('✅ All items marked as PASS', 'success')
+  }
+
+  // Pre-populate valuation rates and batch numbers when approval form opens
   useEffect(() => {
     if (showApprovalForm && selectedGRN?.items?.length > 0) {
       const fetchValuationRates = async () => {
@@ -59,14 +75,28 @@ export default function GRNManagement() {
             const itemDetails = response.data.data
             setStorageData(prev => {
               const updated = { ...prev }
-              selectedGRN.items.forEach(item => {
+              selectedGRN.items.forEach((item, idx) => {
                 const details = itemDetails.find(d => d.item_code === item.item_code)
                 if (details) {
+                  const batchNumber = item.batch_no || generateBatchNumber()
                   updated[item.id] = {
                     ...updated[item.id],
                     valuation_rate: details.valuation_rate || 0,
-                    batch_no: updated[item.id]?.batch_no || item.batch_no || ''
+                    batch_no: updated[item.id]?.batch_no || batchNumber
                   }
+                }
+              })
+              return updated
+            })
+            setApprovalItems(prev => {
+              const updated = [...prev]
+              selectedGRN.items.forEach(item => {
+                if (!updated.find(ai => ai.id === item.id)) {
+                  updated.push({ 
+                    id: item.id, 
+                    accepted_qty: item.received_qty || 0,
+                    qc_status: 'pass'
+                  })
                 }
               })
               return updated
@@ -278,7 +308,6 @@ export default function GRNManagement() {
           accepted_qty: Number(item.accepted_qty) || 0,
           rejected_qty: Number(item.rejected_qty) || 0,
           qc_status: item.qc_status || 'pass',
-          bin_rack: storageData[item.id]?.bin_rack || '',
           batch_no: storageData[item.id]?.batch_no || '',
           valuation_rate: Number(storageData[item.id]?.valuation_rate) || 0,
           warehouse_name: grnItem?.warehouse_name || 'Main Warehouse'
@@ -1028,11 +1057,21 @@ export default function GRNManagement() {
       >
         {selectedGRN && (
           <div className="space-y-2">
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 rounded  p-4 flex gap-3 items-start">
-              <AlertCircle className="text-amber-500 shrink-0" size={20} />
-              <div className="text-xs font-medium text-amber-700 dark:text-amber-400 leading-relaxed">
-                <span className="">Important:</span> Review the quantities accepted and rejected. Ensure the valuation rates and storage locations (Warehouse/Bin) are correctly assigned before final approval.
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 rounded  p-4 flex gap-3 items-start justify-between">
+              <div className="flex gap-3 items-start flex-1">
+                <AlertCircle className="text-amber-500 shrink-0" size={20} />
+                <div className="text-xs font-medium text-amber-700 dark:text-amber-400 leading-relaxed">
+                  <span className="">Important:</span> Review the quantities accepted and rejected. Ensure the valuation rates and batch numbers are correctly assigned before final approval.
+                </div>
               </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="text-[11px] px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50 border-amber-200 dark:border-amber-900/30"
+                onClick={handleCheckAllQC}
+              >
+                ✓ Check All
+              </Button>
             </div>
 
             <div className="space-y-3">
@@ -1051,7 +1090,6 @@ export default function GRNManagement() {
                         <th className="px-2 py-3 text-center w-24">Reject</th>
                         <th className="px-2 py-3 text-center w-28">QC Status</th>
                         <th className="px-2 py-3 w-32">Warehouse</th>
-                        <th className="px-2 py-3 w-32">Bin/Rack</th>
                         <th className="px-2 py-3 w-32">Batch #</th>
                         <th className="p-3 text-right w-32">Rate (₹)</th>
                       </tr>
@@ -1109,15 +1147,6 @@ export default function GRNManagement() {
                                 <MapPin size={10} />
                                 {item.warehouse_name || 'Main'}
                               </div>
-                            </td>
-                            <td className="px-2 py-3">
-                              <input
-                                type="text"
-                                placeholder="Bin/Rack"
-                                value={storage.bin_rack || ''}
-                                onChange={(e) => handleStorageDataChange(item.id, 'bin_rack', e.target.value)}
-                                className="w-full px-2 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded text-[10px] focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                              />
                             </td>
                             <td className="px-2 py-3">
                               <input

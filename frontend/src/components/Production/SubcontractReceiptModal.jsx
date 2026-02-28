@@ -15,7 +15,11 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
 
   useEffect(() => {
     if (isOpen && jobCard) {
-      const remaining = parseFloat(jobCard.sent_qty || 0) - parseFloat(jobCard.received_qty || 0)
+      // Use received_qty if available, otherwise produced_quantity as fallback
+      const currentReceived = parseFloat(jobCard.received_qty || jobCard.produced_quantity || 0)
+      const sent = parseFloat(jobCard.sent_qty || 0)
+      const remaining = Math.max(0, sent - currentReceived)
+      
       setFormData({
         received_qty: remaining,
         accepted_qty: remaining,
@@ -49,14 +53,15 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
       return
     }
 
-    if (formData.accepted_qty + formData.rejected_qty !== formData.received_qty) {
+    if (Math.abs((formData.accepted_qty + formData.rejected_qty) - formData.received_qty) > 0.0001) {
       toast.addToast('Accepted + Rejected quantity must equal Received quantity', 'error')
       return
     }
 
-    const remaining = parseFloat(jobCard.sent_qty || 0) - parseFloat(jobCard.received_qty || 0)
+    const currentReceived = parseFloat(jobCard.received_qty || jobCard.produced_quantity || 0)
+    const remaining = parseFloat(jobCard.sent_qty || 0) - currentReceived
     if (formData.received_qty > remaining + 0.0001) {
-      toast.addToast(`Cannot receive more than remaining sent quantity (${remaining})`, 'error')
+      toast.addToast(`Cannot receive more than remaining sent quantity (${remaining.toFixed(2)})`, 'error')
       return
     }
 
@@ -94,7 +99,8 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
 
   if (!isOpen) return null
 
-  const remaining = parseFloat(jobCard?.sent_qty || 0) - parseFloat(jobCard?.received_qty || 0)
+  const currentReceived = parseFloat(jobCard?.received_qty || jobCard?.produced_quantity || 0)
+  const remaining = Math.max(0, parseFloat(jobCard?.sent_qty || 0) - currentReceived)
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
@@ -128,7 +134,9 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
               </div>
               <div className="text-right">
                 <p className="text-[10px]   text-slate-400 mb-0.5">Pending Receipt</p>
-                <p className="text-sm  text-indigo-600">{remaining} units</p>
+                <p className={`text-sm ${remaining <= 0 ? 'text-emerald-600 font-bold' : 'text-indigo-600'}`}>
+                  {remaining.toFixed(2)} units
+                </p>
               </div>
             </div>
 
@@ -143,7 +151,7 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
                   className="w-full p-2.5 bg-white border border-gray-200 rounded  text-sm  focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                   value={formData.received_qty}
                   onChange={(e) => handleQtyChange('received_qty', e.target.value)}
-                  max={remaining}
+                  max={remaining + 0.0001}
                 />
               </div>
 
@@ -185,6 +193,15 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
                 </div>
               )}
 
+              {remaining <= 0 && (
+                <div className="p-3 bg-emerald-50 rounded  border border-emerald-100 flex items-start gap-2">
+                  <CheckCircle2 size={16} className="text-emerald-600 mt-0.5" />
+                  <p className="text-[11px] text-emerald-700 leading-relaxed">
+                    All items dispatched have been received. You cannot record further receipts for this job card.
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <label className="text-xs  text-gray-700 flex items-center gap-1">
                   <FileText size={14} className="text-gray-400" />
@@ -211,7 +228,7 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || remaining <= 0}
               className="flex items-center gap-2 p-2  bg-emerald-600 text-white rounded  text-sm  hover:bg-emerald-700 transition-all  shadow-emerald-100 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
             >
               {loading ? (
@@ -219,7 +236,7 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
               ) : (
                 <CheckCircle2 size={16} />
               )}
-              Update Next Operation
+              {remaining <= 0 ? 'Fully Received' : 'Update Next Operation'}
             </button>
           </div>
         </form>

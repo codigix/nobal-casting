@@ -31,7 +31,7 @@ export default function StockLedger() {
   const [viewMode, setViewMode] = useState('table')
   const [showColumnMenu, setShowColumnMenu] = useState(false)
 
-  const [visibleColumns, setVisibleColumns] = useState(new Set(['item_code', 'item_name', 'warehouse_name', 'posting_date', 'transaction_type', 'qty_in', 'balance_qty', 'reference_name']))
+  const [visibleColumns, setVisibleColumns] = useState(new Set(['item_details', 'warehouse_name', 'posting_date', 'transaction_type', 'qty_in', 'balance_qty', 'reference_name']))
 
   useEffect(() => {
     fetchWarehouses()
@@ -133,7 +133,7 @@ export default function StockLedger() {
         const rate = row.valuation_rate || 0
         const value = Number(row.transaction_value) || 0
         const reference = row.reference_name ? `${row.reference_doctype}: ${row.reference_name}` : '-'
-        return `"${row.item_code}","${row.item_name}","${row.warehouse_name}",${row.posting_date},"${row.transaction_type}","${reference}",${row.qty_in || 0},${row.qty_out || 0},${balance},${rate},${value.toFixed(2)}`
+        return `"${row.item_code}","${row.item_name}","${row.warehouse_name}","${row.posting_date}","${row.transaction_type}","${reference}",${row.qty_in || 0},${row.qty_out || 0},${balance},${rate},${value.toFixed(2)}`
       })
     ].join('\n')
 
@@ -144,8 +144,16 @@ export default function StockLedger() {
   }
 
   const columns = useMemo(() => [
-    { key: 'item_code', label: 'Item Code' },
-    { key: 'item_name', label: 'Item Name' },
+    {
+      key: 'item_details',
+      label: 'Item',
+      render: (value, row) => (
+        <div className="flex flex-col">
+          <span className="text-xs font-medium text-neutral-900 dark:text-white">{row.item_code}</span>
+          <span className="text-[10px] text-neutral-500">{row.item_name}</span>
+        </div>
+      )
+    },
     { key: 'warehouse_name', label: 'Warehouse' },
     {
       key: 'posting_date',

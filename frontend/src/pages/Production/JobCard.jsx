@@ -216,8 +216,8 @@ export default function JobCard() {
     if (!currentCard) return { canStart: false, reason: 'Job card not found' }
 
     const currentStatus = (currentCard.status || '').toLowerCase()
-    if (!['draft', 'ready', 'pending'].includes(currentStatus)) {
-      return { canStart: false, reason: 'Only draft, ready or pending job cards can be started' }
+    if (!['draft', 'ready', 'pending', 'open'].includes(currentStatus)) {
+      return { canStart: false, reason: 'Only draft, ready, pending or open job cards can be started' }
     }
 
     return { canStart: true }
@@ -233,14 +233,37 @@ export default function JobCard() {
       }
 
       setLoading(true)
+
+      const api = (await import('../../services/api')).default
+
+      toast.addToast('⏳ Checking material request status...', 'info')
+      const materialStatusRes = await api.get(`/production/job-cards/${jobCardId}/material-request-status`)
+      const materialStatus = materialStatusRes.data?.data
+
+      if (!materialStatus.has_material_request) {
+        toast.addToast('❌ No material request found. Please create and send a material request first in the Material Requests page.', 'error')
+        setLoading(false)
+        return
+      }
+
+      if (materialStatus.mr_status !== 'received' && materialStatus.mr_status !== 'completed') {
+        toast.addToast(
+          `⏳ Material request not received yet. Current status: ${materialStatus.mr_status.toUpperCase()}. Please check Material Requests page.`,
+          'warning'
+        )
+        setLoading(false)
+        return
+      }
+
+      toast.addToast('✅ Material received. Starting job card...', 'success')
       await productionService.updateJobCard(jobCardId, { status: 'in-progress' })
-      toast.addToast('Job card started. Redirecting to production entry...', 'success')
       
       setTimeout(() => {
         navigate(`/manufacturing/job-cards/${jobCardId}/production-entry`)
       }, 500)
     } catch (err) {
-      toast.addToast(err.message || 'Failed to start job card', 'error')
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to start job card'
+      toast.addToast(errorMsg, 'error')
       setLoading(false)
     }
   }, [canStartJobCard, navigate, toast])
@@ -432,7 +455,7 @@ export default function JobCard() {
           </>
         )}
 
-        {(card.status || '').toLowerCase() === 'ready' && card.execution_mode !== 'OUTSOURCE' && (
+        {['ready', 'draft', 'pending', 'open'].includes((card.status || '').toLowerCase()) && card.execution_mode !== 'OUTSOURCE' && (
           <button
             onClick={() => handleStartJobCard(card.job_card_id)}
             className="p-1 text-emerald-600 hover:bg-emerald-50 rounded transition-all"
@@ -441,7 +464,7 @@ export default function JobCard() {
             <Zap size={14} className="fill-current" />
           </button>
         )}
-        {(card.status || '').toLowerCase() === 'in-progress' && (
+        {['in-progress', 'in_progress'].includes((card.status || '').toLowerCase()) && card.execution_mode !== 'OUTSOURCE' && (
           <button
             onClick={() => navigate(`/manufacturing/job-cards/${card.job_card_id}/production-entry`)}
             className="p-1 text-indigo-600 hover:bg-indigo-50 rounded transition-all"
@@ -543,6 +566,31 @@ export default function JobCard() {
           )
         }
         return <StatusBadge status={val} />
+      }
+    },
+    {
+      key: 'material_status',
+      label: 'Material Status',
+      render: (val, row) => {
+        const mrStatus = row.material_status || 'pending'
+        const colorMap = {
+          pending: { bg: 'bg-slate-50', text: 'text-slate-600', label: 'No MR' },
+          requested: { bg: 'bg-blue-50', text: 'text-blue-600', label: 'Requested' },
+          received: { bg: 'bg-emerald-50', text: 'text-emerald-600', label: 'Received' },
+          completed: { bg: 'bg-indigo-50', text: 'text-indigo-600', label: 'Completed' }
+        }
+        const config = colorMap[mrStatus] || colorMap.pending
+        
+        return (
+          <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${config.bg} ${config.text}`}>
+            {config.label}
+            {row.mr_id && (
+              <span className="text-[10px] font-mono opacity-75" title={row.mr_id}>
+                ({row.mr_id.slice(-6)})
+              </span>
+            )}
+          </div>
+        )
       }
     },
     {

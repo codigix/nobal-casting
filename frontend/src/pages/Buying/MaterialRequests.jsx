@@ -116,14 +116,32 @@ export default function MaterialRequests() {
   }
 
   const getItemsAvailabilityStatus = useCallback((request) => {
-    if (!request.items?.length) return { all: 'available', details: [] }
-    const items = request.items.map(item => {
+    if (!request.items?.length) return { all: 'available', details: [], totalAvailable: 0, totalRequired: 0 }
+    
+    let totalAvailable = 0
+    let totalRequired = 0
+    const itemDetails = []
+    
+    request.items.forEach(item => {
       const key = `${item.item_code}-${request.source_warehouse || 'warehouse'}`
-      return stockData[key]?.status || 'unavailable'
+      const stockInfo = stockData[key] || { available: 0, requested: parseFloat(item.qty) }
+      totalAvailable += stockInfo.available || 0
+      totalRequired += stockInfo.requested || 0
+      itemDetails.push({ ...stockInfo, itemCode: item.item_code })
     })
-    if (items.every(s => s === 'available')) return { all: 'available' }
-    if (items.some(s => s === 'available')) return { all: 'partial' }
-    return { all: 'unavailable' }
+    
+    const items = itemDetails.map(d => d.status)
+    let statusAll = 'unavailable'
+    if (items.every(s => s === 'available')) statusAll = 'available'
+    else if (items.some(s => s === 'available')) statusAll = 'partial'
+    
+    return { 
+      all: statusAll, 
+      details: itemDetails,
+      totalAvailable: Math.round(totalAvailable),
+      totalRequired: Math.round(totalRequired),
+      fulfillmentPercent: totalRequired > 0 ? Math.round((totalAvailable / totalRequired) * 100) : 0
+    }
   }, [stockData])
 
   const filteredRequests = useMemo(() => {
@@ -205,17 +223,47 @@ export default function MaterialRequests() {
       render: (_, row) => {
         const status = getItemsAvailabilityStatus(row)
         const configs = { 
-          available: { color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800', icon: CheckCircle },
-          unavailable: { color: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border-rose-200 dark:border-rose-800', icon: XCircle },
-          partial: { color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800', icon: AlertCircle }
+          available: { 
+            color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+            bgColor: 'bg-emerald-500',
+            icon: CheckCircle 
+          },
+          unavailable: { 
+            color: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border-rose-200 dark:border-rose-800',
+            bgColor: 'bg-rose-500',
+            icon: XCircle 
+          },
+          partial: { 
+            color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+            bgColor: 'bg-amber-500',
+            icon: AlertCircle 
+          }
         }
         const config = configs[status.all]
         const Icon = config.icon
+        
         return (
-          <Badge className={`${config.color} border flex items-center gap-1.5 w-fit`}>
-            <Icon size={12} />
-            {status.all.toUpperCase()}
-          </Badge>
+          <div className="flex flex-col gap-1.5 min-w-[140px]">
+            <Badge className={`${config.color} border flex items-center gap-1.5 w-fit`}>
+              <Icon size={12} />
+              {status.all === 'available' ? 'Available' : status.all === 'partial' ? 'Partial' : 'Unavailable'}
+            </Badge>
+            
+            {status.totalRequired > 0 && (
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-neutral-600 dark:text-neutral-400 font-medium">{status.totalAvailable}/{status.totalRequired}</span>
+                  <span className="text-neutral-500 dark:text-neutral-500">{status.fulfillmentPercent}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full ${config.bgColor} transition-all duration-300`}
+                    style={{ width: `${Math.min(status.fulfillmentPercent, 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         )
       }
     },
@@ -489,12 +537,28 @@ export default function MaterialRequests() {
                                   <Calendar size={14} className="opacity-50" />
                                   <span>{new Date(req.required_by_date).toLocaleDateString()}</span>
                                 </div>
-                                <span className={`${avail.text}   text-[9px]`}>{availability.all}</span>
+              
                               </div>
                               
-                              <div className="w-full h-1 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                                <div className={`h-full ${avail.bg} w-full opacity-50`}></div>
-                              </div>
+                              {availability.totalRequired > 0 && (
+                                <div className="bg-neutral-50 dark:bg-neutral-800/50 rounded-xs p-2 space-y-1.5">
+                                  <div className="flex items-center justify-between text-[10px]">
+                                    <span className={`font-semibold ${avail.text}`}>
+                                      {availability.all === 'available' ? '✓ Available' : availability.all === 'partial' ? '⚠ Partial' : '✗ Unavailable'}
+                                    </span>
+                                    <span className="text-neutral-500 dark:text-neutral-400">{availability.fulfillmentPercent}%</span>
+                                  </div>
+                                  <div className="text-[9px] text-neutral-600 dark:text-neutral-400">
+                                    {availability.totalAvailable}/{availability.totalRequired} units
+                                  </div>
+                                  <div className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
+                                    <div 
+                                      className={`h-full ${avail.bg} transition-all duration-300`}
+                                      style={{ width: `${Math.min(availability.fulfillmentPercent, 100)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
                             </div>
 
                             <div className="flex items-center justify-between pt-3 border-t border-neutral-100 dark:border-neutral-800">

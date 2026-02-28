@@ -31,7 +31,7 @@ export default function Warehouses() {
     department: 'all'
   })
 
-  const [visibleColumns, setVisibleColumns] = useState(new Set(['warehouse_code', 'warehouse_name', 'warehouse_type', 'location', 'capacity']))
+  const [visibleColumns, setVisibleColumns] = useState(new Set(['warehouse_details', 'warehouse_type', 'location', 'capacity']))
 
   useEffect(() => {
     fetchDepartments()
@@ -185,8 +185,16 @@ export default function Warehouses() {
   }
 
   const columns = useMemo(() => [
-    { key: 'warehouse_code', label: 'Code' },
-    { key: 'warehouse_name', label: 'Name' },
+    {
+      key: 'warehouse_details',
+      label: 'Warehouse',
+      render: (value, row) => (
+        <div className="flex flex-col">
+          <span className="text-xs font-medium text-neutral-900 dark:text-white">{row.warehouse_code}</span>
+          <span className="text-[10px] text-neutral-500">{row.warehouse_name}</span>
+        </div>
+      )
+    },
     { key: 'warehouse_type', label: 'Type' },
     { key: 'location', label: 'Location' },
     { key: 'capacity', label: 'Capacity' }

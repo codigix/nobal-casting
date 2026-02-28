@@ -1158,9 +1158,11 @@ export default function ProductionEntry() {
   const totalDowntimeMinutes = downtimes.reduce((sum, d) => sum + (parseFloat(d.duration_minutes) || 0), 0)
   const hasPendingApproval = rejections.some(rej => rej.status !== 'Approved')
 
-  const maxAllowedQty = previousOperationData
-    ? parseFloat(previousOperationData.transferred_quantity || 0)
-    : parseFloat(jobCardData?.planned_quantity || 0);
+  const maxAllowedQty = jobCardData?.max_allowed_quantity !== undefined 
+    ? parseFloat(jobCardData.max_allowed_quantity)
+    : (previousOperationData
+      ? parseFloat(previousOperationData.transferred_quantity || 0)
+      : parseFloat(jobCardData?.planned_quantity || 0));
 
   const isOperationFinished = totalProducedQty >= (maxAllowedQty - 0.1);
   const canTransfer = transferableQty > 0 || isOperationFinished;

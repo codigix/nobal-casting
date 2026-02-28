@@ -9,7 +9,7 @@ import {
   ArrowDown, ArrowUp, Filter, RefreshCw, Plus, CheckCircle, 
   Clock, XCircle, AlertCircle, Search, ArrowRight, Eye, 
   MoreVertical, Download, Settings2, X, Activity, Database,
-  TrendingUp, TrendingDown, Package
+  TrendingUp, TrendingDown, Package, ChevronDown, ChevronRight
 } from 'lucide-react'
 import StockMovementModal from '../../components/Inventory/StockMovementModal'
 import StockMovementDetailsModal from '../../components/Inventory/StockMovementDetailsModal'
@@ -26,6 +26,10 @@ export default function StockMovements() {
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedMovement, setSelectedMovement] = useState(null)
   const [showColumnMenu, setShowColumnMenu] = useState(false)
+  const [expandedMR, setExpandedMR] = useState(new Set())
+  const [viewMode, setViewMode] = useState('grouped') // 'grouped' or 'flat'
+  const [materialRequests, setMaterialRequests] = useState({})
+  const [loadingMR, setLoadingMR] = useState(new Set())
   const [visibleColumns, setVisibleColumns] = useState(new Set([
     'transaction_no', 'item_code', 'movement_type', 'purpose', 'quantity', 'warehouse_name', 'status', 'created_at'
   ]))
@@ -101,8 +105,42 @@ export default function StockMovements() {
     return configs[status] || { label: status, color: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700', icon: AlertCircle }
   }
 
+  const fetchMaterialRequest = useCallback(async (mrId) => {
+    if (materialRequests[mrId] || loadingMR.has(mrId)) return
+    
+    try {
+      setLoadingMR(prev => new Set([...prev, mrId]))
+      const response = await api.get(`/material-requests/${mrId}`)
+      if (response.data.success) {
+        setMaterialRequests(prev => ({
+          ...prev,
+          [mrId]: response.data.data
+        }))
+      }
+    } catch (err) {
+      console.error('Error fetching material request:', err)
+    } finally {
+      setLoadingMR(prev => {
+        const next = new Set(prev)
+        next.delete(mrId)
+        return next
+      })
+    }
+  }, [materialRequests, loadingMR])
+
+  const toggleMRExpand = (mrId) => {
+    const next = new Set(expandedMR)
+    if (next.has(mrId)) {
+      next.delete(mrId)
+    } else {
+      next.add(mrId)
+      fetchMaterialRequest(mrId)
+    }
+    setExpandedMR(next)
+  }
+
   const filteredMovements = useMemo(() => {
-    return movements.filter(m => {
+    const filtered = movements.filter(m => {
       const matchesSearch = !searchTerm || 
         m.transaction_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.item_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -112,13 +150,38 @@ export default function StockMovements() {
       
       return matchesSearch && matchesPurpose
     })
-  }, [movements, searchTerm, purposeFilter])
+
+    if (viewMode === 'flat') {
+      return filtered
+    }
+
+    // Group by reference_name (Material Request ID)
+    const grouped = {}
+    filtered.forEach(m => {
+      const mrId = m.reference_name || 'NO_REFERENCE'
+      if (!grouped[mrId]) {
+        grouped[mrId] = {
+          reference_name: mrId,
+          items: [],
+          total_qty: 0,
+          movement_types: new Set(),
+          status: m.status,
+          created_at: m.created_at
+        }
+      }
+      grouped[mrId].items.push(m)
+      grouped[mrId].total_qty += parseFloat(m.quantity || 0)
+      grouped[mrId].movement_types.add(m.movement_type)
+    })
+
+    return Object.values(grouped)
+  }, [movements, searchTerm, purposeFilter, viewMode])
 
   const columns = useMemo(() => [
     {
       key: 'transaction_no',
       label: 'Transaction #',
-      render: (val) => <span className=" text-neutral-900 dark:text-white  tracking-wider">{val}</span>
+      render: (val) => <span className=" text-neutral-900 dark:text-white  ">{val}</span>
     },
     {
       key: 'item_code',
@@ -126,7 +189,7 @@ export default function StockMovements() {
       render: (val, row) => (
         <div className="flex flex-col">
           <span className="font-medium text-neutral-900 dark:text-white">{val}</span>
-          <span className="text-[10px] text-neutral-400  truncate max-w-[150px]">{row.item_name}</span>
+          <span className="text-xs text-neutral-400  truncate max-w-[150px]">{row.item_name}</span>
         </div>
       )
     },
@@ -168,9 +231,9 @@ export default function StockMovements() {
         if (row.movement_type === 'TRANSFER') {
           return (
             <div className="flex items-center gap-2 text-neutral-600 dark:text-neutral-400">
-              <span className="font-medium text-neutral-900 dark:text-white bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded-xs text-[10px]">{row.source_warehouse_name}</span>
+              <span className="font-medium text-neutral-900 dark:text-white bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded-xs text-xs">{row.source_warehouse_name}</span>
               <ArrowRight size={14} className="text-neutral-400" />
-              <span className="font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded-xs text-[10px]">{row.target_warehouse_name}</span>
+              <span className="font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded-xs text-xs">{row.target_warehouse_name}</span>
             </div>
           )
         }
@@ -284,7 +347,7 @@ export default function StockMovements() {
                 <stat.icon size={16} />
               </div>
               <div>
-                <p className="text-[10px]  text-neutral-400  tracking-wider leading-none mb-1">{stat.label}</p>
+                <p className="text-xs  text-neutral-400   leading-none mb-1">{stat.label}</p>
                 <h3 className="text-lg  text-neutral-900 dark:text-white leading-none">{stat.value}</h3>
               </div>
             </div>
@@ -408,15 +471,252 @@ export default function StockMovements() {
           )}
         </div>
 
-        {/* Content View */}
-        <div className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800 ">
-          <DataTable
-            columns={columns}
-            data={filteredMovements}
-            loading={loading}
-            externalVisibleColumns={visibleColumns}
-          />
+        {/* View Mode Toggle */}
+        <div className="mb-4 flex gap-2">
+          <button
+            onClick={() => setViewMode('grouped')}
+            className={`px-4 py-2 rounded-xs text-xs font-medium transition-all ${
+              viewMode === 'grouped'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50'
+            }`}
+          >
+            Grouped by Request
+          </button>
+          <button
+            onClick={() => setViewMode('flat')}
+            className={`px-4 py-2 rounded-xs text-xs font-medium transition-all ${
+              viewMode === 'flat'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50'
+            }`}
+          >
+            Flat View
+          </button>
         </div>
+
+        {/* Content View */}
+        {viewMode === 'grouped' ? (
+          <div className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+            {filteredMovements.length === 0 ? (
+              <div className="p-8 text-center">
+                <Package size={32} className="mx-auto mb-4 text-neutral-400" />
+                <p className="text-neutral-600 dark:text-neutral-400">No stock movements found</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                {filteredMovements.map((group) => (
+                  <div key={group.reference_name}>
+                    <button
+                      onClick={() => toggleMRExpand(group.reference_name)}
+                      className="w-full p-2 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-3 flex-1 text-left">
+                        {expandedMR.has(group.reference_name) ? (
+                          <ChevronDown size={18} className="text-blue-600 flex-shrink-0" />
+                        ) : (
+                          <ChevronRight size={18} className="text-neutral-400 flex-shrink-0" />
+                        )}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3">
+                            <h3 className=" text-neutral-900 dark:text-white">
+                              {group.reference_name}
+                            </h3>
+                            <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-900 text-xs">
+                              {group.items.length} item{group.items.length !== 1 ? 's' : ''}
+                            </Badge>
+                            <span className="text-xs text-neutral-600 dark:text-neutral-400">
+                              {group.total_qty.toFixed(2)} units
+                            </span>
+                          </div>
+                          <p className="text-xs text-neutral-500 mt-1">
+                            Created: {new Date(group.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={`${
+                          group.status === 'Approved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                          group.status === 'Pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                          'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-400'
+                        } border text-xs`}>
+                          {group.status}
+                        </Badge>
+                      </div>
+                    </button>
+
+                    {expandedMR.has(group.reference_name) && (
+                      <div className="bg-neutral-50/50 dark:bg-neutral-800/30 border-t border-neutral-200 dark:border-neutral-800">
+                        {/* MR Details Section */}
+                        {materialRequests[group.reference_name] ? (
+                          <div className="p-2 border-b border-neutral-200 dark:border-neutral-800">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                              <div>
+                                <p className="text-xs text-neutral-500   ">Request ID</p>
+                                <p className="text-neutral-900 dark:text-white ">{materialRequests[group.reference_name].mr_id}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-neutral-500   ">Department</p>
+                                <p className="text-neutral-900 dark:text-white">{materialRequests[group.reference_name].department || '-'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-neutral-500   ">Purpose</p>
+                                <p className="text-neutral-900 dark:text-white text-xs">{materialRequests[group.reference_name].purpose || '-'}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-neutral-500   ">Status</p>
+                                <Badge className={`mt-1 text-xs ${
+                                  materialRequests[group.reference_name].status === 'approved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                  materialRequests[group.reference_name].status === 'draft' ? 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-400' :
+                                  materialRequests[group.reference_name].status === 'pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                  'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                }`}>
+                                  {materialRequests[group.reference_name].status?.toUpperCase()}
+                                </Badge>
+                              </div>
+                            </div>
+
+                            {materialRequests[group.reference_name].notes && (
+                              <div>
+                                <p className="text-xs text-neutral-500    mb-1">Notes</p>
+                                <p className="text-sm text-neutral-700 dark:text-neutral-300">{materialRequests[group.reference_name].notes}</p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="p-4 text-center">
+                            {loadingMR.has(group.reference_name) ? (
+                              <div className="flex items-center justify-center gap-2">
+                                <RefreshCw size={14} className="animate-spin text-blue-500" />
+                                <span className="text-sm text-neutral-600 dark:text-neutral-400">Loading request details...</span>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-neutral-600 dark:text-neutral-400">No request details available</span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Unified Materials & Movements Table */}
+                        {((materialRequests[group.reference_name]?.items && materialRequests[group.reference_name].items.length > 0) || group.items.length > 0) && (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead className="bg-neutral-100 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 sticky top-0">
+                                <tr>
+                                  <th className="p-2 text-left text-neutral-600 dark:text-neutral-400 font-medium">Item</th>
+                                  <th className="p-2 text-left text-neutral-600 dark:text-neutral-400 font-medium">Category</th>
+                                  <th className="p-2 text-center text-neutral-600 dark:text-neutral-400 font-medium">Qty</th>
+                                  <th className="p-2 text-left text-neutral-600 dark:text-neutral-400 font-medium">UOM</th>
+                                  <th className="p-2 text-left text-neutral-600 dark:text-neutral-400 font-medium">Movement Type</th>
+                                  <th className="p-2 text-left text-neutral-600 dark:text-neutral-400 font-medium">Warehouse</th>
+                                  <th className="p-2 text-left text-neutral-600 dark:text-neutral-400 font-medium">Status</th>
+                                  <th className="p-2 text-left text-neutral-600 dark:text-neutral-400 font-medium">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                                {/* Requested Materials Rows */}
+                                {materialRequests[group.reference_name]?.items && materialRequests[group.reference_name].items.length > 0 && materialRequests[group.reference_name].items.map((item, idx) => (
+                                  <tr key={`req-${idx}`} className="bg-blue-50/30 dark:bg-blue-900/10 hover:bg-blue-100/50 dark:hover:bg-blue-900/20 transition-colors">
+                                    <td className="p-2">
+                                      <div>
+                                        <div className="font-medium text-neutral-900 dark:text-white">{item.item_code}</div>
+                                        <div className="text-[10px] text-neutral-500">{item.item_name || '-'}</div>
+                                      </div>
+                                    </td>
+                                    <td className="p-2">
+                                      <div className="flex flex-col gap-1">
+                                        <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800 text-[10px] w-fit">
+                                          Requested
+                                        </Badge>
+                                      </div>
+                                    </td>
+                                    <td className="p-2 text-center text-neutral-900 dark:text-white">{parseFloat(item.qty || item.quantity).toFixed(2)}</td>
+                                    <td className="p-2 text-neutral-600 dark:text-neutral-400">{item.uom || '-'}</td>
+                                    <td className="p-2 text-neutral-600 dark:text-neutral-400">-</td>
+                                    <td className="p-2 text-neutral-600 dark:text-neutral-400">-</td>
+                                    <td className="p-2">
+                                      <Badge className="bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700 text-[10px]">
+                                        PENDING
+                                      </Badge>
+                                    </td>
+                                    <td className="p-2">-</td>
+                                  </tr>
+                                ))}
+
+                                {/* Stock Movements Rows */}
+                                {group.items.map((item) => (
+                                  <tr key={`mov-${item.id}`} className="hover:bg-neutral-100/50 dark:hover:bg-neutral-800/50 transition-colors">
+                                    <td className="p-2">
+                                      <div>
+                                        <div className="font-medium text-neutral-900 dark:text-white">{item.item_code}</div>
+                                        <div className="text-[10px] text-neutral-500">{item.item_name || '-'}</div>
+                                      </div>
+                                    </td>
+                                    <td className="p-2">
+                                      <div className="flex flex-col gap-1">
+                                        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900 text-[10px] w-fit">
+                                          Moved
+                                        </Badge>
+                                      </div>
+                                    </td>
+                                    <td className="p-2 text-center text-neutral-900 dark:text-white">{parseFloat(item.quantity).toFixed(2)}</td>
+                                    <td className="p-2 text-neutral-600 dark:text-neutral-400">-</td>
+                                    <td className="p-2">
+                                      {item.movement_type === 'IN' ? (
+                                        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900 flex items-center gap-1 w-fit text-[10px]">
+                                          <ArrowDown size={11} /> IN
+                                        </Badge>
+                                      ) : item.movement_type === 'OUT' ? (
+                                        <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border-rose-200 dark:border-rose-900 flex items-center gap-1 w-fit text-[10px]">
+                                          <ArrowUp size={11} /> OUT
+                                        </Badge>
+                                      ) : (
+                                        <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-900 flex items-center gap-1 w-fit text-[10px]">
+                                          <RefreshCw size={11} /> TRANSFER
+                                        </Badge>
+                                      )}
+                                    </td>
+                                    <td className="p-2 text-neutral-600 dark:text-neutral-400">{item.warehouse_name || '-'}</td>
+                                    <td className="p-2">
+                                      <Badge className={`text-[10px] ${
+                                        item.status === 'Approved' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900' :
+                                        item.status === 'Pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-900' :
+                                        'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700'
+                                      } border`}>
+                                        {item.status}
+                                      </Badge>
+                                    </td>
+                                    <td className="p-2">
+                                      <button
+                                        onClick={() => { setSelectedMovement(item); setShowDetailsModal(true) }}
+                                        className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                                        title="View Details"
+                                      >
+                                        <Eye size={14} />
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800 ">
+            <DataTable
+              columns={columns}
+              data={filteredMovements}
+              loading={loading}
+              externalVisibleColumns={visibleColumns}
+            />
+          </div>
+        )}
       </div>
 
       {/* Modal */}

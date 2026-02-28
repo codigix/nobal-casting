@@ -389,8 +389,8 @@ export class MaterialRequestModel {
             await connection.execute(
               `INSERT INTO stock_movements (
                 transaction_no, item_code, warehouse_id, source_warehouse_id, target_warehouse_id, 
-                movement_type, purpose, quantity, reference_type, reference_name, notes, status, created_by, approved_by, approved_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Approved', ?, ?, NOW())`,
+                movement_type, quantity, reference_type, reference_name, notes, status, created_by, approved_by, approved_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
               [
                 transaction_no, 
                 item.item_code, 
@@ -398,11 +398,11 @@ export class MaterialRequestModel {
                 movement_type === 'TRANSFER' ? sourceWarehouseId : null,
                 movement_type === 'TRANSFER' ? targetWarehouseId : null,
                 movement_type,
-                request.purpose,
                 qtyToIssue,
                 'Material Request',
                 mrId,
                 `Material Release for ${mrId}`,
+                'Approved',
                 approvedBy,
                 approvedBy
               ]

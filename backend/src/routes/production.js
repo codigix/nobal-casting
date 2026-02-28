@@ -240,6 +240,23 @@ router.delete(
     productionController.getOperationLogs.bind(productionController)
   )
 
+  // ============= JOB CARD MATERIAL REQUESTS =============
+  router.get(
+    '/job-cards/:job_card_id/material-request-status',
+    authMiddleware,
+    productionController.checkJobCardMaterialStatus.bind(productionController)
+  )
+  router.post(
+    '/job-cards/:job_card_id/create-material-request',
+    authMiddleware,
+    productionController.createJobCardMaterialRequest.bind(productionController)
+  )
+  router.post(
+    '/job-cards/:job_card_id/validate-start',
+    authMiddleware,
+    productionController.validateJobCardStart.bind(productionController)
+  )
+
   // ============= WORKSTATIONS =============
   router.post(
     '/workstations',

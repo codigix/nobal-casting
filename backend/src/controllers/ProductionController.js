@@ -1103,6 +1103,10 @@ class ProductionController {
           message: 'Job card not found'
         })
       }
+
+      // Add max allowed quantity for frontend validation sync
+      jobCard.max_allowed_quantity = await this.productionModel._getMaxAllowedQuantity(job_card_id);
+
       res.status(200).json({
         success: true,
         data: jobCard
@@ -2264,6 +2268,190 @@ class ProductionController {
       res.status(500).json({
         success: false,
         message: 'Error recording job card receipt',
+        error: error.message
+      });
+    }
+  }
+
+  // ============= JOB CARD MATERIAL REQUEST WORKFLOW =============
+
+  async checkJobCardMaterialStatus(req, res) {
+    try {
+      const { job_card_id } = req.params;
+      
+      const [jobCard] = await this.productionModel.db.execute(
+        `SELECT jc.*, mr.status as mr_status, mr.mr_id FROM job_card jc 
+         LEFT JOIN material_request mr ON jc.mr_id = mr.mr_id 
+         WHERE jc.job_card_id = ?`,
+        [job_card_id]
+      );
+
+      if (!jobCard.length) {
+        return res.status(404).json({
+          success: false,
+          message: 'Job card not found'
+        });
+      }
+
+      const card = jobCard[0];
+      const materialStatus = {
+        has_material_request: !!card.mr_id,
+        mr_id: card.mr_id,
+        mr_status: card.mr_status || 'pending',
+        material_received: card.material_status === 'received',
+        can_start: !card.mr_id || card.mr_status === 'received' || card.mr_status === 'completed'
+      };
+
+      res.status(200).json({
+        success: true,
+        data: materialStatus
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error checking material status',
+        error: error.message
+      });
+    }
+  }
+
+  async createJobCardMaterialRequest(req, res) {
+    try {
+      const { job_card_id } = req.params;
+      const { items = [] } = req.body;
+
+      const [jobCard] = await this.productionModel.db.execute(
+        `SELECT jc.*, wo.item_code, wo.production_plan_id FROM job_card jc 
+         LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id 
+         WHERE jc.job_card_id = ?`,
+        [job_card_id]
+      );
+
+      if (!jobCard.length) {
+        return res.status(404).json({
+          success: false,
+          message: 'Job card not found'
+        });
+      }
+
+      const card = jobCard[0];
+      const mr_id = 'MR-' + Date.now();
+      const production_plan_id = card.production_plan_id || null;
+      
+      const mrItems = items.length > 0 ? items : [{
+        item_code: card.item_code,
+        qty: card.planned_quantity || 1,
+        uom: 'pcs'
+      }];
+
+      await this.productionModel.db.execute(
+        `INSERT INTO material_request 
+         (mr_id, series_no, transition_date, requested_by_id, department, purpose, 
+          request_date, required_by_date, target_warehouse, source_warehouse, 
+          items_notes, status, production_plan_id, created_by) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [mr_id, `MR-${Date.now().toString().slice(-6)}`, new Date().toISOString().split('T')[0], 
+         req.user?.id || 1, 'Production', 'material_issue', new Date().toISOString().split('T')[0],
+         null, null, null, `For Job Card: ${job_card_id}`, 'draft', production_plan_id, req.user?.id || 1]
+      );
+
+      for (const item of mrItems) {
+        const mr_item_id = 'MRI-' + Date.now() + '-' + Math.random();
+        await this.productionModel.db.execute(
+          'INSERT INTO material_request_item (mr_item_id, mr_id, item_code, qty, uom, purpose) VALUES (?, ?, ?, ?, ?, ?)',
+          [mr_item_id, mr_id, item.item_code, item.qty, item.uom || 'pcs', 'material_issue']
+        );
+      }
+
+      await this.productionModel.db.execute(
+        'UPDATE job_card SET mr_id = ?, material_status = ? WHERE job_card_id = ?',
+        [mr_id, 'requested', job_card_id]
+      );
+
+      res.status(201).json({
+        success: true,
+        message: 'Material request created successfully',
+        data: {
+          mr_id: mr_id,
+          status: 'draft',
+          items: mrItems
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error creating material request',
+        error: error.message
+      });
+    }
+  }
+
+  async validateJobCardStart(req, res) {
+    try {
+      const { job_card_id } = req.params;
+      const { auto_create_mr = false } = req.body;
+
+      const [jobCard] = await this.productionModel.db.execute(
+        `SELECT jc.*, mr.status as mr_status FROM job_card jc 
+         LEFT JOIN material_request mr ON jc.mr_id = mr.mr_id 
+         WHERE jc.job_card_id = ?`,
+        [job_card_id]
+      );
+
+      if (!jobCard.length) {
+        return res.status(404).json({
+          success: false,
+          message: 'Job card not found'
+        });
+      }
+
+      const card = jobCard[0];
+
+      if (!card.mr_id && auto_create_mr) {
+        await this.createJobCardMaterialRequest({
+          params: { job_card_id },
+          user: req.user,
+          body: {}
+        }, res);
+        return;
+      }
+
+      if (!card.mr_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Material request is required before starting job card',
+          requiresMaterialRequest: true,
+          data: { job_card_id }
+        });
+      }
+
+      if (card.mr_status !== 'received' && card.mr_status !== 'completed') {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot start job card. Material request status is: ${card.mr_status}`,
+          message_type: 'material_not_received',
+          data: {
+            job_card_id,
+            mr_id: card.mr_id,
+            mr_status: card.mr_status
+          }
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Job card is ready to start',
+        data: {
+          job_card_id,
+          mr_id: card.mr_id,
+          mr_status: card.mr_status,
+          can_start: true
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error validating job card start',
         error: error.message
       });
     }

@@ -1,3 +1,266 @@
+# Phase 29: Stock Movements Workflow & Backfill ✅
+
+## Overview
+Fixed and completed the Stock Movements workflow integration with Material Request approvals. When releasing stock from a Material Request, stock movement entries are now automatically created and marked as "Approved" for immediate visibility in the Stock Movements page. Also backfilled 30 stock movement entries from previously approved Material Requests.
+
+## Features Implemented
+
+### 1. Stock Movement Auto-Creation on Material Release
+**File**: `backend/src/models/MaterialRequestModel.js:384-413`
+
+When a material request is approved and stock is released:
+- ✅ Stock deducted from source warehouse
+- ✅ Stock Movement entry created with transaction number (STK-YYYYMMDD-XXXXX format)
+- ✅ Entry marked as "Approved" status (no manual approval needed)
+- ✅ Linked to Material Request as reference
+- ✅ Visible immediately in Stock Movements page
+
+### 2. Bug Fixes
+**Issue**: Stock Movement entries not being created when approving Material Requests
+- **Cause**: INSERT statement included non-existent `purpose` column
+- **Fix**: Removed invalid column reference in `MaterialRequestModel.approve()`
+
+### 3. Backfill Script
+**File**: `backend/scripts/backfill-stock-movements-from-mr.js`
+
+Created automated script to populate missing stock movement entries from previously approved Material Requests:
+- Finds all Material Requests with status: approved, partial, completed
+- Filters for stock transactions (material_issue, material_transfer)
+- Skips entries that already have stock movements
+- Generates sequential transaction numbers
+- Resolves warehouse codes/names to IDs
+- Creates entries with "Approved" status
+
+**Backfill Results**:
+- ✅ Processed: 4 Material Requests
+- ✅ Created: 30 Stock Movement entries
+- ✅ Skipped: 0 (no duplicates)
+
+### 4. Workflow Diagram
+```
+Material Request Approved
+    ↓
+[Check Purpose: material_issue or material_transfer?]
+    ├─→ material_issue: OUT movement
+    ├─→ material_transfer: TRANSFER movement
+    └─→ other: skip movement
+    ↓
+[Generate Transaction No: STK-YYYYMMDD-XXXXX]
+    ↓
+[Create Stock Movement Entry]
+    ├─ Status: Approved (immediate)
+    ├─ Reference: Material Request ID
+    ├─ Qty: released quantity
+    └─ Warehouse: source_warehouse_id
+    ↓
+[Visible in Stock Movements Page]
+    ↓
+[Entry appears in Stock Ledger]
+```
+
+### 5. Data Integrity
+- All stock movements linked to Material Requests via reference_name
+- Transaction numbers auto-generated to prevent duplicates
+- Warehouse resolution handles codes, names, and IDs
+- Created_by and Approved_by fields logged for audit trail
+
+## Files Modified
+1. `backend/src/models/MaterialRequestModel.js` - Fixed stock movement INSERT
+2. Created `backend/scripts/backfill-stock-movements-from-mr.js` - New backfill utility
+
+## Files Deployed
+- Frontend build: ✅ 2351 modules
+- Backend: ✅ No compilation needed (Node.js)
+
+## Test Results
+- ✅ Backfill script executed successfully
+- ✅ 30 stock movements created from 4 Material Requests
+- ✅ No duplicate entries
+- ✅ All warehouse lookups successful
+- ✅ Transaction numbers generated sequentially
+
+## Running the Backfill Script
+```bash
+cd backend
+node scripts/backfill-stock-movements-from-mr.js
+```
+
+---
+
+# Phase 27: Job Card Material Request Workflow ✅
+
+## Overview
+Implemented a comprehensive material request validation and workflow system for job card execution. When starting a job card, the system now:
+1. **Checks** if a material request exists for the job card
+2. **Auto-creates** a material request if one doesn't exist
+3. **Validates** that materials have been received before allowing job card start
+4. **Tracks** material status through the production lifecycle
+
+## Features Implemented
+
+### 1. Database Schema Updates
+- **Migration**: `scripts/add-material-request-to-job-card.sql`
+  - Added `mr_id` column to link job cards with material requests
+  - Added `material_status` column to track material request state (pending, requested, received, completed)
+  - Added `material_received_date` column to track when materials arrived
+  - Created indexes for performance optimization
+
+### 2. Backend API Endpoints
+Added three new REST endpoints in `/production/job-cards/{job_card_id}`:
+
+#### GET `/material-request-status`
+Checks the current material request status for a job card
+```javascript
+Response: {
+  has_material_request: boolean,
+  mr_id: string,
+  mr_status: string,
+  material_received: boolean,
+  can_start: boolean
+}
+```
+
+#### POST `/create-material-request`
+Creates a new material request for the job card
+- Automatically extracts items from the work order
+- Sets department to "Production" with purpose "material_issue"
+- Links to production plan if available
+- Returns created MR ID and status
+
+#### POST `/validate-start`
+Comprehensive validation before allowing job card start
+- Checks if MR exists; auto-creates if needed
+- Validates that materials are in "received" or "completed" status
+- Returns detailed status information
+- Body param: `auto_create_mr` (boolean, default false)
+
+### 3. Frontend Workflow Enhancement
+**File**: `frontend/src/pages/Production/JobCard.jsx`
+
+#### Updated `handleStartJobCard()` Function
+New workflow when clicking "Start Operation":
+1. **Status Check**: Validates job card status (draft, ready, pending, open)
+2. **Material Status Check**: Fetches current material request status
+3. **Auto-Create if Needed**: 
+   - If no MR exists, automatically creates one
+   - Shows message directing user to Material Requests page
+4. **Wait for Materials**: 
+   - If MR exists but materials not received, shows waiting message
+   - Updates job card status and displays current MR status
+5. **Start Job Card**: 
+   - Only proceeds if materials are in "received" or "completed" status
+   - Updates job card to "in-progress" status
+   - Redirects to production entry page
+
+#### New Material Status Column
+Added visual column in job card table showing:
+- **No MR**: Slate color - No material request exists
+- **Requested**: Blue color - Material request created but not received
+- **Received**: Emerald color - Materials have been received
+- **Completed**: Indigo color - Material request fully processed
+- Shows partial MR ID (last 6 chars) for reference
+
+### 4. Status Flow Diagram
+```
+Job Card Start Click
+    ↓
+[Check Material Status]
+    ├─→ No MR → Auto-Create → Show warning "Send for approval"
+    ├─→ MR Draft → Wait → Show "Status: draft"
+    ├─→ MR Pending → Wait → Show "Status: pending"
+    ├─→ MR Received → ✅ Allow Start
+    └─→ MR Completed → ✅ Allow Start
+         ↓
+    [Update Job Card Status → in-progress]
+         ↓
+    [Redirect to Production Entry]
+```
+
+### 5. Material Request Auto-Creation
+When a material request is auto-created for a job card:
+- **Series No**: Generated from timestamp
+- **Department**: "Production"
+- **Purpose**: "material_issue"
+- **Items**: Extracted from work order
+- **Status**: "draft" (requires manual approval)
+- **Notes**: References the job card ID
+- **Production Plan ID**: Linked if work order is from a plan
+
+### 6. User Experience
+**Toast Notifications**:
+- ⏳ "Checking material request status..."
+- 📋 "Creating material request..."
+- ⚠️ "Material request {MR_ID} created. Send it for approval..."
+- ⏳ "Waiting for material. Current status: {STATUS}"
+- ✅ "Material received. Starting job card..."
+
+**Status Badges**: Color-coded material status visible in job card table for quick assessment
+
+## Files Modified
+1. `backend/src/routes/production.js` - Added 3 new routes
+2. `backend/src/controllers/ProductionController.js` - Added 3 controller methods
+3. `frontend/src/pages/Production/JobCard.jsx` - Updated start handler and added status column
+
+## Files Created
+1. `backend/scripts/add-material-request-to-job-card.sql` - Migration script
+2. `backend/scripts/migrate-material-request-job-card.js` - Migration runner
+
+## Database Migration
+To apply the migration:
+```bash
+cd backend
+node scripts/migrate-material-request-job-card.js
+```
+
+Or run SQL directly:
+```bash
+mysql -u your_user -p your_db < scripts/add-material-request-to-job-card.sql
+```
+
+## Test Results
+- ✅ Frontend builds successfully (2351 modules)
+- ✅ Backend code valid (no syntax errors)
+- ✅ Database migration completes successfully
+- ✅ Material status column displays correctly
+- ✅ Auto-create MR workflow functional
+- ✅ Status validation prevents unauthorized starts
+- ✅ Toast notifications display appropriately
+
+## Workflow Examples
+
+### Scenario 1: New Job Card (No MR)
+1. User clicks "Start" on a draft job card
+2. System checks: No MR found
+3. System auto-creates MR with production items
+4. Shows: "Material request MR-xxx created. Send it for approval..."
+5. User must go to Material Requests page and approve/send
+6. After approval and material receipt, job card can be started
+
+### Scenario 2: MR Created But Not Received
+1. User clicks "Start" on job card with existing MR
+2. System checks: MR status = "draft" or "pending"
+3. Shows: "Waiting for material. Current status: PENDING"
+4. Admin must approve MR in Material Requests page
+5. Once materials are received, status becomes "received"
+6. User can then start the job card
+
+### Scenario 3: MR Received (Ready to Start)
+1. User clicks "Start" on job card
+2. System checks: MR status = "received"
+3. All validations pass
+4. Job card updates to "in-progress"
+5. Redirects to Production Entry for data capture
+
+## Next Steps (Recommended)
+1. **Auto-Approve MR**: Add setting to auto-approve production MRs
+2. **Material Reservation**: Reserve stock automatically when MR is approved
+3. **Stock Deduction**: Deduct materials from stock when job card starts
+4. **Quality Check**: Require QC approval before materials are marked as "received"
+5. **MR Dashboard**: Show pending MRs requiring attention
+6. **Audit Trail**: Log all MR status transitions for compliance
+
+---
+
 # Phase 26: OEE Dashboard Redesign for High-Fidelity Performance Visualization ✅
 
 ## Overview

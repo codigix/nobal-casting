@@ -364,21 +364,72 @@ export default function StockEntries() {
     {
       key: 'warehouse_transition',
       label: 'Warehouse (Source → Dest)',
-      render: (value, row) => (
-        <div className="flex items-center gap-2 text-xs">
-          <div className="flex flex-col">
-            <span className={row.from_warehouse_name ? "text-neutral-900 dark:text-white" : "text-neutral-400 italic"}>
-              {row.from_warehouse_name || 'N/A'}
+      render: (value, row) => {
+        // Determine source warehouse based on entry type
+        let sourceWarehouse = row.from_warehouse_name
+        let destWarehouse = row.to_warehouse_name
+        
+        // For Stock Receipt (from purchase), check if it's from a PO
+        if (row.entry_type === 'Stock Receipt') {
+          let sourceLabel = 'Purchase'
+          let sourceColor = 'text-amber-600 dark:text-amber-400 font-medium'
+          
+          // Check if we have explicit reference information
+          const hasReference = row.reference_doctype && row.reference_doctype.trim() && row.reference_name && row.reference_name.trim()
+          
+          if (hasReference) {
+            const docType = row.reference_doctype.toUpperCase().trim()
+            if (docType === 'PO' || docType === 'PURCHASE ORDER') {
+              sourceLabel = `PO-${row.reference_name}`
+              sourceColor = 'text-blue-600 dark:text-blue-400 font-medium'
+            } else if (docType === 'GRN') {
+              sourceLabel = `GRN-${row.reference_name}`
+              sourceColor = 'text-indigo-600 dark:text-indigo-400 font-medium'
+            } else {
+              sourceLabel = `${row.reference_doctype}-${row.reference_name}`
+              sourceColor = 'text-blue-600 dark:text-blue-400 font-medium'
+            }
+          }
+          
+          return (
+            <div className="flex items-center gap-2 text-xs">
+              <span className={sourceColor}>
+                {sourceLabel}
+              </span>
+              <span className="text-neutral-400">→</span>
+              <span className={destWarehouse ? "text-neutral-900 dark:text-white font-medium" : "text-neutral-400"}>
+                {destWarehouse || 'Warehouse'}
+              </span>
+            </div>
+          )
+        }
+        
+        // For Stock Issue, destination is not set, show only source
+        if (row.entry_type === 'Stock Issue') {
+          return (
+            <div className="flex items-center gap-2 text-xs">
+              <span className={sourceWarehouse ? "text-neutral-900 dark:text-white font-medium" : "text-neutral-400"}>
+                {sourceWarehouse || 'Warehouse'}
+              </span>
+              <span className="text-neutral-400">→</span>
+              <span className="text-neutral-400">*</span>
+            </div>
+          )
+        }
+        
+        // For Stock Transfer, show both
+        return (
+          <div className="flex items-center gap-2 text-xs">
+            <span className={sourceWarehouse ? "text-neutral-900 dark:text-white font-medium" : "text-neutral-400"}>
+              {sourceWarehouse || 'Unknown'}
+            </span>
+            <span className="text-neutral-400">→</span>
+            <span className={destWarehouse ? "text-neutral-900 dark:text-white font-medium" : "text-neutral-400"}>
+              {destWarehouse || 'Unknown'}
             </span>
           </div>
-          <span className="text-neutral-400">→</span>
-          <div className="flex flex-col">
-            <span className={row.to_warehouse_name ? "text-neutral-900 dark:text-white" : "text-neutral-400 italic"}>
-              {row.to_warehouse_name || 'N/A'}
-            </span>
-          </div>
-        </div>
-      )
+        )
+      }
     },
     {
       key: 'status',

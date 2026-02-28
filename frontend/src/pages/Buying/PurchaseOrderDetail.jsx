@@ -159,11 +159,11 @@ export default function PurchaseOrderDetail() {
 
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-1 rounded  border border-neutral-200 dark:border-neutral-700 shadow-inner">
-              <Button variant="ghost" size="sm" className="p-2.5 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400" onClick={() => window.print()}>
-                <Printer size={18} />
+              <Button variant="ghost" size="sm" className="p-1 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400" onClick={() => window.print()}>
+                <Printer size={15} />
               </Button>
-              <Button variant="ghost" size="sm" className="p-2.5 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400">
-                <Download size={18} />
+              <Button variant="ghost" size="sm" className="p-1 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400">
+                <Download size={15} />
               </Button>
             </div>
             
@@ -172,12 +172,12 @@ export default function PurchaseOrderDetail() {
             {['submitted', 'to_receive', 'partially_received', 'completed'].includes(po.status) && (
               <Button 
                 variant="secondary" 
-                size="sm"
-                className="bg-white dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900 px-6 py-3 rounded text-[10px]  "
+                size="xs"
+                className="dark:bg-neutral-800 gap-2 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900 p-2 rounded text-xs  "
                 onClick={() => setShowInvoiceModal(true)}
               >
-                <Receipt size={18} strokeWidth={3} />
-                CREATE INVOICE
+                <Receipt size={15} />
+                Create Invoice
               </Button>
             )}
             {['submitted', 'to_receive', 'partially_received'].includes(po.status) && (
