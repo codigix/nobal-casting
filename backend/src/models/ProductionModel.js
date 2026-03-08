@@ -3029,7 +3029,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       if (producedQty > 0) {
         // Check if FG was already added by a Job Card (last operation)
         const [fgLedgerRows] = await this.db.query(
-          "SELECT ledger_id FROM stock_ledger WHERE reference_doctype = 'Job Card' AND reference_name IN (SELECT job_card_id FROM job_card WHERE work_order_id = ?) AND transaction_type = 'Production'",
+          "SELECT id FROM stock_ledger WHERE reference_doctype = 'Job Card' AND reference_name IN (SELECT job_card_id FROM job_card WHERE work_order_id = ?) AND transaction_type = 'Production'",
           [workOrderId]
         );
         

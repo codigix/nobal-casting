@@ -398,7 +398,7 @@ CREATE TABLE IF NOT EXISTS stock (
 
 -- Stock Ledger
 CREATE TABLE IF NOT EXISTS stock_ledger (
-  ledger_id VARCHAR(50) PRIMARY KEY,
+  id INT AUTO_INCREMENT PRIMARY KEY,
   item_code VARCHAR(50) NOT NULL,
   warehouse_code VARCHAR(50),
   voucher_type VARCHAR(50),

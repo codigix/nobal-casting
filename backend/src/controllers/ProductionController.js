@@ -2280,9 +2280,18 @@ class ProductionController {
       const { job_card_id } = req.params;
       
       const [jobCard] = await this.productionModel.db.execute(
-        `SELECT jc.*, mr.status as mr_status, mr.mr_id FROM job_card jc 
+        `SELECT jc.*, 
+                COALESCE(mr.status, mr_plan.status) as mr_status, 
+                COALESCE(mr.mr_id, mr_plan.mr_id) as mr_id,
+                wo.production_plan_id
+         FROM job_card jc 
          LEFT JOIN material_request mr ON jc.mr_id = mr.mr_id 
-         WHERE jc.job_card_id = ?`,
+         LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id
+         LEFT JOIN material_request mr_plan ON wo.production_plan_id = mr_plan.production_plan_id 
+              AND mr_plan.production_plan_id IS NOT NULL 
+         WHERE jc.job_card_id = ?
+         ORDER BY mr.mr_id DESC, mr_plan.created_at DESC
+         LIMIT 1`,
         [job_card_id]
       );
 
@@ -2294,12 +2303,13 @@ class ProductionController {
       }
 
       const card = jobCard[0];
+      const mrStatus = card.mr_status || 'pending';
       const materialStatus = {
         has_material_request: !!card.mr_id,
         mr_id: card.mr_id,
-        mr_status: card.mr_status || 'pending',
-        material_received: card.material_status === 'received',
-        can_start: !card.mr_id || card.mr_status === 'received' || card.mr_status === 'completed'
+        mr_status: mrStatus,
+        material_received: card.material_status === 'received' || mrStatus === 'received' || mrStatus === 'completed',
+        can_start: !card.mr_id || mrStatus === 'received' || mrStatus === 'completed'
       };
 
       res.status(200).json({
@@ -2392,9 +2402,17 @@ class ProductionController {
       const { auto_create_mr = false } = req.body;
 
       const [jobCard] = await this.productionModel.db.execute(
-        `SELECT jc.*, mr.status as mr_status FROM job_card jc 
+        `SELECT jc.*, 
+                COALESCE(mr.status, mr_plan.status) as mr_status, 
+                COALESCE(mr.mr_id, mr_plan.mr_id) as mr_id
+         FROM job_card jc 
          LEFT JOIN material_request mr ON jc.mr_id = mr.mr_id 
-         WHERE jc.job_card_id = ?`,
+         LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id
+         LEFT JOIN material_request mr_plan ON wo.production_plan_id = mr_plan.production_plan_id 
+              AND mr_plan.production_plan_id IS NOT NULL 
+         WHERE jc.job_card_id = ?
+         ORDER BY mr.mr_id DESC, mr_plan.created_at DESC
+         LIMIT 1`,
         [job_card_id]
       );
 
