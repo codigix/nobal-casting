@@ -1,3 +1,11 @@
+class ConflictError extends Error {
+  constructor(message, details) {
+    super(message);
+    this.name = 'ConflictError';
+    this.details = details;
+  }
+}
+
 class ProductionModel {
   constructor(db) {
     this.db = db
@@ -10,9 +18,74 @@ class ProductionModel {
     return d.toISOString().slice(0, 19).replace('T', ' ');
   }
 
+  _parseUTCDate(date) {
+    if (!date) return null;
+    if (date instanceof Date) return date;
+    
+    // If it's a string from MySQL (e.g., "2026-03-18 22:30:00") and lacks timezone,
+    // treat it as UTC since that's how we store it.
+    if (typeof date === 'string' && !date.includes('Z') && !date.includes('+')) {
+      const utcDate = new Date(date.replace(' ', 'T') + 'Z');
+      if (!isNaN(utcDate.getTime())) {
+        return utcDate;
+      }
+    }
+    return new Date(date);
+  }
+
   _normalizeStatus(status) {
     if (!status) return ''
     return status.toLowerCase().replace(/\s+/g, '-').trim()
+  }
+
+  _format12Hour(date) {
+    if (!date) return '';
+    let d = new Date(date);
+    
+    // If it's a string from MySQL (e.g., "2026-03-18 22:30:00") and lacks timezone,
+    // treat it as UTC since that's how we store it.
+    if (typeof date === 'string' && !date.includes('Z') && !date.includes('+')) {
+      const utcDate = new Date(date.replace(' ', 'T') + 'Z');
+      if (!isNaN(utcDate.getTime())) {
+        d = utcDate;
+      }
+    }
+    
+    if (isNaN(d.getTime())) return '';
+    
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[d.getMonth()];
+    const day = d.getDate();
+    const year = d.getFullYear();
+    
+    let hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; 
+    
+    return `${month} ${day}, ${year} ${hours}:${minutes} ${ampm}`;
+  }
+
+  _formatTime24(time, period) {
+    if (!time) return null;
+    let [hours, minutes] = time.split(':').map(Number);
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
+  }
+
+  _format12HourTime(timeString, period) {
+    if (!timeString) return '';
+    if (period) return `${timeString} ${period}`;
+    
+    // If we only have 24-hour time string "HH:MM:SS"
+    const parts = timeString.split(':');
+    const h = parseInt(parts[0]);
+    const m = parseInt(parts[1] || 0);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const hours = h % 12 || 12;
+    return `${hours}:${m.toString().padStart(2, '0')} ${ampm}`;
   }
 
   async getWarehouseId(warehouseIdentifier) {
@@ -559,6 +632,7 @@ class ProductionModel {
           (SELECT COUNT(*) FROM work_order WHERE parent_wo_id = wo.wo_id) as total_sub_assemblies,
           (SELECT COUNT(*) FROM work_order WHERE parent_wo_id = wo.wo_id AND status != 'completed') as incomplete_sub_assemblies,
           sso.customer_name,
+          sso.project_name,
           wo.parent_wo_id
         FROM work_order wo
         LEFT JOIN item i ON wo.item_code = i.item_code
@@ -632,7 +706,8 @@ class ProductionModel {
           (SELECT COALESCE(SUM(rejected_quantity), 0) FROM job_card WHERE work_order_id = wo.wo_id) as rejected_qty,
           (SELECT COUNT(*) FROM work_order WHERE parent_wo_id = wo.wo_id) as total_sub_assemblies,
           (SELECT COUNT(*) FROM work_order WHERE parent_wo_id = wo.wo_id AND status != 'completed') as incomplete_sub_assemblies,
-          sso.customer_name
+          sso.customer_name,
+          sso.project_name
         FROM work_order wo
         LEFT JOIN item i ON wo.item_code = i.item_code
         LEFT JOIN selling_sales_order sso ON wo.sales_order_id = sso.sales_order_id
@@ -753,6 +828,11 @@ class ProductionModel {
 
   async updateWorkOrder(wo_id, data) {
     try {
+      // 1. Validation for status transition
+      if (data.status !== undefined) {
+        await this.validateWorkOrderStatusTransition(wo_id, data.status);
+      }
+
       const fields = []
       const values = []
 
@@ -800,11 +880,18 @@ class ProductionModel {
       const query = `UPDATE work_order SET ${fields.join(', ')} WHERE wo_id = ?`
       await this.db.query(query, values)
 
-      // Sync Job Cards if quantity changed
+      // Sync Job Cards if quantity or priority changed
       if (data.quantity !== undefined) {
         await this.db.query(
           'UPDATE job_card SET planned_quantity = ? WHERE work_order_id = ?',
           [data.quantity, wo_id]
+        )
+      }
+
+      if (data.priority !== undefined) {
+        await this.db.query(
+          'UPDATE job_card SET priority = ? WHERE work_order_id = ?',
+          [data.priority, wo_id]
         )
       }
 
@@ -1184,6 +1271,51 @@ class ProductionModel {
     }
   }
 
+  async _checkMachineAvailability(machineId, date, shift, jobCardId) {
+    if (!machineId || machineId === 'UNASSIGNED' || machineId === 'OUTSOURCED') return;
+    
+    const normShift = (s) => {
+      const val = String(s || '').trim().toUpperCase().replace(/^SHIFT\s+/, '');
+      if (val === 'A' || val === '1') return { str: 'A', no: 1 };
+      if (val === 'B' || val === '2') return { str: 'B', no: 2 };
+      if (val === 'C' || val === '3') return { str: 'C', no: 3 };
+      return { str: val, no: parseInt(val) || 1 };
+    };
+    
+    const { str: shiftStr, no: shiftNo } = normShift(shift);
+    const dateVal = this._formatDate(date);
+    
+    // Check production_entry
+    const [peConflicts] = await this.db.query(
+      `SELECT pe.job_card_id, mm.name as machine_name 
+       FROM production_entry pe
+       LEFT JOIN machine_master mm ON pe.machine_id = mm.machine_id
+       WHERE pe.machine_id = ? 
+       AND DATE(pe.entry_date) = DATE(?) 
+       AND pe.shift_no = ? 
+       AND pe.job_card_id != ?`,
+      [machineId, dateVal, shiftNo, jobCardId || '']
+    );
+    
+    if (peConflicts.length > 0) {
+      throw new Error(`Machine Allocation Error: Workstation ${peConflicts[0].machine_name || machineId} is already allocated for Job Card ${peConflicts[0].job_card_id} on this shift (Production Entry).`);
+    }
+    
+    // Check time_log
+    const [tlConflicts] = await this.db.query(
+      `SELECT job_card_id FROM time_log 
+       WHERE workstation_name = ? 
+       AND log_date = ? 
+       AND shift = ? 
+       AND job_card_id != ?`,
+      [machineId, dateVal, shiftStr, jobCardId || '']
+    );
+    
+    if (tlConflicts.length > 0) {
+      throw new Error(`Machine Allocation Error: Workstation ${machineId} is already allocated for Job Card ${tlConflicts[0].job_card_id} on this shift (Time Log).`);
+    }
+  }
+
   // ============= PRODUCTION ENTRIES =============
 
   async createProductionEntry(data) {
@@ -1197,6 +1329,11 @@ class ProductionModel {
         );
         if (machines.length === 0) {
           machine_id = null; // Reset to null if not a valid machine in master table
+        } else {
+          // Check machine availability across both production entries and time logs
+          if (data.entry_date && data.shift_no) {
+            await this._checkMachineAvailability(machine_id, data.entry_date, data.shift_no, data.job_card_id);
+          }
         }
       } else {
         machine_id = null;
@@ -1635,7 +1772,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       await this.db.query(
         `INSERT INTO bom_operation (bom_id, operation_name, workstation_type, operation_time, setup_time, hourly_rate, fixed_time, operating_cost, operation_type, execution_mode, vendor_id, vendor_rate_per_unit, sequence, notes)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [bom_id, operation.operation_name, operation.workstation_type, operation.operation_time, operation.setup_time || 0,
+        [bom_id, operation.operation_name, operation.workstation_type || '', operation.operation_time, operation.setup_time || 0,
          operation.hourly_rate || 0, operation.fixed_time, operation.operating_cost || 0, operation.operation_type || 'IN_HOUSE', 
          operation.execution_mode || 'IN_HOUSE', operation.vendor_id || null, operation.vendor_rate_per_unit || 0, operation.sequence, operation.notes]
       )
@@ -1711,14 +1848,18 @@ async deleteAllBOMRawMaterials(bom_id) {
           wo.item_code, 
           i.name as item_name,
           ws.workstation_name as machine_name,
+          ws.status as machine_status,
+          ws.last_job_card_id as machine_current_jc,
           CONCAT(em.first_name, ' ', em.last_name) as operator_name,
-          s.name as vendor_name
+          s.name as vendor_name,
+          sso.project_name
         FROM job_card jc
         LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id
         LEFT JOIN item i ON wo.item_code = i.item_code
         LEFT JOIN workstation ws ON jc.machine_id = ws.name
         LEFT JOIN employee_master em ON jc.operator_id = em.employee_id
         LEFT JOIN supplier s ON jc.vendor_id = s.supplier_id
+        LEFT JOIN selling_sales_order sso ON wo.sales_order_id = sso.sales_order_id
         WHERE 1=1
       `
       const params = []
@@ -1735,17 +1876,29 @@ async deleteAllBOMRawMaterials(bom_id) {
         query += ' AND jc.work_order_id = ?'
         params.push(work_order_id)
       }
-      if (day) {
-        query += ' AND DAY(jc.scheduled_start_date) = ?'
-        params.push(day)
-      }
-      if (month) {
-        query += ' AND MONTH(jc.scheduled_start_date) = ?'
-        params.push(month)
-      }
-      if (year) {
-        query += ' AND YEAR(jc.scheduled_start_date) = ?'
-        params.push(year)
+      if (year && month && day) {
+        const dateStr = `${year}-${month}-${day.toString().padStart(2, '0')}`;
+        // Use CONVERT_TZ to find jobs whose LOCAL date (IST) matches the requested day.
+        // This ensures early morning/late night jobs aren't shifted out of the view.
+        query += ` AND (
+          DATE(CONVERT_TZ(jc.scheduled_start_date, '+00:00', '+05:30')) = ? OR
+          DATE(CONVERT_TZ(jc.scheduled_end_date, '+00:00', '+05:30')) = ? OR
+          (DATE(CONVERT_TZ(jc.scheduled_start_date, '+00:00', '+05:30')) <= ? AND DATE(CONVERT_TZ(jc.scheduled_end_date, '+00:00', '+05:30')) >= ?)
+        )`;
+        params.push(dateStr, dateStr, dateStr, dateStr);
+      } else {
+        if (day) {
+          query += ' AND DAY(CONVERT_TZ(jc.scheduled_start_date, "+00:00", "+05:30")) = ?'
+          params.push(day)
+        }
+        if (month) {
+          query += ' AND MONTH(CONVERT_TZ(jc.scheduled_start_date, "+00:00", "+05:30")) = ?'
+          params.push(month)
+        }
+        if (year) {
+          query += ' AND YEAR(CONVERT_TZ(jc.scheduled_start_date, "+00:00", "+05:30")) = ?'
+          params.push(year)
+        }
       }
 
       query += ' ORDER BY FIELD(jc.operation_type, "SA", "IN_HOUSE", "FG") ASC, CAST(SUBSTRING_INDEX(jc.job_card_id, "-", -1) AS UNSIGNED) ASC, jc.operation_sequence ASC'
@@ -1765,14 +1918,18 @@ async deleteAllBOMRawMaterials(bom_id) {
           wo.quantity as sales_qty,
           i.name as item_name,
           ws.workstation_name as machine_name,
+          ws.status as machine_status,
+          ws.last_job_card_id as machine_current_jc,
           CONCAT(em.first_name, ' ', em.last_name) as operator_name,
-          s.name as vendor_name
+          s.name as vendor_name,
+          sso.project_name
         FROM job_card jc
         LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id
         LEFT JOIN item i ON wo.item_code = i.item_code
         LEFT JOIN workstation ws ON jc.machine_id = ws.name
         LEFT JOIN employee_master em ON jc.operator_id = em.employee_id
         LEFT JOIN supplier s ON jc.vendor_id = s.supplier_id
+        LEFT JOIN selling_sales_order sso ON wo.sales_order_id = sso.sales_order_id
         WHERE jc.job_card_id = ?
       `, [job_card_id])
       return jobCards && jobCards.length > 0 ? jobCards[0] : null
@@ -1785,17 +1942,271 @@ async deleteAllBOMRawMaterials(bom_id) {
     return `JC-${Date.now()}`
   }
 
+  async validateAllocation(data, currentJobCardId = null, connection = null) {
+    const db = connection || this.db;
+    const { machine_id, operator_id, scheduled_start_date, scheduled_end_date, work_order_id, operation_sequence } = data;
+
+    if (!scheduled_start_date || !scheduled_end_date) return true;
+
+    const start = this._formatMySQLDate(scheduled_start_date);
+    const end = this._formatMySQLDate(scheduled_end_date);
+
+    // 1. Machine Conflict Validation
+    if (machine_id) {
+      // Use FOR UPDATE to prevent race conditions if in a transaction
+      const query = connection 
+        ? 'SELECT parallel_capacity FROM workstation WHERE name = ? FOR UPDATE'
+        : 'SELECT parallel_capacity FROM workstation WHERE name = ?';
+        
+      const [workstation] = await db.query(query, [machine_id]);
+      const capacity = workstation.length > 0 ? (workstation[0].parallel_capacity || 1) : 1;
+
+      const [conflicts] = await db.query(
+        `SELECT jc.job_card_id, jc.scheduled_start_date, jc.scheduled_end_date, jc.operation, 
+                jc.work_order_id, jc.planned_quantity, jc.status, i.name as item_name
+         FROM job_card jc
+         LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id
+         LEFT JOIN item i ON wo.item_code = i.item_code
+         WHERE jc.machine_id = ? AND jc.status NOT IN ('completed', 'cancelled')
+         AND jc.scheduled_start_date < ? AND jc.scheduled_end_date > ?
+         ${currentJobCardId ? 'AND jc.job_card_id != ?' : ''}`,
+        [machine_id, end, start, ...(currentJobCardId ? [currentJobCardId] : [])]
+      );
+
+      if (conflicts.length >= capacity) {
+        const conflict = conflicts[0];
+        const conflictInfo = `Conflict with ${conflict.job_card_id} (${conflict.operation}) from ${this._format12Hour(conflict.scheduled_start_date)} to ${this._format12Hour(conflict.scheduled_end_date)}`;
+        
+        // Find alternative machines of same type
+        const [machineInfo] = await db.query('SELECT workstation_type FROM workstation WHERE name = ?', [machine_id]);
+        const machineType = machineInfo.length > 0 ? machineInfo[0].workstation_type : null;
+        
+        let alternatives = [];
+        if (machineType) {
+          const [others] = await db.query(
+            `SELECT name, workstation_name FROM workstation 
+             WHERE workstation_type = ? AND name != ? AND is_active = 1`,
+            [machineType, machine_id]
+          );
+          alternatives = others;
+        }
+
+        // Find next available slot for THIS machine
+        const durationMinutes = (new Date(end) - new Date(start)) / 60000;
+        const nextSlot = await this.suggestSlot(machine_id, durationMinutes, start.split(' ')[0]);
+
+        throw new ConflictError(`Machine '${machine_id}' is already busy with '${conflict.operation}' during this time slot.`, {
+          resource_type: 'machine',
+          resource_id: machine_id,
+          conflict_with: conflict.job_card_id,
+          conflict_operation: conflict.operation,
+          conflict_work_order: conflict.work_order_id,
+          conflict_item: conflict.item_name,
+          conflict_planned_qty: conflict.planned_quantity,
+          conflict_status: conflict.status,
+          start: conflict.scheduled_start_date,
+          end: conflict.scheduled_end_date,
+          info: conflictInfo,
+          alternatives,
+          next_available_slot: nextSlot
+        });
+      }
+    }
+
+    // 2. Operator Conflict Validation
+    if (operator_id) {
+      const [conflicts] = await db.query(
+        `SELECT jc.job_card_id, jc.scheduled_start_date, jc.scheduled_end_date, jc.operation, 
+                jc.work_order_id, jc.planned_quantity, jc.status, i.name as item_name
+         FROM job_card jc
+         LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id
+         LEFT JOIN item i ON wo.item_code = i.item_code
+         WHERE jc.operator_id = ? AND jc.status NOT IN ('completed', 'cancelled')
+         AND jc.scheduled_start_date < ? AND jc.scheduled_end_date > ?
+         ${currentJobCardId ? 'AND jc.job_card_id != ?' : ''}`,
+        [operator_id, end, start, ...(currentJobCardId ? [currentJobCardId] : [])]
+      );
+
+      if (conflicts.length > 0) {
+        const conflict = conflicts[0];
+        const conflictInfo = `Busy with ${conflict.job_card_id} (${conflict.operation}) from ${this._format12Hour(conflict.scheduled_start_date)} to ${this._format12Hour(conflict.scheduled_end_date)}`;
+        
+        // Find other operators in same department
+        const [operatorInfo] = await db.query('SELECT department FROM employee WHERE employee_id = ?', [operator_id]);
+        const department = operatorInfo.length > 0 ? operatorInfo[0].department : null;
+        
+        let alternatives = [];
+        if (department) {
+          const [others] = await db.query(
+            `SELECT employee_id as name, name as workstation_name FROM employee 
+             WHERE department = ? AND employee_id != ? AND status = 'active'`,
+            [department, operator_id]
+          );
+          alternatives = others;
+        }
+
+        // Find next available slot for THIS operator
+        const durationMinutes = (new Date(end) - new Date(start)) / 60000;
+        const nextSlot = await this.suggestOperatorSlot(operator_id, durationMinutes, start.split(' ')[0]);
+
+        throw new ConflictError(`Operator '${operator_id}' is already assigned to '${conflict.operation}' during this period.`, {
+          resource_type: 'operator',
+          resource_id: operator_id,
+          conflict_with: conflict.job_card_id,
+          conflict_operation: conflict.operation,
+          conflict_work_order: conflict.work_order_id,
+          conflict_item: conflict.item_name,
+          conflict_planned_qty: conflict.planned_quantity,
+          conflict_status: conflict.status,
+          start: conflict.scheduled_start_date,
+          end: conflict.scheduled_end_date,
+          info: conflictInfo,
+          alternatives,
+          next_available_slot: nextSlot
+        });
+      }
+    }
+
+    // 3. Operation Sequencing Validation
+    if (work_order_id && operation_sequence) {
+      // Check previous operation
+      const [prevOp] = await db.query(
+        `SELECT scheduled_end_date, operation FROM job_card 
+         WHERE work_order_id = ? AND operation_sequence < ? 
+         AND status != 'cancelled'
+         ORDER BY operation_sequence DESC LIMIT 1`,
+        [work_order_id, operation_sequence]
+      );
+
+      if (prevOp.length > 0 && prevOp[0].scheduled_end_date) {
+        const prevEnd = this._parseUTCDate(prevOp[0].scheduled_end_date);
+        const currentStart = this._parseUTCDate(scheduled_start_date);
+        if (currentStart < prevEnd) {
+          throw new Error(`This operation must start after the previous operation '${prevOp[0].operation}' finishes (Ends on ${this._format12Hour(prevOp[0].scheduled_end_date)}).`);
+        }
+      }
+
+      // Check next operation
+      const [nextOp] = await db.query(
+        `SELECT scheduled_start_date, operation FROM job_card 
+         WHERE work_order_id = ? AND operation_sequence > ? 
+         AND status != 'cancelled'
+         ORDER BY operation_sequence ASC LIMIT 1`,
+        [work_order_id, operation_sequence]
+      );
+
+      if (nextOp.length > 0 && nextOp[0].scheduled_start_date) {
+        const nextStart = this._parseUTCDate(nextOp[0].scheduled_start_date);
+        const currentEnd = this._parseUTCDate(scheduled_end_date);
+        if (currentEnd > nextStart) {
+          throw new Error(`This operation must finish before the next operation '${nextOp[0].operation}' starts (Starts on ${this._format12Hour(nextOp[0].scheduled_start_date)}).`);
+        }
+      }
+    }
+
+    return true;
+  }
+
+  async validateJobCardStatusTransition(jobCardId, newStatus, connection = null) {
+    const db = connection || this.db;
+    const [jc] = await db.query('SELECT status FROM job_card WHERE job_card_id = ?', [jobCardId]);
+    if (jc.length === 0) return true; // New record
+
+    const oldStatus = (jc[0].status || 'draft').toLowerCase().replace(/\s+/g, '-').trim();
+    const normalizedNew = newStatus.toLowerCase().replace(/\s+/g, '-').trim();
+
+    if (oldStatus === normalizedNew) return true;
+
+    const transitions = {
+      'draft': ['ready', 'cancelled'],
+      'ready': ['in-progress', 'draft', 'cancelled'],
+      'in-progress': ['qc-pending', 'ready', 'cancelled'],
+      'qc-pending': ['completed', 'in-progress', 'cancelled'],
+      'completed': [],
+      'cancelled': ['draft']
+    };
+
+    if (!transitions[oldStatus] || !transitions[oldStatus].includes(normalizedNew)) {
+      throw new Error(`Invalid status transition from '${oldStatus}' to '${normalizedNew}' for Job Card.`);
+    }
+
+    return true;
+  }
+
+  async validateWorkOrderStatusTransition(woId, newStatus, connection = null) {
+    const db = connection || this.db;
+    const [wo] = await db.query('SELECT status FROM work_order WHERE wo_id = ?', [woId]);
+    if (wo.length === 0) return true;
+
+    const oldStatus = (wo[0].status || 'draft').toLowerCase().replace(/\s+/g, '-').trim();
+    const normalizedNew = newStatus.toLowerCase().replace(/\s+/g, '-').trim();
+
+    if (oldStatus === normalizedNew) return true;
+
+    const transitions = {
+      'draft': ['ready', 'in-progress', 'completed', 'cancelled'],
+      'ready': ['in-progress', 'completed', 'draft', 'cancelled'],
+      'in-progress': ['completed', 'ready', 'cancelled'],
+      'completed': ['closed', 'in-progress'],
+      'closed': [],
+      'cancelled': ['draft']
+    };
+
+    if (!transitions[oldStatus] || !transitions[oldStatus].includes(normalizedNew)) {
+      throw new Error(`Invalid status transition from '${oldStatus}' to '${normalizedNew}' for Work Order.`);
+    }
+
+    // Special Logic: IN_PROGRESS requires first Job Card scheduled
+    if (normalizedNew === 'in-progress') {
+      const [jobCards] = await db.query(
+        'SELECT scheduled_start_date FROM job_card WHERE work_order_id = ? ORDER BY CAST(operation_sequence AS DECIMAL(18,6)) ASC LIMIT 1',
+        [woId]
+      );
+      if (jobCards.length === 0 || !jobCards[0].scheduled_start_date) {
+        throw new Error('Work Order cannot move to IN_PROGRESS until its first Job Card is validly scheduled.');
+      }
+    }
+
+    // Special Logic: COMPLETED requires all Job Cards COMPLETED
+    if (normalizedNew === 'completed') {
+      const [jobCards] = await db.query(
+        'SELECT status FROM job_card WHERE work_order_id = ? AND status != "cancelled"',
+        [woId]
+      );
+      const allCompleted = jobCards.length > 0 && jobCards.every(jc => (jc.status || '').toLowerCase() === 'completed');
+      if (!allCompleted) {
+        throw new Error('Work Order cannot move to COMPLETED until all associated Job Cards are completed.');
+      }
+    }
+
+    return true;
+  }
+
   async createJobCard(data) {
+    let connection;
     try {
+      connection = await this.db.getConnection();
+      await connection.beginTransaction();
+
+      // Validate allocation before creating
+      await this.validateAllocation(data, null, connection);
+
       // If job_card_id is not provided or is a temporary one, generate a sequential one
       if (!data.job_card_id || data.job_card_id.includes(Date.now().toString().substring(0, 5))) {
         data.job_card_id = await this.getNextJobCardId()
       }
       
       const statusNormalized = ((data.status || 'draft').toLowerCase().replace(/\s+/g, '-')).trim()
-      await this.db.query(
-        `INSERT INTO job_card (job_card_id, work_order_id, machine_id, operator_id, operation, operation_sequence, operation_type, execution_mode, vendor_id, vendor_rate_per_unit, subcontract_status, sent_qty, received_qty, accepted_qty, rejected_qty, planned_quantity, produced_quantity, rejected_quantity, accepted_quantity, scrap_quantity, operation_time, hourly_rate, operating_cost, scheduled_start_date, scheduled_end_date, actual_start_date, actual_end_date, status, created_by, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      
+      // Auto-transition to READY if scheduled
+      let finalStatus = statusNormalized;
+      if (finalStatus === 'draft' && data.scheduled_start_date && data.scheduled_end_date && data.machine_id) {
+        finalStatus = 'ready';
+      }
+
+      await connection.query(
+        `INSERT INTO job_card (job_card_id, work_order_id, machine_id, operator_id, operation, operation_sequence, operation_type, execution_mode, vendor_id, vendor_rate_per_unit, subcontract_status, sent_qty, received_qty, accepted_qty, rejected_qty, planned_quantity, produced_quantity, rejected_quantity, accepted_quantity, scrap_quantity, operation_time, hourly_rate, operating_cost, scheduled_start_date, scheduled_end_date, actual_start_date, actual_end_date, status, created_by, notes, priority)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [data.job_card_id, data.work_order_id, data.machine_id || null, data.operator_id || null, data.operation || null, data.operation_sequence || null,
          data.operation_type || 'IN_HOUSE', data.execution_mode || 'IN_HOUSE', data.vendor_id || null, parseFloat(data.vendor_rate_per_unit) || 0, data.subcontract_status || (data.execution_mode === 'OUTSOURCE' ? 'DRAFT' : null),
          data.sent_qty || 0, data.received_qty || 0, data.accepted_qty || 0, data.rejected_qty || 0,
@@ -1805,42 +2216,101 @@ async deleteAllBOMRawMaterials(bom_id) {
          this._formatMySQLDate(data.scheduled_end_date),
          this._formatMySQLDate(data.actual_start_date),
          this._formatMySQLDate(data.actual_end_date),
-         statusNormalized, data.created_by, data.notes]
+         finalStatus, data.created_by, data.notes, data.priority || 'medium']
       )
-      return data
+
+      await connection.commit();
+      
+      // Notify about resource availability if status is completed or cancelled
+      const statusValue = (data.status || '').toLowerCase().replace(/\s+/g, '-').trim()
+      if (statusValue === 'completed' || statusValue === 'cancelled') {
+        if (current[0].machine_id) {
+          await this.checkAndNotifyResourceAvailability('machine', current[0].machine_id);
+        }
+        if (current[0].operator_id) {
+          await this.checkAndNotifyResourceAvailability('operator', current[0].operator_id);
+        }
+      } else if (schedulingChanged) {
+        // If machine or operator changed, notify that the OLD one might be free now
+        if (data.machine_id !== undefined && current[0].machine_id && data.machine_id !== current[0].machine_id) {
+          await this.checkAndNotifyResourceAvailability('machine', current[0].machine_id);
+        }
+        if (data.operator_id !== undefined && current[0].operator_id && data.operator_id !== current[0].operator_id) {
+          await this.checkAndNotifyResourceAvailability('operator', current[0].operator_id);
+        }
+      }
+
+      // Sync Work Order progress
+      if (data.work_order_id) {
+        await this.checkAndUpdateWorkOrderProgress(data.work_order_id);
+      }
+
+      return { ...data, status: finalStatus };
     } catch (error) {
+      if (connection) await connection.rollback();
       throw error
+    } finally {
+      if (connection) connection.release();
     }
   }
 
   async updateJobCard(job_card_id, data) {
+    let connection;
     try {
+      connection = await this.db.getConnection();
+      await connection.beginTransaction();
+
+      const [current] = await connection.query(
+        'SELECT machine_id, operator_id, scheduled_start_date, scheduled_end_date, work_order_id, operation_sequence, status FROM job_card WHERE job_card_id = ? FOR UPDATE', 
+        [job_card_id]
+      );
+
+      if (current.length === 0) throw new Error('Job card not found');
+
+      // 1. Validation for status transition
+      if (data.status !== undefined) {
+        await this.validateJobCardStatusTransition(job_card_id, data.status, connection);
+      }
+
+      // 2. Validation for scheduling changes
+      let schedulingChanged = false;
+      if (data.scheduled_start_date || data.scheduled_end_date || data.machine_id || data.operator_id) {
+        schedulingChanged = true;
+        const validationData = {
+          machine_id: data.machine_id !== undefined ? data.machine_id : current[0].machine_id,
+          operator_id: data.operator_id !== undefined ? data.operator_id : current[0].operator_id,
+          scheduled_start_date: data.scheduled_start_date !== undefined ? data.scheduled_start_date : current[0].scheduled_start_date,
+          scheduled_end_date: data.scheduled_end_date !== undefined ? data.scheduled_end_date : current[0].scheduled_end_date,
+          work_order_id: current[0].work_order_id,
+          operation_sequence: current[0].operation_sequence
+        };
+        await this.validateAllocation(validationData, job_card_id, connection);
+        
+        // Auto-transition to READY if was DRAFT and now scheduled
+        if (!data.status && current[0].status === 'draft' && validationData.scheduled_start_date && validationData.scheduled_end_date && validationData.machine_id) {
+          data.status = 'ready';
+        }
+      }
+
       const fields = []
       const values = []
 
       // If cost calculation factors change but cost isn't explicitly provided, recalculate it
       if ((data.hourly_rate !== undefined || data.operation_time !== undefined) && data.operating_cost === undefined) {
-        const [current] = await this.db.query('SELECT hourly_rate, operation_time FROM job_card WHERE job_card_id = ?', [job_card_id])
-        if (current.length > 0) {
-          const hRate = data.hourly_rate !== undefined ? data.hourly_rate : (current[0].hourly_rate || 0)
-          const oTime = data.operation_time !== undefined ? data.operation_time : (current[0].operation_time || 0)
-          // Cycle time is in minutes, hourly rate is per hour, so divide by 60
-          data.operating_cost = (parseFloat(hRate) * parseFloat(oTime)) / 60
-        }
+        const hRate = data.hourly_rate !== undefined ? data.hourly_rate : (current[0].hourly_rate || 0)
+        const oTime = data.operation_time !== undefined ? data.operation_time : (current[0].operation_time || 0)
+        data.operating_cost = (parseFloat(hRate) * parseFloat(oTime)) / 60
       }
 
       if (data.operation) { fields.push('operation = ?'); values.push(data.operation) }
       if (data.operation_sequence) { fields.push('operation_sequence = ?'); values.push(data.operation_sequence) }
       if (data.status !== undefined) { 
         const statusValue = (data.status || '').toLowerCase().replace(/\s+/g, '-').trim()
-        if (statusValue.length > 50) {
-          throw new Error(`Status value too long: "${statusValue}" (${statusValue.length} characters, max 50 allowed)`)
-        }
         fields.push('status = ?')
         values.push(statusValue)
       }
-      if (data.operator_id) { fields.push('operator_id = ?'); values.push(data.operator_id) }
-      if (data.machine_id) { fields.push('machine_id = ?'); values.push(data.machine_id) }
+      if (data.operator_id !== undefined) { fields.push('operator_id = ?'); values.push(data.operator_id) }
+      if (data.machine_id !== undefined) { fields.push('machine_id = ?'); values.push(data.machine_id) }
       if (data.execution_mode) { fields.push('execution_mode = ?'); values.push(data.execution_mode) }
       if (data.vendor_id !== undefined) { fields.push('vendor_id = ?'); values.push(data.vendor_id) }
       if (data.vendor_rate_per_unit !== undefined) { fields.push('vendor_rate_per_unit = ?'); values.push(data.vendor_rate_per_unit) }
@@ -1859,17 +2329,20 @@ async deleteAllBOMRawMaterials(bom_id) {
       if (data.actual_start_date) { fields.push('actual_start_date = ?'); values.push(this._formatMySQLDate(data.actual_start_date)) }
       if (data.actual_end_date) { fields.push('actual_end_date = ?'); values.push(this._formatMySQLDate(data.actual_end_date)) }
       if (data.notes) { fields.push('notes = ?'); values.push(data.notes) }
+      if (data.priority) { fields.push('priority = ?'); values.push(data.priority) }
       if (data.hourly_rate !== undefined && data.hourly_rate !== null) { fields.push('hourly_rate = ?'); values.push(data.hourly_rate) }
       if (data.operation_time !== undefined && data.operation_time !== null) { fields.push('operation_time = ?'); values.push(data.operation_time) }
       if (data.operating_cost !== undefined && data.operating_cost !== null) { fields.push('operating_cost = ?'); values.push(data.operating_cost) }
 
-      if (fields.length === 0) return false
+      if (fields.length > 0) {
+        values.push(job_card_id)
+        const query = `UPDATE job_card SET ${fields.join(', ')} WHERE job_card_id = ?`
+        await connection.query(query, values)
+      }
 
-      values.push(job_card_id)
-      const query = `UPDATE job_card SET ${fields.join(', ')} WHERE job_card_id = ?`
-      await this.db.query(query, values)
+      await connection.commit();
 
-      // Sync quantities after update to ensure integrity
+      // Post-commit syncs
       await this._syncJobCardQuantities(job_card_id, { 
         autoTransfer: data.transfer_to_next_op === true || data.autoTransfer === true,
         nextJobCardId: data.next_job_card_id,
@@ -1877,44 +2350,212 @@ async deleteAllBOMRawMaterials(bom_id) {
         nextMachineId: data.next_machine_id
       })
 
-      // Sync Work Order and Sales Order status if status changed
-      if (data.status !== undefined) {
-        const [jc] = await this.db.query('SELECT work_order_id FROM job_card WHERE job_card_id = ?', [job_card_id]);
-        if (jc.length > 0 && jc[0].work_order_id) {
-          const workOrderId = jc[0].work_order_id;
-          const statusValue = (data.status || '').toLowerCase().replace(/\s+/g, '-').trim()
+      if (data.status !== undefined || schedulingChanged) {
+        const workOrderId = current[0].work_order_id;
+        const statusValue = (data.status || current[0].status || '').toLowerCase().replace(/\s+/g, '-').trim()
 
-          if (statusValue === 'in-progress' || statusValue === 'pending') {
-            await this.checkAndUpdateWorkOrderProgress(workOrderId)
-          } else if (statusValue === 'completed') {
-            await this.checkAndUpdateWorkOrderCompletion(workOrderId)
-          }
-
-          // Sync Sales Order and Production Plan
-          const [workOrder] = await this.db.query(
-            'SELECT sales_order_id FROM work_order WHERE wo_id = ?',
-            [workOrderId]
-          )
-          
-          if (workOrder && workOrder.length > 0 && workOrder[0].sales_order_id) {
-            const salesOrderId = workOrder[0].sales_order_id;
-            await this.syncSalesOrderStatus(salesOrderId);
-            
-            const [plans] = await this.db.query(
-              'SELECT plan_id FROM production_plan WHERE sales_order_id = ?',
-              [salesOrderId]
-            );
-            for (const p of plans) {
-              await this.syncProductionPlanStatus(p.plan_id);
-            }
-          }
+        if (statusValue === 'in-progress' || statusValue === 'pending' || schedulingChanged) {
+          await this.checkAndUpdateWorkOrderProgress(workOrderId)
+        } else if (statusValue === 'completed') {
+          await this.checkAndUpdateWorkOrderCompletion(workOrderId)
         }
       }
 
       return true
     } catch (error) {
+      if (connection) await connection.rollback();
       throw error
+    } finally {
+      if (connection) connection.release();
     }
+  }
+
+  async getAvailableSlots(machine_id, date) {
+    const startOfDay = `${date} 00:00:00`;
+    const endOfDay = `${date} 23:59:59`;
+
+    const [workstation] = await this.db.query('SELECT parallel_capacity FROM workstation WHERE name = ?', [machine_id]);
+    const capacity = workstation.length > 0 ? (workstation[0].parallel_capacity || 1) : 1;
+
+    // Fetch all jobs on that day for that machine
+    const [booked] = await this.db.query(
+      `SELECT scheduled_start_date, scheduled_end_date FROM job_card 
+       WHERE machine_id = ? AND status NOT IN ('completed', 'cancelled')
+       AND (
+         (scheduled_start_date >= ? AND scheduled_start_date <= ?) OR
+         (scheduled_end_date >= ? AND scheduled_end_date <= ?) OR
+         (scheduled_start_date <= ? AND scheduled_end_date >= ?)
+       )
+       ORDER BY scheduled_start_date ASC`,
+      [machine_id, startOfDay, endOfDay, startOfDay, endOfDay, startOfDay, endOfDay]
+    );
+
+    return {
+      capacity,
+      booked_slots: booked
+    };
+  }
+
+  async getOperatorAvailableSlots(operator_id, date) {
+    const startOfDay = `${date} 00:00:00`;
+    const endOfDay = `${date} 23:59:59`;
+
+    // Operators usually have capacity 1 (unless shared, but standard is 1)
+    const capacity = 1;
+
+    const [booked] = await this.db.query(
+      `SELECT scheduled_start_date, scheduled_end_date FROM job_card 
+       WHERE operator_id = ? AND status NOT IN ('completed', 'cancelled')
+       AND (
+         (scheduled_start_date >= ? AND scheduled_start_date <= ?) OR
+         (scheduled_end_date >= ? AND scheduled_end_date <= ?) OR
+         (scheduled_start_date <= ? AND scheduled_end_date >= ?)
+       )
+       ORDER BY scheduled_start_date ASC`,
+      [operator_id, startOfDay, endOfDay, startOfDay, endOfDay, startOfDay, endOfDay]
+    );
+
+    return {
+      capacity,
+      booked_slots: booked
+    };
+  }
+
+  async suggestOperatorSlot(operatorId, durationMinutes, preferredDate = null) {
+    const date = preferredDate || new Date().toISOString().split('T')[0];
+    const { capacity, booked_slots } = await this.getOperatorAvailableSlots(operatorId, date);
+
+    // Business hours: 09:00 to 18:00
+    const workStart = new Date(`${date}T09:00:00`);
+    const workEnd = new Date(`${date}T18:00:00`);
+    
+    if (booked_slots.length === 0) {
+      const end = new Date(workStart.getTime() + durationMinutes * 60000);
+      return {
+        start: this._formatMySQLDate(workStart),
+        end: this._formatMySQLDate(end)
+      };
+    }
+
+    const step = 15; // minutes
+    let current = new Date(workStart);
+    
+    while (current.getTime() + durationMinutes * 60000 <= workEnd.getTime()) {
+      const slotEnd = new Date(current.getTime() + durationMinutes * 60000);
+      
+      const overlaps = booked_slots.filter(job => {
+        const jobStart = this._parseUTCDate(job.scheduled_start_date);
+        const jobEnd = this._parseUTCDate(job.scheduled_end_date);
+        return jobStart < slotEnd && jobEnd > current;
+      }).length;
+
+      if (overlaps < capacity) {
+        return {
+          start: this._formatMySQLDate(current),
+          end: this._formatMySQLDate(slotEnd)
+        };
+      }
+      
+      current = new Date(current.getTime() + step * 60000);
+    }
+
+    const nextDay = new Date(new Date(date).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    return {
+      start: `${nextDay} 09:00:00`,
+      end: this._formatMySQLDate(new Date(new Date(`${nextDay} 09:00:00`).getTime() + durationMinutes * 60000))
+    };
+  }
+
+  async requestResourceNotification(userId, resourceType, resourceId) {
+    await this.db.query(
+      `INSERT INTO resource_notification_request (user_id, resource_type, resource_id) 
+       VALUES (?, ?, ?)`,
+      [userId, resourceType, resourceId]
+    );
+    return true;
+  }
+
+  async checkAndNotifyResourceAvailability(resourceType, resourceId) {
+    const [requests] = await this.db.query(
+      `SELECT * FROM resource_notification_request 
+       WHERE resource_type = ? AND resource_id = ? AND notified = 0`,
+      [resourceType, resourceId]
+    );
+
+    if (requests.length === 0) return;
+
+    // Check if it's actually free now
+    // (A basic check - if capacity is not full)
+    // For simplicity, we assume if it's being freed up, we notify everyone who asked for it.
+
+    for (const request of requests) {
+      // Create notification
+      const NotificationModel = (await import('./NotificationModel.js')).default;
+      await NotificationModel.create({
+        user_id: request.user_id,
+        notification_type: 'RESOURCE_AVAILABLE',
+        title: 'Resource Available',
+        message: `The ${resourceType} '${resourceId}' is now available for scheduling.`,
+        reference_type: resourceType === 'machine' ? 'workstation' : 'employee',
+        reference_id: resourceId
+      });
+
+      // Mark as notified
+      await this.db.query(
+        'UPDATE resource_notification_request SET notified = 1 WHERE id = ?',
+        [request.id]
+      );
+    }
+  }
+
+  async suggestSlot(machineId, durationMinutes, preferredDate = null) {
+    const date = preferredDate || new Date().toISOString().split('T')[0];
+    const { capacity, booked_slots } = await this.getAvailableSlots(machineId, date);
+
+    // Business hours: 09:00 to 18:00
+    const workStart = new Date(`${date}T09:00:00`);
+    const workEnd = new Date(`${date}T18:00:00`);
+    
+    // If no jobs at all, return start of day
+    if (booked_slots.length === 0) {
+      const end = new Date(workStart.getTime() + durationMinutes * 60000);
+      return {
+        start: this._formatMySQLDate(workStart),
+        end: this._formatMySQLDate(end)
+      };
+    }
+
+    // To find a slot with parallel capacity, we need to track how many jobs overlap at any given time
+    // We'll check every 15 minutes
+    const step = 15; // minutes
+    let current = new Date(workStart);
+    
+    while (current.getTime() + durationMinutes * 60000 <= workEnd.getTime()) {
+      const slotEnd = new Date(current.getTime() + durationMinutes * 60000);
+      
+      // Count overlaps in this candidate slot
+      const overlaps = booked_slots.filter(job => {
+        const jobStart = this._parseUTCDate(job.scheduled_start_date);
+        const jobEnd = this._parseUTCDate(job.scheduled_end_date);
+        return jobStart < slotEnd && jobEnd > current;
+      }).length;
+
+      if (overlaps < capacity) {
+        return {
+          start: this._formatMySQLDate(current),
+          end: this._formatMySQLDate(slotEnd)
+        };
+      }
+      
+      current = new Date(current.getTime() + step * 60000);
+    }
+
+    // If no slot found on this day, suggest start of next day (simplified)
+    const nextDay = new Date(new Date(date).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    return {
+      start: `${nextDay} 09:00:00`,
+      end: this._formatMySQLDate(new Date(new Date(`${nextDay} 09:00:00`).getTime() + durationMinutes * 60000))
+    };
   }
 
   async checkAndUpdateWorkOrderProgress(work_order_id) {
@@ -1933,6 +2574,10 @@ async deleteAllBOMRawMaterials(bom_id) {
         return status === 'in-progress' || status === 'completed'
       })
 
+      // Requirement: WO can move to IN_PROGRESS only when its first Job Card is validly scheduled
+      const firstJobCard = jobCards[0];
+      const firstJobScheduled = firstJobCard && firstJobCard.scheduled_start_date && firstJobCard.scheduled_end_date;
+
       const hasReady = jobCards.some(card => {
         const status = (card.status || '').toLowerCase()
         return status === 'ready'
@@ -1941,7 +2586,7 @@ async deleteAllBOMRawMaterials(bom_id) {
       const workOrder = await this.getWorkOrderById(work_order_id)
       const workOrderStatus = (workOrder?.status || '').toLowerCase()
 
-      if (hasStarted) {
+      if (hasStarted && firstJobScheduled) {
         if (workOrderStatus !== 'in-progress' && workOrderStatus !== 'in_progress' && workOrderStatus !== 'completed') {
           await this.updateWorkOrder(work_order_id, { status: 'In-Progress' })
           
@@ -2415,9 +3060,10 @@ async deleteAllBOMRawMaterials(bom_id) {
 
   async deleteJobCard(job_card_id) {
     try {
-      // Get work_order_id before deletion for status sync
-      const [jc] = await this.db.query('SELECT work_order_id FROM job_card WHERE job_card_id = ?', [job_card_id])
-      const work_order_id = jc.length > 0 ? jc[0].work_order_id : null
+      // Get data before deletion for status sync and notifications
+      const [jc] = await this.db.query('SELECT work_order_id, machine_id, operator_id FROM job_card WHERE job_card_id = ?', [job_card_id])
+      if (jc.length === 0) return false;
+      const { work_order_id, machine_id, operator_id } = jc[0];
 
       // 1. Delete associated logs and entries
       await this.db.query('DELETE FROM time_log WHERE job_card_id = ?', [job_card_id])
@@ -2455,6 +3101,14 @@ async deleteAllBOMRawMaterials(bom_id) {
       if (work_order_id) {
         await this.checkAndUpdateWorkOrderProgress(work_order_id)
         await this.checkAndUpdateWorkOrderCompletion(work_order_id)
+      }
+
+      // Notify that resource is now free
+      if (machine_id) {
+        await this.checkAndNotifyResourceAvailability('machine', machine_id);
+      }
+      if (operator_id) {
+        await this.checkAndNotifyResourceAvailability('operator', operator_id);
       }
 
       return true
@@ -2578,7 +3232,8 @@ async deleteAllBOMRawMaterials(bom_id) {
           scheduled_end_date: null,
           status: (isFirst && (parseInt(workOrder.incomplete_sub_assemblies) || 0) === 0) ? 'ready' : 'draft',
           created_by,
-          notes: operation.notes || null
+          notes: operation.notes || null,
+          priority: workOrder.priority || 'medium'
         }
 
         await this.createJobCard(jobCardData)
@@ -2682,10 +3337,55 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
-  async getWorkstations() {
+  async getWorkstations(filters = {}) {
     try {
-      const [workstations] = await this.db.query('SELECT * FROM workstation ORDER BY workstation_name')
-      return workstations || []
+      const { date, shift, exclude_job_card_id } = filters
+      let query = 'SELECT * FROM workstation WHERE is_active = 1'
+      const params = []
+
+      if (date && shift) {
+        // Find workstations that have entries for the specified date and shift
+        // We check both production_entry and time_log
+        const normShift = (s) => {
+          const val = String(s || '').trim().toUpperCase().replace(/^SHIFT\s+/, '');
+          if (val === 'A' || val === '1') return { str: 'A', no: 1 };
+          if (val === 'B' || val === '2') return { str: 'B', no: 2 };
+          if (val === 'C' || val === '3') return { str: 'C', no: 3 };
+          return { str: val, no: parseInt(val) || 1 };
+        };
+        
+        const { str: shiftStr, no: shiftNo } = normShift(shift);
+        const dateVal = this._formatDate(date);
+
+        query = `
+          SELECT ws.*, 
+          (SELECT pe.job_card_id FROM production_entry pe 
+           WHERE pe.machine_id = ws.name 
+           AND DATE(pe.entry_date) = DATE(?) 
+           AND pe.shift_no = ? 
+           AND pe.job_card_id != ?
+           LIMIT 1) as occupied_by_entry,
+          (SELECT tl.job_card_id FROM time_log tl 
+           WHERE tl.workstation_name = ws.name 
+           AND tl.log_date = ? 
+           AND tl.shift = ? 
+           AND tl.job_card_id != ?
+           LIMIT 1) as occupied_by_timelog
+          FROM workstation ws
+          WHERE ws.is_active = 1
+        `
+        params.push(dateVal, shiftNo, exclude_job_card_id || '', dateVal, shiftStr, exclude_job_card_id || '')
+      }
+
+      query += ' ORDER BY workstation_name'
+      const [workstations] = await this.db.query(query, params)
+      
+      // Process result to add is_available flag
+      return (workstations || []).map(ws => ({
+        ...ws,
+        is_available: !(ws.occupied_by_entry || ws.occupied_by_timelog),
+        occupied_by: ws.occupied_by_entry || ws.occupied_by_timelog
+      }))
     } catch (error) {
       throw error
     }
@@ -3621,18 +4321,17 @@ async deleteAllBOMRawMaterials(bom_id) {
 
             // Create Stock Movement entry
             try {
-              const transaction_no = await StockMovementModel.generateTransactionNo();
+              const transaction_no = await StockMovementModel.generateTransactionNo(this.db);
               await this.db.query(
                 `INSERT INTO stock_movements (
-                  transaction_no, item_code, warehouse_id, movement_type, purpose, quantity, 
+                  transaction_no, item_code, warehouse_id, movement_type, quantity, 
                   reference_type, reference_name, notes, status, created_by, approved_by, approved_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Approved', 1, 1, NOW())`,
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Approved', 1, 1, NOW())`,
                 [
                   transaction_no, 
                   item.item_code, 
                   rawWarehouse, 
                   consumptionQty > 0 ? 'OUT' : 'IN',
-                  'Consumption',
                   Math.abs(consumptionQty),
                   'Job Card',
                   jc.job_card_id,
@@ -3894,11 +4593,20 @@ async deleteAllBOMRawMaterials(bom_id) {
           extraInfo = ` This is capped by the accepted quantity (${parseFloat(prev.accepted_quantity).toFixed(2)}) from the previous operation (${prev.operation}).`;
         }
 
-        throw new Error(`Quantity Validation Error: Total production (${newTotalProduced.toFixed(2)}) would exceed allowed limit (${maxAllowed.toFixed(2)}).${extraInfo} Please ensure previous stages are fully accepted and approved.`);
+      throw new Error(`Quantity Validation Error: Total production (${newTotalProduced.toFixed(2)}) would exceed allowed limit (${maxAllowed.toFixed(2)}).${extraInfo} Please ensure previous stages are fully accepted and approved.`);
+      }
+
+      // Convert times to 24-hour format for database storage and overlap detection
+      const fromTime24 = this._formatTime24(data.from_time, data.from_period);
+      const toTime24 = this._formatTime24(data.to_time, data.to_period);
+
+      // Check for shift-based over-allocation for workstation across entries and logs
+      if (data.workstation_name && data.workstation_name !== 'UNASSIGNED' && data.workstation_name !== 'OUTSOURCED' && data.log_date && data.shift) {
+        await this._checkMachineAvailability(data.workstation_name, data.log_date, data.shift, data.job_card_id);
       }
 
       // Check for overlapping time intervals for operator or workstation
-      if (data.from_time && data.to_time && (data.employee_id || data.workstation_name)) {
+      if (fromTime24 && toTime24 && (data.employee_id || data.workstation_name)) {
         let overlapQuery = `SELECT * FROM time_log WHERE log_date = ? AND (`
         const overlapParams = [data.log_date]
         
@@ -3907,31 +4615,36 @@ async deleteAllBOMRawMaterials(bom_id) {
           resourceConditions.push('employee_id = ?')
           overlapParams.push(data.employee_id)
         }
-        if (data.workstation_name) {
+        if (data.workstation_name && data.workstation_name !== 'UNASSIGNED' && data.workstation_name !== 'OUTSOURCED') {
           resourceConditions.push('workstation_name = ?')
           overlapParams.push(data.workstation_name)
         }
         
-        overlapQuery += resourceConditions.join(' OR ') + ') AND ('
-        overlapQuery += `
-          (from_time <= ? AND to_time > ?) OR
-          (from_time < ? AND to_time >= ?) OR
-          (? <= from_time AND ? > from_time)
-        )`
-        overlapParams.push(data.from_time, data.from_time, data.to_time, data.to_time, data.from_time, data.to_time)
-        
-        const [overlaps] = await this.db.query(overlapQuery, overlapParams);
-        
-        if (overlaps && overlaps.length > 0) {
-          const conflict = overlaps[0];
-          const resourceType = conflict.employee_id === data.employee_id ? 'Operator' : 'Workstation';
-          throw new Error(`Time Overlap Error: ${resourceType} is already logged for ${conflict.from_time} - ${conflict.to_time} on ${data.log_date}.`);
+        if (resourceConditions.length > 0) {
+          overlapQuery += resourceConditions.join(' OR ') + ') AND ('
+          overlapQuery += `
+            (from_time <= ? AND to_time > ?) OR
+            (from_time < ? AND to_time >= ?) OR
+            (? <= from_time AND ? > from_time)
+          )`
+          overlapParams.push(fromTime24, fromTime24, toTime24, toTime24, fromTime24, toTime24)
+          
+          const [overlaps] = await this.db.query(overlapQuery, overlapParams);
+          
+          if (overlaps && overlaps.length > 0) {
+            const conflict = overlaps[0];
+            const resourceType = conflict.employee_id === data.employee_id ? 'Operator' : 'Workstation';
+            const resourceName = resourceType === 'Operator' ? data.employee_id : data.workstation_name;
+            const conflictFrom = this._format12HourTime(conflict.from_time, conflict.from_period);
+            const conflictTo = this._format12HourTime(conflict.to_time, conflict.to_period);
+            throw new Error(`Time Overlap Error: ${resourceType} '${resourceName}' is already logged for Job Card ${conflict.job_card_id} during ${conflictFrom} - ${conflictTo} on ${data.log_date}.`);
+          }
         }
       }
 
       const timeLogId = `TL-${Date.now()}`
-      const query = `INSERT INTO time_log (time_log_id, job_card_id, day_number, log_date, employee_id, operator_name, workstation_name, shift, from_time, to_time, time_in_minutes, completed_qty, accepted_qty, rejected_qty, scrap_qty, inhouse, outsource)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      const query = `INSERT INTO time_log (time_log_id, job_card_id, day_number, log_date, employee_id, operator_name, workstation_name, shift, from_time, from_period, to_time, to_period, time_in_minutes, completed_qty, accepted_qty, rejected_qty, scrap_qty, inhouse, outsource)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       
       const normShift = (s) => String(s || '').trim().toUpperCase().replace(/^SHIFT\s+/, '') || 'A';
 
@@ -3944,8 +4657,10 @@ async deleteAllBOMRawMaterials(bom_id) {
         data.operator_name || null,
         data.workstation_name || null,
         normShift(data.shift),
-        data.from_time || null,
-        data.to_time || null,
+        fromTime24,
+        data.from_period || null,
+        toTime24,
+        data.to_period || null,
         data.time_in_minutes || 0,
         data.completed_qty || 0,
         data.accepted_qty || 0,
@@ -3999,6 +4714,9 @@ async deleteAllBOMRawMaterials(bom_id) {
           console.error('Scrap tracking failed:', sErr.message);
         }
       }
+
+      // Trigger OEE Recalculation
+      await this._triggerOEERecalculation(data.job_card_id, data.log_date, normShift(data.shift));
 
       return { time_log_id: timeLogId, ...data }
     } catch (error) {
@@ -4156,6 +4874,9 @@ async deleteAllBOMRawMaterials(bom_id) {
         }
       }
 
+      // Trigger OEE Recalculation
+      await this._triggerOEERecalculation(data.job_card_id, data.log_date, normShift(data.shift));
+
       return { id: rejectionId, ...data }
     } catch (error) {
       throw error
@@ -4231,12 +4952,37 @@ async deleteAllBOMRawMaterials(bom_id) {
   async createDowntime(data) {
     try {
       const downtimeId = `DT-${Date.now()}`
-      const query = `INSERT INTO downtime_entry (downtime_id, job_card_id, day_number, log_date, shift, downtime_type, downtime_reason, from_time, to_time, duration_minutes)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      const query = `INSERT INTO downtime_entry (downtime_id, job_card_id, day_number, log_date, shift, downtime_type, downtime_reason, from_time, from_period, to_time, to_period, duration_minutes)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       
       const normShift = (s) => String(s || '').trim().toUpperCase().replace(/^SHIFT\s+/, '') || 'A';
       const logDate = data.log_date || this._formatDate(new Date());
       const shift = normShift(data.shift);
+
+      // Convert times to 24-hour format
+      const fromTime24 = this._formatTime24(data.from_time, data.from_period);
+      const toTime24 = this._formatTime24(data.to_time, data.to_period);
+
+      // Check for overlapping downtime for this machine/shift
+      if (fromTime24 && toTime24) {
+        const [overlaps] = await this.db.query(
+          `SELECT * FROM downtime_entry 
+           WHERE job_card_id = ? AND log_date = ? AND shift = ?
+           AND (
+             (from_time <= ? AND to_time > ?) OR
+             (from_time < ? AND to_time >= ?) OR
+             (? <= from_time AND ? > from_time)
+           )`,
+          [data.job_card_id, logDate, shift, fromTime24, fromTime24, toTime24, toTime24, fromTime24, toTime24]
+        );
+
+        if (overlaps && overlaps.length > 0) {
+          const conflict = overlaps[0];
+          const conflictFrom = this._format12HourTime(conflict.from_time, conflict.from_period);
+          const conflictTo = this._format12HourTime(conflict.to_time, conflict.to_period);
+          throw new Error(`Downtime Overlap: Another downtime (${conflict.downtime_type}) is already recorded for ${conflictFrom} - ${conflictTo} on this shift.`);
+        }
+      }
 
       await this.db.query(query, [
         downtimeId,
@@ -4246,8 +4992,10 @@ async deleteAllBOMRawMaterials(bom_id) {
         shift,
         data.downtime_type || null,
         data.downtime_reason || null,
-        data.from_time || null,
-        data.to_time || null,
+        fromTime24,
+        data.from_period || null,
+        toTime24,
+        data.to_period || null,
         data.duration_minutes || 0
       ])
 
@@ -4289,10 +5037,31 @@ async deleteAllBOMRawMaterials(bom_id) {
     const fields = [];
     const values = [];
 
+    // Get current log data to handle time period transitions if one is missing
+    const [currentLogs] = await this.db.query('SELECT * FROM time_log WHERE time_log_id = ?', [timeLogId]);
+    const currentLog = currentLogs[0] || {};
+
+    const allowedFields = [
+      'completed_qty', 'time_in_minutes', 'accepted_qty', 'rejected_qty', 
+      'scrap_qty', 'notes', 'operator_name', 'employee_id',
+      'from_time', 'from_period', 'to_time', 'to_period',
+      'shift', 'log_date', 'day_number'
+    ];
+
     for (const [key, value] of Object.entries(data)) {
-      if (['completed_qty', 'time_in_minutes', 'accepted_qty', 'rejected_qty', 'scrap_qty', 'notes', 'operator_name', 'employee_id'].includes(key)) {
+      if (allowedFields.includes(key)) {
+        let finalValue = value;
+        
+        if (key === 'from_time') {
+          finalValue = this._formatTime24(value, data.from_period || currentLog.from_period);
+        } else if (key === 'to_time') {
+          finalValue = this._formatTime24(value, data.to_period || currentLog.to_period);
+        } else if (key === 'log_date') {
+          finalValue = this._formatDate(value);
+        }
+
         fields.push(`${key} = ?`);
-        values.push(value);
+        values.push(finalValue);
       }
     }
 
@@ -4302,9 +5071,11 @@ async deleteAllBOMRawMaterials(bom_id) {
     await this.db.query(`UPDATE time_log SET ${fields.join(', ')}, updated_at = NOW() WHERE time_log_id = ?`, values);
 
     // Sync quantities
-    const [rows] = await this.db.query('SELECT job_card_id FROM time_log WHERE time_log_id = ?', [timeLogId]);
+    const [rows] = await this.db.query('SELECT job_card_id, log_date, shift FROM time_log WHERE time_log_id = ?', [timeLogId]);
     if (rows.length > 0) {
-      await this._syncJobCardQuantities(rows[0].job_card_id, { autoTransfer: true });
+      const { job_card_id, log_date, shift } = rows[0];
+      await this._syncJobCardQuantities(job_card_id, { autoTransfer: true });
+      await this._triggerOEERecalculation(job_card_id, this._formatDate(log_date), shift);
     }
     
     return true;
@@ -4327,9 +5098,11 @@ async deleteAllBOMRawMaterials(bom_id) {
     await this.db.query(`UPDATE rejection_entry SET ${fields.join(', ')}, updated_at = NOW() WHERE rejection_id = ?`, values);
 
     // Sync quantities
-    const [rows] = await this.db.query('SELECT job_card_id FROM rejection_entry WHERE rejection_id = ?', [rejectionId]);
+    const [rows] = await this.db.query('SELECT job_card_id, log_date, shift FROM rejection_entry WHERE rejection_id = ?', [rejectionId]);
     if (rows.length > 0) {
-      await this._syncJobCardQuantities(rows[0].job_card_id, { autoTransfer: true });
+      const { job_card_id, log_date, shift } = rows[0];
+      await this._syncJobCardQuantities(job_card_id, { autoTransfer: true });
+      await this._triggerOEERecalculation(job_card_id, this._formatDate(log_date), shift);
     }
     
     return true;
@@ -4340,10 +5113,30 @@ async deleteAllBOMRawMaterials(bom_id) {
       const fields = [];
       const values = [];
 
+      // Get current downtime data to handle time period transitions
+      const [currentDowntimes] = await this.db.query('SELECT * FROM downtime_entry WHERE downtime_id = ?', [downtimeId]);
+      const currentDowntime = currentDowntimes[0] || {};
+
+      const allowedFields = [
+        'duration_minutes', 'downtime_type', 'notes', 'downtime_reason',
+        'from_time', 'from_period', 'to_time', 'to_period', 
+        'log_date', 'shift', 'day_number'
+      ];
+
       for (const [key, value] of Object.entries(data)) {
-        if (['duration_minutes', 'downtime_type', 'notes', 'from_time', 'to_time', 'log_date', 'shift'].includes(key)) {
+        if (allowedFields.includes(key)) {
+          let finalValue = value;
+          
+          if (key === 'from_time') {
+            finalValue = this._formatTime24(value, data.from_period || currentDowntime.from_period);
+          } else if (key === 'to_time') {
+            finalValue = this._formatTime24(value, data.to_period || currentDowntime.to_period);
+          } else if (key === 'log_date') {
+            finalValue = this._formatDate(value);
+          }
+
           fields.push(`${key} = ?`);
-          values.push(value);
+          values.push(finalValue);
         }
       }
 
@@ -4899,6 +5692,61 @@ async deleteAllBOMRawMaterials(bom_id) {
         [normalizedStatus, jobCardId]
       )
 
+      // Machine Allocation Logic
+      const [jcDetails] = await this.db.query(
+        'SELECT machine_id, priority FROM job_card WHERE job_card_id = ?',
+        [jobCardId]
+      );
+      
+      const machineId = jcDetails[0]?.machine_id;
+      const jcPriority = jcDetails[0]?.priority;
+
+      if (machineId) {
+        if (normalizedStatus === 'in-progress') {
+          // Check if machine is already allocated to another job
+          const [currentAllocation] = await this.db.query(
+            'SELECT last_job_card_id, workstation_name FROM workstation WHERE name = ?',
+            [machineId]
+          );
+
+          if (currentAllocation[0]?.last_job_card_id && currentAllocation[0]?.last_job_card_id !== jobCardId) {
+            // Check priority of the current job on this machine
+            const [otherJob] = await this.db.query(
+              'SELECT priority, operation FROM job_card WHERE job_card_id = ?',
+              [currentAllocation[0].last_job_card_id]
+            );
+
+            const priorities = { 'critical': 4, 'high': 3, 'medium': 2, 'low': 1 };
+            const currentPriorityValue = priorities[jcPriority] || 2;
+            const otherPriorityValue = priorities[otherJob[0]?.priority] || 2;
+
+            if (currentPriorityValue > otherPriorityValue) {
+              // Higher priority job, put the other one on hold
+              await this.db.query(
+                'UPDATE job_card SET status = "hold", notes = CONCAT(COALESCE(notes, ""), "\nPaused for higher priority job: ", ?) WHERE job_card_id = ?',
+                [jobCardId, currentAllocation[0].last_job_card_id]
+              );
+              console.log(`Job ${currentAllocation[0].last_job_card_id} put on hold for higher priority job ${jobCardId}`);
+            } else if (currentPriorityValue <= otherPriorityValue) {
+               // Cannot start because a job of same or higher priority is running
+               throw new Error(`Machine ${currentAllocation[0].workstation_name} is already allocated to a ${otherJob[0]?.priority || 'medium'} priority job (${currentAllocation[0].last_job_card_id}).`);
+            }
+          }
+
+          // Allocate machine to this job
+          await this.db.query(
+            'UPDATE workstation SET status = "allocated", last_job_card_id = ? WHERE name = ?',
+            [jobCardId, machineId]
+          );
+        } else if (['completed', 'cancelled', 'hold'].includes(normalizedStatus)) {
+          // Free up the machine if this was the job using it
+          await this.db.query(
+            'UPDATE workstation SET status = "active", last_job_card_id = NULL WHERE name = ? AND last_job_card_id = ?',
+            [machineId, jobCardId]
+          );
+        }
+      }
+
       // Sync quantities after status update
       await this._syncJobCardQuantities(jobCardId)
 
@@ -4949,6 +5797,15 @@ async deleteAllBOMRawMaterials(bom_id) {
             "UPDATE bom SET status = 'active', updated_at = CURRENT_TIMESTAMP WHERE bom_id = ? AND status != 'active'",
             [bomNo]
           )
+        }
+      }
+
+      // Notify that resource is now free
+      if (['completed', 'cancelled'].includes(normalizedStatus)) {
+        const [jc] = await this.db.query('SELECT machine_id, operator_id FROM job_card WHERE job_card_id = ?', [jobCardId]);
+        if (jc && jc.length > 0) {
+          if (jc[0].machine_id) await this.checkAndNotifyResourceAvailability('machine', jc[0].machine_id);
+          if (jc[0].operator_id) await this.checkAndNotifyResourceAvailability('operator', jc[0].operator_id);
         }
       }
 

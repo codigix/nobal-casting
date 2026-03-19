@@ -32,7 +32,7 @@ class AuthController {
 
       // Generate token
       const token = jwt.sign(
-        { user_id: user.user_id, email: user.email, department: user.department },
+        { user_id: user.user_id, email: user.email, full_name: user.full_name, department: user.department },
         JWT_SECRET,
         { expiresIn: '7d' }
       )
@@ -69,7 +69,7 @@ class AuthController {
 
       // Generate token
       const token = jwt.sign(
-        { user_id: user.user_id, email: user.email, department: user.department },
+        { user_id: user.user_id, email: user.email, full_name: user.full_name, department: user.department },
         JWT_SECRET,
         { expiresIn: '7d' }
       )

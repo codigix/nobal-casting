@@ -223,7 +223,8 @@ export default function PurchaseOrderForm() {
     payment_terms_description: '',
     due_date: '',
     invoice_portion: 100,
-    payment_amount: 0
+    payment_amount: 0,
+    project_name: ''
   })
 
   useEffect(() => {
@@ -350,6 +351,29 @@ export default function PurchaseOrderForm() {
   const calculateSubtotal = () => po.items.reduce((sum, item) => sum + (item.qty * item.rate), 0)
   const calculateTaxAmount = () => (calculateSubtotal() * (po.tax_rate || 0)) / 100
   const calculateTotal = () => calculateSubtotal() + calculateTaxAmount() - (po.advance_paid || 0)
+
+  // Auto-calculate advance paid based on percentage in payment terms
+  useEffect(() => {
+    if (po.payment_terms_description) {
+      // Improved regex to handle spaces and common percentage formats
+      const percentageMatch = po.payment_terms_description.match(/(\d+(?:\.\d+)?)\s*%/);
+      if (percentageMatch) {
+        const percentage = parseFloat(percentageMatch[1]);
+        const subtotal = po.items.reduce((sum, item) => sum + ((parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0)), 0);
+        const taxAmount = (subtotal * (parseFloat(po.tax_rate) || 0)) / 100;
+        const totalValuation = subtotal + taxAmount;
+        const calculatedAdvance = (totalValuation * percentage) / 100;
+        
+        // Round to 2 decimal places
+        const roundedAdvance = Math.round(calculatedAdvance * 100) / 100;
+        
+        // Only update if it's different to avoid infinite loops
+        if (parseFloat(po.advance_paid) !== roundedAdvance) {
+          setPo(prev => ({ ...prev, advance_paid: roundedAdvance }));
+        }
+      }
+    }
+  }, [po.payment_terms_description, po.items, po.tax_rate, po.advance_paid]);
 
   const validateForm = () => {
     if (!po.supplier_id) return 'Please select a supplier'
@@ -553,6 +577,15 @@ export default function PurchaseOrderForm() {
                         value={po.expected_date}
                         onChange={(e) => setPo({ ...po, expected_date: e.target.value })}
                         className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-medium focus:ring-4 focus:ring-slate-500/10 focus:border-slate-400 outline-none transition-all"
+                      />
+                    </FieldWrapper>
+                    <FieldWrapper label="Project Name">
+                      <input
+                        type="text"
+                        value={po.project_name}
+                        onChange={(e) => setPo({ ...po, project_name: e.target.value })}
+                        className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-medium focus:ring-4 focus:ring-slate-500/10 focus:border-slate-400 outline-none transition-all"
+                        placeholder="Project identification..."
                       />
                     </FieldWrapper>
                   </div>
@@ -901,7 +934,7 @@ export default function PurchaseOrderForm() {
                               <div>
                                 <p className="text-xs  text-slate-500  mb-1">Payable Balance</p>
                                 <p className="text-xl ">
-                                  ₹{calculateTotal().toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                                  ₹{calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </p>
                               </div>
                               <div className="text-right">

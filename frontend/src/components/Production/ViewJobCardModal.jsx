@@ -7,6 +7,39 @@ import Modal from '../Modal'
 import * as productionService from '../../services/productionService'
 import { useToast } from '../ToastContainer'
 
+const parseUTCDate = (dateStr) => {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) return dateStr;
+  
+  if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
+    const d = new Date(dateStr.replace(' ', 'T') + 'Z');
+    if (!isNaN(d.getTime())) return d;
+  }
+  return new Date(dateStr);
+};
+
+const formatToLocalDisplay = (dateStr) => {
+  if (!dateStr) return 'N/A'
+  let d = new Date(dateStr)
+  
+  if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
+    const utcDate = new Date(dateStr.replace(' ', 'T') + 'Z')
+    if (!isNaN(utcDate.getTime())) {
+      d = utcDate
+    }
+  }
+  
+  if (isNaN(d.getTime())) return 'N/A'
+  
+  return d.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: true 
+  })
+}
+
 export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId }) {
   const toast = useToast()
   const [loading, setLoading] = useState(false)
@@ -196,6 +229,76 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
 
   const dailyLogs = getDailyLogs()
 
+  // Interconnected dynamic metrics calculation
+  const metrics = (() => {
+    if (!jobCard) return null;
+
+    const plannedQty = Number(jobCard.planned_quantity || 0);
+    const producedQty = Number(jobCard.produced_quantity || 0);
+    const acceptedQty = Number(jobCard.accepted_quantity || 0);
+    const cycleTime = Number(jobCard.operation_time || 0); 
+
+    const actualProductionMinutes = timeLogs.reduce((sum, log) => {
+      const parseTime = (time, period) => {
+        if (!time) return 0;
+        let [hours, minutes] = time.split(':').map(Number);
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        return hours * 60 + minutes;
+      };
+      const start = parseTime(log.from_time, log.from_period);
+      const end = parseTime(log.to_time, log.to_period);
+      let diff = end - start;
+      if (diff < 0) diff += 24 * 60;
+      return sum + diff;
+    }, 0);
+
+    const downtimeMinutes = Array.isArray(downtimes) ? downtimes.reduce((sum, dt) => sum + (Number(dt.duration_minutes) || 0), 0) : 0;
+    const totalActualMinutes = actualProductionMinutes + downtimeMinutes;
+    
+    let productionStartDisplay = 'N/A';
+    if (timeLogs.length > 0) {
+      const sortedLogs = [...timeLogs].sort((a, b) => {
+        const dateA = parseUTCDate(a.log_date || a.created_at);
+        const dateB = parseUTCDate(b.log_date || b.created_at);
+        return dateA - dateB;
+      });
+      const firstLog = sortedLogs[0];
+      const date = parseUTCDate(firstLog.log_date || firstLog.created_at);
+      productionStartDisplay = `${date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} ${format12h(firstLog.from_time)}`;
+    } else if (jobCard.actual_start_date) {
+      productionStartDisplay = parseUTCDate(jobCard.actual_start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+    }
+
+    let estimatedEndDisplay = 'N/A';
+    if (jobCard.status === 'completed' && (jobCard.actual_end_date || jobCard.updated_at)) {
+      estimatedEndDisplay = parseUTCDate(jobCard.actual_end_date || jobCard.updated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+    } else if (jobCard.status === 'in-progress' || jobCard.status === 'pending') {
+      const remainingQty = Math.max(0, plannedQty - acceptedQty);
+      const avgCycleTime = producedQty > 0 ? (actualProductionMinutes / producedQty) : cycleTime;
+      const minutesRemaining = remainingQty * (avgCycleTime || cycleTime || 1);
+      
+      if (minutesRemaining > 0) {
+        const estDate = new Date();
+        estDate.setMinutes(estDate.getMinutes() + minutesRemaining);
+        estimatedEndDisplay = estDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true });
+      } else {
+        estimatedEndDisplay = 'Imminent';
+      }
+    } else {
+      estimatedEndDisplay = jobCard.scheduled_end_date ? parseUTCDate(jobCard.scheduled_end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'N/A';
+    }
+
+    return {
+      totalActualMinutes,
+      actualProductionMinutes,
+      downtimeMinutes,
+      productionStartDisplay,
+      estimatedEndDisplay,
+      progress: Math.min(100, Math.round((producedQty / (plannedQty || 1)) * 100))
+    };
+  })();
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Operational Intelligence" size="3xl">
       {loading ? (
@@ -283,17 +386,29 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                 </div>
                 <h4 className="text-xs  text-gray-900 ">Operational Timeline</h4>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-2 bg-gray-50 rounded  border border-gray-100">
-                  <p className="text-xs   text-gray-400  mb-1">Scheduled Start</p>
-                  <p className="text-xs  text-gray-900 ">
-                    {jobCard?.scheduled_start_date ? new Date(jobCard.scheduled_start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2 bg-gray-50 rounded border border-gray-100">
+                  <p className="text-[10px] text-gray-400 mb-1">Scheduled Start</p>
+                  <p className="text-xs text-gray-900">
+                    {formatToLocalDisplay(jobCard?.scheduled_start_date)}
                   </p>
                 </div>
-                <div className="p-2 bg-gray-50 rounded  border border-gray-100">
-                  <p className="text-xs   text-gray-400  mb-1">Estimated End</p>
-                  <p className="text-xs  text-gray-900 ">
-                    {jobCard?.scheduled_end_date ? new Date(jobCard.scheduled_end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                <div className="p-2 bg-indigo-50/50 rounded border border-indigo-100">
+                  <p className="text-[10px] text-indigo-600 font-medium mb-1">Production Start</p>
+                  <p className="text-xs text-indigo-900 font-semibold">
+                    {metrics?.productionStartDisplay}
+                  </p>
+                </div>
+                <div className="p-2 bg-amber-50/50 rounded border border-amber-100">
+                  <p className="text-[10px] text-amber-600 font-medium mb-1">Estimated End</p>
+                  <p className="text-xs text-amber-900 font-semibold">
+                    {metrics?.estimatedEndDisplay}
+                  </p>
+                </div>
+                <div className="p-2 bg-gray-50 rounded border border-gray-100">
+                  <p className="text-[10px] text-gray-400 mb-1">Target Finish</p>
+                  <p className="text-xs text-gray-900">
+                    {formatToLocalDisplay(jobCard?.scheduled_end_date)}
                   </p>
                 </div>
               </div>
@@ -393,28 +508,24 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
 
           {timeLogs.length > 0 && (
             (() => {
-              const operationTimeMinutes = Number(jobCard?.operation_time || 0)
-              const salesQty = Number(jobCard?.sales_qty || jobCard?.planned_quantity || 0)
-              const totalActualHours = ((operationTimeMinutes * salesQty) / 60).toFixed(2)
-              
               const approvedRejectionsList = Array.isArray(rejections) ? rejections.filter(r => r.status === 'Approved') : []
               const totalRejectedQty = approvedRejectionsList.reduce((sum, r) => sum + (Number(r.rejected_qty) || 0), 0)
               const totalScrapQty = approvedRejectionsList.reduce((sum, r) => sum + (Number(r.scrap_qty) || 0), 0)
-              const totalDowntimeMinutes = Array.isArray(downtimes) ? downtimes.reduce((sum, dt) => sum + (Number(dt.duration_minutes) || 0), 0) : 0
+              const actualUptimeHours = (metrics.actualProductionMinutes / 60).toFixed(2)
               
               return (
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <div className="bg-indigo-50/50 p-2 rounded border border-indigo-100">
                     <p className="text-xs   text-indigo-400  mb-2">Actual Uptime</p>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-xl   text-indigo-900 ">{totalActualHours}</span>
+                      <span className="text-xl   text-indigo-900 ">{actualUptimeHours}</span>
                       <span className="text-xs  text-indigo-400">Hours</span>
                     </div>
                   </div>
                   <div className="bg-amber-50/50 p-2 rounded  border border-amber-100">
                     <p className="text-xs   text-amber-400  mb-2">Downtime</p>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-xl   text-amber-900 ">{totalDowntimeMinutes}</span>
+                      <span className="text-xl   text-amber-900 ">{metrics.downtimeMinutes}</span>
                       <span className="text-xs  text-amber-400">Mins</span>
                     </div>
                   </div>

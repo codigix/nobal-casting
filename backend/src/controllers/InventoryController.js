@@ -22,7 +22,7 @@ class InventoryController {
       const allocations = await this.inventoryModel.allocateMaterialsForWorkOrder(
         work_order_id,
         materials,
-        req.user?.username || 'system'
+        req.user?.full_name || 'system'
       )
 
       res.status(201).json({
@@ -56,7 +56,7 @@ class InventoryController {
       const issued = await this.inventoryModel.issueMaterialsToWIP(
         work_order_id,
         materials,
-        req.user?.username || 'system'
+        req.user?.full_name || 'system'
       )
 
       res.status(201).json({
@@ -91,7 +91,7 @@ class InventoryController {
         job_card_id,
         work_order_id,
         produced_qty,
-        req.user?.username || 'system'
+        req.user?.full_name || 'system'
       )
 
       res.status(201).json({
@@ -128,7 +128,7 @@ class InventoryController {
         return_qty,
         target_warehouse,
         reason,
-        req.user?.username || 'system'
+        req.user?.full_name || 'system'
       )
 
       res.status(200).json({
@@ -158,7 +158,7 @@ class InventoryController {
         item_code,
         scrap_qty,
         reason,
-        req.user?.username || 'system'
+        req.user?.full_name || 'system'
       )
 
       res.status(200).json({ success: true, message: 'Scrap recorded successfully' })
@@ -307,7 +307,7 @@ class InventoryController {
 
       const results = await this.inventoryModel.finalizeWorkOrderMaterials(
         work_order_id,
-        req.user?.username || 'system'
+        req.user?.full_name || 'system'
       )
 
       res.status(200).json({

@@ -262,6 +262,27 @@ export default function PurchaseReceipts() {
     }))
   }
 
+  const handleAutoGenerateBatches = () => {
+    if (!selectedGRN) return
+
+    setStorageData(prev => {
+      const updated = { ...prev }
+      const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '')
+      const grnLastPart = selectedGRN.grn_no.split('-').pop()
+      
+      selectedGRN.items.forEach(item => {
+        // Generate prefix: BT-GRN-ITEM
+        const prefix = `BT-${grnLastPart}-${item.item_code}-${dateStr}`
+        updated[item.id] = {
+          ...updated[item.id],
+          batch_no: prefix
+        }
+      })
+      return updated
+    })
+    toast.addToast('Batch prefixes generated. Units will be split into individual batch numbers on approval.', 'info')
+  }
+
   const handleApproveAndStore = async () => {
     if (approvalItems.length === 0) {
       toast.addToast('Please add accepted items', 'warning')
@@ -1141,6 +1162,7 @@ export default function PurchaseReceipts() {
                     <tr>
                       <th className="p-2 ">Item</th>
                       <th className="p-2  text-right">Received Qty</th>
+                      <th className="p-2 ">Batch #</th>
                       <th className="p-2 ">Unit</th>
                     </tr>
                   </thead>
@@ -1153,6 +1175,9 @@ export default function PurchaseReceipts() {
                         </td>
                         <td className="p-2  text-right  text-slate-700 text-xs">
                           {item.received_qty}
+                        </td>
+                        <td className="p-2  text-slate-500 text-xs font-medium">
+                          {item.batch_no || 'N/A'}
                         </td>
                         <td className="p-2  text-slate-500 text-xs font-medium">{item.unit}</td>
                       </tr>
@@ -1230,18 +1255,35 @@ export default function PurchaseReceipts() {
       >
         {selectedGRN && (
           <div className="space-y-2">
-            <div className="bg-amber-50 border border-amber-100 rounded  p-4 flex gap-3 items-start">
-              <AlertCircle className="text-amber-500 shrink-0" size={20} />
-              <div className="text-xs  text-amber-700  leading-none mt-1">
-                Quantity Review & Storage Assignment
+            <div className="bg-indigo-50 border border-indigo-100 rounded  p-4 flex gap-3 items-start">
+              <Grid3x3 className="text-indigo-500 shrink-0" size={20} />
+              <div>
+                <div className="text-xs  text-indigo-900 ">
+                  Unit-Level Batch Allocation
+                </div>
+                <p className="text-[10px] text-indigo-700 leading-relaxed mt-1">
+                  Approving this storage will split the accepted units into individual items. 
+                  Each unit will be allocated a unique batch number based on the prefix provided (e.g., <em>Batch-001, Batch-002...</em>).
+                </p>
               </div>
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-xs  text-slate-900 flex items-center gap-2">
-                <ClipboardCheck size={14} className="text-indigo-500" />
-                Material Receipt & Storage Assignment
-              </h4>
+              <div className="flex justify-between items-center pr-2">
+                <h4 className="text-xs  text-slate-900 flex items-center gap-2">
+                  <ClipboardCheck size={14} className="text-indigo-500" />
+                  Material Receipt & Storage Assignment
+                </h4>
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  className="text-[10px] py-1 h-7 flex items-center gap-1.5"
+                  onClick={handleAutoGenerateBatches}
+                >
+                  <RefreshCw size={10} />
+                  Auto-Generate Batches
+                </Button>
+              </div>
               <div className="border border-slate-100 rounded  overflow-hidden  ">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-[11px]">

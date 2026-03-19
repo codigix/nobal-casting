@@ -257,6 +257,23 @@ router.delete(
     productionController.validateJobCardStart.bind(productionController)
   )
 
+  // ============= SCHEDULING =============
+  router.get(
+    '/scheduling/available-slots/:machine_id',
+    authMiddleware,
+    productionController.getAvailableSlots.bind(productionController)
+  )
+  router.get(
+    '/scheduling/suggest-slot/:machine_id',
+    authMiddleware,
+    productionController.suggestSlot.bind(productionController)
+  )
+  router.post(
+    '/scheduling/notify-available',
+    authMiddleware,
+    productionController.requestResourceNotification.bind(productionController)
+  )
+
   // ============= WORKSTATIONS =============
   router.post(
     '/workstations',

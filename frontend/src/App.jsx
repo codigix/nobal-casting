@@ -14,7 +14,6 @@ import {
   ItemForm,
   ItemGroups,
   GRNRequestDetail,
-  MaterialRequests,
   PurchaseOrders,
   PurchaseOrderForm,
   PurchaseOrderDetail,
@@ -29,7 +28,8 @@ import {
   StockLedger,
   Suppliers,
   GRNManagement,
-  StockMovements
+  StockMovements,
+  MaterialRequestsRedesign
 } from './pages/Inventory'
 
 import {
@@ -242,7 +242,7 @@ function App() {
                 <ProtectedRoute>
                   <DepartmentLayout>
                     <DepartmentProtectedRoute departments={['inventory', 'admin']}>
-                      <MaterialRequests />
+                      <MaterialRequestsRedesign />
                     </DepartmentProtectedRoute>
                   </DepartmentLayout>
                 </ProtectedRoute>

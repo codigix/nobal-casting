@@ -140,7 +140,8 @@ class StockBalanceModel {
         last_receipt_date = null,
         last_issue_date = null,
         is_increment = false, // If true, current_qty and reserved_qty will be added to existing
-        incoming_rate = null  // Used for Moving Average Calculation if is_increment is true
+        incoming_rate = null,  // Used for Moving Average Calculation if is_increment is true
+        skip_item_sync = false // Optional: skip syncing valuation to item table
       } = data
 
       // Get item's valuation method
@@ -149,7 +150,7 @@ class StockBalanceModel {
 
       // Get existing record for valuation and reserved quantity calculation
       const [existing] = await db.query(
-        'SELECT current_qty, reserved_qty, valuation_rate FROM stock_balance WHERE item_code = ? AND warehouse_id = ?',
+        'SELECT current_qty, reserved_qty, valuation_rate FROM stock_balance WHERE item_code = ? AND warehouse_id = ? FOR UPDATE',
         [itemCode, warehouseId]
       )
 
@@ -168,8 +169,9 @@ class StockBalanceModel {
           
           if (current_qty > 0) {
             // INWARD: Always Moving Average regardless of method for the summary rate
-            if (incoming_rate !== null && final_qty > 0) {
-              final_valuation = ((old_qty * old_rate) + (current_qty * incoming_rate)) / final_qty
+            const effectiveIncomingRate = incoming_rate !== null ? incoming_rate : (valuation_rate !== null ? valuation_rate : 0)
+            if (effectiveIncomingRate !== null && final_qty > 0) {
+              final_valuation = ((old_qty * old_rate) + (current_qty * effectiveIncomingRate)) / final_qty
             } else {
               final_valuation = old_rate
             }
@@ -179,21 +181,27 @@ class StockBalanceModel {
               final_valuation = old_rate
             } else {
               // FIFO/LIFO
-              // Import StockLedgerModel dynamically to avoid circular dependency if any
-              const StockLedgerModel = (await import('./StockLedgerModel.js')).default
-              const issueRate = await StockLedgerModel.getValuationRate(
-                itemCode, 
-                warehouseId, 
-                Math.abs(current_qty), 
-                valuation_method, 
-                db
-              )
+              let issueRate = valuation_rate // Use passed rate if available to skip redundant calculation
+              
+              if (issueRate === null) {
+                // Import StockLedgerModel dynamically to avoid circular dependency if any
+                const StockLedgerModel = (await import('./StockLedgerModel.js')).default
+                issueRate = await StockLedgerModel.getValuationRate(
+                  itemCode, 
+                  warehouseId, 
+                  Math.abs(current_qty), 
+                  valuation_method, 
+                  db
+                )
+              }
               
               const old_total_value = old_qty * old_rate
               const issue_value = Math.abs(current_qty) * issueRate
               
               if (final_qty > 0) {
                 final_valuation = (old_total_value - issue_value) / final_qty
+              } else if (final_qty === 0) {
+                final_valuation = 0
               } else {
                 final_valuation = old_rate
               }
@@ -234,24 +242,26 @@ class StockBalanceModel {
       )
 
       // Sync valuation_rate to item table (Weighted Average across all warehouses)
-      try {
-        await db.query(`
-          UPDATE item i
-          JOIN (
-            SELECT item_code, 
-                   CASE 
-                     WHEN SUM(current_qty) > 0 THEN SUM(current_qty * valuation_rate) / SUM(current_qty)
-                     ELSE MAX(valuation_rate)
-                   END as avg_rate
-            FROM stock_balance
-            WHERE item_code = ?
-            GROUP BY item_code
-          ) sb_avg ON i.item_code = sb_avg.item_code
-          SET i.valuation_rate = sb_avg.avg_rate
-          WHERE i.item_code = ?
-        `, [itemCode, itemCode])
-      } catch (syncError) {
-        console.error('Failed to sync valuation_rate to item table:', syncError)
+      if (!skip_item_sync) {
+        try {
+          await db.query(`
+            UPDATE item i
+            JOIN (
+              SELECT item_code, 
+                     CASE 
+                       WHEN SUM(current_qty) > 0 THEN SUM(current_qty * valuation_rate) / SUM(current_qty)
+                       ELSE MAX(valuation_rate)
+                     END as avg_rate
+              FROM stock_balance
+              WHERE item_code = ?
+              GROUP BY item_code
+            ) sb_avg ON i.item_code = sb_avg.item_code
+            SET i.valuation_rate = sb_avg.avg_rate
+            WHERE i.item_code = ?
+          `, [itemCode, itemCode])
+        } catch (syncError) {
+          console.error('Failed to sync valuation_rate to item table:', syncError)
+        }
       }
 
       return this.getByItemAndWarehouse(itemCode, warehouseId, db)

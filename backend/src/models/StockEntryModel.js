@@ -312,7 +312,6 @@ class StockEntryModel {
     try {
       const db = dbConnection || this.getDb()
       
-      // Use provided connection or get a new one and start transaction
       let connection = dbConnection
       let isLocalTransaction = false
       
@@ -323,142 +322,275 @@ class StockEntryModel {
       }
 
       try {
-        // Get entry details
         const entry = await this.getById(id)
         if (!entry) throw new Error('Stock entry not found')
 
-        // Check for period closing lock
         await PeriodClosingModel.checkLock(connection, entry.entry_date)
 
-        // Update status
         await connection.query(
           `UPDATE stock_entries SET status = 'Submitted', submitted_at = NOW(), approved_by = ? WHERE id = ?`,
           [userId, id]
         )
 
-        // Process each item
-        for (const item of entry.items) {
+        const allItemCodes = [...new Set(entry.items.map(i => i.item_code))]
+        const warehouseIds = [entry.from_warehouse_id, entry.to_warehouse_id].filter(id => id)
+
+        // 1. Pre-fetch valuation methods
+        const [valuationRows] = await connection.query(
+          'SELECT item_code, valuation_method FROM item WHERE item_code IN (?)', 
+          [allItemCodes]
+        )
+        const valuationMethods = valuationRows.reduce((acc, row) => {
+          acc[row.item_code] = row.valuation_method
+          return acc
+        }, {})
+
+        // 2. Pre-fetch and lock stock balances
+        const [balanceRows] = await connection.query(
+          'SELECT item_code, warehouse_id, current_qty, valuation_rate, reserved_qty FROM stock_balance WHERE item_code IN (?) AND warehouse_id IN (?) FOR UPDATE',
+          [allItemCodes, warehouseIds]
+        )
+        const currentBalances = balanceRows.reduce((acc, row) => {
+          acc[`${row.item_code}-${row.warehouse_id}`] = {
+            current_qty: Number(row.current_qty) || 0,
+            valuation_rate: Number(row.valuation_rate) || 0,
+            reserved_qty: Number(row.reserved_qty) || 0
+          }
+          return acc
+        }, {})
+
+        // 3. Pre-fetch latest ledger balances
+        const [ledgerRows] = await connection.query(
+          `SELECT item_code, warehouse_id, balance_qty 
+           FROM stock_ledger 
+           WHERE (item_code, warehouse_id, id) IN (
+             SELECT item_code, warehouse_id, MAX(id) 
+             FROM stock_ledger 
+             WHERE item_code IN (?) AND warehouse_id IN (?) 
+             GROUP BY item_code, warehouse_id
+           )`,
+          [allItemCodes, warehouseIds]
+        )
+        const latestLedgerBalances = ledgerRows.reduce((acc, row) => {
+          acc[`${row.item_code}-${row.warehouse_id}`] = Number(row.balance_qty) || 0
+          return acc
+        }, {})
+
+        const sortedItems = [...entry.items].sort((a, b) => (a.item_code || '').localeCompare(b.item_code || ''))
+        const uniqueItemCodes = new Set()
+        const stockMovementData = []
+        const ledgerEntries = []
+        const balanceUpdates = new Map() // Use Map to aggregate updates for same item-warehouse
+
+        const transactionTypeMap = {
+          'Material Receipt': 'Purchase Receipt',
+          'Material Issue': 'Issue',
+          'Material Transfer': 'Transfer',
+          'Manufacturing Return': 'Manufacturing Return',
+          'Repack': 'Repack',
+          'Scrap Entry': 'Scrap Entry'
+        }
+        const transactionType = transactionTypeMap[entry.entry_type] || entry.entry_type
+
+        for (const item of sortedItems) {
           const itemCode = item.item_code
           const itemQty = Number(item.qty) || 0
+          uniqueItemCodes.add(itemCode)
+          const method = valuationMethods[itemCode] || 'FIFO'
           
-          // Get item's valuation method
-          const [itemRows] = await connection.query('SELECT valuation_method FROM item WHERE item_code = ?', [itemCode])
-          const method = itemRows.length > 0 ? itemRows[0].valuation_method : 'FIFO'
-
-          const transactionTypeMap = {
-            'Material Receipt': 'Purchase Receipt',
-            'Material Issue': 'Issue',
-            'Material Transfer': 'Transfer',
-            'Manufacturing Return': 'Manufacturing Return',
-            'Repack': 'Repack',
-            'Scrap Entry': 'Scrap Entry'
-          }
-          const transactionType = transactionTypeMap[entry.entry_type] || entry.entry_type
-
           let finalValuationRate = Number(item.valuation_rate) || 0
 
-          // 1. Handle Outward movement (Issue, Transfer, Scrap, Repack)
+          // Handle Outward movement
           if (['Material Issue', 'Material Transfer', 'Scrap Entry', 'Repack'].includes(entry.entry_type)) {
             const fromWarehouseId = entry.from_warehouse_id
             if (!fromWarehouseId) throw new Error(`Source warehouse is required for ${entry.entry_type}`)
-
-            // Calculate correct valuation rate for this specific issue
-            finalValuationRate = await StockLedgerModel.getValuationRate(
-              itemCode, 
-              fromWarehouseId, 
-              itemQty, 
-              method, 
-              connection
-            )
-
-            // Deduct from Source
-            await StockBalanceModel.upsert(itemCode, fromWarehouseId, {
-              current_qty: -itemQty,
-              is_increment: true,
-              last_issue_date: entry.entry_date
-            }, connection)
-
-            // Add Ledger Entry (OUT)
-            await StockLedgerModel.create({
+            
+            const balanceKey = `${itemCode}-${fromWarehouseId}`
+            const existing = currentBalances[balanceKey] || { current_qty: 0, valuation_rate: 0, reserved_qty: 0 }
+            
+            // Calculate rate - only call StockLedgerModel if not Moving Average or if cache is missing
+            if (method === 'Moving Average') {
+              finalValuationRate = existing.valuation_rate
+            } else {
+              finalValuationRate = await StockLedgerModel.getValuationRate(itemCode, fromWarehouseId, itemQty, method, connection)
+            }
+            
+            // Update memory balance
+            existing.current_qty -= itemQty
+            // Note: valuation_rate for summary doesn't change on outward move for FIFO/LIFO
+            
+            // Ledger entry
+            const prevLedgerBalance = latestLedgerBalances[balanceKey] || 0
+            const newLedgerBalance = prevLedgerBalance - itemQty
+            latestLedgerBalances[balanceKey] = newLedgerBalance
+            
+            ledgerEntries.push([
+              itemCode, fromWarehouseId, entry.entry_date, transactionType,
+              0, itemQty, newLedgerBalance, finalValuationRate, itemQty * finalValuationRate,
+              item.batch_no || null, 'Stock Entry', entry.entry_no, entry.remarks, userId
+            ])
+            
+            balanceUpdates.set(balanceKey, {
               item_code: itemCode,
               warehouse_id: fromWarehouseId,
-              transaction_date: entry.entry_date,
-              transaction_type: transactionType,
-              qty_in: 0,
-              qty_out: itemQty,
-              valuation_rate: finalValuationRate,
-              reference_doctype: 'Stock Entry',
-              reference_name: entry.entry_no,
-              remarks: entry.remarks,
-              created_by: userId
-            }, connection)
+              ...existing,
+              last_issue_date: entry.entry_date
+            })
           }
 
-          // 2. Handle Inward movement (Receipt, Transfer, Manufacturing Return, Repack)
+          // Handle Inward movement
           if (['Material Receipt', 'Material Transfer', 'Manufacturing Return', 'Repack'].includes(entry.entry_type)) {
             const toWarehouseId = entry.to_warehouse_id
             if (!toWarehouseId) throw new Error(`Target warehouse is required for ${entry.entry_type}`)
-
-            // If it's a transfer, we use the rate calculated from the OUT side
-            // If it's a receipt, we use the rate provided in the entry
+            
+            const balanceKey = `${itemCode}-${toWarehouseId}`
+            const existing = currentBalances[balanceKey] || { current_qty: 0, valuation_rate: 0, reserved_qty: 0 }
+            
             const incomingRate = entry.entry_type === 'Material Transfer' ? finalValuationRate : Number(item.valuation_rate)
-
-            // Add to Target
-            await StockBalanceModel.upsert(itemCode, toWarehouseId, {
-              current_qty: itemQty,
-              is_increment: true,
-              incoming_rate: incomingRate,
-              last_receipt_date: entry.entry_date
-            }, connection)
-
-            // Add Ledger Entry (IN)
-            await StockLedgerModel.create({
+            
+            // Moving Average calculation for the summary rate
+            const oldQty = existing.current_qty
+            const oldRate = existing.valuation_rate
+            const newQty = oldQty + itemQty
+            
+            if (newQty > 0) {
+              existing.valuation_rate = ((oldQty * oldRate) + (itemQty * incomingRate)) / newQty
+            } else {
+              existing.valuation_rate = incomingRate
+            }
+            existing.current_qty = newQty
+            
+            // Ledger entry
+            const prevLedgerBalance = latestLedgerBalances[balanceKey] || 0
+            const newLedgerBalance = prevLedgerBalance + itemQty
+            latestLedgerBalances[balanceKey] = newLedgerBalance
+            
+            ledgerEntries.push([
+              itemCode, toWarehouseId, entry.entry_date, transactionType,
+              itemQty, 0, newLedgerBalance, incomingRate, itemQty * incomingRate,
+              item.batch_no || null, 'Stock Entry', entry.entry_no, entry.remarks, userId
+            ])
+            
+            balanceUpdates.set(balanceKey, {
               item_code: itemCode,
               warehouse_id: toWarehouseId,
-              transaction_date: entry.entry_date,
-              transaction_type: transactionType,
-              qty_in: itemQty,
-              qty_out: 0,
-              valuation_rate: incomingRate,
-              reference_doctype: 'Stock Entry',
-              reference_name: entry.entry_no,
-              remarks: entry.remarks,
-              created_by: userId
-            }, connection)
+              ...existing,
+              last_receipt_date: entry.entry_date
+            })
           }
 
-          // Create Stock Movement entry for visibility in Inventory Dashboard
-          try {
-            const movement_type = entry.entry_type === 'Material Receipt' ? 'IN' : 
-                                 entry.entry_type === 'Material Issue' ? 'OUT' : 
-                                 entry.entry_type === 'Material Transfer' ? 'TRANSFER' : 
-                                 (entry.to_warehouse_id ? 'IN' : 'OUT')
-            
-            const transaction_no = await StockMovementModel.generateTransactionNo()
-            
-            await connection.execute(
-              `INSERT INTO stock_movements (
-                transaction_no, item_code, warehouse_id, source_warehouse_id, target_warehouse_id, 
-                movement_type, purpose, quantity, reference_type, reference_name, notes, status, created_by, approved_by, approved_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Approved', ?, ?, NOW())`,
-              [
-                transaction_no, 
-                itemCode, 
-                movement_type === 'TRANSFER' ? null : (movement_type === 'IN' ? entry.to_warehouse_id : entry.from_warehouse_id),
-                movement_type === 'TRANSFER' ? entry.from_warehouse_id : null,
-                movement_type === 'TRANSFER' ? entry.to_warehouse_id : null,
-                movement_type,
-                entry.entry_type,
-                itemQty,
-                'Stock Entry',
-                entry.entry_no,
-                entry.remarks || `Auto-generated from Stock Entry ${entry.entry_no}`,
-                userId,
-                userId
-              ]
+          const movement_type = entry.entry_type === 'Material Receipt' ? 'IN' : 
+                               entry.entry_type === 'Material Issue' ? 'OUT' : 
+                               entry.entry_type === 'Material Transfer' ? 'TRANSFER' : 
+                               (entry.to_warehouse_id ? 'IN' : 'OUT')
+          
+          stockMovementData.push({ itemCode, itemQty, movement_type, batch_no: item.batch_no })
+        }
+
+        // 4. Bulk insert Stock Ledger entries
+        if (ledgerEntries.length > 0) {
+          for (let i = 0; i < ledgerEntries.length; i += 100) {
+            const chunk = ledgerEntries.slice(i, i + 100)
+            await connection.query(
+              `INSERT INTO stock_ledger (
+                item_code, warehouse_id, transaction_date, transaction_type, 
+                qty_in, qty_out, balance_qty, valuation_rate, transaction_value,
+                batch_no, reference_doctype, reference_name, remarks, created_by
+              ) VALUES ?`,
+              [chunk]
             )
+          }
+        }
+
+        // 5. Bulk upsert Stock Balances
+        if (balanceUpdates.size > 0) {
+          const updates = Array.from(balanceUpdates.values())
+          const values = updates.map(u => [
+            u.item_code, u.warehouse_id, u.current_qty, u.reserved_qty, 
+            u.current_qty - u.reserved_qty, u.valuation_rate, u.current_qty * u.valuation_rate,
+            u.last_receipt_date || null, u.last_issue_date || null
+          ])
+          
+          for (let i = 0; i < values.length; i += 100) {
+            const chunk = values.slice(i, i + 100)
+            await connection.query(
+              `INSERT INTO stock_balance 
+                (item_code, warehouse_id, current_qty, reserved_qty, available_qty, valuation_rate, total_value, last_receipt_date, last_issue_date)
+              VALUES ?
+              ON DUPLICATE KEY UPDATE 
+                current_qty = VALUES(current_qty),
+                reserved_qty = VALUES(reserved_qty),
+                available_qty = VALUES(available_qty),
+                valuation_rate = VALUES(valuation_rate),
+                total_value = VALUES(total_value),
+                last_receipt_date = COALESCE(VALUES(last_receipt_date), last_receipt_date),
+                last_issue_date = COALESCE(VALUES(last_issue_date), last_issue_date),
+                updated_at = CURRENT_TIMESTAMP`,
+              [chunk]
+            )
+          }
+        }
+
+        // 6. Bulk Create Stock Movement entries
+        if (stockMovementData.length > 0) {
+          try {
+            const base_transaction_no = await StockMovementModel.generateTransactionNo(connection)
+            const datePart = base_transaction_no.substring(4, 12)
+            const startSeq = parseInt(base_transaction_no.substring(13))
+            
+            const values = []
+            for (let i = 0; i < stockMovementData.length; i++) {
+              const sm = stockMovementData[i]
+              const seq = startSeq + i
+              const transaction_no = `STK-${datePart}-${String(seq).padStart(5, '0')}`
+              
+              const warehouse_id = sm.movement_type === 'TRANSFER' ? null : (sm.movement_type === 'IN' ? entry.to_warehouse_id : entry.from_warehouse_id)
+              const source_warehouse_id = sm.movement_type === 'TRANSFER' ? entry.from_warehouse_id : null
+              const target_warehouse_id = sm.movement_type === 'TRANSFER' ? entry.to_warehouse_id : null
+              
+              values.push([
+                transaction_no, sm.itemCode, warehouse_id, source_warehouse_id, target_warehouse_id,
+                sm.movement_type, sm.itemQty, 'Stock Entry', entry.entry_no,
+                entry.remarks || `Auto-generated from Stock Entry ${entry.entry_no}`,
+                sm.batch_no || null, 'Approved', userId || null, userId || null
+              ])
+            }
+
+            for (let i = 0; i < values.length; i += 100) {
+              const chunk = values.slice(i, i + 100)
+              await connection.query(
+                `INSERT INTO stock_movements (
+                  transaction_no, item_code, warehouse_id, source_warehouse_id, target_warehouse_id, 
+                  movement_type, quantity, reference_type, reference_name, notes, batch_no, status, created_by, approved_by, approved_at
+                ) VALUES ?`,
+                [chunk.map(v => [...v, new Date()])]
+              )
+            }
           } catch (smError) {
-            console.error('Failed to create stock movement entry:', smError)
+            console.error('Failed to create bulk stock movement entries:', smError)
+          }
+        }
+
+        // 7. Final sync of valuation_rate to item table
+        if (uniqueItemCodes.size > 0) {
+          const itemCodesArray = Array.from(uniqueItemCodes)
+          try {
+            await connection.query(`
+              UPDATE item i
+              JOIN (
+                SELECT item_code, 
+                       CASE 
+                         WHEN SUM(current_qty) > 0 THEN SUM(current_qty * valuation_rate) / SUM(current_qty)
+                         ELSE MAX(valuation_rate)
+                       END as avg_rate
+                FROM stock_balance
+                WHERE item_code IN (?)
+                GROUP BY item_code
+              ) sb_avg ON i.item_code = sb_avg.item_code
+              SET i.valuation_rate = sb_avg.avg_rate
+            `, [itemCodesArray])
+          } catch (syncError) {
+            console.error('Failed to sync bulk valuation_rate:', syncError)
           }
         }
 
@@ -535,6 +667,7 @@ class StockEntryModel {
                 qty_in: 0,
                 qty_out: itemQty,
                 valuation_rate: valuationRate,
+                batch_no: item.batch_no,
                 reference_doctype: 'Stock Entry',
                 reference_name: entry.entry_no,
                 remarks: `Reversal of ${entry.entry_no} (Cancelled)`,
@@ -562,6 +695,7 @@ class StockEntryModel {
                 qty_in: itemQty,
                 qty_out: 0,
                 valuation_rate: valuationRate,
+                batch_no: item.batch_no,
                 reference_doctype: 'Stock Entry',
                 reference_name: entry.entry_no,
                 remarks: `Reversal of ${entry.entry_no} (Cancelled)`,

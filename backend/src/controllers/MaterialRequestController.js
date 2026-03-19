@@ -74,7 +74,7 @@ export class MaterialRequestController {
 
       const result = await MaterialRequestModel.create(db, {
         ...req.body,
-        created_by: req.user?.user_id || req.user?.id || null
+        created_by: req.user?.user_id || null
       })
       res.status(201).json({ success: true, data: result })
     } catch (error) {
@@ -140,7 +140,7 @@ export class MaterialRequestController {
         })
       }
 
-      const approvedBy = req.user?.user_id || req.user?.id || approvedByFromBody
+      const approvedBy = req.user?.user_id || approvedByFromBody
       const result = await MaterialRequestModel.approve(db, id, approvedBy, source_warehouse, itemsToProcess)
       
       let message = 'Material request approved successfully'

@@ -312,6 +312,9 @@ export default function ProductionPlanningForm() {
     naming_series: 'PP',
     company: '',
     sales_order_id: '',
+    project_name: '',
+    plan_date: new Date().toISOString().split('T')[0],
+    expected_completion_date: '',
     status: 'draft'
   })
 
@@ -388,6 +391,9 @@ export default function ProductionPlanningForm() {
             naming_series: plan.naming_series || 'PP',
             company: plan.company || '',
             sales_order_id: plan.sales_order_id || '',
+            project_name: plan.project_name || '',
+            plan_date: plan.plan_date ? plan.plan_date.split('T')[0] : new Date().toISOString().split('T')[0],
+            expected_completion_date: plan.expected_completion_date ? plan.expected_completion_date.split('T')[0] : '',
             status: plan.status || 'draft'
           })
 
@@ -842,7 +848,12 @@ export default function ProductionPlanningForm() {
   }, [rawMaterialItems])
 
   const handleSalesOrderSelect = (soId) => {
-    setPlanHeader(prev => ({ ...prev, sales_order_id: soId }))
+    const selectedSO = salesOrders.find(so => (so.sales_order_id || so.name) === soId)
+    setPlanHeader(prev => ({ 
+      ...prev, 
+      sales_order_id: soId,
+      project_name: selectedSO?.project_name || ''
+    }))
     setSelectedSalesOrders([soId])
   }
 
@@ -1704,7 +1715,8 @@ export default function ProductionPlanningForm() {
         sales_order_id: selectedSalesOrders[0],
         status: planHeader.status || 'draft',
         bom_id: selectedBomId || '',
-        plan_date: new Date().toISOString().split('T')[0],
+        plan_date: planHeader.plan_date || new Date().toISOString().split('T')[0],
+        expected_completion_date: planHeader.expected_completion_date || null,
         week_number: null
       }
 
@@ -1922,6 +1934,15 @@ export default function ProductionPlanningForm() {
                   <div className="flex items-center gap-1.5">
                     <StatusBadge status={planHeader.status} />
                   </div>
+                  {planHeader.project_name && (
+                    <>
+                      <div className="w-1 h-1 rounded bg-slate-300"></div>
+                      <div className="flex items-center gap-1.5 text-xs text-indigo-600 font-medium">
+                        <Package size={12} className="text-indigo-400" />
+                        <span>{planHeader.project_name}</span>
+                      </div>
+                    </>
+                  )}
                   {planHeader.company && (
                     <>
                       <div className="w-1 h-1  rounded  bg-slate-300"></div>
@@ -2118,11 +2139,32 @@ export default function ProductionPlanningForm() {
                           <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         </div>
                       </FieldWrapper>
+
+                      <FieldWrapper label="Start Date" required>
+                        <input
+                          type="date"
+                          value={planHeader.plan_date}
+                          disabled={isReadOnly}
+                          onChange={(e) => setPlanHeader(prev => ({ ...prev, plan_date: e.target.value }))}
+                          className={`w-full p-2 border border-slate-200 rounded text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-medium ${isReadOnly ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : 'text-slate-900 bg-white'}`}
+                        />
+                      </FieldWrapper>
+
+                      <FieldWrapper label="Expected Completion">
+                        <input
+                          type="date"
+                          value={planHeader.expected_completion_date}
+                          disabled={isReadOnly}
+                          onChange={(e) => setPlanHeader(prev => ({ ...prev, expected_completion_date: e.target.value }))}
+                          className={`w-full p-2 border border-slate-200 rounded text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-medium ${isReadOnly ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : 'text-slate-900 bg-white'}`}
+                        />
+                      </FieldWrapper>
+
                       <FieldWrapper label="Source Sales Order" required>
                         <SearchableSelect
                           options={salesOrders.map(so => ({
                             value: so.sales_order_id || so.name,
-                            label: `${so.customer_name || 'N/A'} [${so.sales_order_id || so.name}]`
+                            label: `${so.customer_name || 'N/A'} - ${so.project_name || 'No Project'} [${so.sales_order_id || so.name}]`
                           }))}
                           value={selectedSalesOrders[0] || ''}
                           isDisabled={isReadOnly}

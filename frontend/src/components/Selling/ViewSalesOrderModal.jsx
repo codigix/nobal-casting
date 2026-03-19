@@ -123,6 +123,16 @@ export default function ViewSalesOrderModal({ isOpen, orderId, onClose }) {
                     <div className="text-sm  text-slate-800">{order.quotation_id || 'Direct Order'}</div>
                   </div>
                 </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-emerald-100 text-emerald-600 rounded ">
+                    <Package size={18} />
+                  </div>
+                  <div>
+                    <div className="text-[10px]  text-slate-400  ">Project Name</div>
+                    <div className="text-sm  text-slate-800 font-medium">{order.project_name || 'Not Specified'}</div>
+                  </div>
+                </div>
               </div>
             </div>
 

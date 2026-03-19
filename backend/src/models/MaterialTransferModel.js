@@ -282,19 +282,18 @@ class MaterialTransferModel {
 
           // Create Stock Movement entry for visibility in Inventory Dashboard
           try {
-            const transaction_no = await StockMovementModel.generateTransactionNo()
+            const transaction_no = await StockMovementModel.generateTransactionNo(connection)
             
             await connection.execute(
               `INSERT INTO stock_movements (
                 transaction_no, item_code, source_warehouse_id, target_warehouse_id, 
-                movement_type, purpose, quantity, reference_type, reference_name, notes, status, created_by, approved_by, approved_at
-              ) VALUES (?, ?, ?, ?, 'TRANSFER', ?, ?, ?, ?, ?, 'Approved', ?, ?, NOW())`,
+                movement_type, quantity, reference_type, reference_name, notes, status, created_by, approved_by, approved_at
+              ) VALUES (?, ?, ?, ?, 'TRANSFER', ?, ?, ?, ?, 'Approved', ?, ?, NOW())`,
               [
                 transaction_no, 
                 itemCode, 
                 transfer.from_warehouse_id,
                 transfer.to_warehouse_id,
-                'Material Transfer',
                 qty,
                 'Material Transfer',
                 transfer.transfer_no,

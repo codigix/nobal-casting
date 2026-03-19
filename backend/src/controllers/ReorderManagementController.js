@@ -45,7 +45,7 @@ export const generateReorderRequest = async (req, res) => {
 
 export const createMaterialRequestFromReorder = async (req, res) => {
   try {
-    const mrNo = await ReorderManagementModel.createMaterialRequest(req.params.id, req.user?.id)
+    const mrNo = await ReorderManagementModel.createMaterialRequest(req.params.id, req.user?.user_id)
 
     res.json({
       success: true,

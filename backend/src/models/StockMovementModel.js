@@ -121,16 +121,17 @@ class StockMovementModel {
         reference_type,
         reference_name,
         notes,
+        batch_no,
         created_by
       } = data
 
       const [result] = await db.query(
         `INSERT INTO stock_movements (
           transaction_no, item_code, warehouse_id, source_warehouse_id, target_warehouse_id, 
-          movement_type, purpose, quantity, reference_type, reference_name, notes, status, created_by
+          movement_type, quantity, reference_type, reference_name, notes, batch_no, status, created_by
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?)`,
-        [transaction_no, item_code, warehouse_id, source_warehouse_id, target_warehouse_id, 
-         movement_type, purpose, quantity, reference_type, reference_name, notes, created_by]
+        [transaction_no, item_code, warehouse_id || null, source_warehouse_id || null, target_warehouse_id || null, 
+         movement_type, quantity, reference_type || null, reference_name || null, notes || null, batch_no || null, created_by || null]
       )
 
       return this.getById(result.insertId)
@@ -193,6 +194,8 @@ class StockMovementModel {
             transaction_type: 'Transfer',
             qty_in: 0,
             qty_out: movement.quantity,
+            valuation_rate: 0,
+            batch_no: movement.batch_no,
             reference_doctype: 'Stock Movement',
             reference_name: movement.transaction_no,
             remarks: `Transfer to warehouse: ${movement.target_warehouse_name}`,
@@ -214,6 +217,7 @@ class StockMovementModel {
             transaction_type: 'Transfer',
             qty_in: movement.quantity,
             qty_out: 0,
+            batch_no: movement.batch_no,
             reference_doctype: 'Stock Movement',
             reference_name: movement.transaction_no,
             remarks: `Transfer from warehouse: ${movement.source_warehouse_name}`,
@@ -232,6 +236,7 @@ class StockMovementModel {
             transaction_type: movement.movement_type,
             qty_in: qty_in,
             qty_out: qty_out,
+            batch_no: movement.batch_no,
             reference_doctype: 'Stock Movement',
             reference_name: movement.transaction_no,
             remarks: movement.notes,
@@ -354,9 +359,9 @@ class StockMovementModel {
   }
 
   // Generate next transaction number
-  static async generateTransactionNo() {
+  static async generateTransactionNo(connection = null) {
     try {
-      const db = this.getDb()
+      const db = connection || this.getDb()
       const date = new Date()
       const dateStr = date.getFullYear() + String(date.getMonth() + 1).padStart(2, '0') + String(date.getDate()).padStart(2, '0')
       

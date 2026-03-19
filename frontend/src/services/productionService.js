@@ -239,9 +239,26 @@ export const deleteOperation = async (operation_id) => {
   return response.data
 }
 
+// Scheduling
+export const getAvailableSlots = async (machineId, date) => {
+  const response = await api.get(`/production/scheduling/available-slots/${machineId}?date=${date}`)
+  return response.data
+}
+
+export const suggestSlot = async (machineId, duration, date = '') => {
+  const response = await api.get(`/production/scheduling/suggest-slot/${machineId}?duration=${duration}&date=${date}`)
+  return response.data
+}
+
+export const requestResourceNotification = async (data) => {
+  const response = await api.post('/production/scheduling/notify-available', data)
+  return response.data
+}
+
 // Workstations
-export const getWorkstationsList = async () => {
-  const response = await api.get('/production/workstations')
+export const getWorkstationsList = async (filters = {}) => {
+  const params = new URLSearchParams(filters)
+  const response = await api.get(`/production/workstations?${params}`)
   return response.data
 }
 

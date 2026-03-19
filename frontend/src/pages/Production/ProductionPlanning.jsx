@@ -999,7 +999,8 @@ export default function ProductionPlanning() {
       // Search filter
       const matchesSearch = plan.plan_id.toLowerCase().includes(search.toLowerCase()) ||
         plan.company?.toLowerCase().includes(search.toLowerCase()) ||
-        (plan.bom_id && plan.bom_id.toLowerCase().includes(search.toLowerCase()))
+        (plan.bom_id && plan.bom_id.toLowerCase().includes(search.toLowerCase())) ||
+        (plan.project_name && plan.project_name.toLowerCase().includes(search.toLowerCase()))
 
       if (!matchesSearch) return false
 
@@ -1119,22 +1120,40 @@ export default function ProductionPlanning() {
       key: 'expected_completion_date',
       label: 'Timeline',
       render: (value, plan) => {
-        const isOverdue = plan.expected_completion_date && new Date(plan.expected_completion_date) < new Date() && plan.effectiveStatus !== 'completed'
+        const startDate = plan.plan_date
+        const endDate = plan.expected_completion_date
+        const isOverdue = endDate && new Date(endDate) < new Date() && plan.effectiveStatus !== 'completed'
+        
         return (
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2 text-[11px] text-gray-600">
               <Calendar size={12} className="text-gray-400" />
-              <span>{formatDate(plan.expected_completion_date)}</span>
+              <div className="flex flex-col">
+                <span className="font-medium">S: {formatDate(startDate)}</span>
+                <span className="text-gray-400">E: {formatDate(endDate)}</span>
+              </div>
             </div>
-            {plan.expected_completion_date && (
-              <span className={`inline-flex items-center gap-1.5  text-[9px] border ${isOverdue ? 'text-rose-600 bg-rose-50 border-rose-100' : 'text-emerald-600 '}`}>
-                {isOverdue ? <AlertCircle size={12} /> : <CheckCircle2 size={12} />}
+            {endDate && (
+              <span className={`inline-flex items-center justify-center gap-1.5 px-2 py-0.5 rounded text-[9px] border ${isOverdue ? 'text-rose-600 bg-rose-50 border-rose-100' : 'text-emerald-600 bg-emerald-50 border-emerald-100'}`}>
+                {isOverdue ? <AlertCircle size={10} /> : <CheckCircle2 size={10} />}
                 {isOverdue ? 'Overdue' : 'On Schedule'}
               </span>
             )}
           </div>
         )
       }
+    },
+    {
+      key: 'project_name',
+      label: 'Project',
+      render: (value) => (
+        <div className="flex items-center gap-2">
+          <Package size={14} className="text-indigo-500" />
+          <span className="text-xs font-medium text-slate-700 truncate max-w-[120px]">
+            {value || <span className="text-slate-300 italic">No Project</span>}
+          </span>
+        </div>
+      )
     },
     {
       key: 'progress',

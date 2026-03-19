@@ -145,11 +145,12 @@ export default function SalesOrder() {
     const filtered = orders.filter((order) => {
       const orderIdMatch = order.sales_order_id?.toLowerCase().includes(searchTerm)
       const customerMatch = order.customer_name?.toLowerCase().includes(searchTerm)
+      const projectMatch = order.project_name?.toLowerCase().includes(searchTerm)
       const itemsMatch = order.items?.some(item =>
       (item.item_name?.toLowerCase().includes(searchTerm) ||
         item.item_code?.toLowerCase().includes(searchTerm))
       )
-      return orderIdMatch || customerMatch || itemsMatch
+      return orderIdMatch || customerMatch || projectMatch || itemsMatch
     })
     setFilteredOrders(filtered)
   }
@@ -255,6 +256,18 @@ export default function SalesOrder() {
           <div>
             <div className="text-xs font-medium text-slate-700 leading-none">{val}</div>
             <div className="text-[10px] text-slate-400 leading-none mt-1">{row.customer_id}</div>
+          </div>
+        </div>
+      )
+    },
+    {
+      label: 'Project Name',
+      key: 'project_name',
+      render: (val) => (
+        <div className="flex items-center gap-2">
+          <Package size={12} className="text-slate-400" />
+          <div className="text-xs text-slate-600 font-medium truncate max-w-[150px]">
+            {val || <span className="text-slate-300 italic">Not Specified</span>}
           </div>
         </div>
       )

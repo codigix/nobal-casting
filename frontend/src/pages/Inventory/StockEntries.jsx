@@ -10,7 +10,7 @@ import {
   Plus, Trash2, Package, X, Calendar, Search, Warehouse, Tag,
   Database, Grid3x3, List, Eye, Edit2, TrendingUp, TrendingDown,
   Activity, CheckCircle2, RotateCcw, Filter, ChevronDown,
-  Settings2, Download, RefreshCw, LayoutGrid, List as ListIcon
+  Settings2, Download, RefreshCw, LayoutGrid, List as ListIcon, Loader
 } from 'lucide-react'
 import './Inventory.css'
 
@@ -522,22 +522,24 @@ export default function StockEntries() {
         {row.status === 'Draft' && (
           <button
             onClick={() => handleSubmitEntry(row.id || row.entry_id)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 border border-green-100 dark:border-green-900/40 rounded-xs transition-all"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 border border-green-100 dark:border-green-900/40 rounded-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             title="Submit"
+            disabled={loading}
           >
-            <CheckCircle2 size={14} />
-            <span>Submit</span>
+            {loading ? <Loader size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+            <span>{loading ? 'Submitting...' : 'Submit'}</span>
           </button>
         )}
 
         {row.status === 'Submitted' && (
           <button
             onClick={() => handleCancelEntry(row.id || row.entry_id)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 border border-orange-100 dark:border-orange-900/40 rounded-xs transition-all"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 border border-orange-100 dark:border-orange-900/40 rounded-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             title="Cancel (Reverse Stock)"
+            disabled={loading}
           >
-            <RotateCcw size={14} />
-            <span>Cancel</span>
+            {loading ? <Loader size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+            <span>{loading ? 'Cancelling...' : 'Cancel'}</span>
           </button>
         )}
 
@@ -1144,14 +1146,16 @@ export default function StockEntries() {
                               <>
                                 <button
                                   onClick={() => handleSubmitEntry(entry.id || entry.entry_id)}
-                                  className="flex-1 flex items-center justify-center gap-1 py-2 text-[10px]  text-white bg-green-600 hover:bg-green-700 rounded-xs transition-all   active:scale-95"
+                                  className="flex-1 flex items-center justify-center gap-1 py-2 text-[10px] text-white bg-green-600 hover:bg-green-700 rounded-xs transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  disabled={loading}
                                 >
-                                  <CheckCircle2 size={12} />
-                                  SUBMIT
+                                  {loading ? <Loader size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                                  {loading ? 'SUBMITTING...' : 'SUBMIT'}
                                 </button>
                                 <button
                                   onClick={() => handleDelete(entry.id || entry.entry_id)}
                                   className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-medium text-neutral-400 hover:text-red-600 bg-neutral-50 hover:bg-red-50 rounded-xs transition-all border border-neutral-100 hover:border-red-100"
+                                  disabled={loading}
                                 >
                                   <Trash2 size={12} />
                                   DELETE
@@ -1160,10 +1164,11 @@ export default function StockEntries() {
                             ) : entry.status === 'Submitted' ? (
                               <button
                                 onClick={() => handleCancelEntry(entry.id || entry.entry_id)}
-                                className="flex-1 flex items-center justify-center gap-1 py-2 text-[10px]  text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-xs transition-all border border-orange-100   active:scale-95"
+                                className="flex-1 flex items-center justify-center gap-1 py-2 text-[10px] text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-xs transition-all border border-orange-100 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={loading}
                               >
-                                <RotateCcw size={12} />
-                                CANCEL & REVERSE
+                                {loading ? <Loader size={12} className="animate-spin" /> : <RotateCcw size={12} />}
+                                {loading ? 'CANCELLING...' : 'CANCEL & REVERSE'}
                               </button>
                             ) : (
                               <div className="flex-1 text-center py-2 text-[10px]  text-neutral-400 bg-neutral-50 rounded-xs border border-neutral-100 italic ">

@@ -475,15 +475,39 @@ export default function ProductionEntry() {
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-2 text-slate-600">
-          <Clock size={12} className="text-slate-300" />
-          <div className="flex flex-col">
-            <span className="text-[10px]">{row.from_time} {row.from_period} - {row.to_time} {row.to_period}</span>
-            <span className="text-[10px] text-indigo-500 font-medium">
-              {row.time_in_minutes || 0} mins
-            </span>
-          </div>
-        </div>
+        (() => {
+          const shiftDowntime = downtimes
+            .filter(dt => 
+              formatDateForMatch(dt.log_date) === formatDateForMatch(row.log_date) && 
+              normalizeShift(dt.shift) === normalizeShift(row.shift) &&
+              (parseInt(dt.day_number) || 1) === (parseInt(row.day_number) || 1)
+            )
+            .reduce((sum, dt) => sum + (parseFloat(dt.duration_minutes) || 0), 0);
+
+          const totalLogTime = (parseFloat(row.time_in_minutes) || 0) + shiftDowntime;
+
+          return (
+            <div className="flex items-center gap-2 text-slate-600">
+              <Clock size={12} className="text-slate-300" />
+              <div className="flex flex-col">
+                <span className="text-[10px] font-medium">{row.from_time} {row.from_period} - {row.to_time} {row.to_period}</span>
+                <div className="flex items-center gap-1 mt-0.5 whitespace-nowrap">
+                  <span className="text-[10px] text-indigo-500 font-semibold" title="Production Time">
+                    {row.time_in_minutes || 0}
+                  </span>
+                  {shiftDowntime > 0 && (
+                    <span className="text-[10px] text-amber-500 font-semibold" title="Machine Breakdown (Downtime)">
+                      + {shiftDowntime}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-slate-700 font-bold border-l border-slate-300 pl-1.5 ml-0.5" title="Total Shift Time">
+                    = {totalLogTime} mins
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })()
       )
     },
     {
@@ -503,7 +527,7 @@ export default function ProductionEntry() {
         </div>
       )
     }
-  ], [editingId, editingType, editForm, operators])
+  ], [editingId, editingType, editForm, operators, downtimes])
 
   const rejectionColumns = React.useMemo(() => [
     {
@@ -1388,6 +1412,25 @@ export default function ProductionEntry() {
     }
   }, [jobCardData, operations, warehouses, allJobCards])
 
+  const fetchWorkstations = async (date, shift) => {
+    try {
+      const wsRes = await productionService.getWorkstationsList({ 
+        date, 
+        shift, 
+        exclude_job_card_id: jobCardId 
+      })
+      setWorkstations(wsRes.data || [])
+    } catch (err) {
+      console.error('Failed to fetch workstations:', err)
+    }
+  }
+
+  useEffect(() => {
+    if (timeLogForm.log_date && timeLogForm.shift) {
+      fetchWorkstations(timeLogForm.log_date, timeLogForm.shift)
+    }
+  }, [timeLogForm.log_date, timeLogForm.shift, jobCardId])
+
   const fetchAllData = async () => {
     try {
       setLoading(true)
@@ -1615,7 +1658,9 @@ export default function ProductionEntry() {
           )
 
           if (currentOp) {
-            setOperationCycleTime(parseFloat(currentOp.operation_time || 0))
+            const bomQty = parseFloat(bom.quantity || 1)
+            const opTime = parseFloat(currentOp.operation_time || currentOp.time || 0)
+            setOperationCycleTime(opTime / bomQty)
           }
         }
       }
@@ -1914,6 +1959,7 @@ export default function ProductionEntry() {
       
       const response = await productionService.createTimeLog({
         ...timeLogForm,
+        workstation_name: timeLogForm.machine_id, // Map for backend compatibility
         accepted_qty: timeLogForm.completed_qty, // Sync accepted_qty with completed_qty
         job_card_id: jobCardId
       })
@@ -2431,6 +2477,15 @@ export default function ProductionEntry() {
                   <span className="text-xs text-slate-400">Units</span>
                 </div>
               </div>
+              <div>
+                <p className="text-[10px]  tracking-wider text-slate-400 mb-1 font-semibold">Total Exp. Time</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-md text-purple-600 ">
+                    {((operationCycleTime || 0) * (parseFloat(maxAllowedQty || 0))).toFixed(0)}
+                  </span>
+                  <span className="text-xs text-purple-400">Min</span>
+                </div>
+              </div>
               {previousOperationData && (
                 <div>
                   <p className="text-[10px]  tracking-wider text-indigo-400 mb-1 font-semibold">Received</p>
@@ -2494,7 +2549,8 @@ export default function ProductionEntry() {
           <div className="col-span-12">
             {(() => {
               const expectedMinutes = (operationCycleTime || 0) * (totalProducedQty || 0)
-              const actualMinutes = timeLogs.reduce((sum, log) => sum + (parseFloat(log.time_in_minutes) || 0), 0)
+              const productionMinutes = timeLogs.reduce((sum, log) => sum + (parseFloat(log.time_in_minutes) || 0), 0)
+              const actualMinutes = productionMinutes + totalDowntimeMinutes
 
               const efficiency = actualMinutes > 0 ? ((expectedMinutes / actualMinutes) * 100).toFixed(0) : 0
 
@@ -2624,7 +2680,8 @@ export default function ProductionEntry() {
                         onChange={(value) => setTimeLogForm({ ...timeLogForm, machine_id: value })}
                         options={workstations.map(ws => ({
                           value: ws.name || ws.workstation_name || ws.id,
-                          label: ws.workstation_name || ws.name || ws.id
+                          label: `${ws.workstation_name || ws.name || ws.id}${ws.is_available ? '' : ` (Occupied by ${ws.occupied_by.slice(-6)})`}`,
+                          isDisabled: !ws.is_available
                         }))}
                         placeholder="Select Machine"
                         containerClassName=" rounded bg-slate-50 border-slate-200 transition-all"
@@ -2671,14 +2728,21 @@ export default function ProductionEntry() {
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px]  text-slate-400 ">UNITS</span>
                       </div>
-                      {(() => {
-                        const stats = getShiftStats(timeLogForm.log_date, timeLogForm.shift, timeLogForm.day_number);
-                        return stats.timeLogProduced > 0 ? (
-                          <p className="text-[9px] text-indigo-600 mt-1  italic">
-                            Already recorded: {stats.timeLogProduced.toFixed(0)} units
+                      <div className="flex justify-between mt-1">
+                        {(() => {
+                          const stats = getShiftStats(timeLogForm.log_date, timeLogForm.shift, timeLogForm.day_number);
+                          return stats.timeLogProduced > 0 ? (
+                            <p className="text-[9px] text-indigo-600 italic">
+                              Already recorded: {stats.timeLogProduced.toFixed(0)} units
+                            </p>
+                          ) : <div />;
+                        })()}
+                        {operationCycleTime > 0 && (
+                          <p className="text-[9px] text-purple-600 font-medium">
+                            Expected: {((parseFloat(timeLogForm.completed_qty || 0)) * operationCycleTime).toFixed(0)} Min
                           </p>
-                        ) : null;
-                      })()}
+                        )}
+                      </div>
                     </FieldWrapper>
                   </div>
 

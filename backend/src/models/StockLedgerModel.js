@@ -78,6 +78,7 @@
         qty_in,
         qty_out,
         valuation_rate,
+        batch_no,
         reference_doctype,
         reference_name,
         remarks,
@@ -110,12 +111,12 @@
         `INSERT INTO stock_ledger (
           item_code, warehouse_id, transaction_date, transaction_type, 
           qty_in, qty_out, balance_qty, valuation_rate, transaction_value,
-          reference_doctype, reference_name, remarks, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          batch_no, reference_doctype, reference_name, remarks, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           item_code, warehouse_id, transaction_date, transaction_type,
           qty_in, qty_out, balance_qty, final_valuation_rate, transaction_value,
-          reference_doctype, reference_name, remarks, created_by
+          batch_no || null, reference_doctype || null, reference_name || null, remarks || null, created_by || null
         ]
       )
 
@@ -329,49 +330,70 @@
       }
 
       // For FIFO and LIFO, we need to traverse the ledger
-      const [inEntries] = await db.query(
-        `SELECT qty_in, valuation_rate, transaction_date, id 
-         FROM stock_ledger 
-         WHERE item_code = ? AND warehouse_id = ? AND qty_in > 0 
-         ORDER BY transaction_date ASC, id ASC`,
-        [itemCode, warehouseId]
-      )
-
+      // Optimize by calculating total consumed first
       const [outEntries] = await db.query(
         `SELECT SUM(qty_out) as total_out 
          FROM stock_ledger 
          WHERE item_code = ? AND warehouse_id = ? AND qty_out > 0`,
         [itemCode, warehouseId]
       )
+      
+      const totalConsumed = Number(outEntries[0].total_out || 0)
+      const targetQty = totalConsumed + Number(qtyToIssue)
 
-      let totalConsumed = Number(outEntries[0].total_out || 0)
+      // Use window function to fetch only relevant records for FIFO/LIFO
+      // This is much more efficient than fetching all records
+      const [inEntries] = await db.query(
+        `SELECT * FROM (
+           SELECT qty_in, valuation_rate, transaction_date, id,
+                  SUM(qty_in) OVER (ORDER BY transaction_date ASC, id ASC) as cum_qty
+           FROM stock_ledger 
+           WHERE item_code = ? AND warehouse_id = ? AND qty_in > 0
+         ) t
+         WHERE cum_qty > ?`,
+        [itemCode, warehouseId, totalConsumed]
+      )
+
+      let currentTotalConsumed = totalConsumed
       let remainingQtyToIssue = Number(qtyToIssue)
       let totalValue = 0
 
       if (method === 'FIFO') {
         for (const entry of inEntries) {
-          const availableInBatch = Number(entry.qty_in)
+          const cumQty = Number(entry.cum_qty)
+          const qtyIn = Number(entry.qty_in)
+          const prevCumQty = cumQty - qtyIn
           
-          if (totalConsumed >= availableInBatch) {
-            totalConsumed -= availableInBatch
-            continue
-          }
-
-          const usableFromBatch = availableInBatch - totalConsumed
-          totalConsumed = 0 
-
+          // Calculate how much of this entry is available for the current issue
+          // We only care about the portion that is AFTER totalConsumed
+          const usableFromBatch = Math.max(0, cumQty - Math.max(prevCumQty, currentTotalConsumed))
+          
           const taken = Math.min(usableFromBatch, remainingQtyToIssue)
+          if (taken <= 0) continue
+
           totalValue += taken * Number(entry.valuation_rate)
           remainingQtyToIssue -= taken
 
           if (remainingQtyToIssue <= 0) break
         }
       } else if (method === 'LIFO') {
-        const reversedInEntries = [...inEntries].reverse()
-        // Simplified LIFO: assume total_out consumed the latest ones first
-        let tempTotalConsumed = Number(outEntries[0].total_out || 0)
+        // LIFO is harder to optimize with just a simple query because it consumes from the END
+        // For LIFO we still fetch more than needed or use a different strategy
+        // But for now let's use the same fetched entries and reverse them if they are the latest ones
+        // Actually, the query above fetches everything AFTER totalConsumed in FIFO order.
+        // For LIFO, we need the latest ones.
         
-        for (const entry of reversedInEntries) {
+        const [lifoInEntries] = await db.query(
+          `SELECT qty_in, valuation_rate, transaction_date, id 
+           FROM stock_ledger 
+           WHERE item_code = ? AND warehouse_id = ? AND qty_in > 0 
+           ORDER BY transaction_date DESC, id DESC`,
+          [itemCode, warehouseId]
+        )
+        
+        // LIFO logic stays similar but we only process until remainingQtyToIssue is 0
+        let tempTotalConsumed = totalConsumed
+        for (const entry of lifoInEntries) {
           const availableInBatch = Number(entry.qty_in)
           
           if (tempTotalConsumed >= availableInBatch) {

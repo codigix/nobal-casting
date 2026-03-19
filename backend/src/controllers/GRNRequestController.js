@@ -15,7 +15,7 @@ export const generateGRNNo = async (req, res) => {
 
 export const qcApproveGRN = async (req, res) => {
   try {
-    const userId = req.user?.id || 1
+    const userId = req.user?.user_id || 1
     const grnId = req.params.id
 
     const grn = await GRNRequestModel.getById(grnId)
@@ -56,7 +56,7 @@ export const createGRNRequest = async (req, res) => {
       grn_no, po_no, supplier_id, supplier_name, receipt_date, items, notes,
       material_request_id, department, purpose
     } = req.body
-    const userId = req.user?.id || 1
+    const userId = req.user?.user_id || 1
 
     if (!grn_no || !items || items.length === 0) {
       return res.status(400).json({ success: false, error: 'Missing required fields' })
@@ -96,7 +96,7 @@ export const createGRNRequest = async (req, res) => {
 export const createGRNFromMaterialRequest = async (req, res) => {
   try {
     const { material_request_id, items, department, purpose, notes } = req.body
-    const userId = req.user?.id || 1
+    const userId = req.user?.user_id || 1
 
     if (!material_request_id || !items || items.length === 0) {
       return res.status(400).json({ success: false, error: 'Missing material request ID or items' })
@@ -180,7 +180,7 @@ export const getAllGRNRequests = async (req, res) => {
 
 export const startInspection = async (req, res) => {
   try {
-    const userId = req.user?.id || 1
+    const userId = req.user?.user_id || 1
     const grn = await GRNRequestModel.markInspecting(req.params.id, userId)
 
     res.json({ success: true, data: grn, message: 'Inspection started' })
@@ -192,7 +192,7 @@ export const startInspection = async (req, res) => {
 export const sendToInventory = async (req, res) => {
   try {
     const { approvedItems } = req.body
-    const userId = req.user?.id || 1
+    const userId = req.user?.user_id || 1
     const grnId = req.params.id
 
     if (!approvedItems || approvedItems.length === 0) {
@@ -208,7 +208,7 @@ export const sendToInventory = async (req, res) => {
 
 export const inventoryApproveGRN = async (req, res) => {
   try {
-    const userId = req.user?.id || 1
+    const userId = req.user?.user_id || 1
     const grnId = req.params.id
     const { approvedItems = [] } = req.body
 
@@ -232,7 +232,7 @@ export const approveGRNRequest = async (req, res) => {
 export const rejectGRNRequest = async (req, res) => {
   try {
     const { reason } = req.body
-    const userId = req.user?.id || 1
+    const userId = req.user?.user_id || 1
 
     if (!reason) {
       return res.status(400).json({ success: false, error: 'Rejection reason required' })
@@ -249,7 +249,7 @@ export const rejectGRNRequest = async (req, res) => {
 export const sendBackGRNRequest = async (req, res) => {
   try {
     const { reason } = req.body
-    const userId = req.user?.id || 1
+    const userId = req.user?.user_id || 1
 
     if (!reason) {
       return res.status(400).json({ success: false, error: 'Reason required' })

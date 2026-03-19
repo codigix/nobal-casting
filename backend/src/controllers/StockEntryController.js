@@ -66,7 +66,7 @@ export const createStockEntry = async (req, res) => {
 
     // Auto-generate entry number
     const entry_no = await StockEntryModel.generateEntryNo(entry_type)
-    const userId = req.user?.id || 1
+    const userId = req.user?.user_id || 1
 
     const entry = await StockEntryModel.create({
       entry_no,
@@ -116,7 +116,7 @@ export const updateStockEntry = async (req, res) => {
     const updated = await StockEntryModel.update(req.params.id, {
       purpose,
       remarks,
-      updated_by: req.user?.id
+      updated_by: req.user?.user_id
     })
 
     if (!updated) {
@@ -131,7 +131,7 @@ export const updateStockEntry = async (req, res) => {
 
 export const submitStockEntry = async (req, res) => {
   try {
-    const submitted = await StockEntryModel.submit(req.params.id, req.user?.id)
+    const submitted = await StockEntryModel.submit(req.params.id, req.user?.user_id)
 
     if (!submitted) {
       return res.status(404).json({ success: false, error: 'Stock entry not found' })
@@ -145,7 +145,7 @@ export const submitStockEntry = async (req, res) => {
 
 export const cancelStockEntry = async (req, res) => {
   try {
-    const cancelled = await StockEntryModel.cancel(req.params.id, req.user?.id)
+    const cancelled = await StockEntryModel.cancel(req.params.id, req.user?.user_id)
 
     if (!cancelled) {
       return res.status(404).json({ success: false, error: 'Stock entry not found' })

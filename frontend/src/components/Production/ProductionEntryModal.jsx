@@ -56,7 +56,9 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
     machine_id: '',
     shift: 'A',
     from_time: '',
+    from_period: 'AM',
     to_time: '',
+    to_period: 'PM',
     completed_qty: 0,
     accepted_qty: 0,
     rejected_qty: 0,
@@ -75,7 +77,9 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
     type: '',
     reason: '',
     from_time: '',
-    to_time: ''
+    from_period: 'AM',
+    to_time: '',
+    to_period: 'PM'
   })
 
   useEffect(() => {
@@ -155,12 +159,14 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
         const bomResponse = await productionService.getBOMDetails(bomId)
         const bom = bomResponse?.data || bomResponse
         
-        if (bom?.bom_operations) {
-          const operation = bom.bom_operations.find(
+        if (bom?.operations) {
+          const operation = bom.operations.find(
             op => op.name === jobCardData.operation || op.operation_name === jobCardData.operation
           )
-          if (operation && operation.operation_time_per_unit) {
-            setOperationCycleTime(parseFloat(operation.operation_time_per_unit) || 0)
+          if (operation) {
+            const bomQty = parseFloat(bom.quantity || 1)
+            const opTime = parseFloat(operation.operation_time || operation.time || 0)
+            setOperationCycleTime(opTime / bomQty)
           }
         }
       }
@@ -208,10 +214,15 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
 
   const calculateTimeDuration = () => {
     if (timeLogForm.from_time && timeLogForm.to_time) {
-      const [fromHour, fromMin] = timeLogForm.from_time.split(':').map(Number)
-      const [toHour, toMin] = timeLogForm.to_time.split(':').map(Number)
-      let fromTotal = fromHour * 60 + fromMin
-      let toTotal = toHour * 60 + toMin
+      const parseTime = (time, period) => {
+        let [hours, minutes] = time.split(':').map(Number);
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        return hours * 60 + minutes;
+      };
+
+      let fromTotal = parseTime(timeLogForm.from_time, timeLogForm.from_period);
+      let toTotal = parseTime(timeLogForm.to_time, timeLogForm.to_period);
       
       if (toTotal < fromTotal) {
         toTotal += 24 * 60;
@@ -222,12 +233,17 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
     return 0
   }
 
-  const calculateDowntimeDuration = (fromTime, toTime) => {
+  const calculateDowntimeDuration = (fromTime, fromPeriod, toTime, toPeriod) => {
     if (!fromTime || !toTime) return 0
-    const [fromHour, fromMin] = fromTime.split(':').map(Number)
-    const [toHour, toMin] = toTime.split(':').map(Number)
-    let fromTotal = fromHour * 60 + fromMin
-    let toTotal = toHour * 60 + toMin
+    const parseTime = (time, period) => {
+      let [hours, minutes] = time.split(':').map(Number);
+      if (period === 'PM' && hours !== 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+      return hours * 60 + minutes;
+    };
+
+    let fromTotal = parseTime(fromTime, fromPeriod);
+    let toTotal = parseTime(toTime, toPeriod);
     
     if (toTotal < fromTotal) {
       toTotal += 24 * 60;
@@ -298,7 +314,9 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
         workstation_name: timeLogForm.machine_id,
         shift: timeLogForm.shift,
         from_time: timeLogForm.from_time,
+        from_period: timeLogForm.from_period,
         to_time: timeLogForm.to_time,
+        to_period: timeLogForm.to_period,
         completed_qty: completedQty,
         accepted_qty: acceptedQty,
         rejected_qty: rejectedQty,
@@ -319,7 +337,9 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
         machine_id: defaultWorkstation,
         shift: 'A',
         from_time: '',
+        from_period: 'AM',
         to_time: '',
+        to_period: 'PM',
         completed_qty: 0,
         accepted_qty: 0,
         rejected_qty: 0,
@@ -447,15 +467,24 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
 
     try {
       setLoading(true)
-      const durationMinutes = calculateDowntimeDuration(downtimeForm.from_time, downtimeForm.to_time)
+      const durationMinutes = calculateDowntimeDuration(
+        downtimeForm.from_time, 
+        downtimeForm.from_period,
+        downtimeForm.to_time,
+        downtimeForm.to_period
+      )
       
       const payload = {
         job_card_id: jobCardId,
         downtime_type: downtimeForm.type,
         downtime_reason: downtimeForm.reason,
         from_time: downtimeForm.from_time,
+        from_period: downtimeForm.from_period,
         to_time: downtimeForm.to_time,
-        duration_minutes: durationMinutes
+        to_period: downtimeForm.to_period,
+        duration_minutes: durationMinutes,
+        shift: timeLogForm.shift, // Consistent shift context
+        log_date: new Date().toISOString().split('T')[0]
       }
 
       await productionService.createDowntime(payload)
@@ -465,7 +494,9 @@ export default function ProductionEntryModal({ isOpen, onClose, jobCardId, jobCa
         type: '',
         reason: '',
         from_time: '',
-        to_time: ''
+        from_period: 'AM',
+        to_time: '',
+        to_period: 'PM'
       })
       
       fetchDowntimes()
@@ -723,24 +754,44 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                 <div className="grid grid-cols-4 gap-3 mb-3">
                   <div>
                     <label className="block text-xs text-gray-700 mb-1">From Time *</label>
-                    <input
-                      type="time"
-                      value={timeLogForm.from_time}
-                      onChange={(e) => setTimeLogForm({ ...timeLogForm, from_time: e.target.value })}
-                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
-                    />
+                    <div className="flex gap-1">
+                      <input
+                        type="time"
+                        value={timeLogForm.from_time}
+                        onChange={(e) => setTimeLogForm({ ...timeLogForm, from_time: e.target.value })}
+                        className="flex-1 p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      />
+                      <select
+                        value={timeLogForm.from_period}
+                        onChange={(e) => setTimeLogForm({ ...timeLogForm, from_period: e.target.value })}
+                        className="p-2 border border-gray-300 rounded text-xs bg-gray-50"
+                      >
+                        <option value="AM">AM</option>
+                        <option value="PM">PM</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div>
                     <label className="block text-xs text-gray-700 mb-1">To Time *</label>
-                    <input
-                      type="time"
-                      value={timeLogForm.to_time}
-                      onChange={(e) => setTimeLogForm({ ...timeLogForm, to_time: e.target.value })}
-                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
-                    />
+                    <div className="flex gap-1">
+                      <input
+                        type="time"
+                        value={timeLogForm.to_time}
+                        onChange={(e) => setTimeLogForm({ ...timeLogForm, to_time: e.target.value })}
+                        className="flex-1 p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      />
+                      <select
+                        value={timeLogForm.to_period}
+                        onChange={(e) => setTimeLogForm({ ...timeLogForm, to_period: e.target.value })}
+                        className="p-2 border border-gray-300 rounded text-xs bg-gray-50"
+                      >
+                        <option value="AM">AM</option>
+                        <option value="PM">PM</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div>
@@ -754,6 +805,13 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
                       className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
+                    {operationCycleTime > 0 && (
+                      <div className="flex justify-between mt-1">
+                        <p className="text-[10px] text-purple-600 font-medium italic">
+                          Exp: {((parseFloat(timeLogForm.completed_qty || 0)) * operationCycleTime).toFixed(0)} Min
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -1120,34 +1178,59 @@ const totalDowntimeMinutes = downtimes.reduce((sum, dt) => sum + (dt.duration_mi
 
                 <div className="grid grid-cols-3 gap-3 mb-3">
                   <div>
-                    <label className="block text-xs text-gray-700 mb-1">From Time *</label>
-                    <input
-                      type="time"
-                      value={downtimeForm.from_time}
-                      onChange={(e) => setDowntimeForm({ ...downtimeForm, from_time: e.target.value })}
-                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      required
-                    />
+                    <label className="block text-xs text-gray-700 mb-1 font-semibold">Start Time *</label>
+                    <div className="flex gap-1">
+                      <input
+                        type="time"
+                        value={downtimeForm.from_time}
+                        onChange={(e) => setDowntimeForm({ ...downtimeForm, from_time: e.target.value })}
+                        className="flex-1 p-2 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        required
+                      />
+                      <select
+                        value={downtimeForm.from_period}
+                        onChange={(e) => setDowntimeForm({ ...downtimeForm, from_period: e.target.value })}
+                        className="p-2 border border-gray-300 rounded text-xs bg-gray-50 font-medium"
+                      >
+                        <option value="AM">AM</option>
+                        <option value="PM">PM</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs text-gray-700 mb-1">To Time *</label>
-                    <input
-                      type="time"
-                      value={downtimeForm.to_time}
-                      onChange={(e) => setDowntimeForm({ ...downtimeForm, to_time: e.target.value })}
-                      className="w-full p-2 border border-gray-300 rounded  text-xs focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      required
-                    />
+                    <label className="block text-xs text-gray-700 mb-1 font-semibold">End Time *</label>
+                    <div className="flex gap-1">
+                      <input
+                        type="time"
+                        value={downtimeForm.to_time}
+                        onChange={(e) => setDowntimeForm({ ...downtimeForm, to_time: e.target.value })}
+                        className="flex-1 p-2 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        required
+                      />
+                      <select
+                        value={downtimeForm.to_period}
+                        onChange={(e) => setDowntimeForm({ ...downtimeForm, to_period: e.target.value })}
+                        className="p-2 border border-gray-300 rounded text-xs bg-gray-50 font-medium"
+                      >
+                        <option value="AM">AM</option>
+                        <option value="PM">PM</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs text-gray-700 mb-1">Duration (min)</label>
+                    <label className="block text-xs text-gray-700 mb-1 font-semibold">Duration (min)</label>
                     <input
                       type="number"
-                      value={calculateDowntimeDuration(downtimeForm.from_time, downtimeForm.to_time)}
+                      value={calculateDowntimeDuration(
+                        downtimeForm.from_time, 
+                        downtimeForm.from_period, 
+                        downtimeForm.to_time, 
+                        downtimeForm.to_period
+                      )}
                       disabled
-                      className="w-full p-2 border border-gray-300 rounded  text-xs bg-gray-100 text-gray-600"
+                      className="w-full p-2 border border-gray-300 rounded text-xs bg-gray-100 text-gray-600 font-medium"
                     />
                   </div>
                 </div>

@@ -14,15 +14,15 @@ export class ProductionPlanningController {
     const connection = await this.db.getConnection()
     try {
       await connection.beginTransaction()
-      const { plan_id, company, planned_by_id, naming_series, sales_order_id, status, bom_id, plan_date, week_number, fg_items, sub_assemblies, raw_materials, operations, fg_operations } = req.body
+      const { plan_id, company, planned_by_id, naming_series, sales_order_id, status, bom_id, plan_date, expected_completion_date, week_number, fg_items, sub_assemblies, raw_materials, operations, fg_operations } = req.body
 
       const planId = plan_id || `PLAN-${Date.now()}`
       const today = new Date().toISOString().split('T')[0]
       
       await connection.execute(
-        `INSERT INTO production_plan (plan_id, naming_series, company, sales_order_id, status, bom_id, plan_date, week_number, planned_by_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [planId, naming_series || 'PP', company || '', sales_order_id || null, status || 'draft', bom_id || null, plan_date || today, week_number || null, planned_by_id || null]
+        `INSERT INTO production_plan (plan_id, naming_series, company, sales_order_id, status, bom_id, plan_date, expected_completion_date, week_number, planned_by_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [planId, naming_series || 'PP', company || '', sales_order_id || null, status || 'draft', bom_id || null, plan_date || today, expected_completion_date || null, week_number || null, planned_by_id || null]
       )
 
       if (fg_items && Array.isArray(fg_items)) {
@@ -117,7 +117,7 @@ export class ProductionPlanningController {
     try {
       await connection.beginTransaction()
       const { plan_id } = req.params
-      const { naming_series, company, sales_order_id, status, bom_id, plan_date, week_number, planned_by_id, fg_items, sub_assemblies, raw_materials, operations, fg_operations } = req.body
+      const { naming_series, company, sales_order_id, status, bom_id, plan_date, expected_completion_date, week_number, planned_by_id, fg_items, sub_assemblies, raw_materials, operations, fg_operations } = req.body
 
       if (!plan_id) {
         throw new Error('Plan ID is required')
@@ -131,6 +131,7 @@ export class ProductionPlanningController {
       if (status !== undefined) { fields.push('status = ?'); values.push(status) }
       if (bom_id !== undefined) { fields.push('bom_id = ?'); values.push(bom_id) }
       if (plan_date !== undefined) { fields.push('plan_date = ?'); values.push(plan_date) }
+      if (expected_completion_date !== undefined) { fields.push('expected_completion_date = ?'); values.push(expected_completion_date) }
       if (week_number !== undefined) { fields.push('week_number = ?'); values.push(week_number) }
       if (planned_by_id !== undefined) { fields.push('planned_by_id = ?'); values.push(planned_by_id) }
 

@@ -42,9 +42,7 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
       onClick={onToggle}
     >
       <div className="flex items-center gap-4">
-        <div className={`p-2 rounded  transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
-          <Icon size={15} strokeWidth={2.5} />
-        </div>
+        
         <div>
           <h2 className="text-xs  flex items-center gap-3">
             <span className={`${theme.text} `}>{title.split(' ')[0]}</span>
@@ -185,6 +183,7 @@ export default function SalesOrderForm() {
     customer_name: '',
     customer_email: '',
     customer_phone: '',
+    project_name: '',
     bom_id: '',
     bom_name: '',
     source_warehouse: '',
@@ -402,6 +401,7 @@ export default function SalesOrderForm() {
         customer_name: orderData.customer_name || '',
         customer_email: orderData.customer_email || '',
         customer_phone: orderData.customer_phone || '',
+        project_name: orderData.project_name || '',
         bom_id: orderData.bom_id || '',
         bom_name: orderData.bom_name || '',
         source_warehouse: orderData.source_warehouse || '',
@@ -1708,7 +1708,7 @@ export default function SalesOrderForm() {
             {success && <Alert variant="success">{success}</Alert>}
 
             {/* A. Order Foundation Section */}
-            <Card className="!p-0 border-slate-200/60  bg-white group ">
+            <Card className="!p-0 border-slate-200/60 bg-white group relative z-[50]">
               <SectionHeader 
                 title="01 Foundation" 
                 icon={Database} 
@@ -1722,19 +1722,31 @@ export default function SalesOrderForm() {
               {expandedSections.foundation && (
                 <div className="p-4 space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
                   {isReadOnly ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                       <InfoRow label="Protocol Series" value={formData.series} icon={FileText} />
                       <InfoRow label="Initialization Date" value={formData.date} icon={Calendar} />
                       <InfoRow label="Promised Delivery" value={formData.delivery_date} icon={Truck} />
+                      <InfoRow label="Project Name" value={formData.project_name} icon={Package} />
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                       <FieldWrapper label="Customer Selection" required>
                         <SearchableSelect
                           value={formData.customer_id}
                           onChange={handleCustomerChange}
                           options={customers.map(c => ({ label: `${c.customer_name} [${c.customer_id}]`, value: c.customer_id }))}
                           placeholder="Choose a customer..."
+                        />
+                      </FieldWrapper>
+
+                      <FieldWrapper label="Project Name">
+                        <input
+                          className="w-full p-2 text-xs  border border-slate-200 rounded  focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 bg-slate-50/50 transition-all outline-none"
+                          type="text"
+                          name="project_name"
+                          value={formData.project_name}
+                          onChange={handleChange}
+                          placeholder="Enter project name..."
                         />
                       </FieldWrapper>
 
@@ -1764,7 +1776,7 @@ export default function SalesOrderForm() {
             </Card>
 
             {/* B. Client Intelligence Section */}
-            <Card className="!p-0 border-slate-200/60  bg-white group ">
+            <Card className="!p-0 border-slate-200/60 bg-white group relative z-[40]">
               <SectionHeader 
                 title="02 Client Inteligient" 
                 icon={Users} 
@@ -1788,7 +1800,7 @@ export default function SalesOrderForm() {
             </Card>
 
             {/* C. Operational Section */}
-            <Card className="!p-0 border-slate-200/60  bg-white group ">
+            <Card className="!p-0 border-slate-200/60 bg-white group relative z-[30]">
               <SectionHeader 
                 title="03 Operational Metadata" 
                 icon={Activity} 
@@ -1838,7 +1850,7 @@ export default function SalesOrderForm() {
             </Card>
 
             {/* D. Engineering Section */}
-            <Card className="!p-0 border-slate-200/60  bg-white group ">
+            <Card className="!p-0 border-slate-200/60 bg-white group relative z-[20]">
               <SectionHeader 
                 title="04 Product Engineering" 
                 icon={Layers} 
@@ -1889,7 +1901,7 @@ export default function SalesOrderForm() {
             </Card>
 
             {/* E. Taxation Section */}
-            <Card className="!p-0 border-slate-200/60  bg-white group ">
+            <Card className="!p-0 border-slate-200/60 bg-white group relative z-[10]">
               <SectionHeader 
                 title="05 Taxation & Revenue" 
                 icon={CreditCard} 

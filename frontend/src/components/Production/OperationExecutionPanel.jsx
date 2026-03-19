@@ -4,6 +4,13 @@ import api from '../../services/api'
 import OperationExecutionLog from './OperationExecutionLog'
 import SearchableSelect from '../SearchableSelect'
 
+const formatToUTC = (dateStr) => {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString();
+};
+
 export default function OperationExecutionPanel({ jobCard, workstations, operations, operators, onUpdate, onOperationEnded }) {
   const [executionData, setExecutionData] = useState({
     start_time: '',
@@ -188,7 +195,7 @@ export default function OperationExecutionPanel({ jobCard, workstations, operati
       setLoading(true)
       setError(null)
 
-      const endTime = `${executionData.end_date}T${executionData.end_time}:00`
+      const endTime = formatToUTC(`${executionData.end_date}T${executionData.end_time}:00`)
       const response = await api.post(
         `/production/job-cards/${jobCard.job_card_id}/end`,
         {

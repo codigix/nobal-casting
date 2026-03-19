@@ -1,16 +1,130 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
   Plus, Eye, Trash2, Search, Filter, 
   ChevronRight, ClipboardList, Clock, CheckCheck, AlertCircle,
   MoreVertical, Sliders, ArrowRight, Package, Warehouse,
-  Building2, Calendar, ShoppingCart, Truck
+  Building2, Calendar, ShoppingCart, Truck, RefreshCw,
+  History, TrendingUp, CheckCircle2, ShieldCheck, Info,
+  LayoutGrid, List, FileText, Download, Settings2, X, XCircle,
+  Zap, ArrowUpRight, ArrowDownRight, Activity
 } from 'lucide-react'
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import api from '../../services/api'
 import { useToast } from '../../components/ToastContainer'
 import Badge from '../../components/Badge/Badge'
+import Card from '../../components/Card/Card'
 import CreateMaterialRequestModal from '../../components/Buying/CreateMaterialRequestModal'
 import ViewMaterialRequestModal from '../../components/Buying/ViewMaterialRequestModal'
+
+// --- Custom Components ---
+
+const MaterialGauge = ({ available, total }) => {
+  const percentage = total > 0 ? Math.min(100, Math.round((available / total) * 100)) : 0;
+  const data = [
+    { name: 'Available', value: percentage, fill: percentage === 100 ? '#10b981' : percentage > 50 ? '#3b82f6' : '#f59e0b' },
+    { name: 'Missing', value: 100 - percentage, fill: '#f1f5f9' }
+  ];
+
+  return (
+    <div className="relative flex flex-col items-center justify-center w-12 h-12">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={20}
+            outerRadius={22}
+            paddingAngle={0}
+            dataKey="value"
+            stroke="none"
+            startAngle={90}
+            endAngle={-270}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-[9px]  text-slate-700">{percentage}%</span>
+      </div>
+    </div>
+  );
+};
+
+const KPICard = ({ label, value, status, icon: Icon, colorClass, trend }) => (
+  <Card className="p-4 bg-white border-slate-100 relative overflow-hidden group hover:shadow-lg transition-all duration-300">
+    <div className={`absolute top-0 right-0 w-20 h-20 opacity-[0.03] -mr-6 -mt-6 rounded-full transition-transform group-hover:scale-150 duration-700 ${colorClass.split(' ')[0].replace('text-', 'bg-')}`}></div>
+    
+    <div className="flex justify-between items-start mb-4 relative">
+      <div className={`p-2 rounded ${colorClass.replace('text-', 'bg-').replace('-600', '-500/10')} ${colorClass}`}>
+        <Icon size={18} strokeWidth={2.5} />
+      </div>
+      {status && (
+        <span className={`px-2 py-0.5 rounded-full text-[9px]   border ${colorClass.replace('text-', 'bg-').replace('-600', '-500/10')} ${colorClass.replace('text-', 'border-').replace('-600', '-500/20')}`}>
+          {status}
+        </span>
+      )}
+    </div>
+
+    <div className="relative">
+      <p className="text-xs  text-slate-400   mb-1">{label}</p>
+      <div className="flex items-baseline gap-2">
+        <h3 className="text-2xl  text-slate-900">{value}</h3>
+        {trend && (
+          <span className={`text-xs  flex items-center gap-0.5 ${trend >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+            {trend >= 0 ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
+            {Math.abs(trend)}%
+          </span>
+        )}
+      </div>
+    </div>
+  </Card>
+);
+
+const SkeletonRow = () => (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2 animate-pulse">
+    {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+      <div key={i} className="bg-white rounded p-6 border border-slate-100 h-64  relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-slate-100"></div>
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded bg-slate-100"></div>
+            <div className="space-y-2">
+              <div className="h-4 w-24 bg-slate-100 rounded"></div>
+              <div className="h-2 w-16 bg-slate-50 rounded"></div>
+            </div>
+          </div>
+          <div className="w-10 h-10 rounded-full bg-slate-50"></div>
+        </div>
+        <div className="space-y-2 mb-2">
+          <div className="h-12 w-full bg-slate-50 rounded"></div>
+          <div className="flex justify-between px-1">
+            <div className="h-6 w-20 bg-slate-100 rounded-full"></div>
+            <div className="h-6 w-16 bg-slate-100 rounded-full"></div>
+          </div>
+        </div>
+        <div className="flex gap-2 pt-2">
+          <div className="h-10 flex-1 bg-slate-100 rounded"></div>
+          <div className="h-10 w-10 bg-slate-50 rounded"></div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const FilterPill = ({ label, active, onClick, icon: Icon }) => (
+  <button 
+    onClick={onClick}
+    className={`flex items-center gap-2 px-4 py-2 rounded text-xs  transition-all border ${
+      active 
+        ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20' 
+        : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600'
+    }`}
+  >
+    {Icon && <Icon size={14} />}
+    {label.toUpperCase()}
+  </button>
+);
 
 export default function MaterialRequestsRedesign() {
   const navigate = useNavigate()
@@ -19,7 +133,6 @@ export default function MaterialRequestsRedesign() {
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
   const [filters, setFilters] = useState({ status: '', department: '', search: '' })
   const [departments, setDepartments] = useState([])
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -27,13 +140,9 @@ export default function MaterialRequestsRedesign() {
   const [selectedMrId, setSelectedMrId] = useState(null)
   const [stockData, setStockData] = useState({})
   const [viewMode, setViewMode] = useState('grid')
+  const [refreshTime, setRefreshTime] = useState(new Date())
 
-  useEffect(() => {
-    fetchRequests()
-    fetchDepartments()
-  }, [filters])
-
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     try {
       setLoading(true)
       const params = new URLSearchParams()
@@ -44,42 +153,45 @@ export default function MaterialRequestsRedesign() {
       const response = await api.get(`/material-requests?${params}`)
       const data = response.data.data || []
       setRequests(data)
+      setRefreshTime(new Date())
       await checkItemsAvailability(data)
     } catch (err) {
       toast.addToast(err.response?.data?.error || 'Failed to fetch material requests', 'error')
     } finally {
       setLoading(false)
     }
-  }
+  }, [filters, toast])
 
   const checkItemsAvailability = async (requestsList) => {
     try {
       const allStockData = {}
-      for (const request of requestsList) {
-        const warehouse = request.source_warehouse || 'warehouse'
-        for (const item of request.items || []) {
-          const key = `${item.item_code}-${warehouse}`
-          if (allStockData[key]) continue
-          
-          try {
-            const res = await api.get(`/stock/stock-balance`, {
-              params: { item_code: item.item_code, warehouse_id: warehouse }
-            })
-            const balance = res.data.data || res.data
-            let availableQty = 0
-            if (Array.isArray(balance)) {
-              availableQty = balance.reduce((sum, b) => sum + (parseFloat(b.available_qty || b.current_qty || 0)), 0)
-            } else if (balance && typeof balance === 'object') {
-              availableQty = parseFloat(balance.available_qty || balance.current_qty || 0)
-            }
-            allStockData[key] = {
-              available: availableQty,
-              requested: parseFloat(item.qty),
-              status: availableQty >= parseFloat(item.qty) ? 'available' : 'unavailable'
-            }
-          } catch (err) {
-            allStockData[key] = { available: 0, requested: parseFloat(item.qty), status: 'unavailable' }
+      // To optimize, let's collect unique item-warehouse pairs
+      const uniquePairs = new Set()
+      requestsList.forEach(r => {
+        const warehouse = r.source_warehouse || 'warehouse'
+        r.items?.forEach(item => {
+          uniquePairs.add(`${item.item_code}|${warehouse}`)
+        })
+      })
+
+      // Fetch availability for each unique pair
+      // In a real app, you'd want a bulk endpoint for this
+      for (const pair of uniquePairs) {
+        const [item_code, warehouse_id] = pair.split('|')
+        try {
+          const res = await api.get(`/stock/stock-balance`, {
+            params: { item_code, warehouse_id: warehouse_id === 'warehouse' ? undefined : warehouse_id }
+          })
+          const balance = res.data.data || res.data
+          let availableQty = 0
+          if (Array.isArray(balance)) {
+            availableQty = balance.reduce((sum, b) => sum + (parseFloat(b.available_qty || b.current_qty || 0)), 0)
+          } else if (balance && typeof balance === 'object') {
+            availableQty = parseFloat(balance.available_qty || balance.current_qty || 0)
           }
+          allStockData[`${item_code}-${warehouse_id}`] = availableQty
+        } catch (err) {
+          allStockData[`${item_code}-${warehouse_id}`] = 0
         }
       }
       setStockData(allStockData)
@@ -97,11 +209,16 @@ export default function MaterialRequestsRedesign() {
     }
   }
 
+  useEffect(() => {
+    fetchRequests()
+    fetchDepartments()
+  }, [fetchRequests])
+
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this material request?')) return
     try {
       await api.delete(`/material-requests/${id}`)
-      toast.addToast('Material request deleted', 'success')
+      toast.addToast('Material request deleted successfully', 'success')
       fetchRequests()
     } catch (err) {
       toast.addToast(err.response?.data?.error || 'Failed to delete', 'error')
@@ -115,351 +232,339 @@ export default function MaterialRequestsRedesign() {
     const partial = requests.filter(r => r.status === 'partial').length
     const completed = requests.filter(r => r.status === 'completed').length
     const purchase = requests.filter(r => r.purpose === 'purchase').length
+    
+    // Simple mock trends
     return { total, draft, approved, partial, completed, purchase }
   }, [requests])
 
-  const getStatusStyle = (status) => {
-    const styles = {
-      draft: 'bg-amber-50 text-amber-600 border-amber-100',
-      approved: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-      partial: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-      completed: 'bg-blue-50 text-blue-600 border-blue-100',
-      converted: 'bg-slate-100 text-slate-600 border-slate-200',
-      cancelled: 'bg-rose-50 text-rose-600 border-rose-100'
+  const getStatusConfig = (status) => {
+    const configs = {
+      draft: { color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', icon: Clock, label: 'Draft' },
+      approved: { color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', icon: CheckCircle2, label: 'Approved' },
+      partial: { color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', icon: Activity, label: 'Partial' },
+      completed: { color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', icon: ShieldCheck, label: 'Completed' },
+      cancelled: { color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', icon: XCircle, label: 'Cancelled' }
     }
-    return styles[status] || styles.draft
+    return configs[status] || configs.draft
   }
 
-  const getPurposeIcon = (purpose) => {
-    switch (purpose) {
-      case 'purchase': return <ShoppingCart size={16} />
-      case 'material_transfer': return <Warehouse size={16} />
-      case 'material_issue': return <Truck size={16} />
-      default: return <Package size={16} />
-    }
-  }
-
-  const getItemsAvailabilityStatus = (row) => {
+  const getRequestAvailability = useCallback((row) => {
     const warehouse = row.source_warehouse || 'warehouse'
     const items = row.items || []
-    if (items.length === 0) return { all: 'available', available: 0, unavailable: 0 }
+    if (items.length === 0) return { availableCount: 0, totalCount: 0, percentage: 0 }
+    
     let availableCount = 0
-    let unavailableCount = 0
-    for (const item of items) {
-      const key = `${item.item_code}-${warehouse}`
-      const itemStock = stockData[key]
-      if (itemStock && itemStock.status === 'available') availableCount++
-      else unavailableCount++
-    }
+    items.forEach(item => {
+      const available = stockData[`${item.item_code}-${warehouse}`] || 0
+      if (available >= parseFloat(item.qty)) availableCount++
+    })
+    
     return {
-      all: unavailableCount === 0 ? 'available' : (availableCount === 0 ? 'unavailable' : 'partial'),
-      available: availableCount,
-      unavailable: unavailableCount
+      availableCount,
+      totalCount: items.length,
+      percentage: Math.round((availableCount / items.length) * 100)
     }
-  }
+  }, [stockData])
+
+  const filteredRequests = useMemo(() => {
+    return requests.filter(r => {
+      const matchesSearch = !filters.search || 
+        r.mr_id?.toString().toLowerCase().includes(filters.search.toLowerCase()) || 
+        r.project_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        r.requested_by_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        r.department?.toLowerCase().includes(filters.search.toLowerCase())
+      
+      const matchesStatus = !filters.status || r.status === filters.status
+      const matchesDept = !filters.department || r.department === filters.department
+      
+      return matchesSearch && matchesStatus && matchesDept
+    })
+  }, [requests, filters])
 
   return (
-    <div className="min-h-screen bg-slate-50 p-2/50 p-6">
-      <div className="max-w-5xl mx-auto">
-        <CreateMaterialRequestModal 
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSuccess={() => {
-            fetchRequests()
-            toast.addToast('Material request created successfully', 'success')
-          }}
-        />
-
-        <ViewMaterialRequestModal
-          isOpen={viewModalOpen}
-          onClose={() => {
-            setViewModalOpen(false)
-            setSelectedMrId(null)
-          }}
-          mrId={selectedMrId}
-          onStatusChange={() => fetchRequests()}
-        />
-
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 my-4 mb-6">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-10 h-10 rounded  bg-indigo-600 flex items-center justify-center text-white  shadow-indigo-100">
-                <ClipboardList size={24} />
-              </div>
-              <div>
-                <h1 className="text-xl   text-slate-900">Material Requests</h1>
-                <p className="text-slate-500 font-medium text-sm">Manage and track material requisitions</p>
+    <div className="min-h-screen bg-[#f8fafc] pb-12">
+      {/* Header - Industrial Blue Theme */}
+      <div className=" text-white p-2">
+        <div className=" bg-white/5 rounded "></div>
+        <div className=" mx-auto relative">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-white/10 rounded backdrop-blur-md border border-white/20">
+                  <ClipboardList size={24} className="text-blue-200" />
+                </div>
+                <div>
+                  <h1 className="text-2xl  ">Material Requisitions</h1>
+                  <div className="flex items-center gap-4 mt-1">
+                    <span className="text-xs text-blue-200 flex items-center gap-1.5 font-medium">
+                      <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+                      Refreshed {refreshTime.toLocaleTimeString()}
+                    </span>
+                    <span className="text-xs text-blue-200 flex items-center gap-1.5 font-medium">
+                      <Zap size={12} className="text-amber-400" />
+                      Live Inventory Sync Active
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <div className="flex bg-white p-1 rounded  border border-slate-200  ">
+
+            <div className="flex items-center gap-3">
+              <div className="flex bg-black/20 p-1 rounded backdrop-blur-md border border-white/10">
+                <button 
+                  onClick={() => setViewMode('grid')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded text-xs  transition-all ${viewMode === 'grid' ? 'bg-white text-[#1e3a8a] shadow-lg' : 'text-white/60 hover:text-white'}`}
+                >
+                  <LayoutGrid size={14} /> GRID
+                </button>
+                <button 
+                  onClick={() => setViewMode('list')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded text-xs  transition-all ${viewMode === 'list' ? 'bg-white text-[#1e3a8a] shadow-lg' : 'text-white/60 hover:text-white'}`}
+                >
+                  <List size={14} /> LIST
+                </button>
+              </div>
+              
               <button 
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded  text-sm  transition-all ${viewMode === 'grid' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2.5 rounded  text-xs shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 active:scale-95"
               >
-                Grid
-              </button>
-              <button 
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded  text-sm  transition-all ${viewMode === 'list' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                List
+                <Plus size={18} strokeWidth={3} />
+                CREATE REQUISITION
               </button>
             </div>
-            <button 
-              onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2  rounded   text-sm  shadow-indigo-200 transition-all hover:-translate-y-0.5"
-            >
-              <Plus size={20} />
-              New Request
-            </button>
           </div>
         </div>
+      </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-          {[
-            { label: 'Total Requests', value: stats.total, icon: ClipboardList, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-            { label: 'Draft', value: stats.draft, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-            { label: 'Approved', value: stats.approved, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-            { label: 'Partial', value: stats.partial, icon: AlertCircle, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-            { label: 'Completed', value: stats.completed, icon: CheckCheck, color: 'text-blue-600', bg: 'bg-blue-50' },
-            { label: 'Purchase Req', value: stats.purchase, icon: ShoppingCart, color: 'text-rose-600', bg: 'bg-rose-50' }
-          ].map((stat, i) => (
-            <div key={i} className="bg-white rounded p-2 border border-slate-200  flex items-center gap-4">
-              <div className={`w-12 h-12 rounded  ${stat.bg} ${stat.color} flex items-center justify-center`}>
-                <stat.icon size={24} />
-              </div>
-              <div>
-                <p className="text-xs  text-slate-400 ">{stat.label}</p>
-                <h3 className="text-xl   text-slate-900">{stat.value}</h3>
+      <div className=" relative">
+        {/* KPI Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+          <KPICard label="Total Active" value={stats.total} icon={ClipboardList} colorClass="text-blue-600" status="ACTIVE" trend={12} />
+          <KPICard label="Pending Approval" value={stats.draft} icon={Clock} colorClass="text-amber-600" status="DRAFT" trend={-5} />
+          <KPICard label="Approved Requests" value={stats.approved} icon={ShieldCheck} colorClass="text-emerald-600" status="OPTIMAL" />
+          <KPICard label="Partial Release" value={stats.partial} icon={Activity} colorClass="text-indigo-600" status="IN-PROGRESS" trend={8} />
+          <KPICard label="Completed" value={stats.completed} icon={CheckCircle2} colorClass="text-slate-600" status="FULFILLED" />
+          <KPICard label="Direct Purchase" value={stats.purchase} icon={ShoppingCart} colorClass="text-rose-600" status="EXTERNAL" trend={15} />
+        </div>
+
+        {/* Search and Filters */}
+        <div className="flex flex-col gap-6 mb-8">
+          <div className="bg-white rounded p-2 border border-slate-200  flex flex-col lg:flex-row items-center gap-2">
+            <div className="relative flex-1 w-full group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
+              <input 
+                type="text"
+                placeholder="Search by ID, Project, Department or Requester..."
+                value={filters.search}
+                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                className="w-full pl-12 pr-4 py-3 rounded bg-slate-50 border-none focus:ring-2 focus:ring-blue-500/20 text-sm font-medium text-slate-700 placeholder:text-slate-400 transition-all"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2 w-full lg:w-auto px-2 border-l border-slate-100 pl-4">
+              <span className="text-xs  text-slate-400  tracking-widest mr-2">Dept:</span>
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-[400px]">
+                <FilterPill label="All" active={!filters.department} onClick={() => setFilters(prev => ({ ...prev, department: '' }))} />
+                {departments.map(dept => (
+                  <FilterPill 
+                    key={dept} 
+                    label={dept} 
+                    active={filters.department === dept} 
+                    onClick={() => setFilters(prev => ({ ...prev, department: dept }))} 
+                  />
+                ))}
               </div>
             </div>
-          ))}
-        </div>
-
-        {/* Filters Bar */}
-        <div className="bg-white rounded p-2 border border-slate-200  mb-6 flex flex-col md:flex-row items-center gap-4">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text"
-              placeholder="Search by ID, Requester or Department..."
-              value={filters.search}
-              onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              className="w-full pl-12 pr-4 py-2 rounded bg-slate-50 border-none focus:ring-2 focus:ring-indigo-500 text-xs font-medium text-slate-700"
-            />
           </div>
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <select 
-              value={filters.status}
-              onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-              className="bg-slate-50 border-none rounded  p-2 text-xs  text-slate-600 focus:ring-2 focus:ring-indigo-500 cursor-pointer "
-            >
-              <option value="">All Status</option>
-              <option value="draft">Draft</option>
-              <option value="approved">Approved</option>
-              <option value="partial">Partial</option>
-              <option value="completed">Completed</option>
-              <option value="converted">Converted</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-            <select 
-              value={filters.department}
-              onChange={(e) => setFilters(prev => ({ ...prev, department: e.target.value }))}
-              className="bg-slate-50 border-none rounded  p-2 text-xs  text-slate-600 focus:ring-2 focus:ring-indigo-500 cursor-pointer "
-            >
-              <option value="">All Departments</option>
-              {departments.map(dept => (
-                <option key={dept} value={dept}>{dept}</option>
-              ))}
-            </select>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 overflow-x-auto pb-1 no-scrollbar">
+              <FilterPill label="All Status" active={!filters.status} onClick={() => setFilters(prev => ({ ...prev, status: '' }))} icon={List} />
+              <FilterPill label="Draft" active={filters.status === 'draft'} onClick={() => setFilters(prev => ({ ...prev, status: 'draft' }))} icon={Clock} />
+              <FilterPill label="Approved" active={filters.status === 'approved'} onClick={() => setFilters(prev => ({ ...prev, status: 'approved' }))} icon={CheckCircle2} />
+              <FilterPill label="Partial" active={filters.status === 'partial'} onClick={() => setFilters(prev => ({ ...prev, status: 'partial' }))} icon={Activity} />
+              <FilterPill label="Completed" active={filters.status === 'completed'} onClick={() => setFilters(prev => ({ ...prev, status: 'completed' }))} icon={ShieldCheck} />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <span className="text-xs  text-slate-400 bg-white px-3 py-1.5 rounded border border-slate-100 ">
+                Showing {filteredRequests.length} of {requests.length} results
+              </span>
+            </div>
           </div>
         </div>
 
+        {/* Content Area */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-200  ">
-            <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-            <p className="text-slate-500 font-medium">Loading material requests...</p>
-          </div>
-        ) : requests.length > 0 ? (
+          <SkeletonRow />
+        ) : filteredRequests.length > 0 ? (
           viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {requests.map((row) => {
-                const stockStatus = getItemsAvailabilityStatus(row)
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2">
+              {filteredRequests.map((row) => {
+                const availability = getRequestAvailability(row)
+                const config = getStatusConfig(row.status)
+                const StatusIcon = config.icon
+
                 return (
-                  <div 
+                  <Card 
                     key={row.mr_id}
-                    className="bg-white rounded border border-slate-200  hover:shadow  hover:border-indigo-200 transition-all group "
+                    className="bg-white border-slate-200 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group overflow-hidden"
                   >
-                    <div className="p-5">
-                      <div className="flex justify-between items-start mb-4">
+                    <div className={`h-1 w-full ${config.bg} ${config.color.replace('text-', 'bg-')}`}></div>
+                    
+                    <div className="p-2">
+                      <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded  flex items-center justify-center ${getStatusStyle(row.status)}`}>
-                            {getPurposeIcon(row.purpose)}
+                          <div className={`p-2 rounded ${config.bg} ${config.color} transition-transform group-hover:rotate-6`}>
+                            <StatusIcon size={20} strokeWidth={2.5} />
                           </div>
                           <div>
-                            <h3 className=" text-slate-900 group-hover:text-indigo-600 transition-colors">
+                            <h3 className=" text-slate-900 group-hover:text-blue-600 transition-colors ">
                               {row.mr_id}
                             </h3>
-                            <span className="text-xs font-medium text-slate-400 ">
-                              {row.purpose.replace('_', ' ')}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs  text-slate-400 ">
+                                {row.purpose.replace('_', ' ')}
+                              </span>
+                              <span className="text-slate-300">•</span>
+                              <span className="text-xs  text-slate-400 ">
+                                {row.department}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        <Badge color={getStatusStyle(row.status).split(' ')[1].replace('text-', '').replace('-600', '')}>
-                          {row.status}
-                        </Badge>
+                        <div className="flex flex-col items-end">
+                          <MaterialGauge available={availability.availableCount} total={availability.totalCount} />
+                        </div>
                       </div>
 
-                      <div className="space-y-3 mb-5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-400 font-medium text-xs">Requester</span>
-                          <span className="text-slate-700 text-xs flex items-center gap-1.5">
-                            <Building2 size={14} className="text-slate-400" />
-                            {row.requested_by_name || row.requested_by_id}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-400 font-medium text-xs">Department</span>
-                          <span className="text-slate-700 ">{row.department}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-400 font-medium text-xs">Required By</span>
-                          <span className="text-slate-700 text-xs flex items-center gap-1.5">
-                            <Calendar size={14} className="text-slate-400" />
-                            {row.required_by_date ? new Date(row.required_by_date).toLocaleDateString() : '-'}
-                          </span>
-                        </div>
-                        <div className="pt-3 border-t border-slate-50">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs  text-slate-400 ">Stock Status</span>
-                            <span className={`text-xs  ${
-                              stockStatus.all === 'available' ? 'text-emerald-600' : 
-                              stockStatus.all === 'partial' ? 'text-amber-600' : 'text-rose-600'
-                            }`}>
-                              {stockStatus.available}/{(row.items || []).length} Items Available
-                            </span>
+                      <div className="space-y-2 mb-2">
+                        <div className="bg-slate-50 rounded p-3 flex items-center justify-between border border-slate-100 group-hover:bg-blue-50/50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="p-1.5 bg-white rounded border border-slate-200 text-slate-400">
+                              <Building2 size={14} />
+                            </div>
+                            <div>
+                              <p className="text-[9px]  text-slate-400 ">PROJECT</p>
+                              <p className="text-xs  text-slate-700 truncate max-w-[120px]">{row.project_name || 'INTERNAL OPS'}</p>
+                            </div>
                           </div>
-                          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full transition-all duration-500 ${
-                                stockStatus.all === 'available' ? 'bg-emerald-500' : 
-                                stockStatus.all === 'partial' ? 'bg-amber-500' : 'bg-rose-500'
-                              }`}
-                              style={{ width: `${(stockStatus.available / (row.items?.length || 1)) * 100}%` }}
-                            ></div>
+                          <div className="text-right">
+                            <p className="text-[9px]  text-slate-400 ">Requested By</p>
+                            <p className="text-xs  text-slate-700">{row.required_by_date ? new Date(row.required_by_date).toLocaleDateString() : 'N/A'}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between px-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-xs  text-slate-500 overflow-hidden">
+                              {row.requested_by_name?.charAt(0) || 'S'}
+                            </div>
+                            <span className="text-xs  text-slate-500">{row.requested_by_name?.split(' ')[0] || 'System'}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <Package size={14} className="text-slate-400" />
+                            <span className=" text-slate-700">{row.items?.length || 0} Items</span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="pt-4 border-t border-slate-50 flex items-center justify-between gap-2">
-                        <div className="flex gap-1">
-                          {row.status === 'draft' && (
-                            <button 
-                              onClick={() => handleDelete(row.mr_id)}
-                              className="p-2 text-rose-600 hover:bg-rose-50 rounded  transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          )}
-                        </div>
+                      <div className="flex items-center gap-2 pt-2">
                         <button 
-                          onClick={() => {
-                            setSelectedMrId(row.mr_id)
-                            setViewModalOpen(true)
-                          }}
-                          className="p-2 bg-indigo-50 text-indigo-600 rounded  text-sm  flex items-center gap-2 hover:bg-indigo-100 transition-all"
+                          onClick={() => { setSelectedMrId(row.mr_id); setViewModalOpen(true); }}
+                          className="flex-1 flex items-center justify-center gap-2 bg-slate-900 hover:bg-blue-600 text-white p-2 rounded  text-xs  transition-all"
                         >
-                          Details <ArrowRight size={16} />
+                          <Eye size={14} /> View Details
                         </button>
+                        {row.status === 'draft' && (
+                          <button 
+                            onClick={() => handleDelete(row.mr_id)}
+                            className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-all"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 )
               })}
             </div>
           ) : (
-            <div className="bg-white rounded border border-slate-200 ">
+            <div className="bg-white rounded border border-slate-200  overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
+                <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-100">
-                      <th className="p-2 text-left text-xs text-slate-400 ">Request</th>
-                      <th className="p-2 text-left text-xs text-slate-400 ">Requester</th>
-                      <th className="p-2 text-left text-xs text-slate-400 ">Purpose</th>
-                      <th className="p-2 text-left text-xs text-slate-400 ">Stock Status</th>
-                      <th className="p-2 text-left text-xs text-slate-400 ">Status</th>
-                      <th className="p-2 text-xs text-slate-400 ">Actions</th>
+                    <tr className="bg-slate-50/50">
+                      <th className="p-2 text-xs  text-slate-400  ">Request Identifier</th>
+                      <th className="p-2 text-xs  text-slate-400  ">Project Context</th>
+                      <th className="p-2 text-xs  text-slate-400   text-center">Fulfillment</th>
+                      <th className="p-2 text-xs  text-slate-400  ">Requisition Status</th>
+                      <th className="p-2 text-xs  text-slate-400   text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {requests.map((row) => {
-                      const stockStatus = getItemsAvailabilityStatus(row)
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredRequests.map((row) => {
+                      const availability = getRequestAvailability(row)
+                      const config = getStatusConfig(row.status)
+                      const StatusIcon = config.icon
+
                       return (
-                        <tr key={row.mr_id} className="hover:bg-slate-50/50 transition-colors group">
-                          <td className="p-2 whitespace-nowrap">
+                        <tr key={row.mr_id} className="hover:bg-slate-50/80 transition-colors group">
+                          <td className="p-2">
                             <div className="flex items-center gap-3">
-                              <div className={`w-8 h-8 rounded  flex items-center justify-center ${getStatusStyle(row.status)}`}>
-                                {getPurposeIcon(row.purpose)}
+                              <div className={`p-2 rounded ${config.bg} ${config.color}`}>
+                                <StatusIcon size={16} />
                               </div>
                               <div>
-                                <p className=" text-slate-900 group-hover:text-indigo-600 transition-colors">{row.mr_id}</p>
-                                <p className="text-xs font-medium text-slate-400">{new Date(row.created_at).toLocaleDateString()}</p>
+                                <p className="text-xs  text-slate-900  group-hover:text-blue-600 transition-colors">{row.mr_id}</p>
+                                <p className="text-xs  text-slate-400  ">{row.purpose.replace('_', ' ')}</p>
                               </div>
                             </div>
                           </td>
-                          <td className="p-2 whitespace-nowrap">
-                            <p className="text-xs text-slate-700">{row.requested_by_name || row.requested_by_id}</p>
-                            <p className="text-xs font-medium text-slate-400">{row.department}</p>
+                          <td className="p-2">
+                            <div className="flex flex-col">
+                              <span className="text-xs  text-slate-700">{row.project_name || 'Internal Operations'}</span>
+                              <span className="text-xs  text-slate-400  ">{row.department}</span>
+                            </div>
                           </td>
-                          <td className="p-2 whitespace-nowrap">
-                            <span className="text-xs  text-slate-600 capitalize">
-                              {row.purpose.replace('_', ' ')}
-                            </span>
-                          </td>
-                          <td className="p-2 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <td className="p-2">
+                            <div className="flex flex-col items-center gap-1.5">
+                              <div className="flex justify-between items-center w-32">
+                                <span className="text-xs  text-slate-500">{availability.availableCount}/{availability.totalCount} items</span>
+                                <span className={`text-xs  ${availability.percentage === 100 ? 'text-emerald-500' : 'text-blue-500'}`}>{availability.percentage}%</span>
+                              </div>
+                              <div className="w-32 h-1.5 bg-slate-100 rounded overflow-hidden">
                                 <div 
-                                  className={`h-full ${
-                                    stockStatus.all === 'available' ? 'bg-emerald-500' : 
-                                    stockStatus.all === 'partial' ? 'bg-amber-500' : 'bg-rose-500'
-                                  }`}
-                                  style={{ width: `${(stockStatus.available / (row.items?.length || 1)) * 100}%` }}
+                                  className={`h-full transition-all duration-1000 ${availability.percentage === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                                  style={{ width: `${availability.percentage}%` }}
                                 ></div>
                               </div>
-                              <span className="text-xs  text-slate-500">
-                                {stockStatus.available}/{(row.items || []).length}
-                              </span>
                             </div>
                           </td>
-                          <td className="p-2 whitespace-nowrap">
-                            <Badge color={getStatusStyle(row.status).split(' ')[1].replace('text-', '').replace('-600', '')}>
-                              {row.status}
-                            </Badge>
+                          <td className="p-2">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs  border ${config.bg} ${config.color} ${config.border.replace('border-', 'border-opacity-50 border-')}`}>
+                              <StatusIcon size={12} />
+                              {config.label}
+                            </span>
                           </td>
-                          <td className="p-2 whitespace-nowrap text-right text-sm font-medium">
-                            <div className="flex justify-end gap-2">
+                          <td className="p-2 text-right">
+                            <div className="flex items-center justify-end gap-2">
                               <button 
-                                onClick={() => {
-                                  setSelectedMrId(row.mr_id)
-                                  setViewModalOpen(true)
-                                }}
-                                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded  transition-colors"
+                                onClick={() => { setSelectedMrId(row.mr_id); setViewModalOpen(true); }}
+                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
+                                title="View Details"
                               >
-                                <Eye size={18} />
+                                <Eye size={15} />
                               </button>
                               {row.status === 'draft' && (
                                 <button 
                                   onClick={() => handleDelete(row.mr_id)}
-                                  className="p-2 text-rose-600 hover:bg-rose-50 rounded  transition-colors"
+                                  className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-all"
+                                  title="Delete Requisition"
                                 >
-                                  <Trash2 size={18} />
+                                  <Trash2 size={15} />
                                 </button>
                               )}
                             </div>
@@ -473,21 +578,41 @@ export default function MaterialRequestsRedesign() {
             </div>
           )
         ) : (
-          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-dashed border-slate-300">
-            <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 mb-4">
-              <ClipboardList size={32} />
+          <div className="bg-white rounded border border-dashed border-slate-300 p-24 flex flex-col items-center justify-center text-center">
+            <div className="w-20 h-20 bg-slate-50 rounded flex items-center justify-center text-slate-300 mb-6 border border-slate-100">
+              <ClipboardList size={40} />
             </div>
-            <h3 className="text-lg  text-slate-900 mb-1">No requests found</h3>
-            <p className="text-slate-500 max-w-xs text-center">Try adjusting your filters or create a new material request to get started.</p>
+            <h3 className="text-xl  text-slate-900 mb-2">No Material Requests Found</h3>
+            <p className="text-slate-500 max-w-sm mb-8">We couldn't find any requisitions matching your current filters. Try adjusting your search criteria or create a new request.</p>
             <button 
               onClick={() => setIsModalOpen(true)}
-              className="mt-6 flex items-center gap-2 text-indigo-600  hover:text-indigo-700 transition-colors"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded  text-sm shadow-xl shadow-blue-600/20 transition-all hover:-translate-y-1"
             >
-              <Plus size={20} /> Create New Request
+              <Plus size={20} strokeWidth={3} />
+              NEW REQUISITION
             </button>
           </div>
         )}
       </div>
+
+      <CreateMaterialRequestModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={() => {
+          fetchRequests()
+          toast.addToast('Material requisition created successfully', 'success')
+        }}
+      />
+
+      <ViewMaterialRequestModal
+        isOpen={viewModalOpen}
+        onClose={() => {
+          setViewModalOpen(false)
+          setSelectedMrId(null)
+        }}
+        mrId={selectedMrId}
+        onStatusChange={() => fetchRequests()}
+      />
     </div>
   )
 }

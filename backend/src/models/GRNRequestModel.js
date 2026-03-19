@@ -442,6 +442,7 @@ class GRNRequestModel {
                rejected_qty = ?,
                qc_status = ?,
                bin_rack = ?,
+               batch_no = ?,
                valuation_rate = ?,
                warehouse_name = ?
                WHERE id = ?`,
@@ -450,6 +451,7 @@ class GRNRequestModel {
                 Number(item.rejected_qty) || 0,
                 item.qc_status || 'pass',
                 item.bin_rack || null,
+                item.batch_no || null,
                 valuationRate,
                 item.warehouse_name || 'Main Warehouse',
                 item.id
@@ -503,13 +505,42 @@ class GRNRequestModel {
         for (const item of (updatedGRN.items || [])) {
           const acceptedQty = Number(item.accepted_qty) || 0
           if (acceptedQty > 0) {
-            stockEntryItems.push({
-              item_code: item.item_code,
-              qty: acceptedQty,
-              uom: 'Kg',
-              valuation_rate: Number(item.valuation_rate) || 0,
-              batch_no: item.batch_no || ''
-            })
+            // Fetch item details (UOM) from Item Master
+            const [itemMaster] = await connection.query(
+              'SELECT uom FROM item WHERE item_code = ?',
+              [item.item_code]
+            )
+            const itemUom = itemMaster[0]?.uom || 'Nos'
+
+            // Allocate granular batch numbers (unit level) as requested
+            // If qty is 50, create 50 entries with qty 1 and unique batch numbers (Batch-001 to Batch-050)
+            const baseBatchNo = item.batch_no || `BT-${updatedGRN.grn_no.split('-').pop()}-${item.item_code}`
+            
+            // For unit-based tracking, we split into whole units
+            const unitsToCreate = Math.floor(acceptedQty)
+            const fractionalPart = acceptedQty - unitsToCreate
+
+            // Create individual entries for each unit
+            for (let i = 1; i <= unitsToCreate; i++) {
+              stockEntryItems.push({
+                item_code: item.item_code,
+                qty: 1,
+                uom: itemUom,
+                valuation_rate: Number(item.valuation_rate) || 0,
+                batch_no: `${baseBatchNo}-${String(i).padStart(3, '0')}`
+              })
+            }
+
+            // Handle any remaining fractional quantity (e.g., if it's 50.5 Kg)
+            if (fractionalPart > 0) {
+              stockEntryItems.push({
+                item_code: item.item_code,
+                qty: fractionalPart,
+                uom: itemUom,
+                valuation_rate: Number(item.valuation_rate) || 0,
+                batch_no: `${baseBatchNo}-REM`
+              })
+            }
 
             if (!toWarehouseId && item.warehouse_name) {
               const [warehouseRows] = await connection.query(

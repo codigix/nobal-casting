@@ -306,8 +306,8 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
       const unavailableItems = request?.items?.filter(item => {
         const stock = stockData[item.item_code]
         const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
-        // Item is "unavailable" for PO if it's not fully in stock
-        return stock && (!stock.isAvailable || !stock.foundInInventory) && pendingQty > 0
+        // Item is "unavailable" for PO if it's not fully in stock or stock info not yet loaded
+        return (!stock || !stock.isAvailable || !stock.foundInInventory) && pendingQty > 0
       }) || []
 
       if (unavailableItems.length === 0) {
@@ -402,7 +402,19 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
           )}
 
           {/* New Header Info Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-4">
+              <div className="w-10 h-10 rounded  bg-indigo-50 flex items-center justify-center text-indigo-600">
+                <ClipboardList size={15} />
+              </div>
+              <div>
+                <p className="text-xs  text-slate-400 ">Project</p>
+                <p className="text-sm font-semibold text-indigo-600 truncate max-w-[120px]" title={request?.project_name || 'Internal'}>
+                  {request?.project_name || 'Internal'}
+                </p>
+              </div>
+            </div>
+
             <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-4">
               <div className="w-10 h-10 rounded  bg-amber-50 flex items-center justify-center text-amber-600">
                 <Activity size={15} />
@@ -803,10 +815,14 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
               <Button
                 onClick={handleCreatePO}
                 variant="primary"
-                disabled={loading || !!request?.linked_po_no}
+                disabled={loading || !!request?.linked_po_no || checkingStock}
                 className="p-2   shadow-blue-600/20  text-xs rounded  flex items-center gap-2"
               >
-                {request?.linked_po_no ? 'PO Already Created' : 'Create Purchase Order'} <ShoppingCart size={16} />
+                {checkingStock ? (
+                  <>Verifying Stock... <RefreshCw size={16} className="animate-spin" /></>
+                ) : (
+                  <>{request?.linked_po_no ? 'PO Already Created' : 'Create Purchase Order'} <ShoppingCart size={16} /></>
+                )}
               </Button>
             )}
           </div>

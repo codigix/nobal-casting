@@ -12,17 +12,18 @@ export class PurchaseOrderModel {
 
     try {
       const query = `INSERT INTO purchase_order 
-               (po_no, mr_id, supplier_id, order_date, expected_date, currency, 
+               (po_no, mr_id, project_name, supplier_id, order_date, expected_date, currency, 
                 total_value, status, shipping_address_line1, shipping_address_line2, 
                 shipping_city, shipping_state, shipping_pincode, shipping_country,
                 payment_terms_description, due_date, invoice_portion, payment_amount,
                 advance_paid, tax_category, tax_rate, subtotal, tax_amount, final_amount,
                 incoterm, shipping_rule)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       
       const params = [
         po_no,
         data.mr_id || null,
+        data.project_name || null,
         data.supplier_id || null,
         data.order_date || new Date().toISOString().split('T')[0],
         data.expected_date || null,
@@ -100,13 +101,16 @@ export class PurchaseOrderModel {
       const [pos] = await this.db.execute(
         `SELECT po.*, s.name as supplier_name, s.gstin, 
                 mr.department, mr.purpose,
-                COALESCE(CONCAT_WS(' ', em.first_name, em.last_name), c.name, u.full_name, mr.requested_by_id) as requested_by_name
+                COALESCE(CONCAT_WS(' ', em.first_name, em.last_name), c.name, u.full_name, mr.requested_by_id) as requested_by_name,
+                COALESCE(po.project_name, sso.project_name) as project_name
          FROM purchase_order po
          LEFT JOIN supplier s ON po.supplier_id = s.supplier_id
          LEFT JOIN material_request mr ON po.mr_id = mr.mr_id
          LEFT JOIN employee_master em ON mr.requested_by_id = em.employee_id
          LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
          LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
+         LEFT JOIN production_plan pp ON mr.production_plan_id = pp.plan_id
+         LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
          WHERE po.po_no = ?`,
         [po_no]
       )
@@ -137,13 +141,16 @@ export class PurchaseOrderModel {
                       mr.purpose,
                       COALESCE(CONCAT_WS(' ', em.first_name, em.last_name), c.name, u.full_name, mr.requested_by_id) as requested_by_name,
                       COALESCE(poi_agg.total_received_qty, 0) as total_received_qty,
-                      COALESCE(poi_agg.total_ordered_qty, 0) as total_ordered_qty
+                      COALESCE(poi_agg.total_ordered_qty, 0) as total_ordered_qty,
+                      COALESCE(po.project_name, sso.project_name) as project_name
                    FROM purchase_order po
                    LEFT JOIN supplier s ON po.supplier_id = s.supplier_id
                    LEFT JOIN material_request mr ON po.mr_id = mr.mr_id
                    LEFT JOIN employee_master em ON mr.requested_by_id = em.employee_id
                    LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
                    LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
+                   LEFT JOIN production_plan pp ON mr.production_plan_id = pp.plan_id
+                   LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
                    LEFT JOIN (
                       SELECT po_no, 
                              SUM(received_qty) as total_received_qty,
@@ -196,7 +203,7 @@ export class PurchaseOrderModel {
         'shipping_city', 'shipping_state', 'shipping_pincode', 'shipping_country',
         'payment_terms_description', 'due_date', 'invoice_portion', 'payment_amount',
         'advance_paid', 'tax_category', 'tax_rate', 'subtotal', 'tax_amount', 'final_amount',
-        'incoterm', 'shipping_rule'
+        'incoterm', 'shipping_rule', 'project_name'
       ]
       const updateFields = []
 
@@ -352,30 +359,68 @@ export class PurchaseOrderModel {
   }
 
   async createFromMaterialRequest(mrId, items, department, purpose) {
+    const connection = await this.db.getConnection()
     try {
+      await connection.beginTransaction()
       console.log(`[PO Creation] Creating PO from MR: ${mrId}`)
       
+      if (!items || items.length === 0) {
+        throw new Error('No items provided to create Purchase Order')
+      }
+
       const po_no = `PO-MR-${Date.now()}`
       const order_date = new Date().toISOString().split('T')[0]
       
+      // Enhance items with valuation rates from item table if rate is 0
+      for (const item of items) {
+        if (!item.rate || parseFloat(item.rate) === 0) {
+          const [itemData] = await connection.execute(
+            'SELECT valuation_rate, selling_rate FROM item WHERE item_code = ?',
+            [item.item_code]
+          )
+          if (itemData.length > 0) {
+            item.rate = itemData[0].valuation_rate || itemData[0].selling_rate || 0
+          }
+        }
+      }
+
+      // Calculate total value from items
+      const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.qty || 0) * parseFloat(item.rate || 0)), 0)
+      const taxRate = 18 // Default tax rate
+      const taxAmount = (subtotal * taxRate) / 100
+      const finalAmount = subtotal + taxAmount
+
+      // Fetch project name from linked sales order via MR if available
+      const [mrData] = await connection.execute(
+        `SELECT sso.project_name
+         FROM material_request mr
+         LEFT JOIN production_plan pp ON mr.production_plan_id = pp.plan_id
+         LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
+         WHERE mr.mr_id = ?`,
+        [mrId]
+      )
+      const projectName = mrData.length > 0 ? mrData[0].project_name : null
+
       // Create the PO record with all fields
-      await this.db.execute(
+      await connection.execute(
         `INSERT INTO purchase_order 
-         (po_no, mr_id, supplier_id, order_date, currency, status, 
-          tax_category, tax_rate, subtotal, tax_amount, final_amount, incoterm)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (po_no, mr_id, project_name, supplier_id, order_date, currency, status, 
+          tax_category, tax_rate, subtotal, tax_amount, final_amount, total_value, incoterm)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           po_no,
           mrId,
+          projectName,
           null, // Supplier pending
           order_date,
           'INR',
           'draft',
           'GST',
-          18,   // Default tax rate
-          0,    // Subtotal will be updated if needed or calculated on edit
-          0,    // Tax amount
-          0,    // Final amount
+          taxRate,
+          subtotal,
+          taxAmount,
+          finalAmount,
+          finalAmount, // total_value matches final_amount
           'EXW' // Default incoterm
         ]
       )
@@ -384,7 +429,7 @@ export class PurchaseOrderModel {
       for (const item of items) {
         try {
           const po_item_id = this.generateId()
-          await this.db.execute(
+          await connection.execute(
             `INSERT INTO purchase_order_item 
              (po_item_id, po_no, item_code, qty, uom, rate, tax_rate)
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -395,12 +440,12 @@ export class PurchaseOrderModel {
               item.qty,
               item.uom || 'Kg',
               item.rate || 0,
-              18 // Default tax rate
+              taxRate
             ]
           )
         } catch (itemError) {
           // Fallback if po_item_id or tax_rate column doesn't exist
-          await this.db.execute(
+          await connection.execute(
             `INSERT INTO purchase_order_item 
              (po_no, item_code, qty, uom, rate)
              VALUES (?, ?, ?, ?, ?)`,
@@ -415,14 +460,14 @@ export class PurchaseOrderModel {
         }
 
         // Update MR item status to completed for purchase purpose
-        await this.db.execute(
+        await connection.execute(
           'UPDATE material_request_item SET status = ? WHERE mr_id = ? AND item_code = ?',
           ['completed', mrId, item.item_code]
         )
       }
 
       // Check overall MR status
-      const [updatedItems] = await this.db.execute(
+      const [updatedItems] = await connection.execute(
         'SELECT status FROM material_request_item WHERE mr_id = ?',
         [mrId]
       )
@@ -437,14 +482,18 @@ export class PurchaseOrderModel {
         mrStatus = 'partial'
       }
 
-      await this.db.execute(
+      await connection.execute(
         'UPDATE material_request SET status = ?, updated_at = NOW() WHERE mr_id = ?',
         [mrStatus, mrId]
       )
 
+      await connection.commit()
       return { po_no, mr_id: mrId }
     } catch (error) {
+      await connection.rollback()
       throw new Error(`Failed to create PO from Material Request: ${error.message}`)
+    } finally {
+      connection.release()
     }
   }
 

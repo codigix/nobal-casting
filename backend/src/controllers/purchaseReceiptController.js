@@ -65,7 +65,7 @@ export async function acceptGRN(req, res) {
     const db = req.app.locals.db
     const model = new PurchaseReceiptModel(db)
 
-    const result = await model.accept(req.params.grn_no)
+    const result = await model.accept(req.params.grn_no, req.user?.user_id || 1)
     res.json({ success: true, data: result })
   } catch (error) {
     res.status(400).json({ success: false, error: error.message })
@@ -129,7 +129,7 @@ export async function createFromMaterialRequest(req, res) {
       po_no: null,
       supplier_id: null,
       receipt_date: new Date(),
-      created_by: req.user?.id || 'system',
+      created_by: req.user?.user_id || 'system',
       items: items.map(item => ({
         item_code: item.item_code,
         item_name: item.item_name,

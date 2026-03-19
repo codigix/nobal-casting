@@ -48,7 +48,6 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
       <div className="flex items-center gap-4">
         {actions && <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>{actions}</div>}
         <div className={`p-2 rounded  transition-all duration-300 ${isExpanded ? `${theme.bg} ${theme.text}` : 'text-slate-300 bg-slate-50'}`}>
-          <ChevronDown size={18} className={`transform transition-transform duration-500 ${isExpanded ? 'rotate-180' : ''}`} />
         </div>
       </div>
     </div>
@@ -166,7 +165,6 @@ export default function BOMForm() {
   const [editingRowId, setEditingRowId] = useState(null)
   const [editingRowData, setEditingRowData] = useState({})
   const [operationsList, setOperationsList] = useState([])
-  const [workstationsList, setWorkstationsList] = useState([])
   const [warehousesList, setWarehousesList] = useState([])
   const [suppliers, setSuppliers] = useState([])
   const [newRawMaterial, setNewRawMaterial] = useState({
@@ -184,7 +182,6 @@ export default function BOMForm() {
   })
   const [newOperation, setNewOperation] = useState({
     operation_name: '',
-    workstation_type: '',
     operation_time: '0',
     setup_time: '0',
     fixed_time: '0',
@@ -452,7 +449,6 @@ export default function BOMForm() {
   useEffect(() => {
     fetchItems()
     fetchOperations()
-    fetchWorkstations()
     fetchWarehouses()
     fetchSuppliers()
     fetchUOMs()
@@ -585,15 +581,6 @@ export default function BOMForm() {
       setOperationsList(response.data || [])
     } catch (err) {
       console.error('Failed to fetch operations:', err)
-    }
-  }
-
-  const fetchWorkstations = async () => {
-    try {
-      const response = await productionService.getWorkstationsList()
-      setWorkstationsList(response.data || [])
-    } catch (err) {
-      console.error('Failed to fetch workstations:', err)
     }
   }
 
@@ -1229,7 +1216,6 @@ export default function BOMForm() {
     setOperations([...operations, { ...newOperation, operating_cost: calculatedCost.toFixed(2), id: Date.now() }])
     setNewOperation({
       operation_name: '',
-      workstation_type: '',
       operation_time: '0',
       setup_time: '0',
       fixed_time: '0',
@@ -1367,11 +1353,8 @@ export default function BOMForm() {
     <div className="min-h-screen bg-slate-50 p-2/50 p-2">
       <div className="max-w-5xl mx-auto">
         {/* Header Section */}
-        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="my-2 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className=" p-2bg-slate-900 rounded   shadow-slate-200">
-              <Layers className="text-white" size={24} />
-            </div>
             <div>
               <h1 className="text-xl  text-slate-900 leading-tight ">
                 {id ? 'Strategic BOM' : 'New Formulation'}
@@ -2462,7 +2445,7 @@ export default function BOMForm() {
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-12 gap-2 relative z-0">
                             <div className="md:col-span-3">
-                              <FieldWrapper label="Operation *" required>
+                              <FieldWrapper label="Operation" required>
                                 <SearchableSelect
                                   value={newOperation.operation_name}
                                   onChange={(value) => {
@@ -2471,7 +2454,6 @@ export default function BOMForm() {
                                     setNewOperation({
                                       ...newOperation,
                                       operation_name: value,
-                                      workstation_type: op?.workstation_type || '',
                                       hourly_rate: op?.hourly_rate || '0',
                                       operating_cost: cost.toFixed(2)
                                     })
@@ -2510,20 +2492,6 @@ export default function BOMForm() {
 
                             {newOperation.execution_mode === 'IN_HOUSE' ? (
                               <>
-                                <div className="md:col-span-3">
-                                  <FieldWrapper label="Workstation">
-                                    <SearchableSelect
-                                      value={newOperation.workstation_type}
-                                      onChange={(value) => setNewOperation({ ...newOperation, workstation_type: value })}
-                                      options={workstationsList.filter(ws => ws && ws.name).map(ws => ({
-                                        label: ws.name,
-                                        value: ws.name
-                                      }))}
-                                      placeholder="Select"
-                                      className="glass-input"
-                                    />
-                                  </FieldWrapper>
-                                </div>
                                 <div className="md:col-span-3">
                                   <FieldWrapper label="Target Warehouse">
                                     <SearchableSelect
@@ -2680,7 +2648,9 @@ export default function BOMForm() {
                                     <th className="p-2 text-xs   text-slate-400  w-12">#</th>
                                     <th className="p-2 text-xs   text-slate-400 ">Operation</th>
                                     <th className="p-2 text-xs   text-slate-400 ">Mode</th>
-                                    <th className="p-2 text-xs   text-slate-400 ">Workstation/Vendor</th>
+                                    {operations.some(op => op.execution_mode === 'OUTSOURCE') && (
+                                      <th className="p-2 text-xs   text-slate-400 ">Vendor</th>
+                                    )}
                                     <th className="p-2 text-xs   text-slate-400  text-right">Cycle (min)</th>
                                     <th className="p-2 text-xs   text-slate-400  text-right">Setup (min)</th>
                                     <th className="p-2 text-xs   text-slate-400  text-right">Rate (₹)</th>
@@ -2703,11 +2673,13 @@ export default function BOMForm() {
                                           {op.execution_mode === 'OUTSOURCE' ? 'Outsource' : 'In-House'}
                                         </span>
                                       </td>
-                                      <td className="p-2 ">
-                                        <div className="text-xs   text-slate-700">
-                                          {op.execution_mode === 'OUTSOURCE' ? (op.vendor_name || '-') : (op.workstation_type || '-')}
-                                        </div>
-                                      </td>
+                                      {operations.some(op => op.execution_mode === 'OUTSOURCE') && (
+                                        <td className="p-2 ">
+                                          <div className="text-xs   text-slate-700">
+                                            {op.execution_mode === 'OUTSOURCE' ? (op.vendor_name || '-') : ''}
+                                          </div>
+                                        </td>
+                                      )}
                                       <td className="p-2  text-right">
                                         <div className="text-xs   text-slate-900">{op.execution_mode === 'OUTSOURCE' ? '-' : parseFloat(op.operation_time || 0).toFixed(2)}</div>
                                       </td>

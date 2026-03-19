@@ -192,13 +192,14 @@ export default function SearchableSelect({
               {!isLoading && filteredOptions.map((option, index) => (
                 <div
                   key={option.value}
-                  onClick={() => handleSelect(option)}
-                  className={`px-1.5 py-1.5 cursor-pointer border-b border-gray-100 text-xs transition ${
-                    highlightedIndex === index ? 'bg-gray-100' : 'bg-white'
+                  onClick={() => !option.isDisabled && handleSelect(option)}
+                  className={`px-1.5 py-1.5 border-b border-gray-100 text-xs transition ${
+                    option.isDisabled ? 'text-gray-400 cursor-not-allowed bg-gray-50' : 
+                    (highlightedIndex === index ? 'bg-gray-100 cursor-pointer' : 'cursor-pointer bg-white')
                   } ${
-                    option.value === value ? 'text-blue-600 ' : 'text-gray-900'
+                    option.value === value ? 'text-blue-600 font-semibold' : 'text-gray-900'
                   }`}
-                  onMouseEnter={() => setHighlightedIndex(index)}
+                  onMouseEnter={() => !option.isDisabled && setHighlightedIndex(index)}
                 >
                   {option.label}
                 </div>

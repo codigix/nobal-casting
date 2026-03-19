@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import Modal from '../Modal/Modal'
 import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
-import { CheckCircle, AlertCircle, Truck, User, Package, XCircle, TrendingUp, Info, MapPin, ClipboardCheck, Save } from 'lucide-react'
+import { CheckCircle, AlertCircle, Truck, User, Package, XCircle, TrendingUp, Info, MapPin, ClipboardCheck, Save, Grid3x3 } from 'lucide-react'
 import { grnRequestsAPI, itemsAPI } from '../../services/api'
 
 export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
@@ -66,6 +66,24 @@ export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
         [field]: field === 'valuation_rate' ? parseFloat(value || 0) : value
       }
     }))
+  }
+
+  const handleAutoGenerateBatches = () => {
+    const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '')
+    const grnLastPart = grn.grn_no.split('-').pop()
+    
+    setStorageData(prev => {
+      const updated = { ...prev }
+      grn.items.forEach(item => {
+        // Generate prefix: BT-GRN-ITEM
+        const prefix = `BT-${grnLastPart}-${item.item_code}-${dateStr}`
+        updated[item.id] = {
+          ...updated[item.id],
+          batch_no: prefix
+        }
+      })
+      return updated
+    })
   }
 
   const handleApprove = async () => {
@@ -184,6 +202,16 @@ export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
               <ClipboardCheck size={16} className="text-primary-600" /> 
               Material Receipt & Storage Assignment
             </h4>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleAutoGenerateBatches}
+                className="flex items-center gap-1.5 px-2 py-1 text-[10px] bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded transition-colors"
+              >
+                <Grid3x3 size={12} />
+                Generate Batch Prefixes
+              </button>
+            </div>
           </div>
           
           <div className="overflow-x-auto">
@@ -299,14 +327,15 @@ export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
         </section>
 
         {/* Info Banner */}
-        <div className="flex gap-4 p-4 bg-sky-50 border border-sky-100 rounded  items-start">
-          <div className="p-2 bg-sky-100 rounded ">
-            <Info size={20} className="text-sky-700" />
+        <div className="flex gap-4 p-4 bg-indigo-50 border border-indigo-100 rounded  items-start">
+          <div className="p-2 bg-indigo-100 rounded ">
+            <Grid3x3 size={20} className="text-indigo-700" />
           </div>
           <div>
-            <p className=" text-sky-900 text-sm">Automated Stock Updates</p>
-            <p className="text-xs text-sky-800 leading-relaxed mt-1">
-              Approving this storage will automatically create <strong>Stock Ledger</strong> entries and update the <strong>Stock Balance</strong> for {approvalItems.length} item{approvalItems.length !== 1 ? 's' : ''}.
+            <p className=" text-indigo-900 text-sm">Unit-Level Batch Allocation</p>
+            <p className="text-xs text-indigo-800 leading-relaxed mt-1">
+              Approving this storage will split the <strong>{totalAccepted}</strong> accepted units into individual items. 
+              Each unit will be allocated a unique batch number based on the prefix provided (e.g., <em>Batch-001, Batch-002...</em>).
             </p>
           </div>
         </div>

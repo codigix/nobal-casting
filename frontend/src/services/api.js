@@ -200,6 +200,12 @@ export const jobCardsAPI = {
   generateAll: (woId) => api.post(`/production/job-cards/${woId}/generate-all`),
 }
 
+// Scheduling API
+export const schedulingAPI = {
+  getAvailableSlots: (machineId, date) => api.get(`/production/scheduling/available-slots/${machineId}`, { params: { date } }),
+  suggestSlot: (machineId, duration, date) => api.get(`/production/scheduling/suggest-slot/${machineId}`, { params: { duration, date } }),
+}
+
 // Production Plans API
 export const productionPlansAPI = {
   list: (params) => api.get('/production/plans', { params }),

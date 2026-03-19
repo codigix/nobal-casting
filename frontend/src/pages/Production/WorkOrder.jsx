@@ -126,9 +126,9 @@ const WorkOrderRow = React.memo(({
 
           <div className="flex-1">
             <p className="text-xs font-medium text-gray-900">{order.item_name}</p>
-            {/* <p className="text-[10px] text-gray-400 mt-0.5">
-              {(order.bom_no || '').startsWith('BOM-') ? order.bom_no : `BOM-${order.bom_no || order.wo_id.split('-')[1] || 'STANDARD'}`}
-            </p> */}
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              {order.project_name || 'No Project'}
+            </p>
           </div>
 
           <div className=" flex justify-center">
@@ -140,10 +140,16 @@ const WorkOrderRow = React.memo(({
             <span className="text-[10px] text-gray-400 ml-1">units</span>
           </div>
 
-          <div className="">
-            <div className="flex items-center gap-2 text-[10px] text-gray-500">
-              <Calendar size={10} className="text-gray-400" />
-              <span>{order.planned_start_date ? new Date(order.planned_start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</span>
+          <div className="w-32">
+            <div className="flex flex-col gap-1 text-[10px] text-gray-500">
+              <div className="flex items-center gap-1.5">
+                <Calendar size={10} className="text-emerald-500" />
+                <span className="font-medium">Start: {order.planned_start_date ? new Date(order.planned_start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'N/A'}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Clock size={10} className="text-rose-500" />
+                <span className="font-medium">End: {order.planned_end_date ? new Date(order.planned_end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'N/A'}</span>
+              </div>
             </div>
           </div>
 
@@ -242,6 +248,9 @@ const WorkOrderRow = React.memo(({
                 )
               })()}
               <span className="text-sm font-medium text-gray-900 truncate">{order.item_name}</span>
+              <span className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded ml-2">
+                {order.project_name || 'No Project'}
+              </span>
               {hasSubAssemblies && (
                 <span className="text-[10px] text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-full font-medium">
                   {order.subAssemblies.length} Sub-assemblies
@@ -350,7 +359,8 @@ const groupOrdersBySalesOrder = (ordersData) => {
     if (order.sales_order_id && order.sales_order_id !== 'NO_SALES_ORDER') {
       return {
         id: order.sales_order_id,
-        customer_name: order.customer_name || 'Individual Order'
+        customer_name: order.customer_name || 'Individual Order',
+        project_name: order.project_name || 'No Project'
       }
     }
     if (order.parent_wo_id && ordersMap[order.parent_wo_id]) {
@@ -358,17 +368,19 @@ const groupOrdersBySalesOrder = (ordersData) => {
     }
     return {
       id: 'NO_SALES_ORDER',
-      customer_name: 'Individual Order'
+      customer_name: 'Individual Order',
+      project_name: 'No Project'
     }
   }
 
   sortedOrders.forEach(order => {
-    const { id: soId, customer_name: custName } = getEffectiveSOData(order)
+    const { id: soId, customer_name: custName, project_name: projName } = getEffectiveSOData(order)
     
     if (!groups[soId]) {
       groups[soId] = {
         id: soId,
         customer_name: custName,
+        project_name: projName,
         orders: [],
         allCompleted: true,
         totalProduced: 0,
@@ -676,6 +688,13 @@ export default function WorkOrder() {
       )
     },
     {
+      key: 'project_name',
+      label: 'Project Name',
+      render: (val) => (
+        <span className="text-xs font-medium text-gray-700">{val || 'N/A'}</span>
+      )
+    },
+    {
       key: 'status',
       label: 'Status',
       render: (val) => <StatusBadge status={val} />
@@ -692,11 +711,17 @@ export default function WorkOrder() {
     },
     {
       key: 'planned_start_date',
-      label: 'Planned Start Date',
-      render: (val) => (
-        <div className="flex items-center gap-2 text-[10px] text-gray-500">
-          <Calendar size={10} className="text-gray-400" />
-          <span>{val ? new Date(val).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</span>
+      label: 'Schedule',
+      render: (_, row) => (
+        <div className="flex flex-col gap-0.5 text-[10px] text-gray-500">
+          <div className="flex items-center gap-1.5">
+            <Calendar size={10} className="text-emerald-500" />
+            <span className="font-medium">{row.planned_start_date ? new Date(row.planned_start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'N/A'}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Clock size={10} className="text-rose-500" />
+            <span className="font-medium">{row.planned_end_date ? new Date(row.planned_end_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'N/A'}</span>
+          </div>
         </div>
       )
     },
@@ -795,7 +820,7 @@ export default function WorkOrder() {
                   </span>
                   <span className="flex items-center gap-2 text-xs   text-amber-600 ">
                     <Clock size={12} />
-                    {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                   </span>
                 </div>
               </div>
@@ -1035,6 +1060,9 @@ export default function WorkOrder() {
                                   <div>
                                     <div className="flex items-center gap-2">
                                       <h3 className="text-sm font-semibold text-gray-900">{group.customer_name}</h3>
+                                      <span className="text-[10px] font-medium bg-amber-50 px-2 py-0.5 rounded border border-amber-100 text-amber-700">
+                                        {group.project_name || 'No Project'}
+                                      </span>
                                       <span className="text-[10px] font-mono bg-white px-2 py-0.5 rounded border border-gray-200 text-gray-500  ">
                                         {group.id === 'NO_SALES_ORDER' ? 'Direct Production' : group.id}
                                       </span>

@@ -231,14 +231,22 @@ export default function PurchaseOrders() {
           <span className="text-xs  text-indigo-600 dark:text-indigo-400  leading-none group-hover:scale-105 transition-transform origin-left">
             {row.po_no}
           </span>
-          {row.mr_id ? (
-            <div className="flex items-center bg-neutral-100 dark:bg-neutral-800  w-fit">
-              <FileText size={10} className="text-neutral-400" />
-              <span className="text-xs  text-neutral-500 dark:text-neutral-400  ">#{row.mr_id}</span>
-            </div>
-          ) : (
-            <span className="text-xs  text-neutral-400 dark:text-neutral-500   opacity-50">Direct PO</span>
-          )}
+          <div className="flex items-center gap-1.5">
+            {row.mr_id ? (
+              <div className="flex items-center bg-neutral-100 dark:bg-neutral-800  w-fit px-1 rounded">
+                <FileText size={10} className="text-neutral-400" />
+                <span className="text-[10px]  text-neutral-500 dark:text-neutral-400  ">#{row.mr_id}</span>
+              </div>
+            ) : (
+              <span className="text-[10px]  text-neutral-400 dark:text-neutral-500   opacity-50">Direct PO</span>
+            )}
+            {row.project_name && (
+              <div className="flex items-center bg-indigo-50 dark:bg-indigo-950/30 w-fit px-1 rounded border border-indigo-100 dark:border-indigo-900/50">
+                <LayoutGrid size={10} className="text-indigo-400" />
+                <span className="text-[10px]  text-indigo-600 dark:text-indigo-400  ">{row.project_name}</span>
+              </div>
+            )}
+          </div>
         </div>
       )
     },

@@ -144,7 +144,7 @@ class AccountsFinanceController {
 
       let result
       if (status === 'paid') {
-        result = await this.paymentEntryModel.submitVendorPayment(payment_id, req.user?.id)
+        result = await this.paymentEntryModel.submitVendorPayment(payment_id, req.user?.user_id)
       } else {
         result = await this.accountsFinanceModel.updateVendorPaymentStatus(payment_id, status)
       }
@@ -239,7 +239,7 @@ class AccountsFinanceController {
 
       let result
       if (status === 'received') {
-        result = await this.paymentEntryModel.submitCustomerPayment(payment_id, req.user?.id)
+        result = await this.paymentEntryModel.submitCustomerPayment(payment_id, req.user?.user_id)
       } else {
         result = await this.accountsFinanceModel.updateCustomerPaymentStatus(payment_id, status)
       }

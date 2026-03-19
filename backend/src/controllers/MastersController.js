@@ -1,4 +1,14 @@
 class MastersController {
+  static _parseUTCDate(date) {
+    if (!date) return null;
+    if (date instanceof Date) return date;
+    if (typeof date === 'string' && !date.includes('Z') && !date.includes('+')) {
+      const utcDate = new Date(date.replace(' ', 'T') + 'Z');
+      if (!isNaN(utcDate.getTime())) return utcDate;
+    }
+    return new Date(date);
+  }
+
   static getDb() {
     const db = global.db
     if (!db) {
@@ -573,14 +583,14 @@ class MastersController {
           
           // Update dates to cover the whole range for the stage
           if (jc.actual_start_date || jc.scheduled_start_date) {
-            const currentStart = new Date(jc.actual_start_date || jc.scheduled_start_date);
-            if (!stage.start_date || currentStart < new Date(stage.start_date)) {
+            const currentStart = this._parseUTCDate(jc.actual_start_date || jc.scheduled_start_date);
+            if (!stage.start_date || currentStart < this._parseUTCDate(stage.start_date)) {
               stage.start_date = jc.actual_start_date || jc.scheduled_start_date;
             }
           }
           if (jc.actual_end_date || jc.scheduled_end_date) {
-            const currentEnd = new Date(jc.actual_end_date || jc.scheduled_end_date);
-            if (!stage.end_date || currentEnd > new Date(stage.end_date)) {
+            const currentEnd = this._parseUTCDate(jc.actual_end_date || jc.scheduled_end_date);
+            if (!stage.end_date || currentEnd > this._parseUTCDate(stage.end_date)) {
               stage.end_date = jc.actual_end_date || jc.scheduled_end_date;
             }
           }
@@ -645,21 +655,21 @@ class MastersController {
           
           stage.planned_time = (stage.planned_time || 0) + parseFloat(jc.operation_time || 0)
           if (jc.actual_start_date && jc.actual_end_date) {
-            const start = new Date(jc.actual_start_date)
-            const end = new Date(jc.actual_end_date)
+            const start = this._parseUTCDate(jc.actual_start_date)
+            const end = this._parseUTCDate(jc.actual_end_date)
             stage.actual_time = (stage.actual_time || 0) + (end - start) / (1000 * 60 * 60)
           }
 
           // Update dates to cover the whole range for the stage
           if (jc.actual_start_date || jc.scheduled_start_date) {
-            const currentStart = new Date(jc.actual_start_date || jc.scheduled_start_date);
-            if (!stage.start_date || currentStart < new Date(stage.start_date)) {
+            const currentStart = this._parseUTCDate(jc.actual_start_date || jc.scheduled_start_date);
+            if (!stage.start_date || currentStart < this._parseUTCDate(stage.start_date)) {
               stage.start_date = jc.actual_start_date || jc.scheduled_start_date;
             }
           }
           if (jc.actual_end_date || jc.scheduled_end_date) {
-            const currentEnd = new Date(jc.actual_end_date || jc.scheduled_end_date);
-            if (!stage.end_date || currentEnd > new Date(stage.end_date)) {
+            const currentEnd = this._parseUTCDate(jc.actual_end_date || jc.scheduled_end_date);
+            if (!stage.end_date || currentEnd > this._parseUTCDate(stage.end_date)) {
               stage.end_date = jc.actual_end_date || jc.scheduled_end_date;
             }
           }

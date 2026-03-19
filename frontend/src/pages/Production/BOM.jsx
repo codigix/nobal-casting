@@ -325,7 +325,7 @@ export default function BOM() {
     },
     {
       key: 'bom_type',
-      label: 'BOM TYpe',
+      label: 'BOM Type',
       render: (value, row) => <BOMTypeBadge type={getBOMType(row)} />
     },
     // {

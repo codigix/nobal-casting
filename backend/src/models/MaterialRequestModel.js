@@ -37,12 +37,15 @@ export class MaterialRequestModel {
       let query = `
         SELECT mr.*, 
                COALESCE(CONCAT_WS(' ', em.first_name, em.last_name), c.name, u.full_name, mr.requested_by_id) as requested_by_name, 
-               po.po_no as linked_po_no, po.status as po_status
+               po.po_no as linked_po_no, po.status as po_status,
+               sso.project_name
         FROM material_request mr 
         LEFT JOIN employee_master em ON mr.requested_by_id = em.employee_id
         LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
         LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
         LEFT JOIN purchase_order po ON mr.mr_id = po.mr_id AND po.status != 'cancelled'
+        LEFT JOIN production_plan pp ON mr.production_plan_id = pp.plan_id
+        LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
         WHERE 1=1`
       const params = []
 
@@ -62,9 +65,9 @@ export class MaterialRequestModel {
       }
 
       if (filters.search) {
-        query += ' AND (mr.mr_id LIKE ? OR c.name LIKE ?)'
+        query += ' AND (mr.mr_id LIKE ? OR c.name LIKE ? OR sso.project_name LIKE ?)'
         const term = `%${filters.search}%`
-        params.push(term, term)
+        params.push(term, term, term)
       }
 
       query += ' ORDER BY mr.created_at DESC LIMIT 100'
@@ -111,12 +114,15 @@ export class MaterialRequestModel {
       const [mrRows] = await db.execute(
         `SELECT mr.*, 
                 COALESCE(CONCAT_WS(' ', em.first_name, em.last_name), c.name, u.full_name, mr.requested_by_id) as requested_by_name, 
-                po.po_no as linked_po_no, po.status as po_status
+                po.po_no as linked_po_no, po.status as po_status,
+                sso.project_name
          FROM material_request mr 
          LEFT JOIN employee_master em ON mr.requested_by_id = em.employee_id
          LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
          LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
          LEFT JOIN purchase_order po ON mr.mr_id = po.mr_id AND po.status != 'cancelled'
+         LEFT JOIN production_plan pp ON mr.production_plan_id = pp.plan_id
+         LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
          WHERE mr.mr_id = ?`,
         [mrId]
       )
@@ -384,7 +390,7 @@ export class MaterialRequestModel {
           // Create Stock Movement entry for visibility in Inventory Dashboard
           try {
             const movement_type = request.purpose?.toLowerCase() === 'material_transfer' ? 'TRANSFER' : 'OUT'
-            const transaction_no = await StockMovementModel.generateTransactionNo()
+            const transaction_no = await StockMovementModel.generateTransactionNo(connection)
             
             await connection.execute(
               `INSERT INTO stock_movements (

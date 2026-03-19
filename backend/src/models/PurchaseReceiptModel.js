@@ -182,7 +182,7 @@ export class PurchaseReceiptModel {
     }
   }
 
-  async accept(grn_no) {
+  async accept(grn_no, userId = 1) {
     try {
       // Get the GRN details to check for MR link
       const grn = await this.getById(grn_no)
@@ -210,17 +210,17 @@ export class PurchaseReceiptModel {
         // 1. Move accepted quantity to the designated warehouse (default: ACCEPTED)
         if (accepted > 0) {
           const targetWarehouse = item.warehouse_code || 'ACCEPTED'
-          await this.updateStock(item.item_code, targetWarehouse, accepted, 'GRN-Accepted', grn_no, rate, receipt_date)
+          await this.updateStock(item.item_code, targetWarehouse, accepted, 'GRN-Accepted', grn_no, rate, receipt_date, userId)
         }
 
         // 2. Move rejected quantity to REJECTED warehouse
         if (rejected > 0) {
-          await this.updateStock(item.item_code, 'REJECTED', rejected, 'GRN-Rejected', grn_no, rate, receipt_date)
+          await this.updateStock(item.item_code, 'REJECTED', rejected, 'GRN-Rejected', grn_no, rate, receipt_date, userId)
         }
 
         // 3. Move remaining to HOLD warehouse
         if (hold > 0) {
-          await this.updateStock(item.item_code, 'HOLD', hold, 'GRN-Hold', grn_no, rate, receipt_date)
+          await this.updateStock(item.item_code, 'HOLD', hold, 'GRN-Hold', grn_no, rate, receipt_date, userId)
         }
       }
 
@@ -252,7 +252,7 @@ export class PurchaseReceiptModel {
     }
   }
 
-  async updateStock(item_code, warehouse_code, qty, voucher_type, voucher_no, purchase_rate = 0, transaction_date = new Date()) {
+  async updateStock(item_code, warehouse_code, qty, voucher_type, voucher_no, purchase_rate = 0, transaction_date = new Date(), userId = 1) {
     try {
       // Check for period closing lock
       await PeriodClosingModel.checkLock(this.db, transaction_date)
@@ -280,28 +280,29 @@ export class PurchaseReceiptModel {
         reference_doctype: 'Purchase Receipt',
         reference_name: voucher_no,
         remarks: `${voucher_type} for GRN ${voucher_no}`,
-        created_by: 1 // Should be passed if available
+        created_by: userId
       }, this.db)
 
       // Create Stock Movement entry for visibility in Inventory Dashboard
       try {
-        const transaction_no = await StockMovementModel.generateTransactionNo()
+        const transaction_no = await StockMovementModel.generateTransactionNo(this.db)
         
         await this.db.execute(
           `INSERT INTO stock_movements (
             transaction_no, item_code, warehouse_id, 
-            movement_type, purpose, quantity, reference_type, reference_name, notes, status, created_by, approved_by, approved_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Approved', 1, 1, NOW())`,
+            movement_type, quantity, reference_type, reference_name, notes, status, created_by, approved_by, approved_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Approved', ?, ?, NOW())`,
           [
             transaction_no, 
             item_code, 
             warehouse_id, 
             'IN',
-            'Purchase Receipt',
             qty,
             'Purchase Receipt',
             voucher_no,
-            `${voucher_type} for GRN ${voucher_no}`
+            `${voucher_type} for GRN ${voucher_no}`,
+            userId,
+            userId
           ]
         )
       } catch (smError) {

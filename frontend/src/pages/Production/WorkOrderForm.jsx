@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   Save, X, AlertCircle, CheckCircle, Factory,
@@ -93,7 +93,31 @@ export default function WorkOrderForm() {
   const [availableBoms, setAvailableBoms] = useState([])
   const [jobCards, setJobCards] = useState([])
   const [workstations, setWorkstations] = useState([])
-  const [isEditMode] = useState(!id)
+  const [formData, setFormData] = useState({
+    work_order_id: '',
+    naming_series: 'MFG-WO-.YYYY.-',
+    item_to_manufacture: prefillItem || '',
+    qty_to_manufacture: prefillQty ? parseInt(prefillQty) : 1,
+    sales_order_id: '',
+    bom_id: prefillBom || '',
+    planned_start_date: prefillStartDate || new Date().toISOString().split('T')[0],
+    planned_end_date: '',
+    actual_start_date: '',
+    actual_end_date: '',
+    expected_delivery_date: '',
+    priority: 'medium',
+    status: 'Draft',
+    notes: '',
+    production_stage_id: null
+  })
+
+  const isEditAllowed = useMemo(() => {
+    if (isReadOnly) return false
+    if (!id) return true
+    const status = (formData.status || '').toLowerCase()
+    return status === 'draft' || status === 'ready'
+  }, [id, isReadOnly, formData.status])
+
   const [editingJobCardId, setEditingJobCardId] = useState(null)
   const [showReceiptModal, setShowReceiptModal] = useState(false)
   const [receivingJobCard, setReceivingJobCard] = useState(null)
@@ -154,24 +178,6 @@ export default function WorkOrderForm() {
   const [allDowntimes, setAllDowntimes] = useState([])
   const [operationWiseConsumption, setOperationWiseConsumption] = useState([])
 
-  const [formData, setFormData] = useState({
-    work_order_id: '',
-    naming_series: 'MFG-WO-.YYYY.-',
-    item_to_manufacture: prefillItem || '',
-    qty_to_manufacture: prefillQty ? parseInt(prefillQty) : 1,
-    sales_order_id: '',
-    bom_id: prefillBom || '',
-    planned_start_date: prefillStartDate || new Date().toISOString().split('T')[0],
-    planned_end_date: '',
-    actual_start_date: '',
-    actual_end_date: '',
-    expected_delivery_date: '',
-    priority: 'medium',
-    status: 'Draft',
-    notes: '',
-    production_stage_id: null
-  })
-
   // Data Fetching Logic (Same as before)
   useEffect(() => {
     fetchItems()
@@ -211,7 +217,8 @@ export default function WorkOrderForm() {
 
   // Reactive update for materials and operations when quantity changes
   useEffect(() => {
-    if (!id) {
+    // Only recalculate if it's a new work order OR an existing one in editable status
+    if (!id || (formData.status || '').toLowerCase() === 'draft' || (formData.status || '').toLowerCase() === 'ready') {
       const workOrderQty = parseFloat(formData.qty_to_manufacture) || 0
       
       if (bomMaterials.length > 0) {
@@ -242,7 +249,7 @@ export default function WorkOrderForm() {
         }))
       }
     }
-  }, [formData.qty_to_manufacture, id])
+  }, [formData.qty_to_manufacture, id, formData.status])
 
   const fetchProductionStages = async () => {
     try {
@@ -1233,7 +1240,7 @@ export default function WorkOrderForm() {
                         onChange={handleItemSelect}
                         options={items.map(item => ({ value: item.item_code, label: `${item.name || item.item_name || 'No Name'} [${item.item_code}]` }))}
                         placeholder="Search Products..."
-                        isDisabled={isReadOnly || (id && !isEditMode)}
+                        isDisabled={!isEditAllowed}
                       />
                     </FieldWrapper>
 
@@ -1243,7 +1250,7 @@ export default function WorkOrderForm() {
                         onChange={(val) => handleInputChange({ target: { name: 'bom_id', value: val } })}
                         options={availableBoms.map(bom => ({ value: bom.bom_id || bom.name, label: bom.bom_id || bom.name }))}
                         placeholder="Select BOM..."
-                        isDisabled={isReadOnly || (id && !isEditMode)}
+                        isDisabled={!isEditAllowed}
                       />
                     </FieldWrapper>
 
@@ -1255,7 +1262,7 @@ export default function WorkOrderForm() {
                             name="qty_to_manufacture"
                             value={formData.qty_to_manufacture}
                             onChange={handleInputChange}
-                            disabled={isReadOnly || (id && !isEditMode)}
+                            disabled={!isEditAllowed}
                             className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all "
                           />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px]  text-slate-400">UNIT</span>
@@ -1267,12 +1274,13 @@ export default function WorkOrderForm() {
                           name="priority"
                           value={formData.priority}
                           onChange={handleInputChange}
-                          disabled={isReadOnly || (id && !isEditMode)}
+                          disabled={isReadOnly}
                           className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium"
                         >
                           <option value="low">Low Priority</option>
                           <option value="medium">Medium Priority</option>
                           <option value="high">High Priority</option>
+                          <option value="critical">Critical (Preempts all)</option>
                         </select>
                       </FieldWrapper>
                     </div>
@@ -1284,12 +1292,23 @@ export default function WorkOrderForm() {
                           name="sales_order_id"
                           value={formData.sales_order_id}
                           onChange={handleInputChange}
-                          disabled={isReadOnly || (id && !isEditMode)}
+                          disabled={!isEditAllowed}
                           placeholder="SO-REFERENCE"
                           className="w-full pl-4 pr-10 py-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none font-mono"
                         />
                         <Database size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
                       </div>
+                    </FieldWrapper>
+
+                    <FieldWrapper label="Additional Notes">
+                      <textarea
+                        name="notes"
+                        value={formData.notes}
+                        onChange={handleInputChange}
+                        disabled={isReadOnly}
+                        placeholder="Add production notes, special instructions or constraints..."
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 min-h-[100px] transition-all resize-none"
+                      />
                     </FieldWrapper>
                   </div>
                 </Card>
@@ -1314,7 +1333,7 @@ export default function WorkOrderForm() {
                             name="planned_start_date"
                             value={formData.planned_start_date}
                             onChange={handleInputChange}
-                            disabled={isReadOnly || (id && !isEditMode)}
+                            disabled={isReadOnly}
                             className="w-full pl-4 pr-10 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-medium"
                           />
                           <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1330,7 +1349,7 @@ export default function WorkOrderForm() {
                             name="planned_end_date"
                             value={formData.planned_end_date}
                             onChange={handleInputChange}
-                            disabled={isReadOnly || (id && !isEditMode)}
+                            disabled={isReadOnly}
                             className="w-full pl-4 pr-10 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-medium"
                           />
                           <Clock size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1339,11 +1358,19 @@ export default function WorkOrderForm() {
                     </div>
 
                     <div className="col-span-4 border-t border-slate-100">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs  text-slate-400 ">Delivery Commitment</span>
-                        <div className="p-1 bg-amber-50 text-amber-600 rounded text-[10px]  border border-amber-100">Parget</div>
-                      </div>
-                      <p className="text-xs  text-slate-900">{formData.expected_delivery_date || 'Pending Schedule'}</p>
+                      <FieldWrapper label="Delivery Commitment">
+                        <div className="relative">
+                          <input
+                            type="date"
+                            name="expected_delivery_date"
+                            value={formData.expected_delivery_date}
+                            onChange={handleInputChange}
+                            disabled={isReadOnly}
+                            className="w-full pl-4 pr-10 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-medium"
+                          />
+                          <ShieldCheck size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        </div>
+                      </FieldWrapper>
                     </div>
                   </div>
                 </Card>
@@ -1814,7 +1841,7 @@ export default function WorkOrderForm() {
                                   {new Date(usage.tracked_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                                 </div>
                                 <div className="text-[9px] text-slate-400">
-                                  {new Date(usage.tracked_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  {new Date(usage.tracked_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                                 </div>
                               </td>
                             </tr>

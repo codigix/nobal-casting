@@ -3,6 +3,25 @@ class ProductionController {
     this.productionModel = productionModel
   }
 
+  handleError(res, error, defaultMessage) {
+    console.error(`${defaultMessage}:`, error);
+    
+    if (error.name === 'ConflictError') {
+      return res.status(409).json({
+        success: false,
+        message: error.message,
+        conflict: true,
+        details: error.details
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: defaultMessage,
+      error: error.message
+    });
+  }
+
   // ============= OPERATIONS =============
 
   // Create operation
@@ -179,7 +198,7 @@ class ProductionController {
       }
 
       // Use the recursive method to handle BOM explosion and sub-assemblies
-      const createdWoIds = await this.productionModel.createWorkOrderRecursive(data, req.user?.id || 1)
+      const createdWoIds = await this.productionModel.createWorkOrderRecursive(data, req.user?.user_id || 1)
 
       res.status(201).json({
         success: true,
@@ -272,23 +291,71 @@ class ProductionController {
         })
       }
 
+      // Fetch existing job cards to check for progress
+      const existingJobCards = await this.productionModel.getJobCards({ work_order_id: wo_id })
+      const hasProgress = existingJobCards.some(jc => 
+        (jc.status || '').toLowerCase() !== 'draft' || 
+        (parseFloat(jc.produced_quantity) || 0) > 0
+      )
+
       if (required_items && Array.isArray(required_items)) {
-        await this.productionModel.deleteAllWorkOrderItems(wo_id)
-        if (required_items.length > 0) {
+        if (hasProgress) {
+          // SURGICAL UPDATE for items: Update existing ones, only add new ones
+          // This prevents accidental loss of issued/consumed data if frontend state lags
           for (let i = 0; i < required_items.length; i++) {
-            await this.productionModel.addWorkOrderItem(wo_id, { ...required_items[i], sequence: i + 1 })
+            const item = required_items[i]
+            const [existingItems] = await this.productionModel.db.query(
+              'SELECT item_id FROM work_order_item WHERE wo_id = ? AND item_code = ?',
+              [wo_id, item.item_code]
+            )
+
+            if (existingItems && existingItems.length > 0) {
+              await this.productionModel.db.query(
+                `UPDATE work_order_item SET 
+                  source_warehouse = ?, required_qty = ?, 
+                  issued_qty = ?, consumed_qty = ?, returned_qty = ?
+                 WHERE item_id = ?`,
+                [
+                  item.source_warehouse || 'Main',
+                  parseFloat(item.required_qty) || 0,
+                  parseFloat(item.issued_qty) || 0,
+                  parseFloat(item.consumed_qty) || 0,
+                  parseFloat(item.returned_qty) || 0,
+                  existingItems[0].item_id
+                ]
+              )
+            } else {
+              await this.productionModel.addWorkOrderItem(wo_id, { ...item, sequence: i + 1 })
+            }
+          }
+
+          // Optional: Delete items that are NOT in the new list AND have NO issuance/consumption
+          const newItemCodes = required_items.map(m => m.item_code)
+          const [currentItems] = await this.productionModel.db.query(
+            'SELECT item_id, item_code, issued_qty, consumed_qty FROM work_order_item WHERE wo_id = ?',
+            [wo_id]
+          )
+
+          for (const ci of currentItems) {
+            if (!newItemCodes.includes(ci.item_code)) {
+              const itemHasProgress = (parseFloat(ci.issued_qty) || 0) > 0 || (parseFloat(ci.consumed_qty) || 0) > 0
+              if (!itemHasProgress) {
+                await this.productionModel.db.query('DELETE FROM work_order_item WHERE item_id = ?', [ci.item_id])
+              }
+            }
+          }
+        } else {
+          // NO PROGRESS: Safe to wipe and recreate
+          await this.productionModel.deleteAllWorkOrderItems(wo_id)
+          if (required_items.length > 0) {
+            for (let i = 0; i < required_items.length; i++) {
+              await this.productionModel.addWorkOrderItem(wo_id, { ...required_items[i], sequence: i + 1 })
+            }
           }
         }
       }
 
       if (operations && Array.isArray(operations)) {
-        // Fetch existing job cards to check for progress
-        const existingJobCards = await this.productionModel.getJobCards({ work_order_id: wo_id })
-        const hasProgress = existingJobCards.some(jc => 
-          (jc.status || '').toLowerCase() !== 'draft' || 
-          (parseFloat(jc.produced_quantity) || 0) > 0
-        )
-
         if (hasProgress) {
           // SURGICAL UPDATE: Update existing operations and job cards, only add new ones
           // This preserves data integrity for job cards already in production
@@ -347,6 +414,7 @@ class ProductionController {
                 vendor_id: op.vendor_id || matchingJC.vendor_id || null,
                 vendor_rate_per_unit: op.vendor_rate_per_unit || matchingJC.vendor_rate_per_unit || 0,
                 planned_quantity: parseFloat(quantity) || 0,
+                priority: priority || matchingJC.priority || 'medium',
                 notes: op.notes || matchingJC.notes
               })
             } else {
@@ -359,6 +427,7 @@ class ProductionController {
                 operation_sequence: seq,
                 machine_id: op.workstation || op.workstation_type || '',
                 planned_quantity: parseFloat(quantity) || 0,
+                priority: priority || 'medium',
                 operation_time: op.time || op.operation_time || 0,
                 hourly_rate: op.hourly_rate || 0,
                 operating_cost: op.operating_cost || 0,
@@ -369,7 +438,7 @@ class ProductionController {
                 scheduled_start_date: planned_start_date,
                 scheduled_end_date: planned_end_date,
                 status: 'draft',
-                created_by: req.user?.username || 'system',
+                created_by: req.user?.full_name || 'system',
                 notes: op.notes || ''
               })
             }
@@ -419,6 +488,7 @@ class ProductionController {
                 operation_sequence: operation.sequence || (i + 1),
                 machine_id: wsType,
                 planned_quantity: parseFloat(quantity) || 0,
+                priority: priority || 'medium',
                 operation_time: parseFloat(opTime) || 0,
                 hourly_rate: parseFloat(hRate) || 0,
                 operating_cost: parseFloat(opCost) || 0,
@@ -429,7 +499,7 @@ class ProductionController {
                 scheduled_start_date: planned_start_date,
                 scheduled_end_date: planned_end_date,
                 status: 'draft',
-                created_by: req.user?.username || 'system',
+                created_by: req.user?.full_name || 'system',
                 notes: operation.notes || ''
               })
             }
@@ -502,7 +572,7 @@ class ProductionController {
       const plan = await this.productionModel.createProductionPlan({
         plan_date: new Date(),
         week_number: Math.ceil((new Date().getDate()) / 7),
-        planned_by_id: req.user?.id || 'system'
+        planned_by_id: req.user?.user_id || 'system'
       })
 
       // Add items if provided
@@ -888,7 +958,7 @@ class ProductionController {
         status: status || 'Draft',
         revision: revision || 1,
         effective_date,
-        created_by: req.user?.username || 'system',
+        created_by: req.user?.full_name || 'system',
         total_cost: total_cost || 0,
         selling_rate: selling_rate || 0
       })
@@ -1148,7 +1218,7 @@ class ProductionController {
         scheduled_start_date,
         scheduled_end_date,
         status: status || 'draft',
-        created_by: req.user?.username || 'system',
+        created_by: req.user?.full_name || 'system',
         notes,
         execution_mode,
         vendor_id,
@@ -1162,11 +1232,7 @@ class ProductionController {
         data: jobCard
       })
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: 'Error creating job card',
-        error: error.message
-      })
+      this.handleError(res, error, 'Error creating job card');
     }
   }
 
@@ -1183,7 +1249,7 @@ class ProductionController {
 
       const createdCards = await this.productionModel.generateJobCardsForWorkOrder(
         work_order_id,
-        req.user?.username || 'system'
+        req.user?.full_name || 'system'
       )
 
       res.status(201).json({
@@ -1270,11 +1336,7 @@ class ProductionController {
         })
       }
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: 'Error updating job card',
-        error: error.message
-      })
+      this.handleError(res, error, 'Error updating job card');
     }
   }
 
@@ -1298,11 +1360,7 @@ class ProductionController {
         data: result
       })
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: 'Error updating job card status',
-        error: error.message
-      })
+      this.handleError(res, error, 'Error updating job card status');
     }
   }
 
@@ -1379,7 +1437,8 @@ class ProductionController {
 
   async getWorkstations(req, res) {
     try {
-      const workstations = await this.productionModel.getWorkstations()
+      const { date, shift, exclude_job_card_id } = req.query
+      const workstations = await this.productionModel.getWorkstations({ date, shift, exclude_job_card_id })
       res.status(200).json({
         success: true,
         data: workstations,
@@ -2023,7 +2082,7 @@ class ProductionController {
         notes,
         dispatch_quantity,
         items,
-        created_by: req.user?.id || 'system'
+        created_by: req.user?.user_id || 'system'
       })
 
       res.status(201).json({
@@ -2085,7 +2144,7 @@ class ProductionController {
         quantity_accepted,
         quantity_rejected,
         notes,
-        created_by: req.user?.id || 'system'
+        created_by: req.user?.user_id || 'system'
       })
 
       res.status(201).json({
@@ -2226,7 +2285,7 @@ class ProductionController {
     try {
       const { job_card_id } = req.params;
       const { items, outward_challan_id } = req.body;
-      const result = await this.productionModel.handleSubcontractDispatch(job_card_id, req.user?.id || 1, items, outward_challan_id);
+      const result = await this.productionModel.handleSubcontractDispatch(job_card_id, req.user?.user_id || 1, items, outward_challan_id);
       res.status(200).json({
         success: true,
         message: 'Job card dispatched to vendor successfully',
@@ -2257,7 +2316,7 @@ class ProductionController {
         received_qty: parseFloat(received_qty),
         accepted_qty: parseFloat(accepted_qty),
         rejected_qty: parseFloat(rejected_qty)
-      }, req.user?.id || 1);
+      }, req.user?.user_id || 1);
 
       res.status(200).json({
         success: true,
@@ -2361,8 +2420,8 @@ class ProductionController {
           items_notes, status, production_plan_id, created_by) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [mr_id, `MR-${Date.now().toString().slice(-6)}`, new Date().toISOString().split('T')[0], 
-         req.user?.id || 1, 'Production', 'material_issue', new Date().toISOString().split('T')[0],
-         null, null, null, `For Job Card: ${job_card_id}`, 'draft', production_plan_id, req.user?.id || 1]
+         req.user?.user_id || 1, 'Production', 'material_issue', new Date().toISOString().split('T')[0],
+         null, null, null, `For Job Card: ${job_card_id}`, 'draft', production_plan_id, req.user?.user_id || 1]
       );
 
       for (const item of mrItems) {
@@ -2470,6 +2529,85 @@ class ProductionController {
       res.status(500).json({
         success: false,
         message: 'Error validating job card start',
+        error: error.message
+      });
+    }
+  }
+
+  async getAvailableSlots(req, res) {
+    try {
+      const { machine_id } = req.params;
+      const { date } = req.query;
+
+      if (!machine_id || !date) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required parameters: machine_id, date'
+        });
+      }
+
+      const slots = await this.productionModel.getAvailableSlots(machine_id, date);
+      res.status(200).json({
+        success: true,
+        data: slots
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching available slots',
+        error: error.message
+      });
+    }
+  }
+
+  async suggestSlot(req, res) {
+    try {
+      const { machine_id } = req.params;
+      const { duration, date } = req.query;
+
+      if (!machine_id || !duration) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required parameters: machine_id, duration'
+        });
+      }
+
+      const slot = await this.productionModel.suggestSlot(machine_id, parseFloat(duration), date);
+      res.status(200).json({
+        success: true,
+        data: slot
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error suggesting slot',
+        error: error.message
+      });
+    }
+  }
+
+  async requestResourceNotification(req, res) {
+    try {
+      const { resource_type, resource_id } = req.body;
+      const userId = req.user?.user_id;
+
+      if (!resource_type || !resource_id || !userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: resource_type, resource_id, user_id'
+        });
+      }
+
+      await this.productionModel.requestResourceNotification(userId, resource_type, resource_id);
+      
+      res.status(200).json({
+        success: true,
+        message: 'Notification request saved successfully'
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error requesting resource notification',
         error: error.message
       });
     }

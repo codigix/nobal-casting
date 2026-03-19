@@ -9,9 +9,9 @@ export class ProductionPlanningModel {
       const today = new Date().toISOString().split('T')[0]
       
       await this.db.execute(
-        `INSERT INTO production_plan (plan_id, naming_series, company, sales_order_id, status, bom_id, plan_date, week_number, planned_by_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [planId, data.naming_series || 'PP', data.company || '', data.sales_order_id || null, data.status || 'draft', data.bom_id || null, data.plan_date || today, data.week_number || null, data.planned_by_id || null]
+        `INSERT INTO production_plan (plan_id, naming_series, company, sales_order_id, status, bom_id, plan_date, expected_completion_date, week_number, planned_by_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [planId, data.naming_series || 'PP', data.company || '', data.sales_order_id || null, data.status || 'draft', data.bom_id || null, data.plan_date || today, data.expected_completion_date || null, data.week_number || null, data.planned_by_id || null]
       )
 
       return { plan_id: planId }
@@ -23,10 +23,11 @@ export class ProductionPlanningModel {
   async getPlanById(plan_id) {
     try {
       const [plans] = await this.db.execute(
-        `SELECT pp.*, i.name as bom_product_name, b.item_code as bom_item_code 
+        `SELECT pp.*, i.name as bom_product_name, b.item_code as bom_item_code, sso.project_name 
          FROM production_plan pp
          LEFT JOIN bom b ON pp.bom_id = b.bom_id
          LEFT JOIN item i ON b.item_code = i.item_code
+         LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
          WHERE pp.plan_id = ?`,
         [plan_id]
       )
@@ -150,10 +151,11 @@ export class ProductionPlanningModel {
   async getAllPlans() {
     try {
       const [plans] = await this.db.execute(
-        `SELECT pp.*, i.name as bom_product_name, b.item_code as bom_item_code 
+        `SELECT pp.*, i.name as bom_product_name, b.item_code as bom_item_code, sso.project_name 
          FROM production_plan pp
          LEFT JOIN bom b ON pp.bom_id = b.bom_id
          LEFT JOIN item i ON b.item_code = i.item_code
+         LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
          ORDER BY pp.created_at DESC`
       )
       
@@ -283,8 +285,8 @@ export class ProductionPlanningModel {
       if (existing.length === 0) {
         const today = new Date().toISOString().split('T')[0]
         const insertQuery = `INSERT INTO production_plan 
-          (plan_id, naming_series, company, sales_order_id, status, bom_id, plan_date, week_number, planned_by_id)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          (plan_id, naming_series, company, sales_order_id, status, bom_id, plan_date, expected_completion_date, week_number, planned_by_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         
         await this.db.execute(insertQuery, [
           plan_id,
@@ -294,6 +296,7 @@ export class ProductionPlanningModel {
           data.status || 'draft',
           data.bom_id || null,
           data.plan_date || today,
+          data.expected_completion_date || null,
           data.week_number || null,
           data.planned_by_id || null
         ])
@@ -310,6 +313,7 @@ export class ProductionPlanningModel {
       if (data.status !== undefined) { fields.push('status = ?'); values.push(data.status) }
       if (data.bom_id !== undefined) { fields.push('bom_id = ?'); values.push(data.bom_id) }
       if (data.plan_date !== undefined) { fields.push('plan_date = ?'); values.push(data.plan_date) }
+      if (data.expected_completion_date !== undefined) { fields.push('expected_completion_date = ?'); values.push(data.expected_completion_date) }
       if (data.week_number !== undefined) { fields.push('week_number = ?'); values.push(data.week_number) }
       if (data.planned_by_id !== undefined) { fields.push('planned_by_id = ?'); values.push(data.planned_by_id) }
 

@@ -32,7 +32,7 @@ export default function MaterialRequests() {
   const [viewMode, setViewMode] = useState('table')
   const [showColumnMenu, setShowColumnMenu] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState(new Set([
-    'mr_id', 'requested_by_name', 'department', 'status', 'required_by_date', 'stock_availability', 'actions'
+    'mr_id', 'project_name', 'requested_by_name', 'department', 'status', 'required_by_date', 'stock_availability', 'actions'
   ]))
 
   const checkItemsAvailability = useCallback(async (requestsList) => {
@@ -148,6 +148,7 @@ export default function MaterialRequests() {
     return requests.filter(r => {
       const matchesSearch = !searchQuery || 
         r.mr_id?.toString().toLowerCase().includes(searchQuery.toLowerCase()) || 
+        r.project_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.requested_by_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.department?.toLowerCase().includes(searchQuery.toLowerCase())
       
@@ -182,6 +183,11 @@ export default function MaterialRequests() {
       key: 'mr_id',
       label: 'ID',
       render: (val) => <span className=" text-neutral-900 dark:text-white  tracking-wider">MR-{val}</span>
+    },
+    {
+      key: 'project_name',
+      label: 'Project',
+      render: (val) => <span className="text-neutral-900 dark:text-white font-medium">{val || 'N/A'}</span>
     },
     {
       key: 'requested_by_name',

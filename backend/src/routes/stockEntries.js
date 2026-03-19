@@ -1,7 +1,11 @@
 import express from 'express'
 import * as StockEntryController from '../controllers/StockEntryController.js'
+import authMiddleware from '../middleware/authMiddleware.js'
 
 const router = express.Router()
+
+// Apply authMiddleware to all routes
+router.use(authMiddleware)
 
 // Stock Entry routes
 router.get('/', StockEntryController.getAllStockEntries)

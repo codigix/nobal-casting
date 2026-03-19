@@ -95,7 +95,7 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
     >
       <div className="flex items-center gap-4">
         <div className={`p-2 rounded  transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
-          <Icon size={20} strokeWidth={2.5} />
+          <Icon size={15} strokeWidth={2.5} />
         </div>
         <div>
           <h2 className="text-xs  flex items-center gap-3">
