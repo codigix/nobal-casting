@@ -21,7 +21,7 @@ export default function Layout({ children }) {
     <div className="flex h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* Sidebar */}
       <aside className={`sidebar ${sidebarOpen ? 'w-64' : 'w-20'} transition-all duration-300`} style={{ backgroundColor: 'var(--sidebar-bg)', color: 'var(--sidebar-text)' }}>
-        <div className="p-4 flex items-center justify-between">
+        <div className="p-2 flex items-center justify-between">
           <h1 className="text-xl ">ERP</h1>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}

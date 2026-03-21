@@ -1276,7 +1276,7 @@ class ProductionController {
         status, notes,
         execution_mode, vendor_id, subcontract_status, sent_qty, received_qty, 
         accepted_qty, rejected_qty, scrap_quantity, accepted_quantity, rejected_quantity: rejQty,
-        transfer_to_next_op
+        transfer_to_next_op, next_job_card_id, next_operator_id, next_machine_id, next_warehouse_id
       } = req.body
 
       if (status) {
@@ -1308,7 +1308,10 @@ class ProductionController {
         rejected_qty,
         scrap_quantity,
         accepted_quantity,
-        transfer_to_next_op: transfer_to_next_op === true || transfer_to_next_op === 'true'
+        transfer_to_next_op: transfer_to_next_op === true || transfer_to_next_op === 'true',
+        next_job_card_id,
+        next_operator_id,
+        next_machine_id: next_machine_id || next_warehouse_id // Handle both naming conventions
       })
 
       if (success) {
@@ -1646,7 +1649,9 @@ class ProductionController {
         workstation_name, 
         shift, 
         from_time, 
+        from_period,
         to_time, 
+        to_period,
         completed_qty, 
         accepted_qty, 
         rejected_qty, 
@@ -1672,7 +1677,9 @@ class ProductionController {
         workstation_name,
         shift,
         from_time,
+        from_period,
         to_time,
+        to_period,
         completed_qty,
         accepted_qty,
         rejected_qty,
@@ -1872,7 +1879,7 @@ class ProductionController {
 
   async createDowntime(req, res) {
     try {
-      const { job_card_id, day_number, log_date, shift, downtime_type, downtime_reason, from_time, to_time, duration_minutes } = req.body
+      const { job_card_id, day_number, log_date, shift, downtime_type, downtime_reason, from_time, from_period, to_time, to_period, duration_minutes } = req.body
 
       if (!job_card_id || !downtime_type || !from_time || !to_time) {
         return res.status(400).json({
@@ -1889,7 +1896,9 @@ class ProductionController {
         downtime_type,
         downtime_reason,
         from_time,
+        from_period,
         to_time,
+        to_period,
         duration_minutes
       })
 

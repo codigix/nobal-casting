@@ -4,28 +4,25 @@ export class CustomerModel {
   }
 
   async create(data) {
-    const customer_id = `CUST-${Date.now()}`
+    const customer_id = data.customer_id || `CUST-${Date.now()}`
 
     try {
       await this.db.execute(
-        `INSERT INTO customer 
-         (customer_id, name, customer_type, customer_group, gstin, contact_person_id, address_id, 
-          billing_address_id, shipping_address_id, pan, credit_limit, payment_terms_days, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO selling_customer 
+         (customer_id, name, customer_type, email, phone, gstin, billing_address, shipping_address, credit_limit, status, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           customer_id,
           data.name,
           data.customer_type || 'other',
-          data.customer_group || null,
+          data.email || null,
+          data.phone || null,
           data.gstin || null,
-          data.contact_person_id || null,
-          data.address_id || null,
-          data.billing_address_id || null,
-          data.shipping_address_id || null,
-          data.pan || null,
+          data.billing_address || null,
+          data.shipping_address || null,
           data.credit_limit || 0,
-          data.payment_terms_days || 30,
-          data.is_active !== undefined ? data.is_active : 1
+          data.status || 'active',
+          data.created_by || 'system'
         ]
       )
 
@@ -38,7 +35,7 @@ export class CustomerModel {
   async getById(customerId) {
     try {
       const [rows] = await this.db.execute(
-        `SELECT * FROM customer WHERE customer_id = ? AND deleted_at IS NULL`,
+        `SELECT * FROM selling_customer WHERE customer_id = ? AND deleted_at IS NULL`,
         [customerId]
       )
       return rows[0] || null
@@ -49,20 +46,16 @@ export class CustomerModel {
 
   async getAll(filters) {
     try {
-      let query = 'SELECT * FROM customer WHERE deleted_at IS NULL'
+      let query = 'SELECT * FROM selling_customer WHERE deleted_at IS NULL'
       const params = []
 
       if (filters.name) {
         query += ' AND name LIKE ?'
         params.push(`%${filters.name}%`)
       }
-      if (filters.customer_group) {
-        query += ' AND customer_group = ?'
-        params.push(filters.customer_group)
-      }
-      if (filters.is_active !== undefined) {
-        query += ' AND is_active = ?'
-        params.push(filters.is_active)
+      if (filters.status) {
+        query += ' AND status = ?'
+        params.push(filters.status)
       }
 
       query += ' ORDER BY created_at DESC'
@@ -77,18 +70,22 @@ export class CustomerModel {
 
   async update(customerId, data) {
     try {
+      const allowedFields = ['name', 'customer_type', 'email', 'phone', 'gstin', 'billing_address', 'shipping_address', 'credit_limit', 'status', 'updated_by']
       const updates = Object.keys(data)
-        .filter(key => key !== 'customer_id')
+        .filter(key => allowedFields.includes(key))
         .map(key => `${key} = ?`)
         .join(', ')
 
-      const values = Object.values(data).filter((_, idx) => Object.keys(data)[idx] !== 'customer_id')
+      const values = Object.keys(data)
+        .filter(key => allowedFields.includes(key))
+        .map(key => data[key])
+      
+      if (!updates) return { customer_id: customerId, ...data }
+      
       values.push(customerId)
 
-      if (!updates) return { customer_id: customerId, ...data }
-
       await this.db.execute(
-        `UPDATE customer SET ${updates}, updated_at = NOW() WHERE customer_id = ? AND deleted_at IS NULL`,
+        `UPDATE selling_customer SET ${updates}, updated_at = NOW() WHERE customer_id = ? AND deleted_at IS NULL`,
         values
       )
 
@@ -101,7 +98,7 @@ export class CustomerModel {
   async delete(customerId) {
     try {
       await this.db.execute(
-        `UPDATE customer SET deleted_at = NOW() WHERE customer_id = ?`,
+        `UPDATE selling_customer SET deleted_at = NOW(), status = 'inactive' WHERE customer_id = ?`,
         [customerId]
       )
       return { message: 'Customer deleted successfully' }

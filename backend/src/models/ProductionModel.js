@@ -3812,15 +3812,18 @@ async deleteAllBOMRawMaterials(bom_id) {
       if (currentJC.length === 0) return;
       const jcDetails = currentJC[0];
 
-      // 1. Get all time logs for this job card
+      // 1. Get all time logs for this job card (Join with operator_master to get valid operator_id)
       const [timeLogs] = await this.db.query(
-        'SELECT completed_qty, rejected_qty, scrap_qty, shift, log_date, day_number, time_in_minutes FROM time_log WHERE job_card_id = ?',
+        `SELECT tl.completed_qty, tl.rejected_qty, tl.scrap_qty, tl.shift, tl.log_date, tl.day_number, tl.time_in_minutes, tl.employee_id, om.operator_id 
+         FROM time_log tl
+         LEFT JOIN operator_master om ON tl.employee_id = om.employee_id
+         WHERE tl.job_card_id = ?`,
         [jobCardId]
       );
 
       // 2. Get all rejection entries for this job card
       const [rejections] = await this.db.query(
-        'SELECT rejected_qty, scrap_qty, accepted_qty, shift, log_date, day_number, status FROM rejection_entry WHERE job_card_id = ?',
+        'SELECT rejected_qty, scrap_qty, accepted_qty, shift, log_date, day_number, status, rejection_reason FROM rejection_entry WHERE job_card_id = ?',
         [jobCardId]
       );
 
@@ -3832,7 +3835,7 @@ async deleteAllBOMRawMaterials(bom_id) {
 
       // 4. Get all production entries for this job card
       const [prodEntries] = await this.db.query(
-        'SELECT quantity_produced, accepted_quantity, quantity_rejected, scrap_quantity, shift_no, entry_date FROM production_entry WHERE job_card_id = ?',
+        'SELECT entry_id, quantity_produced, accepted_quantity, quantity_rejected, scrap_quantity, shift_no, entry_date, hours_worked, operator_id, remarks FROM production_entry WHERE job_card_id = ?',
         [jobCardId]
       );
 
@@ -3850,7 +3853,8 @@ async deleteAllBOMRawMaterials(bom_id) {
           rejectionProduced: 0, rejectionRejected: 0, rejectionScrap: 0, rejectionAccepted: 0, 
           prodEntryProduced: 0, prodEntryAccepted: 0, prodEntryRejected: 0, prodEntryScrap: 0, 
           hoursWorked: 0,
-          operator_id: log.employee_id,
+          operator_id: log.operator_id || null,
+          hasSourceData: true,
           isInferred: false 
         };
         shifts[key].produced += parseFloat(log.completed_qty) || 0;
@@ -3878,16 +3882,19 @@ async deleteAllBOMRawMaterials(bom_id) {
             prodEntryProduced: 0, prodEntryAccepted: 0, prodEntryRejected: 0, prodEntryScrap: 0, 
             hoursWorked: 0,
             operator_id: null,
+            hasSourceData: true,
             isInferred: true 
           };
+        } else {
+          shifts[key].hasSourceData = true;
         }
         
         shifts[key].rejectionProduced += entryProduced;
 
         if (rej.status === 'Approved') {
+          shifts[key].rejectionAccepted += aQty;
           shifts[key].rejectionRejected += rQty;
           shifts[key].rejectionScrap += sQty;
-          shifts[key].rejectionAccepted += aQty;
         }
       });
 
@@ -3896,6 +3903,8 @@ async deleteAllBOMRawMaterials(bom_id) {
         const shiftStr = entry.shift_no === 2 ? 'B' : (entry.shift_no === 3 ? 'C' : 'A');
         const key = `${dateStr}_${shiftStr}`;
         
+        const isAuto = entry.remarks && entry.remarks.includes('Auto-synced');
+
         if (!shifts[key]) {
           shifts[key] = { 
             date: dateStr, 
@@ -3905,8 +3914,11 @@ async deleteAllBOMRawMaterials(bom_id) {
             prodEntryProduced: 0, prodEntryAccepted: 0, prodEntryRejected: 0, prodEntryScrap: 0, 
             hoursWorked: parseFloat(entry.hours_worked) || 0,
             operator_id: entry.operator_id,
+            hasSourceData: !isAuto, // If it's manual, it is its own source data
             isInferred: false 
           };
+        } else {
+          if (!isAuto) shifts[key].hasSourceData = true;
         }
         
         shifts[key].prodEntryProduced += parseFloat(entry.quantity_produced) || 0;
@@ -3915,7 +3927,6 @@ async deleteAllBOMRawMaterials(bom_id) {
         shifts[key].prodEntryScrap += parseFloat(entry.scrap_quantity) || 0;
 
         // Track manual vs auto-synced production entries
-        const isAuto = entry.remarks && entry.remarks.includes('Auto-synced');
         if (!isAuto) {
           if (!shifts[key].manual) shifts[key].manual = { produced: 0, accepted: 0, rejected: 0, scrap: 0 };
           shifts[key].manual.produced += parseFloat(entry.quantity_produced) || 0;
@@ -4021,10 +4032,12 @@ async deleteAllBOMRawMaterials(bom_id) {
       // For each shift, ensure there is a production_entry record representing the latest aggregated data
       
       // Delete production entries that are no longer valid (shifts that no longer have data from any source)
-      const validShiftEntries = Object.values(shifts).map(s => {
-        const shiftNo = s.shift === 'B' ? 2 : (s.shift === 'C' ? 3 : 1);
-        return `('${s.date}', ${shiftNo})`;
-      });
+      const validShiftEntries = Object.values(shifts)
+        .filter(s => s.hasSourceData) // ONLY shifts with actual log/rejection/manual data are valid
+        .map(s => {
+          const shiftNo = s.shift === 'B' ? 2 : (s.shift === 'C' ? 3 : 1);
+          return `('${s.date}', ${shiftNo})`;
+        });
 
       if (validShiftEntries.length > 0) {
         await this.db.query(
@@ -4113,7 +4126,17 @@ async deleteAllBOMRawMaterials(bom_id) {
 
         // 4.1 Transfer Batch Logic (Overlapping Operations)
         // This allows partial quantities to flow to the next operation immediately
-        // We ALWAYS sync quantities to the next operation within the same WO to ensure flow
+        
+        // ALWAYS use the latest transferred_quantity from the DB to calculate delta
+        const [freshJC] = await this.db.query('SELECT transferred_quantity, status FROM job_card WHERE job_card_id = ?', [jobCardId]);
+        const currentTransferred = parseFloat(freshJC[0]?.transferred_quantity || 0);
+
+        // Formula: transferable_qty = current_operation.accepted_qty − current_operation.transferred_qty
+        let transferableQty = totalAccepted - currentTransferred;
+
+        // If we have deleted production, we must reverse the transfer
+        const isReduction = transferableQty < 0;
+
         let next;
         if (nextJobCardId) {
           const [rows] = await this.db.query(
@@ -4133,48 +4156,43 @@ async deleteAllBOMRawMaterials(bom_id) {
           if (nextJCs && nextJCs.length > 0) next = nextJCs[0];
         }
 
-        if (next) {
-          // Use the latest transferred_quantity from the DB to calculate delta
-          const [freshJC] = await this.db.query('SELECT transferred_quantity FROM job_card WHERE job_card_id = ?', [jobCardId]);
-          const currentTransferred = parseFloat(freshJC[0]?.transferred_quantity || 0);
-
-          // Formula: transferable_qty = current_operation.accepted_qty − current_operation.transferred_qty
-          const transferableQty = totalAccepted - currentTransferred;
-
+        if (next || isReduction) {
           if (transferableQty !== 0) {
             // 1. Update current job card's transferred_quantity
             await this.db.query(
-              'UPDATE job_card SET transferred_quantity = COALESCE(transferred_quantity, 0) + ? WHERE job_card_id = ?',
+              'UPDATE job_card SET transferred_quantity = GREATEST(0, COALESCE(transferred_quantity, 0) + ?), updated_at = NOW() WHERE job_card_id = ?',
               [transferableQty, jobCardId]
             );
 
-            // 2. Adjust next job card's planned_quantity
-            const nextUpdateFields = ['planned_quantity = GREATEST(0, planned_quantity + ?)'];
-            const nextUpdateValues = [transferableQty];
+            // 2. Adjust next job card's planned_quantity if it exists
+            if (next) {
+              const nextUpdateFields = ['planned_quantity = GREATEST(0, planned_quantity + ?)', 'updated_at = NOW()'];
+              const nextUpdateValues = [transferableQty];
 
-            if (nextOperatorId) {
-              nextUpdateFields.push('operator_id = ?');
-              nextUpdateValues.push(nextOperatorId);
-            }
-            if (nextMachineId) {
-              nextUpdateFields.push('machine_id = ?');
-              nextUpdateValues.push(nextMachineId);
-            }
-
-            // If it was draft/ready/open and we now have available items, move it to ready or in-progress
-            const nextStatusNorm = this._normalizeStatus(next.status);
-            if (['draft', 'open', 'pending'].includes(nextStatusNorm)) {
-              if (transferableQty > 0) {
-                nextUpdateFields.push('status = ?');
-                nextUpdateValues.push('ready');
+              if (nextOperatorId) {
+                nextUpdateFields.push('operator_id = ?');
+                nextUpdateValues.push(nextOperatorId);
               }
-            }
+              if (nextMachineId) {
+                nextUpdateFields.push('machine_id = ?');
+                nextUpdateValues.push(nextMachineId);
+              }
 
-            nextUpdateValues.push(next.job_card_id);
-            await this.db.query(
-              `UPDATE job_card SET ${nextUpdateFields.join(', ')} WHERE job_card_id = ?`,
-              nextUpdateValues
-            );
+              // If it was draft/ready/open and we now have available items, move it to ready or in-progress
+              const nextStatusNorm = this._normalizeStatus(next.status);
+              if (['draft', 'open', 'pending'].includes(nextStatusNorm)) {
+                if (transferableQty > 0) {
+                  nextUpdateFields.push('status = ?');
+                  nextUpdateValues.push('ready');
+                }
+              }
+
+              nextUpdateValues.push(next.job_card_id);
+              await this.db.query(
+                `UPDATE job_card SET ${nextUpdateFields.join(', ')} WHERE job_card_id = ?`,
+                nextUpdateValues
+              );
+            }
           }
         } else {
           // No next job card in same WO - Check for Parent WO dependency
@@ -4237,7 +4255,9 @@ async deleteAllBOMRawMaterials(bom_id) {
 
       // 6. Trigger OEE Recalculation
       for (const s of Object.values(shifts)) {
-        await this._triggerOEERecalculation(jobCardId, s.date, s.shift);
+        if (s.hasSourceData) {
+          await this._triggerOEERecalculation(jobCardId, s.date, s.shift);
+        }
       }
 
       return { totalProduced, totalRejected, totalAccepted, totalScrap };
@@ -4569,31 +4589,28 @@ async deleteAllBOMRawMaterials(bom_id) {
         `SELECT 
           COALESCE((SELECT SUM(completed_qty) FROM time_log WHERE job_card_id = ?), 0) as total_time_log_produced,
           COALESCE((SELECT SUM(accepted_qty + rejected_qty + scrap_qty) FROM rejection_entry WHERE job_card_id = ?), 0) as total_rejection_produced,
-          COALESCE((SELECT SUM(quantity_received) FROM inward_challan WHERE job_card_id = ?), 0) as total_challan_produced`,
-        [data.job_card_id, data.job_card_id, data.job_card_id]
+          COALESCE((SELECT SUM(quantity_received) FROM inward_challan WHERE job_card_id = ?), 0) as total_challan_produced,
+          COALESCE((SELECT SUM(rejected_qty + scrap_qty) FROM rejection_entry WHERE job_card_id = ?), 0) as total_rejected_and_scrap`,
+        [data.job_card_id, data.job_card_id, data.job_card_id, data.job_card_id]
       );
       
       const totalTimeLogProduced = parseFloat(existingTotals[0].total_time_log_produced);
       const totalRejectionProduced = parseFloat(existingTotals[0].total_rejection_produced);
       const totalChallanProduced = parseFloat(existingTotals[0].total_challan_produced);
+      const totalRejectedAndScrap = parseFloat(existingTotals[0].total_rejected_and_scrap);
       
       const currentTotalProduced = Math.max(totalTimeLogProduced + totalChallanProduced, totalRejectionProduced);
       const newTotalProduced = Math.max(totalTimeLogProduced + totalChallanProduced + newQty, totalRejectionProduced);
       
-      const tolerance = 0.001; // 0.1% tolerance to allow for rounding errors only
-      if (newTotalProduced > (maxAllowed * (1 + tolerance)) + 0.0001) {
-        const prevOpDetails = await this.db.query(
-          'SELECT operation, accepted_quantity FROM job_card WHERE work_order_id = ? AND operation_sequence < ? ORDER BY operation_sequence DESC LIMIT 1',
-          [currentJobCard.work_order_id, currentJobCard.operation_sequence]
-        );
-        
-        let extraInfo = '';
-        if (prevOpDetails[0] && prevOpDetails[0].length > 0) {
-          const prev = prevOpDetails[0][0];
-          extraInfo = ` This is capped by the accepted quantity (${parseFloat(prev.accepted_quantity).toFixed(2)}) from the previous operation (${prev.operation}).`;
-        }
-
-      throw new Error(`Quantity Validation Error: Total production (${newTotalProduced.toFixed(2)}) would exceed allowed limit (${maxAllowed.toFixed(2)}).${extraInfo} Please ensure previous stages are fully accepted and approved.`);
+      // LOOSE VALIDATION FOR TIME LOGS:
+      // We allow Time Logs to exceed maxAllowed as long as they don't exceed a reasonable buffer (e.g. 1.5x)
+      // The strict validation will happen in createRejection/Quality Inspection on the ACCEPTED quantity.
+      const productionBuffer = 1.5; 
+      const effectiveMaxAllowed = maxAllowed + totalRejectedAndScrap;
+      
+      const tolerance = 0.001; 
+      if (newTotalProduced > (effectiveMaxAllowed * productionBuffer) + 0.0001) {
+        throw new Error(`Quantity Validation Error: Excessive production (${newTotalProduced.toFixed(2)}) detected. Allowed target is ${maxAllowed.toFixed(2)}. Please ensure you are not double-logging for Job Card ${data.job_card_id}.`);
       }
 
       // Convert times to 24-hour format for database storage and overlap detection
@@ -4782,23 +4799,18 @@ async deleteAllBOMRawMaterials(bom_id) {
       // Calculate how much this entry would increase total production
       const [existingTotals] = await this.db.query(
         `SELECT 
-          COALESCE((SELECT SUM(completed_qty) FROM time_log WHERE job_card_id = ?), 0) as total_time_log_produced,
-          COALESCE((SELECT SUM(accepted_qty + rejected_qty + scrap_qty) FROM rejection_entry WHERE job_card_id = ?), 0) as total_rejection_produced,
-          COALESCE((SELECT SUM(quantity_received) FROM inward_challan WHERE job_card_id = ?), 0) as total_challan_produced`,
+          COALESCE((SELECT SUM(accepted_qty) FROM rejection_entry WHERE job_card_id = ?), 0) as total_rejection_accepted,
+          COALESCE((SELECT SUM(quantity_accepted) FROM inward_challan WHERE job_card_id = ?), 0) as total_challan_accepted,
+          COALESCE((SELECT SUM(rejected_qty + scrap_qty) FROM rejection_entry WHERE job_card_id = ?), 0) as total_rejected_and_scrap`,
         [data.job_card_id, data.job_card_id, data.job_card_id]
       );
       
-      const totalTimeLogProduced = parseFloat(existingTotals[0].total_time_log_produced);
-      const totalRejectionProduced = parseFloat(existingTotals[0].total_rejection_produced);
-      const totalChallanProduced = parseFloat(existingTotals[0].total_challan_produced);
+      const totalAcceptedSoFar = parseFloat(existingTotals[0].total_rejection_accepted) + parseFloat(existingTotals[0].total_challan_accepted);
+      const enteringAccepted = parseFloat(data.accepted_qty) || 0;
+      const newTotalAccepted = totalAcceptedSoFar + enteringAccepted;
       
-      const enteringProduced = (parseFloat(data.accepted_qty) || 0) + (parseFloat(data.rejected_qty) || 0) + (parseFloat(data.scrap_qty) || 0);
-      
-      const currentTotalProduced = Math.max(totalTimeLogProduced + totalChallanProduced, totalRejectionProduced);
-      const newTotalProduced = Math.max(totalTimeLogProduced + totalChallanProduced, totalRejectionProduced + enteringProduced);
-      
-      const tolerance = 0.001; // 0.1% tolerance to allow for rounding errors only
-      if (newTotalProduced > (maxAllowed * (1 + tolerance)) + 0.0001) {
+      const tolerance = 0.001; 
+      if (newTotalAccepted > (maxAllowed * (1 + tolerance)) + 0.0001) {
         const prevOpDetails = await this.db.query(
           'SELECT operation, accepted_quantity FROM job_card WHERE work_order_id = ? AND operation_sequence < ? ORDER BY operation_sequence DESC LIMIT 1',
           [currentJobCard.work_order_id, currentJobCard.operation_sequence]
@@ -4810,7 +4822,7 @@ async deleteAllBOMRawMaterials(bom_id) {
           extraInfo = ` This is capped by the accepted quantity (${parseFloat(prev.accepted_quantity).toFixed(2)}) from the previous operation (${prev.operation}).`;
         }
 
-        throw new Error(`Quantity Validation Error: Total production (${newTotalProduced.toFixed(2)}) would exceed allowed limit (${maxAllowed.toFixed(2)}).${extraInfo} Please ensure previous stages are fully accepted and approved.`);
+        throw new Error(`Quantity Validation Error: Total accepted quantity (${newTotalAccepted.toFixed(2)}) would exceed target limit (${maxAllowed.toFixed(2)}).${extraInfo} Please adjust rejected quantities to match the original job card target.`);
       }
 
       const rejectionId = `REJ-${Date.now()}`
@@ -5466,8 +5478,16 @@ async deleteAllBOMRawMaterials(bom_id) {
         const currentJobCard = await this.getJobCardDetails(old.job_card_id);
         const currentTotalProduced = parseFloat(currentJobCard?.produced_quantity || 0);
 
-        if (currentTotalProduced + productionIncrease > maxAllowed + 0.0001) {
-          throw new Error(`Quantity Validation Error: Update would exceed allowed quantity (${maxAllowed.toFixed(2)}) based on previous operation or plan.`);
+        // Consistent with createInwardChallan: allow up to total dispatched
+        const [dispatchInfo] = await this.db.query(
+          'SELECT COALESCE(SUM(dispatch_quantity), 0) as total_dispatched FROM outward_challan WHERE job_card_id = ?',
+          [old.job_card_id]
+        );
+        const totalDispatched = parseFloat(dispatchInfo[0]?.total_dispatched || 0);
+        const effectiveMax = Math.max(maxAllowed, totalDispatched);
+
+        if (currentTotalProduced + productionIncrease > effectiveMax + 0.0001) {
+          throw new Error(`Quantity Validation Error: Update would exceed allowed quantity (${effectiveMax.toFixed(2)}) based on plan, previous production, or dispatch quantity.`);
         }
       }
 

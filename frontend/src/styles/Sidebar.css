@@ -4,7 +4,7 @@
    =========================== */
 
 .sidebar {
-  /* width: 260px; */
+  width: 230px !important;
   height: calc(100vh - 70px);
   background-color: #ffffff;
   color: #111827;

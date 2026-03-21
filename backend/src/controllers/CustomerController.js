@@ -17,7 +17,7 @@ export class CustomerController {
       }
 
       if (status) {
-        filters.is_active = status === 'active' ? 1 : status === 'inactive' ? 0 : undefined
+        filters.status = status
       }
 
       const customers = await model.getAll(filters)
@@ -27,13 +27,13 @@ export class CustomerController {
         customer_name: c.name,
         email: c.email || '',
         phone: c.phone || '',
-        address: c.address || '',
-        city: c.city || '',
-        state: c.state || '',
-        postal_code: c.postal_code || '',
-        country: c.country || '',
+        address: c.billing_address || '',
+        billing_address: c.billing_address || '',
+        shipping_address: c.shipping_address || '',
+        gstin: c.gstin || '',
+        credit_limit: c.credit_limit || 0,
         customer_type: c.customer_type || 'other',
-        status: c.is_active ? 'active' : 'inactive'
+        status: c.status || 'active'
       }))
 
       res.json({ success: true, data: mappedCustomers })
@@ -59,13 +59,12 @@ export class CustomerController {
         customer_name: customer.name,
         email: customer.email || '',
         phone: customer.phone || '',
-        address: customer.address || '',
-        city: customer.city || '',
-        state: customer.state || '',
-        postal_code: customer.postal_code || '',
-        country: customer.country || '',
+        billing_address: customer.billing_address || '',
+        shipping_address: customer.shipping_address || '',
+        gstin: customer.gstin || '',
+        credit_limit: customer.credit_limit || 0,
         customer_type: customer.customer_type || 'other',
-        status: customer.is_active ? 'active' : 'inactive'
+        status: customer.status || 'active'
       }
 
       res.json({ success: true, data: mapped })
@@ -80,14 +79,13 @@ export class CustomerController {
       const {
         customer_id,
         customer_name,
+        customer_type,
         email,
         phone,
-        address,
-        city,
-        state,
-        postal_code,
-        country,
-        customer_type,
+        billing_address,
+        shipping_address,
+        gstin,
+        credit_limit,
         status
       } = req.body
 
@@ -102,15 +100,14 @@ export class CustomerController {
       const data = {
         customer_id,
         name: customer_name,
+        customer_type: customer_type || 'other',
         email: email || null,
         phone: phone || null,
-        address: address || null,
-        city: city || null,
-        state: state || null,
-        postal_code: postal_code || null,
-        country: country || null,
-        customer_type: customer_type || 'other',
-        is_active: status === 'active' ? 1 : 0
+        billing_address: billing_address || null,
+        shipping_address: shipping_address || null,
+        gstin: gstin || null,
+        credit_limit: credit_limit || 0,
+        status: status || 'active'
       }
 
       const customer = await model.create(data)
@@ -120,13 +117,12 @@ export class CustomerController {
         customer_name: customer.name,
         email: customer.email || '',
         phone: customer.phone || '',
-        address: customer.address || '',
-        city: customer.city || '',
-        state: customer.state || '',
-        postal_code: customer.postal_code || '',
-        country: customer.country || '',
+        billing_address: customer.billing_address || '',
+        shipping_address: customer.shipping_address || '',
+        gstin: customer.gstin || '',
+        credit_limit: customer.credit_limit || 0,
         customer_type: customer.customer_type || 'other',
-        status: customer.is_active ? 'active' : 'inactive'
+        status: customer.status || 'active'
       }
 
       res.status(201).json({ success: true, data: mapped })
@@ -141,14 +137,13 @@ export class CustomerController {
       const { id } = req.params
       const {
         customer_name,
+        customer_type,
         email,
         phone,
-        address,
-        city,
-        state,
-        postal_code,
-        country,
-        customer_type,
+        billing_address,
+        shipping_address,
+        gstin,
+        credit_limit,
         status
       } = req.body
 
@@ -161,15 +156,14 @@ export class CustomerController {
 
       const updateData = {}
       if (customer_name) updateData.name = customer_name
+      if (customer_type !== undefined) updateData.customer_type = customer_type || 'other'
       if (email !== undefined) updateData.email = email || null
       if (phone !== undefined) updateData.phone = phone || null
-      if (address !== undefined) updateData.address = address || null
-      if (city !== undefined) updateData.city = city || null
-      if (state !== undefined) updateData.state = state || null
-      if (postal_code !== undefined) updateData.postal_code = postal_code || null
-      if (country !== undefined) updateData.country = country || null
-      if (customer_type !== undefined) updateData.customer_type = customer_type || 'other'
-      if (status !== undefined) updateData.is_active = status === 'active' ? 1 : 0
+      if (billing_address !== undefined) updateData.billing_address = billing_address || null
+      if (shipping_address !== undefined) updateData.shipping_address = shipping_address || null
+      if (gstin !== undefined) updateData.gstin = gstin || null
+      if (credit_limit !== undefined) updateData.credit_limit = credit_limit || 0
+      if (status !== undefined) updateData.status = status || 'active'
 
       const customer = await model.update(id, updateData)
 
@@ -178,13 +172,12 @@ export class CustomerController {
         customer_name: customer.name,
         email: customer.email || '',
         phone: customer.phone || '',
-        address: customer.address || '',
-        city: customer.city || '',
-        state: customer.state || '',
-        postal_code: customer.postal_code || '',
-        country: customer.country || '',
+        billing_address: customer.billing_address || '',
+        shipping_address: customer.shipping_address || '',
+        gstin: customer.gstin || '',
+        credit_limit: customer.credit_limit || 0,
         customer_type: customer.customer_type || 'other',
-        status: customer.is_active ? 'active' : 'inactive'
+        status: customer.status || 'active'
       }
 
       res.json({ success: true, data: mapped })

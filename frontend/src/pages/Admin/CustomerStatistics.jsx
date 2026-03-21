@@ -31,6 +31,8 @@ const DetailModal = ({ isOpen, item, onClose, detailedData, loading }) => {
   const profile = detailedData?.profile || {}
   const statusDist = detailedData?.statusDistribution || []
   const topItems = detailedData?.topItems || []
+  const mrHealth = detailedData?.mrHealth || { pending_mr: 0, approved_mr: 0, received_mr: 0 }
+  const otdRate = detailedData?.otdRate || 100
 
   const COLORS = ['#3b82f6', '#fbbf24', '#8b5cf6', '#ef4444', '#10b981', '#6366f1']
 
@@ -94,6 +96,57 @@ const DetailModal = ({ isOpen, item, onClose, detailedData, loading }) => {
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wider m-0">Avg Ticket Size</p>
                     </div>
                     <h4 className="text-2xl font-black text-slate-900 m-0">₹{item.orders > 0 ? Math.round(item.revenue / item.orders).toLocaleString() : 0}</h4>
+                  </div>
+                </div>
+
+                {/* Intelligence Layer: Supply Chain & OTD */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-slate-900 p-5 rounded-2xl text-white relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Target size={18} className="text-blue-400" />
+                          <h5 className="text-xs font-black uppercase tracking-widest m-0">Delivery Fidelity</h5>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400">OTD RATE</span>
+                      </div>
+                      <div className="flex items-end gap-3 mb-4">
+                        <h4 className="text-4xl font-black m-0">{otdRate}%</h4>
+                        <div className={`flex items-center gap-1 text-[10px] font-bold pb-1 ${otdRate >= 90 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                          {otdRate >= 90 ? 'OPTIMAL' : 'MARGINAL'}
+                        </div>
+                      </div>
+                      <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                        <div className={`h-full transition-all duration-1000 ${otdRate >= 90 ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${otdRate}%` }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <Package size={18} className="text-indigo-500" />
+                        <h5 className="text-xs font-black text-slate-900 uppercase tracking-widest m-0">Supply Chain Velocity</h5>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter mb-1">Awaiting</p>
+                        <h4 className="text-xl font-black text-slate-900 m-0">{mrHealth.pending_mr}</h4>
+                        <p className="text-[8px] font-bold text-rose-500 mt-1">Pending MR</p>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter mb-1">In Pipeline</p>
+                        <h4 className="text-xl font-black text-slate-900 m-0">{mrHealth.approved_mr}</h4>
+                        <p className="text-[8px] font-bold text-blue-500 mt-1">Approved</p>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter mb-1">Received</p>
+                        <h4 className="text-xl font-black text-slate-900 m-0">{mrHealth.received_mr}</h4>
+                        <p className="text-[8px] font-bold text-emerald-500 mt-1">Ready</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -322,7 +375,7 @@ const DetailModal = ({ isOpen, item, onClose, detailedData, loading }) => {
 export default function CustomerStatistics() {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
-  const [activeTab, setActiveTab] = useState('premium')
+  const [activeTab, setActiveTab] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
@@ -370,7 +423,9 @@ export default function CustomerStatistics() {
     </div>
   )
 
-  const currentCustomers = activeTab === 'premium' ? data.customers.premium : data.customers.regular
+  const currentCustomers = activeTab === 'all' 
+    ? [...data.customers.premium, ...data.customers.regular]
+    : activeTab === 'premium' ? data.customers.premium : data.customers.regular
   const filteredCustomers = currentCustomers.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     c.id.toString().includes(searchTerm)
@@ -400,6 +455,46 @@ export default function CustomerStatistics() {
           <button onClick={fetchStats} className="flex items-center gap-2 p-1.5 bg-blue-600 rounded text-[10px]  text-white hover:bg-blue-700 transition-all  shadow-blue-600/20">
             <Zap size={14} /> Refresh
           </button>
+        </div>
+      </div>
+
+      {/* Supply Chain Pulse Banner */}
+      <div className="bg-slate-900 rounded-xl p-4 mb-4 text-white flex flex-col md:flex-row items-center justify-between gap-6 border border-white/10 relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-blue-600/20 transition-all duration-1000" />
+        <div className="relative z-10 flex items-center gap-4">
+          <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-blue-400 border border-white/10">
+            <Zap size={24} className="animate-pulse" />
+          </div>
+          <div>
+            <h3 className="text-sm font-black m-0 tracking-widest uppercase">Global Supply Chain Pulse</h3>
+            <p className="text-[10px] text-slate-400 font-bold m-0 uppercase tracking-tighter">Real-time across {data.supplyChainHealth?.active_orders || 0} active manufacturing projects</p>
+          </div>
+        </div>
+
+        <div className="relative z-10 flex flex-wrap items-center gap-8">
+          <div className="text-center">
+            <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Pending MRs</p>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-black text-rose-400">{data.supplyChainHealth?.pending_mr || 0}</span>
+              <span className="text-[10px] bg-rose-500/10 text-rose-500 px-1.5 rounded font-black">CRITICAL</span>
+            </div>
+          </div>
+          <div className="w-px h-8 bg-white/10" />
+          <div className="text-center">
+            <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Approved MRs</p>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-black text-blue-400">{data.supplyChainHealth?.approved_mr || 0}</span>
+              <span className="text-[10px] bg-blue-500/10 text-blue-400 px-1.5 rounded font-black">ACTIVE</span>
+            </div>
+          </div>
+          <div className="w-px h-8 bg-white/10" />
+          <div className="text-center">
+            <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Received MRs</p>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-black text-emerald-400">{data.supplyChainHealth?.received_mr || 0}</span>
+              <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-1.5 rounded font-black">READY</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -460,8 +555,9 @@ export default function CustomerStatistics() {
                 />
               </div>
               <div className="flex gap-0.5 p-0.5 bg-slate-50 rounded border border-slate-200">
-                <button onClick={() => setActiveTab('premium')} className={`px-2 py-1 rounded text-[10px] transition-all font-medium ${activeTab === 'premium' ? 'bg-white text-amber-600  ' : 'text-slate-400 hover:text-slate-600'}`}>PREMIUM</button>
-                <button onClick={() => setActiveTab('regular')} className={`px-2 py-1 rounded text-[10px] transition-all font-medium ${activeTab === 'regular' ? 'bg-white text-blue-600  ' : 'text-slate-400 hover:text-slate-600'}`}>REGULAR</button>
+                <button onClick={() => setActiveTab('all')} className={`px-2 py-1 rounded text-[10px] transition-all font-medium ${activeTab === 'all' ? 'bg-white text-slate-900  shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>ALL</button>
+                <button onClick={() => setActiveTab('premium')} className={`px-2 py-1 rounded text-[10px] transition-all font-medium ${activeTab === 'premium' ? 'bg-white text-amber-600  shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>PREMIUM</button>
+                <button onClick={() => setActiveTab('regular')} className={`px-2 py-1 rounded text-[10px] transition-all font-medium ${activeTab === 'regular' ? 'bg-white text-blue-600  shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>REGULAR</button>
               </div>
             </div>
             <p className="text-[10px] text-slate-400 font-medium">{filteredCustomers.length} Entities identified</p>

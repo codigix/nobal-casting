@@ -23,7 +23,7 @@ import { AlertTriangle, Calendar as CalendarIcon, Clock, ArrowRight, Bell, Users
 const parseUTCDate = (dateStr) => {
   if (!dateStr) return null;
   if (dateStr instanceof Date) return dateStr;
-  
+
   if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
     const d = new Date(dateStr.replace(' ', 'T') + 'Z');
     if (!isNaN(d.getTime())) return d;
@@ -34,7 +34,7 @@ const parseUTCDate = (dateStr) => {
 const formatForDateTimeInput = (dateStr) => {
   if (!dateStr) return ''
   let d = new Date(dateStr)
-  
+
   if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
     // Treat string from DB as UTC if it lacks timezone info
     const utcDate = new Date(dateStr.replace(' ', 'T') + 'Z')
@@ -46,21 +46,21 @@ const formatForDateTimeInput = (dateStr) => {
   }
 
   if (isNaN(d.getTime())) return ''
-  
+
   // Convert to local time components for datetime-local input
   const year = d.getFullYear()
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   const hours = String(d.getHours()).padStart(2, '0')
   const minutes = String(d.getMinutes()).padStart(2, '0')
-  
+
   return `${year}-${month}-${day}T${hours}:${minutes}`
 }
 
 const formatToLocalDisplay = (dateStr) => {
   if (!dateStr) return 'N/A'
   let d = new Date(dateStr)
-  
+
   if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
     // Treat string from DB as UTC if it lacks timezone info
     const utcDate = new Date(dateStr.replace(' ', 'T') + 'Z')
@@ -70,15 +70,15 @@ const formatToLocalDisplay = (dateStr) => {
   } else if (dateStr instanceof Date) {
     d = dateStr;
   }
-  
+
   if (isNaN(d.getTime())) return 'N/A'
-  
+
   return d.toLocaleString('en-IN', {
     day: '2-digit',
     month: '2-digit',
-    hour: '2-digit', 
+    hour: '2-digit',
     minute: '2-digit',
-    hour12: true 
+    hour12: true
   })
 }
 
@@ -93,7 +93,7 @@ export default function JobCard() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const toast = useToast()
-  
+
   // State management
   const [jobCards, setJobCards] = useState([])
   const [loading, setLoading] = useState(true)
@@ -122,11 +122,11 @@ export default function JobCard() {
   const [inlineEditingId, setInlineEditingId] = useState(null)
   const [inlineEditData, setInlineEditData] = useState({})
   const [isInlineSaving, setIsInlineSaving] = useState(false)
-  
+
   // Pre-selection states
   const [preSelectedMachine, setPreSelectedMachine] = useState(null)
   const [preSelectedStartTime, setPreSelectedStartTime] = useState(null)
-  
+
   // Master data state
   const [workstations, setWorkstations] = useState([])
   const [operators, setOperators] = useState([])
@@ -172,7 +172,7 @@ export default function JobCard() {
       const inProgress = cards.filter(jc => (jc.status || '').toLowerCase() === 'in-progress' || (jc.status || '').toLowerCase() === 'in_progress').length
       const completed = cards.filter(jc => (jc.status || '').toLowerCase() === 'completed').length
       const total = cards.length
-      
+
       // Count unique allocated machines
       const allocatedSet = new Set()
       cards.forEach(jc => {
@@ -231,7 +231,7 @@ export default function JobCard() {
   // 3. Inline Editing Handlers
   const handleInlineEdit = useCallback((card) => {
     setInlineEditingId(card.job_card_id)
-    
+
     // Parse challan type from notes if it exists
     let challanType = ''
     let remainingNotes = card.notes || ''
@@ -266,14 +266,14 @@ export default function JobCard() {
 
   const handleInlineSave = useCallback(async (jobCardId) => {
     if (isInlineSaving) return
-    
+
     try {
       setIsInlineSaving(true)
       const currentCard = jobCards.find(c => c.job_card_id === jobCardId)
       const statusChanged = currentCard && (currentCard.status !== inlineEditData.status)
 
       const updateData = { ...inlineEditData }
-      
+
       if (!statusChanged) {
         delete updateData.status
       }
@@ -306,18 +306,18 @@ export default function JobCard() {
     } catch (err) {
       const errorData = err.response?.data;
       const errorMsg = errorData?.message || err.message || 'Failed to update job card'
-      
+
       // Check if it's a scheduling conflict error (409) or includes conflict keywords
-      const isConflict = err.response?.status === 409 || 
-                         errorData?.conflict === true ||
-                         errorMsg.toLowerCase().includes('busy') || 
-                         errorMsg.toLowerCase().includes('conflict') || 
-                         errorMsg.toLowerCase().includes('already assigned') ||
-                         errorMsg.toLowerCase().includes('already allocated') ||
-                         errorMsg.toLowerCase().includes('must start after') ||
-                         errorMsg.toLowerCase().includes('must finish before') ||
-                         errorMsg.toLowerCase().includes('sequencing error') ||
-                         errorMsg.toLowerCase().includes('engagement');
+      const isConflict = err.response?.status === 409 ||
+        errorData?.conflict === true ||
+        errorMsg.toLowerCase().includes('busy') ||
+        errorMsg.toLowerCase().includes('conflict') ||
+        errorMsg.toLowerCase().includes('already assigned') ||
+        errorMsg.toLowerCase().includes('already allocated') ||
+        errorMsg.toLowerCase().includes('must start after') ||
+        errorMsg.toLowerCase().includes('must finish before') ||
+        errorMsg.toLowerCase().includes('sequencing error') ||
+        errorMsg.toLowerCase().includes('engagement');
 
       if (isConflict) {
         const details = errorData?.details || {}
@@ -398,7 +398,7 @@ export default function JobCard() {
 
       toast.addToast('✅ Material received. Starting job card...', 'success')
       await productionService.updateJobCard(jobCardId, { status: 'in-progress' })
-      
+
       setTimeout(() => {
         navigate(`/manufacturing/job-cards/${jobCardId}/production-entry`)
       }, 500)
@@ -456,36 +456,36 @@ export default function JobCard() {
 
   const checkMachineConflict = (machineId, start, end, currentJobCardId) => {
     if (!machineId || !start || !end) return { hasConflict: false };
-    
+
     const startTime = parseUTCDate(start).getTime();
     const endTime = parseUTCDate(end).getTime();
-    
+
     if (isNaN(startTime) || isNaN(endTime)) return { hasConflict: false };
 
     const workstation = workstations.find(ws => ws.name === machineId);
     const capacity = workstation ? (workstation.parallel_capacity || 1) : 1;
-    
+
     const conflicts = jobCards.filter(jc => {
       if (jc.job_card_id === currentJobCardId) return false;
       if (jc.machine_id !== machineId) return false;
       if (['completed', 'cancelled'].includes((jc.status || '').toLowerCase())) return false;
-      
+
       const jcStart = parseUTCDate(jc.scheduled_start_date).getTime();
       const jcEnd = parseUTCDate(jc.scheduled_end_date).getTime();
-      
+
       if (isNaN(jcStart) || isNaN(jcEnd)) return false;
-      
+
       return jcStart < endTime && jcEnd > startTime;
     });
-    
+
     if (conflicts.length >= capacity) {
-      return { 
-        hasConflict: true, 
+      return {
+        hasConflict: true,
         conflict: conflicts[0],
-        message: `Machine busy with ${conflicts[0].job_card_id}` 
+        message: `Machine busy with ${conflicts[0].job_card_id}`
       };
     }
-    
+
     return { hasConflict: false };
   };
 
@@ -515,11 +515,11 @@ export default function JobCard() {
 
   const getPreviousOpEndTime = useCallback((row) => {
     if (!row.work_order_id || !row.operation_sequence) return null
-    
+
     // Find all job cards for same work order with lower sequence
     const predecessors = jobCards
-      .filter(jc => 
-        jc.work_order_id === row.work_order_id && 
+      .filter(jc =>
+        jc.work_order_id === row.work_order_id &&
         jc.operation_sequence < row.operation_sequence &&
         jc.status !== 'cancelled'
       )
@@ -601,7 +601,7 @@ export default function JobCard() {
 
         const duration = (new Date(inlineEditData.scheduled_end_date) - new Date(inlineEditData.scheduled_start_date)) / 60000
         const suggested = await productionService.suggestSlot(resourceId, { duration })
-        
+
         if (suggested?.data?.available_slots?.length > 0) {
           const slot = suggested.data.available_slots[0]
           setInlineEditData(prev => ({
@@ -674,10 +674,10 @@ export default function JobCard() {
       const now = new Date();
       const diffMs = end - now;
       if (diffMs <= 0) return "Becoming free now";
-      
+
       const diffMins = Math.ceil(diffMs / 60000);
       if (diffMins < 60) return `${diffMins} mins`;
-      
+
       const diffHours = Math.floor(diffMins / 60);
       const remainingMins = diffMins % 60;
       return `${diffHours}h ${remainingMins}m`;
@@ -692,69 +692,73 @@ export default function JobCard() {
       >
         <div className="p-2 space-y-2">
           {/* Header Engagement Section */}
-          <div className={`flex flex-col md:flex-row items-start gap-2 p-2 ${conflictModalData.conflict_with ? 'bg-indigo-50/40 border-indigo-100' : 'bg-amber-50 border-amber-100'} border rounded  overflow-hidden relative`}>
-            {/* Background Accent */}
-            <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full ${conflictModalData.conflict_with ? 'bg-indigo-500/5' : 'bg-amber-500/5'}`} />
-            
-            <div className={`flex-shrink-0 p-2 rounded ${conflictModalData.conflict_with ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-amber-100 text-amber-600'} z-10`}>
-              {conflictModalData.resource_type === 'machine' ? <Cpu size={15} strokeWidth={2.5} /> : (conflictModalData.resource_type === 'operator' ? <Users size={15} strokeWidth={2.5} /> : <AlertTriangle size={15} strokeWidth={2.5} />)}
-            </div>
+          <div className='flex gap-2'>
+            <div className={`flex flex-col items-start gap-2 p-2 ${conflictModalData.conflict_with ? 'bg-indigo-50/40 border-indigo-100' : 'bg-amber-50 border-amber-100'} border rounded  overflow-hidden relative`}>
+              {/* Background Accent */}
+              <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full ${conflictModalData.conflict_with ? 'bg-indigo-500/5' : 'bg-amber-500/5'}`} />
 
-            <div className="flex-1 z-10">
-              <div>
-                <h3 className={`${conflictModalData.conflict_with ? 'text-indigo-900' : 'text-amber-900'}  text-sm  leading-none`}>
-                  {conflictModalData.conflict_with 
-                    ? `${conflictModalData.resource_type === 'machine' ? 'Machine' : 'Operator'} is Already Engaged`
-                    : "Scheduling Sequence Alert"
-                  }
-                </h3>
-                <p className={`${conflictModalData.conflict_with ? 'text-indigo-600/80' : 'text-amber-700'} text-xs  leading-relaxed `}>
-                  {conflictModalData.conflict_with 
-                    ? `Conflict with ${conflictModalData.conflict_with} (${conflictModalData.conflict_operation || 'Operation'}) from ${formatToLocalDisplay(conflictModalData.start)} to ${formatToLocalDisplay(conflictModalData.end)}`
-                    : conflictModalData.message
-                  }
-                </p>
+              <div className={`flex-shrink-0 p-2 rounded ${conflictModalData.conflict_with ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-amber-100 text-amber-600'} z-10`}>
+                {conflictModalData.resource_type === 'machine' ? <Cpu size={15} strokeWidth={2.5} /> : (conflictModalData.resource_type === 'operator' ? <Users size={15} strokeWidth={2.5} /> : <AlertTriangle size={15} strokeWidth={2.5} />)}
               </div>
-              
-              {conflictModalData.conflict_with && (
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <div className="bg-white/90 p-2 rounded border border-indigo-100 flex items-center gap-3  group hover:border-indigo-200 transition-colors">
-                    <div className="p-1.5 bg-indigo-50 rounded text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                      <Clock size={15} />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-xs    text-indigo-400">Next available in:</span>
-                      <span className="text-xs  text-indigo-600">{getWaitTimeText(conflictModalData.end)}</span>
-                    </div>
-                  </div>
 
-                  <div className="bg-indigo-600 px-4 py-2.5 rounded flex items-center gap-3 shadow-md shadow-indigo-100 group hover:bg-indigo-700 transition-colors active:scale-95 cursor-pointer">
-                    <div className="p-1.5 bg-white/20 rounded text-white">
-                      <ClipboardList size={15} />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-xs    text-indigo-200">Engaged with:</span>
-                      <span className="text-xs  text-white">{conflictModalData.conflict_with}</span>
-                    </div>
+              <div className="flex-1 z-10">
+                <div>
+                  <h3 className={`${conflictModalData.conflict_with ? 'text-indigo-900' : 'text-amber-900'}  text-sm  leading-none`}>
+                    {conflictModalData.conflict_with
+                      ? `${conflictModalData.resource_type === 'machine' ? 'Machine' : 'Operator'} is Already Engaged`
+                      : "Scheduling Sequence Alert"
+                    }
+                  </h3>
+                  <p className={`${conflictModalData.conflict_with ? 'text-indigo-600/80' : 'text-amber-700'} text-xs  leading-relaxed `}>
+                    {conflictModalData.conflict_with
+                      ? `Conflict with ${conflictModalData.conflict_with} (${conflictModalData.conflict_operation || 'Operation'}) from ${formatToLocalDisplay(conflictModalData.start)} to ${formatToLocalDisplay(conflictModalData.end)}`
+                      : conflictModalData.message
+                    }
+                  </p>
+                </div>
+
+
+              </div>
+
+            </div>
+            {conflictModalData.conflict_with && (
+              <div className=" flex gap-3">
+                <div className="bg-white/90 p-2 rounded border border-indigo-100 flex items-center gap-3  group hover:border-indigo-200 transition-colors">
+                  <div className="p-1.5 bg-indigo-50 rounded text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    <Clock size={15} />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs    text-indigo-400">Next available in:</span>
+                    <span className="text-xs  text-indigo-600">{getWaitTimeText(conflictModalData.end)}</span>
                   </div>
                 </div>
-              )}
-            </div>
+
+                <div className="bg-indigo-600 px-4 py-2.5 rounded flex items-center gap-3 shadow-md shadow-indigo-100 group hover:bg-indigo-700 transition-colors active:scale-95 cursor-pointer">
+                  <div className="p-1.5 bg-white/20 rounded text-white">
+                    <ClipboardList size={15} />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs    text-indigo-200">Engaged with:</span>
+                    <span className="text-xs  text-white">{conflictModalData.conflict_with}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Active Job Details Section - Only show if there's a specific conflicting job */}
           {conflictModalData.conflict_with && (
             <div className="bg-white border border-slate-100 rounded  overflow-hidden">
-              <div className="bg-slate-50/50 px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="bg-slate-50/50 p-2 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white rounded border border-slate-100  text-slate-400">
-                    <ClipboardList size={18} />
+                    <ClipboardList size={15} />
                   </div>
                   <h4 className="text-xs  text-slate-500  ">Currently Engaged Job Details</h4>
                 </div>
               </div>
-              
-              <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+
+              <div className="p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 <div className="space-y-1.5">
                   <span className="text-xs text-slate-400    block">Work Order</span>
                   <p className="text-xs  text-slate-700 break-all leading-tight">
@@ -792,7 +796,7 @@ export default function JobCard() {
                 <div className="space-y-1.5">
                   <span className="text-xs text-slate-400    block">Current Status</span>
                   <div className="inline-flex mt-0.5">
-                     <StatusBadge status={conflictModalData.conflict_status} />
+                    <StatusBadge status={conflictModalData.conflict_status} />
                   </div>
                 </div>
               </div>
@@ -800,21 +804,21 @@ export default function JobCard() {
           )}
 
           {conflictModalData.conflict_with && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {/* Suggested Solution Section */}
-              <div className="space-y-5">
+              <div className="space-y-2">
                 <div className="flex items-center gap-2 px-1">
                   <Zap size={18} className="text-amber-500" />
                   <h4 className="text-sm  text-slate-800  ">Easiest Fix</h4>
                 </div>
 
-                <div className="bg-white border-2 border-indigo-100 rounded overflow-hidden  hover:shadow-xl transition-all group">
+                <div className="bg-white border border-grey-200 rounded overflow-hidden  hover: transition-all group">
                   <div className="bg-indigo-600 p-2 border-b border-indigo-100 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Zap size={15} className="text-amber-400 fill-amber-400" />
-                      <span className="text-sm  text-white  er">Automatic Reschedule</span>
+                      <span className="text-xs  text-white  er">Automatic Reschedule</span>
                     </div>
-                    <span className="text-[9px] bg-white text-indigo-600 px-2 py-0.5 rounded-md   ">Recommended</span>
+                    <span className="text-xs bg-white text-indigo-600 px-2 py-0.5 rounded-md   ">Recommended</span>
                   </div>
                   <div className="p-2 space-y-2">
                     {conflictModalData.next_available_slot ? (
@@ -822,20 +826,20 @@ export default function JobCard() {
                         <div className="flex items-center justify-between bg-indigo-50/50 p-2 rounded border border-indigo-100 group-hover:border-indigo-300 transition-colors relative overflow-hidden">
                           <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-indigo-500" />
                           <div className="text-center flex-1">
-                            <p className="text-[9px] text-indigo-400   ">Start Time</p>
-                            <p className="text-sm  text-indigo-900 mt-1.5">{formatToLocalDisplay(conflictModalData.next_available_slot.start)}</p>
+                            <p className="text-xs text-indigo-400   ">Start Time</p>
+                            <p className="text-xs  text-indigo-900 ">{formatToLocalDisplay(conflictModalData.next_available_slot.start)}</p>
                           </div>
                           <div className="px-5 text-indigo-200">
-                            <ArrowRight size={20} strokeWidth={3} />
+                            <ArrowRight size={15} strokeWidth={3} />
                           </div>
                           <div className="text-center flex-1">
-                            <p className="text-[9px] text-indigo-400   ">End Time</p>
-                            <p className="text-sm  text-indigo-900 mt-1.5">{formatToLocalDisplay(conflictModalData.next_available_slot.end)}</p>
+                            <p className="text-xs text-indigo-400   ">End Time</p>
+                            <p className="text-xs  text-indigo-900 ">{formatToLocalDisplay(conflictModalData.next_available_slot.end)}</p>
                           </div>
                         </div>
                         <button
                           onClick={handleApplyNextAvailable}
-                          className="w-full p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all text-sm  shadow-lg shadow-indigo-100 active:scale-[0.98] flex items-center justify-center gap-3 group/btn"
+                          className="w-full p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all text-xs  shadow-lg shadow-indigo-100 active:scale-[0.98] flex items-center justify-center gap-3 group/btn"
                         >
                           <CheckCircle size={15} className="group-hover/btn:scale-110 transition-transform" />
                           Update to This Slot
@@ -850,24 +854,23 @@ export default function JobCard() {
                 </div>
 
                 {/* Notification Section */}
-                <div className="bg-gradient-to-br from-indigo-900 to-indigo-800 border border-indigo-700 rounded p-2 flex items-center justify-between shadow-xl shadow-indigo-100">
-                  <div className="flex items-center gap-2">
+                <div className="bg-gradient-to-br from-indigo-900 to-indigo-800 border border-indigo-700 rounded p-2 flex items-center justify-between  shadow-indigo-100">
+                  <div className="flex items-center gap-1">
                     <div className="p-2 bg-white/10 rounded text-indigo-100 backdrop-blur-sm">
                       <Bell size={15} strokeWidth={2.5} />
                     </div>
                     <div>
                       <h5 className="text-xs  text-white leading-tight ">Don't want to wait?</h5>
-                      <p className="text-xs text-indigo-200 mt-1 font-medium">We'll alert you when it's free.</p>
+                      <p className="text-xs text-indigo-200 font-medium">We'll alert you when it's free.</p>
                     </div>
                   </div>
                   <button
                     disabled={notifyingResourceId === conflictModalData.resource_id}
                     onClick={handleNotifyWhenAvailable}
-                    className={`px-6 py-3 rounded text-xs  transition-all shadow-lg ${
-                      notifyingResourceId === conflictModalData.resource_id
+                    className={`p-2 rounded text-xs  transition-all ${notifyingResourceId === conflictModalData.resource_id
                         ? 'bg-indigo-700/50 text-indigo-300 cursor-not-allowed flex items-center gap-2'
                         : 'bg-white text-indigo-900 hover:bg-indigo-50 active:scale-95'
-                    }`}
+                      }`}
                   >
                     {notifyingResourceId === conflictModalData.resource_id ? (
                       <><CheckCircle size={14} /> Alert Set</>
@@ -883,14 +886,14 @@ export default function JobCard() {
                   <h4 className="text-sm  text-slate-800  ">Try Another {conflictModalData.resource_type === 'machine' ? 'Machine' : 'Operator'}</h4>
                 </div>
 
-                <div className="bg-slate-50 border border-slate-200 rounded p-5 min-h-[300px] flex flex-col">
+                <div className="bg-slate-50 border border-slate-200 rounded p-2 flex flex-col">
                   {conflictModalData.alternatives && conflictModalData.alternatives.length > 0 ? (
                     <div className="space-y-4 flex-1">
                       <p className="text-[11px]  text-slate-400   mb-3 px-1">
                         Free {conflictModalData.resource_type === 'machine' ? 'machines of same type' : 'operators in same dept'}
                       </p>
                       {conflictModalData.alternatives.map(alt => (
-                        <div key={alt.name} className="flex items-center justify-between bg-white p-5 rounded border border-slate-100 hover:border-indigo-300 hover:shadow-xl transition-all group">
+                        <div key={alt.name} className="flex items-center justify-between bg-white p-5 rounded border border-slate-100 hover:border-indigo-300 hover: transition-all group">
                           <div className="flex items-center gap-4">
                             <div className="p-3 bg-slate-50 rounded text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
                               {conflictModalData.resource_type === 'machine' ? <Cpu size={22} /> : <Users size={22} />}
@@ -910,27 +913,27 @@ export default function JobCard() {
                       ))}
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center flex-1 text-center space-y-4 opacity-70 py-10">
-                      <div className="p-6 bg-white rounded shadow-inner border border-slate-100">
-                        <Layers size={48} className="text-slate-200" />
+                    <div className="flex flex-col items-center justify-center flex-1 text-center space-y-2 opacity-70 p-2">
+                      <div className="p-2 bg-white rounded shadow-inner border border-slate-100">
+                        <Layers size={15} className="text-slate-200" />
                       </div>
-                      <p className="text-xs  text-slate-500 max-w-[220px] leading-relaxed">
+                      <p className="text-xs  text-slate-500 leading-relaxed">
                         No other similar {conflictModalData.resource_type === 'machine' ? 'machines' : 'operators'} are available right now.
                       </p>
                     </div>
                   )}
 
-                  <div className="mt-8 space-y-3">
+                  <div className="mt-2 space-y-2">
                     <button
                       onClick={() => setActiveTab('scheduling')}
-                      className="flex items-center justify-center gap-3 w-full p-4 bg-slate-900 text-white rounded hover:bg-slate-800 transition-all text-sm  shadow-xl shadow-slate-200 active:scale-[0.98]"
+                      className="flex items-center justify-center gap-3 w-full p-2 bg-slate-900 text-white rounded hover:bg-slate-800 transition-all text-xs   shadow-slate-200 active:scale-[0.98]"
                     >
-                      <CalendarIcon size={18} />
+                      <CalendarIcon size={15} />
                       View All Schedules
                     </button>
                     <button
                       onClick={() => { setShowConflictModal(false); setConflictModalData(null) }}
-                      className="w-full p-4 text-slate-500 bg-white border border-slate-200 rounded hover:bg-slate-50 transition-all text-xs "
+                      className="w-full p-2 text-slate-500 bg-white border border-slate-200 rounded hover:bg-slate-50 transition-all text-xs "
                     >
                       Close & Choose Time Manually
                     </button>
@@ -1055,17 +1058,17 @@ export default function JobCard() {
   }, [inlineEditingId, handleInlineSave, handleInlineCancel, handleViewJobCard, navigate, handleInlineEdit, handleDelete, handleStartJobCard, handleDispatch, handleOpenReceiptModal, isInlineSaving])
 
   const columns = useMemo(() => [
-      {
+    {
       key: 'job_card_id',
       label: 'ID / Project',
       render: (val, row) => {
         const parts = (val || '').split('-')
-        const displayId = parts.length > 4 ? `${parts[0]}-${parts[1]}-..${parts[parts.length-2].slice(-4)}-${parts[parts.length-1]}` : val
-        
+        const displayId = parts.length > 4 ? `${parts[0]}-${parts[1]}-..${parts[parts.length - 2].slice(-4)}-${parts[parts.length - 1]}` : val
+
         const woVal = row.work_order_id || ''
         const woParts = woVal.split('-')
-        const displayWoId = woParts.length >= 4 
-          ? `${woParts[0]}-${woParts[1]}-..${woParts[woParts.length-2].slice(-4)}-${woParts[woParts.length-1]}` 
+        const displayWoId = woParts.length >= 4
+          ? `${woParts[0]}-${woParts[1]}-..${woParts[woParts.length - 2].slice(-4)}-${woParts[woParts.length - 1]}`
           : woVal
 
         return (
@@ -1073,7 +1076,7 @@ export default function JobCard() {
             <span className="text-[11px] font-mono text-indigo-600 " title={`Job Card: ${val}`}>
               {displayId}
             </span>
-            {/* <span className="text-[9px] font-mono text-slate-400 " title={`Work Order: ${woVal}`}>
+            {/* <span className="text-xs font-mono text-slate-400 " title={`Work Order: ${woVal}`}>
               WO: {displayWoId}
             </span> */}
             <span className="text-xs  text-slate-700 mt-1">{row.project_name || 'No Project'}</span>
@@ -1127,7 +1130,7 @@ export default function JobCard() {
         )
       }
     },
-   
+
     {
       key: 'status',
       label: 'Status',
@@ -1162,7 +1165,7 @@ export default function JobCard() {
     //       completed: { bg: 'bg-indigo-50', text: 'text-indigo-600', label: 'Completed' }
     //     }
     //     const config = colorMap[mrStatus] || colorMap.pending
-        
+
     //     return (
     //       <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${config.bg} ${config.text}`}>
     //         {config.label}
@@ -1194,77 +1197,117 @@ export default function JobCard() {
             />
           )
         }
-        
+
         const isSubcontract = (val || '').toLowerCase() === 'outsource' || (val || '').toLowerCase() === 'subcontract'
         return (
-          <span className={`text-xs font-medium ${
-            isSubcontract 
-              ? ' text-amber-600 ' 
+          <span className={`text-xs font-medium ${isSubcontract
+              ? ' text-amber-600 '
               : ' text-blue-600 '
-          }`}>
+            }`}>
             {isSubcontract ? 'Subcontract' : 'In-house'}
           </span>
         )
       }
     },
     {
-      key: 'planned_quantity',
-      label: 'Qty To Manufacture',
-      render: (val, row) => {
+      key: 'production_metrics',
+      label: 'Production Status (P / A / T)',
+      render: (_, row) => {
+        const target = parseFloat(row.planned_quantity) || 0
+        const produced = parseFloat(row.produced_quantity) || 0
+        const accepted = parseFloat(row.accepted_quantity) || 0
+        const progress = target > 0 ? Math.min((produced / target) * 100, 100) : 0
+
         const isEditing = inlineEditingId === row.job_card_id
         if (isEditing) {
           return (
-            <div className="flex items-center gap-1">
-              <input
-                type="number"
-                value={inlineEditData.planned_quantity}
-                onChange={(e) => handleInlineInputChange('planned_quantity', e.target.value)}
-                className="w-16 text-xs border border-gray-200 rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500"
-              />
-              <span className="text-xs text-gray-400">units</span>
+            <div className="flex flex-col gap-2 p-1.5 bg-gray-50/50 rounded-lg border border-gray-100">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[10px] text-gray-500 font-semibold  tracking-wider">Target:</span>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={inlineEditData.planned_quantity}
+                    onChange={(e) => handleInlineInputChange('planned_quantity', e.target.value)}
+                    className="w-20 text-xs border border-gray-200 rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white transition-all shadow-sm"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[10px] text-emerald-600 font-semibold  tracking-wider">Accepted:</span>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={inlineEditData.accepted_quantity}
+                    onChange={(e) => handleInlineInputChange('accepted_quantity', e.target.value)}
+                    className="w-20 text-xs border border-emerald-200 rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white transition-all shadow-sm"
+                  />
+                </div>
+              </div>
             </div>
           )
         }
+
         return (
-          <div className="flex items-baseline gap-1">
-            <span className="text-xs  text-gray-900">{formatQuantity(val)}</span>
-            <span className="text-xs text-gray-400">units</span>
-          </div>
-        )
-      }
-    },
-    {
-      key: 'produced_quantity',
-      label: 'Produced Qty',
-      render: (val) => (
-        <div className="flex items-baseline gap-1">
-          <span className="text-xs font-medium text-slate-700">{formatQuantity(val)}</span>
-          <span className="text-xs text-slate-400">units</span>
-        </div>
-      )
-    },
-    {
-      key: 'accepted_quantity',
-      label: 'Accepted Qty',
-      render: (val, row) => {
-        const isEditing = inlineEditingId === row.job_card_id
-        if (isEditing) {
-          return (
-            <div className="flex items-center gap-1">
-              <input
-                type="number"
-                value={inlineEditData.accepted_quantity}
-                onChange={(e) => handleInlineInputChange('accepted_quantity', e.target.value)}
-                className="w-16 text-xs border border-emerald-200 rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-emerald-500"
-              />
-              <span className="text-xs text-gray-400">units</span>
+          <div className="flex flex-col gap-2  py-1">
+            <div className="flex justify-between items-end">
+              <div className="flex flex-col">
+                <span className="text-[9px] text-gray-400   tracking-widest mb-0.5">Yield Metrics</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-baseline gap-0.5">
+                    <span className="text-xs  text-slate-700" title="Produced">{formatQuantity(produced)}</span>
+                    <span className="text-[10px] text-slate-300 font-light">/</span>
+                    <span className="text-xs  text-emerald-600" title="Accepted">{formatQuantity(accepted)}</span>
+                    <span className="text-[10px] text-slate-300 font-light">/</span>
+                    <span className="text-xs  text-indigo-600" title="Target">{formatQuantity(target)}</span>
+                  </div>
+                  <span className="text-[9px] text-gray-400 font-medium">units</span>
+                </div>
+              </div>
+              <div className="flex flex-col items-end">
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${progress >= 100 ? 'bg-emerald-100 text-emerald-700' :
+                  progress > 0 ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                  {Math.round(progress)}%
+                </span>
+              </div>
             </div>
-          )
-        }
-        return (
-          <div className="flex items-baseline gap-1">
-            <span className="text-xs  text-emerald-600">{formatQuantity(val)}</span>
-            <span className="text-xs text-emerald-400">units</span>
+
+            <div className="relative w-full bg-gray-100 rounded-full h-2 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)]">
+              <div
+                className={`h-full transition-all duration-700 cubic-bezier(0.4, 0, 0.2, 1) ${progress >= 100 ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]' :
+                  progress > 50 ? 'bg-gradient-to-r from-indigo-500 to-blue-400 shadow-[0_0_12px_rgba(99,102,241,0.3)]' :
+                    'bg-gradient-to-r from-blue-500 to-sky-400 shadow-[0_0_12px_rgba(59,130,246,0.3)]'
+                  }`}
+                style={{ width: `${progress}%` }}
+              />
+              {/* Animated highlight */}
+              {progress > 0 && progress < 100 && (
+                <div
+                  className="absolute top-0 bottom-0 w-8 bg-white/20 skew-x-[-20deg] animate-[shimmer_2s_infinite]"
+                  style={{ left: '-20%' }}
+                />
+              )}
+            </div>
+
+            {/* Quality Index */}
+            {produced > 0 && (
+              <div className="flex items-center gap-2 mt-0.5">
+                <div className="flex-1 h-1 bg-gray-50 rounded-full overflow-hidden flex">
+                  <div
+                    className="h-full bg-emerald-400"
+                    style={{ width: `${(accepted / produced) * 100}%` }}
+                  />
+                  <div
+                    className="h-full bg-rose-400"
+                    style={{ width: `${((produced - accepted) / produced) * 100}%` }}
+                  />
+                </div>
+                <span className="text-[8px]  text-gray-400  ">
+                  Quality: {Math.round((accepted / produced) * 100)}%
+                </span>
+              </div>
+            )}
           </div>
         )
       }
@@ -1292,8 +1335,8 @@ export default function JobCard() {
             )
           }
           const machineConflict = checkMachineConflict(
-            inlineEditData.machine_id, 
-            inlineEditData.scheduled_start_date, 
+            inlineEditData.machine_id,
+            inlineEditData.scheduled_start_date,
             inlineEditData.scheduled_end_date,
             row.job_card_id
           )
@@ -1331,7 +1374,7 @@ export default function JobCard() {
 
         const wsName = getWorkstationName(row.machine_id, row) || val || 'N/A'
         const isAllocated = row.machine_status === 'allocated'
-        
+
         return (
           <div className="flex flex-col gap-0.5">
             <span className="text-xs text-gray-700 font-medium">{wsName}</span>
@@ -1342,7 +1385,7 @@ export default function JobCard() {
                   {isAllocated ? 'Allocated' : 'Available'}
                 </span>
                 {isAllocated && row.machine_current_jc && row.machine_current_jc !== row.job_card_id && (
-                   <span className="text-[9px] text-gray-400 italic">(by {row.machine_current_jc.slice(-6)})</span>
+                  <span className="text-xs text-gray-400 italic">(by {row.machine_current_jc.slice(-6)})</span>
                 )}
               </div>
             )}
@@ -1401,11 +1444,11 @@ export default function JobCard() {
       render: (val, row) => {
         const isEditing = inlineEditingId === row.job_card_id
         const prevEnd = getPreviousOpEndTime(row)
-        
+
         if (isEditing) {
           const machineConflict = checkMachineConflict(
-            inlineEditData.machine_id, 
-            inlineEditData.scheduled_start_date, 
+            inlineEditData.machine_id,
+            inlineEditData.scheduled_start_date,
             inlineEditData.scheduled_end_date,
             row.job_card_id
           )
@@ -1417,11 +1460,10 @@ export default function JobCard() {
                   type="datetime-local"
                   value={inlineEditData.scheduled_start_date}
                   onChange={(e) => handleInlineInputChange('scheduled_start_date', e.target.value)}
-                  className={`text-xs border rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500 ${
-                    (prevEnd && new Date(inlineEditData.scheduled_start_date) < parseUTCDate(prevEnd)) || machineConflict.hasConflict
-                      ? 'border-rose-300 bg-rose-50' 
+                  className={`text-xs border rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500 ${(prevEnd && new Date(inlineEditData.scheduled_start_date) < parseUTCDate(prevEnd)) || machineConflict.hasConflict
+                      ? 'border-rose-300 bg-rose-50'
                       : 'border-gray-200'
-                  }`}
+                    }`}
                 />
                 {prevEnd && new Date(inlineEditData.scheduled_start_date) < parseUTCDate(prevEnd) && (
                   <span className="text-[8px] text-rose-500 font-medium leading-tight mt-0.5">
@@ -1438,16 +1480,15 @@ export default function JobCard() {
                 type="datetime-local"
                 value={inlineEditData.scheduled_end_date}
                 onChange={(e) => handleInlineInputChange('scheduled_end_date', e.target.value)}
-                className={`text-xs border rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500 ${
-                  machineConflict.hasConflict ? 'border-rose-300 bg-rose-50' : 'border-gray-200'
-                }`}
+                className={`text-xs border rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500 ${machineConflict.hasConflict ? 'border-rose-300 bg-rose-50' : 'border-gray-200'
+                  }`}
               />
             </div>
           )
         }
 
         if (!val && !row.scheduled_end_date) return <span className="text-xs text-gray-400">Not Scheduled</span>
-        
+
         return (
           <div className="flex flex-col">
             <span className="text-xs font-medium text-slate-600">S: {formatToLocalDisplay(val)}</span>
@@ -1491,7 +1532,7 @@ export default function JobCard() {
       <div className="bg-white/80 backdrop-blur-xl border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-           
+
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="text-xl text-gray-900">Job Cards</h1>
@@ -1596,81 +1637,81 @@ export default function JobCard() {
         {activeTab === 'list' ? (
           <>
             {/* Filters */}
-        <div className="my-3 flex flex-col md:flex-row items-center gap-6 flex-shrink-0">
-          <div className="flex-1 relative w-full group">
-            <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
-              <Search className="text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
-            </div>
-            <input
-              type="text"
-              name="search"
-              placeholder="Search by Work Order ID or Item name..."
-              value={filters.search}
-              onChange={handleFilterChange}
-              className="w-full pl-16 pr-8 p-2 bg-white border border-gray-100 rounded text-xs text-gray-900 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
-            />
-          </div>
-          <div className="flex items-center gap-4 w-full md:w-auto">
-            <div className="relative min-w-[240px] group">
-              <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none z-10">
-                <Filter className="text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+            <div className="my-3 flex flex-col md:flex-row items-center gap-6 flex-shrink-0">
+              <div className="flex-1 relative w-full group">
+                <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
+                  <Search className="text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
+                </div>
+                <input
+                  type="text"
+                  name="search"
+                  placeholder="Search by Work Order ID or Item name..."
+                  value={filters.search}
+                  onChange={handleFilterChange}
+                  className="w-full pl-16 pr-8 p-2 bg-white border border-gray-100 rounded text-xs text-gray-900 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
+                />
               </div>
-              <SearchableSelect
-                name="status"
-                value={filters.status}
-                onChange={(val) => setFilters(prev => ({ ...prev, status: val }))}
-                options={[
-                  { value: 'draft', label: 'Draft' },
-                  { value: 'pending', label: 'Pending' },
-                  { value: 'in-progress', label: 'In Production' },
-                  { value: 'completed', label: 'Completed' },
-                  { value: 'cancelled', label: 'Cancelled' }
-                ]}
-                placeholder="All Operational States"
-                containerClassName="pl-10"
-                className="text-xs"
-              />
+              <div className="flex items-center gap-4 w-full md:w-auto">
+                <div className="relative min-w-[240px] group">
+                  <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none z-10">
+                    <Filter className="text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                  </div>
+                  <SearchableSelect
+                    name="status"
+                    value={filters.status}
+                    onChange={(val) => setFilters(prev => ({ ...prev, status: val }))}
+                    options={[
+                      { value: 'draft', label: 'Draft' },
+                      { value: 'pending', label: 'Pending' },
+                      { value: 'in-progress', label: 'In Production' },
+                      { value: 'completed', label: 'Completed' },
+                      { value: 'cancelled', label: 'Cancelled' }
+                    ]}
+                    placeholder="All Operational States"
+                    containerClassName="pl-10"
+                    className="text-xs"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Data Table */}
-        {loading ? (
-          <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-[3rem] border border-gray-100">
-            <div className="relative">
-              <div className="w-20 h-20 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Activity className="w-8 h-8 text-indigo-600 animate-pulse" />
+            {/* Data Table */}
+            {loading ? (
+              <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-[3rem] border border-gray-100">
+                <div className="relative">
+                  <div className="w-20 h-20 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Activity className="w-8 h-8 text-indigo-600 animate-pulse" />
+                  </div>
+                </div>
+                <h3 className="mt-8 text-xl text-gray-900">Syncing Production Queue</h3>
+                <p className="mt-2 text-sm text-gray-400">Retrieving live operational data...</p>
               </div>
-            </div>
-            <h3 className="mt-8 text-xl text-gray-900">Syncing Production Queue</h3>
-            <p className="mt-2 text-sm text-gray-400">Retrieving live operational data...</p>
-          </div>
-        ) : jobCards.length > 0 ? (
-          <div className="flex-1">
-            <DataTable
-              data={jobCards}
-              columns={columns}
-              loading={loading}
-              searchable={false}
-              pagination={true}
-              pageSize={20}
-              pageSizeOptions={[10, 20, 50, 100]}
-            />
-          </div>
-        ) : (
-          <div className="flex-1 bg-white rounded-[3rem] flex flex-col items-center justify-center p-24 text-center border border-gray-100">
-            <div className="w-24 h-24 bg-gray-50 rounded flex items-center justify-center mx-auto mb-8">
-              <ClipboardList className="text-gray-300" size={48} />
-            </div>
-            <h3 className="text-xl text-gray-900 mb-2">Operational Pipeline Empty</h3>
-            <p className="text-sm text-gray-400 max-w-md mx-auto">No job cards were found matching your filters. Create a new work order to begin production tracking.</p>
-          </div>
-        )}
+            ) : jobCards.length > 0 ? (
+              <div className="flex-1">
+                <DataTable
+                  data={jobCards}
+                  columns={columns}
+                  loading={loading}
+                  searchable={false}
+                  pagination={true}
+                  pageSize={20}
+                  pageSizeOptions={[10, 20, 50, 100]}
+                />
+              </div>
+            ) : (
+              <div className="flex-1 bg-white rounded-[3rem] flex flex-col items-center justify-center p-24 text-center border border-gray-100">
+                <div className="w-24 h-24 bg-gray-50 rounded flex items-center justify-center mx-auto mb-8">
+                  <ClipboardList className="text-gray-300" size={48} />
+                </div>
+                <h3 className="text-xl text-gray-900 mb-2">Operational Pipeline Empty</h3>
+                <p className="text-sm text-gray-400 max-w-md mx-auto">No job cards were found matching your filters. Create a new work order to begin production tracking.</p>
+              </div>
+            )}
           </>
         ) : (
           <div className="flex-1 overflow-y-auto">
-            <SchedulingGanttView 
+            <SchedulingGanttView
               onJobClick={(id) => {
                 setViewingJobCardId(id)
                 setShowViewModal(true)

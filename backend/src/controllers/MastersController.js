@@ -19,7 +19,7 @@ class MastersController {
 
   static async getDepartments(req, res) {
     try {
-      const database = this.getDb()
+      const database = MastersController.getDb()
       if (!database) {
         return res.json({
           success: true,
@@ -83,7 +83,7 @@ class MastersController {
   static async getUsersByDepartment(req, res) {
     try {
       const { department } = req.params
-      const database = this.getDb()
+      const database = MastersController.getDb()
       
       const [users] = await database.query(
         `SELECT user_id, email, full_name, department, role, is_active 
@@ -109,7 +109,7 @@ class MastersController {
   static async getWarehousesByDepartment(req, res) {
     try {
       const { department } = req.params
-      const database = this.getDb()
+      const database = MastersController.getDb()
       
       const [warehouses] = await database.query(
         `SELECT * FROM warehouses 
@@ -133,7 +133,7 @@ class MastersController {
 
   static async getMachines(req, res) {
     try {
-      const database = this.getDb()
+      const database = MastersController.getDb()
       const [machines] = await database.query(
         `SELECT machine_id, name, type, model, capacity, status 
          FROM machine_master 
@@ -157,7 +157,7 @@ class MastersController {
 
   static async getOperators(req, res) {
     try {
-      const database = this.getDb()
+      const database = MastersController.getDb()
       const [operators] = await database.query(
         `SELECT operator_id, name, experience_years, status 
          FROM operator_master 
@@ -181,7 +181,7 @@ class MastersController {
 
   static async getTools(req, res) {
     try {
-      const database = this.getDb()
+      const database = MastersController.getDb()
       const [tools] = await database.query(
         `SELECT tool_id, name, tool_type, location, status 
          FROM tool_master 
@@ -205,7 +205,7 @@ class MastersController {
 
   static async getInspectionChecklists(req, res) {
     try {
-      const database = this.getDb()
+      const database = MastersController.getDb()
       const [checklists] = await database.query(
         `SELECT checklist_id, name, inspection_type, parameters 
          FROM inspection_checklist 
@@ -228,7 +228,7 @@ class MastersController {
 
   static async getSystemStats(req, res) {
     try {
-      const database = this.getDb()
+      const database = MastersController.getDb()
       
       const [[{ userCount }]] = await database.query(`SELECT COUNT(*) as userCount FROM users WHERE is_active = TRUE`)
       const [[{ warehouseCount }]] = await database.query(`SELECT COUNT(*) as warehouseCount FROM warehouses WHERE is_active = TRUE`)
@@ -258,7 +258,7 @@ class MastersController {
 
   static async getMachineStats(req, res) {
     try {
-      const database = this.getDb()
+      const database = MastersController.getDb()
       
       const [[{ totalMachines }]] = await database.query(
         `SELECT COUNT(*) as totalMachines FROM machine_master WHERE status != 'retired'`
@@ -297,7 +297,7 @@ class MastersController {
 
   static async getProjectStats(req, res) {
     try {
-      const database = this.getDb()
+      const database = MastersController.getDb()
       
       const [[{ totalProjects }]] = await database.query(
         `SELECT COUNT(DISTINCT wo_id) as totalProjects FROM work_order`
@@ -341,7 +341,7 @@ class MastersController {
 
   static async getProductionReports(req, res) {
     try {
-      const database = this.getDb()
+      const database = MastersController.getDb()
       const { period = 'daily' } = req.query
       
       let dateGroup = '%Y-%m-%d'
@@ -409,7 +409,7 @@ class MastersController {
 
   static async getProjectAnalysis(req, res) {
     try {
-      const database = this.getDb()
+      const database = MastersController.getDb()
       
       const [[{ total }]] = await database.query(
         `SELECT COUNT(DISTINCT wo_id) as total FROM work_order`
@@ -562,6 +562,7 @@ class MastersController {
               rejected_qty: 0,
               scrap_qty: 0,
               status: 'pending',
+              material_status: jc.material_status || 'pending',
               job_cards_count: 0,
               planned_time: 0,
               actual_time: 0,
@@ -578,19 +579,30 @@ class MastersController {
           stage.rejected_qty += parseFloat(jc.rejected_quantity || 0);
           stage.scrap_qty += parseFloat(jc.scrap_quantity || 0);
           stage.job_cards_count += 1;
+
+          // Track material status - if any is 'requested', stage is 'requested'
+          // If any is 'pending', stage is 'pending' unless others are 'requested'
+          // Prioritize: pending > requested > received > completed
+          const statusPriority = { pending: 3, requested: 2, received: 1, completed: 0 };
+          const currentStatus = jc.material_status || 'pending';
+          const stageStatus = stage.material_status || 'completed';
+          
+          if (statusPriority[currentStatus] > statusPriority[stageStatus]) {
+            stage.material_status = currentStatus;
+          }
           
           stage.planned_time = (stage.planned_time || 0) + parseFloat(jc.operation_time || 0);
           
           // Update dates to cover the whole range for the stage
           if (jc.actual_start_date || jc.scheduled_start_date) {
-            const currentStart = this._parseUTCDate(jc.actual_start_date || jc.scheduled_start_date);
-            if (!stage.start_date || currentStart < this._parseUTCDate(stage.start_date)) {
+            const currentStart = MastersController._parseUTCDate(jc.actual_start_date || jc.scheduled_start_date);
+            if (!stage.start_date || currentStart < MastersController._parseUTCDate(stage.start_date)) {
               stage.start_date = jc.actual_start_date || jc.scheduled_start_date;
             }
           }
           if (jc.actual_end_date || jc.scheduled_end_date) {
-            const currentEnd = this._parseUTCDate(jc.actual_end_date || jc.scheduled_end_date);
-            if (!stage.end_date || currentEnd > this._parseUTCDate(stage.end_date)) {
+            const currentEnd = MastersController._parseUTCDate(jc.actual_end_date || jc.scheduled_end_date);
+            if (!stage.end_date || currentEnd > MastersController._parseUTCDate(stage.end_date)) {
               stage.end_date = jc.actual_end_date || jc.scheduled_end_date;
             }
           }
@@ -655,21 +667,21 @@ class MastersController {
           
           stage.planned_time = (stage.planned_time || 0) + parseFloat(jc.operation_time || 0)
           if (jc.actual_start_date && jc.actual_end_date) {
-            const start = this._parseUTCDate(jc.actual_start_date)
-            const end = this._parseUTCDate(jc.actual_end_date)
+            const start = MastersController._parseUTCDate(jc.actual_start_date)
+            const end = MastersController._parseUTCDate(jc.actual_end_date)
             stage.actual_time = (stage.actual_time || 0) + (end - start) / (1000 * 60 * 60)
           }
 
           // Update dates to cover the whole range for the stage
           if (jc.actual_start_date || jc.scheduled_start_date) {
-            const currentStart = this._parseUTCDate(jc.actual_start_date || jc.scheduled_start_date);
-            if (!stage.start_date || currentStart < this._parseUTCDate(stage.start_date)) {
+            const currentStart = MastersController._parseUTCDate(jc.actual_start_date || jc.scheduled_start_date);
+            if (!stage.start_date || currentStart < MastersController._parseUTCDate(stage.start_date)) {
               stage.start_date = jc.actual_start_date || jc.scheduled_start_date;
             }
           }
           if (jc.actual_end_date || jc.scheduled_end_date) {
-            const currentEnd = this._parseUTCDate(jc.actual_end_date || jc.scheduled_end_date);
-            if (!stage.end_date || currentEnd > this._parseUTCDate(stage.end_date)) {
+            const currentEnd = MastersController._parseUTCDate(jc.actual_end_date || jc.scheduled_end_date);
+            if (!stage.end_date || currentEnd > MastersController._parseUTCDate(stage.end_date)) {
               stage.end_date = jc.actual_end_date || jc.scheduled_end_date;
             }
           }
@@ -787,6 +799,41 @@ class MastersController {
           name,
           data: chartDataMap[name]
         }));
+
+        // 4.7 Fetch Material Requests for this project
+        const [materialRequests] = await database.query(
+          `SELECT mr.*, 
+                  (SELECT COUNT(*) FROM material_request_item WHERE mr_id = mr.mr_id) as item_count
+           FROM material_request mr
+           WHERE mr.production_plan_id = ? OR mr.mr_id IN (
+             SELECT DISTINCT mr_id FROM job_card 
+             WHERE work_order_id IN (SELECT wo_id FROM work_order WHERE sales_order_id = ?)
+             AND mr_id IS NOT NULL
+           )`,
+          [productionPlan ? productionPlan.plan_id : null, id]
+        )
+        project.material_requests = materialRequests;
+
+        // 4.8 Fetch Stock Movements for this project
+        const [stockMovements] = await database.query(
+          `SELECT sm.*, i.name as item_name,
+                  sw.warehouse_name as source_warehouse_name,
+                  tw.warehouse_name as target_warehouse_name
+           FROM stock_movements sm
+           LEFT JOIN item i ON sm.item_code = i.item_code
+           LEFT JOIN warehouses sw ON sm.source_warehouse_id = sw.id
+           LEFT JOIN warehouses tw ON sm.target_warehouse_id = tw.id
+           WHERE sm.reference_name IN (
+             SELECT mr_id FROM material_request 
+             WHERE production_plan_id = ? OR mr_id IN (
+               SELECT DISTINCT mr_id FROM job_card 
+               WHERE work_order_id IN (SELECT wo_id FROM work_order WHERE sales_order_id = ?)
+               AND mr_id IS NOT NULL
+             )
+           ) OR (sm.reference_type = 'Work Order' AND sm.reference_name IN (SELECT wo_id FROM work_order WHERE sales_order_id = ?))`,
+          [productionPlan ? productionPlan.plan_id : null, id, id]
+        )
+        project.stock_movements = stockMovements;
       }
       
       // 5. Fetch Material Readiness (Aggregated from material_allocation)
@@ -1073,14 +1120,16 @@ class MastersController {
         `SELECT COALESCE(SUM(order_amount), 0) as totalRevenue FROM selling_sales_order WHERE status != 'draft' AND deleted_at IS NULL`
       )
 
-      // 2. Customer Segmentation (Premium vs Regular based on revenue threshold)
+      // 2. Customer Segmentation and On-Time Delivery (OTD)
       const revenueThreshold = 100000; // 1 Lakh threshold for premium
       
       const [customers] = await database.query(
         `SELECT c.customer_id as id, c.name, c.created_at,
                 COALESCE(SUM(sso.order_amount), 0) as revenue,
                 COUNT(sso.sales_order_id) as orders,
-                CASE WHEN SUM(sso.order_amount) >= ? THEN 'Premium' ELSE 'Regular' END as segment
+                CASE WHEN SUM(sso.order_amount) >= ? THEN 'Premium' ELSE 'Regular' END as segment,
+                COUNT(CASE WHEN sso.status = 'completed' AND sso.updated_at <= sso.delivery_date THEN 1 END) as on_time_orders,
+                COUNT(CASE WHEN sso.status = 'completed' THEN 1 END) as completed_orders
          FROM selling_customer c
          LEFT JOIN selling_sales_order sso ON c.customer_id = sso.customer_id AND sso.status != 'draft' AND sso.deleted_at IS NULL
          WHERE c.status = 'active'
@@ -1088,6 +1137,20 @@ class MastersController {
          ORDER BY revenue DESC`,
         [revenueThreshold]
       )
+
+      // 2.5 Supply Chain & Production Health Aggregates
+      const [healthMetrics] = await database.query(
+        `SELECT 
+          COUNT(CASE WHEN mr.status = 'pending' THEN 1 END) as pending_mr,
+          COUNT(CASE WHEN mr.status = 'approved' THEN 1 END) as approved_mr,
+          COUNT(CASE WHEN mr.status = 'received' THEN 1 END) as received_mr,
+          COUNT(DISTINCT sso.sales_order_id) as active_orders
+         FROM selling_sales_order sso
+         LEFT JOIN production_plan pp ON sso.sales_order_id = pp.sales_order_id
+         LEFT JOIN material_request mr ON pp.plan_id = mr.production_plan_id
+         WHERE sso.status NOT IN ('draft', 'completed', 'cancelled') AND sso.deleted_at IS NULL`
+      );
+      const supplyChainHealth = healthMetrics[0] || { pending_mr: 0, approved_mr: 0, received_mr: 0, active_orders: 0 };
 
       const premiumCustomers = customers.filter(c => c.segment === 'Premium')
       const regularClients = customers.filter(c => c.segment === 'Regular')
@@ -1212,7 +1275,8 @@ class MastersController {
           trends: monthlyTrend || [],
           comparison: comparison,
           capabilities: capabilities,
-          kpiTrends: kpiTrends
+          kpiTrends: kpiTrends,
+          supplyChainHealth: supplyChainHealth
         }
       })
     } catch (error) {
@@ -1274,11 +1338,35 @@ class MastersController {
         [id]
       )
 
-      // 5. Calculate Top Items from all orders (parsing JSON)
+      // 5. Calculate Top Items and Production Health
       const [allItemsRows] = await database.query(
-        `SELECT items FROM selling_sales_order WHERE customer_id = ? AND deleted_at IS NULL`,
+        `SELECT items, sales_order_id, status FROM selling_sales_order WHERE customer_id = ? AND deleted_at IS NULL`,
         [id]
       )
+
+      // 6. Fetch Material Request health for THIS customer
+      const [mrHealth] = await database.query(
+        `SELECT 
+          COUNT(CASE WHEN mr.status = 'pending' THEN 1 END) as pending_mr,
+          COUNT(CASE WHEN mr.status = 'approved' THEN 1 END) as approved_mr,
+          COUNT(CASE WHEN mr.status = 'received' THEN 1 END) as received_mr
+         FROM selling_sales_order sso
+         JOIN production_plan pp ON sso.sales_order_id = pp.sales_order_id
+         JOIN material_request mr ON pp.plan_id = mr.production_plan_id
+         WHERE sso.customer_id = ? AND sso.deleted_at IS NULL`,
+        [id]
+      );
+
+      // 7. Calculate OTD for this customer
+      const [[otdStats]] = await database.query(
+        `SELECT 
+          COUNT(CASE WHEN status = 'completed' AND updated_at <= delivery_date THEN 1 END) as on_time,
+          COUNT(CASE WHEN status = 'completed' THEN 1 END) as total_completed
+         FROM selling_sales_order 
+         WHERE customer_id = ? AND deleted_at IS NULL`,
+        [id]
+      );
+      const otdRate = otdStats.total_completed > 0 ? Math.round((otdStats.on_time / otdStats.total_completed) * 100) : 100;
 
       const itemStats = {}
       allItemsRows.forEach(row => {
@@ -1315,7 +1403,9 @@ class MastersController {
           trends: monthlyTrend || [],
           recentOrders: recentOrders || [],
           statusDistribution: statusDistribution || [],
-          topItems: topItems || []
+          topItems: topItems || [],
+          mrHealth: mrHealth[0] || { pending_mr: 0, approved_mr: 0, received_mr: 0 },
+          otdRate: otdRate
         }
       })
     } catch (error) {

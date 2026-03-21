@@ -1,6 +1,6 @@
 import mysql from 'mysql2/promise';
 
-async function listTables() {
+async function describeTable() {
   const connection = await mysql.createConnection({
     host: '127.0.0.1',
     user: 'nobalcasting_user',
@@ -10,8 +10,8 @@ async function listTables() {
   });
 
   try {
-    const [tables] = await connection.execute('SHOW TABLES');
-    console.table(tables.map(t => Object.values(t)[0]));
+    const [columns] = await connection.execute('DESCRIBE work_order');
+    console.table(columns.map(c => ({ Field: c.Field, Type: c.Type })));
   } catch (error) {
     console.error('Error:', error);
   } finally {
@@ -19,4 +19,4 @@ async function listTables() {
   }
 }
 
-listTables();
+describeTable();

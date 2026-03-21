@@ -152,7 +152,7 @@ export class SellingController {
 
       // Validate customer exists
       const [customerCheck] = await db.execute(
-        'SELECT customer_id FROM customer WHERE customer_id = ? AND deleted_at IS NULL',
+        'SELECT customer_id FROM selling_customer WHERE customer_id = ? AND deleted_at IS NULL',
         [customer_id]
       )
 
@@ -383,7 +383,7 @@ export class SellingController {
 
       // Fetch customer details
       const [customerRows] = await db.execute(
-        'SELECT customer_id, name, email, phone FROM customer WHERE customer_id = ? AND deleted_at IS NULL',
+        'SELECT customer_id, name, email, phone FROM selling_customer WHERE customer_id = ? AND deleted_at IS NULL',
         [customer_id]
       )
 

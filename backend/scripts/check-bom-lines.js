@@ -1,6 +1,6 @@
 import mysql from 'mysql2/promise';
 
-async function listTables() {
+async function checkBOMLines() {
   const connection = await mysql.createConnection({
     host: '127.0.0.1',
     user: 'nobalcasting_user',
@@ -10,8 +10,16 @@ async function listTables() {
   });
 
   try {
-    const [tables] = await connection.execute('SHOW TABLES');
-    console.table(tables.map(t => Object.values(t)[0]));
+    const bomId = 'BOM-1773669839953';
+    console.log(`Checking BOM Lines for: ${bomId}`);
+    
+    const [lines] = await connection.execute(
+      'SELECT * FROM bom_line WHERE bom_id = ?',
+      [bomId]
+    );
+    
+    console.table(lines);
+
   } catch (error) {
     console.error('Error:', error);
   } finally {
@@ -19,4 +27,4 @@ async function listTables() {
   }
 }
 
-listTables();
+checkBOMLines();

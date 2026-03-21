@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
-import { TrendingUp, Calendar, AlertCircle, Clock, CheckCircle, Truck, Package, LayoutGrid, ArrowUpRight, Layers, Zap, Cpu, ChevronLeft, ClipboardCheck } from 'lucide-react'
+import { TrendingUp, Calendar, AlertCircle, Clock, CheckCircle, Truck, Package, LayoutGrid, ArrowUpRight, Layers, Zap, Cpu, ChevronLeft, ClipboardCheck, ArrowRight, ShoppingCart, Boxes } from 'lucide-react'
 import { getDetailedProjectAnalysis } from '../../services/adminService'
+
+const Factory = ({ size, className, style }) => <Cpu size={size} className={className} style={style} />
 
 const statusConfig = {
   draft: { icon: Clock, color: '#f97316', bg: '#fff7ed', text: '#9a3412', border: '#ffedd5', label: 'Draft' },
+  confirmed: { icon: CheckCircle, color: '#3b82f6', bg: '#eff6ff', text: '#1e40af', border: '#dbeafe', label: 'Confirmed' },
+  under_production: { icon: Factory, color: '#0ea5e9', bg: '#f0f9ff', text: '#0c4a6e', border: '#e0f2fe', label: 'In Production' },
   production: { icon: Truck, color: '#0ea5e9', bg: '#f0f9ff', text: '#0c4a6e', border: '#e0f2fe', label: 'Production' },
   complete: { icon: CheckCircle, color: '#10b981', bg: '#f0fdf4', text: '#14532d', border: '#dcfce7', label: 'Complete' },
   on_hold: { icon: AlertCircle, color: '#f59e0b', bg: '#fffbeb', text: '#78350f', border: '#fef3c7', label: 'On Hold' },
@@ -29,6 +33,25 @@ const StatusBadge = ({ status }) => {
       <Icon size={12} style={{ color: config.color }} />
       <span>{config.label}</span>
     </div>
+  )
+}
+
+const MaterialStatusBadge = ({ status }) => {
+  const configs = {
+    pending: { label: 'Pending', color: 'bg-slate-100 text-slate-600 border-slate-200' },
+    requested: { label: 'Requested', color: 'bg-blue-50 text-blue-600 border-blue-200' },
+    received: { label: 'Received', color: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
+    completed: { label: 'Completed', color: 'bg-indigo-50 text-indigo-600 border-indigo-200' },
+    draft: { label: 'Draft', color: 'bg-amber-50 text-amber-600 border-amber-200' },
+    approved: { label: 'Approved', color: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
+    rejected: { label: 'Rejected', color: 'bg-rose-50 text-rose-600 border-rose-200' },
+    partial: { label: 'Partial', color: 'bg-amber-50 text-amber-600 border-amber-200' }
+  }
+  const config = configs[status?.toLowerCase()] || configs.pending
+  return (
+    <span className={`px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider ${config.color}`}>
+      {config.label}
+    </span>
   )
 }
 
@@ -115,9 +138,16 @@ const ProcessFlow = ({ stages }) => {
                       </div>
                       
                       <div className="flex items-center gap-3 border-t border-slate-50">
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                          <Package size={12} className="text-slate-400 text-xs" />
-                          {stage.job_cards_count} Active Jobs
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                            <Package size={12} className="text-slate-400 text-xs" />
+                            {stage.job_cards_count} Active Jobs
+                          </div>
+                          {stage.material_status && (
+                            <div className="flex items-center gap-1.5">
+                              <MaterialStatusBadge status={stage.material_status} />
+                            </div>
+                          )}
                         </div>
                         {(parseFloat(stage.rejected_qty) > 0 || parseFloat(stage.scrap_qty) > 0) && (
                           <div className="flex items-center gap-1.5 text-xs text-rose-500  ml-auto">
@@ -142,6 +172,7 @@ export default function ProjectDetails() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('overview')
+  const [selectedItemForStages, setSelectedItemForStages] = useState('All Items')
   const [detailedData, setDetailedData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -226,6 +257,11 @@ export default function ProjectDetails() {
     { subject: 'Efficiency', A: efficiency, B: 85, fullMark: 100 }
   ]
 
+  const availableItems = ['All Items', ...Object.keys(detailedData?.project?.stagesByItem || {})]
+  const displayStages = selectedItemForStages === 'All Items' 
+    ? (detailedData?.stages || [])
+    : (detailedData?.project?.stagesByItem?.[selectedItemForStages] || [])
+
   return (
     <div className="p-6">
       {/* Header */}
@@ -254,8 +290,9 @@ export default function ProjectDetails() {
             { id: 'overview', label: 'Overview', icon: LayoutGrid },
             { id: 'stages', label: 'Production Flow', icon: TrendingUp },
             { id: 'workorders', label: 'Work Orders', icon: ClipboardCheck },
+            { id: 'supplychain', label: 'Supply Chain', icon: ShoppingCart },
             { id: 'history', label: 'Production History', icon: Clock },
-            { id: 'materials', label: 'Resource Efficiency', icon: Layers }
+            { id: 'materials', label: 'Inventory Matrix', icon: Layers }
           ].map(tab => (
             <button
               key={tab.id}
@@ -276,30 +313,123 @@ export default function ProjectDetails() {
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="col-span-2 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-2  rounded    border border-slate-200 hover: transition-shadow">
-                  <p className="text-xs text-slate-400  mb-4">Project Completion</p>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white p-4  rounded    border border-slate-200 hover: transition-shadow">
+                  <p className="text-xs text-slate-400 font-bold mb-4 uppercase tracking-wider">Completion</p>
                   <div className="flex items-end justify-between mb-2">
-                    <h3 className="text-xl  text-slate-900">{progress}%</h3>
+                    <h3 className="text-2xl font-bold text-slate-900">{progress}%</h3>
                     <TrendingUp size={15} className="text-emerald-500 mb-2" />
                   </div>
-                  <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-blue-500 to-blue-600" style={{ width: `${progress}%` }} />
+                  <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-600" style={{ width: `${progress}%` }} />
                   </div>
                 </div>
                 
-                <div className="bg-white p-2  rounded    border border-slate-200 hover: transition-shadow">
-                  <p className="text-xs text-slate-400  mb-4">Total Revenue</p>
-                  <h3 className="text-xl  text-slate-900">₹{parseFloat(project.revenue || 0).toLocaleString()}</h3>
-                  <p className="text-emerald-600 text-xs  mt-2 flex items-center gap-1">
-                    <ArrowUpRight size={16} /> Full Payment Confirmed
+                <div className="bg-white p-4  rounded    border border-slate-200 hover: transition-shadow">
+                  <p className="text-xs text-slate-400 font-bold mb-4 uppercase tracking-wider">Revenue</p>
+                  <h3 className="text-2xl font-bold text-slate-900">₹{parseFloat(project.revenue || 0).toLocaleString()}</h3>
+                  <p className="text-emerald-600 text-[10px] font-bold mt-2 flex items-center gap-1 uppercase">
+                    <CheckCircle size={12} /> Confirmed
                   </p>
                 </div>
 
-                <div className="bg-white p-2  rounded    border border-slate-200 hover: transition-shadow">
-                  <p className="text-xs text-slate-400  mb-4">Timeline Performance</p>
-                  <h3 className="text-xl  text-slate-900">{project.daysLeft || 0} Days</h3>
-                  <p className="text-slate-500 text-xs font-medium mt-2">Remaining to delivery</p>
+                <div className="bg-white p-4  rounded    border border-slate-200 hover: transition-shadow">
+                  <p className="text-xs text-slate-400 font-bold mb-4 uppercase tracking-wider">Timeline</p>
+                  <h3 className="text-2xl font-bold text-slate-900">{project.daysLeft || 0} Days</h3>
+                  <p className="text-slate-500 text-[10px] font-bold mt-2 uppercase">Remaining</p>
+                </div>
+
+                <div className="bg-white p-4  rounded    border border-slate-200 hover: transition-shadow">
+                  <p className="text-xs text-slate-400 font-bold mb-4 uppercase tracking-wider">Materials</p>
+                  <h3 className="text-2xl font-bold text-slate-900">{detailedData.project?.material_requests?.length || 0}</h3>
+                  <p className="text-blue-600 text-[10px] font-bold mt-2 uppercase">Requests Active</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white p-6 rounded border border-slate-200">
+                  <h4 className="text-lg font-bold text-slate-900 mb-6 tracking-tight">Supply Chain Health</h4>
+                  <div className="space-y-6">
+                    <div>
+                      <div className="flex justify-between text-xs font-bold mb-2">
+                        <span className="text-slate-500 uppercase">Material Requests</span>
+                        <span className="text-slate-900">{detailedData.project?.material_requests?.filter(mr => mr.status === 'approved' || mr.status === 'completed').length || 0} / {detailedData.project?.material_requests?.length || 0} Approved</span>
+                      </div>
+                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-emerald-500" 
+                          style={{ width: `${(detailedData.project?.material_requests?.length > 0 ? (detailedData.project.material_requests.filter(mr => mr.status === 'approved' || mr.status === 'completed').length / detailedData.project.material_requests.length) * 100 : 0)}%` }} 
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-xs font-bold mb-2">
+                        <span className="text-slate-500 uppercase">Stock Logistics</span>
+                        <span className="text-slate-900">{detailedData.project?.stock_movements?.length || 0} Transactions</span>
+                      </div>
+                      <div className="flex gap-1">
+                        {detailedData.project?.stock_movements?.slice(0, 10).map((sm, i) => (
+                          <div key={i} className={`h-1.5 flex-1 rounded-full ${sm.status === 'Approved' ? 'bg-emerald-500' : 'bg-amber-400'}`} title={sm.transaction_no} />
+                        ))}
+                        {(!detailedData.project?.stock_movements || detailedData.project.stock_movements.length === 0) && (
+                          <div className="h-1.5 w-full bg-slate-100 rounded-full" />
+                        )}
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t border-slate-50 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded flex items-center justify-center">
+                          <ShoppingCart size={16} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase leading-none mb-1">Last Request</p>
+                          <p className="text-xs font-bold text-slate-700 m-0">
+                            {detailedData.project?.material_requests?.[0]?.mr_id || 'No requests yet'}
+                          </p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setActiveTab('supplychain')}
+                        className="text-blue-600 text-xs font-bold flex items-center gap-1 hover:underline"
+                      >
+                        View Details <ArrowRight size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white p-6 rounded border border-slate-200">
+                  <h4 className="text-lg font-bold text-slate-900 mb-6 tracking-tight">Machine Utilization</h4>
+                  <div className="h-[150px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={detailedData.project?.machine_stats?.slice(0, 5) || []}>
+                        <XAxis dataKey="machine_name" hide />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '10px', fontWeight: 'bold' }}
+                        />
+                        <Bar dataKey="efficiency" radius={[4, 4, 0, 0]}>
+                          {detailedData.project?.machine_stats?.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.efficiency >= 85 ? '#10b981' : entry.efficiency >= 70 ? '#f59e0b' : '#ef4444'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="text-center">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Active</p>
+                        <p className="text-sm font-bold text-slate-700">{detailedData.project?.machine_stats?.length || 0}</p>
+                      </div>
+                      <div className="w-px h-8 bg-slate-100" />
+                      <div className="text-center">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Avg Eff.</p>
+                        <p className="text-sm font-bold text-slate-700">
+                          {Math.round((detailedData.project?.machine_stats?.reduce((acc, m) => acc + m.efficiency, 0) || 0) / (detailedData.project?.machine_stats?.length || 1))}%
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -382,7 +512,27 @@ export default function ProjectDetails() {
           </div>
         )}
 
-        {activeTab === 'stages' && <ProcessFlow stages={detailedData.stages} />}
+        {activeTab === 'stages' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col md:flex-row md:items-center justify-between bg-white p-4 rounded border border-slate-200 gap-4 shadow-sm">
+              <div>
+                <h4 className="text-lg font-bold text-slate-900 m-0 tracking-tight">Production Workflow Analysis</h4>
+                <p className="text-xs text-slate-500 font-medium mt-1 uppercase tracking-wider">Status of operations across all manufacturing phases</p>
+              </div>
+              <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-2">Filter Item:</span>
+                <select 
+                  className="bg-white border border-slate-200 rounded px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all cursor-pointer min-w-[200px]"
+                  value={selectedItemForStages}
+                  onChange={(e) => setSelectedItemForStages(e.target.value)}
+                >
+                  {availableItems.map(item => <option key={item} value={item}>{item}</option>)}
+                </select>
+              </div>
+            </div>
+            <ProcessFlow stages={displayStages} />
+          </div>
+        )}
 
         {activeTab === 'workorders' && (
           <div className="space-y-6">
@@ -665,6 +815,140 @@ export default function ProjectDetails() {
             ) : null}
 
             
+          </div>
+        )}
+
+        {activeTab === 'supplychain' && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Material Requests Section */}
+            <div className="bg-white rounded border border-slate-200 overflow-hidden">
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h4 className="text-lg text-slate-900 m-0 font-bold tracking-tight">Supply Chain Activity</h4>
+                  <p className="text-xs text-slate-500 font-medium mt-1">Status of procurement and internal material issues</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold">
+                    {detailedData.project?.material_requests?.length || 0} Requests
+                  </div>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-slate-50/50">
+                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">MR ID</th>
+                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Dept</th>
+                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Purpose</th>
+                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider text-center">Items</th>
+                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Status</th>
+                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Request Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {detailedData.project?.material_requests?.length > 0 ? (
+                      detailedData.project.material_requests.map((mr, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="p-4">
+                            <span className="text-xs font-bold text-slate-900">{mr.mr_id}</span>
+                          </td>
+                          <td className="p-4 text-xs text-slate-700 font-medium">{mr.department}</td>
+                          <td className="p-4 text-xs text-slate-700 font-medium capitalize">{mr.purpose?.replace(/_/g, ' ')}</td>
+                          <td className="p-4 text-center text-xs text-slate-900 font-bold">{mr.item_count}</td>
+                          <td className="p-4">
+                            <MaterialStatusBadge status={mr.status} />
+                          </td>
+                          <td className="p-4 text-xs text-slate-500 font-medium">
+                            {new Date(mr.request_date).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="6" className="p-12 text-center">
+                          <ShoppingCart size={40} className="text-slate-200 mx-auto mb-3" />
+                          <p className="text-slate-400 font-medium">No material requests found for this project</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Stock Movements Section */}
+            <div className="bg-white rounded border border-slate-200 overflow-hidden">
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h4 className="text-lg text-slate-900 m-0 font-bold tracking-tight">Stock Logistics</h4>
+                  <p className="text-xs text-slate-500 font-medium mt-1">Real-time inventory transfers and issues</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold">
+                    {detailedData.project?.stock_movements?.length || 0} Movements
+                  </div>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-slate-50/50">
+                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Transaction</th>
+                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Item Details</th>
+                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Type</th>
+                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider text-right">Quantity</th>
+                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Route (Source → Target)</th>
+                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {detailedData.project?.stock_movements?.length > 0 ? (
+                      detailedData.project.stock_movements.map((sm, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="p-4">
+                            <span className="text-xs font-bold text-slate-900">{sm.transaction_no}</span>
+                            <div className="text-[10px] text-slate-400 mt-0.5 font-medium">{sm.reference_name}</div>
+                          </td>
+                          <td className="p-4">
+                            <p className="text-xs text-slate-900 m-0 font-bold">{sm.item_name || sm.item_code}</p>
+                            <p className="text-[10px] text-slate-400 m-0 font-medium uppercase">{sm.item_code}</p>
+                          </td>
+                          <td className="p-4">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              sm.movement_type === 'IN' ? 'bg-blue-50 text-blue-600' :
+                              sm.movement_type === 'OUT' ? 'bg-rose-50 text-rose-600' :
+                              'bg-amber-50 text-amber-600'
+                            }`}>
+                              {sm.movement_type}
+                            </span>
+                          </td>
+                          <td className="p-4 text-right text-xs font-bold text-slate-900">
+                            {parseFloat(sm.quantity).toLocaleString()}
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                              <span className="font-bold text-slate-700 truncate max-w-[100px]">{sm.source_warehouse_name || 'EXTERNAL'}</span>
+                              <ArrowRight size={10} className="text-slate-300" />
+                              <span className="font-bold text-slate-700 truncate max-w-[100px]">{sm.target_warehouse_name || 'N/A'}</span>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <MaterialStatusBadge status={sm.status} />
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="6" className="p-12 text-center">
+                          <Boxes size={40} className="text-slate-200 mx-auto mb-3" />
+                          <p className="text-slate-400 font-medium">No logistics transactions recorded</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 

@@ -482,7 +482,7 @@ export default function PurchaseOrderForm() {
         </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto px-4 mt-8">
+      <div className=" mx-auto p-2 mt-8">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Navigation Sidebar */}
           <aside className="lg:w-64 flex-shrink-0">
