@@ -95,7 +95,7 @@ export default function StockMovementDetailsModal({ movement, onClose }) {
               </div>
               <div className="flex flex-col">
                 <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">Quantity & Purpose</span>
-                <span className="text-lg font-bold text-neutral-900 dark:text-white">{parseFloat(movement.quantity).toFixed(2)} Units</span>
+                <span className="text-lg  text-neutral-900 dark:text-white">{parseFloat(movement.quantity).toFixed(2)} Units</span>
                 <span className="text-xs text-neutral-600 dark:text-neutral-400">Purpose: {movement.purpose}</span>
               </div>
             </div>

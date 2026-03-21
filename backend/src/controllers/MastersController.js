@@ -511,7 +511,6 @@ class MastersController {
         `SELECT wo.*, i.name as item_name,
                 COALESCE(
                   (SELECT accepted_quantity FROM job_card WHERE work_order_id = wo.wo_id ORDER BY operation_sequence DESC LIMIT 1),
-                  (SELECT SUM(pe.quantity_produced) FROM production_entry pe WHERE pe.work_order_id = wo.wo_id),
                   0
                 ) as produced_qty
          FROM work_order wo 
@@ -772,7 +771,7 @@ class MastersController {
              DATE(pe.entry_date) as date,
              wo.item_code,
              i.name as item_name,
-             SUM(pe.quantity_produced) as actual
+             SUM(pe.accepted_quantity) as actual
            FROM production_entry pe
            JOIN work_order wo ON pe.work_order_id = wo.wo_id
            LEFT JOIN item i ON wo.item_code = i.item_code
@@ -875,6 +874,27 @@ class MastersController {
         )
         finalMaterials = planMaterials
       }
+
+      // Third fallback: If still empty, check work_order_item table
+      if (finalMaterials.length === 0) {
+        const [woMaterials] = await database.query(
+          `SELECT 
+             wi.item_code, 
+             i.name as item_name, 
+             SUM(COALESCE(wi.required_qty, 0)) as required_qty, 
+             SUM(COALESCE(wi.consumed_qty, 0)) as consumed_qty, 
+             'Work Order' as status, 
+             i.uom,
+             (SELECT COALESCE(SUM(current_qty), 0) FROM stock_balance WHERE item_code = wi.item_code) as stock_qty
+           FROM work_order_item wi
+           JOIN work_order wo ON wi.wo_id = wo.wo_id
+           LEFT JOIN item i ON wi.item_code = i.item_code
+           WHERE wo.sales_order_id = ?
+           GROUP BY wi.item_code, i.name, i.uom`,
+          [id]
+        )
+        finalMaterials = woMaterials
+      }
       
       // 6. Calculate Global Metrics
       const totalPlannedTime = stages.reduce((acc, s) => acc + (parseFloat(s.planned_time) || 0), 0);
@@ -887,7 +907,7 @@ class MastersController {
       
       let calculatedProgress = 0;
       if (stages.length > 0) {
-        const stageProgresses = stages.map(s => Math.min(1, (parseFloat(s.produced_qty) || 0) / (parseFloat(s.planned_qty) || 1)));
+        const stageProgresses = stages.map(s => Math.min(1, (parseFloat(s.accepted_qty) || 0) / (parseFloat(s.planned_qty) || 1)));
         calculatedProgress = Math.round((stageProgresses.reduce((acc, p) => acc + p, 0) / stages.length) * 100);
       }
 
@@ -952,7 +972,6 @@ class MastersController {
                     SELECT 
                       COALESCE(
                         (SELECT accepted_quantity FROM job_card jc WHERE jc.work_order_id = wo.wo_id ORDER BY operation_sequence DESC LIMIT 1),
-                        (SELECT SUM(pe.quantity_produced) FROM production_entry pe WHERE pe.work_order_id = wo.wo_id),
                         0
                       ) as produced_qty
                     FROM work_order wo
@@ -966,7 +985,6 @@ class MastersController {
                      SELECT wo.quantity as ordered_qty, 
                             COALESCE(
                               (SELECT accepted_quantity FROM job_card jc WHERE jc.work_order_id = wo.wo_id ORDER BY operation_sequence DESC LIMIT 1),
-                              (SELECT SUM(pe.quantity_produced) FROM production_entry pe WHERE pe.work_order_id = wo.wo_id),
                               0
                             ) as produced_qty
                      FROM work_order wo

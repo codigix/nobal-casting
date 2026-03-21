@@ -451,7 +451,7 @@ export default function SalesOrder() {
             </div>
             <div className="mt-4 flex items-center justify-between text-[10px] border-t border-slate-50 pt-3">
               <span className="text-slate-400 font-medium">Fulfillment Rate</span>
-              <span className="font-bold text-blue-600">{stats.fulfillment_rate}%</span>
+              <span className=" text-blue-600">{stats.fulfillment_rate}%</span>
             </div>
           </div>
         </div>
@@ -462,7 +462,7 @@ export default function SalesOrder() {
             <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
               <Clock size={20} />
             </div>
-            <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold  tracking-tight">Active</span>
+            <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-600 text-[10px]   tracking-tight">Active</span>
           </div>
           <div>
             <p className="text-slate-500 text-[10px] ">Active Fulfillment</p>
@@ -471,7 +471,7 @@ export default function SalesOrder() {
               <span className="text-[10px] font-medium text-slate-400">Orders</span>
             </div>
             <div className="mt-4 space-y-1.5">
-              <div className="flex justify-between text-[8px] text-slate-400 font-bold  tracking-tighter">
+              <div className="flex justify-between text-[8px] text-slate-400   tracking-tighter">
                 <span>Production Queue</span>
                 <span>{stats.under_production || 0} Units</span>
               </div>
@@ -498,7 +498,7 @@ export default function SalesOrder() {
           <div>
             <p className="text-slate-500 text-[10px] ">Critical Alerts</p>
             <div className="flex items-baseline gap-1.5 mt-1">
-              <span className={`text-2xl font-bold ${stats.overdue > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{stats.overdue}</span>
+              <span className={`text-2xl  ${stats.overdue > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{stats.overdue}</span>
               <span className="text-[10px] font-medium text-slate-400">Overdue</span>
             </div>
             <p className="mt-4 text-[9px] text-slate-400 border-t border-slate-50 pt-3 font-medium  tracking-tight">
@@ -513,7 +513,7 @@ export default function SalesOrder() {
             <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
               <CheckCircle size={20} />
             </div>
-            <span className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold  tracking-tight">Completed</span>
+            <span className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px]   tracking-tight">Completed</span>
           </div>
           <div>
             <p className="text-slate-500 text-[10px] ">Successful Deliveries</p>
@@ -521,7 +521,7 @@ export default function SalesOrder() {
               <span className="text-xl  text-slate-900">{stats.delivered + stats.complete || 0}</span>
               <span className="text-[10px] font-medium text-slate-400">Success</span>
             </div>
-            <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-emerald-600 border-t border-slate-50 pt-3  tracking-tight">
+            <div className="mt-4 flex items-center gap-2 text-[10px]  text-emerald-600 border-t border-slate-50 pt-3  tracking-tight">
               <TrendingUp size={12} />
               <span>+5.4% from last period</span>
             </div>

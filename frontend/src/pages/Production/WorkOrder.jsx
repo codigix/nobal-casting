@@ -167,8 +167,8 @@ const WorkOrderRow = React.memo(({
           </div>
 
           <div className="w-24">
-            <span className={`text-xs font-medium ${parseFloat(order.scrap_qty) > 0 ? 'text-rose-500' : 'text-gray-400'}`}>
-              {parseFloat(order.scrap_qty).toFixed(2)}
+            <span className={`text-xs font-medium ${(parseFloat(order.scrap_qty) + parseFloat(order.rejected_qty)) > 0 ? 'text-rose-500' : 'text-gray-400'}`}>
+              {(parseFloat(order.scrap_qty || 0) + parseFloat(order.rejected_qty || 0)).toFixed(2)}
             </span>
           </div>
 

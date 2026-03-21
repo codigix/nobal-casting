@@ -12,10 +12,8 @@ const db = createPool({
 
 async function run() {
   try {
-    const [logs] = await db.query('SELECT * FROM time_log WHERE job_card_id = "JC-1773915481064"');
-    console.log('Welding Logs:', JSON.stringify(logs, null, 2));
-    const [rejs] = await db.query('SELECT * FROM rejection_entry WHERE job_card_id = "JC-1773915481064"');
-    console.log('Welding Rejections:', JSON.stringify(rejs, null, 2));
+    const [customers] = await db.query('SELECT * FROM customer');
+    console.log('All Customers (production table):', JSON.stringify(customers, null, 2));
   } catch (e) {
     console.error(e);
   } finally {

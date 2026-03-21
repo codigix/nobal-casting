@@ -11,7 +11,7 @@
         SELECT 
           bt.*,
           i.item_code,
-          i.item_name,
+          i.name as item_name,
           w.warehouse_code,
           w.warehouse_name
         FROM batch_tracking bt
@@ -62,7 +62,7 @@
         `SELECT 
           bt.*,
           i.item_code,
-          i.item_name,
+          i.name as item_name,
           w.warehouse_code,
           w.warehouse_name
         FROM batch_tracking bt
@@ -185,7 +185,7 @@
         SELECT 
           bt.*,
           i.item_code,
-          i.item_name,
+          i.name as item_name,
           w.warehouse_name,
           DATEDIFF(CURDATE(), bt.expiry_date) as days_expired
         FROM batch_tracking bt
@@ -216,7 +216,7 @@
         SELECT 
           bt.*,
           i.item_code,
-          i.item_name,
+          i.name as item_name,
           w.warehouse_name,
           DATEDIFF(bt.expiry_date, CURDATE()) as days_remaining
         FROM batch_tracking bt

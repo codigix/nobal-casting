@@ -277,7 +277,7 @@ class StockBalanceModel {
       let query = `
         SELECT 
           sb.*,
-          i.item_name,
+          i.name as item_name,
           w.warehouse_code,
           w.warehouse_name,
           COALESCE(sl_in.total_in_qty, 0) as in_quantity,

@@ -375,7 +375,7 @@ export default function ProductionHierarchy() {
         <div className="flex items-center gap-3">
           <button onClick={handleDownloadPDF} className="flex items-center gap-2 p-2 text-black/50 rounded bg-orange-100 transition-all ">
             <Download size={16} />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Download PDF</span>
+            <span className="text-[10px]  uppercase tracking-wider">Download PDF</span>
           </button>
           <div className="flex bg-slate-50 rounded border border-slate-200 p-0.5">
             <button onClick={() => setZoom(Math.max(0.4, zoom - 0.1))} className="p-1.5 hover:bg-white hover: rounded-md text-slate-500 transition-all"><Minimize2 size={14} /></button>

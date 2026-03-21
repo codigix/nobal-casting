@@ -805,7 +805,8 @@ class OEEModel {
     try {
       const [rows] = await this.db.query(`
         SELECT DISTINCT wo.wo_id, wo.item_code, i.name as item_name,
-               oa.oee, oa.availability, oa.performance, oa.quality, oa.log_date
+               oa.oee, oa.availability, oa.performance, oa.quality, oa.log_date,
+               wo.created_at
         FROM work_order wo
         JOIN job_card jc ON wo.wo_id = jc.work_order_id
         JOIN item i ON wo.item_code = i.item_code

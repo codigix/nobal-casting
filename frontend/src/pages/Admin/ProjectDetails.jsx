@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, AreaChart, Area } from 'recharts'
 import { TrendingUp, Calendar, AlertCircle, Clock, CheckCircle, Truck, Package, LayoutGrid, ArrowUpRight, Layers, Zap, Cpu, ChevronLeft, ClipboardCheck, ArrowRight, ShoppingCart, Boxes } from 'lucide-react'
 import { getDetailedProjectAnalysis } from '../../services/adminService'
 
@@ -23,7 +23,7 @@ const StatusBadge = ({ status }) => {
 
   return (
     <div 
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+      className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium"
       style={{
         backgroundColor: config.bg,
         border: `1px solid ${config.border}`,
@@ -49,7 +49,7 @@ const MaterialStatusBadge = ({ status }) => {
   }
   const config = configs[status?.toLowerCase()] || configs.pending
   return (
-    <span className={`px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider ${config.color}`}>
+    <span className={`px-2 py-0.5 rounded border text-[10px]    ${config.color}`}>
       {config.label}
     </span>
   )
@@ -92,14 +92,15 @@ const ProcessFlow = ({ stages }) => {
                 </div>
                 <h4 className=" text-slate-700">{column.title}</h4>
               </div>
-              <span className="text-xs  bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">
+              <span className="text-xs  bg-slate-100 text-slate-600 px-2 py-1 rounded">
                 {columnStages.length}
               </span>
             </div>
             
-            <div className={`flex-1 flex flex-col gap-4 p-3  rounded  border-2 border-dashed ${column.border} ${column.bg} transition-colors`}>
+            <div className={`flex-1 flex flex-col gap-2 p-3  rounded  border-2 border-dashed ${column.border} ${column.bg} transition-colors`}>
               {columnStages.map((stage, idx) => {
-                const rawProgress = stage.planned_qty > 0 ? Math.round((stage.produced_qty / stage.planned_qty) * 100) : 0;
+                const verifiedProgress = stage.planned_qty > 0 ? Math.round((stage.accepted_qty / stage.planned_qty) * 100) : 0;
+                const producedProgress = stage.planned_qty > 0 ? Math.round((stage.produced_qty / stage.planned_qty) * 100) : 0;
                 const yieldRate = stage.produced_qty > 0 ? Math.round((stage.accepted_qty / stage.produced_qty) * 100) : 0;
                 
                 return (
@@ -126,14 +127,25 @@ const ProcessFlow = ({ stages }) => {
                     <div className="space-y-3">
                       <div>
                         <div className="flex items-center justify-between text-[10px]  text-slate-500 mb-1.5">
-                          <span>PROGRESS</span>
-                          <span className="text-slate-900">{rawProgress}%</span>
+                          <span>EXECUTION PROGRESS</span>
+                          <span className="text-slate-900">{verifiedProgress}% / {producedProgress}%</span>
                         </div>
-                        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-2 w-full bg-slate-100 rounded overflow-hidden relative">
+                          {/* Produced (Gross) Progress - Light/Orange bar */}
                           <div 
-                            className={`h-full transition-all duration-1000 ${column.status === 'completed' ? 'bg-emerald-500' : 'bg-blue-600'}`}
-                            style={{ width: `${Math.min(rawProgress, 100)}%` }}
+                            className="h-full absolute left-0 top-0 bg-amber-200 transition-all duration-1000"
+                            style={{ width: `${Math.min(producedProgress, 100)}%` }}
                           />
+                          {/* Verified (Net) Progress - Darker/Blue or Green bar */}
+                          <div 
+                            className={`h-full absolute left-0 top-0 transition-all duration-1000 ${column.status === 'completed' ? 'bg-emerald-500' : 'bg-blue-600'}`}
+                            style={{ width: `${Math.min(verifiedProgress, 100)}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-tighter">
+                          <span>Net: {stage.accepted_qty}</span>
+                          <span>Gross: {stage.produced_qty}</span>
+                          <span>Target: {stage.planned_qty}</span>
                         </div>
                       </div>
                       
@@ -204,7 +216,7 @@ export default function ProjectDetails() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded animate-spin mb-4" />
         <p className="text-slate-500 font-medium animate-pulse">Analyzing Project Vitals...</p>
       </div>
     )
@@ -230,6 +242,7 @@ export default function ProjectDetails() {
   const progress = project.progress || 0
   
   const stages = detailedData.stages || []
+  const entries = detailedData.entries || []
   const totalProduced = stages.reduce((acc, s) => acc + (parseFloat(s.produced_qty) || 0), 0)
   const totalAccepted = stages.reduce((acc, s) => acc + (parseFloat(s.accepted_qty) || 0), 0)
   const totalRejected = stages.reduce((acc, s) => acc + (parseFloat(s.rejected_qty) || 0), 0)
@@ -262,11 +275,33 @@ export default function ProjectDetails() {
     ? (detailedData?.stages || [])
     : (detailedData?.project?.stagesByItem?.[selectedItemForStages] || [])
 
+  // Aggregate daily production trend from chartData
+  const getAggregatedTrend = () => {
+    if (!detailedData?.chartData || detailedData.chartData.length === 0) return [];
+    
+    const aggregated = {};
+    detailedData.chartData.forEach(item => {
+      item.data.forEach(point => {
+        if (!aggregated[point.date]) {
+          aggregated[point.date] = { date: point.date, actual: 0 };
+        }
+        aggregated[point.date].actual += point.actual;
+      });
+    });
+    
+    return Object.values(aggregated).sort((a, b) => {
+      // Simple date sort (assuming DD MMM format from backend)
+      return new Date(a.date) - new Date(b.date);
+    });
+  };
+
+  const trendData = getAggregatedTrend();
+
   return (
     <div className="p-6">
       {/* Header */}
-      <div className=" md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
+      <div className=" md:flex-row md:items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2">
           <button 
             onClick={() => navigate('/admin/project-analysis')}
             className="p-2 bg-white border border-slate-200 rounded  text-slate-500 hover:text-blue-600 hover:border-blue-100 transition-all  "
@@ -275,7 +310,7 @@ export default function ProjectDetails() {
           </button>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-xl  text-slate-900 m-0">{project.name || 'Untitled Project'}</h1>
+              <h1 className="text-md  text-slate-900 m-0">{project.name || 'Untitled Project'}</h1>
               <StatusBadge status={project.status} />
             </div>
             <p className="text-slate-500 font-medium m-0">
@@ -313,49 +348,49 @@ export default function ProjectDetails() {
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="col-span-2 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white p-4  rounded    border border-slate-200 hover: transition-shadow">
-                  <p className="text-xs text-slate-400 font-bold mb-4 uppercase tracking-wider">Completion</p>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                <div className="bg-white p-2  rounded    border border-slate-200 hover: transition-shadow">
+                  <p className="text-xs text-slate-400  mb-4  ">Completion</p>
                   <div className="flex items-end justify-between mb-2">
-                    <h3 className="text-2xl font-bold text-slate-900">{progress}%</h3>
+                    <h3 className="text-xl  text-slate-900">{progress}%</h3>
                     <TrendingUp size={15} className="text-emerald-500 mb-2" />
                   </div>
-                  <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-2 w-full bg-slate-100 rounded overflow-hidden">
                     <div className="h-full bg-blue-600" style={{ width: `${progress}%` }} />
                   </div>
                 </div>
                 
-                <div className="bg-white p-4  rounded    border border-slate-200 hover: transition-shadow">
-                  <p className="text-xs text-slate-400 font-bold mb-4 uppercase tracking-wider">Revenue</p>
-                  <h3 className="text-2xl font-bold text-slate-900">₹{parseFloat(project.revenue || 0).toLocaleString()}</h3>
-                  <p className="text-emerald-600 text-[10px] font-bold mt-2 flex items-center gap-1 uppercase">
+                <div className="bg-white p-2  rounded    border border-slate-200 hover: transition-shadow">
+                  <p className="text-xs text-slate-400  mb-4  ">Revenue</p>
+                  <h3 className="text-xl  text-slate-900">₹{parseFloat(project.revenue || 0).toLocaleString()}</h3>
+                  <p className="text-emerald-600 text-[10px]  mt-2 flex items-center gap-1 ">
                     <CheckCircle size={12} /> Confirmed
                   </p>
                 </div>
 
-                <div className="bg-white p-4  rounded    border border-slate-200 hover: transition-shadow">
-                  <p className="text-xs text-slate-400 font-bold mb-4 uppercase tracking-wider">Timeline</p>
-                  <h3 className="text-2xl font-bold text-slate-900">{project.daysLeft || 0} Days</h3>
-                  <p className="text-slate-500 text-[10px] font-bold mt-2 uppercase">Remaining</p>
+                <div className="bg-white p-2  rounded    border border-slate-200 hover: transition-shadow">
+                  <p className="text-xs text-slate-400  mb-4  ">Timeline</p>
+                  <h3 className="text-xl  text-slate-900">{project.daysLeft || 0} Days</h3>
+                  <p className="text-slate-500 text-[10px]  mt-2 ">Remaining</p>
                 </div>
 
-                <div className="bg-white p-4  rounded    border border-slate-200 hover: transition-shadow">
-                  <p className="text-xs text-slate-400 font-bold mb-4 uppercase tracking-wider">Materials</p>
-                  <h3 className="text-2xl font-bold text-slate-900">{detailedData.project?.material_requests?.length || 0}</h3>
-                  <p className="text-blue-600 text-[10px] font-bold mt-2 uppercase">Requests Active</p>
+                <div className="bg-white p-2  rounded    border border-slate-200 hover: transition-shadow">
+                  <p className="text-xs text-slate-400  mb-4  ">Materials</p>
+                  <h3 className="text-xl  text-slate-900">{detailedData.project?.material_requests?.length || 0}</h3>
+                  <p className="text-blue-600 text-[10px]  mt-2 ">Requests Active</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white p-6 rounded border border-slate-200">
-                  <h4 className="text-lg font-bold text-slate-900 mb-6 tracking-tight">Supply Chain Health</h4>
-                  <div className="space-y-6">
+                <div className="bg-white p-2 rounded border border-slate-200">
+                  <h4 className="text-sm  text-slate-900 mb-6 ">Supply Chain Health</h4>
+                  <div className="space-y-2">
                     <div>
-                      <div className="flex justify-between text-xs font-bold mb-2">
-                        <span className="text-slate-500 uppercase">Material Requests</span>
+                      <div className="flex justify-between text-xs  mb-2">
+                        <span className="text-slate-500 ">Material Requests</span>
                         <span className="text-slate-900">{detailedData.project?.material_requests?.filter(mr => mr.status === 'approved' || mr.status === 'completed').length || 0} / {detailedData.project?.material_requests?.length || 0} Approved</span>
                       </div>
-                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-2 w-full bg-slate-100 rounded overflow-hidden">
                         <div 
                           className="h-full bg-emerald-500" 
                           style={{ width: `${(detailedData.project?.material_requests?.length > 0 ? (detailedData.project.material_requests.filter(mr => mr.status === 'approved' || mr.status === 'completed').length / detailedData.project.material_requests.length) * 100 : 0)}%` }} 
@@ -363,16 +398,16 @@ export default function ProjectDetails() {
                       </div>
                     </div>
                     <div>
-                      <div className="flex justify-between text-xs font-bold mb-2">
-                        <span className="text-slate-500 uppercase">Stock Logistics</span>
+                      <div className="flex justify-between text-xs  mb-2">
+                        <span className="text-slate-500 ">Stock Logistics</span>
                         <span className="text-slate-900">{detailedData.project?.stock_movements?.length || 0} Transactions</span>
                       </div>
                       <div className="flex gap-1">
                         {detailedData.project?.stock_movements?.slice(0, 10).map((sm, i) => (
-                          <div key={i} className={`h-1.5 flex-1 rounded-full ${sm.status === 'Approved' ? 'bg-emerald-500' : 'bg-amber-400'}`} title={sm.transaction_no} />
+                          <div key={i} className={`h-1.5 flex-1 rounded ${sm.status === 'Approved' ? 'bg-emerald-500' : 'bg-amber-400'}`} title={sm.transaction_no} />
                         ))}
                         {(!detailedData.project?.stock_movements || detailedData.project.stock_movements.length === 0) && (
-                          <div className="h-1.5 w-full bg-slate-100 rounded-full" />
+                          <div className="h-1.5 w-full bg-slate-100 rounded" />
                         )}
                       </div>
                     </div>
@@ -382,15 +417,15 @@ export default function ProjectDetails() {
                           <ShoppingCart size={16} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase leading-none mb-1">Last Request</p>
-                          <p className="text-xs font-bold text-slate-700 m-0">
+                          <p className="text-[10px]  text-slate-400  leading-none mb-1">Last Request</p>
+                          <p className="text-xs  text-slate-700 m-0">
                             {detailedData.project?.material_requests?.[0]?.mr_id || 'No requests yet'}
                           </p>
                         </div>
                       </div>
                       <button 
                         onClick={() => setActiveTab('supplychain')}
-                        className="text-blue-600 text-xs font-bold flex items-center gap-1 hover:underline"
+                        className="text-blue-600 text-xs  flex items-center gap-1 hover:underline"
                       >
                         View Details <ArrowRight size={14} />
                       </button>
@@ -398,8 +433,8 @@ export default function ProjectDetails() {
                   </div>
                 </div>
 
-                <div className="bg-white p-6 rounded border border-slate-200">
-                  <h4 className="text-lg font-bold text-slate-900 mb-6 tracking-tight">Machine Utilization</h4>
+                <div className="bg-white p-2 rounded border border-slate-200">
+                  <h4 className="text-sm  text-slate-900 mb-2 ">Machine Utilization</h4>
                   <div className="h-[150px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={detailedData.project?.machine_stats?.slice(0, 5) || []}>
@@ -416,15 +451,15 @@ export default function ProjectDetails() {
                     </ResponsiveContainer>
                   </div>
                   <div className="mt-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
                       <div className="text-center">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Active</p>
-                        <p className="text-sm font-bold text-slate-700">{detailedData.project?.machine_stats?.length || 0}</p>
+                        <p className="text-[10px]  text-slate-400  mb-1">Active</p>
+                        <p className="text-sm  text-slate-700">{detailedData.project?.machine_stats?.length || 0}</p>
                       </div>
                       <div className="w-px h-8 bg-slate-100" />
                       <div className="text-center">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Avg Eff.</p>
-                        <p className="text-sm font-bold text-slate-700">
+                        <p className="text-[10px]  text-slate-400  mb-1">Avg Eff.</p>
+                        <p className="text-sm  text-slate-700">
                           {Math.round((detailedData.project?.machine_stats?.reduce((acc, m) => acc + m.efficiency, 0) || 0) / (detailedData.project?.machine_stats?.length || 1))}%
                         </p>
                       </div>
@@ -435,22 +470,44 @@ export default function ProjectDetails() {
 
               <div className="bg-white p-2 rounded  border border-slate-200">
                 <div className="flex items-center justify-between mb-6">
-                  <h4 className="text-lg  text-slate-900">Health Radar Analysis</h4>
+                  <h4 className="text-sm  text-slate-900">Verified Progress by Stage</h4>
                   <div className="flex items-center gap-6 text-xs ">
-                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500" /> Current Performance</div>
-                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-slate-200" /> Industry Benchmark</div>
+                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-blue-500" /> Verified Stage Output</div>
                   </div>
                 </div>
                 <div className="h-[400px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                      <PolarGrid stroke="#e2e8f0" />
-                      <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 12, fontWeight: 700 }} />
-                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                      <Radar name="Benchmark" dataKey="B" stroke="#cbd5e1" fill="#f1f5f9" fillOpacity={0.5} />
-                      <Radar name="Project" dataKey="A" stroke="#2563eb" strokeWidth={3} fill="#3b82f6" fillOpacity={0.3} />
-                      <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                    </RadarChart>
+                    <BarChart data={stages.slice(0, 8)} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis 
+                        dataKey="stage_name" 
+                        axisLine={{ stroke: '#e2e8f0' }}
+                        tickLine={false}
+                        tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }}
+                      />
+                      <YAxis 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: '#94a3b8', fontSize: 10 }}
+                      />
+                      <Tooltip 
+                        cursor={{ fill: '#f8fafc' }}
+                        contentStyle={{ 
+                          backgroundColor: '#ffffff', 
+                          border: '1px solid #e2e8f0', 
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                          fontSize: '12px'
+                        }}
+                      />
+                      <Bar 
+                        dataKey="accepted_qty" 
+                        name="Verified Output" 
+                        fill="#3b82f6" 
+                        radius={[4, 4, 0, 0]}
+                        barSize={40}
+                      />
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
@@ -496,8 +553,8 @@ export default function ProjectDetails() {
                         { label: 'Production Start', date: stages[0]?.start_date || orderDate, completed: stages.some(s => s.status !== 'pending') },
                         { label: 'Target Delivery', date: dueDate, completed: project.status === 'delivered' }
                       ].map((milestone, i) => (
-                        <div key={i} className="flex items-center gap-4">
-                          <div className={`w-2 h-2 rounded-full ${milestone.completed ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-slate-700'}`} />
+                        <div key={i} className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded ${milestone.completed ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-slate-700'}`} />
                           <div>
                             <p className="text-xs  m-0">{milestone.label}</p>
                             <p className="text-[10px] text-slate-400 m-0">{milestone.date ? new Date(milestone.date).toLocaleDateString() : 'TBD'}</p>
@@ -513,16 +570,16 @@ export default function ProjectDetails() {
         )}
 
         {activeTab === 'stages' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex flex-col md:flex-row md:items-center justify-between bg-white p-4 rounded border border-slate-200 gap-4 shadow-sm">
+          <div className="space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col md:flex-row md:items-center justify-between p-2 rounded  gap-2">
               <div>
-                <h4 className="text-lg font-bold text-slate-900 m-0 tracking-tight">Production Workflow Analysis</h4>
-                <p className="text-xs text-slate-500 font-medium mt-1 uppercase tracking-wider">Status of operations across all manufacturing phases</p>
+                <h4 className="text-lg  text-slate-900 m-0 ">Production Workflow Analysis</h4>
+                <p className="text-xs text-slate-500 font-medium mt-1  ">Status of operations across all manufacturing phases</p>
               </div>
               <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-2">Filter Item:</span>
+                <span className="text-[10px]  text-slate-400  tracking-widest pl-2">Filter Item:</span>
                 <select 
-                  className="bg-white border border-slate-200 rounded px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all cursor-pointer min-w-[200px]"
+                  className="bg-white border border-slate-200 rounded px-3 py-1.5 text-xs  text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all cursor-pointer min-w-[200px]"
                   value={selectedItemForStages}
                   onChange={(e) => setSelectedItemForStages(e.target.value)}
                 >
@@ -540,20 +597,20 @@ export default function ProjectDetails() {
               <div className="bg-blue-600  rounded  p-2 text-white  flex items-center justify-between overflow-hidden relative">
                 <div className="absolute -right-10 -bottom-10 opacity-10 rotate-12"><Cpu size={90} /></div>
                 <div className="relative z-0">
-                  <p className="text-[10px]  uppercase tracking-[0.2em] text-blue-200 mb-1">Production Planning</p>
-                  <h3 className="text-xl text-white  m-0">{detailedData.productionPlan.plan_id}</h3>
-                  <div className="flex items-center gap-4 mt-3">
-                    <span className="flex items-center gap-1.5 text-xs  bg-white/20 px-2.5 py-1 rounded-full backdrop-blur-md">
+                  <p className="text-xs  text-blue-200 mb-1">Production Planning</p>
+                  <h3 className="text-sm text-white  m-0">{detailedData.productionPlan.plan_id}</h3>
+                  <div className="flex items-center gap-2 mt-3">
+                    <span className="flex items-center gap-1.5 text-xs  bg-white/20 px-2 py-1 rounded backdrop-blur-md">
                       <Clock size={12} /> {new Date(detailedData.productionPlan.plan_date).toLocaleDateString()}
                     </span>
-                    <span className="flex items-center gap-1.5 text-xs  bg-white/20 px-2.5 py-1 rounded-full backdrop-blur-md ">
+                    <span className="flex items-center gap-1.5 text-xs  bg-white/20 px-2 py-1 rounded backdrop-blur-md ">
                       Status: {detailedData.productionPlan.status}
                     </span>
                   </div>
                 </div>
                 <div className="text-right relative z-0">
-                  <p className="text-[10px]  uppercase tracking-[0.2em] text-blue-200 mb-1">Total Operations</p>
-                  <p className="text-4xl text-white m-0">{detailedData.operations?.length || 0}</p>
+                  <p className="text-xs text-blue-200 mb-1">Total Operations</p>
+                  <p className="text-xl text-white m-0">{detailedData.operations?.length || 0}</p>
                 </div>
               </div>
             )}
@@ -561,10 +618,10 @@ export default function ProjectDetails() {
             <div className="bg-white  rounded    border border-slate-200 overflow-hidden">
               <div className="p-2 border-b border-slate-100 flex items-center justify-between">
                 <div>
-                  <h4 className="text-lg  text-slate-900 m-0">Manufacturing Work Orders</h4>
+                  <h4 className="text-sm  text-slate-900 m-0">Manufacturing Work Orders</h4>
                   <p className="text-xs text-slate-500 font-medium mt-1">Detailed tracking of item production status</p>
                 </div>
-                <div className="px-3 py-1 bg-slate-100 rounded-full text-[10px]  text-slate-600 ">
+                <div className="p-2 bg-slate-100 rounded text-xs  text-slate-600 ">
                   {detailedData.workOrders?.length || 0} Orders
                 </div>
               </div>
@@ -572,12 +629,12 @@ export default function ProjectDetails() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-slate-50/50">
-                      <th className="p-4 text-[10px]  text-slate-400 ">Work Order</th>
-                      <th className="p-4 text-[10px]  text-slate-400 ">Item</th>
-                      <th className="p-4 text-[10px]  text-slate-400  text-center">Qty</th>
-                      <th className="p-4 text-[10px]  text-slate-400  text-center">Produced</th>
-                      <th className="p-4 text-[10px]  text-slate-400 ">Status</th>
-                      <th className="p-4 text-[10px]  text-slate-400 ">Target Delivery</th>
+                      <th className="p-2 text-[10px]  text-slate-400 ">Work Order</th>
+                      <th className="p-2 text-[10px]  text-slate-400 ">Item</th>
+                      <th className="p-2 text-[10px]  text-slate-400  text-center">Qty</th>
+                      <th className="p-2 text-[10px]  text-slate-400  text-center">Produced</th>
+                      <th className="p-2 text-[10px]  text-slate-400 ">Status</th>
+                      <th className="p-2 text-[10px]  text-slate-400 ">Target Delivery</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -587,12 +644,12 @@ export default function ProjectDetails() {
                           <td className="p-2">
                             <span className="text-xs  text-slate-900 group-hover:text-blue-600 transition-colors">{wo.wo_id}</span>
                             <div className="flex gap-2 mt-1">
-                              {wo.bom_no && <span className="text-[9px]  text-slate-400 uppercase tracking-tighter">BOM: {wo.bom_no}</span>}
+                              {wo.bom_no && <span className="text-[9px]  text-slate-400  er">BOM: {wo.bom_no}</span>}
                             </div>
                           </td>
                           <td className="p-2">
                             <p className="text-xs  text-slate-700 m-0">{wo.item_name || wo.item_code}</p>
-                            <p className="text-[10px]  text-slate-400 m-0 uppercase">{wo.item_code}</p>
+                            <p className="text-[10px]  text-slate-400 m-0 ">{wo.item_code}</p>
                           </td>
                           <td className="p-2 text-center">
                             <span className="text-xs  text-slate-900">{parseFloat(wo.quantity).toLocaleString()}</span>
@@ -602,7 +659,7 @@ export default function ProjectDetails() {
                               <span className={`text-xs  ${wo.produced_qty >= wo.quantity ? 'text-emerald-600' : 'text-slate-900'}`}>
                                 {parseFloat(wo.produced_qty).toLocaleString()}
                               </span>
-                              <div className="w-12 h-1 bg-slate-100 rounded-full mt-1 overflow-hidden">
+                              <div className="w-12 h-1 bg-slate-100 rounded mt-1 overflow-hidden">
                                 <div 
                                   className={`h-full ${wo.produced_qty >= wo.quantity ? 'bg-emerald-500' : 'bg-blue-600'}`} 
                                   style={{ width: `${Math.min(100, (wo.produced_qty / wo.quantity) * 100)}%` }}
@@ -649,9 +706,9 @@ export default function ProjectDetails() {
                 <div className="p-0">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-slate-100">
                     {detailedData.operations.map((op, idx) => (
-                      <div key={idx} className="bg-white p-4">
+                      <div key={idx} className="bg-white p-2">
                         <div className="flex items-center justify-between mb-3">
-                          <span className="text-[10px]  text-blue-600 uppercase tracking-[0.2em]">{op.operation_type || 'IN-HOUSE'}</span>
+                          <span className="text-[10px]  text-blue-600  tracking-[0.2em]">{op.operation_type || 'IN-HOUSE'}</span>
                           <span className="text-xs  text-slate-400">#{idx + 1}</span>
                         </div>
                         <h5 className="text-sm  text-slate-800 mb-1">{op.operation_name}</h5>
@@ -660,7 +717,7 @@ export default function ProjectDetails() {
                           <span className="flex items-center gap-1"><Cpu size={12} /> {op.workstation_type || 'Manual'}</span>
                         </div>
                         <div className="flex items-center justify-between pt-3 border-t border-slate-50">
-                          <span className="text-[10px]  text-slate-400 uppercase">Cost Allocation</span>
+                          <span className="text-[10px]  text-slate-400 ">Cost Allocation</span>
                           <span className="text-xs  text-slate-900">₹{parseFloat(op.total_cost || 0).toLocaleString()}</span>
                         </div>
                       </div>
@@ -674,35 +731,67 @@ export default function ProjectDetails() {
 
         {activeTab === 'history' && (
           <div className="space-y-8">
-            {/* Stage-wise Progress Analysis (Matching Excel Visual - Consolidated - Light Theme) */}
+            {/* Main KPI Row for History */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-white p-4 rounded border border-slate-200">
+                <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase mb-1">Overall Plan</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-bold text-slate-900">{stages.reduce((acc, s) => acc + s.planned_qty, 0)}</h3>
+                  <span className="text-xs text-slate-500">Units</span>
+                </div>
+              </div>
+              <div className="bg-white p-4 rounded border border-slate-200">
+                <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase mb-1">Overall Actual</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-bold text-blue-600">{stages.reduce((acc, s) => acc + s.accepted_qty, 0)}</h3>
+                  <span className="text-xs text-slate-500">Units</span>
+                </div>
+              </div>
+              <div className="bg-white p-4 rounded border border-slate-200">
+                <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase mb-1">Production Yield</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-bold text-emerald-600">{yieldRate}%</h3>
+                  <TrendingUp size={16} className="text-emerald-500" />
+                </div>
+              </div>
+              <div className="bg-white p-4 rounded border border-slate-200">
+                <p className="text-[10px] text-slate-400 font-bold tracking-wider uppercase mb-1">Process Loss</p>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-2xl font-bold text-rose-600">{totalLoss}</h3>
+                  <span className="text-xs text-slate-500">Units</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Stage-wise Progress Analysis */}
             {detailedData.stages && detailedData.stages.length > 0 ? (
-              <div className="bg-white p-6  rounded    border border-slate-200">
+              <div className="bg-white p-6 rounded border border-slate-200">
                 <div className="flex items-center justify-between mb-8">
                   <div>
-                    <h4 className="text-xl  text-slate-900 m-0 ">Global Production Tracking</h4>
-                    <p className="text-blue-600 text-[10px]  uppercase tracking-[0.3em] mt-1">Consolidated Operation Progress Analysis</p>
+                    <h4 className="text-lg font-bold text-slate-900 m-0">Global Production Tracking</h4>
+                    <p className="text-slate-500 text-xs mt-1">Consolidated Operation Progress Analysis</p>
                   </div>
                   <div className="flex gap-6">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-[#10b981] rounded-sm  " />
-                      <span className="text-[10px]  text-slate-500 ">PLAN</span>
+                      <div className="w-3 h-3 bg-[#10b981] rounded-full" />
+                      <span className="text-[10px] font-bold text-slate-500">PLAN</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-[#ef4444] rounded-sm  " />
-                      <span className="text-[10px]  text-slate-500 ">ACTUAL</span>
+                      <div className="w-3 h-3 bg-[#ef4444] rounded-full" />
+                      <span className="text-[10px] font-bold text-slate-500">ACTUAL</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="h-[450px] w-full">
+                <div className="h-[400px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={detailedData.stages} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
+                    <BarChart data={detailedData.stages} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis 
                         dataKey="stage_name" 
                         axisLine={{ stroke: '#e2e8f0' }}
                         tickLine={false}
-                        tick={{ fill: '#64748b', fontSize: 10, fontWeight: 800 }}
+                        tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }}
                         angle={-45}
                         textAnchor="end"
                         interval={0}
@@ -710,111 +799,166 @@ export default function ProjectDetails() {
                       <YAxis 
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 800 }}
+                        tick={{ fill: '#94a3b8', fontSize: 10 }}
                       />
                       <Tooltip 
                         cursor={{ fill: '#f8fafc' }}
                         contentStyle={{ 
                           backgroundColor: '#ffffff', 
                           border: '1px solid #e2e8f0', 
-                          borderRadius: '12px',
-                          boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                          fontSize: '10px',
-                          fontWeight: 'bold'
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                          fontSize: '12px'
                         }}
-                        itemStyle={{ color: '#1e293b' }}
                       />
                       <Bar 
                         dataKey="planned_qty" 
                         name="PLAN" 
                         fill="#10b981" 
-                        radius={[2, 2, 0, 0]}
+                        radius={[4, 4, 0, 0]}
                         barSize={30}
                       />
                       <Bar 
-                        dataKey="produced_qty" 
+                        dataKey="accepted_qty" 
                         name="ACTUAL" 
                         fill="#ef4444" 
-                        radius={[2, 2, 0, 0]}
+                        radius={[4, 4, 0, 0]}
                         barSize={30}
                       />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
                 
-                {/* Data Summary Table below chart */}
-                <div className="mt-8 overflow-x-auto  border border-slate-100 bg-slate-50/50">
-                  <table className="w-full text-center">
-                    <thead className="bg-white">
+                {/* Data Summary Table */}
+                <div className="mt-8 rounded border border-slate-100 overflow-hidden">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50">
                       <tr>
-                        <th className="p-2 text-[9px]  text-slate-400  border-r border-slate-100">TYPE</th>
+                        <th className="p-3 text-[10px] font-bold text-slate-400 border-r border-slate-100 w-32 uppercase tracking-wider">TYPE</th>
                         {detailedData.stages.map((s, i) => (
-                          <th key={i} className="p-2 text-[9px]  text-slate-600  border-r border-slate-100">{s.stage_name}</th>
+                          <th key={i} className="p-3 text-[10px] font-bold text-slate-400 text-center border-r border-slate-100 uppercase tracking-wider">{s.stage_name}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-t border-slate-100">
-                        <td className="p-2 text-[10px]  text-emerald-600 border-r border-slate-100 bg-emerald-50/30">PLAN</td>
+                      <tr className="border-t border-slate-100 hover:bg-slate-50/30">
+                        <td className="p-3 text-xs font-bold text-emerald-600 border-r border-slate-100">PLAN</td>
                         {detailedData.stages.map((s, i) => (
-                          <td key={i} className="p-2 text-[10px]  text-slate-700 border-r border-slate-100">{s.planned_qty}</td>
+                          <td key={i} className="p-3 text-xs text-slate-700 text-center border-r border-slate-100">{s.planned_qty}</td>
                         ))}
                       </tr>
-                      <tr className="border-t border-slate-100">
-                        <td className="p-2 text-[10px]  text-rose-600 border-r border-slate-100 bg-rose-50/30">ACTUAL</td>
+                      <tr className="border-t border-slate-100 hover:bg-slate-50/30">
+                        <td className="p-3 text-xs font-bold text-rose-600 border-r border-slate-100">ACTUAL</td>
                         {detailedData.stages.map((s, i) => (
-                          <td key={i} className="p-2 text-[10px]  text-slate-700 border-r border-slate-100">{s.produced_qty}</td>
+                          <td key={i} className="p-3 text-xs text-slate-700 text-center border-r border-slate-100">{s.accepted_qty}</td>
                         ))}
                       </tr>
                     </tbody>
                   </table>
                 </div>
-
-                {/* Production Log - Detailed History */}
-                <div className="mt-12">
-                  <div className="flex items-center justify-between mb-4 px-2">
-                    <h5 className="text-xs  text-slate-900 ">Recent Production Logs</h5>
-                    <span className="text-[10px]  text-slate-400">{detailedData.entries?.length || 0} Entries</span>
-                  </div>
-                  <div className="overflow-hidden  border border-slate-100 bg-white  ">
-                    <table className="w-full text-left">
-                      <thead>
-                        <tr className="bg-slate-50">
-                          <th className="p-3 text-[9px]  text-slate-400 ">ID</th>
-                          <th className="p-3 text-[9px]  text-slate-400 ">Date</th>
-                          <th className="p-3 text-[9px]  text-slate-400 ">Work Order</th>
-                          <th className="p-3 text-[9px]  text-slate-400 ">Operation</th>
-                          <th className="p-3 text-[9px]  text-slate-400  text-right">Qty</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50">
-                        {detailedData.entries?.length > 0 ? (
-                          detailedData.entries.slice().reverse().map((entry, i) => (
-                            <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="p-3 text-[10px]  text-slate-600">{entry.pe_id}</td>
-                              <td className="p-3 text-[10px]  text-slate-500">
-                                {new Date(entry.entry_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                              </td>
-                              <td className="p-3 text-[10px]  text-slate-900">{entry.work_order_id}</td>
-                              <td className="p-3 text-[10px]  text-blue-600 uppercase">{entry.operation}</td>
-                              <td className="p-3 text-[10px]  text-slate-900 text-right">{entry.quantity_produced}</td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan="5" className="p-8 text-center text-[10px]  text-slate-400 uppercase">
-                              No production entries logged yet
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
               </div>
             ) : null}
 
-            
+            {/* Daily Production Trend Chart */}
+            {trendData.length > 0 && (
+              <div className="bg-white p-6 rounded border border-slate-200">
+                <div className="mb-6">
+                  <h4 className="text-lg font-bold text-slate-900 m-0">Production Velocity</h4>
+                  <p className="text-slate-500 text-xs mt-1">Daily trend of verified production output across all stages</p>
+                </div>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis 
+                        dataKey="date" 
+                        axisLine={{ stroke: '#e2e8f0' }}
+                        tickLine={false}
+                        tick={{ fill: '#64748b', fontSize: 10 }}
+                      />
+                      <YAxis 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: '#94a3b8', fontSize: 10 }}
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#ffffff', 
+                          border: '1px solid #e2e8f0', 
+                          borderRadius: '8px',
+                          fontSize: '12px'
+                        }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="actual" 
+                        stroke="#3b82f6" 
+                        strokeWidth={3}
+                        fillOpacity={1} 
+                        fill="url(#colorActual)" 
+                        name="Verified Output"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {/* Production Log - Detailed History */}
+            <div className="bg-white rounded border border-slate-200 overflow-hidden">
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 m-0">Recent Production Logs</h4>
+                  <p className="text-xs text-slate-500 mt-1">Audit log of all production transactions</p>
+                </div>
+                <span className="px-2 py-1 bg-slate-100 rounded text-[10px] font-bold text-slate-500">{detailedData.entries?.length || 0} Records</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50/50">
+                    <tr>
+                      <th className="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">ID</th>
+                      <th className="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</th>
+                      <th className="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Work Order</th>
+                      <th className="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Operation</th>
+                      <th className="p-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Quantity</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {detailedData.entries?.length > 0 ? (
+                      detailedData.entries.slice().reverse().map((entry, i) => (
+                        <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="p-3 text-xs font-medium text-slate-600">{entry.pe_id || entry.entry_id}</td>
+                          <td className="p-3 text-xs text-slate-500">
+                            {new Date(entry.entry_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </td>
+                          <td className="p-3 text-xs font-bold text-slate-900">{entry.work_order_id}</td>
+                          <td className="p-3">
+                            <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded text-[10px] font-bold">{entry.operation}</span>
+                          </td>
+                          <td className="p-3 text-xs font-bold text-slate-900 text-right">{entry.quantity_produced}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="5" className="p-12 text-center">
+                          <div className="flex flex-col items-center">
+                            <Clock size={40} className="text-slate-200 mb-2" />
+                            <p className="text-slate-400 font-medium">No production history logged yet</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
@@ -822,13 +966,13 @@ export default function ProjectDetails() {
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Material Requests Section */}
             <div className="bg-white rounded border border-slate-200 overflow-hidden">
-              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="p-2 border-b border-slate-100 flex items-center justify-between">
                 <div>
-                  <h4 className="text-lg text-slate-900 m-0 font-bold tracking-tight">Supply Chain Activity</h4>
+                  <h4 className="text-sm text-slate-900 m-0  ">Supply Chain Activity</h4>
                   <p className="text-xs text-slate-500 font-medium mt-1">Status of procurement and internal material issues</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold">
+                  <div className="p-2 bg-blue-50 text-blue-600 rounded text-[10px] ">
                     {detailedData.project?.material_requests?.length || 0} Requests
                   </div>
                 </div>
@@ -837,28 +981,28 @@ export default function ProjectDetails() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-slate-50/50">
-                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">MR ID</th>
-                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Dept</th>
-                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Purpose</th>
-                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider text-center">Items</th>
-                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Status</th>
-                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Request Date</th>
+                      <th className="p-2 text-[10px] text-slate-400   ">MR ID</th>
+                      <th className="p-2 text-[10px] text-slate-400   ">Dept</th>
+                      <th className="p-2 text-[10px] text-slate-400   ">Purpose</th>
+                      <th className="p-2 text-[10px] text-slate-400    text-center">Items</th>
+                      <th className="p-2 text-[10px] text-slate-400   ">Status</th>
+                      <th className="p-2 text-[10px] text-slate-400   ">Request Date</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {detailedData.project?.material_requests?.length > 0 ? (
                       detailedData.project.material_requests.map((mr, idx) => (
                         <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="p-4">
-                            <span className="text-xs font-bold text-slate-900">{mr.mr_id}</span>
+                          <td className="p-2">
+                            <span className="text-xs  text-slate-900">{mr.mr_id}</span>
                           </td>
-                          <td className="p-4 text-xs text-slate-700 font-medium">{mr.department}</td>
-                          <td className="p-4 text-xs text-slate-700 font-medium capitalize">{mr.purpose?.replace(/_/g, ' ')}</td>
-                          <td className="p-4 text-center text-xs text-slate-900 font-bold">{mr.item_count}</td>
-                          <td className="p-4">
+                          <td className="p-2 text-xs text-slate-700 font-medium">{mr.department}</td>
+                          <td className="p-2 text-xs text-slate-700 font-medium capitalize">{mr.purpose?.replace(/_/g, ' ')}</td>
+                          <td className="p-2 text-center text-xs text-slate-900 ">{mr.item_count}</td>
+                          <td className="p-2">
                             <MaterialStatusBadge status={mr.status} />
                           </td>
-                          <td className="p-4 text-xs text-slate-500 font-medium">
+                          <td className="p-2 text-xs text-slate-500 font-medium">
                             {new Date(mr.request_date).toLocaleDateString()}
                           </td>
                         </tr>
@@ -878,13 +1022,13 @@ export default function ProjectDetails() {
 
             {/* Stock Movements Section */}
             <div className="bg-white rounded border border-slate-200 overflow-hidden">
-              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="p-2 border-b border-slate-100 flex items-center justify-between">
                 <div>
-                  <h4 className="text-lg text-slate-900 m-0 font-bold tracking-tight">Stock Logistics</h4>
+                  <h4 className="text-sm text-slate-900 m-0  ">Stock Logistics</h4>
                   <p className="text-xs text-slate-500 font-medium mt-1">Real-time inventory transfers and issues</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold">
+                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded text-[10px] ">
                     {detailedData.project?.stock_movements?.length || 0} Movements
                   </div>
                 </div>
@@ -893,28 +1037,28 @@ export default function ProjectDetails() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-slate-50/50">
-                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Transaction</th>
-                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Item Details</th>
-                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Type</th>
-                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider text-right">Quantity</th>
-                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Route (Source → Target)</th>
-                      <th className="p-4 text-[10px] text-slate-400 uppercase font-bold tracking-wider">Status</th>
+                      <th className="p-2 text-[10px] text-slate-400   ">Transaction</th>
+                      <th className="p-2 text-[10px] text-slate-400   ">Item Details</th>
+                      <th className="p-2 text-[10px] text-slate-400   ">Type</th>
+                      <th className="p-2 text-[10px] text-slate-400    text-right">Quantity</th>
+                      <th className="p-2 text-[10px] text-slate-400   ">Route (Source → Target)</th>
+                      <th className="p-2 text-[10px] text-slate-400   ">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {detailedData.project?.stock_movements?.length > 0 ? (
                       detailedData.project.stock_movements.map((sm, idx) => (
                         <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="p-4">
-                            <span className="text-xs font-bold text-slate-900">{sm.transaction_no}</span>
+                          <td className="p-2">
+                            <span className="text-xs  text-slate-900">{sm.transaction_no}</span>
                             <div className="text-[10px] text-slate-400 mt-0.5 font-medium">{sm.reference_name}</div>
                           </td>
-                          <td className="p-4">
-                            <p className="text-xs text-slate-900 m-0 font-bold">{sm.item_name || sm.item_code}</p>
-                            <p className="text-[10px] text-slate-400 m-0 font-medium uppercase">{sm.item_code}</p>
+                          <td className="p-2">
+                            <p className="text-xs text-slate-900 m-0 ">{sm.item_name || sm.item_code}</p>
+                            <p className="text-[10px] text-slate-400 m-0 font-medium ">{sm.item_code}</p>
                           </td>
-                          <td className="p-4">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          <td className="p-2">
+                            <span className={`px-2 py-0.5 rounded text-[10px]  ${
                               sm.movement_type === 'IN' ? 'bg-blue-50 text-blue-600' :
                               sm.movement_type === 'OUT' ? 'bg-rose-50 text-rose-600' :
                               'bg-amber-50 text-amber-600'
@@ -922,17 +1066,17 @@ export default function ProjectDetails() {
                               {sm.movement_type}
                             </span>
                           </td>
-                          <td className="p-4 text-right text-xs font-bold text-slate-900">
+                          <td className="p-2 text-right text-xs  text-slate-900">
                             {parseFloat(sm.quantity).toLocaleString()}
                           </td>
-                          <td className="p-4">
+                          <td className="p-2">
                             <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                              <span className="font-bold text-slate-700 truncate max-w-[100px]">{sm.source_warehouse_name || 'EXTERNAL'}</span>
+                              <span className=" text-slate-700 truncate max-w-[100px]">{sm.source_warehouse_name || 'EXTERNAL'}</span>
                               <ArrowRight size={10} className="text-slate-300" />
-                              <span className="font-bold text-slate-700 truncate max-w-[100px]">{sm.target_warehouse_name || 'N/A'}</span>
+                              <span className=" text-slate-700 truncate max-w-[100px]">{sm.target_warehouse_name || 'N/A'}</span>
                             </div>
                           </td>
-                          <td className="p-4">
+                          <td className="p-2">
                             <MaterialStatusBadge status={sm.status} />
                           </td>
                         </tr>
@@ -953,14 +1097,14 @@ export default function ProjectDetails() {
         )}
 
         {activeTab === 'materials' && (
-          <div className="space-y-8">
-            <div className="bg-white  rounded    border border-slate-200 p-8">
-              <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 bg-amber-100  flex items-center justify-center text-amber-600   shadow-amber-200">
-                  <Layers size={24} />
+          <div className="space-y-2">
+            <div className="bg-white  rounded    border border-slate-200 p-2">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-6 h-6 bg-amber-100  flex items-center justify-center text-amber-600   shadow-amber-200">
+                  <Layers size={15} />
                 </div>
                 <div>
-                  <h4 className="text-xl  text-slate-900 m-0">Resource & Component Readiness</h4>
+                  <h4 className="text-sm  text-slate-900 m-0">Resource & Component Readiness</h4>
                   <p className="text-slate-500 font-medium m-0">Tracking inventory requirements across all production stages</p>
                 </div>
               </div>
@@ -969,11 +1113,11 @@ export default function ProjectDetails() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-slate-50/50">
-                      <th className="p-4 text-[10px]  text-slate-400 ">Item Details</th>
-                      <th className="p-4 text-[10px]  text-slate-400  text-right">Required</th>
-                      <th className="p-4 text-[10px]  text-slate-400  text-right">Consumed</th>
-                      <th className="p-4 text-[10px]  text-slate-400  text-right">Available</th>
-                      <th className="p-4 text-[10px]  text-slate-400  text-center">Status</th>
+                      <th className="p-2 text-[10px]  text-slate-400 ">Item Details</th>
+                      <th className="p-2 text-[10px]  text-slate-400  text-right">Required</th>
+                      <th className="p-2 text-[10px]  text-slate-400  text-right">Consumed</th>
+                      <th className="p-2 text-[10px]  text-slate-400  text-right">Available</th>
+                      <th className="p-2 text-[10px]  text-slate-400  text-center">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -982,23 +1126,23 @@ export default function ProjectDetails() {
                         const shortage = (parseFloat(mat.required_qty) - parseFloat(mat.consumed_qty)) > parseFloat(mat.stock_qty)
                         return (
                           <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="p-4">
+                            <td className="p-2">
                               <p className="text-xs  text-slate-900 m-0">{mat.item_name || mat.item_code}</p>
                               <p className="text-[10px]  text-slate-400 m-0 ">{mat.item_code}</p>
                             </td>
-                            <td className="p-4 text-right">
+                            <td className="p-2 text-right">
                               <p className="text-xs  text-slate-900 m-0">{parseFloat(mat.required_qty).toLocaleString()} {mat.uom}</p>
                             </td>
-                            <td className="p-4 text-right">
+                            <td className="p-2 text-right">
                               <p className="text-xs  text-slate-600 m-0">{parseFloat(mat.consumed_qty).toLocaleString()} {mat.uom}</p>
                             </td>
-                            <td className="p-4 text-right">
+                            <td className="p-2 text-right">
                               <p className={`text-xs  m-0 ${!shortage ? 'text-emerald-600' : 'text-rose-600'}`}>
                                 {parseFloat(mat.stock_qty).toLocaleString()} {mat.uom}
                               </p>
                             </td>
-                            <td className="p-4 text-center">
-                              <span className={`px-2 py-1 rounded-md text-[10px]  uppercase ${
+                            <td className="p-2 text-center">
+                              <span className={`px-2 py-1 rounded-md text-[10px]   ${
                                 !shortage ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
                               }`}>
                                 {!shortage ? 'Ready' : 'Shortage'}
@@ -1021,13 +1165,13 @@ export default function ProjectDetails() {
               </div>
             </div>
 
-            <div className="bg-white  rounded    border border-slate-200 p-8">
-              <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 bg-blue-100  flex items-center justify-center text-blue-600   shadow-blue-200">
-                  <Cpu size={24} />
+            <div className="bg-white  rounded    border border-slate-200 p-2">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-6 h-6 bg-blue-100  flex items-center justify-center text-blue-600   shadow-blue-200">
+                  <Cpu size={15} />
                 </div>
                 <div>
-                  <h4 className="text-xl  text-slate-900 m-0">Machine Efficiency</h4>
+                  <h4 className="text-sm  text-slate-900 m-0">Machine Efficiency</h4>
                   <p className="text-slate-500 font-medium m-0">Real-time utilization and downtime analysis</p>
                 </div>
               </div>
@@ -1037,32 +1181,32 @@ export default function ProjectDetails() {
                   <table className="w-full text-left">
                     <thead>
                       <tr className="bg-slate-50/50">
-                        <th className="p-4 text-[10px]  text-slate-400 ">Machine</th>
-                        <th className="p-4 text-[10px]  text-slate-400  text-right">Working</th>
-                        <th className="p-4 text-[10px]  text-slate-400  text-right">Downtime</th>
-                        <th className="p-4 text-[10px]  text-slate-400  text-right">Efficiency</th>
-                        <th className="p-4 text-[10px]  text-slate-400  text-center">Status</th>
+                        <th className="p-2 text-[10px]  text-slate-400 ">Machine</th>
+                        <th className="p-2 text-[10px]  text-slate-400  text-right">Working</th>
+                        <th className="p-2 text-[10px]  text-slate-400  text-right">Downtime</th>
+                        <th className="p-2 text-[10px]  text-slate-400  text-right">Efficiency</th>
+                        <th className="p-2 text-[10px]  text-slate-400  text-center">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {detailedData.project.machine_stats.map((machine, idx) => (
                         <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="p-4">
+                          <td className="p-2">
                             <p className="text-xs  text-slate-900 m-0">{machine.machine_name}</p>
                             <p className="text-[10px]  text-slate-400 m-0 ">{machine.machine_id}</p>
                           </td>
-                          <td className="p-4 text-right">
+                          <td className="p-2 text-right">
                             <p className="text-xs  text-slate-900 m-0">{(Number(machine.working_time || 0) / 60).toFixed(1)} hrs</p>
                           </td>
-                          <td className="p-4 text-right">
+                          <td className="p-2 text-right">
                             <p className="text-xs  text-slate-900 m-0">{(Number(machine.downtime || 0) / 60).toFixed(1)} hrs</p>
                           </td>
-                          <td className="p-4 text-right">
+                          <td className="p-2 text-right">
                             <div className="flex flex-col items-end gap-1">
                               <span className={`text-xs  ${machine.efficiency >= 85 ? 'text-emerald-600' : machine.efficiency >= 70 ? 'text-amber-600' : 'text-rose-600'}`}>
                                 {machine.efficiency}%
                               </span>
-                              <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                              <div className="w-24 h-1.5 bg-slate-100 rounded overflow-hidden">
                                 <div 
                                   className={`h-full ${machine.efficiency >= 85 ? 'bg-emerald-500' : machine.efficiency >= 70 ? 'bg-amber-500' : 'bg-rose-500'}`}
                                   style={{ width: `${machine.efficiency}%` }}
@@ -1070,8 +1214,8 @@ export default function ProjectDetails() {
                               </div>
                             </div>
                           </td>
-                          <td className="p-4 text-center">
-                            <span className={`px-2 py-1 rounded-md text-[10px]  uppercase ${
+                          <td className="p-2 text-center">
+                            <span className={`px-2 py-1 rounded-md text-[10px]   ${
                               machine.efficiency >= 85 ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
                             }`}>
                               {machine.efficiency >= 85 ? 'Optimal' : 'Issues'}

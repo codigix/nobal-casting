@@ -377,6 +377,12 @@ router.delete(
     productionController.updateTimeLog.bind(productionController)
   )
 
+  router.get(
+    '/rejections/analysis',
+    authMiddleware,
+    productionController.getRejectionAnalysis.bind(productionController)
+  )
+
   router.post(
     '/rejections',
     authMiddleware,

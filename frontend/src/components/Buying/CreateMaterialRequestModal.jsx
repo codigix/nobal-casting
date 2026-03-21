@@ -415,7 +415,7 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
                   <div className="p-1.5 bg-blue-100 text-blue-600 rounded ">
                     <Package size={16} />
                   </div>
-                  <h3 className="text-sm  text-neutral-800">Requested Items</h3>
+                  <h3 className="text-sm">Requested Items</h3>
                 </div>
                 <Badge variant="blue" className="px-2.5 py-1 text-[10px]">
                   {formData.items.length} Items Total

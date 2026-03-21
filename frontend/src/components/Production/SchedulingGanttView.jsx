@@ -209,7 +209,7 @@ export default function SchedulingGanttView({ onJobClick, onSlotClick }) {
         <div className="min-w-[1200px] relative">
           {/* Time Header */}
           <div className="flex border-b border-slate-100 bg-slate-50/30 sticky top-0 z-20">
-            <div className="w-56 p-3 border-r border-slate-200 sticky left-0 bg-slate-50/50 z-30 font-bold text-[11px] text-slate-500 uppercase tracking-widest shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)]">
+            <div className="w-56 p-3 border-r border-slate-200 sticky left-0 bg-slate-50/50 z-30  text-[11px] text-slate-500 uppercase tracking-widest shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)]">
               Workstation / Machine
             </div>
             <div className="flex-1 flex bg-slate-50/30">
@@ -228,7 +228,7 @@ export default function SchedulingGanttView({ onJobClick, onSlotClick }) {
                 className="absolute top-0 bottom-0 w-px bg-red-400 z-10 pointer-events-none" 
                 style={{ left: `calc(14rem + (100% - 14rem) * ${currentTimePos / 100})` }}
               >
-                <div className="absolute top-0 -translate-x-1/2 bg-red-400 text-white text-[8px] px-1 rounded-b font-bold uppercase tracking-tighter">Now</div>
+                <div className="absolute top-0 -translate-x-1/2 bg-red-400 text-white text-[8px] px-1 rounded-b  uppercase tracking-tighter">Now</div>
               </div>
             )}
 
@@ -237,13 +237,13 @@ export default function SchedulingGanttView({ onJobClick, onSlotClick }) {
               return (
                 <div key={ws.name} className="flex border-b border-slate-100 hover:bg-slate-50/50 transition-colors group">
                   <div className="w-56 p-3 border-r border-slate-200 sticky left-0 bg-white group-hover:bg-slate-50 z-20 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)]">
-                    <div className="font-bold text-xs text-slate-800 truncate mb-1">{ws.workstation_name || ws.name}</div>
+                    <div className=" text-xs text-slate-800 truncate mb-1">{ws.workstation_name || ws.name}</div>
                     <div className="flex items-center gap-1.5">
-                       <span className="text-[9px] font-bold px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded uppercase tracking-tighter border border-slate-200">
+                       <span className="text-[9px]  px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded uppercase tracking-tighter border border-slate-200">
                          CAP: {ws.parallel_capacity || 1}
                        </span>
                        {wsJobs.length > 0 && (
-                         <span className="text-[9px] font-bold px-1.5 py-0.5 bg-indigo-50 text-indigo-500 rounded border border-indigo-100">
+                         <span className="text-[9px]  px-1.5 py-0.5 bg-indigo-50 text-indigo-500 rounded border border-indigo-100">
                            {wsJobs.length} JOBS
                          </span>
                        )}
@@ -275,7 +275,7 @@ export default function SchedulingGanttView({ onJobClick, onSlotClick }) {
                       >
                         <div className="flex items-center gap-1 min-w-0">
                           <Clock size={10} className="text-white/70 flex-shrink-0" />
-                          <span className="text-[10px] text-white font-bold truncate tracking-tight">
+                          <span className="text-[10px] text-white  truncate tracking-tight">
                             {jc.operation}
                           </span>
                         </div>
@@ -283,7 +283,7 @@ export default function SchedulingGanttView({ onJobClick, onSlotClick }) {
                         {/* Professional Tooltip on hover */}
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-56 bg-slate-900/95 backdrop-blur-sm text-white text-[11px] p-3 rounded-lg hidden group-hover/job:block z-50 shadow-2xl border border-white/10 ring-1 ring-black/5 animate-in fade-in zoom-in duration-200">
                           <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2">
-                             <span className="font-bold text-indigo-400 uppercase tracking-widest text-[9px]">{jc.job_card_id}</span>
+                             <span className=" text-indigo-400 uppercase tracking-widest text-[9px]">{jc.job_card_id}</span>
                              <Badge status={jc.status} size="xs" />
                           </div>
                           
@@ -301,7 +301,7 @@ export default function SchedulingGanttView({ onJobClick, onSlotClick }) {
                               <span className="truncate">WO: {jc.work_order_id}</span>
                             </div>
                             {jc.project_name && (
-                              <div className="pt-1 text-[9px] text-indigo-300 font-bold uppercase tracking-wider bg-indigo-500/10 px-1.5 py-0.5 rounded w-fit">
+                              <div className="pt-1 text-[9px] text-indigo-300  uppercase tracking-wider bg-indigo-500/10 px-1.5 py-0.5 rounded w-fit">
                                 Project: {jc.project_name}
                               </div>
                             )}

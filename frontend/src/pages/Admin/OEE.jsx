@@ -75,14 +75,14 @@ const KPICard = ({ label, value, status, colorClass }) => (
 );
 
 const WorkstationList = ({ machines }) => (
-  <div className="bg-white rounded-xl  border border-slate-100 overflow-hidden">
+  <div className="bg-white   border border-slate-100 overflow-hidden">
     <div className="p-4 border-b border-slate-50 flex items-center gap-2">
       <Monitor size={16} className="text-slate-400" />
       <h3 className="text-xs  text-slate-700  ">Workstation OEE Analysis</h3>
     </div>
     <div className="divide-y divide-slate-50">
       {machines.map((m, i) => (
-        <div key={i} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+        <div key={i} className="p-2 flex items-center justify-between hover:bg-slate-50 transition-colors">
           <div className="flex flex-col">
             <span className="text-xs  text-slate-900">{m.name}</span>
             <span className="text-[9px] text-slate-400  er truncate max-w-[120px]">
@@ -128,17 +128,17 @@ const RecentJobCards = ({ jobCards }) => (
       <table className="w-full text-left border-collapse">
         <thead className="bg-slate-50/50">
           <tr>
-            <th className="px-6 py-4 text-[10px]  text-slate-400  tracking-wider">Identifier</th>
-            <th className="px-6 py-4 text-[10px]  text-slate-400  tracking-wider">Asset Context</th>
-            <th className="px-6 py-4 text-[10px]  text-slate-400  tracking-wider">Output Metrics</th>
-            <th className="px-6 py-4 text-[10px]  text-slate-400  tracking-wider">Quality Index</th>
-            <th className="px-6 py-4 text-[10px]  text-slate-400  tracking-wider text-right">OEE Score</th>
+            <th className="p-2 text-[10px]  text-slate-400  ">Identifier</th>
+            <th className="p-2 text-[10px]  text-slate-400  ">Asset Context</th>
+            <th className="p-2 text-[10px]  text-slate-400  ">Output Metrics</th>
+            <th className="p-2 text-[10px]  text-slate-400  ">Quality Index</th>
+            <th className="p-2 text-[10px]  text-slate-400   text-right">OEE Score</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-50">
           {jobCards.map((jc, i) => (
             <tr key={jc.id} className="hover:bg-slate-50/80 transition-colors group">
-              <td className="px-6 py-5">
+              <td className="p-2">
                 <div className="flex flex-col">
                   <span className="text-xs  text-slate-900 ">{jc.id}</span>
                   <div className="flex items-center gap-1 mt-1">
@@ -147,13 +147,13 @@ const RecentJobCards = ({ jobCards }) => (
                   </div>
                 </div>
               </td>
-              <td className="px-6 py-5">
+              <td className="p-2">
                 <div className="flex flex-col">
                   <span className="text-xs  text-slate-700">{jc.workstation}</span>
                   <span className="text-[10px] text-slate-400 font-medium truncate max-w-[150px]">{jc.workstation_desc}</span>
                 </div>
               </td>
-              <td className="px-6 py-5">
+              <td className="p-2">
                 <div className="flex items-center gap-4">
                   <div>
                     <span className="text-[9px] text-slate-400  block  mb-1">Produced</span>
@@ -166,7 +166,7 @@ const RecentJobCards = ({ jobCards }) => (
                   </div>
                 </div>
               </td>
-              <td className="px-6 py-5">
+              <td className="p-2">
                 <div className="flex flex-col gap-1.5">
                   <div className="flex justify-between items-center w-32">
                     <span className="text-[9px]  text-blue-500 ">Reject Rate</span>
@@ -180,9 +180,9 @@ const RecentJobCards = ({ jobCards }) => (
                   </div>
                 </div>
               </td>
-              <td className="px-6 py-5 text-right">
+              <td className="p-2 text-right">
                 <div className="flex flex-col items-end">
-                  <div className={`px-3 py-1.5 rounded text-xs  min-w-[64px] text-center bg-blue-600 text-white shadow-blue-500/10`}>
+                  <div className={`p-2 rounded text-xs text-center bg-blue-600 text-white shadow-blue-500/10`}>
                     {(Number(jc.oee) || 0).toFixed(1)}%
                   </div>
                   <span className="text-[9px] text-slate-400   mt-1 er">
@@ -865,7 +865,7 @@ export default function OEE() {
     ];
 
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
         {/* Top Header Row - Dark Blue like screenshot */}
         <div className=" rounded p-2 flex items-center justify-between ">
           <div className="flex items-center gap-2">
@@ -905,9 +905,9 @@ export default function OEE() {
               {/* Workstation List */}
             </div>
             <div className='col-span-6'>
-              <div className="bg-white rounded-xl border border-slate-100 p-6 relative overflow-hidden group hover:shadow-lg transition-all duration-500">
+              <div className="bg-white  border border-slate-100 p-2 relative overflow-hidden group hover:shadow-lg transition-all duration-500">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-16 -mt-16 transition-all group-hover:scale-110 opacity-30 pointer-events-none"></div>
-                <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                <h3 className="text-[11px]  text-slate-400   mb-6 flex items-center gap-2">
                   <PieChartIcon size={14} className="text-blue-600" />
                   Workstation OEE Analysis
                 </h3>
@@ -936,7 +936,7 @@ export default function OEE() {
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                       <span className="text-2xl font-black text-[#1e3a8a] leading-none tracking-tight">{(Number(summary.oee) || 0).toFixed(0)}%</span>
-                      <span className="text-[8px] text-slate-400 mt-1 uppercase font-bold tracking-widest">Global OEE</span>
+                      <span className="text-[8px] text-slate-400 mt-1   ">Global OEE</span>
                     </div>
                   </div>
                   <div className="w-1/2 flex flex-col gap-5">
@@ -949,7 +949,7 @@ export default function OEE() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }}></div>
-                            <span className="text-[10px] font-bold text-slate-500 group-hover/item:text-slate-900 transition-colors tracking-tight">{item.label}</span>
+                            <span className="text-[10px]  text-slate-500 group-hover/item:text-slate-900 transition-colors tracking-tight">{item.label}</span>
                           </div>
                           <span className="text-[10px] font-black text-slate-800">{(Number(item.val) || 0).toFixed(1)}%</span>
                         </div>
@@ -1010,7 +1010,7 @@ export default function OEE() {
             {/* Right Column - 8/12 */}
             <div className="lg:col-span-6 flex flex-col gap-8">
               {/* Loss Breakdown Bar Chart - Grouped by A, P, Q */}
-              <div className=" rounded-xl  border border-slate-100 p-6">
+              <div className="   border border-slate-100 p-6">
                 <div className="flex items-center justify-between mb-8">
                   <h3 className="text-xs  text-slate-700  tracking-wider">Metric Breakdown by Workstation</h3>
                   <span className="text-[10px]  text-slate-400 ">A / P / Q Comparison</span>
@@ -1048,7 +1048,7 @@ export default function OEE() {
               
             </div>
             <div className='col-span-12'>
-              <div className=" bg-slate-50 rounded-xl p-6 flex justify-between  gap-4">
+              <div className=" bg-slate-50  p-6 flex justify-between  gap-4">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-blue-300"></div>
@@ -1074,12 +1074,12 @@ export default function OEE() {
             </div>
           
             <div className='col-span-12'>
-              <div className="bg-blue-50 rounded-xl  border border-slate-100 p-6">
-                <div className="flex items-center justify-between mb-8">
+              <div className="bg-blue-50   border border-slate-100 p-2">
+                <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xs  text-slate-700  tracking-wider">OEE by Workstation</h3>
                   <span className="text-[10px]  text-slate-400 ">Overall Avg: {(Number(summary.oee) || 0).toFixed(1)}%</span>
                 </div>
-                <ResponsiveContainer width="100%" height={240}>
+                <ResponsiveContainer width="100%" height={150}>
                   <BarChart data={filteredMachines.slice(0, 4)}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis
@@ -1105,30 +1105,30 @@ export default function OEE() {
   };
 
   return (
-    <div className=" min-h-screen">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div className="p-2 min-h-screen">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
         <div>
-          <h1 className="text-2xl  text-slate-900 m-0 ">OEE Intelligence Dashboard</h1>
-          <p className="text-slate-500 text-xs    mt-1">Real-time performance analytics</p>
+          <h1 className="text-xl  text-slate-900 m-0 ">OEE Intelligence Dashboard</h1>
+          <p className="text-slate-500 text-xs">Real-time performance analytics</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded">
             <Calendar size={14} className="text-slate-400" />
             <select
               value={filters.range}
               onChange={(e) => setFilters({ ...filters, range: e.target.value })}
-              className="bg-transparent border-none text-xs font-bold text-slate-700 outline-none cursor-pointer pr-2"
+              className="bg-transparent border-none text-xs  text-slate-700 outline-none cursor-pointer pr-2"
             >
               {['Daily', 'Yesterday', 'Weekly', 'Monthly', 'Yearly'].map(opt => <option key={opt} className="text-slate-900">{opt}</option>)}
             </select>
           </div>
           <button onClick={() => fetchData(true)} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs  rounded hover:bg-slate-50 transition-all ">
-            <RefreshCcw size={16} className={syncLoading ? 'animate-spin' : ''} />
+            <RefreshCcw size={15} className={syncLoading ? 'animate-spin' : ''} />
             Sync Dashboard
           </button>
           <button
             onClick={handleExportReport}
-            className="flex items-center gap-2 px-6 py-2 bg-[#1e3a8a] text-white text-xs  rounded hover:bg-[#1e3a8a]/90  shadow-md transition-all"
+            className="flex items-center gap-2 p-2 bg-[#1e3a8a] text-white text-xs  rounded hover:bg-[#1e3a8a]/90  shadow-md transition-all"
           >
             <Download size={16} />
             Export Report
@@ -1136,7 +1136,7 @@ export default function OEE() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 mb-8 bg-white p-1 rounded-xl border border-slate-200 w-fit ">
+      <div className="flex items-center gap-2 mb-2 bg-white p-1  border border-slate-200 w-fit ">
         {['Executive Overview', 'Machine Analytics', 'Loss Analysis'].map(tab => (
           <button
             key={tab}
@@ -1164,7 +1164,7 @@ export default function OEE() {
           {activeTab === 'Machine Analytics' && (
             <div className="space-y-6">
               {/* Filter bar for Machine Analytics */}
-              <div className="bg-white rounded-xl border border-slate-200 p-3 flex flex-wrap items-center gap-4 ">
+              <div className="bg-white  border border-slate-200 p-3 flex flex-wrap items-center gap-4 ">
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded text-slate-500">
                   <Filter size={16} />
                   <span className="text-[10px]   tracking-wider">Filters</span>

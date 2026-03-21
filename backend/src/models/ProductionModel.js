@@ -623,8 +623,7 @@ class ProductionModel {
           COALESCE(wo.unit_cost, i.valuation_rate, 0) as unit_cost,
           COALESCE(wo.total_cost, i.valuation_rate * wo.quantity, 0) as total_cost,
           COALESCE(
-            (SELECT accepted_quantity FROM job_card WHERE work_order_id = wo.wo_id ORDER BY operation_sequence DESC LIMIT 1),
-            (SELECT quantity_produced FROM production_entry WHERE work_order_id = wo.wo_id ORDER BY created_at DESC LIMIT 1),
+            (SELECT MAX(accepted_quantity) FROM job_card WHERE work_order_id = wo.wo_id AND status != 'cancelled'),
             0
           ) as produced_qty,
           (SELECT COALESCE(SUM(scrap_quantity), 0) FROM job_card WHERE work_order_id = wo.wo_id) as scrap_qty,
@@ -698,8 +697,7 @@ class ProductionModel {
           COALESCE(wo.unit_cost, i.valuation_rate, 0) as unit_cost,
           COALESCE(wo.total_cost, i.valuation_rate * wo.quantity, 0) as total_cost,
           COALESCE(
-            (SELECT accepted_quantity FROM job_card WHERE work_order_id = wo.wo_id ORDER BY operation_sequence DESC LIMIT 1),
-            (SELECT quantity_produced FROM production_entry WHERE work_order_id = wo.wo_id ORDER BY created_at DESC LIMIT 1),
+            (SELECT MAX(accepted_quantity) FROM job_card WHERE work_order_id = wo.wo_id AND status != 'cancelled'),
             0
           ) as produced_qty,
           (SELECT COALESCE(SUM(scrap_quantity), 0) FROM job_card WHERE work_order_id = wo.wo_id) as scrap_qty,

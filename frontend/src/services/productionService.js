@@ -49,7 +49,7 @@ export const recordRejection = async (data) => {
 
 export const getRejectionAnalysis = async (filters = {}) => {
   const params = new URLSearchParams(filters)
-  const response = await api.get(`/production/rejections/analysis?${params}`)
+  const response = await api.get(`/production/analytics/rejection-analysis?${params}`)
   return response.data
 }
 

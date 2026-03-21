@@ -342,7 +342,7 @@ const ProductionRibbon = ({
           <div className="border-l border-slate-100 pl-6">
             <p className="text-xs   text-slate-400  mb-2">Assignee</p>
             <div className="flex items-center gap-2">
-              <div className="w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center text-[10px] text-indigo-600 font-bold border border-indigo-100">
+              <div className="w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center text-[10px] text-indigo-600  border border-indigo-100">
                 {(jobCardData?.assignee_name || jobCardData?.operator_name || 'U').charAt(0)}
               </div>
               <span className="text-xs  text-slate-700 font-medium">
@@ -1092,7 +1092,7 @@ export default function ProductionEntry() {
           />
         ) : (
           <div className="flex flex-col items-end">
-            <span className="text-emerald-600 font-bold text-xs">{parseFloat(val || 0).toLocaleString()}</span>
+            <span className="text-emerald-600  text-xs">{parseFloat(val || 0).toLocaleString()}</span>
             <span className="text-[8px] text-emerald-400 uppercase tracking-tighter">Accepted</span>
           </div>
         );
@@ -1116,7 +1116,7 @@ export default function ProductionEntry() {
           />
         ) : (
           <div className="flex flex-col items-end">
-            <span className="text-rose-600 font-bold text-xs">{parseFloat(val || 0).toLocaleString()}</span>
+            <span className="text-rose-600  text-xs">{parseFloat(val || 0).toLocaleString()}</span>
             <span className="text-[8px] text-rose-400 uppercase tracking-tighter font-medium">Rejected</span>
           </div>
         );
@@ -1140,7 +1140,7 @@ export default function ProductionEntry() {
           />
         ) : (
           <div className="flex flex-col items-end">
-            <span className="text-amber-600 font-bold text-xs">{parseFloat(val || 0).toLocaleString()}</span>
+            <span className="text-amber-600  text-xs">{parseFloat(val || 0).toLocaleString()}</span>
             <span className="text-[8px] text-amber-500 uppercase tracking-tighter">Scrap</span>
           </div>
         );
@@ -1154,7 +1154,7 @@ export default function ProductionEntry() {
         <div className="flex flex-col gap-1.5 min-w-[100px] items-center">
           <div className="flex justify-between items-center text-[10px] w-full">
             <span className="text-slate-400 uppercase tracking-tight font-medium">Yield</span>
-            <span className={`font-bold px-1.5 py-0.5 rounded border ${
+            <span className={` px-1.5 py-0.5 rounded border ${
               parseFloat(row.yieldPercentage) >= 95 ? 'text-emerald-600 bg-emerald-50 border-emerald-100' :
               parseFloat(row.yieldPercentage) >= 85 ? 'text-blue-600 bg-blue-50 border-blue-100' :
               'text-rose-600 bg-rose-50 border-rose-100'
@@ -1164,7 +1164,7 @@ export default function ProductionEntry() {
           </div>
           <div className="flex justify-between items-center text-[10px] w-full">
             <span className="text-slate-400 uppercase tracking-tight font-medium">UPH</span>
-            <span className="font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+            <span className=" text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
               {row.uph}
             </span>
           </div>
@@ -1193,7 +1193,7 @@ export default function ProductionEntry() {
         ) : (
           <div className="flex flex-col items-end">
             <div className="flex items-center gap-1">
-              <span className={`font-bold text-xs ${val > 0 ? 'text-rose-600' : 'text-slate-400'}`}>{val || 0}</span>
+              <span className={` text-xs ${val > 0 ? 'text-rose-600' : 'text-slate-400'}`}>{val || 0}</span>
               <span className="text-[9px] text-slate-400  ">min</span>
             </div>
             <span className="text-[8px] text-slate-400 uppercase tracking-tighter">Total Loss</span>
@@ -2490,7 +2490,7 @@ export default function ProductionEntry() {
                     return (
                       <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-full text-amber-700 animate-in fade-in slide-in-from-right-4 duration-500">
                         <AlertTriangle size={14} className="animate-pulse" />
-                        <span className="text-[10px] font-bold uppercase tracking-tight">Shift Downtime:</span>
+                        <span className="text-[10px]  uppercase tracking-tight">Shift Downtime:</span>
                         <span className="text-xs font-black">{shiftDowntime} mins</span>
                       </div>
                     );
@@ -2504,7 +2504,7 @@ export default function ProductionEntry() {
                           type="number" 
                           value={timeLogForm.day_number} 
                           onChange={(e) => handleDayChange(e.target.value, 'timeLog')} 
-                          className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all font-bold"
+                          className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all "
                           min="1"
                           required
                         />
@@ -2539,7 +2539,7 @@ export default function ProductionEntry() {
                             type="number" 
                             value={rejectionForm.day_number} 
                             onChange={(e) => handleDayChange(e.target.value, 'rejection')} 
-                            className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all font-bold"
+                            className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all "
                             min="1"
                             required
                           />
@@ -2586,7 +2586,7 @@ export default function ProductionEntry() {
                           type="number" 
                           value={rejectionForm.rejected_qty} 
                           onChange={(e) => setRejectionForm({ ...rejectionForm, rejected_qty: e.target.value })} 
-                          className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-rose-600 font-bold outline-none focus:ring-2 focus:ring-rose-500/20" 
+                          className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-rose-600  outline-none focus:ring-2 focus:ring-rose-500/20" 
                           required 
                         />
                       </FieldWrapper>
@@ -2597,7 +2597,7 @@ export default function ProductionEntry() {
                           type="number" 
                           value={rejectionForm.scrap_qty} 
                           onChange={(e) => setRejectionForm({ ...rejectionForm, scrap_qty: e.target.value })} 
-                          className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-amber-600 font-bold outline-none focus:ring-2 focus:ring-amber-500/20" 
+                          className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-amber-600  outline-none focus:ring-2 focus:ring-amber-500/20" 
                         />
                       </FieldWrapper>
                     </div>
@@ -2606,7 +2606,7 @@ export default function ProductionEntry() {
                         <input 
                           type="number" 
                           value={rejectionForm.accepted_qty} 
-                          className="w-full p-2 bg-emerald-50 border border-emerald-200 rounded text-xs text-emerald-700 font-bold outline-none cursor-not-allowed" 
+                          className="w-full p-2 bg-emerald-50 border border-emerald-200 rounded text-xs text-emerald-700  outline-none cursor-not-allowed" 
                           readOnly 
                         />
                       </FieldWrapper>
@@ -2645,7 +2645,7 @@ export default function ProductionEntry() {
                           type="number" 
                           value={downtimeForm.day_number} 
                           onChange={(e) => handleDayChange(e.target.value, 'downtime')} 
-                          className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20 transition-all font-bold"
+                          className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none focus:ring-2 focus:ring-amber-500/20 transition-all "
                           min="1"
                           required
                         />

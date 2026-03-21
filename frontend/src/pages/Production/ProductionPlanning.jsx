@@ -1351,7 +1351,7 @@ export default function ProductionPlanning() {
           {/* <div className="flex border-b border-gray-100 bg-white">
             <button
               onClick={() => setActiveTab('all')}
-              className={`px-8 py-4 text-xs font-bold transition-all relative ${
+              className={`px-8 py-4 text-xs  transition-all relative ${
                 activeTab === 'all' 
                   ? 'text-indigo-600 bg-indigo-50/30' 
                   : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
@@ -1364,7 +1364,7 @@ export default function ProductionPlanning() {
             </button>
             <button
               onClick={() => setActiveTab('pending_mr')}
-              className={`px-8 py-4 text-xs font-bold transition-all relative flex items-center gap-2 ${
+              className={`px-8 py-4 text-xs  transition-all relative flex items-center gap-2 ${
                 activeTab === 'pending_mr' 
                   ? 'text-amber-600 bg-amber-50/30' 
                   : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
@@ -1695,7 +1695,7 @@ export default function ProductionPlanning() {
                   <div className="flex gap-4">
                     <button
                       onClick={() => setMrActiveTab('pending')}
-                      className={`pb-2 text-xs font-bold transition-all relative ${
+                      className={`pb-2 text-xs  transition-all relative ${
                         mrActiveTab === 'pending'
                           ? 'text-rose-600'
                           : 'text-gray-400 hover:text-gray-600'
@@ -1714,7 +1714,7 @@ export default function ProductionPlanning() {
                     </button>
                     <button
                       onClick={() => setMrActiveTab('complete')}
-                      className={`pb-2 text-xs font-bold transition-all relative ${
+                      className={`pb-2 text-xs  transition-all relative ${
                         mrActiveTab === 'complete'
                           ? 'text-emerald-600'
                           : 'text-gray-400 hover:text-gray-600'
@@ -1862,9 +1862,9 @@ export default function ProductionPlanning() {
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-amber-600 px-1">
                         <Clock size={16} className="animate-pulse" />
-                        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em]">Active Requests</h3>
+                        <h3 className="text-[10px]  uppercase tracking-[0.2em]">Active Requests</h3>
                         <div className="flex-1 h-px bg-amber-100/50 ml-2" />
-                        <span className="text-[10px] bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 font-bold">
+                        <span className="text-[10px] bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 ">
                           {mrHistory[selectedPlanForHistory.plan_id].filter(mr => mr.status !== 'completed').length}
                         </span>
                       </div>
@@ -1881,9 +1881,9 @@ export default function ProductionPlanning() {
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-emerald-600 px-1">
                         <CheckCircle2 size={16} />
-                        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em]">Completed Archive</h3>
+                        <h3 className="text-[10px]  uppercase tracking-[0.2em]">Completed Archive</h3>
                         <div className="flex-1 h-px bg-emerald-100/50 ml-2" />
-                        <span className="text-[10px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 font-bold">
+                        <span className="text-[10px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 ">
                           {mrHistory[selectedPlanForHistory.plan_id].filter(mr => mr.status === 'completed').length}
                         </span>
                       </div>

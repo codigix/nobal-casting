@@ -95,7 +95,7 @@ export default function OperationsRedesign() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-2/50 p-8">
+    <div className="min-h-screen bg-slate-50 p-2/50 p-2">
       <div className="max-w-5xl mx-auto">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">

@@ -1148,7 +1148,7 @@ export default function SalesOrderForm() {
                             <span className="text-xs  text-slate-900 group-hover:text-blue-600 transition-colors">
                               {item.component_code || item.item_code || '-'}
                             </span>
-                            <span className="text-xs text-slate-400  truncate max-w-[250px]">
+                            <span className="text-xs text-slate-400  truncate max-">
                               {item.item_name || '-'}
                             </span>
                           </div>
@@ -1228,7 +1228,7 @@ export default function SalesOrderForm() {
                             <span className="text-xs  text-slate-900 group-hover:text-amber-600 transition-colors">
                               {item.component_code || item.item_code || '-'}
                             </span>
-                            <span className="text-xs text-slate-400  truncate max-w-[250px]">
+                            <span className="text-xs text-slate-400  truncate max-">
                               {item.component_description || item.item_name || '-'}
                             </span>
                           </div>

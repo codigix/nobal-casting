@@ -96,7 +96,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
                 <div className="absolute top-0 left-0 w-full h-1.5" style={{ backgroundColor: kpi.color }}></div>
                 <div className="absolute top-0 right-0 w-20 h-20 bg-slate-50 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110 opacity-50"></div>
                 
-                <div className="flex justify-between items-start mb-6 relative ">
+                <div className="flex justify-between items-start mb-2 relative ">
                   <div>
                     <p className="text-[10px]  text-slate-400   mb-1">{kpi.label}</p>
                     <p className="text-xl  text-slate-900 m-0 ">{kpi.value}%</p>
@@ -117,7 +117,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
           </div>
           
           {/* Secondary Stats Section */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-8">
             {[
               { label: 'Uptime', value: `${machine.uptimeHours}h`, icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
               { label: 'Allocation', value: `${machine.allocation}h`, icon: Calendar, color: 'text-slate-600', bg: 'bg-slate-100' },
@@ -145,7 +145,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
                 </div>
                 <div>
                   <h3 className="text-xs  text-slate-800   m-0">Historical Performance</h3>
-                  <p className="text-[10px] font-bold text-slate-400   m-0">Trends and analytics across periods</p>
+                  <p className="text-[10px]  text-slate-400   m-0">Trends and analytics across periods</p>
                 </div>
               </div>
               <div className="flex bg-slate-100 p-1.5 rounded gap-1">
@@ -376,7 +376,7 @@ const LineDetailsModal = ({ isOpen, line, onClose, setSelectedMachine, setModalO
                 <div className="absolute top-0 left-0 w-full h-1.5" style={{ backgroundColor: kpi.color }}></div>
                 <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rounded-bl-full -mr-12 -mt-12 transition-transform group-hover:scale-110 opacity-50"></div>
                 
-                <div className="flex justify-between items-start mb-6 relative ">
+                <div className="flex justify-between items-start mb-2 relative ">
                   <div>
                     <p className="text-xs  text-slate-400   mb-1">{kpi.label}</p>
                     <p className="text-xl  text-slate-900 m-0 er">{kpi.value}%</p>
@@ -418,7 +418,7 @@ const LineDetailsModal = ({ isOpen, line, onClose, setSelectedMachine, setModalO
                       <td className="p-2">
                         <div className="flex flex-col">
                            <span className="text-xs  text-slate-900 m-0 ">{m.name}</span>
-                           <span className="text-[10px] font-bold text-slate-400 m-0 mt-1  er">{m.id} • {m.workstationType}</span>
+                           <span className="text-[10px]  text-slate-400 m-0 mt-1  er">{m.id} • {m.workstationType}</span>
                         </div>
                       </td>
                       <td className="p-2 text-center">
@@ -480,7 +480,7 @@ const StatCard = ({ label, value, icon: Icon, color, accentColor, trend, tooltip
     <div className="absolute top-0 right-0 w-32 h-32 rounded-bl-full -mr-16 -mt-16 transition-all duration-700 group-hover:scale-150 group-hover:rotate-12 opacity-[0.05]" style={{ backgroundColor: accentColor }}></div>
     <div className="absolute bottom-0 left-0 w-16 h-16 rounded-tr-full -ml-8 -mb-8 opacity-[0.02]" style={{ backgroundColor: accentColor }}></div>
     
-    <div className="flex justify-between items-start mb-6 relative ">
+    <div className="flex justify-between items-start mb-2 relative ">
       <div className="p-2 rounded transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 " style={{ backgroundColor: `${accentColor}15`, color: accentColor }}>
         <Icon size={15} strokeWidth={2.5} />
       </div>
@@ -734,32 +734,32 @@ const MachineAnalysis = () => {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded bg-white/10 flex items-center justify-center border border-white/20 shadow-inner backdrop-blur-md">
-                <Monitor size={30} className="text-blue-300" />
+              <div className="w-7 h-7 rounded bg-white/10 flex items-center justify-center border border-white/20 shadow-inner backdrop-blur-md">
+                <Monitor size={15} className="text-blue-300" />
               </div>
               <div>
-                <h1 className="text-2xl  m-0  flex items-center gap-3">
+                <h1 className="text-xl  m-0  flex items-center gap-3">
                   Machine Analysis 
-                  <span className="text-xs bg-blue-500/20 text-blue px-2 py-0.5 rounded border border-blue-400/30   ">Live AI Insights</span>
+                  <span className="text-[10px] bg-blue-500/20 text-blue px-2 py-0.5 rounded border border-blue-400/30   ">Live AI Insights</span>
                 </h1>
-                <p className="text-xs  text-blue mt-1  ">
+                <p className="text-xs  text-blue">
                   Factory Floor Performance Monitoring
                 </p>
               </div>
             </div>
             
             <div className="flex items-center gap-6">
-              <div className="hidden sm:flex flex-col items-end">
+              <div className="hidden sm:flex gap-2 items-end">
                 <span className="text-xs text-blue    leading-none mb-1">Last Sync</span>
                 <div className="flex items-center gap-2">
                    <Clock size={12} className="text-blue-400" />
-                   <span className="text-sm  text-white">{refreshTime.toLocaleTimeString()}</span>
+                   <span className="text-sm">{refreshTime.toLocaleTimeString()}</span>
                 </div>
               </div>
               <button
                 onClick={() => fetchData(true)}
                 disabled={syncLoading}
-                className={`group flex items-center gap-3 px-6 py-2.5 bg-white text-[#1e3a8a] rounded  text-[11px]   hover:bg-blue-50 transition-all shadow-xl active:scale-95 disabled:opacity-50 ${syncLoading ? 'cursor-not-allowed' : ''}`}
+                className={`group flex items-center gap-3 px-6 py-2.5 bg-white text-[#1e3a8a] rounded  text-[11px]   hover:bg-blue-50 transition-all  active:scale-95 disabled:opacity-50 ${syncLoading ? 'cursor-not-allowed' : ''}`}
               >
                 <RefreshCw size={14} className={syncLoading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'} /> 
                 {syncLoading ? 'Synchronizing...' : 'Refresh Intelligence'}
@@ -769,9 +769,9 @@ const MachineAnalysis = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6 -mt-8">
+      <div className="p-2">
         {/* KPI Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 mb-2">
           <StatCard 
             label="Overall OEE" 
             value={`${averageOEE}%`}
@@ -815,7 +815,7 @@ const MachineAnalysis = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-10 mb-8 border-b border-slate-200">
+        <div className="flex gap-10 my-4  border-b border-slate-200">
           {['overview', 'lines', 'machines', 'efficiency'].map((tab) => (
             <button
               key={tab}
@@ -839,11 +839,11 @@ const MachineAnalysis = () => {
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Status Distribution */}
-              <div className="bg-white rounded border border-slate-100 p-8  group  transition-all duration-500 relative overflow-hidden">
+              <div className="bg-white rounded border border-slate-100 p-2  group  transition-all duration-500 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
                 
-                <div className="flex items-center justify-between mb-8 relative ">
-                  <h3 className="text-[11px]  text-slate-400   flex items-center gap-2">
+                <div className="flex items-center justify-between mb-2 relative ">
+                  <h3 className="text-sm  flex items-center gap-2">
                     <PieIcon size={14} className="text-indigo-500" /> Asset Health Spread
                   </h3>
                   <div className="px-2 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[9px]   er">Live Monitor</div>
@@ -930,12 +930,12 @@ const MachineAnalysis = () => {
               </div>
 
               {/* Work Time vs Downtime */}
-              <div className="lg:col-span-2 bg-white rounded border border-slate-100 p-8  group  transition-all duration-500 relative overflow-hidden">
+              <div className="lg:col-span-2 bg-white rounded border border-slate-100 p-2  group  transition-all duration-500 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/30 rounded -mr-32 -mt-32 transition-transform group-hover:scale-110"></div>
                 
-                <div className="flex items-center justify-between mb-10 relative ">
+                <div className="flex items-center justify-between mb-2 relative ">
                    <div>
-                      <h3 className="text-[11px]  text-slate-400   flex items-center gap-2 mb-1">
+                      <h3 className="text-sm   flex items-center gap-2 mb-1">
                         <BarChart3 size={14} className="text-blue-500" /> Temporal Asset Analysis
                       </h3>
                       <p className="text-xs  text-slate-400  er">Active vs Standby Duration by Asset (Top 10)</p>
@@ -1024,13 +1024,13 @@ const MachineAnalysis = () => {
             </div>
 
             {/* Overall Efficiency Area Chart */}
-            <div className="bg-white rounded border border-slate-100 p-8  group  transition-all duration-500 relative overflow-hidden">
+            <div className="bg-white rounded border border-slate-100 p-2  group  transition-all duration-500 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-96 h-96 bg-slate-50 rounded -mr-48 -mt-48 transition-transform group-hover:scale-110 opacity-50"></div>
               
               <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 relative  gap-6">
                 <div>
-                  <h3 className="text-[11px]  text-slate-400   flex items-center gap-2 mb-1">
-                    <TrendingUp size={14} className="text-[#1e3a8a]" /> Multi-Factor Efficiency Stream
+                  <h3 className="text-sm    flex items-center gap-2 mb-1">
+                    <TrendingUp size={14} className="text-[#1e3a8a] text-xl" /> Multi-Factor Efficiency Stream
                   </h3>
                   <p className="text-xs  text-slate-400  er">Holistic OEE Components Trend Analysis</p>
                 </div>
@@ -1123,7 +1123,7 @@ const MachineAnalysis = () => {
                     </div>
                     <div>
                       <h3 className="text-xs  text-slate-800 m-0  ">Line: {line.id}</h3>
-                      <p className="text-[10px] font-bold text-slate-400 m-0  ">{line.machines.length} Operational Units</p>
+                      <p className="text-[10px]  text-slate-400 m-0  ">{line.machines.length} Operational Units</p>
                     </div>
                   </div>
                   <div className="relative flex items-center justify-center w-14 h-14 transition-transform group-hover:scale-110 duration-500">

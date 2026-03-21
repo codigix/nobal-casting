@@ -55,7 +55,7 @@ const StatCard = ({ label, value, icon: Icon, trend, trendValue, bgColor, iconCo
         )}
       </div>
       <p className="text-[11px]  text-slate-400   mb-1">{label}</p>
-      <h3 className={`text-2xl  ${textColor || 'text-slate-900'}`}>{value}</h3>
+      <h3 className={`text-xl  ${textColor || 'text-slate-900'}`}>{value}</h3>
     </div>
   </div>
 );

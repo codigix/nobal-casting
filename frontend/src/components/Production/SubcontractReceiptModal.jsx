@@ -134,7 +134,7 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
               </div>
               <div className="text-right">
                 <p className="text-[10px]   text-slate-400 mb-0.5">Pending Receipt</p>
-                <p className={`text-sm ${remaining <= 0 ? 'text-emerald-600 font-bold' : 'text-indigo-600'}`}>
+                <p className={`text-sm ${remaining <= 0 ? 'text-emerald-600 ' : 'text-indigo-600'}`}>
                   {remaining.toFixed(2)} units
                 </p>
               </div>

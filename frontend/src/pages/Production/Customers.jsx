@@ -352,7 +352,7 @@ export default function Customers() {
                     <Users size={32} />
                   </div>
                   <h3 className="text-xs text-slate-900 text-xs">No Connections Found</h3>
-                  <p className="text-xs text-slate-500 mt-1 max-w-[250px] font-medium leading-relaxed">
+                  <p className="text-xs text-slate-500 mt-1 max- font-medium leading-relaxed">
                     We couldn't find any customers matching your current search or filter criteria.
                   </p>
                   <button 
