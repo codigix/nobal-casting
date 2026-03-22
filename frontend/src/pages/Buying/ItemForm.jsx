@@ -88,7 +88,6 @@ export default function ItemForm() {
     drawing_no: '',
     revision: '',
     material_grade: '',
-    item_type: 'Raw Material',
     gdc_dimensional_parameters: [],
     pdi_dimensional_parameters: [],
     visual_parameters: [],
@@ -107,13 +106,6 @@ export default function ItemForm() {
     { label: 'Raw Material', value: 'Raw Material' },
     { label: 'Products', value: 'Products' },
     { label: 'All Item Groups', value: 'All Item Groups' }
-  ])
-  const [itemTypes] = useState([
-    { label: 'Raw Material', value: 'Raw Material' },
-    { label: 'Consumable', value: 'Consumable' },
-    { label: 'Sub Assembly', value: 'Sub Assembly' },
-    { label: 'Finished Good', value: 'Finished Good' },
-    { label: 'Service', value: 'Service' }
   ])
   const [suppliers, setSuppliers] = useState([])
   const [customers, setCustomers] = useState([])
@@ -1054,17 +1046,6 @@ export default function ItemForm() {
             }}
             options={itemGroups}
             placeholder="Select item group"
-          />
-        </div>
-        <div className="form-group">
-          <label>Item Type *</label>
-          <SearchableSelect
-            value={formData.item_type}
-            onChange={(val) => {
-              setFormData({ ...formData, item_type: val })
-            }}
-            options={itemTypes}
-            placeholder="Select item type"
           />
         </div>
         <div className="form-group">
