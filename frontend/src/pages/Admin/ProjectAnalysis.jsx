@@ -488,9 +488,9 @@ export default function ProjectAnalysis() {
 
       {/* Distribution Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 ">
+        <div className="bg-white p-2 rounded border border-slate-200 ">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg  text-slate-900 m-0 tracking-tight">Timeline Analytics</h3>
+            <h3 className="text-sm  text-slate-900 m-0 ">Timeline Analytics</h3>
             <div className="flex items-center gap-2 text-[10px] ">
               <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500" /> PRODUCTION</div>
               <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-slate-200" /> FORECAST</div>
@@ -518,9 +518,9 @@ export default function ProjectAnalysis() {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 ">
+        <div className="bg-white p-2 rounded border border-slate-200 ">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg  text-slate-900 m-0 tracking-tight">Volume Distribution</h3>
+            <h3 className="text-sm  text-slate-900 m-0 ">Volume Distribution</h3>
             <StatusBadge status="complete" />
           </div>
           <div className="h-72">

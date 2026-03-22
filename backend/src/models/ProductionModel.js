@@ -531,6 +531,7 @@ class ProductionModel {
         : (bomDetails && bomDetails.lines)
           ? bomDetails.lines.map(line => ({
               item_code: line.component_code,
+              item_type: line.item_type || line.component_type || 'Raw Material',
               required_qty: (parseFloat(line.quantity) || 0) * quantity
             }))
           : [];
@@ -773,7 +774,7 @@ class ProductionModel {
       }
       
       const [items] = await this.db.query(
-        'SELECT * FROM work_order_item WHERE wo_id = ? ORDER BY sequence ASC',
+        'SELECT woi.*, i.name as item_name FROM work_order_item woi LEFT JOIN item i ON woi.item_code = i.item_code WHERE woi.wo_id = ? ORDER BY woi.sequence ASC',
         [wo_id]
       )
 
@@ -782,16 +783,18 @@ class ProductionModel {
       if ((!woItems || woItems.length === 0) && bom_id) {
         const [bomLines] = await this.db.query(
           `SELECT 
-            component_code as item_code, 
-            quantity as required_qty, 
+            bl.component_code as item_code, 
+            i.item_type,
+            bl.quantity as required_qty, 
             0 as issued_qty, 
             0 as consumed_qty, 
             0 as returned_qty, 
-            sequence,
-            operation
-           FROM bom_line 
-           WHERE bom_id = ? 
-           ORDER BY sequence ASC`,
+            bl.sequence,
+            bl.operation
+           FROM bom_line bl
+           LEFT JOIN item i ON bl.component_code = i.item_code
+           WHERE bl.bom_id = ? 
+           ORDER BY bl.sequence ASC`,
           [bom_id]
         )
         woItems = bomLines
@@ -851,8 +854,14 @@ class ProductionModel {
 
       // Reconciliation check before completing
       if (data.status && data.status.toLowerCase() === 'completed') {
+        const InventoryModel = (await import('./InventoryModel.js')).default;
+        const inventoryModel = new InventoryModel(this.db);
+        
+        // Auto-reconcile consumables first
+        await inventoryModel.reconcileMaterials(wo_id, data.updated_by || 1);
+
         const [items] = await this.db.query(
-          'SELECT item_code, issued_qty, consumed_qty, returned_qty, scrap_qty FROM work_order_item WHERE wo_id = ?',
+          'SELECT item_code, item_type, issued_qty, consumed_qty, returned_qty, scrap_qty FROM work_order_item WHERE wo_id = ?',
           [wo_id]
         )
         for (const item of items) {
@@ -864,7 +873,8 @@ class ProductionModel {
           // Flexibility: If issued is 0 but consumption happened, we assume they bypassed the explicit issuance step
           // We only enforce strict reconciliation if issued_qty > 0
           if (issued > 0 && Math.abs(issued - (consumed + returned + scrap)) > 0.001) {
-            throw new Error(`Material reconciliation failed for ${item.item_code}. Issued (${issued.toFixed(3)}) != Consumed (${consumed.toFixed(3)}) + Returned (${returned.toFixed(3)}) + Scrap (${scrap.toFixed(3)})`)
+            const typeLabel = item.item_type === 'Consumable' ? 'Consumable' : 'Material';
+            throw new Error(`${typeLabel} reconciliation failed for ${item.item_code}. Issued (${issued.toFixed(3)}) != Consumed (${consumed.toFixed(3)}) + Returned (${returned.toFixed(3)}) + Scrap (${scrap.toFixed(3)})`)
           }
           
           // Optional: If issued is 0 but consumed > 0, we can log a warning but allow completion
@@ -989,11 +999,12 @@ class ProductionModel {
       const requiredQty = parseFloat(item.required_qty) || parseFloat(item.required_quantity) || parseFloat(item.qty) || parseFloat(item.quantity) || 0
       
       await this.db.query(
-        `INSERT INTO work_order_item (wo_id, item_code, source_warehouse, required_qty, allocated_qty, issued_qty, consumed_qty, returned_qty, scrap_qty, sequence, operation)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO work_order_item (wo_id, item_code, item_type, source_warehouse, required_qty, allocated_qty, issued_qty, consumed_qty, returned_qty, scrap_qty, sequence, operation)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           wo_id, 
           item.item_code, 
+          item.item_type || 'Raw Material',
           item.source_warehouse || '', 
           requiredQty, 
           parseFloat(item.allocated_qty) || 0,
@@ -1508,7 +1519,7 @@ class ProductionModel {
       if (!bom || bom.length === 0) return null
 
     const [lines] = await this.db.query(
-      `SELECT bl.*, i.name as component_name, i.item_group, i.loss_percentage as item_loss_percentage
+      `SELECT bl.*, i.name as component_name, i.item_group, i.item_type, i.loss_percentage as item_loss_percentage
        FROM bom_line bl
        LEFT JOIN item i ON bl.component_code = i.item_code
        WHERE bl.bom_id = ? 
@@ -1546,7 +1557,7 @@ class ProductionModel {
 async getBOMRawMaterials(bom_id) {
   try {
     const [materials] = await this.db.query(
-      `SELECT brm.*, i.name as item_name, i.item_group FROM bom_raw_material brm LEFT JOIN item i ON brm.item_code = i.item_code WHERE brm.bom_id = ? ORDER BY brm.sequence`,
+      `SELECT brm.*, i.name as item_name, i.item_group, i.item_type FROM bom_raw_material brm LEFT JOIN item i ON brm.item_code = i.item_code WHERE brm.bom_id = ? ORDER BY brm.sequence`,
       [bom_id]
     )
     return materials || []

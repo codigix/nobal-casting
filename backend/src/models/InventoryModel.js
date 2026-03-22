@@ -245,7 +245,7 @@ class InventoryModel {
       // 2. Get BOM materials required for this operation (or all if not operation-specific)
       // For simplicity, we assume we consume materials proportional to produced quantity
       const [materials] = await connection.query(
-        'SELECT item_code, required_qty, issued_qty FROM work_order_item WHERE wo_id = ?',
+        'SELECT item_code, required_qty, issued_qty, consumed_qty, item_type FROM work_order_item WHERE wo_id = ?',
         [work_order_id]
       )
 
@@ -257,24 +257,27 @@ class InventoryModel {
         const ratio = mat.required_qty / jc[0].wo_total_qty
         const toConsume = produced_qty * ratio
 
+        // The system must ensure that consumed_qty never exceeds issued_qty
+        const remainingToConsume = Math.max(0, mat.issued_qty - mat.consumed_qty);
+        const actualToConsume = Math.min(toConsume, remainingToConsume);
+
+        if (actualToConsume <= 0) continue;
+
         // Check if we have enough issued quantity in WIP
-        // The prompt says "prevent over-consumption beyond issued_qty"
         const [wipStock] = await connection.query(
           'SELECT current_qty FROM stock_balance WHERE item_code = ? AND warehouse_id = ?',
           [mat.item_code, wipWarehouseId]
         )
         const availableInWIP = wipStock[0]?.current_qty || 0
 
-        if (availableInWIP < toConsume) {
-           // We might want to allow it but warn, or strictly block
-           // If we strictly block:
-           // throw new Error(`Insufficient issued stock for ${mat.item_code} in WIP. Available: ${availableInWIP}, Required: ${toConsume}`)
-           // For now, let's just cap it or allow but log
-        }
+        // Cap actualToConsume to available WIP stock to prevent negative stock
+        const finalToConsume = Math.min(actualToConsume, availableInWIP);
+
+        if (finalToConsume <= 0) continue;
 
         // Deduct from WIP current_qty
         await StockBalanceModel.upsert(mat.item_code, wipWarehouseId, {
-          current_qty: -toConsume,
+          current_qty: -finalToConsume,
           is_increment: true,
           last_issue_date: new Date()
         }, connection)
@@ -286,23 +289,23 @@ class InventoryModel {
           transaction_date: new Date(),
           transaction_type: 'Material Consumption',
           qty_in: 0,
-          qty_out: toConsume,
+          qty_out: finalToConsume,
           reference_doctype: 'Job Card',
           reference_name: job_card_id,
-          remarks: `Consumed for producing ${produced_qty} units`,
+          remarks: `Consumed for producing ${produced_qty} units (Type: ${mat.item_type})`,
           created_by: tracked_by
         }, connection)
 
         // Update work_order_item
         await connection.query(
           'UPDATE work_order_item SET consumed_qty = consumed_qty + ? WHERE wo_id = ? AND item_code = ?',
-          [toConsume, work_order_id, mat.item_code]
+          [finalToConsume, work_order_id, mat.item_code]
         )
 
         // Update material_allocation
         await connection.query(
           'UPDATE material_allocation SET consumed_qty = consumed_qty + ? WHERE work_order_id = ? AND item_code = ?',
-          [toConsume, work_order_id, mat.item_code]
+          [finalToConsume, work_order_id, mat.item_code]
         )
 
         // Create consumption log for audit
@@ -312,10 +315,10 @@ class InventoryModel {
             operation_name, planned_qty, consumed_qty, wasted_qty, status, tracked_by, tracked_at)
            SELECT ?, ?, ?, name, ?, ?, ?, ?, 0, 'completed', ?, NOW()
            FROM item WHERE item_code = ?`,
-          [job_card_id, work_order_id, mat.item_code, wipWarehouseId, jc[0].operation_name, mat.required_qty, toConsume, tracked_by, mat.item_code]
+          [job_card_id, work_order_id, mat.item_code, wipWarehouseId, jc[0].operation_name, mat.required_qty, finalToConsume, tracked_by, mat.item_code]
         )
 
-        consumptions.push({ item_code: mat.item_code, consumed_qty: toConsume })
+        consumptions.push({ item_code: mat.item_code, consumed_qty: finalToConsume })
       }
 
       await connection.commit()
@@ -331,6 +334,91 @@ class InventoryModel {
   // ============================================================================
   // STEP 3: FINALIZE MATERIAL DEDUCTION (When Work Order is Completed)
   // ============================================================================
+  async reconcileMaterials(work_order_id, finalized_by = 1) {
+    const connection = await this.db.getConnection()
+    await connection.beginTransaction()
+
+    try {
+      // 1. Get all items for this work order
+      const [items] = await connection.query(
+        'SELECT item_code, item_type, issued_qty, consumed_qty, returned_qty, scrap_qty FROM work_order_item WHERE wo_id = ?',
+        [work_order_id]
+      )
+
+      // 2. Get WIP warehouse
+      const [wo] = await connection.query(
+        'SELECT wip_warehouse FROM work_order WHERE wo_id = ?',
+        [work_order_id]
+      )
+      if (!wo || wo.length === 0) throw new Error(`Work Order ${work_order_id} not found`)
+      
+      const wipWarehouse = wo[0].wip_warehouse
+      const [wipWh] = await connection.query(
+        'SELECT id FROM warehouses WHERE warehouse_name = ? OR warehouse_code = ?',
+        [wipWarehouse, wipWarehouse]
+      )
+      if (!wipWh || wipWh.length === 0) throw new Error(`WIP Warehouse ${wipWarehouse} not found`)
+      const wipWarehouseId = wipWh[0].id
+
+      for (const item of items) {
+        const issued = parseFloat(item.issued_qty) || 0
+        const consumed = parseFloat(item.consumed_qty) || 0
+        const returned = parseFloat(item.returned_qty) || 0
+        const scrap = parseFloat(item.scrap_qty) || 0
+        
+        const remaining = issued - (consumed + returned + scrap)
+        
+        if (remaining > 0.001) {
+          if (item.item_type === 'Consumable') {
+            // Auto-adjust as process loss
+            await connection.query(
+              'UPDATE work_order_item SET scrap_qty = scrap_qty + ? WHERE wo_id = ? AND item_code = ?',
+              [remaining, work_order_id, item.item_code]
+            )
+
+            // Deduct from WIP stock
+            await StockBalanceModel.upsert(item.item_code, wipWarehouseId, {
+              current_qty: -remaining,
+              is_increment: true,
+              last_issue_date: new Date()
+            }, connection)
+
+            // Log Ledger
+            await StockLedgerModel.create({
+              item_code: item.item_code,
+              warehouse_id: wipWarehouseId,
+              transaction_date: new Date(),
+              transaction_type: 'Material Reconciliation (Loss)',
+              qty_in: 0,
+              qty_out: remaining,
+              reference_doctype: 'Work Order',
+              reference_name: work_order_id,
+              remarks: `Consumable auto-adjusted as process loss at closure`,
+              created_by: finalized_by
+            }, connection)
+
+            // Update material_allocation if exists
+            await connection.query(
+              'UPDATE material_allocation SET wasted_qty = wasted_qty + ? WHERE work_order_id = ? AND item_code = ?',
+              [remaining, work_order_id, item.item_code]
+            )
+          } else {
+            // Raw Material: Must be returned or scrapped manually
+            // We don't throw error here, the caller (updateWorkOrder) will throw it
+          }
+        }
+      }
+
+      await connection.commit()
+      return true
+    } catch (error) {
+      await connection.rollback()
+      throw error
+    } finally {
+      connection.release()
+    }
+  }
+
   async finalizeWorkOrderMaterials(work_order_id, finalized_by = 1) {
     try {
       // 0. Verify Work Order exists
@@ -345,7 +433,10 @@ class InventoryModel {
 
       // 1. Get all allocations for this work order
       const [allocations] = await this.db.query(
-        `SELECT * FROM material_allocation WHERE work_order_id = ?`,
+        `SELECT ma.*, woi.item_type 
+         FROM material_allocation ma
+         LEFT JOIN work_order_item woi ON ma.work_order_id = woi.wo_id AND ma.item_code = woi.item_code
+         WHERE ma.work_order_id = ?`,
         [work_order_id]
       )
 
@@ -384,8 +475,23 @@ class InventoryModel {
 
       for (let alloc of allocations) {
         // Calculate final deduction
-        const finalDeductionQty = alloc.consumed_qty + alloc.wasted_qty
-        const returnQty = alloc.allocated_qty - finalDeductionQty
+        const currentWasted = parseFloat(alloc.wasted_qty) || 0;
+        const currentConsumed = parseFloat(alloc.consumed_qty) || 0;
+        const currentAllocated = parseFloat(alloc.allocated_qty) || 0;
+        
+        let returnQty = 0;
+        let finalWasted = currentWasted;
+
+        // Consumables are non-recoverable: any remaining issued qty is auto-adjusted as process loss
+        if (alloc.item_type === 'Consumable') {
+          finalWasted = currentAllocated - currentConsumed;
+          returnQty = 0;
+        } else {
+          // Standard Raw Material: remaining is returned to store
+          returnQty = Math.max(0, currentAllocated - (currentConsumed + currentWasted));
+        }
+
+        const finalDeductionQty = currentConsumed + finalWasted;
 
         // Get stock info
         const [stockInfo] = await this.db.query(
@@ -417,7 +523,7 @@ class InventoryModel {
             qty_out: finalDeductionQty,
             reference_doctype: 'Work Order',
             reference_name: work_order_id,
-            remarks: `Consumed: ${alloc.consumed_qty}, Wasted: ${alloc.wasted_qty}`,
+            remarks: `Consumed: ${currentConsumed}, Wasted: ${finalWasted}`,
             created_by: finalized_by
           }, this.db)
 
@@ -431,7 +537,7 @@ class InventoryModel {
             finalDeductionQty,
             stock.current_qty,
             stock.current_qty - finalDeductionQty,
-            `Final deduction: Consumed ${alloc.consumed_qty}, Wasted ${alloc.wasted_qty}`,
+            `Final deduction: Consumed ${currentConsumed}, Wasted ${finalWasted}`,
             finalized_by
           )
 
@@ -467,8 +573,8 @@ class InventoryModel {
         updates.push({
           allocation_id: alloc.allocation_id,
           item_code: alloc.item_code,
-          consumed_qty: alloc.consumed_qty,
-          wasted_qty: alloc.wasted_qty,
+          consumed_qty: currentConsumed,
+          wasted_qty: finalWasted,
           returned_qty: returnQty
         })
       }

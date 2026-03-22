@@ -13,7 +13,7 @@ export default function Dashboard() {
   const departmentRoutes = {
     'manufacturing': '/manufacturing/dashboard',
     'inventory': '/inventory/dashboard',
-    'admin': '/admin/project-analysis',
+    'admin': '/admin/dashboard',
     'production': '/manufacturing/dashboard',
     'accounts': '/accounts/dashboard',
   }

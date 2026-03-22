@@ -93,6 +93,7 @@ export default function WorkOrderForm() {
   const [availableBoms, setAvailableBoms] = useState([])
   const [jobCards, setJobCards] = useState([])
   const [workstations, setWorkstations] = useState([])
+  const [warehouses, setWarehouses] = useState([])
   const [formData, setFormData] = useState({
     work_order_id: '',
     naming_series: 'MFG-WO-.YYYY.-',
@@ -178,11 +179,19 @@ export default function WorkOrderForm() {
   const [allDowntimes, setAllDowntimes] = useState([])
   const [operationWiseConsumption, setOperationWiseConsumption] = useState([])
 
+  const fetchWarehouses = async () => {
+    try {
+      const response = await productionService.getWarehouses()
+      setWarehouses(response.data || [])
+    } catch (err) { console.error('Failed to fetch warehouses:', err) }
+  }
+
   // Data Fetching Logic (Same as before)
   useEffect(() => {
     fetchItems()
     fetchProductionStages()
     fetchWorkstations()
+    fetchWarehouses()
     if (id) {
       fetchWorkOrderDetails(id)
       fetchJobCards(id)
@@ -601,6 +610,7 @@ export default function WorkOrderForm() {
           id: item.id || idx,
           item_code: item.item_code,
           item_name: item.item_name || '',
+          item_type: item.item_type || 'Raw Material',
           quantity: item.required_qty,
           uom: item.uom || '',
           required_qty: item.required_qty,
@@ -651,6 +661,7 @@ export default function WorkOrderForm() {
                 id: Date.now() + idx,
                 item_code: rm.item_code || '',
                 item_name: rm.item_name || rm.description || '',
+                item_type: rm.item_type || 'Raw Material',
                 base_qty: baseQty,
                 quantity: multipliedQty,
                 uom: rm.uom || '',
@@ -669,6 +680,7 @@ export default function WorkOrderForm() {
                 id: `line-${Date.now()}-${idx}`,
                 item_code: l.item_code || l.component_code || '',
                 item_name: l.item_name || l.component_name || l.description || l.component_description || '',
+                item_type: l.item_type || 'Raw Material',
                 base_qty: baseQty,
                 quantity: multipliedQty,
                 uom: l.uom || '',
@@ -699,6 +711,7 @@ export default function WorkOrderForm() {
                 id: alloc.allocation_id || idx,
                 item_code: alloc.item_code,
                 item_name: alloc.item_name || '',
+                item_type: alloc.item_type || 'Raw Material',
                 quantity: alloc.allocated_qty,
                 uom: alloc.uom || '',
                 required_qty: alloc.allocated_qty,
@@ -765,6 +778,7 @@ export default function WorkOrderForm() {
           id: Date.now() + idx,
           item_code: rm.item_code || '',
           item_name: rm.item_name || rm.description || '',
+          item_type: rm.item_type || 'Raw Material',
           base_qty: baseQty, // Store base ratio
           quantity: multipliedQty,
           uom: rm.uom || '',
@@ -783,6 +797,7 @@ export default function WorkOrderForm() {
           id: `line-${Date.now()}-${idx}`,
           item_code: l.item_code || l.component_code || '',
           item_name: l.item_name || l.component_name || l.description || l.component_description || '',
+          item_type: l.item_type || 'Raw Material',
           base_qty: baseQty,
           quantity: multipliedQty,
           uom: l.uom || '',
@@ -808,28 +823,62 @@ export default function WorkOrderForm() {
       const allocationRes = await productionService.getMaterialAllocationForWorkOrder(id)
       const allocations = allocationRes.data || allocationRes || []
       
-      if (allocations.length > 0) {
+      // Fetch current work order items to get latest consumption/issued/etc
+      const [wo] = await productionService.getWorkOrder(id);
+      const woItems = wo.items || [];
+
+      if (allocations.length > 0 || woItems.length > 0) {
         setBomMaterials(prev => {
+          // Priority to woItems if they exist as they have the latest data from work_order_item table
+          if (woItems.length > 0) {
+            return woItems.map((item, idx) => ({
+              id: item.id || idx,
+              item_code: item.item_code,
+              item_name: item.item_name || '',
+              item_type: item.item_type || 'Raw Material',
+              quantity: item.required_qty,
+              uom: item.uom || '',
+              required_qty: item.required_qty,
+              source_warehouse: item.source_warehouse,
+              issued_qty: item.issued_qty || 0,
+              consumed_qty: item.consumed_qty || 0,
+              returned_qty: item.returned_qty || 0,
+              scrap_qty: item.scrap_qty || 0
+            }))
+          }
+          
           if (prev.length === 0) {
             return allocations.map((alloc, idx) => ({
               id: alloc.allocation_id || idx,
               item_code: alloc.item_code,
               item_name: alloc.item_name || '',
+              item_type: 'Raw Material', // Allocation doesn't have type by default
               quantity: alloc.allocated_qty,
               uom: alloc.uom || '',
               required_qty: alloc.allocated_qty,
               source_warehouse: alloc.warehouse_code,
-              issued_qty: alloc.allocated_qty,
+              issued_qty: alloc.issued_qty || 0,
               consumed_qty: alloc.consumed_qty || 0,
-              returned_qty: alloc.returned_qty || 0
+              returned_qty: alloc.returned_qty || 0,
+              scrap_qty: 0
             }))
           } else {
             return prev.map(item => {
               const alloc = allocations.find(a => a.item_code === item.item_code)
-              if (alloc) {
+              const woItem = woItems.find(i => i.item_code === item.item_code)
+              if (woItem) {
                 return {
                   ...item,
-                  issued_qty: alloc.allocated_qty,
+                  item_type: woItem.item_type || item.item_type,
+                  issued_qty: woItem.issued_qty,
+                  consumed_qty: woItem.consumed_qty,
+                  returned_qty: woItem.returned_qty,
+                  scrap_qty: woItem.scrap_qty
+                }
+              } else if (alloc) {
+                return {
+                  ...item,
+                  issued_qty: alloc.issued_qty,
                   consumed_qty: alloc.consumed_qty || item.consumed_qty || 0,
                   returned_qty: alloc.returned_qty || item.returned_qty || 0
                 }
@@ -841,12 +890,47 @@ export default function WorkOrderForm() {
         setSuccess('Inventory data synchronized')
         setTimeout(() => setSuccess(null), 3000)
       } else {
-        setError('No allocated materials found for this work order')
+        setError('No materials found for this work order')
         setTimeout(() => setError(null), 3000)
       }
     } catch (err) {
       console.error('Failed to sync inventory:', err)
       setError('Failed to synchronize inventory data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleIssueToWIP = async () => {
+    if (!id) return
+    try {
+      setLoading(true)
+      // Collect materials that have a source warehouse and positive required qty that hasn't been issued
+      const materialsToIssue = bomMaterials
+        .filter(m => m.source_warehouse && (m.required_qty - m.issued_qty) > 0.001)
+        .map(m => ({
+          item_code: m.item_code,
+          issue_qty: Math.max(0, m.required_qty - m.issued_qty),
+          source_warehouse: m.source_warehouse
+        }))
+
+      if (materialsToIssue.length === 0) {
+        setError('No materials ready for issuance. Ensure source warehouses are selected for items with pending quantities.')
+        setTimeout(() => setError(null), 5000)
+        return
+      }
+
+      await productionService.issueToWIP(id, {
+        work_order_id: id,
+        materials: materialsToIssue
+      })
+      
+      setSuccess('Materials issued to WIP successfully')
+      setTimeout(() => setSuccess(null), 5000)
+      await syncInventory()
+    } catch (err) {
+      setError('Issuance failed: ' + err.message)
+      setTimeout(() => setError(null), 5000)
     } finally {
       setLoading(false)
     }
@@ -1047,6 +1131,7 @@ export default function WorkOrderForm() {
         sales_order_id: formData.sales_order_id,
         required_items: bomMaterials.map(mat => ({
           item_code: mat.item_code,
+          item_type: mat.item_type || 'Raw Material',
           source_warehouse: mat.source_warehouse || 'Stores - NC',
           required_qty: mat.required_qty,
           issued_qty: mat.issued_qty || 0,
@@ -1692,6 +1777,15 @@ export default function WorkOrderForm() {
                     </div>
                     <div className="flex items-center gap-2">
                       <button 
+                        onClick={handleIssueToWIP}
+                        title="Issue selected materials to WIP"
+                        disabled={loading || isReadOnly || !id}
+                        className={`px-3 py-1.5 flex items-center gap-2 text-xs font-medium rounded border transition-all ${loading || isReadOnly || !id ? 'bg-slate-50 text-slate-400 border-slate-100' : 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100'}`}
+                      >
+                        <Zap size={14} className={loading ? 'animate-pulse' : ''} />
+                        Issue to WIP
+                      </button>
+                      <button 
                         onClick={syncInventory}
                         title="Sync with Inventory Allocations"
                         className={`p-2 transition-all bg-white rounded border border-slate-100 ${loading ? 'text-indigo-600 animate-spin' : 'text-slate-400 hover:text-indigo-600'}`}
@@ -1709,62 +1803,88 @@ export default function WorkOrderForm() {
                       <table className="w-full text-left bg-white">
                         <thead>
                           <tr className="bg-slate-50/30">
-                            <th className="p-2  text-xs  text-slate-400  ">Item</th>
+                            <th className="p-2  text-xs  text-slate-400  ">Item & Source</th>
                             <th className="p-2  text-xs  text-slate-400  text-right">Required</th>
                             <th className="p-2  text-xs  text-slate-400  text-right">Issued</th>
                             <th className="p-2  text-xs  text-slate-400  text-right">Consumed</th>
-                            <th className="p-2  text-xs  text-slate-400  text-right">Yield Loss</th>
+                            <th className="p-2  text-xs  text-slate-400  text-right">Remaining</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {bomMaterials.map((mat) => {
-                            const loss = Math.max(0, (parseFloat(mat.issued_qty) || 0) - (parseFloat(mat.consumed_qty) || 0) - (parseFloat(mat.returned_qty) || 0))
-                            const isShortage = (parseFloat(mat.issued_qty) || 0) < (parseFloat(mat.required_qty) || 0)
+                            const issued = parseFloat(mat.issued_qty) || 0
+                            const consumed = parseFloat(mat.consumed_qty) || 0
+                            const returned = parseFloat(mat.returned_qty) || 0
+                            const scrap = parseFloat(mat.scrap_qty) || 0
+                            const remaining = Math.max(0, issued - (consumed + returned + scrap))
+                            const isShortage = issued < (parseFloat(mat.required_qty) || 0)
+                            const isConsumable = mat.item_type === 'Consumable'
 
                             return (
                               <tr key={mat.id} className="hover:bg-slate-50/50 transition-colors group">
                                 <td className="p-2 ">
-                                  <div className="flex flex-col">
-                                    <span className="text-xs  text-slate-900">{mat.item_name || mat.description}</span>
-                                    <span className="text-xs text-slate-400 font-medium text-xs truncate max-w-[240px]">{mat.item_code}</span>
+                                  <div className="flex flex-col gap-1.5">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-semibold text-slate-900">{mat.item_name || mat.description}</span>
+                                      {isConsumable && (
+                                        <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 text-[9px] font-bold uppercase rounded border border-indigo-100">
+                                          Consumable
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-[10px] text-slate-400 font-medium font-mono">{mat.item_code}</span>
+                                      <select
+                                        value={mat.source_warehouse || ''}
+                                        onChange={(e) => updateMaterial(mat.id, 'source_warehouse', e.target.value)}
+                                        disabled={isReadOnly || issued > 0}
+                                        className="text-[10px] bg-slate-50 border-none rounded px-1 py-0.5 text-slate-600 focus:ring-1 focus:ring-indigo-500 outline-none"
+                                      >
+                                        <option value="">Select Warehouse</option>
+                                        {warehouses.map(w => (
+                                          <option key={w.id} value={w.warehouse_name}>{w.warehouse_name}</option>
+                                        ))}
+                                      </select>
+                                    </div>
                                   </div>
                                 </td>
                                 <td className="p-2  text-right">
                                   <div className="flex flex-col items-end">
-                                    <span className="text-xs  text-slate-900">{mat.required_qty}</span>
+                                    <span className="text-xs  text-slate-900 font-medium">{mat.required_qty}</span>
                                     <span className="text-[9px]  text-slate-400 ">{mat.uom}</span>
                                   </div>
                                 </td>
                                 <td className="p-2  text-right">
-                                  <div className="relative inline-block">
-                                    <input
-                                      type="number"
-                                      value={mat.issued_qty || 0}
-                                      onChange={(e) => updateMaterial(mat.id, 'issued_qty', parseFloat(e.target.value) || 0)}
-                                      disabled={isReadOnly}
-                                      className={`w-24 p-2  py-1.5 rounded text-right text-xs  outline-none border transition-all ${isShortage ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-slate-50 border-slate-200 focus:border-indigo-500'
-                                        }`}
-                                    />
-                                    {isShortage && (
-                                      <div className="absolute -top-2 -right-2">
-                                        <AlertCircle size={12} className="text-amber-500 fill-white" />
-                                      </div>
+                                  <div className="flex flex-col items-end">
+                                    <span className={`text-xs font-bold ${issued > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                      {issued.toFixed(2)}
+                                    </span>
+                                    {isShortage && issued > 0 && (
+                                      <span className="text-[9px] text-amber-500 font-medium italic">Partial</span>
+                                    )}
+                                    {isShortage && issued === 0 && (
+                                      <span className="text-[9px] text-rose-500 font-medium italic">Not Issued</span>
                                     )}
                                   </div>
                                 </td>
                                 <td className="p-2  text-right">
-                                  <input
-                                    type="number"
-                                    value={mat.consumed_qty || 0}
-                                    onChange={(e) => updateMaterial(mat.id, 'consumed_qty', parseFloat(e.target.value) || 0)}
-                                    disabled={isReadOnly}
-                                    className="w-24 p-2  py-1.5 bg-emerald-50 border border-emerald-100 rounded text-right text-xs  text-emerald-700 outline-none focus:ring-2 focus:ring-emerald-500/20"
-                                  />
+                                  <div className="flex flex-col items-end">
+                                    <span className={`text-xs font-bold ${consumed > 0 ? 'text-blue-600' : 'text-slate-400'}`}>
+                                      {consumed.toFixed(2)}
+                                    </span>
+                                  </div>
                                 </td>
                                 <td className="p-2  text-right">
-                                  <span className={`text-xs  ${loss > 0 ? 'text-rose-500' : 'text-slate-400'}`}>
-                                    {loss > 0 ? `-${loss.toFixed(2)}` : '0.00'}
-                                  </span>
+                                  <div className="flex flex-col items-end">
+                                    <span className={`text-xs font-bold ${remaining > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                                      {remaining.toFixed(2)}
+                                    </span>
+                                    {scrap > 0 && (
+                                      <span className="text-[9px] text-rose-500">
+                                        Loss: {scrap.toFixed(2)}
+                                      </span>
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                             )

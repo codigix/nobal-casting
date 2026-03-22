@@ -345,16 +345,16 @@ class MastersController {
       const { period = 'daily' } = req.query
       
       let dateGroup = '%Y-%m-%d'
-      let daysBack = 1
+      let daysBack = 7
       
       if (period === 'weekly') {
         dateGroup = '%Y-%u'
-        daysBack = 7
+        daysBack = 30
       } else if (period === 'monthly') {
         dateGroup = '%Y-%m'
-        daysBack = 30
+        daysBack = 90
       } else if (period === 'yearly') {
-        dateGroup = '%Y-%m'
+        dateGroup = '%Y'
         daysBack = 365
       }
       
@@ -365,21 +365,21 @@ class MastersController {
                 SUM(hours_worked) as hours,
                 COUNT(DISTINCT machine_id) as machines_used
          FROM production_entry
-         WHERE entry_date >= DATE_SUB(NOW(), INTERVAL ? DAY)
-         GROUP BY DATE_FORMAT(entry_date, ?)
-         ORDER BY entry_date DESC`,
+         WHERE entry_date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+         GROUP BY period
+         ORDER BY period ASC`,
         [dateGroup, daysBack, dateGroup]
       )
       
       const [[{ totalProduced }]] = await database.query(
         `SELECT SUM(quantity_produced) as totalProduced FROM production_entry
-         WHERE entry_date >= DATE_SUB(NOW(), INTERVAL ? DAY)`,
+         WHERE entry_date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)`,
         [daysBack]
       )
       
       const [[{ totalRejected }]] = await database.query(
         `SELECT SUM(quantity_rejected) as totalRejected FROM production_entry
-         WHERE entry_date >= DATE_SUB(NOW(), INTERVAL ? DAY)`,
+         WHERE entry_date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)`,
         [daysBack]
       )
       

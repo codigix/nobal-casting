@@ -95,13 +95,13 @@ export default function DepartmentLayout({ children }) {
     const dashboardPaths = {
       'inventory': '/inventory/dashboard',
       'manufacturing': '/manufacturing/dashboard',
-      'admin': '/admin/project-analysis',
+      'admin': '/admin/dashboard',
       'accounts': '/accounts/dashboard'
     }
     
     const dashboardItem = {
       id: 'dashboard',
-      label: 'Dashboard',
+      label: userDept === 'admin' ? 'Admin Dashboard' : 'Dashboard',
       icon: LayoutDashboard,
       path: dashboardPaths[userDept] || '/manufacturing/dashboard',
       section: 'NAVIGATION'

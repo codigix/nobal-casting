@@ -18,7 +18,7 @@ export class ItemModel {
         'safety_stock', 'is_customer_provided_item', 'default_sales_uom', 'max_discount_percentage',
         'grant_commission', 'allow_sales', 'cess_rate', 'inclusive_tax',
         'supply_raw_materials_for_purchase', 'include_item_in_manufacturing', 'no_of_cavities',
-        'family_mould', 'mould_number', 'loss_percentage'
+        'family_mould', 'mould_number', 'loss_percentage', 'item_type'
       ]
 
       const values = [
@@ -37,7 +37,7 @@ export class ItemModel {
         data.allow_sales !== false, data.cess_rate || 0, data.inclusive_tax || false,
         data.supply_raw_materials_for_purchase || false, data.include_item_in_manufacturing || false,
         data.no_of_cavities || 1, data.family_mould || false, data.mould_number || null,
-        data.loss_percentage || 0
+        data.loss_percentage || 0, data.item_type || 'Raw Material'
       ]
 
       const placeholders = fields.map(() => '?').join(', ')
@@ -310,7 +310,7 @@ export class ItemModel {
         'safety_stock', 'is_customer_provided_item', 'default_sales_uom', 'max_discount_percentage',
         'grant_commission', 'allow_sales', 'cess_rate', 'inclusive_tax',
         'supply_raw_materials_for_purchase', 'include_item_in_manufacturing', 'no_of_cavities',
-        'family_mould', 'mould_number', 'loss_percentage'
+        'family_mould', 'mould_number', 'loss_percentage', 'item_type'
       ]
 
       const numericFields = [

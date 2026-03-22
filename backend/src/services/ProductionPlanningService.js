@@ -102,7 +102,7 @@ export class ProductionPlanningService {
       const bom = boms[0]
 
       const [bomLines] = await this.db.execute(
-        `SELECT bl.*, i.item_group 
+        `SELECT bl.*, i.item_group, i.item_type 
          FROM bom_line bl 
          LEFT JOIN item i ON bl.component_code = i.item_code 
          WHERE bl.bom_id = ? 
@@ -116,7 +116,7 @@ export class ProductionPlanningService {
       )
 
       const [bomRawMaterials] = await this.db.execute(
-        `SELECT brm.*, i.item_group 
+        `SELECT brm.*, i.item_group, i.item_type 
          FROM bom_raw_material brm 
          LEFT JOIN item i ON brm.item_code = i.item_code 
          WHERE brm.bom_id = ? 
@@ -138,7 +138,8 @@ export class ProductionPlanningService {
   isConsumable(line) {
     if (!line) return false
     const itemGroup = (line.item_group || '').toLowerCase()
-    return itemGroup === 'consumable'
+    const itemType = (line.item_type || '').toLowerCase()
+    return itemGroup === 'consumable' || itemType === 'consumable'
   }
 
   async isSubAssembly(line) {
@@ -224,6 +225,7 @@ export class ProductionPlanningService {
     const itemCode = item.item_code || item.component_code
     const itemName = item.item_name || item.component_description || item.description || itemCode
     const itemGroup = item.item_group || ''
+    const itemType = item.item_type || 'Raw Material'
     const qtyPerUnit = parseFloat(item.qty || item.quantity || 0)
     const totalRmQty = qtyPerUnit * plannedQty
     const rate = parseFloat(item.rate || 0)
@@ -246,6 +248,7 @@ export class ProductionPlanningService {
         item_code: itemCode,
         item_name: itemName,
         item_group: itemGroup,
+        item_type: itemType,
         uom: uom,
         qty_per_unit: qtyPerUnit,
         total_qty: totalRmQty,

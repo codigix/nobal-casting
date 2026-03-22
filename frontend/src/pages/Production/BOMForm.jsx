@@ -156,6 +156,7 @@ export default function BOMForm() {
     qty: '1',
     uom: 'Kg',
     item_group: '',
+    item_type: 'Raw Material',
     rate: '0',
     selling_price: '0',
     notes: '',
@@ -171,6 +172,7 @@ export default function BOMForm() {
     item_code: '',
     item_name: '',
     item_group: '',
+    item_type: 'Raw Material',
     qty: '1',
     uom: 'Kg',
     rate: '0',
@@ -834,6 +836,7 @@ export default function BOMForm() {
             ...prev,
             component_name: itemData.name || itemData.item_name || prev.component_name,
             uom: itemData.uom || prev.uom,
+            item_type: itemData.item_type || 'Raw Material',
             rate: rate,
             selling_price: sellingPrice,
             loss_percentage: itemData.loss_percentage || '0'
@@ -954,6 +957,7 @@ export default function BOMForm() {
                     qty: qty.toString(),
                     uom: line.uom || 'Kg',
                     item_group: line.item_group,
+                    item_type: itemResp?.data?.item_type || line.item_type || 'Raw Material',
                     rate: itemRate.toString(),
                     amount: amount,
                     loss_percentage: itemResp?.data?.loss_percentage || '0',
@@ -985,6 +989,7 @@ export default function BOMForm() {
       selling_price: sellingPrice,
       uom: selectedItem?.uom || newLine.uom,
       item_group: selectedItem?.item_group || newLine.item_group,
+      item_type: selectedItem?.item_type || 'Raw Material',
       loss_percentage: lossPercentage
     })
   }
@@ -1055,6 +1060,7 @@ export default function BOMForm() {
       item_code: value,
       item_name: item?.name || item?.item_name || '',
       item_group: item?.item_group || '',
+      item_type: item?.item_type || 'Raw Material',
       uom: item?.uom || newRawMaterial.uom,
       rate,
       amount: (parseFloat(newRawMaterial.qty || 0) * parseFloat(rate || 0)).toFixed(2),
@@ -1104,6 +1110,7 @@ export default function BOMForm() {
       qty: '1',
       uom: 'Kg',
       item_group: '',
+      item_type: 'Raw Material',
       rate: '0',
       selling_price: '0',
       notes: '',
@@ -1173,6 +1180,7 @@ export default function BOMForm() {
       item_code: '',
       item_name: '',
       item_group: '',
+      item_type: 'Raw Material',
       qty: '1',
       uom: 'Kg',
       rate: '0',
@@ -1998,6 +2006,11 @@ export default function BOMForm() {
                                       <div className="  text-slate-900 text-xs  ">{line.component_name}</div>
                                       <div className="flex items-center gap-2 mt-1.5">
                                         <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[9px]   rounded   ">{line.component_code}</span>
+                                        {line.item_type === 'Consumable' && (
+                                          <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 text-[8px] font-bold uppercase rounded border border-amber-100">
+                                            Consumable
+                                          </span>
+                                        )}
                                         {parseFloat(line.loss_percentage) > 0 && (
                                           <span className="flex items-center gap-1 text-[9px]   text-rose-500">
                                             <TrendingDown size={10} />
@@ -2330,7 +2343,14 @@ export default function BOMForm() {
                                                     </td>
                                                     <td className="p-2 ">
                                                       <div className="text-xs   text-slate-900 ">{material.item_name}</div>
-                                                      <div className="text-[9px]   text-amber-600    mt-1">{material.item_code}</div>
+                                                      <div className="flex items-center gap-2 mt-1">
+                                                        <div className="text-[9px]   text-amber-600    ">{material.item_code}</div>
+                                                        {material.item_type === 'Consumable' && (
+                                                          <span className="px-1 py-0.5 bg-amber-50 text-amber-600 text-[7px] font-bold uppercase rounded border border-amber-100">
+                                                            Consumable
+                                                          </span>
+                                                        )}
+                                                      </div>
                                                     </td>
                                                     <td className="p-2  text-right">
                                                       {isEditing ? (

@@ -39,7 +39,7 @@ const StatusBadge = ({ status }) => {
   }
 
   return (
-    <div className={`px-2 py-0.5 rounded text-[10px]   tracking-wider border ${colors}`}>
+    <div className={`p-2 py-0.5 rounded text-[10px]   tracking-wider border ${colors}`}>
       {status}
     </div>
   );
@@ -56,7 +56,7 @@ const JobCardItem = ({ jc }) => {
         </div>
         <div className="text-[10px]  text-slate-800 truncate">{jc.job_card_id}</div>
       </div>
-      <div className="text-[9px] font-medium text-slate-500 text-center w-fit m-auto bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 truncate">
+      <div className="text-[9px]  text-slate-500 text-center w-fit m-auto bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 truncate">
         {jc.operation}
       </div>
 
@@ -66,9 +66,9 @@ const JobCardItem = ({ jc }) => {
           <span>Progress</span>
           <span>{jc.produced_quantity} / {jc.planned_quantity}</span>
         </div>
-        <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
+        <div className="w-full bg-slate-100 h-1 rounded overflow-hidden">
           <div 
-            className={`h-full rounded-full transition-all duration-500 ${progress >= 100 ? 'bg-emerald-500' : 'bg-violet-500'}`}
+            className={`h-full rounded transition-all duration-500 ${progress >= 100 ? 'bg-emerald-500' : 'bg-violet-500'}`}
             style={{ width: `${Math.min(100, progress)}%` }}
           />
         </div>
@@ -87,7 +87,7 @@ const JobCardItem = ({ jc }) => {
 
       <div className="flex justify-center items-center mt-1">
         <div className="text-[8px]   text-slate-400">Execution</div>
-        <div className={`text-[8px]  px-1.5 py-0.5 rounded-full ${
+        <div className={`text-[8px]  px-1.5 py-0.5 rounded ${
           jc.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' : 
           jc.status === 'In Progress' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-500'
         }`}>
@@ -158,7 +158,7 @@ const TreeBranch = ({ children, label, showTopLine = true }) => {
     <div className={`relative flex flex-col items-center ${showTopLine ? 'pt-6' : 'pt-0'}`}>
       {/* Label on the vertical line */}
       {showTopLine && label && (
-        <div className="absolute top-4 px-2 py-0.5 bg-blue-50 border border-blue-100 rounded text-[8px]  text-blue-600  z-10">
+        <div className="absolute top-4 p-2 py-0.5 bg-blue-50 border border-blue-100 rounded text-[8px]  text-blue-600  z-10">
           {label}
         </div>
       )}
@@ -197,7 +197,7 @@ const SvgConnector = ({ type = 'straight', height = 30, isDotted = false, label 
     <div className="relative flex flex-col items-center w-full" style={{ height }}>
       <div className={`w-0 h-full border-l-2 ${isDotted ? 'border-dashed border-slate-300' : 'border-solid border-slate-200'}`} />
       {label && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-2 py-0.5 bg-white border border-slate-200 rounded text-[8px]  text-slate-400  z-10 whitespace-nowrap">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-2 py-0.5 bg-white border border-slate-200 rounded text-[8px]  text-slate-400  z-10 whitespace-nowrap">
           {label}
         </div>
       )}
@@ -251,7 +251,7 @@ export default function ProductionHierarchy() {
         <div className="bg-white p-10 rounded-3xl shadow-2xl text-center border border-slate-100 max-w-md">
           <AlertCircle className="mx-auto text-rose-500 mb-6" size={64} />
           <h2 className="text-2xl  text-slate-900 mb-2 tracking-tight">Mapping Engine Halted</h2>
-          <p className="text-slate-500 font-medium mb-8 leading-relaxed">{error}</p>
+          <p className="text-slate-500  mb-8 leading-relaxed">{error}</p>
           <button onClick={() => navigate(-1)} className="w-full py-4 bg-slate-900 text-black/50 rounded-xl  tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
             TERMINATE & RETURN
           </button>
@@ -379,7 +379,7 @@ export default function ProductionHierarchy() {
           </button>
           <div className="flex bg-slate-50 rounded border border-slate-200 p-0.5">
             <button onClick={() => setZoom(Math.max(0.4, zoom - 0.1))} className="p-1.5 hover:bg-white hover: rounded-md text-slate-500 transition-all"><Minimize2 size={14} /></button>
-            <div className="px-2 flex items-center text-[9px]  text-slate-400">{Math.round(zoom * 100)}%</div>
+            <div className="p-2 flex items-center text-[9px]  text-slate-400">{Math.round(zoom * 100)}%</div>
             <button onClick={() => setZoom(Math.min(1.5, zoom + 0.1))} className="p-1.5 hover:bg-white hover: rounded-md text-slate-500 transition-all"><Maximize2 size={14} /></button>
           </div>
           <button onClick={fetchHierarchy} className="p-2 bg-white rounded  border border-slate-200 text-blue-600 hover:bg-slate-50 transition-all">
@@ -438,8 +438,8 @@ export default function ProductionHierarchy() {
                     {planRootWOs.map((rootWo) => renderWorkOrderNode(rootWo, 0))}
                   </TreeBranch>
                 ) : (
-                  <div className="px-16 py-8 border-2 border-dashed border-slate-100 rounded-2xl text-[10px]  text-slate-200  tracking-[0.3em] flex flex-col items-center gap-4">
-                    <Factory size={32} />
+                  <div className="p-2 border-2 border-dashed border-slate-100 rounded-2xl text-[10px]  text-slate-200  tracking-[0.3em] flex flex-col items-center gap-4">
+                    <Factory size={15} />
                     No Work Orders Linked to this Plan
                   </div>
                 )}
@@ -448,7 +448,7 @@ export default function ProductionHierarchy() {
             );
           }) : (
              <div className="flex flex-col items-center opacity-40">
-                <div className="text-[10px]  text-slate-400  px-4 py-2 border-2 border-dashed border-slate-200 rounded-xl">No Production Plans Drafted</div>
+                <div className="text-[10px]  text-slate-400  p-2 border-2 border-dashed border-slate-200 rounded-xl">No Production Plans Drafted</div>
                 <SvgConnector type="straight" height={60} isDotted={true} />
              </div>
           )}
@@ -456,7 +456,7 @@ export default function ProductionHierarchy() {
           {/* Node 2: Direct Work Orders (Not linked to any plan) */}
           {directWOs.length > 0 && (
             <div className="flex flex-col items-center mt-12 w-full">
-              <div className="px-6 py-2 bg-amber-50 border border-amber-200 rounded-full text-[10px]  text-amber-600  mb-4">Direct Execution (No Plan)</div>
+              <div className="p-2 bg-amber-50 border border-amber-200 rounded text-[10px]  text-amber-600  mb-4">Direct Execution (No Plan)</div>
               <TreeBranch>
                 {directWOs.map((rootWo) => renderWorkOrderNode(rootWo, 0))}
               </TreeBranch>
@@ -475,7 +475,7 @@ export default function ProductionHierarchy() {
           { color: 'bg-slate-600', label: 'Field Action (Op)' }
         ].map((item, idx) => (
           <div key={idx} className="flex items-center gap-2">
-            <div className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
+            <div className={`w-2.5 h-2.5 rounded ${item.color}`} />
             <span className="text-[9px]   tracking-tight text-slate-600">{item.label}</span>
           </div>
         ))}

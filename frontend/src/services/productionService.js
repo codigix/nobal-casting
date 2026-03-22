@@ -538,6 +538,11 @@ export const trackMaterialConsumption = async (data) => {
   return response.data
 }
 
+export const issueToWIP = async (work_order_id, data) => {
+  const response = await api.post(`/production/work-orders/${work_order_id}/issue-to-wip`, data)
+  return response.data
+}
+
 // Material Requests
 export const getMaterialRequests = async (filters = {}) => {
   const params = new URLSearchParams(filters)

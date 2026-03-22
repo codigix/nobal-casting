@@ -60,7 +60,7 @@ import {
 } from './pages/Selling'
 
 import './App.css'
-import { ProjectAnalysis, ProjectDetails, MachineAnalysis, CustomerStatistics, OEE, OEERedesign, EmployeesDesignations, AdminPanel } from './pages/Admin'
+import { ProjectAnalysis, ProjectDetails, MachineAnalysis, CustomerStatistics, OEE, OEERedesign, EmployeesDesignations, AdminPanel, AdminDashboard } from './pages/Admin'
 import AccountDashboard from './pages/Accounts/AccountDashboard'
 import Payments from './pages/Accounts/Payments'
 import Expenses from './pages/Accounts/Expenses'
@@ -702,6 +702,7 @@ function App() {
             {/* ADMIN DEPARTMENT */}
             {/* ==================== */}
 
+           
             {/* Admin Dashboard */}
             <Route
               path="/admin/dashboard"
@@ -709,7 +710,7 @@ function App() {
                 <ProtectedRoute>
                   <DepartmentLayout>
                     <DepartmentProtectedRoute departments={['admin']}>
-                      <DepartmentDashboard />
+                      <AdminDashboard />
                     </DepartmentProtectedRoute>
                   </DepartmentLayout>
                 </ProtectedRoute>
@@ -807,6 +808,20 @@ function App() {
                   <DepartmentLayout>
                     <DepartmentProtectedRoute departments={['admin']}>
                       <EmployeesDesignations />
+                    </DepartmentProtectedRoute>
+                  </DepartmentLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Admin Dashboard */}
+            <Route
+              path="/admin/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DepartmentLayout>
+                    <DepartmentProtectedRoute departments={['admin']}>
+                      <AdminDashboard />
                     </DepartmentProtectedRoute>
                   </DepartmentLayout>
                 </ProtectedRoute>
