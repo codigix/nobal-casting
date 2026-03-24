@@ -2399,7 +2399,7 @@ class ProductionController {
       const { items = [] } = req.body;
 
       const [jobCard] = await this.productionModel.db.execute(
-        `SELECT jc.*, wo.item_code, wo.production_plan_id FROM job_card jc 
+        `SELECT jc.*, wo.item_code, wo.production_plan_id, wo.wip_warehouse FROM job_card jc 
          LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id 
          WHERE jc.job_card_id = ?`,
         [job_card_id]
@@ -2415,6 +2415,7 @@ class ProductionController {
       const card = jobCard[0];
       const mr_id = 'MR-' + Date.now();
       const production_plan_id = card.production_plan_id || null;
+      const target_warehouse = card.wip_warehouse || null;
       
       const mrItems = items.length > 0 ? items : [{
         item_code: card.item_code,
@@ -2430,7 +2431,7 @@ class ProductionController {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [mr_id, `MR-${Date.now().toString().slice(-6)}`, new Date().toISOString().split('T')[0], 
          req.user?.user_id || 1, 'Production', 'material_issue', new Date().toISOString().split('T')[0],
-         null, null, null, `For Job Card: ${job_card_id}`, 'draft', production_plan_id, req.user?.user_id || 1]
+         null, target_warehouse, null, `For Job Card: ${job_card_id}`, 'draft', production_plan_id, req.user?.user_id || 1]
       );
 
       for (const item of mrItems) {

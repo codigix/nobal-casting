@@ -126,14 +126,14 @@ export class MaterialRequestController {
         })
       }
 
-      if (purpose === 'material_issue' && !source_warehouse) {
+      if (purpose === 'material_issue' && !source_warehouse && (!itemsToProcess || Object.keys(itemsToProcess).length === 0)) {
         return res.status(400).json({ 
           success: false, 
           error: 'Source warehouse is required for Material Issue requests' 
         })
       }
 
-      if (purpose === 'material_transfer' && (!source_warehouse || !mrRequest.target_warehouse)) {
+      if (purpose === 'material_transfer' && (!source_warehouse && (!itemsToProcess || Object.keys(itemsToProcess).length === 0)) || (purpose === 'material_transfer' && !mrRequest.target_warehouse)) {
         return res.status(400).json({ 
           success: false, 
           error: 'Both source and target warehouses are required for Material Transfer requests' 

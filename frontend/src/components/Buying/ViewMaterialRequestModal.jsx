@@ -23,6 +23,9 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
   const [itemWarehouses, setItemWarehouses] = useState({})
   const [checkingStock, setCheckingStock] = useState(false)
 
+  const [selectedSourceWarehouse, setSelectedSourceWarehouse] = useState(null)
+  const [selectedTargetWarehouse, setSelectedTargetWarehouse] = useState(null)
+
   useEffect(() => {
     if (isOpen && mrId) {
       const initializeModal = async () => {
@@ -36,6 +39,8 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
       setSuccess(null)
       setStockData({})
       setItemWarehouses({})
+      setSelectedSourceWarehouse(null)
+      setSelectedTargetWarehouse(null)
     }
   }, [isOpen, mrId])
 
@@ -54,6 +59,8 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
       setLoading(true)
       const response = await api.get(`/material-requests/${mrId}`)
       setRequest(response.data.data)
+      setSelectedSourceWarehouse(response.data.data?.source_warehouse)
+      setSelectedTargetWarehouse(response.data.data?.target_warehouse)
       setError(null)
       if (response.data.data?.items) {
         await checkStockAvailability(response.data.data)
@@ -76,7 +83,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
           // If item-specific warehouse is selected, use it. 
           // Otherwise check all warehouses to find best match
           const itemSpecificWh = itemWarehouses[item.item_code]
-          const useGlobalWh = requestData?.source_warehouse
+          const useGlobalWh = selectedSourceWarehouse || requestData?.source_warehouse
           
           // ALWAYS fetch all warehouses to get a breakdown for filtering dropdowns
           const params = {
@@ -233,7 +240,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
         request?.items?.forEach(item => {
           const stock = stockData[item.item_code]
           const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
-          const whId = itemWarehouses[item.item_code] || request?.source_warehouse
+          const whId = itemWarehouses[item.item_code] || selectedSourceWarehouse || request?.source_warehouse
           
           if (stock && stock.hasStock && pendingQty > 0 && whId) {
             processMap[item.item_code] = whId
@@ -245,6 +252,13 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
           setLoading(false)
           return
         }
+        
+        if (request?.purpose?.toLowerCase() === 'material_transfer' && !selectedTargetWarehouse && !request?.target_warehouse) {
+          setError('Target warehouse is required for transfer requests.')
+          setLoading(false)
+          return
+        }
+        
         itemsToProcess = processMap
       }
 
@@ -254,8 +268,12 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
       }
       
       // If we have a global warehouse, send it as fallback
-      if (isTransferOrIssue && request?.source_warehouse) {
-        payload.source_warehouse = request?.source_warehouse
+      if (isTransferOrIssue && (selectedSourceWarehouse || request?.source_warehouse)) {
+        payload.source_warehouse = selectedSourceWarehouse || request?.source_warehouse
+      }
+      
+      if (isTransferOrIssue && request?.purpose?.toLowerCase() === 'material_transfer' && (selectedTargetWarehouse || request?.target_warehouse)) {
+        payload.target_warehouse = selectedTargetWarehouse || request?.target_warehouse
       }
       
       const response = await api.patch(`/material-requests/${mrId}/approve`, payload)
@@ -277,7 +295,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
     try {
       setLoading(true)
       setError(null)
-      const whId = itemWarehouses[itemCode] || request?.source_warehouse
+      const whId = itemWarehouses[itemCode] || selectedSourceWarehouse || request?.source_warehouse
       
       if (!whId) {
         setError('Warehouse is required for release. Please select one for this item.')
@@ -478,6 +496,53 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                 <p className="text-xs  text-slate-700 capitalize">{request?.purpose?.replace('_', ' ')}</p>
               </div>
             </div>
+
+            {isTransferOrIssue && (
+              <>
+                <div className="bg-white p-2 rounded border border-slate-200 flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-indigo-50 flex items-center justify-center text-indigo-600">
+                    <Warehouse size={15} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[10px] text-slate-400">Source Store</p>
+                    <select 
+                      value={selectedSourceWarehouse || ''} 
+                      onChange={(e) => {
+                        setSelectedSourceWarehouse(e.target.value)
+                        setTimeout(() => checkStockAvailability(request), 0)
+                      }}
+                      className="text-xs text-slate-700 bg-transparent border-none outline-none w-full p-0 h-4"
+                    >
+                      <option value="">Select Store...</option>
+                      {warehouses.map(w => (
+                        <option key={w.id} value={w.id}>{w.warehouse_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {request?.purpose?.toLowerCase() === 'material_transfer' && (
+                  <div className="bg-white p-2 rounded border border-slate-200 flex items-center gap-2">
+                    <div className="w-6 h-6 rounded bg-emerald-50 flex items-center justify-center text-emerald-600">
+                      <Truck size={15} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] text-slate-400">Target Store</p>
+                      <select 
+                        value={selectedTargetWarehouse || ''} 
+                        onChange={(e) => setSelectedTargetWarehouse(e.target.value)}
+                        className="text-xs text-slate-700 bg-transparent border-none outline-none w-full p-0 h-4"
+                      >
+                        <option value="">Select Store...</option>
+                        {warehouses.map(w => (
+                          <option key={w.id} value={w.id}>{w.warehouse_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
 
             {/* <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-2">
               <div className="w-6 h-6 rounded  bg-purple-50 flex items-center justify-center text-purple-600">
