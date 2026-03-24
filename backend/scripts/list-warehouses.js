@@ -11,8 +11,8 @@ async function listWarehouses() {
   });
 
   try {
-    const [rows] = await connection.execute('SELECT * FROM warehouse');
-    console.table(rows.map(r => ({ Code: r.warehouse_code, Name: r.name })));
+    const [rows] = await connection.execute('SELECT * FROM warehouses');
+    console.table(rows.map(r => ({ ID: r.id, Code: r.warehouse_code, Name: r.warehouse_name })));
   } catch (error) {
     console.error('Error:', error);
   } finally {

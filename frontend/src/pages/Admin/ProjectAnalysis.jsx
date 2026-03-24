@@ -289,7 +289,8 @@ export default function ProjectAnalysis() {
               <thead>
                 <tr className="bg-slate-50/50">
                   <th className="p-2 text-[11px]  text-slate-400   border-b border-slate-100">Project Identifier</th>
-
+                  <th className="p-2 text-[11px]  text-slate-400   border-b border-slate-100">Project Name</th>
+                  <th className="p-2 text-[11px]  text-slate-400   border-b border-slate-100">Finished Goods</th>
                   <th className="p-2 text-[11px]  text-slate-400   border-b border-slate-100">Execution Status</th>
                   <th className="p-2 text-[11px]  text-slate-400   border-b border-slate-100">Resource Matrix</th>
                   <th className="p-2 text-[11px]  text-slate-400   border-b border-slate-100">Production Yield</th>

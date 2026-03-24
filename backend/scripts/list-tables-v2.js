@@ -1,25 +1,20 @@
 
 import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const dbConfig = {
-  host: process.env.DB_HOST || '127.0.0.1',
-  user: process.env.DB_USER || 'nobalcasting_user',
-  password: process.env.DB_PASSWORD || 'C0digix$309',
-  database: process.env.DB_NAME || 'nobalcasting',
-  port: parseInt(process.env.DB_PORT) || 3307
-};
 
 async function listTables() {
-  const connection = await mysql.createConnection(dbConfig);
+  const connection = await mysql.createConnection({
+    host: '127.0.0.1',
+    user: 'nobalcasting_user',
+    password: 'C0digix$309',
+    database: 'nobalcasting',
+    port: 3307
+  });
+
   try {
-    const [tables] = await connection.query('SHOW TABLES');
-    console.log('Tables:');
-    tables.forEach(row => console.log(`- ${Object.values(row)[0]}`));
+    const [rows] = await connection.execute('SHOW TABLES');
+    console.table(rows.map(r => Object.values(r)[0]));
   } catch (error) {
-    console.error('Failed to list tables:', error);
+    console.error('Error:', error);
   } finally {
     await connection.end();
   }
