@@ -18,7 +18,7 @@ const statusConfig = {
 }
 
 const StatusBadge = ({ status }) => {
-  const config = statusConfig[status?.toLowerCase()] || statusConfig.draft
+  const config = statusConfig[String(status || '').toLowerCase()] || statusConfig.draft
   const Icon = config.icon
 
   return (
@@ -47,7 +47,7 @@ const MaterialStatusBadge = ({ status }) => {
     rejected: { label: 'Rejected', color: 'bg-rose-50 text-rose-600 border-rose-200' },
     partial: { label: 'Partial', color: 'bg-amber-50 text-amber-600 border-amber-200' }
   }
-  const config = configs[status?.toLowerCase()] || configs.pending
+  const config = configs[String(status || '').toLowerCase()] || configs.pending
   return (
     <span className={`px-2 py-0.5 rounded border text-[10px]    ${config.color}`}>
       {config.label}

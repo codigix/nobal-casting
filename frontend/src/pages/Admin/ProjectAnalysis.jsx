@@ -21,7 +21,7 @@ const statusConfig = {
 }
 
 const StatusBadge = ({ status }) => {
-  const config = statusConfig[status?.toLowerCase()] || statusConfig.draft
+  const config = statusConfig[String(status || '').toLowerCase()] || statusConfig.draft
   const Icon = config.icon
 
   return (
@@ -82,7 +82,7 @@ export default function ProjectAnalysis() {
   useEffect(() => {
     let filtered = allProjects
     if (activeTab !== 'all') {
-      filtered = filtered.filter(p => p.status?.toLowerCase() === activeTab)
+      filtered = filtered.filter(p => String(p.status || '').toLowerCase() === activeTab)
     }
     if (segmentTab !== 'all') {
       filtered = filtered.filter(p => p.segment === segmentTab)
@@ -90,11 +90,11 @@ export default function ProjectAnalysis() {
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase()
       filtered = filtered.filter(p =>
-        p.name?.toLowerCase().includes(lowerSearch) ||
-        p.project_name?.toLowerCase().includes(lowerSearch) ||
-        p.finished_goods?.toLowerCase().includes(lowerSearch) ||
-        p.customer_name?.toLowerCase().includes(lowerSearch) ||
-        p.id?.toString().includes(lowerSearch)
+        String(p.name || '').toLowerCase().includes(lowerSearch) ||
+        String(p.project_name || '').toLowerCase().includes(lowerSearch) ||
+        String(p.finished_goods || '').toLowerCase().includes(lowerSearch) ||
+        String(p.customer_name || '').toLowerCase().includes(lowerSearch) ||
+        String(p.id || '').toLowerCase().includes(lowerSearch)
       )
     }
     setFilteredProjects(filtered)
