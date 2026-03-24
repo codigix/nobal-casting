@@ -165,7 +165,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                     value={formData.item_code}
                     onChange={handleInputChange}
                     required
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-xs"
                   >
                     <option value="">Select Item</option>
                     {items.map(item => (
@@ -187,7 +187,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                     name="bom_no"
                     value={formData.bom_no}
                     onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-xs"
                   >
                     <option value="">Select BOM (Optional)</option>
                     {boms.filter(b => b.item_code === formData.item_code).map(bom => (
@@ -213,7 +213,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                       onChange={handleInputChange}
                       required
                       min="1"
-                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-xs"
                     />
                   </div>
                 </div>
@@ -229,7 +229,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                       value={formData.unit_cost}
                       onChange={handleInputChange}
                       placeholder="0.00"
-                      className="w-full pl-8 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+                      className="w-full pl-8 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-xs"
                     />
                   </div>
                 </div>
@@ -255,7 +255,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                     name="sales_order_id"
                     value={formData.sales_order_id}
                     onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-xs"
                   >
                     <option value="">Direct Production (No SO)</option>
                     {salesOrders.map(so => (
@@ -279,7 +279,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                     value={formData.required_date}
                     onChange={handleInputChange}
                     required
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-xs"
                   />
                 </div>
               </div>
@@ -321,7 +321,7 @@ export default function CreateWorkOrderModal({ isOpen, onClose, onSuccess, bom }
                 onChange={handleInputChange}
                 rows="3"
                 placeholder="Special manufacturing instructions, quality checkpoints, or packaging requirements..."
-                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm resize-none"
+                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-xs resize-none"
               />
             </div>
           </div>

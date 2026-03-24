@@ -185,7 +185,7 @@ export default function ProductionStages() {
                 <div className="flex justify-between items-start gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center  text-blue-600 text-xs">
+                      <div className="w-8 h-8 rounded  bg-blue-100 flex items-center justify-center  text-blue-600 text-xs">
                         {stage.stage_sequence}
                       </div>
                       <div>

@@ -177,7 +177,7 @@ export default function GRNRequestDetail() {
     return (
       <div className="py-12 text-center">
         <div className="inline-block">
-          <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded  animate-spin"></div>
           <p className="text-neutral-600 dark:text-neutral-400 mt-2">Loading GRN details...</p>
         </div>
       </div>
@@ -273,7 +273,7 @@ export default function GRNRequestDetail() {
                     return (
                       <div key={step.status} className="flex items-center flex-1">
                         <div className="flex flex-col items-center flex-1">
-                          <div className={`w-5 h-5 rounded-full flex items-center justify-center  text-xs  transition-all ${
+                          <div className={`w-5 h-5 rounded  flex items-center justify-center  text-xs  transition-all ${
                             isCompleted ? 'bg-green-500 text-white' :
                             isActive ? 'bg-blue-600 text-white scale-110 shadow-lg' :
                             'bg-gray-200 text-gray-600'
@@ -283,7 +283,7 @@ export default function GRNRequestDetail() {
                           <p className="text-xs mt-2.5 text-gray-700 text-center whitespace-nowrap">{step.label}</p>
                         </div>
                         {idx < 4 && (
-                          <div className={`h-1 flex-1 mx-2 rounded-full transition-colors ${
+                          <div className={`h-1 flex-1 mx-2 rounded  transition-colors ${
                             isCompleted ? 'bg-green-500' :
                             isActive ? 'bg-blue-400' :
                             'bg-gray-200'
@@ -380,7 +380,7 @@ export default function GRNRequestDetail() {
                             className={`text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
                           />
                           <div className="flex-1 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center  text-blue-600 text-xs flex-shrink-0">
+                            <div className="w-8 h-8 rounded  bg-blue-100 flex items-center justify-center  text-blue-600 text-xs flex-shrink-0">
                               {idx + 1}
                             </div>
                             <div className="flex-1 min-w-0">
@@ -515,7 +515,7 @@ export default function GRNRequestDetail() {
                     {grn.logs.map((log, idx) => (
                       <div key={log.id} className="flex gap-4">
                         <div className="flex flex-col items-center flex-shrink-0">
-                          <div className="w-3 h-3 rounded-full bg-blue-500 border-2 border-white"></div>
+                          <div className="w-3 h-3 rounded  bg-blue-500 border-2 border-white"></div>
                           {idx < grn.logs.length - 1 && (
                             <div className="w-0.5 h-8 bg-blue-200"></div>
                           )}

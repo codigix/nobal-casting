@@ -34,7 +34,7 @@ const StatCard = ({ label, value, icon: Icon, color, onClick, isActive, descript
       onClick={onClick}
       className={`bg-gradient-to-br ${colorMap[color] || colorMap.primary} p-2 overflow-hidden border-1 transition-all duration-300 hover:shadow  hover:-translate-y-1 relative rounded group cursor-pointer ${isActive ? 'ring-2 ring-indigo-500 border-transparent shadow-indigo-500/20' : ''}`}
     >
-      <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-current opacity-5 rounded-full group-hover:scale-125 transition-transform" />
+      <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-current opacity-5 rounded  group-hover:scale-125 transition-transform" />
       <div className="flex items-start justify-between relative z-0">
         <div>
           <span className="text-xs    text-neutral-500 dark:text-neutral-400">{label}</span>
@@ -639,7 +639,7 @@ export default function PurchaseReceipts() {
     return (
       <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-50 dark:bg-neutral-800 mb-4  ">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded  bg-blue-50 dark:bg-neutral-800 mb-4  ">
             <Package size={32} className="text-blue-500 animate-pulse" />
           </div>
           <p className="text-neutral-600 dark:text-neutral-400 font-medium">Loading Goods Receipts...</p>
@@ -907,7 +907,7 @@ export default function PurchaseReceipts() {
                           </div>
                           <h2 className=" text-slate-800 text-sm">{column.title}</h2>
                         </div>
-                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-xs ">
+                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded  text-xs ">
                           {columnGrns.length}
                         </span>
                       </div>
@@ -956,7 +956,7 @@ export default function PurchaseReceipts() {
                                     <span className="text-xs  text-slate-400 ">Items Status</span>
                                     <span className="text-xs  text-slate-600">{itemStats.accepted}/{itemStats.total}</span>
                                   </div>
-                                  <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden flex">
+                                  <div className="w-full h-1.5 bg-slate-200 rounded  overflow-hidden flex">
                                     <div 
                                       className="h-full bg-emerald-500 transition-all" 
                                       style={{ width: `${(itemStats.accepted / itemStats.total) * 100}%` }}
@@ -1032,7 +1032,7 @@ export default function PurchaseReceipts() {
             <div className="p-0">
               {availableItemsLoading ? (
                 <div className="flex flex-col items-center justify-center py-32 bg-neutral-50/50 dark:bg-neutral-900/50">
-                  <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                  <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded  animate-spin mb-4"></div>
                   <p className="text-neutral-500 dark:text-neutral-400 font-medium">Updating Stock Data...</p>
                 </div>
               ) : availableItems.length === 0 ? (
@@ -1110,7 +1110,7 @@ export default function PurchaseReceipts() {
           <div className="space-y-2">
             <div className="flex items-center justify-between bg-slate-50 p-4 rounded  border border-slate-100">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded  bg-white   flex items-center justify-center text-indigo-600">
+                <div className="w-6 h-6 rounded  bg-white   flex items-center justify-center text-indigo-600">
                   <ClipboardList size={20} />
                 </div>
                 <div>
@@ -1240,7 +1240,7 @@ export default function PurchaseReceipts() {
             >
               {loading ? (
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded  animate-spin"></div>
                   Processing...
                 </div>
               ) : (

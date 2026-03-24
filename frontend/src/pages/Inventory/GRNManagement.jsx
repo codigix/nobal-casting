@@ -521,7 +521,7 @@ export default function GRNManagement() {
       label: 'Supplier',
       render: (val) => (
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-[10px]  text-neutral-500">
+          <div className="w-6 h-6 rounded  bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-[10px]  text-neutral-500">
             {val?.charAt(0) || 'S'}
           </div>
           <span className="truncate max-w-[150px]">{val}</span>
@@ -579,7 +579,7 @@ export default function GRNManagement() {
     return (
       <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center p-5">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded  animate-spin mx-auto mb-4"></div>
           <p className="text-neutral-600 dark:text-neutral-400 font-medium">Loading Quality Control Dashboard...</p>
         </div>
       </div>
@@ -794,7 +794,7 @@ export default function GRNManagement() {
 
                             <div className="mb-4">
                               <div className="flex items-center gap-2 text-neutral-700 dark:text-neutral-300 text-[11px] mb-2 font-medium">
-                                <div className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500  text-[9px]">
+                                <div className="w-5 h-5 rounded  bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500  text-[9px]">
                                   {grn.supplier_name?.charAt(0) || 'S'}
                                 </div>
                                 <span className="truncate">{grn.supplier_name}</span>
@@ -805,7 +805,7 @@ export default function GRNManagement() {
                                   <span className="text-neutral-500   tracking-wider">Progress</span>
                                   <span className="text-neutral-900 dark:text-white ">{Math.round((acceptedItems / (totalItems || 1)) * 100)}%</span>
                                 </div>
-                                <div className="w-full h-1 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                                <div className="w-full h-1 bg-neutral-100 dark:bg-neutral-800 rounded  overflow-hidden">
                                   <div 
                                     className={`h-full transition-all duration-500 ${config.iconColor.replace('text-', 'bg-')}`}
                                     style={{ width: `${(acceptedItems / (totalItems || 1)) * 100}%` }}
@@ -903,7 +903,7 @@ export default function GRNManagement() {
           <div className="space-y-2">
             <div className="flex items-center justify-between bg-neutral-50 dark:bg-neutral-800/50 p-4 rounded  border border-neutral-100 dark:border-neutral-800">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded bg-white dark:bg-neutral-900 flex items-center justify-center text-indigo-600 border border-neutral-200 dark:border-neutral-700">
+                <div className="w-6 h-6 rounded bg-white dark:bg-neutral-900 flex items-center justify-center text-indigo-600 border border-neutral-200 dark:border-neutral-700">
                   <ClipboardList size={20} />
                 </div>
                 <div>
@@ -1042,7 +1042,7 @@ export default function GRNManagement() {
             >
               {loading ? (
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded  animate-spin"></div>
                   Processing...
                 </div>
               ) : (

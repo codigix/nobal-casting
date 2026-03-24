@@ -2061,7 +2061,7 @@ export default function ItemForm() {
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <div className="animate-spin inline-block mb-3">
-                <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full"></div>
+                <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded "></div>
               </div>
               <p className="text-slate-600">Loading item details...</p>
             </div>

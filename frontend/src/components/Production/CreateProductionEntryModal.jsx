@@ -134,7 +134,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
                       value={formData.work_order_id}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                     >
                       <option value="">Select Work Order</option>
                       {workOrders.map(wo => (
@@ -157,7 +157,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
                       value={formData.machine_id}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                     >
                       <option value="">Select Workstation</option>
                       {machines.map(m => (
@@ -179,7 +179,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
                       name="operator_id"
                       value={formData.operator_id}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                     >
                       <option value="">Select Operator</option>
                       {operators.map(op => (
@@ -293,7 +293,7 @@ export default function CreateProductionEntryModal({ isOpen, onClose, onSuccess 
                     onChange={handleInputChange}
                     placeholder="Describe any issues, downtime causes, or quality observations..."
                     rows="3"
-                    className="w-full p-2  bg-slate-50 border border-slate-200 rounded  focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm resize-none"
+                    className="w-full p-2  bg-slate-50 border border-slate-200 rounded  focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs resize-none"
                   />
                 </div>
               </div>

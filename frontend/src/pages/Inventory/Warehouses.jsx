@@ -345,12 +345,12 @@ export default function Warehouses() {
           <div className="p-0">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-20">
-                <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mb-4" />
+                <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded  animate-spin mb-4" />
                 <p className="text-xs text-neutral-500">Loading warehouses...</p>
               </div>
             ) : filteredWarehouses.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center px-4">
-                <div className="w-12 h-12 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-neutral-100 dark:bg-neutral-800 rounded  flex items-center justify-center mb-4">
                   <Warehouse size={24} className="text-neutral-400" />
                 </div>
                 <h3 className="text-sm  text-neutral-900 dark:text-white">No warehouses found</h3>

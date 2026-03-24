@@ -140,7 +140,7 @@ const DetailModal = ({ isOpen, machine, onClose }) => {
           <div className="bg-white rounded border border-slate-100  overflow-hidden">
             <div className="p-2 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner">
+                <div className="w-6 h-6 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner">
                   <TrendingUp size={20} strokeWidth={2.5} />
                 </div>
                 <div>
@@ -457,7 +457,7 @@ const LineDetailsModal = ({ isOpen, line, onClose, setSelectedMachine, setModalO
                       <td className="p-2 text-right">
                         <button 
                           onClick={() => { setSelectedMachine(m); setModalOpen(true); }}
-                          className="p-2 bg-[#1e3a8a]/5 text-[#1e3a8a] rounded-xl hover:bg-[#1e3a8a] hover:text-white transition-all shadow-sm"
+                          className="p-2 bg-[#1e3a8a]/5 text-[#1e3a8a] rounded-xl hover:bg-[#1e3a8a] hover:text-white transition-all "
                         >
                           <Eye size={14} strokeWidth={2.5} />
                         </button>
@@ -1293,14 +1293,14 @@ const MachineAnalysis = () => {
                 <button 
                   onClick={() => setCurrentMachinePage(p => Math.max(1, p-1))}
                   disabled={currentMachinePage === 1}
-                  className="w-10 h-10 flex items-center justify-center text-slate-400 border border-slate-200 rounded hover:bg-white hover:text-[#1e3a8a] hover:border-[#1e3a8a] disabled:opacity-30 disabled:hover:bg-transparent transition-all "
+                  className="w-6 h-6 flex items-center justify-center text-slate-400 border border-slate-200 rounded hover:bg-white hover:text-[#1e3a8a] hover:border-[#1e3a8a] disabled:opacity-30 disabled:hover:bg-transparent transition-all "
                 >
                   <ChevronLeft size={18} strokeWidth={2.5} />
                 </button>
                 <button 
                   onClick={() => setCurrentMachinePage(p => Math.min(Math.ceil(filteredMachines.length/itemsPerPage), p+1))}
                   disabled={currentMachinePage >= Math.ceil(filteredMachines.length/itemsPerPage)}
-                  className="w-10 h-10 flex items-center justify-center text-slate-400 border border-slate-200 rounded hover:bg-white hover:text-[#1e3a8a] hover:border-[#1e3a8a] disabled:opacity-30 disabled:hover:bg-transparent transition-all "
+                  className="w-6 h-6 flex items-center justify-center text-slate-400 border border-slate-200 rounded hover:bg-white hover:text-[#1e3a8a] hover:border-[#1e3a8a] disabled:opacity-30 disabled:hover:bg-transparent transition-all "
                 >
                   <ChevronRight size={18} strokeWidth={2.5} />
                 </button>

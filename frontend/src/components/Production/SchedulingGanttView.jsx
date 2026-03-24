@@ -197,7 +197,7 @@ export default function SchedulingGanttView({ onJobClick, onSlotClick }) {
         <div className="flex gap-4">
           {['Ready', 'In-Progress', 'Completed'].map(status => (
             <div key={status} className="flex items-center gap-1.5">
-              <div className={`w-3 h-3 rounded-full ${statusColors[status.toLowerCase().replace('-', '_')]}`} />
+              <div className={`w-3 h-3 rounded  ${statusColors[status.toLowerCase().replace('-', '_')]}`} />
               <span className="text-xs font-medium text-slate-600">{status}</span>
             </div>
           ))}

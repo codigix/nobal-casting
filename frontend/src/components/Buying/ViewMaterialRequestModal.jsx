@@ -19,8 +19,8 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [warehouses, setWarehouses] = useState([])
-  const [selectedSourceWarehouse, setSelectedSourceWarehouse] = useState('')
   const [stockData, setStockData] = useState({})
+  const [itemWarehouses, setItemWarehouses] = useState({})
   const [checkingStock, setCheckingStock] = useState(false)
 
   useEffect(() => {
@@ -34,16 +34,11 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
       setRequest(null)
       setError(null)
       setSuccess(null)
-      setSelectedSourceWarehouse('')
       setStockData({})
+      setItemWarehouses({})
     }
   }, [isOpen, mrId])
 
-  useEffect(() => {
-    if (request && selectedSourceWarehouse) {
-      checkStockAvailability(request)
-    }
-  }, [selectedSourceWarehouse])
 
   const fetchWarehouses = async () => {
     try {
@@ -60,7 +55,6 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
       const response = await api.get(`/material-requests/${mrId}`)
       setRequest(response.data.data)
       setError(null)
-      setSelectedSourceWarehouse('')
       if (response.data.data?.items) {
         await checkStockAvailability(response.data.data)
       }
@@ -74,65 +68,115 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
   const checkStockAvailability = async (requestData) => {
     try {
       setCheckingStock(true)
-      const warehouse = selectedSourceWarehouse || requestData?.source_warehouse
-      const warehouseObj = warehouse ? warehouses.find(w => w.id == warehouse || w.warehouse_id == warehouse) : null
-      const warehouseName = warehouseObj ? `${warehouseObj.warehouse_name} (${warehouseObj.warehouse_code || warehouseObj.warehouse_id})` : 'All Warehouses'
-      
       const stockInfo = {}
+      const suggestedWarehouses = { ...itemWarehouses }
       
       for (const item of requestData.items || []) {
         try {
+          // If item-specific warehouse is selected, use it. 
+          // Otherwise check all warehouses to find best match
+          const itemSpecificWh = itemWarehouses[item.item_code]
+          const useGlobalWh = requestData?.source_warehouse
+          
+          // ALWAYS fetch all warehouses to get a breakdown for filtering dropdowns
           const params = {
             itemCode: item.item_code
           }
           
-          if (warehouse) {
-            params.warehouseId = warehouse
-          }
+          // Note: We don't restrict by warehouseId in params here because we want the full breakdown 
+          // to populate the "best warehouse" and the filtered dropdown list.
+          // Instead, we filter the results locally.
           
           const res = await api.get(`/stock/stock-balance`, { params })
           const balance = res.data.data || res.data
           
-          let availableQty = 0
+          let totalAvailableQty = 0
           let itemExists = false
           let stockBreakdown = []
+          let bestWarehouse = null
+          let maxStock = -1
           
           if (Array.isArray(balance)) {
             itemExists = balance.length > 0
-            availableQty = balance.reduce((sum, b) => {
+            
+            // Map the balance to breakdown
+            balance.forEach(b => {
               const qty = parseFloat(b.current_qty || b.available_qty || b.qty || 0)
+              const whId = b.warehouse_id || b.id
+              
               if (qty > 0) {
                 stockBreakdown.push({
                   warehouse: b.warehouse_name || b.warehouse_code || b.warehouse_id,
+                  id: whId,
                   qty: qty
                 })
+                
+                // Track best warehouse (highest stock)
+                if (qty > maxStock) {
+                  maxStock = qty
+                  bestWarehouse = whId
+                }
               }
-              return sum + qty
-            }, 0)
+            })
+            
+            // Calculate available qty based on selection
+            const activeWhId = itemSpecificWh || useGlobalWh
+            let currentSelectionQty = 0
+            if (activeWhId) {
+              const activeWhBalance = balance.find(b => (b.warehouse_id || b.id) == activeWhId)
+              currentSelectionQty = activeWhBalance ? parseFloat(activeWhBalance.current_qty || activeWhBalance.available_qty || activeWhBalance.qty || 0) : 0
+            } else {
+              currentSelectionQty = balance.reduce((sum, b) => sum + parseFloat(b.current_qty || b.available_qty || b.qty || 0), 0)
+            }
+            
+            // Auto-suggest best warehouse if:
+            // 1. Nothing is selected yet (neither item-specific nor global)
+            // 2. OR the current selection has 0 stock but we found stock elsewhere
+            if (bestWarehouse && (
+                 (!itemSpecificWh && !useGlobalWh) || 
+                 (currentSelectionQty <= 0 && maxStock > 0)
+            )) {
+              suggestedWarehouses[item.item_code] = bestWarehouse
+              totalAvailableQty = maxStock
+            } else {
+              totalAvailableQty = currentSelectionQty
+            }
           } else if (balance && typeof balance === 'object') {
             itemExists = true
-            availableQty = parseFloat(balance.current_qty || balance.available_qty || balance.qty || 0)
-            if (availableQty > 0) {
+            const qty = parseFloat(balance.current_qty || balance.available_qty || balance.qty || 0)
+            totalAvailableQty = qty
+            const whId = balance.warehouse_id || balance.id
+            if (qty > 0) {
               stockBreakdown.push({
                 warehouse: balance.warehouse_name || balance.warehouse_code || balance.warehouse_id,
-                qty: availableQty
+                id: whId,
+                qty: qty
               })
+              bestWarehouse = whId
             }
           }
           
           const requestedQty = parseFloat(item.qty || 0)
           const issuedQty = parseFloat(item.issued_qty || 0)
           const pendingQty = requestedQty - issuedQty
-          const hasRequiredQty = availableQty >= pendingQty
+          
+          // Determine which warehouse name to show
+          let warehouseDisplayName = 'All Warehouses'
+          const activeWhId = itemSpecificWh || useGlobalWh
+          if (activeWhId) {
+            const whObj = warehouses.find(w => w.id == activeWhId || w.warehouse_id == activeWhId)
+            warehouseDisplayName = whObj ? whObj.warehouse_name : `WH: ${activeWhId}`
+          }
           
           stockInfo[item.item_code] = {
-            available: availableQty,
+            available: totalAvailableQty,
             requested: requestedQty,
             pending: pendingQty,
-            isAvailable: itemExists && availableQty > 0 && (pendingQty <= 0 || availableQty >= pendingQty),
-            hasStock: itemExists && availableQty > 0,
-            isPartial: itemExists && availableQty > 0 && availableQty < pendingQty,
-            warehouse: warehouseName,
+            isAvailable: itemExists && totalAvailableQty > 0 && (pendingQty <= 0 || totalAvailableQty >= pendingQty),
+            hasStock: itemExists && totalAvailableQty > 0,
+            hasStockAnywhere: stockBreakdown.length > 0,
+            isPartial: itemExists && totalAvailableQty > 0 && totalAvailableQty < pendingQty,
+            warehouse: warehouseDisplayName,
             breakdown: stockBreakdown,
             foundInInventory: itemExists,
             error: !itemExists
@@ -143,7 +187,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
             requested: parseFloat(item.qty || 0),
             pending: parseFloat(item.qty || 0) - parseFloat(item.issued_qty || 0),
             isAvailable: false,
-            warehouse: warehouseName,
+            warehouse: 'Unknown',
             foundInInventory: false,
             error: true
           }
@@ -151,6 +195,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
       }
       
       setStockData(stockInfo)
+      setItemWarehouses(suggestedWarehouses)
     } catch (err) {
       console.error('Error checking stock:', err)
     } finally {
@@ -179,43 +224,43 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
       setLoading(true)
       setError(null)
       const isTransferOrIssue = ['material_transfer', 'material_issue'].includes(request?.purpose?.toLowerCase())
-      const finalWarehouse = selectedSourceWarehouse || request?.source_warehouse
       
-      if (isTransferOrIssue && !finalWarehouse) {
-        setError('Source warehouse is required for Material Transfer/Issue. Please select one.')
-        setLoading(false)
-        return
-      }
-
       // Identify available items to process if it's a stock transaction
       let itemsToProcess = null
       if (isTransferOrIssue) {
-        itemsToProcess = request?.items?.filter(item => {
+        // Build a map of item_code -> warehouse_id for items that have stock and pending quantity
+        const processMap = {}
+        request?.items?.forEach(item => {
           const stock = stockData[item.item_code]
           const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
-          return stock && stock.hasStock && pendingQty > 0
-        }).map(item => item.item_code)
+          const whId = itemWarehouses[item.item_code] || request?.source_warehouse
+          
+          if (stock && stock.hasStock && pendingQty > 0 && whId) {
+            processMap[item.item_code] = whId
+          }
+        })
 
-        if (!itemsToProcess || itemsToProcess.length === 0) {
-          setError('No available items to release at this moment.')
+        if (Object.keys(processMap).length === 0) {
+          setError('No available items with selected warehouses to release at this moment.')
           setLoading(false)
           return
         }
+        itemsToProcess = processMap
       }
 
       const payload = { 
         approvedBy: user?.id || user?.user_id || 'User',
-        itemsToProcess // Pass the specific items to release
+        itemsToProcess
       }
       
-      if (isTransferOrIssue) {
-        payload.source_warehouse = finalWarehouse
+      // If we have a global warehouse, send it as fallback
+      if (isTransferOrIssue && request?.source_warehouse) {
+        payload.source_warehouse = request?.source_warehouse
       }
       
       const response = await api.patch(`/material-requests/${mrId}/approve`, payload)
       setSuccess(response.data.message || 'Material request processed successfully')
       
-      // Dispatch event to notify other components (like Stock Balance) to refresh
       window.dispatchEvent(new CustomEvent('materialRequestApproved', { detail: { mrId } }))
       
       fetchRequestDetails()
@@ -232,18 +277,17 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
     try {
       setLoading(true)
       setError(null)
-      const finalWarehouse = selectedSourceWarehouse || request?.source_warehouse
+      const whId = itemWarehouses[itemCode] || request?.source_warehouse
       
-      if (!finalWarehouse) {
-        setError('Source warehouse is required. Please select one.')
+      if (!whId) {
+        setError('Warehouse is required for release. Please select one for this item.')
         setLoading(false)
         return
       }
 
       const payload = { 
         approvedBy: user?.id || user?.user_id || 'User',
-        itemsToProcess: [itemCode],
-        source_warehouse: finalWarehouse
+        itemsToProcess: { [itemCode]: whId }
       }
       
       const response = await api.patch(`/material-requests/${mrId}/approve`, payload)
@@ -382,202 +426,290 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
       <Modal isOpen={isOpen} onClose={onClose} title="Loading Request Details..." size="7xl">
         <div className="py-24 text-center">
           <RefreshCw size={40} className="animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-500 font-medium">Fetching details from the stock ledger...</p>
+          <p className="text-gray-500 ">Fetching details from the stock ledger...</p>
         </div>
       </Modal>
     )
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Material Request: ${request?.series_no || 'Details'}`} size="7xl">
+    <Modal isOpen={isOpen} onClose={onClose} title={`Material Request: ${request?.finished_goods_name || request?.series_no || 'Details'}`} size="7xl">
       <div className="flex flex-col h-[78vh] bg-slate-50/50">
         <div className="flex-1 overflow-y-auto space-y-3">
           {error && <Alert type="danger" className="  border-2 mb-4">{error}</Alert>}
           {success && <Alert type="success" className="  border-2 mb-4">{success}</Alert>}
-          {request?.requires_manual_review && (
-            <Alert type="warning" className="border-2 mb-4 font-medium flex items-center gap-2">
+          {!!request?.requires_manual_review && (
+            <Alert type="warning" className="border-2 mb-4  flex items-center gap-2">
               <AlertTriangle className="w-5 h-5" />
               <span>This request requires manual review: {request.review_reason}</span>
             </Alert>
           )}
 
           {/* New Header Info Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-4">
-              <div className="w-10 h-10 rounded  bg-indigo-50 flex items-center justify-center text-indigo-600">
+          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-2">
+            <div className="bg-white p-2  rounded  border border-slate-200   flex items-center gap-2">
+              <div className="w-6 h-6 rounded  bg-indigo-50 flex items-center justify-center text-indigo-600">
                 <ClipboardList size={15} />
               </div>
               <div>
-                <p className="text-xs  text-slate-400 ">Project</p>
-                <p className="text-sm font-semibold text-indigo-600 truncate max-w-[120px]" title={request?.project_name || 'Internal'}>
-                  {request?.project_name || 'Internal'}
+                <p className="text-[10px]  text-slate-400 ">Finished Goods</p>
+                <p className="text-xs  text-indigo-600" title={request?.finished_goods_name || request?.project_name || 'Internal'}>
+                  {request?.finished_goods_name || request?.project_name || 'Internal'}
                 </p>
               </div>
             </div>
 
-            <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-4">
-              <div className="w-10 h-10 rounded  bg-amber-50 flex items-center justify-center text-amber-600">
+            <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-2">
+              <div className="w-6 h-6 rounded  bg-amber-50 flex items-center justify-center text-amber-600">
                 <Activity size={15} />
               </div>
               <div>
-                <p className="text-xs  text-slate-400 ">Status</p>
+                <p className="text-[10px]  text-slate-400 ">Status</p>
                 <div className="mt-0.5">{getStatusBadge(request?.status)}</div>
               </div>
             </div>
 
-            <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-4">
-              <div className="w-10 h-10 rounded  bg-blue-50 flex items-center justify-center text-blue-600">
+            <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-2">
+              <div className="w-6 h-6 rounded  bg-blue-50 flex items-center justify-center text-blue-600">
                 <ArrowRightLeft size={15} />
               </div>
               <div>
-                <p className="text-xs  text-slate-400 ">Purpose</p>
-                <p className="text-sm  text-slate-700 capitalize">{request?.purpose?.replace('_', ' ')}</p>
+                <p className="text-[10px]  text-slate-400 ">Purpose</p>
+                <p className="text-xs  text-slate-700 capitalize">{request?.purpose?.replace('_', ' ')}</p>
               </div>
             </div>
 
-            <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-4">
-              <div className="w-10 h-10 rounded  bg-purple-50 flex items-center justify-center text-purple-600">
+            {/* <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-2">
+              <div className="w-6 h-6 rounded  bg-purple-50 flex items-center justify-center text-purple-600">
                 <Building2 size={15} />
               </div>
               <div>
-                <p className="text-xs  text-slate-400 ">Department</p>
-                <p className="text-sm  text-slate-700">{request?.department}</p>
+                <p className="text-[10px]  text-slate-400 ">Department</p>
+                <p className="text-xs  text-slate-700">{request?.department}</p>
               </div>
-            </div>
+            </div> */}
 
-            <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-4">
-              <div className="w-10 h-10 rounded  bg-emerald-50 flex items-center justify-center text-emerald-600">
+            {/* <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-2">
+              <div className="w-6 h-6 rounded  bg-emerald-50 flex items-center justify-center text-emerald-600">
                 <User size={15} />
               </div>
               <div>
-                <p className="text-xs  text-slate-400 ">Requested By</p>
-                <p className="text-sm  text-slate-700">{request?.requested_by_name || 'System'}</p>
+                <p className="text-[10px]  text-slate-400 ">Requested By</p>
+                <p className="text-xs  text-slate-700">{request?.requested_by_name || 'System'}</p>
               </div>
-            </div>
+            </div> */}
 
-            <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-4">
-              <div className="w-10 h-10 rounded  bg-indigo-50 flex items-center justify-center text-indigo-600">
+            <div className="bg-white p-2 rounded  border border-slate-200   flex items-center gap-2">
+              <div className="w-6 h-6 rounded  bg-indigo-50 flex items-center justify-center text-indigo-600">
                 <ShoppingCart size={15} />
               </div>
               <div>
-                <p className="text-xs  text-slate-400 ">Linked PO</p>
+                <p className="text-[10px]  text-slate-400 ">Linked PO</p>
                 {request?.linked_po_no ? (
                   <div className="flex flex-col">
                     <p className="text-xs  text-indigo-700">#{request.linked_po_no}</p>
                     <p className="text-xs text-indigo-500  ">{request.po_status || 'CREATED'}</p>
                   </div>
                 ) : (
-                  <p className="text-sm  text-slate-400 italic">None</p>
+                  <p className="text-xs  text-slate-400 italic">None</p>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-2">
             {/* Left Column: Line Items */}
             <div className="lg:col-span-2 space-y-2">
               <div className="bg-white rounded  border border-slate-200   overflow-hidden">
-                <div className="p-2 border-b border-slate-100 flex items-center justify-between bg-white">
+                <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-slate-50 rounded  text-slate-600">
-                      <Package size={18} />
+                    <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600 ">
+                      <Package size={20} />
                     </div>
-                    <h3 className="text-sm   text-slate-800">Line Items</h3>
+                    <div>
+                      <h3 className="text-xs  text-slate-800">Requested Items</h3>
+                      <p className="text-[10px] text-slate-400 ">Verify stock availability per store</p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <button 
                       onClick={() => checkStockAvailability(request)}
                       disabled={checkingStock}
-                      className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors text-[10px] font-medium"
+                      className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded hover:bg-slate-50 transition-all text-[11px]  "
                     >
-                      <RefreshCw size={12} className={checkingStock ? 'animate-spin' : ''} />
-                      Refresh Stock
+                      <RefreshCw size={14} className={checkingStock ? 'animate-spin' : ''} />
+                      {checkingStock ? 'Updating...' : 'Refresh Stock'}
                     </button>
-                    {checkingStock && (
-                      <div className="flex items-center gap-2 text-xs   text-blue-600 animate-pulse">
-                        Verifying Inventory...
-                      </div>
-                    )}
                   </div>
                 </div>
                 
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left">
+                  <table className="w-full text-xs text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-50/50 border-b border-slate-100">
-                        <th className="p-2  text-xs   text-slate-500 tracking-wider">Item Details</th>
-                        <th className="p-2  text-xs   text-slate-500 tracking-wider text-center">Quantity</th>
-                        <th className="p-2  text-xs   text-slate-500 tracking-wider text-center">Stock Level</th>
-                        <th className="p-2  text-xs   text-slate-500 tracking-wider text-right">Status</th>
+                      <tr className="bg-slate-50/80 border-b border-slate-100">
+                        <th className="p-2 text-[10px]   text-slate-500 ">Item Details</th>
+                        <th className="p-2 text-[10px]   text-slate-500  text-center">Quantity</th>
+                        <th className="p-2 text-[10px]   text-slate-500  text-center">Fulfillment Store</th>
+                        <th className="p-2 text-[10px]   text-slate-500  text-center">Available Stock</th>
+                        <th className="p-2 text-[10px]   text-slate-500  text-right">Fulfillment Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-50">
+                    <tbody className="divide-y divide-slate-100">
                       {request?.items?.map((item, idx) => {
                         const stock = stockData[item.item_code]
                         const isAvailable = stock?.isAvailable
                         const issuedQty = Number(item.issued_qty || 0)
                         const pendingQty = Number(item.qty) - issuedQty
+                        const itemWarehouse = itemWarehouses[item.item_code] || request?.source_warehouse || ''
                         
                         return (
-                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="p-2 ">
-                              <p className="  text-slate-900 leading-tight">{item.item_name}</p>
-                              <p className="text-xs text-slate-500 mt-1">{item.item_code}</p>
-                              {issuedQty > 0 && (
-                                <p className="text-[10px] text-emerald-600 mt-0.5">Issued: {issuedQty} {item.uom}</p>
-                              )}
-                            </td>
-                            <td className="p-2  text-center">
-                              <div className="flex flex-col items-center gap-1">
-                                <span className="inline-flex items-center p-1 rounded text-xs font-medium bg-slate-100 text-slate-800">
-                                  {item.qty} {item.uom}
-                                </span>
+                          <tr key={idx} className="hover:bg-indigo-50/20 transition-all group">
+                            <td className="p-2 align-top">
+                              <div className="flex flex-col gap-1">
+                                <span className=" text-slate-800 leading-tight text-xs group-hover:text-indigo-600 transition-colors">{item.item_name}</span>
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] w-fit bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono ">{item.item_code}</span>
+                                  {item.item_group && (
+                                    <span className="text-[10px] text-slate-400 "> {item.item_group}</span>
+                                  )}
+                                </div>
                                 {issuedQty > 0 && (
-                                  <span className="text-[10px] text-slate-400">
-                                    Pending: {pendingQty > 0 ? pendingQty : 0}
-                                  </span>
+                                  <div className="flex items-center gap-1.5 mt-1">
+                                    <div className="w-1 h-1 rounded bg-emerald-500 animate-pulse"></div>
+                                    <p className="text-[10px]  text-emerald-600">Issued: {issuedQty} {item.uom}</p>
+                                  </div>
                                 )}
                               </div>
                             </td>
-                            <td className="p-2  text-center font-mono text-xs">
-                              {stock ? (
-                                <div className="flex flex-col items-center">
-                                  <span className={stock.available > 0 ? 'text-blue-600  ' : 'text-slate-400'}>
-                                    {stock.available} {item.uom}
-                                  </span>
-                                  {stock.warehouse === 'All Warehouses' && stock.breakdown?.length > 0 ? (
-                                    <div className="mt-1 flex flex-col gap-0.5 max-h-16 overflow-y-auto w-full">
-                                      {stock.breakdown.map((b, i) => (
-                                        <span key={i} className="text-xs text-indigo-500 bg-indigo-50 px-1 rounded truncate w-fit" title={`${b.warehouse}: ${b.qty}`}>
-                                          {b.warehouse}: {b.qty}
-                                        </span>
+                            <td className="p-2 align-top text-center">
+                              <div className="flex flex-col items-center gap-1.5">
+                                <div className="inline-flex items-center  rounded text-[10px]  bg-slate-100 text-slate-700 border border-slate-200 ">
+                                  {item.qty} {item.uom}
+                                </div>
+                                {issuedQty > 0 && (
+                                  <div className="flex flex-col items-center">
+                                    <p className="text-[10px]  text-slate-400  tracking-tighter">Pending</p>
+                                    <p className="text-xs  text-slate-600">{pendingQty > 0 ? pendingQty : 0} {item.uom}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-2 align-top text-center min-w-[200px]">
+                              {isTransferOrIssue && item.status !== 'completed' ? (
+                                stock?.hasStockAnywhere ? (
+                                  <div className="space-y-1.5 relative group/select">
+                                    <select
+                                      value={itemWarehouse}
+                                      onChange={(e) => {
+                                        const newWhId = e.target.value
+                                        setItemWarehouses(prev => ({ ...prev, [item.item_code]: newWhId }))
+                                        setTimeout(() => checkStockAvailability(request), 0)
+                                      }}
+                                      className={`w-full text-[11px]  border-2 rounded bg-white outline-none transition-all appearance-none cursor-pointer ${
+                                        !itemWarehouse
+                                          ? 'border-amber-200 bg-amber-50/30 text-amber-700' 
+                                          : 'border-slate-100 text-slate-700 hover:border-indigo-200 focus:border-indigo-500'
+                                      }`}
+                                    >
+                                      <option value="">Choose Store...</option>
+                                      {stock?.breakdown?.map(b => (
+                                        <option key={b.id} value={b.id}>
+                                          {b.warehouse} (Avail: {b.qty})
+                                        </option>
                                       ))}
+                                    </select>
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-focus-within/select:text-indigo-500 transition-colors">
+                                      <ArrowRight size={12} />
+                                    </div>
+                                    {stock?.breakdown?.length > 1 && !itemWarehouses[item.item_code] && (
+                                      <div className="flex items-center justify-center gap-1.5 py-1 px-2 bg-indigo-50/50 rounded-lg">
+                                        <Info size={10} className="text-indigo-500" />
+                                        <p className="text-[9px]  text-indigo-600  tracking-tighter">Optimization Possible</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col items-center gap-1 py-2 px-3 bg-rose-50 border border-rose-100 rounded-xl">
+                                    <div className="flex items-center gap-1.5 text-rose-600">
+                                      <XCircle size={12} />
+                                      <span className="text-[10px]   ">Out of Stock</span>
+                                    </div>
+                                    <p className="text-[9px]  text-rose-400 text-center leading-tight">Procurement required for fulfillment</p>
+                                  </div>
+                                )
+                              ) : (
+                                <div className="flex flex-col items-center gap-1">
+                                  <div className="flex items-center gap-1.5 text-slate-500">
+                                    <Warehouse size={12} />
+                                    <span className="text-xs ">{stock?.warehouse || request?.source_warehouse_name || '---'}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-2 align-top text-center font-mono">
+                              {stock ? (
+                                <div className="flex flex-col items-center gap-2">
+                                  <div className={`text-xs  px-2 py-0.5 rounded-lg ${stock.available > 0 ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 bg-slate-50'}`}>
+                                    {stock.available} {item.uom}
+                                  </div>
+                                  {!itemWarehouses[item.item_code] && stock.breakdown?.length > 0 ? (
+                                    <div className="flex flex-col gap-1 w-full max-w-[140px]">
+                                      {stock.breakdown.slice(0, 3).map((b, i) => (
+                                        <button 
+                                          key={i} 
+                                          onClick={() => {
+                                            setItemWarehouses(prev => ({ ...prev, [item.item_code]: b.id }))
+                                            setTimeout(() => checkStockAvailability(request), 0)
+                                          }}
+                                          className="flex items-center justify-between gap-2 px-2 py-1 bg-white border border-slate-100 hover:border-indigo-300 hover: rounded-lg transition-all text-[9px]  text-slate-500 group/btn"
+                                        >
+                                          <span className="truncate group-hover/btn:text-indigo-600 transition-colors">{b.warehouse}</span>
+                                          <span className="text-indigo-500 bg-indigo-50 px-1 rounded">{b.qty}</span>
+                                        </button>
+                                      ))}
+                                      {stock.breakdown.length > 3 && (
+                                        <p className="text-[8px]  text-slate-400  tracking-tighter">+{stock.breakdown.length - 3} more stores</p>
+                                      )}
                                     </div>
                                   ) : (
-                                    <span className="text-xs text-slate-400 mt-0.5">{stock.warehouse}</span>
+                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-slate-50 border border-slate-100 rounded-lg">
+                                      <Activity size={10} className="text-slate-400" />
+                                      <span className="text-[9px]  text-slate-500  tracking-tighter">{stock.warehouse}</span>
+                                    </div>
                                   )}
                                 </div>
-                              ) : '---'}
+                              ) : (
+                                <div className="w-12 h-4 bg-slate-50 rounded animate-pulse mx-auto"></div>
+                              )}
                             </td>
-                            <td className="p-2  text-right">
-                              <div className="flex flex-col items-end gap-1">
+                            <td className="p-2 align-top text-right">
+                              <div className="flex flex-col items-end gap-2">
                                 {stock ? (
-                                  <Badge 
-                                    color={stock.isAvailable ? 'success' : (stock.hasStock ? 'warning' : 'danger')} 
-                                    className="text-xs px-2 py-1 tracking-wider"
-                                  >
-                                    {stock.isAvailable ? 'In Stock' : (stock.hasStock ? 'Limited Stock' : 'Out of Stock')}
-                                  </Badge>
+                                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded border  transition-all ${
+                                    stock.isAvailable 
+                                      ? 'bg-emerald-50 border-emerald-100 text-emerald-700' 
+                                      : (stock.hasStock ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-rose-50 border-rose-100 text-rose-700')
+                                  }`}>
+                                    <div className={`w-1.5 h-1.5 rounded ${stock.isAvailable ? 'bg-emerald-500' : (stock.hasStock ? 'bg-amber-500' : 'bg-rose-500')}`}></div>
+                                    <span className="text-[10px]    leading-none">
+                                      {stock.isAvailable ? 'Optimal' : (stock.hasStock ? 'Partial' : 'Critically Low')}
+                                    </span>
+                                  </div>
                                 ) : (
-                                  <span className="text-slate-300">--</span>
-                                )}
-                                {item.status && (
-                                  <Badge color={item.status === 'completed' ? 'success' : 'warning'} className="text-[9px] px-1 py-0">
-                                    {item.status.toUpperCase()}
-                                  </Badge>
+                                  <div className="w-20 h-5 bg-slate-50 rounded animate-pulse"></div>
                                 )}
                                 
-                                {/* Individual Release Button */}
+                                {item.status && (
+                                  <div className={`text-[9px]    px-2 py-0.5 rounded-md border ${
+                                    item.status === 'completed' 
+                                      ? 'bg-indigo-50 border-indigo-100 text-indigo-600' 
+                                      : 'bg-slate-50 border-slate-200 text-slate-500'
+                                  }`}>
+                                    {item.status}
+                                  </div>
+                                )}
+                                
+                                {/* High-Fidelity Quick Release */}
                                 {isTransferOrIssue && 
                                  ['pending', 'partial', 'approved', 'completed'].includes(request?.status) && 
                                  item.status !== 'completed' && 
@@ -585,9 +717,9 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                                   <button
                                     onClick={() => handleReleaseSingleItem(item.item_code)}
                                     disabled={loading}
-                                    className="mt-1 flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded text-[10px] hover:bg-emerald-100 transition-colors"
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px]    transition-all shadow-lg shadow-emerald-600/20 active:scale-95 disabled:opacity-50"
                                   >
-                                    <CheckCircle size={10} /> Release
+                                    <CheckCircle size={12} strokeWidth={3} /> Dispatch
                                   </button>
                                 )}
                               </div>
@@ -596,6 +728,9 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                         )
                       })}
                     </tbody>
+                         
+                    
+                    
                   </table>
                 </div>
               </div>
@@ -605,72 +740,14 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
 
             {/* Right Column: Sidebar */}
             <div className="space-y-2">
-              {/* Source Configuration */}
-              {['draft', 'pending', 'partial', 'approved', 'completed'].includes(request?.status) && isTransferOrIssue && (
-                <div className={`bg-white rounded border-2 transition-all duration-300 overflow-hidden ${
-                  !selectedSourceWarehouse && anyAvailable 
-                    ? 'border-amber-500  shadow-amber-500/10 scale-[1.02]' 
-                    : 'border-slate-200'
-                }`}>
-                  <div className={`px-5 py-2 border-b flex items-center justify-between ${
-                    !selectedSourceWarehouse && anyAvailable ? 'bg-amber-500 text-white' : 'bg-slate-50 text-slate-700'
-                  }`}>
-                    <div className="flex items-center gap-2">
-                      <Warehouse size={16} />
-                      <h3 className="text-xs  tracking-wider ">Fulfillment Source</h3>
-                    </div>
-                    {!selectedSourceWarehouse && anyAvailable && (
-                      <Badge color="warning" className="text-[10px] animate-bounce bg-white text-amber-600 border-none">
-                        Action Required
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="p-5">
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <label className="text-xs font-semibold text-slate-500">Select Warehouse</label>
-                        {anyAvailable && (
-                          <span className="text-[10px] text-emerald-600  flex items-center gap-1">
-                            <CheckCheck size={10} /> Stock Available
-                          </span>
-                        )}
-                      </div>
-                      <div className="relative">
-                        <select
-                          value={selectedSourceWarehouse || request.source_warehouse || ''}
-                          onChange={(e) => setSelectedSourceWarehouse(e.target.value)}
-                          className={`w-full pl-3 pr-10 py-2  border rounded  text-sm bg-white outline-none appearance-none transition-all ${
-                            !selectedSourceWarehouse && anyAvailable 
-                              ? 'border-amber-500 ring-2 ring-amber-500/20 text-amber-900 font-medium' 
-                              : 'border-slate-200 text-slate-700 focus:ring-2 focus:ring-blue-500'
-                          }`}
-                        >
-                          <option value="">Select Warehouse...</option>
-                          {warehouses.map(wh => (
-                            <option key={wh.id || wh.warehouse_id} value={wh.id || wh.warehouse_id}>{wh.warehouse_name}</option>
-                          ))}
-                        </select>
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                          <ArrowRight size={14} />
-                        </div>
-                      </div>
-                      <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-100 flex items-start gap-2">
-                        <Info size={12} className="shrink-0 mt-0.5" />
-                        <span>Changing the warehouse will trigger a real-time stock verification for all line items.</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Approval Flow Info */}
               {request?.status === 'approved' && (
-                <div className="bg-emerald-50 rounded  border border-emerald-200 overflow-hidden p-4 space-y-3">
+                <div className="bg-emerald-50 rounded  border border-emerald-200 overflow-hidden p-2 space-y-3">
                   <div className="flex items-center gap-3 text-emerald-800">
                     <div className="w-8 h-8 rounded  bg-emerald-100 flex items-center justify-center">
                       <CheckCheck size={18} />
                     </div>
-                    <h4 className="text-sm tracking-wider">Approved Requisition</h4>
+                    <h4 className="text-xs ">Approved Requisition</h4>
                   </div>
                   <p className="text-xs text-emerald-700 leading-relaxed pl-11">
                     This requisition has been reviewed and authorized. 
@@ -680,61 +757,9 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
               )}
 
               {/* Summary Sidebar */}
-              <div className="bg-white rounded  border border-slate-200   overflow-hidden">
-                <div className="p-2 border-b border-slate-100 bg-slate-50/30">
-                  <h4 className="text-xs  text-slate-400  flex items-center gap-2">
-                    <ClipboardList size={14} /> Request Summary
-                  </h4>
-                </div>
-                <div className="p-2 ">
-                  {request?.linked_po_no && (
-                    <div className="p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800 flex gap-2">
-                      <ShoppingCart size={14} className="shrink-0 text-blue-600" />
-                      <div>
-                        <strong>Linked Purchase Order:</strong>
-                        <p className="mt-1  ">{request.linked_po_no}</p>
-                        <p className="mt-0.5">Status: <Badge color="info" className="text-[8px] ">{request.po_status}</Badge></p>
-                      </div>
-                    </div>
-                  )}
-                  {isTransferOrIssue && anyUnavailable && (
-                    <div className="p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800 flex gap-2 mb-3">
-                      <AlertTriangle size={14} className="shrink-0 text-amber-600" />
-                      <div>
-                        <strong>Insufficient Stock:</strong> Some items are not available in the selected warehouse.
-                        <p className="mt-1  ">You can release available items now and create a Purchase Order for the rest.</p>
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center border-b border-slate-50 pb-2">
-                    <span className="text-xs   text-slate-400 ">Required By</span>
-                    <span className="text-xs  text-slate-700 flex items-center gap-1.5">
-                      <Calendar size={12} className="text-slate-400" />
-                      {new Date(request?.required_by_date).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center border-b border-slate-50 pb-2">
-                    <span className="text-xs   text-slate-400 ">Created On</span>
-                    <span className="text-xs  text-slate-700">
-                      {new Date(request?.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs   text-slate-400 ">Items Total</span>
-                    <span className="text-xs   text-blue-600 bg-blue-50 p-1 rounded">
-                      {request?.items?.length || 0} Unique Items
-                    </span>
-                  </div>
-                </div>
-              </div>
-
+              
               {/* Print Action */}
-              <button 
-                className="w-full flex items-center justify-center gap-2 py-2 border-2 border-slate-200 rounded  text-slate-600   text-xs hover:bg-slate-50 hover:border-slate-300 transition-all  "
-                onClick={() => window.print()}
-              >
-                <Printer size={16} /> Print Document
-              </button>
+             
             </div>
           </div>
         </div>
@@ -753,7 +778,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
             )}
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <button
               onClick={onClose}
               className="p-2  text-xs   text-slate-400 hover:text-slate-600 transition-colors "
@@ -766,7 +791,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                 <Button
                   onClick={handleReject}
                   variant="outline-danger"
-                  className="p-2 text-xs border-2   tracking-wider rounded "
+                  className="p-2 text-xs border-2    rounded "
                 >
                   Reject
                 </Button>
@@ -794,7 +819,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                   <Button
                     onClick={handleReject}
                     variant="outline-danger"
-                    className="p-2 text-xs border-2   tracking-wider rounded "
+                    className="p-2 text-xs border-2    rounded "
                   >
                     Reject
                   </Button>

@@ -189,7 +189,7 @@ export default function InventoryApprovalModal({ grn, onClose, onSuccess }) {
                 ₹{totalValuation.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
-            <div className="bg-primary-700/50 px-3 py-1 rounded-full text-[10px]  ">
+            <div className="bg-primary-700/50 px-3 py-1 rounded  text-[10px]  ">
               {approvalItems.length} Items Ready
             </div>
           </div>

@@ -71,6 +71,8 @@ export default function CreateJobCardModal({
     vendor_name: '',
     vendor_rate_per_unit: 0,
     planned_quantity: '100',
+    produced_quantity: 0,
+    accepted_quantity: 0,
     scheduled_start_date: '', // Will be initialized in useEffect
     scheduled_end_date: '',
     status: 'draft',
@@ -247,6 +249,8 @@ export default function CreateJobCardModal({
         vendor_name: jc.vendor_name || '',
         vendor_rate_per_unit: jc.vendor_rate_per_unit || 0,
         planned_quantity: String(jc.planned_quantity || jc.quantity || '100'),
+        produced_quantity: jc.produced_quantity || 0,
+        accepted_quantity: jc.accepted_quantity || 0,
         scheduled_start_date: jc.scheduled_start_date ? formatForDateTimeLocal(jc.scheduled_start_date) : formatForDateTimeLocal(new Date()),
         scheduled_end_date: jc.scheduled_end_date ? formatForDateTimeLocal(jc.scheduled_end_date) : '',
         status: jc.status || 'draft',
@@ -407,7 +411,10 @@ export default function CreateJobCardModal({
       setError(null)
 
       const isOutsourced = formData.execution_mode === 'OUTSOURCE';
-      const requiredFields = ['work_order_id', 'planned_quantity', 'scheduled_start_date'];
+      const requiredFields = ['work_order_id', 'planned_quantity'];
+      if (!isOutsourced) {
+        requiredFields.push('scheduled_start_date');
+      }
       
       if (!isOutsourced && !formData.machine_id) {
         throw new Error('Please select a workstation for in-house operation');
@@ -576,7 +583,7 @@ export default function CreateJobCardModal({
                         name="vendor_rate_per_unit"
                         value={formData.vendor_rate_per_unit}
                         onChange={handleInputChange}
-                        className="w-full pl-8 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+                        className="w-full pl-8 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-amber-500 outline-none transition-all text-xs"
                         placeholder="0.00"
                       />
                     </div>
@@ -595,7 +602,7 @@ export default function CreateJobCardModal({
                       name="operator_id"
                       value={formData.operator_id}
                       onChange={handleInputChange}
-                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                     >
                       <option value="">Select Operator (Optional)</option>
                       {operators.map(emp => (
@@ -638,7 +645,7 @@ export default function CreateJobCardModal({
                       operation_time: selectedOp?.operation_time || 0
                     }))
                   }}
-                  className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
+                  className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-xs"
                   disabled={!formData.work_order_id}
                 >
                   <option value="">Select Operation</option>
@@ -661,10 +668,40 @@ export default function CreateJobCardModal({
                       value={formData.planned_quantity}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-xs"
                     />
                   </div>
                 </div>
+
+                {editingId && (
+                  <>
+                    <div>
+                      <label className="block text-xs  text-emerald-600  tracking-wider mb-1">
+                        Produced Qty
+                      </label>
+                      <input
+                        type="number"
+                        name="produced_quantity"
+                        value={formData.produced_quantity}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-emerald-100 rounded focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs  text-blue-600  tracking-wider mb-1">
+                        Accepted Qty
+                      </label>
+                      <input
+                        type="number"
+                        name="accepted_quantity"
+                        value={formData.accepted_quantity}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-blue-100 rounded focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
+                      />
+                    </div>
+                  </>
+                )}
+
                 <div>
                   <label className="block text-xs  text-slate-500  tracking-wider mb-1">
                     Status
@@ -673,7 +710,7 @@ export default function CreateJobCardModal({
                     name="status"
                     value={formData.status}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm"
+                    className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-xs"
                   >
                     <option value="draft">Draft</option>
                     <option value="pending">Pending</option>
@@ -684,54 +721,56 @@ export default function CreateJobCardModal({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="relative">
-                  <label className="block text-xs  text-slate-500  tracking-wider mb-1">
-                    Start DateTime *
-                  </label>
-                  <input
-                    type="datetime-local"
-                    name="scheduled_start_date"
-                    value={formData.scheduled_start_date}
-                    onChange={handleInputChange}
-                    required
-                    className={`w-full px-4 py-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm ${
-                      getSequencingError() ? 'border-rose-300 bg-rose-50' : 'border-slate-200'
-                    }`}
-                  />
-                  {getSequencingError() && (
-                    <span className="text-[10px] text-rose-500 font-medium mt-1 block">
-                      ⚠️ {getSequencingError()}
-                    </span>
-                  )}
+              {formData.execution_mode !== 'OUTSOURCE' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="relative">
+                    <label className="block text-xs  text-slate-500  tracking-wider mb-1">
+                      Start DateTime *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      name="scheduled_start_date"
+                      value={formData.scheduled_start_date}
+                      onChange={handleInputChange}
+                      required
+                      className={`w-full px-4 py-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-xs ${
+                        getSequencingError() ? 'border-rose-300 bg-rose-50' : 'border-slate-200'
+                      }`}
+                    />
+                    {getSequencingError() && (
+                      <span className="text-[10px] text-rose-500 font-medium mt-1 block">
+                        ⚠️ {getSequencingError()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <label className="block text-xs  text-slate-500  tracking-wider mb-1 flex justify-between">
+                      End DateTime
+                      <button 
+                        type="button" 
+                        onClick={handleSuggestSlot}
+                        className="text-indigo-600 hover:text-indigo-800 font-medium"
+                      >
+                        Suggest Slot
+                      </button>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      name="scheduled_end_date"
+                      value={formData.scheduled_end_date}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-xs ${
+                        getMachineConflict() ? 'border-amber-300 bg-amber-50' : 'border-slate-200'
+                      }`}
+                    />
+                    {getMachineConflict() && (
+                      <span className="text-[10px] text-amber-600 font-medium mt-1 block">
+                        ⚠️ {getMachineConflict().message}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="relative">
-                  <label className="block text-xs  text-slate-500  tracking-wider mb-1 flex justify-between">
-                    End DateTime
-                    <button 
-                      type="button" 
-                      onClick={handleSuggestSlot}
-                      className="text-indigo-600 hover:text-indigo-800 font-medium"
-                    >
-                      Suggest Slot
-                    </button>
-                  </label>
-                  <input
-                    type="datetime-local"
-                    name="scheduled_end_date"
-                    value={formData.scheduled_end_date}
-                    onChange={handleInputChange}
-                    className={`w-full px-4 py-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm ${
-                      getMachineConflict() ? 'border-amber-300 bg-amber-50' : 'border-slate-200'
-                    }`}
-                  />
-                  {getMachineConflict() && (
-                    <span className="text-[10px] text-amber-600 font-medium mt-1 block">
-                      ⚠️ {getMachineConflict().message}
-                    </span>
-                  )}
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -747,7 +786,7 @@ export default function CreateJobCardModal({
                 onChange={handleInputChange}
                 rows="3"
                 placeholder="Specific instructions for the operator..."
-                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm resize-none"
+                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs resize-none"
               />
             </div>
           </div>

@@ -240,7 +240,7 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
               <tab.icon size={14} />
               {tab.label}
               {tab.id === 'components' && formData.lines.length > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded-full text-[10px]">
+                <span className="ml-1 px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded  text-[10px]">
                   {formData.lines.length}
                 </span>
               )}
@@ -366,8 +366,8 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
                             onChange={handleInputChange}
                             className="peer sr-only"
                           />
-                          <div className="w-10 h-5 bg-slate-200 rounded-full peer-checked:bg-blue-600 transition-all"></div>
-                          <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-all"></div>
+                          <div className="w-10 h-5 bg-slate-200 rounded  peer-checked:bg-blue-600 transition-all"></div>
+                          <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded  peer-checked:translate-x-5 transition-all"></div>
                         </div>
                         <span className="text-sm  text-slate-600 group-hover:text-blue-600">BOM is Active</span>
                       </label>
@@ -381,8 +381,8 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
                             onChange={handleInputChange}
                             className="peer sr-only"
                           />
-                          <div className="w-10 h-5 bg-slate-200 rounded-full peer-checked:bg-blue-600 transition-all"></div>
-                          <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-all"></div>
+                          <div className="w-10 h-5 bg-slate-200 rounded  peer-checked:bg-blue-600 transition-all"></div>
+                          <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded  peer-checked:translate-x-5 transition-all"></div>
                         </div>
                         <span className="text-sm  text-slate-600 group-hover:text-blue-600">Set as Default</span>
                       </label>
@@ -485,7 +485,7 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
                             </Badge>
                           </td>
                           <td className="p-2  text-center">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full  text-slate-700">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 rounded   text-slate-700">
                               {line.qty} <span className="text-[10px] text-slate-400 font-normal">{line.uom}</span>
                             </div>
                           </td>
@@ -595,7 +595,7 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
                         formData.operations.map((op, idx) => (
                           <tr key={op.id || idx} className="hover:bg-slate-50/50 transition-colors group">
                             <td className="p-2 ">
-                              <span className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center  text-slate-400 text-xs">
+                              <span className="w-8 h-8 rounded  bg-slate-100 border border-slate-200 flex items-center justify-center  text-slate-400 text-xs">
                                 {idx + 1}
                               </span>
                             </td>
@@ -740,8 +740,8 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
                   <label className="flex items-start gap-4 p-4 rounded  border border-slate-50 hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer group">
                     <div className="relative mt-1">
                       <input type="checkbox" name="with_operations" checked={formData.with_operations} onChange={handleInputChange} className="peer sr-only" />
-                      <div className="w-10 h-5 bg-slate-200 rounded-full peer-checked:bg-blue-600 transition-all"></div>
-                      <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-all"></div>
+                      <div className="w-10 h-5 bg-slate-200 rounded  peer-checked:bg-blue-600 transition-all"></div>
+                      <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded  peer-checked:translate-x-5 transition-all"></div>
                     </div>
                     <div>
                       <span className="block text-sm  text-slate-700">Enable Route Operations</span>
@@ -752,8 +752,8 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
                   <label className="flex items-start gap-4 p-4 rounded  border border-slate-50 hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer group">
                     <div className="relative mt-1">
                       <input type="checkbox" name="allow_alternative_item" checked={formData.allow_alternative_item} onChange={handleInputChange} className="peer sr-only" />
-                      <div className="w-10 h-5 bg-slate-200 rounded-full peer-checked:bg-blue-600 transition-all"></div>
-                      <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-all"></div>
+                      <div className="w-10 h-5 bg-slate-200 rounded  peer-checked:bg-blue-600 transition-all"></div>
+                      <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded  peer-checked:translate-x-5 transition-all"></div>
                     </div>
                     <div>
                       <span className="block text-sm  text-slate-700">Allow Alternatives</span>
@@ -764,8 +764,8 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
                   <label className="flex items-start gap-4 p-4 rounded  border border-slate-50 hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer group">
                     <div className="relative mt-1">
                       <input type="checkbox" name="auto_sub_assembly_rate" checked={formData.auto_sub_assembly_rate} onChange={handleInputChange} className="peer sr-only" />
-                      <div className="w-10 h-5 bg-slate-200 rounded-full peer-checked:bg-blue-600 transition-all"></div>
-                      <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-all"></div>
+                      <div className="w-10 h-5 bg-slate-200 rounded  peer-checked:bg-blue-600 transition-all"></div>
+                      <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded  peer-checked:translate-x-5 transition-all"></div>
                     </div>
                     <div>
                       <span className="block text-sm  text-slate-700">Recursive Rate Calc</span>

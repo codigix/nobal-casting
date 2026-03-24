@@ -176,7 +176,7 @@ export default function Workstations() {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 bg-white rounded   border border-slate-200 ">
-            <div className="w-6 h-6  border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+            <div className="w-6 h-6  border-4 border-indigo-100 border-t-indigo-600 rounded  animate-spin mb-4"></div>
             <p className="text-slate-500 ">Synchronizing asset registry...</p>
           </div>
         ) : filteredWorkstations.length > 0 ? (
@@ -191,7 +191,7 @@ export default function Workstations() {
                     <div className="p-3">
                       <div className="flex justify-between items-start mb-6">
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded flex items-center justify-center ${ws.is_active === false ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                          <div className={`w-6 h-6 rounded flex items-center justify-center ${ws.is_active === false ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'}`}>
                             {ws.is_active === false ? <AlertCircle size={20} /> : <Settings size={20} />}
                           </div>
                           <div>
@@ -233,7 +233,7 @@ export default function Workstations() {
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-slate-400  ">Utilization</span>
                           <div className="flex items-center gap-2">
-                            <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="w-20 h-1.5 bg-slate-100 rounded  overflow-hidden">
                               <div 
                                 className="h-full bg-indigo-600" 
                                 style={{ width: `${ws.capacity_utilization || 0}%` }}
@@ -246,7 +246,7 @@ export default function Workstations() {
 
                       <div className="pt-3 border-t border-slate-50 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${ws.is_active === false ? 'bg-rose-500' : 'bg-emerald-500'} animate-pulse`} />
+                          <div className={`w-2 h-2 rounded  ${ws.is_active === false ? 'bg-rose-500' : 'bg-emerald-500'} animate-pulse`} />
                           <span className="text-xs text-slate-400  ">
                             {ws.is_active === false ? 'Offline' : 'Operational'}
                           </span>
@@ -288,7 +288,7 @@ export default function Workstations() {
                           </div>
                         </td>
                         <td className="p-2">
-                          <span className="px-2.5 py-1 rounded-full text-xs    bg-slate-100 text-slate-600">
+                          <span className="px-2.5 py-1 rounded  text-xs    bg-slate-100 text-slate-600">
                             {ws.workstation_type || 'Standard'}
                           </span>
                         </td>

@@ -35,7 +35,7 @@ const StatCard = ({ label, value, icon: Icon, color, onClick, isActive, descript
       onClick={onClick}
       className={`bg-gradient-to-br ${colorMap[color] || colorMap.primary} p-2 border-1 transition-all duration-300 hover:shadow  hover:-translate-y-1 relative overflow-hidden group cursor-pointer ${isActive ? 'ring-2 ring-blue-500 border-transparent shadow-blue-500/20' : ''}`}
     >
-      <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-current opacity-5 rounded-full group-hover:scale-125 transition-transform" />
+      <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-current opacity-5 rounded  group-hover:scale-125 transition-transform" />
         <div className="flex items-start justify-between relative z-0">
           <div>
             <span className="text-xs    text-neutral-500 dark:text-neutral-400">{label}</span>
@@ -112,7 +112,10 @@ export default function PurchaseOrders() {
 
       const matchesSearch =
         order.po_no?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.supplier_name?.toLowerCase().includes(searchQuery.toLowerCase())
+        order.supplier_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.finished_goods_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.mr_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.project_name?.toLowerCase().includes(searchQuery.toLowerCase())
 
       return matchesFilter && matchesSearch
     })
@@ -225,12 +228,29 @@ export default function PurchaseOrders() {
     {
       key: 'po_details',
       label: 'PO Details',
-      width: '15%',
+      width: '18%',
       render: (_, row) => (
         <div className="flex flex-col gap-1.5 py-1">
-          <span className="text-xs  text-indigo-600 dark:text-indigo-400  leading-none group-hover:scale-105 transition-transform origin-left">
-            {row.po_no}
-          </span>
+          <div className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 leading-tight">
+            {row.finished_goods_name ? (
+               <div className="flex flex-col">
+                  <span className="text-indigo-600 dark:text-indigo-400   ">
+                    {row.finished_goods_name}
+                  </span>
+               </div>
+            ) : (
+              <span className="text-neutral-400 dark:text-neutral-500 italic">No FG Linked</span>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-xs  text-indigo-600 dark:text-indigo-400  leading-none group-hover:scale-105 transition-transform origin-left ">
+              {row.po_no}
+            </span>
+          </div>
+          
+          {/* Finished Goods Name */}
+          
           <div className="flex items-center gap-1.5">
             {row.mr_id ? (
               <div className="flex items-center bg-neutral-100 dark:bg-neutral-800  w-fit px-1 rounded">
@@ -339,9 +359,9 @@ export default function PurchaseOrders() {
               <span className="text-xs  text-neutral-500 dark:text-neutral-400  ">{received}/{ordered}</span>
               <span className={`text-xs    ${percentage === 100 ? 'text-emerald-600' : 'text-indigo-600 dark:text-indigo-400'}`}>{percentage}%</span>
             </div>
-            <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-1.5 overflow-hidden border border-neutral-200 dark:border-neutral-700 shadow-inner">
+            <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded  h-1.5 overflow-hidden border border-neutral-200 dark:border-neutral-700 shadow-inner">
               <div
-                className={`h-full transition-all duration-700 ease-out rounded-full ${
+                className={`h-full transition-all duration-700 ease-out rounded  ${
                   percentage === 100 ? 'bg-emerald-500' : 'bg-indigo-600'
                 }`}
                 style={{ width: `${percentage}%` }}
@@ -618,7 +638,7 @@ export default function PurchaseOrders() {
                     <column.icon size={20} />
                   </div>
                   <h3 className="text-neutral-900 dark:text-neutral-100  text-xs  ">{column.title}</h3>
-                  <span className="bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-2.5 py-0.5 rounded-full text-xs ">
+                  <span className="bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-2.5 py-0.5 rounded  text-xs ">
                     {columnOrders.length}
                   </span>
                 </div>
@@ -701,7 +721,7 @@ export default function PurchaseOrders() {
                 ))}
                 {columnOrders.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-12 px-4 text-center opacity-40">
-                    <div className="p-4 bg-neutral-200 dark:bg-neutral-800 rounded-full mb-3">
+                    <div className="p-4 bg-neutral-200 dark:bg-neutral-800 rounded  mb-3">
                       <column.icon size={24} className="text-neutral-400" />
                     </div>
                     <p className="text-xs  text-neutral-500  ">No {column.title}</p>

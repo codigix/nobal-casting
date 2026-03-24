@@ -184,8 +184,8 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
               <p className={` ${approvalStatus === 'approve' ? 'text-emerald-900' : 'text-neutral-900'}`}>Approve & Store</p>
               <p className="text-xs text-neutral-500 mt-1 leading-relaxed">Allocate accepted items to warehouses and update stock.</p>
             </div>
-            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${approvalStatus === 'approve' ? 'border-emerald-500 bg-emerald-500' : 'border-neutral-300'}`}>
-              {approvalStatus === 'approve' && <div className="w-2 h-2 rounded-full bg-white" />}
+            <div className={`w-5 h-5 rounded  border-2 flex items-center justify-center ${approvalStatus === 'approve' ? 'border-emerald-500 bg-emerald-500' : 'border-neutral-300'}`}>
+              {approvalStatus === 'approve' && <div className="w-2 h-2 rounded  bg-white" />}
             </div>
           </button>
 
@@ -205,8 +205,8 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
               <p className={` ${approvalStatus === 'reject' ? 'text-red-900' : 'text-neutral-900'}`}>Full Rejection</p>
               <p className="text-xs text-neutral-500 mt-1 leading-relaxed">Mark the entire GRN as rejected and return items to supplier.</p>
             </div>
-            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${approvalStatus === 'reject' ? 'border-red-500 bg-red-500' : 'border-neutral-300'}`}>
-              {approvalStatus === 'reject' && <div className="w-2 h-2 rounded-full bg-white" />}
+            <div className={`w-5 h-5 rounded  border-2 flex items-center justify-center ${approvalStatus === 'reject' ? 'border-red-500 bg-red-500' : 'border-neutral-300'}`}>
+              {approvalStatus === 'reject' && <div className="w-2 h-2 rounded  bg-white" />}
             </div>
           </button>
         </div>
@@ -274,7 +274,7 @@ export default function InspectionApprovalModal({ grn, onClose, onSuccess }) {
                             <div className="text-[10px] text-neutral-500  truncate max-w-[200px]">{item.item_name}</div>
                           </td>
                           <td className="p-2  text-center">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs  bg-emerald-100 text-emerald-700">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded  text-xs  bg-emerald-100 text-emerald-700">
                               {item.accepted_qty}
                             </span>
                           </td>

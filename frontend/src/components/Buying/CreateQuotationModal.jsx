@@ -173,7 +173,7 @@ export default function CreateQuotationModal({ isOpen, onClose, onSuccess }) {
     return (
       <Modal isOpen={isOpen} onClose={handleClose} title="Create Supplier Quotation" size="3xl">
         <div className="flex flex-col items-center justify-center py-12">
-          <div className="w-10 h-10 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin"></div>
+          <div className="w-6 h-6 border-4 border-neutral-200 border-t-primary-600 rounded  animate-spin"></div>
           <p className="mt-4 text-neutral-500">Loading required data...</p>
         </div>
       </Modal>

@@ -51,14 +51,14 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
           {subtitle && <p className="text-xs font-medium text-slate-400">{subtitle}</p>}
         </div>
         {badge && (
-          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-[10px]  rounded-full border ${theme.border}  `}>
+          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-[10px]  rounded  border ${theme.border}  `}>
             {badge}
           </span>
         )}
       </div>
       <div className="flex items-center gap-4">
         {actions && <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>{actions}</div>}
-        <div className={`p-2 rounded-full transition-all duration-300 ${isExpanded ? `${theme.bg} ${theme.text}` : 'text-slate-300'}`}>
+        <div className={`p-2 rounded  transition-all duration-300 ${isExpanded ? `${theme.bg} ${theme.text}` : 'text-slate-300'}`}>
           <ChevronDown size={20} className={`transition-transform duration-500 ${isExpanded ? 'rotate-180' : ''}`} strokeWidth={3} />
         </div>
       </div>
@@ -106,7 +106,7 @@ const SectionTitle = ({ title, icon: Icon, badge }) => (
       <h3 className="text-xs text-slate-900 ">{title}</h3>
     </div>
     {badge && (
-      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px]  rounded-full border border-slate-200 ">
+      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px]  rounded  border border-slate-200 ">
         {badge}
       </span>
     )}
@@ -134,7 +134,7 @@ const StatusBadge = ({ status }) => {
     cancelled: 'bg-rose-50 text-rose-600 border-rose-100'
   }
   return (
-    <span className={`px-2.5 py-1 rounded-full text-[10px]  border  ${styles[status?.toLowerCase()] || styles.draft}`}>
+    <span className={`px-2.5 py-1 rounded  text-[10px]  border  ${styles[status?.toLowerCase()] || styles.draft}`}>
       {status || 'DRAFT'}
     </span>
   )
@@ -405,7 +405,7 @@ export default function SalesOrderForm() {
         bom_id: orderData.bom_id || '',
         bom_name: orderData.bom_name || '',
         source_warehouse: orderData.source_warehouse || '',
-        delivery_date: orderData.delivery_date || '',
+        delivery_date: orderData.delivery_date ? new Date(orderData.delivery_date).toISOString().split('T')[0] : '',
         order_type: orderData.order_type || 'Sales',
         items: orderData.items || [],
         status: orderData.status || 'Draft',
@@ -1121,7 +1121,7 @@ export default function SalesOrderForm() {
                   <p className="text-xs text-slate-400 ">Output Configuration</p>
                 </div>
               </div>
-              <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs  rounded-full border border-blue-100">
+              <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs  rounded  border border-blue-100">
                 {bomFinishedGoods.length} Specification
               </span>
             </div>
@@ -1201,7 +1201,7 @@ export default function SalesOrderForm() {
                   <p className="text-xs text-slate-400 ">Intermediate Protocol</p>
                 </div>
               </div>
-              <span className="px-3 py-1 bg-amber-50 text-amber-600 text-xs  rounded-full border border-amber-100">
+              <span className="px-3 py-1 bg-amber-50 text-amber-600 text-xs  rounded  border border-amber-100">
                 {bomSubAssemblies.length} NODES
               </span>
             </div>
@@ -1272,13 +1272,13 @@ export default function SalesOrderForm() {
                     type="button"
                     onClick={fetchSubAssemblyMaterials}
                     disabled={refreshingBom}
-                    className="flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 text-xs  text-slate-600  rounded-full hover:bg-slate-50 transition-all  "
+                    className="flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 text-xs  text-slate-600  rounded  hover:bg-slate-50 transition-all  "
                   >
                     {refreshingBom ? <RotateCcw size={12} className="animate-spin" /> : <RotateCcw size={12} />}
                     {refreshingBom ? 'Syncing...' : 'Sync Protocol'}
                   </button>
                 )}
-                <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-xs  rounded-full border border-emerald-100">
+                <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-xs  rounded  border border-emerald-100">
                   {bomRawMaterials.length} RESOURCES
                 </span>
               </div>
@@ -1357,7 +1357,7 @@ export default function SalesOrderForm() {
                   <p className="text-xs text-slate-400 ">Operational Sequence</p>
                 </div>
               </div>
-              <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs  rounded-full border border-indigo-100">
+              <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs  rounded  border border-indigo-100">
                 {bomOperations.length} STEPS
               </span>
             </div>
@@ -1455,8 +1455,8 @@ export default function SalesOrderForm() {
       <div className=" animate-in fade-in slide-in-from-right-8 duration-700">
         <div className="bg-white/40 backdrop-blur-xl border border-slate-100 rounded p-2   shadow-slate-200/50 relative overflow-hidden group">
           {/* Neural Core Decoration */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-blue-500/10 transition-all duration-1000"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-500/5 rounded-full -ml-12 -mb-12 blur-2xl group-hover:bg-emerald-500/10 transition-all duration-1000"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded  -mr-16 -mt-16 blur-3xl group-hover:bg-blue-500/10 transition-all duration-1000"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-500/5 rounded  -ml-12 -mb-12 blur-2xl group-hover:bg-emerald-500/10 transition-all duration-1000"></div>
           
           <div className="flex items-center justify-between mb-4 border-b border-slate-100/50 pb-3">
             <div className="flex items-center gap-4">
@@ -1479,7 +1479,7 @@ export default function SalesOrderForm() {
           <div className="space-y-2">
             <div className="flex justify-between items-center group/row">
               <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-slate-200 group-hover/row:bg-blue-400 transition-all"></div>
+                <div className="w-1.5 h-1.5 rounded  bg-slate-200 group-hover/row:bg-blue-400 transition-all"></div>
                 <span className="text-[11px]  text-slate-500  group-hover/row:text-slate-700 transition-colors">Unit Manufacturing Cost</span>
               </div>
               <span className="text-xs   text-slate-600">{formatCurrency(fgUnitCost)}</span>
@@ -1531,9 +1531,9 @@ export default function SalesOrderForm() {
                       FINAL INVOICE
                     </span>
                     <div className="flex -space-x-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse delay-75"></div>
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse delay-150"></div>
+                      <div className="w-1.5 h-1.5 rounded  bg-blue-500 animate-pulse"></div>
+                      <div className="w-1.5 h-1.5 rounded  bg-blue-500 animate-pulse delay-75"></div>
+                      <div className="w-1.5 h-1.5 rounded  bg-blue-500 animate-pulse delay-150"></div>
                     </div>
                   </div>
                 </div>
@@ -1588,7 +1588,7 @@ export default function SalesOrderForm() {
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-xs  text-slate-400">Sales Order</span>
-                  <div className="w-1 h-1 rounded-full bg-slate-300" />
+                  <div className="w-1 h-1 rounded  bg-slate-300" />
                   <span className="text-xs  text-blue-600 ">
                     {isReadOnly ? 'Neural View' : isEditMode ? 'Configuration Mode' : 'Initialization Phase'}
                   </span>
@@ -1692,7 +1692,7 @@ export default function SalesOrderForm() {
             <div className="hidden lg:flex items-center gap-4 bg-slate-900 p-2 rounded shrink-0  shadow-slate-900/20">
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <div className="w-1.5 h-1.5 rounded  bg-emerald-500 animate-pulse" />
                   <span className="text-[10px]  text-slate-400  ">Order Valuation</span>
                 </div>
                 <div className="text-sm  text-white ">

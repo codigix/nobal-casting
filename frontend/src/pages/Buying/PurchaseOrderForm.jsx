@@ -25,7 +25,7 @@ const SectionTitle = ({ title, icon: Icon, badge }) => (
       <h3 className="text-xs text-slate-900 ">{title}</h3>
     </div>
     {badge && (
-      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs  rounded-full border border-slate-200 ">
+      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs  rounded  border border-slate-200 ">
         {badge}
       </span>
     )}
@@ -92,13 +92,11 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
   return (
     <div
       id={id}
-      className={`flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50/50 transition-all border-b border-slate-100 ${isExpanded ? 'bg-slate-50/30' : ''}`}
+      className={`flex items-center justify-between p-2 cursor-pointer hover:bg-slate-50/50 transition-all border-b border-slate-100 ${isExpanded ? 'bg-slate-50/30' : ''}`}
       onClick={onToggle}
     >
       <div className="flex items-center gap-4">
-        <div className={`p-2 rounded  transition-all duration-300 ${theme.icon} ${isExpanded ? 'scale-110 rotate-3' : ''}`}>
-          <Icon size={20} strokeWidth={2.5} />
-        </div>
+        
         <div>
           <h2 className="text-xs  flex items-center gap-3">
             <span className={`${theme.text} `}>{title.split(' ')[0]}</span>
@@ -107,15 +105,15 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
           {subtitle && <p className="text-xs font-medium text-slate-400">{subtitle}</p>}
         </div>
         {badge && (
-          <span className={`px-2.5 py-1 ${theme.bg} ${theme.text} text-xs  rounded-full border ${theme.border} `}>
+          <span className={`p-2 ${theme.bg} ${theme.text} text-xs  rounded  border ${theme.border} `}>
             {badge}
           </span>
         )}
       </div>
       <div className="flex items-center gap-4">
         {actions && <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>{actions}</div>}
-        <div className={`p-2 rounded-full transition-all duration-300 ${isExpanded ? `${theme.bg} ${theme.text}` : 'text-slate-300'}`}>
-          <ChevronDown size={20} className={`transition-transform duration-500 ${isExpanded ? 'rotate-180' : ''}`} strokeWidth={3} />
+        <div className={`p-2 rounded  transition-all duration-300 ${isExpanded ? `${theme.bg} ${theme.text}` : 'text-slate-300'}`}>
+          <ChevronDown size={15} className={`transition-transform duration-500 ${isExpanded ? 'rotate-180' : ''}`} strokeWidth={3} />
         </div>
       </div>
     </div>
@@ -224,7 +222,8 @@ export default function PurchaseOrderForm() {
     due_date: '',
     invoice_portion: 100,
     payment_amount: 0,
-    project_name: ''
+    project_name: '',
+    finished_goods_name: ''
   })
 
   useEffect(() => {
@@ -437,7 +436,7 @@ export default function PurchaseOrderForm() {
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
+              className="p-2 hover:bg-slate-100 rounded  transition-colors text-slate-500"
             >
               <ArrowLeft size={20} />
             </button>
@@ -472,7 +471,7 @@ export default function PurchaseOrderForm() {
               className="flex items-center gap-2 px-6  shadow-indigo-200 text-xs   h-10"
             >
               {loading ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded  animate-spin" />
               ) : (
                 <Save size={14} />
               )}
@@ -483,10 +482,10 @@ export default function PurchaseOrderForm() {
       </div>
 
       <div className=" mx-auto p-2 mt-8">
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex flex-col lg:flex-row gap-2">
           {/* Navigation Sidebar */}
           <aside className="lg:w-64 flex-shrink-0">
-            <div className="sticky top-28 space-y-1">
+            <div className="sticky top-28 space-y-1 border border-gray-200">
               <NavItem
                 label="Foundation"
                 icon={Settings}
@@ -530,7 +529,7 @@ export default function PurchaseOrderForm() {
 
               <div className="mt-8 p-4 bg-white rounded border border-slate-100  ">
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                  <div className="w-1.5 h-1.5 rounded  bg-indigo-500 animate-pulse" />
                   <span className="text-xs  text-slate-400 ">Order Summary</span>
                 </div>
                 <div className="space-y-3">
@@ -561,7 +560,7 @@ export default function PurchaseOrderForm() {
                   themeColor="slate"
                 />
                 {expandedSections.foundation && (
-                  <div className="p-2 grid grid-cols-1 md:grid-cols-2 gap-2 bg-gradient-to-b from-slate-50/50 to-white">
+                  <div className="p-2 grid grid-cols-1 md:grid-cols-3 gap-2 bg-gradient-to-b from-slate-50/50 to-white">
                     <FieldWrapper label="Order Date" required>
                       <input
                         type="date"
@@ -579,32 +578,16 @@ export default function PurchaseOrderForm() {
                         className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-medium focus:ring-4 focus:ring-slate-500/10 focus:border-slate-400 outline-none transition-all"
                       />
                     </FieldWrapper>
-                    <FieldWrapper label="Project Name">
+                    <FieldWrapper label="Finished Goods">
                       <input
                         type="text"
-                        value={po.project_name}
-                        onChange={(e) => setPo({ ...po, project_name: e.target.value })}
+                        value={po.project_name || po.finished_goods_name || ''}
+                        onChange={(e) => setPo({ ...po, project_name: e.target.value, finished_goods_name: e.target.value })}
                         className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-medium focus:ring-4 focus:ring-slate-500/10 focus:border-slate-400 outline-none transition-all"
-                        placeholder="Project identification..."
+                        placeholder="Finished goods identification..."
                       />
                     </FieldWrapper>
-                  </div>
-                )}
-              </div>
-
-              {/* Vendor Section */}
-              <div id="vendor" className="scroll-mt-28 bg-white rounded border border-slate-200  ">
-                <SectionHeader
-                  title="Vendor PARTNER"
-                  subtitle="Supplier selection and profile information"
-                  icon={User}
-                  isExpanded={expandedSections.vendor}
-                  onToggle={() => toggleSection('vendor')}
-                  themeColor="indigo"
-                />
-                {expandedSections.vendor && (
-                  <div className="p-8 bg-gradient-to-b from-indigo-50/30 to-white">
-                    <div className="max-w-xl">
+                    <div className="col-span-3">
                       <FieldWrapper label="Select Supplier" required>
                         <SearchableSelect
                           value={po.supplier_id}
@@ -618,9 +601,13 @@ export default function PurchaseOrderForm() {
                         />
                       </FieldWrapper>
                     </div>
-
-                    {po.supplier_id && (
-                      <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                   
+                  </div>
+                  
+                )}
+              </div>
+               {po.supplier_id && (
+                      <div className="mt-2 gap-4 flex animate-in fade-in slide-in-from-top-2 duration-500">
                         <InfoRow 
                           label="Supplier Name" 
                           value={po.supplier_name} 
@@ -641,9 +628,9 @@ export default function PurchaseOrderForm() {
                         />
                       </div>
                     )}
-                  </div>
-                )}
-              </div>
+
+              {/* Vendor Section */}
+             
 
               {/* Items Section */}
               <div id="items" className="scroll-mt-28 bg-white rounded border border-slate-200  ">
@@ -745,7 +732,7 @@ export default function PurchaseOrderForm() {
                     </table>
                     {po.items.length === 0 && (
                       <div className="py-20 flex flex-col items-center justify-center text-slate-400 space-y-2 bg-slate-50/30">
-                        <div className="p-4 bg-white rounded-full border border-slate-100  ">
+                        <div className="p-4 bg-white rounded  border border-slate-100  ">
                           <Package size={32} strokeWidth={1.5} />
                         </div>
                         <p className="text-xs   ">No Items Configured</p>
@@ -904,7 +891,7 @@ export default function PurchaseOrderForm() {
                       </div>
 
                       <div className="bg-slate-900 rounded p-2 text-white  relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-rose-500/20 transition-all duration-700" />
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/10 rounded  -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-rose-500/20 transition-all duration-700" />
                         
                         <div className="relative space-y-2">
                           <div className="flex items-center justify-between">

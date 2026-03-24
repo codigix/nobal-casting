@@ -226,7 +226,7 @@ const MaintenanceSchedule = () => {
                       </td>
                       <td className="p-2 text-xs text-gray-900 font-medium">₹{item.cost}</td>
                       <td className="p-2">
-                        <span className={`inline-block p-2  py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
+                        <span className={`inline-block p-2  py-1 rounded  text-xs font-medium ${getStatusColor(item.status)}`}>
                           {item.status}
                         </span>
                       </td>

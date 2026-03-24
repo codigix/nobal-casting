@@ -137,7 +137,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
                       value={formData.production_entry_id}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                     >
                       <option value="">Select Entry</option>
                       {entries.map(entry => (
@@ -160,7 +160,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
                       value={formData.reported_by_id}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                      className="w-full pl-10 pr-4 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                     >
                       <option value="">Select Employee</option>
                       {employees.map(emp => (
@@ -182,7 +182,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
                       value={formData.rejection_reason}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                      className="w-full px-3 py-2  bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                     >
                       <option value="">Select Reason</option>
                       {rejectionReasons.map(reason => (
@@ -202,7 +202,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
                       placeholder="0"
                       required
                       min="1"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm  text-red-600"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs  text-red-600"
                     />
                   </div>
                 </div>
@@ -240,7 +240,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
                     placeholder="Why did this rejection happen? (e.g., Machine calibration drift, Material impurity)"
                     required
                     rows="4"
-                    className="w-full p-2  bg-slate-50 border border-slate-200 rounded  focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm resize-none"
+                    className="w-full p-2  bg-slate-50 border border-slate-200 rounded  focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs resize-none"
                   />
                 </div>
 
@@ -256,7 +256,7 @@ export default function RecordRejectionModal({ isOpen, onClose, onSuccess }) {
                     placeholder="What was done to fix this? (e.g., Reset machine parameters, Switched material batch)"
                     required
                     rows="4"
-                    className="w-full p-2  bg-slate-50 border border-slate-200 rounded  focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm resize-none"
+                    className="w-full p-2  bg-slate-50 border border-slate-200 rounded  focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs resize-none"
                   />
                 </div>
               </div>

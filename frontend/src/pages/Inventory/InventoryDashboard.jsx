@@ -177,7 +177,7 @@ export default function InventoryDashboard() {
 
   const StatCard = ({ label, value, icon: Icon, color, trend, trendValue, trendDirection }) => (
     <div className={`bg-gradient-to-br ${color} p-2 rounded  border-2 transition-all duration-300 hover: hover:scale-105 relative overflow-hidden group`}>
-      <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full group-hover:scale-110 transition-transform" />
+      <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded  group-hover:scale-110 transition-transform" />
       <div className="flex items-start justify-between mb-2">
         <span className="text-xs    text-gray-500 ">{label}</span>
         <div className="p-2 bg-white/50 rounded ">
@@ -188,7 +188,7 @@ export default function InventoryDashboard() {
       <div className="flex items-center justify-between">
         <p className="text-xs  text-gray-500 font-medium er">{trend}</p>
         {trendValue && (
-          <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs   ${trendDirection === 'up' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+          <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded  text-xs   ${trendDirection === 'up' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
             {trendDirection === 'up' ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
             {trendValue}
           </div>
@@ -587,9 +587,9 @@ export default function InventoryDashboard() {
                       <span className="text-xs  text-gray-700">{wh.name}</span>
                       <span className="text-xs text-gray-500">{wh.items} items</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div className="w-full bg-gray-200 rounded  h-3">
                       <div
-                        className="bg-gradient-to-r from-blue-500 to-cyan-500 h-3 rounded-full transition-all duration-500"
+                        className="bg-gradient-to-r from-blue-500 to-cyan-500 h-3 rounded  transition-all duration-500"
                         style={{ width: `${wh.utilization}%` }}
                       />
                     </div>
@@ -625,14 +625,14 @@ export default function InventoryDashboard() {
                         <p className="text-xs  text-gray-400  ">
                           Value: ₹{(Number(item.total_value) || 0).toLocaleString()}
                         </p>
-                        <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[9px]  rounded-full ">Critical</span>
+                        <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[9px]  rounded  ">Critical</span>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded  flex items-center justify-center mx-auto mb-4">
                     <Package size={32} />
                   </div>
                   <p className="text-emerald-700  text-lg">All levels healthy</p>
@@ -696,7 +696,7 @@ const WorkflowStep = ({ title, desc, count, icon: Icon, color, link, isLast }) =
         
         {count !== undefined && (
           <div className="mt-2 flex items-center justify-between">
-            <span className={`text-xs px-1.5 py-0.5 rounded-full ${count > 0 ? 'bg-amber-100 text-amber-700 ' : 'bg-gray-100 text-gray-400'}`}>
+            <span className={`text-xs px-1.5 py-0.5 rounded  ${count > 0 ? 'bg-amber-100 text-amber-700 ' : 'bg-gray-100 text-gray-400'}`}>
               {count} Pending
             </span>
             <ChevronRight size={12} className="text-gray-400 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />

@@ -193,13 +193,13 @@ export default function QuotationForm() {
 
         {error && (
           <div className="bg-rose-50 border border-rose-200 p-3 rounded flex items-center gap-3">
-            <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            <div className="w-1.5 h-1.5 rounded  bg-rose-500" />
             <p className="text-[11px]  text-rose-700  tracking-wider">{error}</p>
           </div>
         )}
         {success && (
           <div className="bg-emerald-50 border border-emerald-200 p-3 rounded flex items-center gap-3">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <div className="w-1.5 h-1.5 rounded  bg-emerald-500" />
             <p className="text-[11px]  text-emerald-700  tracking-wider">{success}</p>
           </div>
         )}

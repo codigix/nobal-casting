@@ -145,7 +145,7 @@ export default function Customers() {
     const Icon = config.icon
     
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs   text-xs border ${config.color}`}>
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded  text-xs   text-xs border ${config.color}`}>
         <Icon size={12} />
         {status}
       </span>
@@ -271,7 +271,7 @@ export default function Customers() {
             <div className="">
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-slate-50/30">
-                  <div className="w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mb-4" />
+                  <div className="w-6 h-6 border-4 border-blue-600/20 border-t-blue-600 rounded  animate-spin mb-4" />
                   <p className="text-xs  text-slate-500 ">Synchronizing Directory...</p>
                 </div>
               ) : filteredCustomers.length > 0 ? (

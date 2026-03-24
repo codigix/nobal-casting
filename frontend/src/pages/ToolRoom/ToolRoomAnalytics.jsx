@@ -48,7 +48,7 @@ const ToolRoomAnalytics = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-xl  text-gray-900 flex items-center gap-3">
-            <TrendingUp className="w-10 h-10 text-blue-600" />
+            <TrendingUp className="w-6 h-6 text-blue-600" />
             Tool Room Analytics
           </h1>
           <p className="text-gray-600 mt-2">Advanced reports and insights</p>

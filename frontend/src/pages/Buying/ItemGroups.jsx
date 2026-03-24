@@ -249,7 +249,7 @@ export default function ItemGroups() {
             
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 rounded  border border-indigo-100 dark:border-indigo-800">
-                <span className="flex h-2 w-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                <span className="flex h-2 w-2 rounded  bg-indigo-500 animate-pulse"></span>
                 <span className="text-[10px]  text-indigo-700 dark:text-indigo-400  er">Live Database</span>
               </div>
             </div>

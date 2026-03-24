@@ -102,7 +102,15 @@ export class PurchaseOrderModel {
         `SELECT po.*, s.name as supplier_name, s.gstin, 
                 mr.department, mr.purpose,
                 COALESCE(CONCAT_WS(' ', em.first_name, em.last_name), c.name, u.full_name, mr.requested_by_id) as requested_by_name,
-                COALESCE(po.project_name, sso.project_name) as project_name
+                COALESCE(po.project_name, sso.project_name) as project_name,
+                COALESCE(
+                  i_resolved.name,
+                  pp_fg.item_name, 
+                  pp_sa.item_name, 
+                  jc_wo.item_name, 
+                  i_bom.name, 
+                  mr.items_notes
+                ) as finished_goods_name
          FROM purchase_order po
          LEFT JOIN supplier s ON po.supplier_id = s.supplier_id
          LEFT JOIN material_request mr ON po.mr_id = mr.mr_id
@@ -111,6 +119,29 @@ export class PurchaseOrderModel {
          LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
          LEFT JOIN production_plan pp ON mr.production_plan_id = pp.plan_id
          LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
+         LEFT JOIN bom b ON pp.bom_id = b.bom_id
+         LEFT JOIN item i_bom ON b.item_code = i_bom.item_code
+         LEFT JOIN (
+           SELECT plan_id, ANY_VALUE(item_code) as item_code, ANY_VALUE(item_name) as item_name FROM production_plan_fg GROUP BY plan_id
+         ) pp_fg ON mr.production_plan_id = pp_fg.plan_id
+         LEFT JOIN (
+           SELECT plan_id, ANY_VALUE(item_code) as item_code, ANY_VALUE(item_name) as item_name FROM production_plan_sub_assembly GROUP BY plan_id
+         ) pp_sa ON mr.production_plan_id = pp_sa.plan_id
+         LEFT JOIN (
+           SELECT jc.mr_id, ANY_VALUE(wo.item_code) as item_code, ANY_VALUE(i.name) as item_name 
+           FROM job_card jc 
+           JOIN work_order wo ON jc.work_order_id = wo.wo_id
+           JOIN item i ON wo.item_code = i.item_code
+           WHERE jc.mr_id IS NOT NULL
+           GROUP BY jc.mr_id
+         ) jc_wo ON mr.mr_id = jc_wo.mr_id
+         LEFT JOIN item i_resolved ON i_resolved.item_code = COALESCE(
+           pp_fg.item_code,
+           pp_sa.item_code,
+           jc_wo.item_code,
+           b.item_code,
+           TRIM(REGEXP_REPLACE(REGEXP_SUBSTR(mr.items_notes, 'Item: [^\\n\\r]+'), 'Item: ', ''))
+         )
          WHERE po.po_no = ?`,
         [po_no]
       )
@@ -142,7 +173,15 @@ export class PurchaseOrderModel {
                       COALESCE(CONCAT_WS(' ', em.first_name, em.last_name), c.name, u.full_name, mr.requested_by_id) as requested_by_name,
                       COALESCE(poi_agg.total_received_qty, 0) as total_received_qty,
                       COALESCE(poi_agg.total_ordered_qty, 0) as total_ordered_qty,
-                      COALESCE(po.project_name, sso.project_name) as project_name
+                      COALESCE(po.project_name, sso.project_name) as project_name,
+                      COALESCE(
+                        i_resolved.name,
+                        pp_fg.item_name, 
+                        pp_sa.item_name, 
+                        jc_wo.item_name, 
+                        i_bom.name, 
+                        mr.items_notes
+                      ) as finished_goods_name
                    FROM purchase_order po
                    LEFT JOIN supplier s ON po.supplier_id = s.supplier_id
                    LEFT JOIN material_request mr ON po.mr_id = mr.mr_id
@@ -151,6 +190,29 @@ export class PurchaseOrderModel {
                    LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
                    LEFT JOIN production_plan pp ON mr.production_plan_id = pp.plan_id
                    LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
+                   LEFT JOIN bom b ON pp.bom_id = b.bom_id
+                   LEFT JOIN item i_bom ON b.item_code = i_bom.item_code
+                   LEFT JOIN (
+                     SELECT plan_id, ANY_VALUE(item_code) as item_code, ANY_VALUE(item_name) as item_name FROM production_plan_fg GROUP BY plan_id
+                   ) pp_fg ON mr.production_plan_id = pp_fg.plan_id
+                   LEFT JOIN (
+                     SELECT plan_id, ANY_VALUE(item_code) as item_code, ANY_VALUE(item_name) as item_name FROM production_plan_sub_assembly GROUP BY plan_id
+                   ) pp_sa ON mr.production_plan_id = pp_sa.plan_id
+                   LEFT JOIN (
+                     SELECT jc.mr_id, ANY_VALUE(wo.item_code) as item_code, ANY_VALUE(i.name) as item_name 
+                     FROM job_card jc 
+                     JOIN work_order wo ON jc.work_order_id = wo.wo_id
+                     JOIN item i ON wo.item_code = i.item_code
+                     WHERE jc.mr_id IS NOT NULL
+                     GROUP BY jc.mr_id
+                   ) jc_wo ON mr.mr_id = jc_wo.mr_id
+                   LEFT JOIN item i_resolved ON i_resolved.item_code = COALESCE(
+                     pp_fg.item_code,
+                     pp_sa.item_code,
+                     jc_wo.item_code,
+                     b.item_code,
+                     TRIM(REGEXP_REPLACE(REGEXP_SUBSTR(mr.items_notes, 'Item: [^\\n\\r]+'), 'Item: ', ''))
+                   )
                    LEFT JOIN (
                       SELECT po_no, 
                              SUM(received_qty) as total_received_qty,

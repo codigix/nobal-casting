@@ -382,7 +382,7 @@ export default function CreateCustomersModal({ isOpen, onClose, onSuccess, editi
             className="flex items-center gap-2 p-2 .5 bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed  transition-all text-xs "
           >
             {loading ? (
-              <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded  animate-spin" />
             ) : null}
             {editingId ? 'Save Profile' : 'Finalize Registration'}
           </button>

@@ -159,7 +159,7 @@ export default function ProfitLoss() {
               </Badge>
             </div>
           </div>
-          <div className={`p-4 rounded-full ${isProfit ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+          <div className={`p-4 rounded  ${isProfit ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
             {isProfit ? <TrendingUp size={48} strokeWidth={2.5} /> : <TrendingDown size={48} strokeWidth={2.5} />}
           </div>
         </div>

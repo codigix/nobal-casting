@@ -177,7 +177,7 @@ export default function CreateDeliveryNoteModal({ isOpen, onClose, onSuccess }) 
                         value={formData.delivery_date}
                         onChange={handleInputChange}
                         required
-                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium  "
+                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs font-medium  "
                       />
                     </div>
                   </div>
@@ -193,7 +193,7 @@ export default function CreateDeliveryNoteModal({ isOpen, onClose, onSuccess }) 
                         value={formData.total_qty}
                         onChange={handleInputChange}
                         required
-                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm  text-blue-600  "
+                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs  text-blue-600  "
                       />
                     </div>
                   </div>
@@ -220,7 +220,7 @@ export default function CreateDeliveryNoteModal({ isOpen, onClose, onSuccess }) 
                       value={formData.vehicle_no}
                       onChange={handleInputChange}
                       placeholder="e.g. MH-12-AB-1234"
-                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium  "
+                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs font-medium  "
                     />
                   </div>
                 </div>
@@ -237,7 +237,7 @@ export default function CreateDeliveryNoteModal({ isOpen, onClose, onSuccess }) 
                       value={formData.driver_name}
                       onChange={handleInputChange}
                       placeholder="Enter driver name"
-                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium  "
+                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs font-medium  "
                     />
                   </div>
                 </div>
@@ -271,7 +271,7 @@ export default function CreateDeliveryNoteModal({ isOpen, onClose, onSuccess }) 
                       <tr>
                         <td colSpan="2" className="px-5 py-10 text-center">
                           <div className="flex flex-col items-center gap-2">
-                            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded  animate-spin"></div>
                             <span className="text-xs text-slate-400">Fetching items...</span>
                           </div>
                         </td>
@@ -313,7 +313,7 @@ export default function CreateDeliveryNoteModal({ isOpen, onClose, onSuccess }) 
                 onChange={handleInputChange}
                 rows="4"
                 placeholder="Enter any specific instructions for delivery, unloading, or logistics..."
-                className="w-full p-2  border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm   resize-none bg-slate-50/30"
+                className="w-full p-2  border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs   resize-none bg-slate-50/30"
               />
             </div>
 

@@ -523,7 +523,7 @@ export default function CreateSalesOrderModal({ isOpen, onClose, onSuccess }) {
                 onChange={handleInputChange}
                 rows="4"
                 placeholder="Specify payment terms, delivery conditions, or any special instructions..."
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
               />
             </div>
           </div>

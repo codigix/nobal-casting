@@ -375,7 +375,7 @@ export default function RFQs() {
                   <stat.icon size={20} />
                 </div>
                 {activeFilter === stat.id && (
-                  <div className="bg-indigo-500 w-1.5 h-1.5 rounded-full" />
+                  <div className="bg-indigo-500 w-1.5 h-1.5 rounded " />
                 )}
               </div>
               <div>

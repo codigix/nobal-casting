@@ -123,7 +123,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
                     onChange={handleInputChange}
                     required
                     placeholder="Acme Corp"
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                   />
                 </div>
               </div>
@@ -146,7 +146,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
                     name="customer_type"
                     value={formData.customer_type}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                   >
                     <option value="other">Standard</option>
                     <option value="tata">Corporate (TATA)</option>
@@ -161,7 +161,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
                     name="status"
                     value={formData.status}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -192,7 +192,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
                     onChange={handleInputChange}
                     required
                     placeholder="billing@customer.com"
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                   />
                 </div>
               </div>
@@ -210,7 +210,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
                     onChange={handleInputChange}
                     required
                     placeholder="+91-XXXXXXXXXX"
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                   />
                 </div>
               </div>
@@ -227,7 +227,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
                     value={formData.gst_no}
                     onChange={handleInputChange}
                     placeholder="22ABCDE1234F1Z5"
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                   />
                 </div>
               </div>
@@ -251,7 +251,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
                   value={formData.address}
                   onChange={handleInputChange}
                   rows="3"
-                  className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                  className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                   placeholder="Official registered address..."
                 />
               </div>
@@ -264,7 +264,7 @@ export default function CreateCustomerModal({ isOpen, onClose, onSuccess }) {
                   value={formData.shipping_address}
                   onChange={handleInputChange}
                   rows="3"
-                  className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                  className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                   placeholder="Where goods should be delivered..."
                 />
               </div>

@@ -22,7 +22,7 @@ const SectionTitle = ({ title, icon: Icon, badge }) => (
       <h3 className="text-xs text-slate-900 text-xs">{title}</h3>
     </div>
     {badge && (
-      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs   rounded-full border border-slate-200 text-xs">
+      <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs   rounded  border border-slate-200 text-xs">
         {badge}
       </span>
     )}
@@ -1225,7 +1225,7 @@ export default function WorkOrderForm() {
                 disabled={loading}
                 className="flex items-center gap-2 p-2 bg-slate-900 text-white rounded hover:bg-slate-800 disabled:opacity-50  hover: hover:-translate-y-0.5 transition-all text-xs "
               >
-                {loading ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={14} />}
+                {loading ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded  animate-spin" /> : <Save size={14} />}
                 {id ? 'Update Order' : 'Release to Production'}
               </button>
             )}
@@ -1283,7 +1283,7 @@ export default function WorkOrderForm() {
               <span className="opacity-60 ">Execution Pulse</span>
               <span className="text-indigo-400 ml-2">{((completionMetrics.totalCompleted / (formData.qty_to_manufacture || 1)) * 100).toFixed(0)}%</span>
             </div>
-            <div className="w-24 bg-white/10 rounded-full h-1 overflow-hidden">
+            <div className="w-24 bg-white/10 rounded  h-1 overflow-hidden">
               <div
                 className="bg-indigo-500 h-full transition-all duration-1000 shadow-[0_0_8px_rgba(99,102,241,0.6)]"
                 style={{ width: `${Math.min(100, (completionMetrics.totalCompleted / (formData.qty_to_manufacture || 1)) * 100)}%` }}
@@ -1509,14 +1509,14 @@ export default function WorkOrderForm() {
                       {jobCards.length > 0 && (
                         <button
                           onClick={() => fetchJobCards(id)}
-                          className="flex items-center gap-2 px-3 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full transition-colors border border-indigo-100"
+                          className="flex items-center gap-2 px-3 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded  transition-colors border border-indigo-100"
                         >
                           <Activity size={12} className={loading ? 'animate-spin' : ''} />
                           Sync Progress
                         </button>
                       )}
                       {jobCards.length > 0 && (
-                        <div className="flex items-center gap-2 p-2  py-1 bg-indigo-600 text-white rounded-full  shadow-indigo-100">
+                        <div className="flex items-center gap-2 p-2  py-1 bg-indigo-600 text-white rounded   shadow-indigo-100">
                           <Activity size={12} className="animate-pulse" />
                           <span className="text-xs ">{jobCards.length} Tasks active</span>
                         </div>
@@ -1545,7 +1545,7 @@ export default function WorkOrderForm() {
                               <tr key={jcId} className="group hover:bg-slate-50/50 transition-colors">
                                 <td className="p-2 ">
                                   <div className="flex items-center gap-4">
-                                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 text-xs ">
+                                    <span className="flex items-center justify-center w-6 h-6 rounded  bg-slate-100 text-slate-400 text-xs ">
                                       0{idx + 1}
                                     </span>
                                     <div>
@@ -1571,7 +1571,7 @@ export default function WorkOrderForm() {
                                   ) : (
                                     <div className="flex flex-col gap-1">
                                       <div className="flex items-center gap-2">
-                                        <div className={`w-2 h-2 rounded-full ${jc.execution_mode === 'OUTSOURCE' ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]' : 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)]'}`} />
+                                        <div className={`w-2 h-2 rounded  ${jc.execution_mode === 'OUTSOURCE' ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]' : 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)]'}`} />
                                         <span className="text-xs font-medium text-slate-600">
                                           {jc.execution_mode === 'OUTSOURCE' ? (jc.vendor_name || 'Vendor Assigned') : getWorkstationName(jc.workstation_type || jc.workstation)}
                                         </span>
@@ -1593,7 +1593,7 @@ export default function WorkOrderForm() {
                                     <span className="text-xs  text-slate-900">
                                       {jc.completed_quantity || 0} <span className="text-slate-400 font-medium text-xs">/ {jc.planned_quantity}</span>
                                     </span>
-                                    <div className="w-24 bg-slate-100 h-1 rounded-full overflow-hidden">
+                                    <div className="w-24 bg-slate-100 h-1 rounded  overflow-hidden">
                                       <div
                                         className="bg-indigo-500 h-full transition-all duration-500"
                                         style={{ width: `${Math.min(100, ((jc.completed_quantity || 0) / jc.planned_quantity) * 100)}%` }}
@@ -1670,7 +1670,7 @@ export default function WorkOrderForm() {
                             <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                               <td className="p-2 text-xs text-slate-900">{op.operation_name}</td>
                               <td className="p-2 text-xs">
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] ${op.execution_mode === 'OUTSOURCE' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                <span className={`px-2 py-0.5 rounded  text-[10px] ${op.execution_mode === 'OUTSOURCE' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
                                   {op.execution_mode === 'OUTSOURCE' ? 'Outsource' : 'In-House'}
                                 </span>
                               </td>
@@ -1729,9 +1729,9 @@ export default function WorkOrderForm() {
                             {((completionMetrics.totalCompleted / (formData.qty_to_manufacture || 1)) * 100).toFixed(0)}%
                           </span>
                         </div>
-                        <div className="h-3 bg-white/10 rounded-full overflow-hidden border border-white/5 p-0.5">
+                        <div className="h-3 bg-white/10 rounded  overflow-hidden border border-white/5 p-0.5">
                           <div
-                            className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 rounded-full transition-all duration-1000 shadow-[0_0_12px_rgba(99,102,241,0.4)]"
+                            className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 rounded  transition-all duration-1000 shadow-[0_0_12px_rgba(99,102,241,0.4)]"
                             style={{ width: `${Math.min(100, (completionMetrics.totalCompleted / (formData.qty_to_manufacture || 1)) * 100)}%` }}
                           />
                         </div>
@@ -2039,7 +2039,7 @@ export default function WorkOrderForm() {
                         <span>Issued Status</span>
                         <span>{((bomMaterials.filter(m => (m.issued_qty || 0) >= (m.required_qty || 0)).length / (bomMaterials.length || 1)) * 100).toFixed(0)}%</span>
                       </div>
-                      <div className=" bg-white/20 rounded-full overflow-hidden">
+                      <div className=" bg-white/20 rounded  overflow-hidden">
                         <div
                           className="h-full bg-white transition-all duration-1000"
                           style={{ width: `${(bomMaterials.filter(m => (m.issued_qty || 0) >= (m.required_qty || 0)).length / (bomMaterials.length || 1)) * 100}%` }}
@@ -2152,7 +2152,7 @@ export default function WorkOrderForm() {
                   <p className="text-[10px] text-emerald-600   tracking-wider">{receivingJobCard?.job_card_id || receivingJobCard?.id}</p>
                 </div>
               </div>
-              <button onClick={() => setShowReceiptModal(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-full transition-all">
+              <button onClick={() => setShowReceiptModal(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded  transition-all">
                 <X size={20} />
               </button>
             </div>

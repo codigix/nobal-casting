@@ -172,7 +172,7 @@ export default function QCApprovalModal({ grn, onClose, onSuccess }) {
           </div>
           <button 
             onClick={onClose} 
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors group"
+            className="p-2 hover:bg-gray-100 rounded  transition-colors group"
           >
             <X className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
           </button>
@@ -304,7 +304,7 @@ export default function QCApprovalModal({ grn, onClose, onSuccess }) {
                               <td className="p-2   text-gray-900">{item.item_code}</td>
                               <td className="p-2  text-center font-medium text-gray-500">{item.received_qty}</td>
                               <td className="p-2  text-center">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs  bg-emerald-100 text-emerald-800">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded  text-xs  bg-emerald-100 text-emerald-800">
                                   {item.accepted_qty}
                                 </span>
                               </td>

@@ -2093,7 +2093,7 @@ export default function BOMForm() {
                         </div>
                       ) : (
                         <div className="text-center p-2 border-2 border-dashed border-slate-100 rounded bg-slate-50/30 group/empty">
-                          <div className="w-10 h-10 rounded bg-white  shadow-slate-200/50 flex items-center justify-center mx-auto mb-6 group-hover/empty:scale-110 group-hover/empty:rotate-6 transition-all duration-700">
+                          <div className="w-6 h-6 rounded bg-white  shadow-slate-200/50 flex items-center justify-center mx-auto mb-6 group-hover/empty:scale-110 group-hover/empty:rotate-6 transition-all duration-700">
                             <Layers size={16} className="text-indigo-400" />
                           </div>
                           <p className="    ">No components identified</p>
@@ -2311,7 +2311,7 @@ export default function BOMForm() {
                                           <div className="text-sm   text-amber-600">₹{groupCost.toLocaleString()}</div>
                                           <div className="text-[8px]   text-slate-400  mt-1">Sub-Total Value</div>
                                         </div>
-                                        <div className={`w-10 h-10 rounded  flex items-center justify-center transition-all duration-500 ${isExpanded ? 'bg-amber-600 text-white rotate-180 shadow-lg' : 'bg-slate-100 text-slate-300'}`}>
+                                        <div className={`w-6 h-6 rounded  flex items-center justify-center transition-all duration-500 ${isExpanded ? 'bg-amber-600 text-white rotate-180 shadow-lg' : 'bg-slate-100 text-slate-300'}`}>
                                           <ChevronDown size={20} />
                                         </div>
                                       </div>
@@ -2431,7 +2431,7 @@ export default function BOMForm() {
                           </div>
                         ) : (
                           <div className="text-center  py-2 border-2 border-dashed border-slate-200 rounded bg-slate-50/50 group/empty">
-                            <div className="w-10 h-10 rounded bg-white border border-slate-100  flex items-center justify-center mx-auto mb-6 group-hover/empty:scale-110 group-hover/empty:rotate-6 transition-all duration-700">
+                            <div className="w-6 h-6 rounded bg-white border border-slate-100  flex items-center justify-center mx-auto mb-6 group-hover/empty:scale-110 group-hover/empty:rotate-6 transition-all duration-700">
                               <Database size={10} className="text-slate-300 group-hover/empty:text-amber-400 transition-colors" />
                             </div>
                             <p className="    ">Awaiting Asset Integration</p>
@@ -2738,7 +2738,7 @@ export default function BOMForm() {
                           </div>
                         ) : (
                           <div className="text-center  py-2 border-2 border-dashed border-slate-200 rounded bg-slate-50/50 group/empty">
-                            <div className="w-10 h-10 rounded bg-white border border-slate-100  flex items-center justify-center mx-auto mb-6 group-hover/empty:scale-110 group-hover/empty:rotate-6 transition-all duration-700">
+                            <div className="w-6 h-6 rounded bg-white border border-slate-100  flex items-center justify-center mx-auto mb-6 group-hover/empty:scale-110 group-hover/empty:rotate-6 transition-all duration-700">
                               <Settings size={10} className="text-slate-300 group-hover/empty:text-emerald-400 transition-colors" />
                             </div>
                             <p className="    ">Awaiting Process Definition</p>
@@ -2871,7 +2871,7 @@ export default function BOMForm() {
                           </div>
                         ) : (
                           <div className="text-center  py-2 border-2 border-dashed border-slate-200 rounded bg-slate-50/50 group/empty">
-                            <div className="w-10 h-10 rounded bg-white border border-slate-100  flex items-center justify-center mx-auto mb-6 group-hover/empty:scale-110 group-hover/empty:rotate-6 transition-all duration-700">
+                            <div className="w-6 h-6 rounded bg-white border border-slate-100  flex items-center justify-center mx-auto mb-6 group-hover/empty:scale-110 group-hover/empty:rotate-6 transition-all duration-700">
                               <Trash2 size={10} className="text-slate-300 group-hover/empty:text-rose-400 transition-colors" />
                             </div>
                             <p className="    ">No Loss Recorded</p>
@@ -2985,7 +2985,7 @@ export default function BOMForm() {
                         <Layers size={80} className="text-indigo-400" />
                       </div>
                       <div className="flex items-center gap-2 relative z-0">
-                        <div className="w-10 h-10 bg-indigo-500/20 backdrop-blur-xl rounded flex items-center justify-center border border-white/10 shadow-inner group-hover:scale-110 transition-transform duration-700">
+                        <div className="w-6 h-6 bg-indigo-500/20 backdrop-blur-xl rounded flex items-center justify-center border border-white/10 shadow-inner group-hover:scale-110 transition-transform duration-700">
                           <Layers size={36} className="text-indigo-400" />
                         </div>
                         <div>

@@ -37,7 +37,7 @@ const ToolRoomDashboard = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-xl  text-gray-900 flex items-center gap-3">
-            <Wrench className="w-10 h-10 text-blue-600" />
+            <Wrench className="w-6 h-6 text-blue-600" />
             Tool Room Dashboard
           </h1>
           <p className="text-gray-600 mt-2">Track tools, dies, maintenance & performance</p>

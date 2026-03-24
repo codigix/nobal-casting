@@ -67,7 +67,7 @@ export default function BuyingAnalytics() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <div className="inline-block animate-spin rounded  h-8 w-8 border-b-2 border-primary-600"></div>
       </div>
     );
   }

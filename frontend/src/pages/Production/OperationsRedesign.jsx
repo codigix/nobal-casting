@@ -184,7 +184,7 @@ export default function OperationsRedesign() {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 bg-white rounded   border border-slate-200 ">
-            <div className="w-6 h-6  border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+            <div className="w-6 h-6  border-4 border-indigo-100 border-t-indigo-600 rounded  animate-spin mb-4"></div>
             <p className="text-slate-500 ">Loading operations catalog...</p>
           </div>
         ) : filteredOperations.length > 0 ? (
@@ -198,7 +198,7 @@ export default function OperationsRedesign() {
                   <div className="p-3">
                     <div className="flex justify-between items-start mb-6">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded flex items-center justify-center ${op.is_corrective_operation ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                        <div className={`w-6 h-6 rounded flex items-center justify-center ${op.is_corrective_operation ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'}`}>
                           {op.is_corrective_operation ? <AlertCircle size={20} /> : <Zap size={20} />}
                         </div>
                         <div>
@@ -258,13 +258,13 @@ export default function OperationsRedesign() {
                           <div 
                             key={i} 
                             title={sub.operation}
-                            className="w-7 h-7 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-xs   text-slate-600"
+                            className="w-7 h-7 rounded  bg-slate-100 border-2 border-white flex items-center justify-center text-xs   text-slate-600"
                           >
                             {i + 1}
                           </div>
                         ))}
                         {(op.sub_operations?.length || 0) > 3 && (
-                          <div className="w-7 h-7 rounded-full bg-indigo-50 border-2 border-white flex items-center justify-center text-xs   text-indigo-600">
+                          <div className="w-7 h-7 rounded  bg-indigo-50 border-2 border-white flex items-center justify-center text-xs   text-indigo-600">
                             +{(op.sub_operations?.length || 0) - 3}
                           </div>
                         )}
@@ -315,7 +315,7 @@ export default function OperationsRedesign() {
                         </span>
                       </td>
                       <td className="p-2 ">
-                        <span className={`px-2.5 py-1 rounded-full text-xs   ${op.operation_type === 'OUTSOURCED' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                        <span className={`px-2.5 py-1 rounded  text-xs   ${op.operation_type === 'OUTSOURCED' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
                           {op.operation_type || 'IN_HOUSE'}
                         </span>
                       </td>
@@ -354,7 +354,7 @@ export default function OperationsRedesign() {
           )
         ) : (
           <div className="flex flex-col items-center justify-center py-20 bg-white rounded   border border-slate-200 ">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-6">
+            <div className="w-20 h-20 bg-slate-50 rounded  flex items-center justify-center text-slate-300 mb-6">
               <Box size={40} />
             </div>
             <h3 className="text-xl  text-slate-900 mb-2">No operations found</h3>

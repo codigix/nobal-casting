@@ -52,7 +52,7 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
 
   return (
     <div className="bg-slate-50/50 p-2 rounded  border border-gray-100   hover: transition-all group  relative">
-      <div className="absolute -right-4 -top-4 w-24 h-24 bg-white rounded-full opacity-50 group-hover:scale-110 transition-transform" />
+      <div className="absolute -right-4 -top-4 w-24 h-24 bg-white rounded  opacity-50 group-hover:scale-110 transition-transform" />
       <div className="relative flex justify-between items-start">
         <div className="">
           <p className="text-xs   text-gray-400 ">{label}</p>
@@ -320,7 +320,7 @@ export default function ProductionPlanning() {
     <div key={mr.mr_id} className="border border-gray-100 rounded  overflow-hidden hover: transition-shadow">
       <div className="bg-gray-50/50 p-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center border border-gray-200 text-indigo-600   text-xs">
+          <div className="w-8 h-8 rounded  bg-white flex items-center justify-center border border-gray-200 text-indigo-600   text-xs">
             {idx + 1}
           </div>
           <div>
@@ -329,7 +329,7 @@ export default function ProductionPlanning() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className={`px-2 py-1 rounded-full text-xs tracking-wider border ${
+          <span className={`px-2 py-1 rounded  text-xs tracking-wider border ${
             mr.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
             mr.status === 'approved' ? 'bg-blue-50 text-blue-600 border-blue-100' :
             mr.status === 'draft' ? 'bg-gray-50 text-gray-600 border-gray-100' :
@@ -833,9 +833,10 @@ export default function ProductionPlanning() {
         // Refresh plans to show updated status
         fetchPlans()
         
-        // Navigate to job cards page. If we have multiple, maybe just the list, 
-        // or filter by the first one (usually the FG)
-        if (firstWoId) {
+        // Navigate to job cards page showing ALL job cards for this plan
+        if (workOrderData.production_plan_id) {
+          navigate(`/manufacturing/job-cards?filter_plan=${workOrderData.production_plan_id}`)
+        } else if (firstWoId) {
           navigate(`/manufacturing/job-cards?filter_work_order=${firstWoId}`)
         } else {
           navigate(`/manufacturing/job-cards`)
@@ -905,6 +906,8 @@ export default function ProductionPlanning() {
         source_warehouse: '',
         items_notes: `Material request for Production Plan: ${plan.plan_id}\\nBOM: ${plan.bom_id}\\nItem: ${fgItem.item_code || fgItem.item_name || ''}\\nPlanned Quantity: ${plannedQty}\\nIncludes raw materials from all sub-assemblies`,
         production_plan_id: plan.plan_id,
+        project_name: plan.project_name,
+        finished_goods_name: plan.bom_id && bomCache[plan.bom_id] ? bomCache[plan.bom_id] : (fgItem.item_name || 'Generic Production'),
         items: requiredItems
       }
 
@@ -1122,6 +1125,7 @@ export default function ProductionPlanning() {
       render: (value, plan) => {
         const startDate = plan.plan_date
         const endDate = plan.expected_completion_date
+        const deliveryDate = plan.expected_delivery_date
         const isOverdue = endDate && new Date(endDate) < new Date() && plan.effectiveStatus !== 'completed'
         
         return (
@@ -1129,8 +1133,11 @@ export default function ProductionPlanning() {
             <div className="flex items-center gap-2 text-[11px] text-gray-600">
               <Calendar size={12} className="text-gray-400" />
               <div className="flex flex-col">
-                <span className="font-medium">S: {formatDate(startDate)}</span>
-                <span className="text-gray-400">E: {formatDate(endDate)}</span>
+                <span className="font-medium text-[10px] text-indigo-600">Start: {formatDate(startDate)}</span>
+                <span className="text-gray-500 text-[10px]">End: {formatDate(endDate)}</span>
+                {deliveryDate && (
+                  <span className="text-rose-500 text-[10px] font-semibold">Deliv: {formatDate(deliveryDate)}</span>
+                )}
               </div>
             </div>
             {endDate && (
@@ -1168,9 +1175,9 @@ export default function ProductionPlanning() {
               <span className="text-[10px] text-gray-400">{progressValue}% Complete</span>
               <span className="text-[8px] text-slate-900 bg-slate-100 px-2 py-0.5 rounded">{opsInfo} OPS</span>
             </div>
-            <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+            <div className="w-full h-1 bg-gray-100 rounded  overflow-hidden shadow-inner">
               <div
-                className={`h-full transition-all duration-700 rounded-full ${progressValue === 0 ? 'bg-gray-200' :
+                className={`h-full transition-all duration-700 rounded  ${progressValue === 0 ? 'bg-gray-200' :
                   progressValue < 30 ? 'bg-amber-500' :
                     progressValue < 70 ? 'bg-indigo-500' :
                       'bg-emerald-500'
@@ -1250,7 +1257,7 @@ export default function ProductionPlanning() {
         >
           <FileText size={12} />
           {mrHistory[plan.plan_id] && mrHistory[plan.plan_id].length > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-xs text-white animate-in zoom-in duration-300">
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded  bg-indigo-600 text-xs text-white animate-in zoom-in duration-300">
               {mrHistory[plan.plan_id].length}
             </span>
           )}
@@ -1285,7 +1292,7 @@ export default function ProductionPlanning() {
                 <div className="flex items-center gap-2 text-xs   text-slate-400 ">
                   <Activity size={12} className="text-indigo-500" />
                   <span>Planning & Strategy Center</span>
-                  <span className="w-1 h-1 rounded-full bg-slate-300" />
+                  <span className="w-1 h-1 rounded  bg-slate-300" />
                   <Clock size={12} className="text-amber-500" />
                   <span className="text-slate-900">
                     {currentTime.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -1372,7 +1379,7 @@ export default function ProductionPlanning() {
             >
               Pending Requests
               {Object.values(mrHistory).flat().filter(mr => mr.status !== 'completed').length > 0 && (
-                <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+                <span className={`px-2 py-0.5 rounded  text-[10px] ${
                   activeTab === 'pending_mr' ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-500'
                 }`}>
                   {Object.values(mrHistory).flat().filter(mr => mr.status !== 'completed').length}
@@ -1416,7 +1423,7 @@ export default function ProductionPlanning() {
           <div className="">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-22 bg-gray-50/30">
-                <div className="w-6 h-6  border-4 border-indigo-600/20 border-t-indigo-600 rounded-full animate-spin mb-6" />
+                <div className="w-6 h-6  border-4 border-indigo-600/20 border-t-indigo-600 rounded  animate-spin mb-6" />
                 <p className="text-xs   text-slate-500  animate-pulse">Synchronizing Production Intelligence...</p>
               </div>
             ) : filteredPlans.length > 0 ? (
@@ -1491,7 +1498,7 @@ export default function ProductionPlanning() {
                 </div>
                 <div className="p-2 rounded   bg-gray-50 border border-gray-100">
                   <p className="text-xs   text-gray-400  mb-1">Priority</p>
-                  <span className="inline-flex items-center gap-1.5 p-2  py-1 bg-amber-50 text-amber-600 border border-amber-100 rounded-full text-xs   ">
+                  <span className="inline-flex items-center gap-1.5 p-2  py-1 bg-amber-50 text-amber-600 border border-amber-100 rounded  text-xs   ">
                     {workOrderData.priority}
                   </span>
                 </div>
@@ -1500,7 +1507,7 @@ export default function ProductionPlanning() {
               {workOrderData.operations && workOrderData.operations.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-1.5 h-6 bg-indigo-600 rounded-full" />
+                    <div className="w-1.5 h-6 bg-indigo-600 rounded " />
                     <h3 className="text-xs  text-gray-900 ">Operational Sequence ({workOrderData.operations.length})</h3>
                   </div>
                   <div className="rounded border border-gray-100 overflow-hidden  ">
@@ -1530,7 +1537,7 @@ export default function ProductionPlanning() {
                                 {isNewGroup && (
                                   <tr className="bg-slate-50/50">
                                     <td colSpan="3" className="p-2 py-1 text-[10px]  text-slate-500  tracking-wider flex items-center gap-2">
-                                      <div className={`w-2 h-2 rounded-full ${op.depth === 0 ? 'bg-indigo-500' : 'bg-amber-500'}`} />
+                                      <div className={`w-2 h-2 rounded  ${op.depth === 0 ? 'bg-indigo-500' : 'bg-amber-500'}`} />
                                       {op.item_name || op.item_code} {op.depth === 0 ? '(Finished Good)' : '(Sub-Assembly)'}
                                     </td>
                                   </tr>
@@ -1558,7 +1565,7 @@ export default function ProductionPlanning() {
               {/* {(workOrderData.sub_assemblies?.length > 0 || workOrderData.required_items?.length > 0) && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-1.5 h-6 bg-indigo-600 rounded-full" />
+                    <div className="w-1.5 h-6 bg-indigo-600 rounded " />
                     <h3 className="text-xs  text-gray-900 ">Resource Allocation</h3>
                   </div>
                   <div className="rounded border border-gray-100 overflow-hidden  ">
@@ -1599,7 +1606,7 @@ export default function ProductionPlanning() {
                                     </div>
                                   )
                                 ) : (
-                                  <div className="w-5 h-5 rounded-full border-2 border-slate-200 border-t-indigo-500 animate-spin mx-auto" />
+                                  <div className="w-5 h-5 rounded  border-2 border-slate-200 border-t-indigo-500 animate-spin mx-auto" />
                                 )}
                               </td>
                             </tr>
@@ -1614,7 +1621,7 @@ export default function ProductionPlanning() {
 
             <div className="p-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-3 p-2 bg-white rounded  border border-gray-100  ">
-                <div className={`w-2.5 h-2.5 rounded-full ${checkingStock ? 'bg-amber-500 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]'}`} />
+                <div className={`w-2.5 h-2.5 rounded  ${checkingStock ? 'bg-amber-500 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]'}`} />
                 <span className="text-xs   text-gray-900 ">{checkingStock ? 'Analyzing Inventories...' : 'All Stocks Verified'}</span>
               </div>
               <div className="flex items-center gap-4">
@@ -1673,10 +1680,14 @@ export default function ProductionPlanning() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-2 ">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="p-2 rounded bg-gray-50 border border-gray-100">
                   <p className="text-xs text-gray-400 mb-1">Request Identifier</p>
                   <p className="text-sm text-gray-900">{materialRequestData.series_no}</p>
+                </div>
+                <div className="p-2 rounded bg-gray-50 border border-gray-100">
+                  <p className="text-xs text-gray-400 mb-1">Finished Goods</p>
+                  <p className="text-sm text-gray-900 truncate" title={materialRequestData.finished_goods_name}>{materialRequestData.finished_goods_name || 'Generic Production'}</p>
                 </div>
                 <div className="p-2 rounded bg-gray-50 border border-gray-100">
                   <p className="text-xs text-gray-400 mb-1">Originating Dept</p>
@@ -1702,7 +1713,7 @@ export default function ProductionPlanning() {
                       }`}
                     >
                       Pending Request
-                      <span className="ml-2 px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px]">
+                      <span className="ml-2 px-1.5 py-0.5 rounded  bg-rose-50 text-rose-600 text-[10px]">
                         {materialRequestData.items?.filter(item => {
                           const stock = materialStockData[item.item_code];
                           return !stock || !stock.isAvailable;
@@ -1721,7 +1732,7 @@ export default function ProductionPlanning() {
                       }`}
                     >
                       Complete Request
-                      <span className="ml-2 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px]">
+                      <span className="ml-2 px-1.5 py-0.5 rounded  bg-emerald-50 text-emerald-600 text-[10px]">
                         {materialRequestData.items?.filter(item => {
                           const stock = materialStockData[item.item_code];
                           return stock && stock.isAvailable;
@@ -1733,7 +1744,7 @@ export default function ProductionPlanning() {
                     </button>
                   </div>
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-1.5 h-6 bg-blue-600 rounded-full transition-colors" />
+                    <div className="w-1.5 h-6 bg-blue-600 rounded  transition-colors" />
                     <h3 className="text-xs text-gray-900 ">
                       Items to Request ({materialRequestData.items?.length || 0})
                     </h3>
@@ -1787,7 +1798,7 @@ export default function ProductionPlanning() {
                                   </div>
                                 )
                               ) : (
-                                <div className="w-5 h-5 rounded-full  animate-spin mx-auto" />
+                                <div className="w-5 h-5 rounded   animate-spin mx-auto" />
                               )}
                             </td>
                           </tr>
@@ -1864,7 +1875,7 @@ export default function ProductionPlanning() {
                         <Clock size={16} className="animate-pulse" />
                         <h3 className="text-[10px]  uppercase tracking-[0.2em]">Active Requests</h3>
                         <div className="flex-1 h-px bg-amber-100/50 ml-2" />
-                        <span className="text-[10px] bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 ">
+                        <span className="text-[10px] bg-amber-50 px-2 py-0.5 rounded  border border-amber-100 ">
                           {mrHistory[selectedPlanForHistory.plan_id].filter(mr => mr.status !== 'completed').length}
                         </span>
                       </div>
@@ -1883,7 +1894,7 @@ export default function ProductionPlanning() {
                         <CheckCircle2 size={16} />
                         <h3 className="text-[10px]  uppercase tracking-[0.2em]">Completed Archive</h3>
                         <div className="flex-1 h-px bg-emerald-100/50 ml-2" />
-                        <span className="text-[10px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 ">
+                        <span className="text-[10px] bg-emerald-50 px-2 py-0.5 rounded  border border-emerald-100 ">
                           {mrHistory[selectedPlanForHistory.plan_id].filter(mr => mr.status === 'completed').length}
                         </span>
                       </div>
@@ -1897,7 +1908,7 @@ export default function ProductionPlanning() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-20 bg-gray-50/50 rounded  border border-dashed border-gray-200">
-                  <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-gray-200 mb-4   border border-gray-100">
+                  <div className="w-16 h-16 rounded  bg-white flex items-center justify-center text-gray-200 mb-4   border border-gray-100">
                     <Boxes size={32} />
                   </div>
                   <h3 className="text-base   text-gray-900">No Request History Found</h3>

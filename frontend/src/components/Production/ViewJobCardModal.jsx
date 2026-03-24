@@ -303,23 +303,23 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
     <Modal isOpen={isOpen} onClose={onClose} title="Operational Intelligence" size="3xl">
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
-          <div className="w-6 h-6  border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4" />
+          <div className="w-6 h-6  border-4 border-indigo-100 border-t-indigo-600 rounded  animate-spin mb-4" />
           <p className="text-xs  text-gray-400  text-center">Decrypting Operational Data...</p>
         </div>
       ) : (
         <div className="space-y-2">
           {/* High-Level Overview */}
           <div className="bg-gray-900 rounded  p-2 text-white  relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-indigo-500/20 transition-colors duration-700" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded  -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:bg-indigo-500/20 transition-colors duration-700" />
             
             <div className="relative z-0">
               <div className="flex justify-between items-start mb-2">
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <span className="p-2  py-1 bg-indigo-500/20 text-indigo-300 rounded-full text-xs    border border-indigo-500/30">
+                    <span className="p-2  py-1 bg-indigo-500/20 text-indigo-300 rounded  text-xs    border border-indigo-500/30">
                       ID: {jobCard?.job_card_id}
                     </span>
-                    <span className={`p-2  py-1 rounded-full text-xs    border ${
+                    <span className={`p-2  py-1 rounded  text-xs    border ${
                       jobCard?.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
                       jobCard?.status === 'in-progress' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
                       'bg-gray-500/20 text-gray-400 border-gray-500/30'
@@ -360,7 +360,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                       {Math.min(100, Math.round((parseFloat(jobCard?.produced_quantity || 0) / parseFloat(jobCard?.planned_quantity || 1)) * 100))}%
                     </p>
                   </div>
-                  <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+                  <div className="w-full bg-white/10 rounded  h-1.5 overflow-hidden">
                     <div 
                       className={`h-full transition-all duration-1000 ${
                         parseFloat(jobCard?.produced_quantity || 0) > parseFloat(jobCard?.planned_quantity || 0) 
@@ -564,7 +564,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                   <h4 className="text-xs  text-gray-900 ">Production Intelligence Feed</h4>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  <div className="w-2 h-2 bg-emerald-500 rounded  animate-pulse" />
                   <span className="text-xs   text-gray-400 ">Real-time Data Sync</span>
                 </div>
               </div>
@@ -591,7 +591,7 @@ export default function ViewJobCardModal({ isOpen, onClose, onSuccess, jobCardId
                           </div>
                         </td>
                         <td className="p-2  text-center">
-                          <span className={`px-4 py-1.5 rounded-full text-xs    border transition-colors ${
+                          <span className={`px-4 py-1.5 rounded  text-xs    border transition-colors ${
                             log.shift === 'A' ? 'bg-blue-50 text-blue-600 border-blue-100 group-hover:bg-blue-100' : 
                             log.shift === 'B' ? 'bg-purple-50 text-purple-600 border-purple-100 group-hover:bg-purple-100' : 
                             'bg-gray-50 text-gray-600 border-gray-100 group-hover:bg-gray-100'

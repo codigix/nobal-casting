@@ -773,11 +773,11 @@ export default function ProjectDetails() {
                   </div>
                   <div className="flex gap-6">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-[#10b981] rounded-full" />
+                      <div className="w-3 h-3 bg-[#10b981] rounded " />
                       <span className="text-[10px] font-bold text-slate-500">PLAN</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-[#ef4444] rounded-full" />
+                      <div className="w-3 h-3 bg-[#ef4444] rounded " />
                       <span className="text-[10px] font-bold text-slate-500">ACTUAL</span>
                     </div>
                   </div>

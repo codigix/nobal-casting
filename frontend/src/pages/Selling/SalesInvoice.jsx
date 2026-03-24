@@ -41,7 +41,7 @@ const StatCard = ({ label, value, icon: Icon, color, onClick, isActive, trend, s
           <Icon size={20} />
         </div>
         {trend && (
-          <div className="flex items-center gap-1 text-[10px]  tracking-wider text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+          <div className="flex items-center gap-1 text-[10px]  tracking-wider text-emerald-600 bg-emerald-50 px-2 py-1 rounded  border border-emerald-100">
             <TrendingUp size={10} />
             {trend}
           </div>
@@ -169,7 +169,7 @@ export default function SalesInvoice() {
         <div className="flex flex-col">
           <span className=" text-slate-900 flex items-center gap-2">
             {val}
-            {row.status === 'draft' && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
+            {row.status === 'draft' && <span className="w-1.5 h-1.5 rounded  bg-amber-400 animate-pulse" />}
           </span>
           <span className="text-[10px] text-slate-400 font-medium tracking-wider flex items-center gap-1 mt-0.5">
             <FileText size={10} /> DN: {row.delivery_note_id || 'Direct'}
@@ -224,8 +224,8 @@ export default function SalesInvoice() {
       render: (val) => {
         const config = getStatusConfig(val)
         return (
-          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${config.badge} text-[10px]   tracking-wider`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded  border ${config.badge} text-[10px]   tracking-wider`}>
+            <span className={`w-1.5 h-1.5 rounded  ${config.dot}`} />
             {config.label}
           </div>
         )

@@ -36,16 +36,53 @@ export class MaterialRequestModel {
     try {
       let query = `
         SELECT mr.*, 
-               COALESCE(CONCAT_WS(' ', em.first_name, em.last_name), c.name, u.full_name, mr.requested_by_id) as requested_by_name, 
-               po.po_no as linked_po_no, po.status as po_status,
-               sso.project_name
+               COALESCE(
+                 NULLIF(CONCAT_WS(' ', em.first_name, em.last_name), ' '), 
+                 NULLIF(em.first_name, ''),
+                 NULLIF(c.name, ''), 
+                 NULLIF(u.full_name, ''), 
+                 mr.requested_by_id
+               ) as requested_by_name, 
+               (SELECT GROUP_CONCAT(po_no) FROM purchase_order WHERE mr_id = mr.mr_id AND status != 'cancelled') as linked_po_no,
+               (SELECT GROUP_CONCAT(status) FROM purchase_order WHERE mr_id = mr.mr_id AND status != 'cancelled') as po_status,
+               sso.project_name,
+               COALESCE(
+                 i_resolved.name,
+                 pp_fg.item_name, 
+                 pp_sa.item_name, 
+                 jc_wo.item_name, 
+                 i_bom.name, 
+                 mr.items_notes
+               ) as finished_goods_name
         FROM material_request mr 
         LEFT JOIN employee_master em ON mr.requested_by_id = em.employee_id
         LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
         LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
-        LEFT JOIN purchase_order po ON mr.mr_id = po.mr_id AND po.status != 'cancelled'
         LEFT JOIN production_plan pp ON mr.production_plan_id = pp.plan_id
         LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
+        LEFT JOIN bom b ON pp.bom_id = b.bom_id
+        LEFT JOIN item i_bom ON b.item_code = i_bom.item_code
+        LEFT JOIN (
+          SELECT plan_id, ANY_VALUE(item_code) as item_code, ANY_VALUE(item_name) as item_name FROM production_plan_fg GROUP BY plan_id
+        ) pp_fg ON mr.production_plan_id = pp_fg.plan_id
+        LEFT JOIN (
+          SELECT plan_id, ANY_VALUE(item_code) as item_code, ANY_VALUE(item_name) as item_name FROM production_plan_sub_assembly GROUP BY plan_id
+        ) pp_sa ON mr.production_plan_id = pp_sa.plan_id
+        LEFT JOIN (
+          SELECT jc.mr_id, ANY_VALUE(wo.item_code) as item_code, ANY_VALUE(i.name) as item_name 
+          FROM job_card jc 
+          JOIN work_order wo ON jc.work_order_id = wo.wo_id
+          JOIN item i ON wo.item_code = i.item_code
+          WHERE jc.mr_id IS NOT NULL
+          GROUP BY jc.mr_id
+        ) jc_wo ON mr.mr_id = jc_wo.mr_id
+        LEFT JOIN item i_resolved ON i_resolved.item_code = COALESCE(
+          pp_fg.item_code,
+          pp_sa.item_code,
+          jc_wo.item_code,
+          b.item_code,
+          TRIM(REGEXP_REPLACE(REGEXP_SUBSTR(mr.items_notes, 'Item: [^\\n\\r]+'), 'Item: ', ''))
+        )
         WHERE 1=1`
       const params = []
 
@@ -113,16 +150,53 @@ export class MaterialRequestModel {
     try {
       const [mrRows] = await db.execute(
         `SELECT mr.*, 
-                COALESCE(CONCAT_WS(' ', em.first_name, em.last_name), c.name, u.full_name, mr.requested_by_id) as requested_by_name, 
-                po.po_no as linked_po_no, po.status as po_status,
-                sso.project_name
+                COALESCE(
+                  NULLIF(CONCAT_WS(' ', em.first_name, em.last_name), ' '), 
+                  NULLIF(em.first_name, ''),
+                  NULLIF(c.name, ''), 
+                  NULLIF(u.full_name, ''), 
+                  mr.requested_by_id
+                ) as requested_by_name, 
+                (SELECT GROUP_CONCAT(po_no) FROM purchase_order WHERE mr_id = mr.mr_id AND status != 'cancelled') as linked_po_no,
+                (SELECT GROUP_CONCAT(status) FROM purchase_order WHERE mr_id = mr.mr_id AND status != 'cancelled') as po_status,
+                sso.project_name,
+                COALESCE(
+                  i_resolved.name,
+                  pp_fg.item_name, 
+                  pp_sa.item_name, 
+                  jc_wo.item_name, 
+                  i_bom.name, 
+                  mr.items_notes
+                ) as finished_goods_name
          FROM material_request mr 
          LEFT JOIN employee_master em ON mr.requested_by_id = em.employee_id
          LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
          LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
-         LEFT JOIN purchase_order po ON mr.mr_id = po.mr_id AND po.status != 'cancelled'
          LEFT JOIN production_plan pp ON mr.production_plan_id = pp.plan_id
          LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
+         LEFT JOIN bom b ON pp.bom_id = b.bom_id
+         LEFT JOIN item i_bom ON b.item_code = i_bom.item_code
+         LEFT JOIN (
+           SELECT plan_id, ANY_VALUE(item_code) as item_code, ANY_VALUE(item_name) as item_name FROM production_plan_fg GROUP BY plan_id
+         ) pp_fg ON mr.production_plan_id = pp_fg.plan_id
+         LEFT JOIN (
+           SELECT plan_id, ANY_VALUE(item_code) as item_code, ANY_VALUE(item_name) as item_name FROM production_plan_sub_assembly GROUP BY plan_id
+         ) pp_sa ON mr.production_plan_id = pp_sa.plan_id
+         LEFT JOIN (
+           SELECT jc.mr_id, ANY_VALUE(wo.item_code) as item_code, ANY_VALUE(i.name) as item_name 
+           FROM job_card jc 
+           JOIN work_order wo ON jc.work_order_id = wo.wo_id
+           JOIN item i ON wo.item_code = i.item_code
+           WHERE jc.mr_id IS NOT NULL
+           GROUP BY jc.mr_id
+         ) jc_wo ON mr.mr_id = jc_wo.mr_id
+         LEFT JOIN item i_resolved ON i_resolved.item_code = COALESCE(
+           pp_fg.item_code,
+           pp_sa.item_code,
+           jc_wo.item_code,
+           b.item_code,
+           TRIM(REGEXP_REPLACE(REGEXP_SUBSTR(mr.items_notes, 'Item: [^\\n\\r]+'), 'Item: ', ''))
+         )
          WHERE mr.mr_id = ?`,
         [mrId]
       )
@@ -284,8 +358,24 @@ export class MaterialRequestModel {
       let [items] = await connection.execute('SELECT * FROM material_request_item WHERE mr_id = ?', [mrId])
       
       // If itemsToProcess is provided, filter the items to be processed
-      if (itemsToProcess && Array.isArray(itemsToProcess)) {
-        items = items.filter(item => itemsToProcess.includes(item.item_code))
+      let itemWarehouseMap = {}
+      if (itemsToProcess) {
+        if (Array.isArray(itemsToProcess)) {
+          if (typeof itemsToProcess[0] === 'object' && itemsToProcess[0] !== null) {
+            // Array of objects [{ item_code, warehouse_id }]
+            itemsToProcess.forEach(itp => {
+              itemWarehouseMap[itp.item_code] = itp.warehouse_id
+            })
+            items = items.filter(item => itemWarehouseMap[item.item_code])
+          } else {
+            // Array of strings [item_code1, item_code2]
+            items = items.filter(item => itemsToProcess.includes(item.item_code))
+          }
+        } else if (typeof itemsToProcess === 'object') {
+          // Object { [item_code]: warehouse_id }
+          itemWarehouseMap = itemsToProcess
+          items = items.filter(item => itemWarehouseMap[item.item_code])
+        }
       }
 
       if (items.length === 0 && itemsToProcess) {
@@ -298,12 +388,10 @@ export class MaterialRequestModel {
       // Use provided source warehouse or fall back to existing one
       const finalSourceWarehouse = sourceWarehouse || request.source_warehouse
 
-      if (isStockTransaction && !finalSourceWarehouse) {
+      if (isStockTransaction && !finalSourceWarehouse && Object.keys(itemWarehouseMap).length === 0) {
         throw new Error('Source warehouse is required for Material Transfer/Issue')
       }
       
-      const sourceWarehouseId = isStockTransaction ? await this.getWarehouseId(connection, finalSourceWarehouse) : null
-
       // STOCK CHECK for Issue/Transfer
       if (isStockTransaction) {
         for (const item of items) {
@@ -311,13 +399,20 @@ export class MaterialRequestModel {
           const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
           if (pendingQty <= 0) continue // Already issued
 
-          const balance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, sourceWarehouseId, connection)
+          // Use per-item warehouse if available, otherwise use common source warehouse
+          const itemWarehouse = itemWarehouseMap[item.item_code] || finalSourceWarehouse
+          if (!itemWarehouse) {
+            throw new Error(`Warehouse is missing for item ${item.item_code}`)
+          }
+          const itemWarehouseId = await this.getWarehouseId(connection, itemWarehouse)
+
+          const balance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, itemWarehouseId, connection)
           const availableQty = balance ? Number(balance.available_qty || balance.current_qty || 0) : 0
           
           if (availableQty <= 0) {
             // If no stock at all for an item that was explicitly requested to be processed
             if (itemsToProcess) {
-              throw new Error(`No stock available for item ${item.item_code} in warehouse ${finalSourceWarehouse}.`)
+              throw new Error(`No stock available for item ${item.item_code} in warehouse ${itemWarehouse}.`)
             }
             continue // Skip if part of a bulk approval and not available
           }
@@ -345,7 +440,11 @@ export class MaterialRequestModel {
           const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
           if (pendingQty <= 0) continue
 
-          const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, sourceWarehouseId, connection)
+          // Use per-item warehouse if available, otherwise use common source warehouse
+          const itemWarehouse = itemWarehouseMap[item.item_code] || finalSourceWarehouse
+          const itemWarehouseId = await this.getWarehouseId(connection, itemWarehouse)
+
+          const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, itemWarehouseId, connection)
           const availableQty = sourceBalance ? Number(sourceBalance.available_qty || sourceBalance.current_qty || 0) : 0
           
           if (availableQty <= 0) continue
@@ -359,14 +458,14 @@ export class MaterialRequestModel {
           // Calculate correct valuation rate for this specific issue
           const issueRate = await StockLedgerModel.getValuationRate(
             item.item_code, 
-            sourceWarehouseId, 
+            itemWarehouseId, 
             qtyToIssue, 
             method, 
             connection
           )
           
           // Deduct from Source
-          await StockBalanceModel.upsert(item.item_code, sourceWarehouseId, {
+          await StockBalanceModel.upsert(item.item_code, itemWarehouseId, {
             current_qty: -qtyToIssue,
             is_increment: true,
             last_issue_date: new Date()
@@ -375,7 +474,7 @@ export class MaterialRequestModel {
           // Add Ledger Entry (OUT)
           await StockLedgerModel.create({
             item_code: item.item_code,
-            warehouse_id: sourceWarehouseId,
+            warehouse_id: itemWarehouseId,
             transaction_date: new Date(),
             transaction_type: request.purpose?.toLowerCase() === 'material_transfer' ? 'Transfer' : 'Issue',
             qty_in: 0,
@@ -400,8 +499,8 @@ export class MaterialRequestModel {
               [
                 transaction_no, 
                 item.item_code, 
-                movement_type === 'OUT' ? sourceWarehouseId : null,
-                movement_type === 'TRANSFER' ? sourceWarehouseId : null,
+                movement_type === 'OUT' ? itemWarehouseId : null,
+                movement_type === 'TRANSFER' ? itemWarehouseId : null,
                 movement_type === 'TRANSFER' ? targetWarehouseId : null,
                 movement_type,
                 qtyToIssue,
@@ -701,7 +800,11 @@ export class MaterialRequestModel {
   static async getByDepartment(db, department) {
     try {
       const [rows] = await db.execute(
-        'SELECT * FROM material_request WHERE department = ? ORDER BY created_at DESC',
+        `SELECT mr.*, sso.project_name
+         FROM material_request mr 
+         LEFT JOIN production_plan pp ON mr.production_plan_id = pp.plan_id
+         LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
+         WHERE mr.department = ? ORDER BY mr.created_at DESC`,
         [department]
       )
       return rows
@@ -718,10 +821,25 @@ export class MaterialRequestModel {
       const [rows] = await db.execute(
         `SELECT mr.*, 
                 COALESCE(c.name, u.full_name, mr.requested_by_id) as requested_by_name, 
-                COALESCE(mri_agg.item_count, 0) as item_count 
+                COALESCE(mri_agg.item_count, 0) as item_count,
+                sso.project_name,
+                COALESCE(pp_fg.item_name, jc_wo.item_name) as finished_goods_name
          FROM material_request mr 
          LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
          LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
+         LEFT JOIN production_plan pp ON mr.production_plan_id = pp.plan_id
+         LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
+         LEFT JOIN (
+           SELECT plan_id, ANY_VALUE(item_name) as item_name FROM production_plan_fg GROUP BY plan_id
+         ) pp_fg ON mr.production_plan_id = pp_fg.plan_id
+         LEFT JOIN (
+           SELECT jc.mr_id, ANY_VALUE(i.name) as item_name 
+           FROM job_card jc 
+           JOIN work_order wo ON jc.work_order_id = wo.wo_id
+           JOIN item i ON wo.item_code = i.item_code
+           WHERE jc.mr_id IS NOT NULL
+           GROUP BY jc.mr_id
+         ) jc_wo ON mr.mr_id = jc_wo.mr_id
          LEFT JOIN (
             SELECT mr_id, COUNT(mr_item_id) as item_count
             FROM material_request_item
@@ -743,10 +861,25 @@ export class MaterialRequestModel {
     try {
       const [rows] = await db.execute(
         `SELECT mr.*, 
-                COALESCE(c.name, u.full_name, mr.requested_by_id) as requested_by_name 
+                COALESCE(c.name, u.full_name, mr.requested_by_id) as requested_by_name,
+                sso.project_name,
+                COALESCE(pp_fg.item_name, jc_wo.item_name) as finished_goods_name
          FROM material_request mr 
          LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
          LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
+         LEFT JOIN production_plan pp ON mr.production_plan_id = pp.plan_id
+         LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
+         LEFT JOIN (
+           SELECT plan_id, ANY_VALUE(item_name) as item_name FROM production_plan_fg GROUP BY plan_id
+         ) pp_fg ON mr.production_plan_id = pp_fg.plan_id
+         LEFT JOIN (
+           SELECT jc.mr_id, ANY_VALUE(i.name) as item_name 
+           FROM job_card jc 
+           JOIN work_order wo ON jc.work_order_id = wo.wo_id
+           JOIN item i ON wo.item_code = i.item_code
+           WHERE jc.mr_id IS NOT NULL
+           GROUP BY jc.mr_id
+         ) jc_wo ON mr.mr_id = jc_wo.mr_id
          WHERE mr.status = "approved" 
          ORDER BY mr.required_by_date ASC`
       )

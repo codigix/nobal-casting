@@ -537,155 +537,158 @@ export class ProductionPlanningService {
       const dbFGItems = plan.fg_items || plan.finished_goods || []
       const allFGItems = bodyFGItems.length > 0 ? bodyFGItems : dbFGItems
 
-      // 1. PRE-GENERATE IDs and Establish Hierarchy
-      const batchTimestamp = Date.now()
+      // Fallback: If no FG items found in tables, use the plan header's BOM as the FG item
+      if (allFGItems.length === 0 && plan.bom_id) {
+        allFGItems.push({
+          item_code: plan.bom_item_code || plan.item_code,
+          item_name: plan.bom_product_name || plan.product_name,
+          planned_qty: plan.planned_qty || 1,
+          bom_no: plan.bom_id,
+          id: `HEADER-${plan.plan_id}`
+        })
+      }
+
+      // Use a unified map to track ALL created work orders (both FG and SA)
+      // This ensures nested sub-assemblies correctly find their parents
+      const itemCodeToWoIdMap = {}
       let woCounter = 0
-      const rowIdToWoIdMap = {} // production_plan_sub_assembly.id -> wo_id
-      const fgCodeToWoIdMap = {} // item_code -> wo_id (for FG)
+      const batchTimestamp = Date.now()
 
-      // Use all sub-assemblies directly to ensure each plan row gets its own Work Order
-      // This supports detailed tracking for each branch of the manufacturing process
-      // Sort DESCENDING (Level 3, 2, 1...) to ensure children (base components) exist BEFORE parents
-      // Using stable sort to keep discovery order (BOM sequence) within the same level
-      const sortedSubAsmList = [...allSubAsms].sort((a, b) => (parseInt(b.explosion_level || 0)) - (parseInt(a.explosion_level || 0)))
+      const processBatch = async (batch, isFG = false) => {
+        if (!batch || batch.length === 0) return
 
-      // Generate IDs for FGs first (to have references)
-      allFGItems.forEach(item => {
-        const id = `WO-FG-${batchTimestamp}-${++woCounter}`
-        fgCodeToWoIdMap[item.item_code] = id
-        item.generated_wo_id = id
-      })
+        console.log(`[ProductionPlanningService] Processing batch of ${batch.length} items (isFG: ${isFG}) for Plan: ${planId}`)
 
-      // Generate IDs for SAs next
-      sortedSubAsmList.forEach(item => {
-        const id = `WO-SA-${batchTimestamp}-${++woCounter}`
-        if (item.id) {
-          rowIdToWoIdMap[item.id] = id
-        }
-        item.generated_wo_id = id
-      })
+        for (const item of batch) {
+          try {
+            const plannedQty = parseFloat(item.planned_qty) || parseFloat(item.qty) || parseFloat(item.quantity) || 0
+            if (plannedQty <= 0) {
+              console.warn(`[ProductionPlanningService] Skipping item ${item.item_code} with zero or invalid quantity: ${plannedQty}`)
+              continue
+            }
 
-      // 2. CREATE WORK ORDERS
-      // Logic: Create Deepest Sub-assemblies FIRST (High explosion level), then parents, then Finished Goods LAST.
-      const createdWorkOrders = []
-      const dependenciesToCreate = []
-      
-      // Helper to process items
-      const processBatch = async (items, isFG = false) => {
-        for (const item of items) {
-          const plannedQty = parseFloat(item.planned_qty) || parseFloat(item.qty) || parseFloat(item.quantity) || 0
-          if (plannedQty <= 0) continue
-
-          const wo_id = item.generated_wo_id
-          const parentItemCode = item.parent_item_code || item.parent_code
-          let parentWoId = null
-
-          if (parentItemCode) {
-            // Attempt to link to the correct parent Work Order
-            // First check if parent is the Finished Good
-            parentWoId = fgCodeToWoIdMap[parentItemCode]
-
-            if (!parentWoId) {
-              // Otherwise, check if it's another sub-assembly at the next higher level
-              const parentRow = allSubAsms.find(sa => 
-                sa.item_code === parentItemCode && 
-                (parseInt(sa.explosion_level || 0) === parseInt(item.explosion_level || 0) - 1)
-              )
-              if (parentRow && rowIdToWoIdMap[parentRow.id]) {
-                parentWoId = rowIdToWoIdMap[parentRow.id]
+            // Determine parent WO ID
+            let parentWoId = null
+            const parentItemCode = item.parent_item_code || item.parent_assembly_code || item.parent_code
+            
+            if (parentItemCode) {
+              parentWoId = itemCodeToWoIdMap[parentItemCode]
+              if (!parentWoId) {
+                // Fallback for direct children of FG if map uses a different key format
+                console.warn(`[ProductionPlanningService] Parent item ${parentItemCode} not found in WO map for child ${item.item_code}`)
               }
             }
-          }
 
-          if (parentWoId) {
-            dependenciesToCreate.push({
-              parent: parentWoId,
-              child: wo_id,
-              item: item.item_code,
-              qty: plannedQty
-            })
-          }
+            // Generate a deterministic ID if it's an FG or if we want better tracking
+            const woId = isFG 
+              ? `WO-FG-${batchTimestamp}-${++woCounter}`
+              : `WO-SA-${batchTimestamp}-${++woCounter}`
 
-          // Fetch operations for this item (BOM or overridden in plan)
-          let operationsToUse = []
-          const itemBomNo = item.bom_no || item.bom_id || (isFG ? plan.bom_id : null)
-          
-          if (itemBomNo) {
-            const bomDetails = await productionModel.getBOMDetails(itemBomNo)
-            if (bomDetails && bomDetails.operations) {
-              operationsToUse = bomDetails.operations.map(op => {
-                // Check if plan has an override for this operation name
-                const planOpOverride = (plan.operations || []).find(pop => pop.operation_name === op.operation_name)
-                const executionMode = planOpOverride?.execution_mode || op.execution_mode || 'IN_HOUSE'
-                const vendorRate = parseFloat(planOpOverride?.vendor_rate_per_unit || op.vendor_rate_per_unit || 0)
-                const opTime = parseFloat(op.operation_time || 0)
-                const hRate = parseFloat(op.hourly_rate || 0)
-                
-                let opCost = 0
-                if (executionMode === 'OUTSOURCE') {
-                  opCost = vendorRate * plannedQty
-                } else {
-                  opCost = (opTime / 60) * hRate * plannedQty
-                }
-                
-                return {
-                  operation_name: op.operation_name,
-                  workstation: op.workstation_type,
-                  operation_time: op.operation_time,
-                  hourly_rate: op.hourly_rate,
-                  operating_cost: opCost,
-                  operation_type: op.operation_type || (isFG ? 'FG' : 'SA'),
-                  execution_mode: executionMode,
-                  vendor_id: planOpOverride?.vendor_id || op.vendor_id || null,
-                  vendor_rate_per_unit: vendorRate,
-                  notes: op.notes || op.description || ''
-                }
-              })
+            // Fetch operations for this item (BOM or overridden in plan)
+            let operationsToUse = []
+            const itemBomNo = item.bom_no || item.bom_id || (isFG ? plan.bom_id : null)
+            
+            if (itemBomNo) {
+              const bomDetails = await productionModel.getBOMDetails(itemBomNo)
+              if (bomDetails && bomDetails.operations) {
+                operationsToUse = bomDetails.operations.map(op => {
+                  const planOpOverride = (plan.operations || []).find(pop => pop.operation_name === op.operation_name)
+                  const executionMode = planOpOverride?.execution_mode || op.execution_mode || 'IN_HOUSE'
+                  const vendorRate = parseFloat(planOpOverride?.vendor_rate_per_unit || op.vendor_rate_per_unit || 0)
+                  const opTime = parseFloat(op.operation_time || 0)
+                  const hRate = parseFloat(op.hourly_rate || 0)
+                  
+                  let opCost = 0
+                  if (executionMode === 'OUTSOURCE') {
+                    opCost = vendorRate * plannedQty
+                  } else {
+                    opCost = (opTime / 60) * hRate * plannedQty
+                  }
+                  
+                  return {
+                    operation_name: op.operation_name,
+                    workstation: op.workstation_type,
+                    operation_time: op.operation_time,
+                    hourly_rate: op.hourly_rate,
+                    operating_cost: opCost,
+                    operation_type: op.operation_type || (isFG ? 'FG' : 'SA'),
+                    execution_mode: executionMode,
+                    vendor_id: planOpOverride?.vendor_id || op.vendor_id || null,
+                    vendor_rate_per_unit: vendorRate,
+                    notes: op.notes || op.description || ''
+                  }
+                })
+              }
             }
-          }
 
-          const woData = {
-            wo_id,
-            item_code: item.item_code,
-            quantity: plannedQty,
-            status: 'Draft',
-            priority: isFG ? 'Medium' : 'High',
-            sales_order_id: plan.sales_order_id || item.sales_order_id || options.sales_order_id || null,
-            production_plan_id: planId,
-            bom_no: itemBomNo,
-            planned_start_date: item.planned_start_date || item.schedule_date || item.scheduled_date || plan.plan_date,
-            expected_delivery_date: item.expected_delivery_date || plan.expected_delivery_date,
-            parent_wo_id: parentWoId,
-            target_warehouse: item.target_warehouse || item.fg_warehouse || null,
-            notes: `Created from Production Plan: ${planId}${isFG ? '' : ' (Sub-Assembly)'}`,
-            operations: operationsToUse
-          }
+            const woData = {
+              wo_id: woId,
+              item_code: item.item_code,
+              quantity: plannedQty,
+              status: 'Draft',
+              priority: isFG ? 'Medium' : 'High',
+              sales_order_id: plan.sales_order_id || item.sales_order_id || options.sales_order_id || null,
+              production_plan_id: planId,
+              bom_no: itemBomNo,
+              planned_start_date: item.planned_start_date || item.schedule_date || item.scheduled_date || plan.plan_date || new Date(),
+              expected_delivery_date: item.expected_delivery_date || plan.expected_delivery_date,
+              parent_wo_id: parentWoId,
+              target_warehouse: item.target_warehouse || item.fg_warehouse || null,
+              notes: `Auto-generated from Production Plan ${planId}${isFG ? ' (Finished Good)' : ' (Sub-Assembly)'}`,
+              operations: operationsToUse
+            }
 
-          console.log(`[ProductionPlanningService] Generating WO: ${wo_id} for ${item.item_code} | Parent: ${parentWoId || 'None'}`)
-          
-          // Pass skipDependency: true because we will create them manually after all WOs exist
-          const createdIds = await productionModel.createWorkOrderRecursive(woData, userId || 1, false, true)
-          createdWorkOrders.push(...createdIds)
-          
-          // Add a 100ms delay to ensure unique timestamps and sequential creation
-          await new Promise(resolve => setTimeout(resolve, 100))
+            console.log(`[ProductionPlanningService] Creating Work Order: ${woId} for Item: ${item.item_code} (Parent: ${parentWoId || 'None'})`)
+
+            const createdIds = await productionModel.createWorkOrderRecursive(woData, userId || 1, false, true)
+            
+            if (createdIds && createdIds.length > 0) {
+              const actualWoId = createdIds[0]
+              itemCodeToWoIdMap[item.item_code] = actualWoId
+              item.generated_wo_id = actualWoId
+              console.log(`[ProductionPlanningService] Successfully created WO ${actualWoId} for ${item.item_code}`)
+              
+              if (parentWoId) {
+                console.log(`[ProductionPlanningService] Linking dependency: ${parentWoId} -> ${actualWoId}`)
+                await productionModel.addWorkOrderDependency(parentWoId, actualWoId, item.item_code, plannedQty)
+              }
+            }
+
+            // Add a small delay to ensure unique timestamps and sequential creation
+            await new Promise(resolve => setTimeout(resolve, 100))
+          } catch (itemError) {
+            console.error(`[ProductionPlanningService] Error creating work order for item ${item.item_code}:`, itemError)
+          }
         }
       }
 
-      await processBatch(sortedSubAsmList, false)
+      const createdWorkOrders = []
+      
+      // 1. Process Finished Goods FIRST (Roots)
+      console.log(`[ProductionPlanningService] Starting Finished Goods batch... Count: ${allFGItems.length}`)
       await processBatch(allFGItems, true)
 
-      // 2.5 CREATE DEPENDENCIES
-      console.log(`[ProductionPlanningService] Linking ${dependenciesToCreate.length} dependencies...`)
-      for (const dep of dependenciesToCreate) {
-        await productionModel.addWorkOrderDependency(dep.parent, dep.child, dep.item, dep.qty)
-      }
+      // 2. Process Sub-Assemblies in order of explosion level
+      // Note: We use dbSubAsms but we need to ensure they match allSubAsms used in previous logic
+      const sortedSubAsmList = [...(dbSubAsms || allSubAsms)].sort((a, b) => 
+        (parseInt(a.explosion_level || 0)) - (parseInt(b.explosion_level || 0))
+      )
+      
+      console.log(`[ProductionPlanningService] Starting Sub-Assembly batch... Count: ${sortedSubAsmList.length}`)
+      await processBatch(sortedSubAsmList, false)
+
+      // Collect all generated IDs
+      const allGeneratedIds = [...allFGItems, ...sortedSubAsmList]
+        .map(item => item.generated_wo_id)
+        .filter(id => !!id)
 
       // 3. Update Plan Status
+      console.log(`[ProductionPlanningService] Updating plan status for ${planId} to 'in_progress'`)
       await productionPlanningModel.updatePlanStatus(planId, 'in_progress')
 
       // 4. Sync Sales Order Status
       if (plan.sales_order_id) {
+        console.log(`[ProductionPlanningService] Syncing Sales Order status for ${plan.sales_order_id}`)
         await productionModel.syncSalesOrderStatus(plan.sales_order_id)
       }
 
@@ -697,7 +700,7 @@ export class ProductionPlanningService {
             user_id: userId,
             notification_type: 'WORK_ORDER_GENERATED',
             title: 'Production Plan Implementation Started',
-            message: `Generated ${createdWorkOrders.length} work orders from Production Plan ${planId}.`,
+            message: `Generated ${allGeneratedIds.length} work orders from Production Plan ${planId}.`,
             reference_type: 'ProductionPlan',
             reference_id: planId
           })
@@ -706,7 +709,7 @@ export class ProductionPlanningService {
         console.warn('Notification failed:', notifError.message)
       }
 
-      return [...new Set(createdWorkOrders)]
+      return [...new Set(allGeneratedIds)]
     } catch (error) {
       console.error('Error in createWorkOrdersFromPlan:', error)
       throw error

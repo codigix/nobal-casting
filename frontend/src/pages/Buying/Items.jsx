@@ -136,7 +136,7 @@ export default function Items() {
       render: (_, row) => (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <div className={`h-2 w-2 rounded-full ${(row.quantity || 0) <= 10 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></div>
+            <div className={`h-2 w-2 rounded  ${(row.quantity || 0) <= 10 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></div>
             <span className="text-xs  text-slate-700 dark:text-slate-300">{row.quantity || 0}</span>
             <span className="text-[10px]  text-slate-400 dark:text-slate-500  er bg-slate-100 dark:bg-slate-800 px-1 rounded">{row.uom}</span>
           </div>
@@ -187,7 +187,7 @@ export default function Items() {
         onClick={onClick}
         className={`bg-gradient-to-br ${colorMap[color] || colorMap.primary} p-2 border-1 transition-all duration-300 hover:shadow  hover:-translate-y-1 relative overflow-hidden group cursor-pointer ${isActive ? 'ring-2 ring-blue-500 border-transparent shadow-blue-500/20' : ''}`}
       >
-        <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-current opacity-5 rounded-full group-hover:scale-125 transition-transform" />
+        <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-current opacity-5 rounded  group-hover:scale-125 transition-transform" />
         <div className="flex items-start justify-between relative z-0">
           <div>
             <span className="text-[10px]    text-slate-500 dark:text-slate-400">{label}</span>

@@ -223,7 +223,7 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
     return (
       <Modal isOpen={isOpen} onClose={onClose} title="Edit Sales Order" size="5xl">
         <div className="flex flex-col items-center justify-center py-20">
-          <RefreshCw className="w-10 h-10 text-blue-500 animate-spin mb-4" />
+          <RefreshCw className="w-6 h-6 text-blue-500 animate-spin mb-4" />
           <p className="text-slate-500 font-medium">Fetching order details...</p>
         </div>
       </Modal>
@@ -285,7 +285,7 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
                     name="status"
                     value={formData.status}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
                   >
                     <option value="draft">Draft</option>
                     <option value="confirmed">Confirmed</option>
@@ -443,7 +443,7 @@ export default function EditSalesOrderModal({ isOpen, orderId, onClose, onSucces
                 value={formData.order_terms}
                 onChange={handleInputChange}
                 rows="4"
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded  focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs"
               />
             </div>
           </div>

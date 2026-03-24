@@ -414,6 +414,19 @@ export class SellingController {
       // Calculate grand total
       const finalAmount = calculatedItems.reduce((sum, item) => sum + (item.amount || 0), 0)
       
+      let finalDeliveryDate = null
+      if (delivery_date) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(delivery_date)) {
+          finalDeliveryDate = delivery_date
+        } else {
+          try {
+            finalDeliveryDate = new Date(delivery_date).toISOString().split('T')[0]
+          } catch (e) {
+            finalDeliveryDate = null
+          }
+        }
+      }
+      
       const itemsJSON = calculatedItems && calculatedItems.length > 0 ? JSON.stringify(calculatedItems) : null
       const bomRawMaterialsJSON = bom_raw_materials ? JSON.stringify(bom_raw_materials) : null
       const bomOperationsJSON = bom_operations ? JSON.stringify(bom_operations) : null
@@ -426,7 +439,7 @@ export class SellingController {
         `INSERT INTO selling_sales_order 
          (sales_order_id, customer_id, customer_name, customer_email, customer_phone, project_name, quotation_id, order_amount, profit_margin_percentage, cgst_rate, sgst_rate, delivery_date, order_terms, items, bom_id, bom_name, qty, source_warehouse, order_type, status, bom_raw_materials, bom_operations, bom_finished_goods)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [sales_order_id, customer_id, finalCustomerName, finalCustomerEmail, finalCustomerPhone, project_name || null, quotation_id || null, finalAmount, profit_margin_percentage || 0, cgst_rate || 0, sgst_rate || 0, delivery_date || null, finalTerms || null, itemsJSON, bom_id || null, bom_name || null, salesQuantity, source_warehouse || null, order_type || 'Sales', status || 'Draft', bomRawMaterialsJSON, bomOperationsJSON, bomFinishedGoodsJSON]
+        [sales_order_id, customer_id, finalCustomerName, finalCustomerEmail, finalCustomerPhone, project_name || null, quotation_id || null, finalAmount, profit_margin_percentage || 0, cgst_rate || 0, sgst_rate || 0, finalDeliveryDate, finalTerms || null, itemsJSON, bom_id || null, bom_name || null, salesQuantity, source_warehouse || null, order_type || 'Sales', status || 'Draft', bomRawMaterialsJSON, bomOperationsJSON, bomFinishedGoodsJSON]
       )
       
       // Re-enable FK checks
@@ -445,7 +458,7 @@ export class SellingController {
           order_amount: finalAmount,
           total_amount: finalAmount,
           total_value: finalAmount,
-          delivery_date,
+          delivery_date: finalDeliveryDate,
           order_terms: finalTerms,
           items: items || [],
           bom_id,
@@ -782,7 +795,15 @@ export class SellingController {
       }
       if (delivery_date !== undefined) {
         updates.push('delivery_date = ?')
-        const dateValue = delivery_date ? new Date(delivery_date).toISOString().split('T')[0] : null
+        let dateValue = null
+        if (delivery_date) {
+          // If it's already YYYY-MM-DD, use it directly to avoid timezone shifts
+          if (/^\d{4}-\d{2}-\d{2}$/.test(delivery_date)) {
+            dateValue = delivery_date
+          } else {
+            dateValue = new Date(delivery_date).toISOString().split('T')[0]
+          }
+        }
         values.push(dateValue)
       }
       if (project_name !== undefined) {

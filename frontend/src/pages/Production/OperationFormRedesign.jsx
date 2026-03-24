@@ -189,7 +189,7 @@ export default function OperationFormRedesign() {
     return (
       <div className="min-h-screen bg-slate-50 p-2/50 flex items-center justify-center">
         <div className="flex flex-col items-center">
-          <div className="w-6 h-6  border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+          <div className="w-6 h-6  border-4 border-indigo-100 border-t-indigo-600 rounded  animate-spin mb-4"></div>
           <p className="text-slate-500 ">Loading operation details...</p>
         </div>
       </div>
@@ -231,7 +231,7 @@ export default function OperationFormRedesign() {
               className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white p-2 .5 rounded  text-xs  shadow-indigo-200 transition-all disabled:opacity-70"
             >
               {loading ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded  animate-spin"></div>
               ) : (
                 <Save size={18} />
               )}

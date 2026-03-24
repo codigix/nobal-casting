@@ -232,7 +232,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSuccess, initial
           </div>
           <button 
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-all"
+            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded  transition-all"
           >
             <X size={20} />
           </button>
@@ -386,7 +386,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSuccess, initial
                             ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </p>
                         </div>
-                        <div className="p-2 bg-white/10 rounded-full">
+                        <div className="p-2 bg-white/10 rounded ">
                           <IndianRupee size={24} className="text-indigo-200" />
                         </div>
                       </div>
@@ -437,7 +437,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSuccess, initial
                           <tr>
                             <td colSpan="4" className="px-6 py-12 text-center">
                               <div className="flex flex-col items-center gap-3">
-                                <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
+                                <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded  animate-spin"></div>
                                 <span className="text-xs  text-slate-400  ">Syncing Strategic Data...</span>
                               </div>
                             </td>
@@ -515,7 +515,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSuccess, initial
                           name="tax_rate"
                           value={formData.tax_rate}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 bg-white border border-slate-200 rounded  focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all text-sm  text-slate-700"
+                          className="w-full px-4 py-3 bg-white border border-slate-200 rounded  focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all text-xs  text-slate-700"
                         >
                           <option value="0">0% (GST Exempt)</option>
                           <option value="5">5% GST - Essential</option>

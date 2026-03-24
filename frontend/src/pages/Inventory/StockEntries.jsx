@@ -689,7 +689,7 @@ export default function StockEntries() {
               </select>
               <div className="mt-1.5 text-[10px] text-neutral-500 flex items-center gap-3">
                 <span>Available GRNs: <span className=" text-neutral-700 dark:text-neutral-300">{grnRequests.filter(g => !grnWithEntries.has(g.grn_no)).length}</span></span>
-                <span className="w-1 h-1 rounded-full bg-neutral-300" />
+                <span className="w-1 h-1 rounded  bg-neutral-300" />
                 <span>Processed: <span className=" text-neutral-700 dark:text-neutral-300">{grnWithEntries.size}</span></span>
               </div>
             </div>
@@ -912,12 +912,12 @@ export default function StockEntries() {
 
         {loading && !entries.length ? (
           <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800 text-center px-4">
-            <div className="w-10 h-10 border-3 border-amber-500 border-t-transparent rounded-full animate-spin mb-4" />
+            <div className="w-6 h-6 border-3 border-amber-500 border-t-transparent rounded  animate-spin mb-4" />
             <p className="text-xs text-neutral-500 font-medium tracking-wide ">Loading Stock Entries...</p>
           </div>
         ) : entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800 text-center px-4">
-            <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-4">
+            <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-800 rounded  flex items-center justify-center mb-4">
               <Package size={32} className="text-neutral-400" />
             </div>
             <h3 className="text-base  text-neutral-900 dark:text-white">No stock entries found</h3>
@@ -1121,13 +1121,13 @@ export default function StockEntries() {
 
                             <div className="bg-neutral-50 dark:bg-neutral-800/50 p-2 rounded-xs border border-neutral-100 dark:border-neutral-800">
                               <div className="flex items-center gap-2 mb-1.5">
-                                <div className="w-1.5 h-1.5 rounded-full bg-neutral-300" />
+                                <div className="w-1.5 h-1.5 rounded  bg-neutral-300" />
                                 <span className="text-[10px] text-neutral-500 truncate flex-1 font-medium">
                                   {entry.from_warehouse_name || 'No Source'}
                                 </span>
                               </div>
                               <div className="flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                <div className="w-1.5 h-1.5 rounded  bg-amber-500" />
                                 <span className="text-[10px] text-neutral-900 dark:text-neutral-100 truncate flex-1 ">
                                   {entry.to_warehouse_name || 'No Destination'}
                                 </span>

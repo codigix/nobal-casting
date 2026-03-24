@@ -273,7 +273,7 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess,
             </section>
 
             <section className="bg-slate-900 rounded  p-6 text-white shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded  -mr-16 -mt-16 blur-2xl" />
               <div className="relative z-0 space-y-2">
                 <div className="flex items-center gap-2 pb-4 border-b border-white/10">
                   <Calculator size={18} className="text-indigo-400" />
@@ -373,7 +373,7 @@ export default function CreatePurchaseInvoiceModal({ isOpen, onClose, onSuccess,
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-20 text-center px-10">
-                    <div className="w-16 h-16 bg-neutral-50 rounded-full flex items-center justify-center mb-4 border border-neutral-100">
+                    <div className="w-16 h-16 bg-neutral-50 rounded  flex items-center justify-center mb-4 border border-neutral-100">
                       <Receipt size={32} className="text-neutral-300" />
                     </div>
                     <h4 className="text-sm  text-neutral-800 mb-1">No Source Document Selected</h4>

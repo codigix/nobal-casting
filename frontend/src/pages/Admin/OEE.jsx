@@ -66,7 +66,7 @@ const KPICard = ({ label, value, status, colorClass }) => (
     </div>
     {status && (
       <div className="mt-1 relative z-10">
-        <span className="px-2.5 py-1 bg-blue-500/10 text-blue-600 text-[9px]  rounded-full border border-blue-500/20 tracking-wider">
+        <span className="px-2.5 py-1 bg-blue-500/10 text-blue-600 text-[9px]  rounded  border border-blue-500/20 tracking-wider">
           {status}
         </span>
       </div>
@@ -172,7 +172,7 @@ const RecentJobCards = ({ jobCards }) => (
                     <span className="text-[9px]  text-blue-500 ">Reject Rate</span>
                     <span className="text-[9px]  text-slate-600 ">{((jc.rejected / (jc.produced || 1)) * 100).toFixed(1)}%</span>
                   </div>
-                  <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="w-32 h-1.5 bg-slate-100 rounded  overflow-hidden">
                     <div
                       className="h-full bg-blue-500 transition-all duration-1000"
                       style={{ width: `${(jc.rejected / (jc.produced || 1)) * 100}%` }}
@@ -313,7 +313,7 @@ const OEEDrillDownModal = ({ isOpen, machine, onClose, filters }) => {
 
           <button
             onClick={onClose}
-            className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-all border border-transparent hover:border-blue-100 group"
+            className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-all border border-transparent hover:border-blue-100 group"
           >
             <X size={24} className="group-hover:rotate-90 transition-transform duration-300" />
           </button>
@@ -948,14 +948,14 @@ export default function OEE() {
                       <div key={i} className="flex flex-col gap-1.5 group/item cursor-default">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }}></div>
+                            <div className="w-1.5 h-1.5 rounded " style={{ backgroundColor: item.color }}></div>
                             <span className="text-[10px]  text-slate-500 group-hover/item:text-slate-900 transition-colors tracking-tight">{item.label}</span>
                           </div>
                           <span className="text-[10px] font-black text-slate-800">{(Number(item.val) || 0).toFixed(1)}%</span>
                         </div>
-                        <div className="w-full h-1 bg-slate-50 rounded-full overflow-hidden">
+                        <div className="w-full h-1 bg-slate-50 rounded  overflow-hidden">
                           <div
-                            className="h-full transition-all duration-1000 ease-out rounded-full"
+                            className="h-full transition-all duration-1000 ease-out rounded "
                             style={{
                               width: `${(item.val / (100 - (Number(summary.oee) || 0) || 1)) * 100}%`,
                               backgroundColor: item.color
@@ -1051,21 +1051,21 @@ export default function OEE() {
               <div className=" bg-slate-50  p-6 flex justify-between  gap-4">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-blue-300"></div>
+                    <div className="w-3 h-3 rounded  bg-blue-300"></div>
                     <span className="text-[11px]  text-slate-700  er">Availability Loss</span>
                     <span className="text-[11px] text-slate-400 er">Breakdowns, Setup Time, Waiting</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-blue-400"></div>
+                    <div className="w-3 h-3 rounded  bg-blue-400"></div>
                     <span className="text-[11px]  text-slate-700  er">Performance Loss</span>
                     <span className="text-[11px] text-slate-400 er">Minor Stops, Slow Cycles</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                    <div className="w-3 h-3 rounded  bg-blue-500"></div>
                     <span className="text-[11px]  text-slate-700  er">Quality Loss</span>
                     <span className="text-[11px] text-slate-400 er">Scrap, Rework</span>
                   </div>
@@ -1145,7 +1145,7 @@ export default function OEE() {
           >
             {tab}
             {tab === 'Machine Analytics' && (
-              <span className={`ml-2 px-1.5 py-0.5 rounded-full text-[10px] ${activeTab === tab ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
+              <span className={`ml-2 px-1.5 py-0.5 rounded  text-[10px] ${activeTab === tab ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
                 {filteredMachines.length}
               </span>
             )}
@@ -1177,7 +1177,7 @@ export default function OEE() {
 
               {filteredMachines.length === 0 ? (
                 <div className="bg-white rounded border border-slate-200 p-20 flex flex-col items-center justify-center text-center ">
-                  <div className="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 mb-6">
+                  <div className="w-20 h-20 rounded  bg-slate-50 flex items-center justify-center text-slate-300 mb-6">
                     <Monitor size={40} />
                   </div>
                   <h3 className="text-xl  text-slate-900 m-0">No Workstations Found</h3>
@@ -1239,7 +1239,7 @@ export default function OEE() {
                           <div className="flex flex-col items-end">
                             <span className="text-lg  text-blue-600 block">{m.oee}%</span>
                             <div className="flex items-center gap-1">
-                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                              <div className="w-1.5 h-1.5 rounded  bg-blue-500"></div>
                               <span className="text-[9px] text-slate-400   er">Critical Bottleneck</span>
                             </div>
                           </div>
@@ -1257,7 +1257,7 @@ export default function OEE() {
                     <Zap className="text-blue-400" size={24} />
                     <h3 className="text-sm  text-white   m-0">Intelligence Insights & Recommendations</h3>
                   </div>
-                  <div className="px-3 py-1 bg-blue-400/10 text-blue-400 text-[10px]  rounded-full border border-blue-400/20 ">
+                  <div className="px-3 py-1 bg-blue-400/10 text-blue-400 text-[10px]  rounded  border border-blue-400/20 ">
                     AI Enabled
                   </div>
                 </div>

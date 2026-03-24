@@ -32,7 +32,7 @@ export default function MaterialRequests() {
   const [viewMode, setViewMode] = useState('table')
   const [showColumnMenu, setShowColumnMenu] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState(new Set([
-    'mr_id', 'project_name', 'requested_by_name', 'department', 'status', 'required_by_date', 'stock_availability', 'actions'
+    'mr_id', 'project_name', 'finished_goods_name', 'requested_by_name', 'department', 'status', 'required_by_date', 'stock_availability', 'actions'
   ]))
 
   const checkItemsAvailability = useCallback(async (requestsList) => {
@@ -190,6 +190,11 @@ export default function MaterialRequests() {
       render: (val) => <span className="text-neutral-900 dark:text-white font-medium">{val || 'N/A'}</span>
     },
     {
+      key: 'finished_goods_name',
+      label: 'Finished Goods',
+      render: (val) => <span className="text-neutral-900 dark:text-white font-medium italic">{val || 'Manual Entry'}</span>
+    },
+    {
       key: 'requested_by_name',
       label: 'Requester',
       render: (val, row) => (
@@ -261,7 +266,7 @@ export default function MaterialRequests() {
                   <span className="text-neutral-600 dark:text-neutral-400 font-medium">{status.totalAvailable}/{status.totalRequired}</span>
                   <span className="text-neutral-500 dark:text-neutral-500">{status.fulfillmentPercent}%</span>
                 </div>
-                <div className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-700 rounded  overflow-hidden">
                   <div 
                     className={`h-full ${config.bgColor} transition-all duration-300`}
                     style={{ width: `${Math.min(status.fulfillmentPercent, 100)}%` }}
@@ -533,7 +538,19 @@ export default function MaterialRequests() {
                               <div>
                                 <span className="text-[10px]  text-indigo-600 dark:text-indigo-400  tracking-wider">MR-{req.mr_id}</span>
                                 <h4 className=" text-neutral-900 dark:text-white leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors text-sm truncate">{req.requested_by_name}</h4>
-                                <p className="text-[10px]  text-neutral-400   mt-0.5">{req.department}</p>
+                                <div className="flex flex-col mt-0.5">
+                                  <p className="text-[10px]  text-neutral-400 font-medium ">{req.department}</p>
+                                  {req.finished_goods_name && (
+                                    <p className="text-[10px] text-indigo-500 font-bold italic mt-1 leading-none">
+                                      {req.finished_goods_name}
+                                    </p>
+                                  )}
+                                  {req.project_name && (
+                                    <p className="text-[10px] text-slate-500 font-medium mt-1 leading-none">
+                                      Proj: {req.project_name}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                             </div>
 
@@ -557,7 +574,7 @@ export default function MaterialRequests() {
                                   <div className="text-[9px] text-neutral-600 dark:text-neutral-400">
                                     {availability.totalAvailable}/{availability.totalRequired} units
                                   </div>
-                                  <div className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
+                                  <div className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-700 rounded  overflow-hidden">
                                     <div 
                                       className={`h-full ${avail.bg} transition-all duration-300`}
                                       style={{ width: `${Math.min(availability.fulfillmentPercent, 100)}%` }}
@@ -571,7 +588,7 @@ export default function MaterialRequests() {
                               <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-neutral-50 dark:bg-neutral-800">
                                 {req.items?.length || 0} Items
                               </Badge>
-                              <div className="w-6 h-6 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400  transition-opacity">
+                              <div className="w-6 h-6 rounded  bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400  transition-opacity">
                                 <ChevronRight size={14} />
                               </div>
                             </div>

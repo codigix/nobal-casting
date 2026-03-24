@@ -192,7 +192,7 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
           </div>
           <button 
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded  transition-colors"
           >
             <X size={20} />
           </button>
@@ -215,7 +215,7 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
             {/* Vendor Info */}
             <div className="p-4 bg-amber-50 rounded  border border-amber-100 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 text-amber-600 rounded-full">
+                <div className="p-2 bg-amber-100 text-amber-600 rounded ">
                   <User size={16} />
                 </div>
                 <div>
@@ -385,7 +385,7 @@ export default function SubcontractDispatchModal({ isOpen, onClose, jobCard, onD
               className="flex items-center gap-2 p-2  bg-indigo-600 text-white rounded  text-sm  hover:bg-indigo-700 transition-all  shadow-indigo-100 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
             >
               {loading ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded  animate-spin" />
               ) : (
                 <CheckCircle2 size={16} />
               )}

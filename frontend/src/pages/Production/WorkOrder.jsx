@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import {
   ChevronRight, ChevronDown, AlertCircle, Layers, ClipboardList,
   CheckCircle2, Factory, Clock, Package, Plus, Edit2, Trash2, Eye, Trash, Search, Filter, Calendar, Activity,
@@ -40,10 +40,14 @@ const sortWorkOrders = (ordersData) => {
   return [...ordersData].sort((a, b) => {
     const depthA = getDepth(a, ordersData)
     const depthB = getDepth(b, ordersData)
+    
+    // Root items (Depth 0) first, then children
     if (depthA !== depthB) {
-      return depthB - depthA // Deepest/Low-level first
+      return depthA - depthB
     }
-    return (a.created_at || '').localeCompare(b.created_at || '') // Oldest/Created first for same depth
+    
+    // For same depth, show newest ones first
+    return (b.created_at || '').localeCompare(a.created_at || '')
   })
 }
 
@@ -81,7 +85,7 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
 
   return (
     <div className="bg-white p-2 rounded border border-gray-100   hover: transition-all group overflow-hidden relative">
-      <div className="absolute -right-4 -top-4 w-24 h-24 bg-gray-50 rounded-full opacity-50 group-hover:scale-110 transition-transform" />
+      <div className="absolute -right-4 -top-4 w-24 h-24 bg-gray-50 rounded  opacity-50 group-hover:scale-110 transition-transform" />
       
       <div className="relative flex justify-between items-start">
         <div className="">
@@ -158,7 +162,7 @@ const WorkOrderRow = React.memo(({
               <span className="font-medium text-gray-700">{parseFloat(order.produced_qty || 0).toFixed(2)} / {parseFloat(order.quantity).toFixed(2)}</span>
               <span className="text-indigo-600 font-semibold">{Math.round(((order.produced_qty || 0) / (order.quantity || 1)) * 100)}%</span>
             </div>
-            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+            <div className="w-full h-1.5 bg-gray-100 rounded  overflow-hidden shadow-inner">
               <div 
                 className={`h-full transition-all duration-700 ${order.status === 'completed' ? 'bg-emerald-500' : 'bg-indigo-500'}`}
                 style={{ width: `${Math.min(((order.produced_qty || 0) / (order.quantity || 1)) * 100, 100)}%` }}
@@ -252,7 +256,7 @@ const WorkOrderRow = React.memo(({
                 {order.project_name || 'No Project'}
               </span>
               {hasSubAssemblies && (
-                <span className="text-[10px] text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-full font-medium">
+                <span className="text-[10px] text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded  font-medium">
                   {order.subAssemblies.length} Sub-assemblies
                 </span>
               )}
@@ -261,7 +265,7 @@ const WorkOrderRow = React.memo(({
               <span className={order.priority === 'high' ? 'text-rose-500 font-medium' : ''}>
                 {order.priority.toUpperCase()} priority
               </span>
-              <span className="w-1 h-1 bg-gray-300 rounded-full" />
+              <span className="w-1 h-1 bg-gray-300 rounded " />
               <span>BOM: {(order.bom_no || '').startsWith('BOM-') ? order.bom_no : `BOM-${order.bom_no || order.wo_id.split('-')[1] || 'STANDARD'}`}</span>
             </div>
           </div>
@@ -273,7 +277,7 @@ const WorkOrderRow = React.memo(({
               <span>Progress</span>
               <span>{Math.round((order.produced_qty / order.quantity) * 100)}%</span>
             </div>
-            <div className=" h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className=" h-1.5 bg-gray-100 rounded  overflow-hidden">
               <div 
                 className={`h-full ${order.status === 'completed' ? 'bg-emerald-500' : 'bg-indigo-500'} transition-all duration-500`}
                 style={{ width: `${Math.min((order.produced_qty / order.quantity) * 100, 100)}%` }}
@@ -442,6 +446,8 @@ const groupOrdersBySalesOrder = (ordersData) => {
 
 export default function WorkOrder() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -458,10 +464,24 @@ export default function WorkOrder() {
   const [filters, setFilters] = useState({
     status: '',
     search: '',
+    production_plan_id: '',
     day: '',
     month: '',
     year: ''
   })
+
+  // URL Parameter Handling
+  useEffect(() => {
+    const planId = searchParams.get('production_plan_id') || searchParams.get('plan_id')
+    const searchParam = searchParams.get('search')
+    
+    if (planId) {
+      setFilters(prev => ({ ...prev, production_plan_id: planId }))
+    }
+    if (searchParam) {
+      setFilters(prev => ({ ...prev, search: searchParam }))
+    }
+  }, [searchParams])
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -734,7 +754,7 @@ export default function WorkOrder() {
             <span className="font-medium text-gray-700">{row.produced_qty || 0} / {row.quantity}</span>
             <span className="text-indigo-600 font-semibold">{Math.round(((row.produced_qty || 0) / (row.quantity || 1)) * 100)}%</span>
           </div>
-          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+          <div className="w-full h-1.5 bg-gray-100 rounded  overflow-hidden shadow-inner">
             <div 
               className={`h-full transition-all duration-700 ${(row.status || '').toLowerCase() === 'completed' ? 'bg-emerald-500' : 'bg-indigo-500'}`}
               style={{ width: `${Math.min(((row.produced_qty || 0) / (row.quantity || 1)) * 100, 100)}%` }}
@@ -1013,8 +1033,8 @@ export default function WorkOrder() {
                               <h2 className="text-sm font-semibold text-gray-900">Active Work Orders</h2>
                               <p className="text-[10px] text-gray-500 mt-0.5">Real-time production tracking</p>
                             </div>
-                            <div className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-medium flex items-center gap-1.5">
-                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <div className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded  text-[10px] font-medium flex items-center gap-1.5">
+                              <div className="w-1.5 h-1.5 rounded  bg-emerald-500 animate-pulse" />
                               {activeOrders.length} Orders Active
                             </div>
                           </div>
@@ -1129,11 +1149,11 @@ export default function WorkOrder() {
                                 <span className="italic">Aggregated production lifecycle for {group.id}</span>
                                 <div className="flex gap-6">
                                   <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                                    <div className="w-1.5 h-1.5 rounded  bg-gray-300" />
                                     <span>Target FG: <strong>{group.fgQuantity}</strong></span>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                    <div className="w-1.5 h-1.5 rounded  bg-emerald-500" />
                                     <span className="text-emerald-600 font-medium">Delivered: {group.fgProduced} units</span>
                                   </div>
                                 </div>

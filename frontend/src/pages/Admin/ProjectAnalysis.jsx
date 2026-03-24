@@ -26,7 +26,7 @@ const StatusBadge = ({ status }) => {
 
   return (
     <div
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] "
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded  text-[10px] "
       style={{
         backgroundColor: config.bg,
         border: `1px solid ${config.border}`,
@@ -41,14 +41,14 @@ const StatusBadge = ({ status }) => {
 
 const StatCard = ({ label, value, icon: Icon, trend, trendValue, bgColor, iconColor, textColor }) => (
   <div className="bg-white rounded p-2 border border-slate-200 hover: hover:border-blue-200 transition-all group relative overflow-hidden">
-    <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full ${bgColor} opacity-5 group-hover:opacity-10 transition-opacity`} />
+    <div className={`absolute -right-6 -top-6 w-24 h-24 rounded  ${bgColor} opacity-5 group-hover:opacity-10 transition-opacity`} />
     <div className="relative z-0">
       <div className="flex items-center justify-between mb-3">
-        <div className={`w-10 h-10  ${bgColor} ${iconColor} flex items-center justify-center `}>
+        <div className={`w-6 h-6  ${bgColor} ${iconColor} flex items-center justify-center `}>
           <Icon size={20} />
         </div>
         {trend && (
-          <div className={`flex items-center gap-1 text-[10px]  px-2 py-1 rounded-full ${trend === 'up' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+          <div className={`flex items-center gap-1 text-[10px]  px-2 py-1 rounded  ${trend === 'up' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
             {trend === 'up' ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
             {trendValue}
           </div>
@@ -125,8 +125,8 @@ export default function ProjectAnalysis() {
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
       <div className="relative">
-        <div className="w-16 h-16 border-4 border-slate-200 rounded-full" />
-        <div className="absolute top-0 left-0 w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-16 h-16 border-4 border-slate-200 rounded " />
+        <div className="absolute top-0 left-0 w-16 h-16 border-4 border-blue-600 border-t-transparent rounded  animate-spin" />
       </div>
       <p className="text-slate-500  mt-6 animate-pulse   text-xs">Analyzing Project Portfolio...</p>
     </div>
@@ -140,7 +140,7 @@ export default function ProjectAnalysis() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-blue-600 rounded flex items-center justify-center text-white  shadow-blue-200">
+            <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white  shadow-blue-200">
               <Activity size={15} />
             </div>
             <h1 className="text-xl  text-slate-900 m-0 tracking-tight">Project Matrix</h1>
@@ -271,7 +271,7 @@ export default function ProjectAnalysis() {
             </div>
             <div className="flex items-center gap-2 text-slate-500  text-[10px]  ">
             <span className="bg-blue-50 text-blue-700 p-1 rounded border border-blue-100 flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+              <div className="w-1.5 h-1.5 rounded  bg-blue-600 animate-pulse" />
               {filteredProjects.length} RESULTS IDENTIFIED
             </span>
           </div>
@@ -365,7 +365,7 @@ export default function ProjectAnalysis() {
                             {project.produced_qty || 0} / {project.planned_qty || 0}
                           </span>
                         </div>
-                        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                        <div className="h-2 w-full bg-slate-100 rounded  overflow-hidden shadow-inner">
                           <div
                             className={`h-full transition-all duration-1000 ease-out ${project.progress === 100 ? 'bg-emerald-500' :
                                 project.progress > 70 ? 'bg-blue-500' :
@@ -388,7 +388,7 @@ export default function ProjectAnalysis() {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleViewProject(project.id)}
-                          className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-600 hover:bg-blue-600 hover:text-white hover:border-blue-600  transition-all "
+                          className="w-6 h-6 flex items-center justify-center bg-white border border-slate-200 text-slate-600 hover:bg-blue-600 hover:text-white hover:border-blue-600  transition-all "
                         >
                           <Eye size={15} />
                         </button>
@@ -430,7 +430,7 @@ export default function ProjectAnalysis() {
                       <span className="text-[10px]  text-slate-400  ">Progress</span>
                       <span className="text-xs  text-slate-900">{project.progress}%</span>
                     </div>
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-2 w-full bg-slate-100 rounded  overflow-hidden">
                       <div
                         className={`h-full transition-all duration-1000 ${project.progress === 100 ? 'bg-emerald-500' : 'bg-blue-600'}`}
                         style={{ width: `${project.progress}%` }}
@@ -469,7 +469,7 @@ export default function ProjectAnalysis() {
 
         {filteredProjects.length === 0 && (
           <div className="py-24 flex flex-col items-center justify-center bg-white">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-6 border border-dashed border-slate-200">
+            <div className="w-20 h-20 bg-slate-50 rounded  flex items-center justify-center text-slate-300 mb-6 border border-dashed border-slate-200">
               <Search size={32} />
             </div>
             <h3 className="text-lg  text-slate-900 mb-2 tracking-tight">No Strategic Data Found</h3>
@@ -492,8 +492,8 @@ export default function ProjectAnalysis() {
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-sm  text-slate-900 m-0 ">Timeline Analytics</h3>
             <div className="flex items-center gap-2 text-[10px] ">
-              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500" /> PRODUCTION</div>
-              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-slate-200" /> FORECAST</div>
+              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded  bg-blue-500" /> PRODUCTION</div>
+              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded  bg-slate-200" /> FORECAST</div>
             </div>
           </div>
           <div className="h-72">

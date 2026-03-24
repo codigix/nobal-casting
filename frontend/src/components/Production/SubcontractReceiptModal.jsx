@@ -118,7 +118,7 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
           </div>
           <button 
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded  transition-colors"
           >
             <X size={20} />
           </button>
@@ -232,7 +232,7 @@ export default function SubcontractReceiptModal({ isOpen, onClose, jobCard, onRe
               className="flex items-center gap-2 p-2  bg-emerald-600 text-white rounded  text-sm  hover:bg-emerald-700 transition-all  shadow-emerald-100 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
             >
               {loading ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded  animate-spin" />
               ) : (
                 <CheckCircle2 size={16} />
               )}

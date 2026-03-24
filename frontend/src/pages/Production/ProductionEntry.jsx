@@ -185,7 +185,7 @@ const SectionTitle = ({ title, icon: Icon, badge, subtitle }) => (
         <h3 className="text-xs  text-slate-900">{title}</h3>
       </div>
       {badge && (
-        <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs  rounded-full border border-slate-200">
+        <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs  rounded  border border-slate-200">
           {badge}
         </span>
       )}
@@ -332,7 +332,7 @@ const ProductionRibbon = ({
           <div>
             <p className="text-xs   text-slate-400  mb-2">Current Op</p>
             <div className="flex items-center gap-3">
-              <div className="w-2.5 h-2.5 rounded-full bg-violet-500 animate-pulse shrink-0 ring-4 ring-violet-50" />
+              <div className="w-2.5 h-2.5 rounded  bg-violet-500 animate-pulse shrink-0 ring-4 ring-violet-50" />
               <span className="text-xs  text-violet-600 truncate font-medium">
                 {jobCardData?.operation || 'N/A'}
               </span>
@@ -342,7 +342,7 @@ const ProductionRibbon = ({
           <div className="border-l border-slate-100 pl-6">
             <p className="text-xs   text-slate-400  mb-2">Assignee</p>
             <div className="flex items-center gap-2">
-              <div className="w-5 h-5 bg-indigo-50 rounded-full flex items-center justify-center text-[10px] text-indigo-600  border border-indigo-100">
+              <div className="w-5 h-5 bg-indigo-50 rounded  flex items-center justify-center text-[10px] text-indigo-600  border border-indigo-100">
                 {(jobCardData?.assignee_name || jobCardData?.operator_name || 'U').charAt(0)}
               </div>
               <span className="text-xs  text-slate-700 font-medium">
@@ -643,7 +643,7 @@ export default function ProductionEntry() {
         </select>
       ) : (
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-xs text-slate-500 ">
+          <div className="w-6 h-6 bg-slate-100 rounded  flex items-center justify-center text-xs text-slate-500 ">
             {val?.charAt(0) || 'U'}
           </div>
           <span className="truncate max-w-[80px] text-xs font-medium">{val || 'N/A'}</span>
@@ -2355,7 +2355,7 @@ export default function ProductionEntry() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-4">
-        <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
+        <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded  animate-spin" />
         <p className="text-slate-500 font-medium animate-pulse">Syncing Production Environment...</p>
       </div>
     )
@@ -2394,7 +2394,7 @@ export default function ProductionEntry() {
                 disabled={isSubmitting}
                 className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50 shadow-lg shadow-emerald-200 transition-all text-xs "
               >
-                {isSubmitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircle size={15} />}
+                {isSubmitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded  animate-spin" /> : <CheckCircle size={15} />}
                 Complete Production
               </button>
             )}
@@ -2403,7 +2403,7 @@ export default function ProductionEntry() {
 
         {jobCardData?.execution_mode === 'OUTSOURCE' && (
           <div className="mb-6 p-8 bg-indigo-50 border-2 border-dashed border-indigo-200 rounded text-center">
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl shadow-indigo-100">
+            <div className="w-16 h-16 bg-white rounded  flex items-center justify-center mx-auto mb-4 shadow-xl shadow-indigo-100">
               <Package className="text-indigo-600" size={32} />
             </div>
             <h2 className="text-xl  text-slate-900 mb-2">Outsource Operation</h2>
@@ -2454,7 +2454,7 @@ export default function ProductionEntry() {
               {previousOperationData && (
                 <div className="bg-emerald-50/20 border border-emerald-100 rounded p-4 flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded flex items-center justify-center"><CheckCircle size={20} /></div>
+                    <div className="w-6 h-6 bg-emerald-100 text-emerald-600 rounded flex items-center justify-center"><CheckCircle size={20} /></div>
                     <div>
                       <p className="text-xs  tracking-wider text-emerald-600 ">Previous Phase Complete</p>
                       <h3 className="text-xs  text-slate-900">{previousOperationData.operation}</h3>
@@ -2488,7 +2488,7 @@ export default function ProductionEntry() {
                     if (shiftDowntime === 0) return null;
 
                     return (
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-full text-amber-700 animate-in fade-in slide-in-from-right-4 duration-500">
+                      <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded  text-amber-700 animate-in fade-in slide-in-from-right-4 duration-500">
                         <AlertTriangle size={14} className="animate-pulse" />
                         <span className="text-[10px]  uppercase tracking-tight">Shift Downtime:</span>
                         <span className="text-xs font-black">{shiftDowntime} mins</span>
@@ -2752,7 +2752,7 @@ export default function ProductionEntry() {
                       disabled={isSubmitting || (hasPendingApproval && totalAcceptedQty === 0)}
                       className={`flex items-center gap-3 px-8 py-3 rounded  transition-all shadow-lg active:scale-95 text-white ${isOperationFinished ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'}`}
                     >
-                      {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : (isOperationFinished ? <CheckCircle2 size={20} /> : <ArrowRight size={20} />)}
+                      {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded  animate-spin" /> : (isOperationFinished ? <CheckCircle2 size={20} /> : <ArrowRight size={20} />)}
                       {isOperationFinished ? 'Finalize & Dispatch' : `Transfer ${transferableQty.toFixed(0)} Units`}
                     </button>
                   )}

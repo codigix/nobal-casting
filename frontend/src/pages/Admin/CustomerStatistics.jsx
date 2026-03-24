@@ -58,7 +58,7 @@ const DetailModal = ({ isOpen, item, onClose, detailedData, loading }) => {
           </div>
           <button 
             onClick={onClose} 
-            className="w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded transition-all hover:rotate-90 text-white relative z-10"
+            className="w-6 h-6 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded transition-all hover:rotate-90 text-white relative z-10"
           >
             <X size={15} />
           </button>
@@ -280,7 +280,7 @@ const DetailModal = ({ isOpen, item, onClose, detailedData, loading }) => {
                   <h4 className="text-xs  text-blue-400   mb-2 border-b border-white/10 pb-4">Partner Profile</h4>
                   <div className="space-y-2">
                     <div className="flex gap-2">
-                      <div className="w-10 h-10 bg-white/5 rounded flex items-center justify-center text-blue-400 shrink-0"><Users size={18} /></div>
+                      <div className="w-6 h-6 bg-white/5 rounded flex items-center justify-center text-blue-400 shrink-0"><Users size={18} /></div>
                       <div>
                         <p className="text-xs text-slate-500    mb-1">Point of Contact</p>
                         <p className="text-sm font-semibold m-0">{profile.email || 'N/A'}</p>
@@ -288,14 +288,14 @@ const DetailModal = ({ isOpen, item, onClose, detailedData, loading }) => {
                       </div>
                     </div>
                     <div className="flex gap-4">
-                      <div className="w-10 h-10 bg-white/5 rounded flex items-center justify-center text-emerald-400 shrink-0"><Award size={18} /></div>
+                      <div className="w-6 h-6 bg-white/5 rounded flex items-center justify-center text-emerald-400 shrink-0"><Award size={18} /></div>
                       <div>
                         <p className="text-xs text-slate-500    mb-1">Fiscal ID (GSTIN)</p>
                         <p className="text-sm   m-0">{profile.gstin || 'UNREGISTERED'}</p>
                       </div>
                     </div>
                     <div className="flex gap-4">
-                      <div className="w-10 h-10 bg-white/5 rounded flex items-center justify-center text-amber-400 shrink-0"><TrendingUp size={18} /></div>
+                      <div className="w-6 h-6 bg-white/5 rounded flex items-center justify-center text-amber-400 shrink-0"><TrendingUp size={18} /></div>
                       <div>
                         <p className="text-xs text-slate-500    mb-1">Alliance Start</p>
                         <p className="text-sm font-semibold m-0">{profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</p>

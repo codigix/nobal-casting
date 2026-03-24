@@ -283,7 +283,7 @@ export default function Suppliers() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-neutral-50 dark:bg-neutral-950">
-        <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-2 mb-4 animate-pulse">
+        <div className="rounded  bg-neutral-100 dark:bg-neutral-800 p-2 mb-4 animate-pulse">
           <Users size={40} className="text-neutral-400 dark:text-neutral-600" />
         </div>
         <p className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">Loading suppliers...</p>
@@ -554,7 +554,7 @@ export default function Suppliers() {
 
         {filteredSuppliers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-neutral-900 rounded-xs border border-neutral-200 dark:border-neutral-800">
-            <div className="rounded-full bg-neutral-100 dark:bg-neutral-800 p-2 mb-4">
+            <div className="rounded  bg-neutral-100 dark:bg-neutral-800 p-2 mb-4">
               <Users size={40} className="text-neutral-400 dark:text-neutral-600" />
             </div>
             <h3 className="text-lg  text-neutral-900 dark:text-white mb-2">No Suppliers Found</h3>

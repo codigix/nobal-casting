@@ -94,14 +94,14 @@ const SectionHeader = ({ title, icon: Icon, subtitle, isExpanded, onToggle, them
           {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
         </div>
         {badge && (
-          <span className={`px-2 py-0.5 ${theme.bg} ${theme.text} text-xs   rounded-full border ${theme.border} `}>
+          <span className={`px-2 py-0.5 ${theme.bg} ${theme.text} text-xs   rounded  border ${theme.border} `}>
             {badge}
           </span>
         )}
       </div>
       <div className="flex items-center gap-3">
         {actions && <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>{actions}</div>}
-        <div className={`p-1.5 rounded-full transition-all duration-300 ${isExpanded ? `${theme.bg} ${theme.text}` : 'text-slate-300'}`}>
+        <div className={`p-1.5 rounded  transition-all duration-300 ${isExpanded ? `${theme.bg} ${theme.text}` : 'text-slate-300'}`}>
           <ChevronDown size={18} className={`transform transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
         </div>
       </div>
@@ -135,7 +135,7 @@ const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = '
         <Icon size={10} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
       </div>
       <span className="text-xs ">{label.split(' ').slice(1).join(' ')}</span>
-      {isActive && <div className="w-1 h-1 rounded-full bg-current animate-pulse ml-0.5" />}
+      {isActive && <div className="w-1 h-1 rounded  bg-current animate-pulse ml-0.5" />}
     </button>
   )
 }
@@ -394,6 +394,7 @@ export default function ProductionPlanningForm() {
             project_name: plan.project_name || '',
             plan_date: plan.plan_date ? plan.plan_date.split('T')[0] : new Date().toISOString().split('T')[0],
             expected_completion_date: plan.expected_completion_date ? plan.expected_completion_date.split('T')[0] : '',
+            expected_delivery_date: plan.expected_delivery_date || '',
             status: plan.status || 'draft'
           })
 
@@ -852,7 +853,8 @@ export default function ProductionPlanningForm() {
     setPlanHeader(prev => ({ 
       ...prev, 
       sales_order_id: soId,
-      project_name: selectedSO?.project_name || ''
+      project_name: selectedSO?.project_name || '',
+      expected_delivery_date: selectedSO?.delivery_date || ''
     }))
     setSelectedSalesOrders([soId])
   }
@@ -899,6 +901,12 @@ export default function ProductionPlanningForm() {
       item_name: itemName
     }
     setSelectedSalesOrderDetails(enrichedDetails)
+    
+    // Also update expected_delivery_date in header
+    setPlanHeader(prev => ({
+      ...prev,
+      expected_delivery_date: soDetails.delivery_date || ''
+    }))
 
     const fg = {
       item_code: itemCode,
@@ -2076,8 +2084,8 @@ export default function ProductionPlanningForm() {
                     <div className="flex items-center justify-between text-xs mb-1">
                       <span className="opacity-80 text-white">Production Progress</span>
                     </div>
-                    <div className="w-24 bg-white/20 rounded-full h-1">
-                      <div className="bg-white rounded-full h-full w-0 transition-all duration-1000"></div>
+                    <div className="w-24 bg-white/20 rounded  h-1">
+                      <div className="bg-white rounded  h-full w-0 transition-all duration-1000"></div>
                     </div>
                   </div>
                   <TrendingUp size={16} className="text-white" />
@@ -2160,6 +2168,15 @@ export default function ProductionPlanningForm() {
                         />
                       </FieldWrapper>
 
+                      <FieldWrapper label="Expected Delivery Date">
+                        <input
+                          type="date"
+                          value={planHeader.expected_delivery_date ? planHeader.expected_delivery_date.split('T')[0] : ''}
+                          disabled={true}
+                          className="w-full p-2 border border-slate-200 rounded text-xs bg-slate-50 text-rose-500 cursor-not-allowed outline-none transition-all font-semibold"
+                        />
+                      </FieldWrapper>
+
                       <FieldWrapper label="Source Sales Order" required>
                         <SearchableSelect
                           options={salesOrders.map(so => ({
@@ -2182,7 +2199,7 @@ export default function ProductionPlanningForm() {
                           <input
                             type="number"
                             value={salesOrderQuantity}
-                            disabled={isReadOnly}
+                            disabled={isReadOnly || !!plan_id}
                             onChange={(e) => {
                               const qty = parseInt(e.target.value) || 1
                               setSalesOrderQuantity(qty)
@@ -2191,7 +2208,7 @@ export default function ProductionPlanningForm() {
                               }
                             }}
                             min="1"
-                            className={`w-full pl-4 pr-12 py-2  border border-slate-200 rounded text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-medium ${isReadOnly ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : 'text-slate-900 bg-white'}`}
+                            className={`w-full pl-4 pr-12 py-2  border border-slate-200 rounded text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-medium ${(isReadOnly || !!plan_id) ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : 'text-slate-900 bg-white'}`}
                           />
                           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs    text-slate-400 ">UNIT</div>
                         </div>
@@ -2358,7 +2375,7 @@ export default function ProductionPlanningForm() {
                                                         {isSubAsm && <Layers size={10} className="text-rose-500" />}
                                                         <div className={`font-medium ${isSubAsm ? 'text-rose-700' : 'text-slate-900'}`}>{mCode}</div>
                                                         {isSubAsm && (
-                                                          <span className="px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 text-[8px]   tracking-wider">
+                                                          <span className="px-1.5 py-0.5 rounded  bg-rose-100 text-rose-600 text-[8px]   tracking-wider">
                                                             Sub-Assembly
                                                           </span>
                                                         )}
@@ -2877,7 +2894,7 @@ export default function ProductionPlanningForm() {
 
               <div className="space-y-3">
                 <div className="flex items-center gap-2 mb-1">
-                  <div className="w-1.5 h-4 bg-emerald-500 rounded-full" />
+                  <div className="w-1.5 h-4 bg-emerald-500 rounded " />
                   <h3 className="text-xs  text-slate-900 ">Requested Components ({materialRequestData.items.length})</h3>
                 </div>
                 <div className="rounded border border-slate-100 overflow-hidden  ">
@@ -2919,7 +2936,7 @@ export default function ProductionPlanningForm() {
                               {checkingStock ? (
                                 <span className="inline-block w-16 h-4 bg-slate-100 animate-pulse rounded" />
                               ) : (
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px]  border transition-all ${isAvailable
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded  text-[10px]  border transition-all ${isAvailable
                                     ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
                                     : 'bg-rose-50 text-rose-600 border-rose-100'
                                   }`}>

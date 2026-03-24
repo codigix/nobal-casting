@@ -212,7 +212,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
     return (
       <Modal isOpen={isOpen} onClose={onClose} title="Create New Purchase Order" size="3xl">
         <div className="flex flex-col items-center justify-center py-12">
-          <div className="w-10 h-10 border-4 border-neutral-200 border-t-primary-600 rounded-full animate-spin"></div>
+          <div className="w-6 h-6 border-4 border-neutral-200 border-t-primary-600 rounded  animate-spin"></div>
           <p className="mt-4 text-neutral-500">Loading required data...</p>
         </div>
       </Modal>
@@ -298,7 +298,7 @@ export default function CreatePurchaseOrderModal({ isOpen, onClose, onSuccess })
 
           {supplierDetails && (
             <div className="mx-4 mb-4 p-3 bg-green-50 rounded  border border-green-100 flex items-center gap-3">
-              <div className="p-1.5 bg-green-100 rounded-full">
+              <div className="p-1.5 bg-green-100 rounded ">
                 <CheckCircle size={14} className="text-green-600" />
               </div>
               <div className="text-xs text-green-700 flex flex-wrap gap-x-4 gap-y-1">

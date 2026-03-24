@@ -23,7 +23,7 @@ const SectionTitle = ({ title, icon: Icon, badge }) => (
       <h3 className="text-sm  text-slate-900 ">{title}</h3>
     </div>
     {badge && (
-      <span className="p-2 bg-slate-100 text-slate-500 text-xs rounded-full border border-slate-200 text-xs ">
+      <span className="p-2 bg-slate-100 text-slate-500 text-xs rounded  border border-slate-200 text-xs ">
         {badge}
       </span>
     )}
@@ -47,7 +47,7 @@ const StatusBadge = ({ status }) => {
   const { color, icon: Icon, label } = config[s] || config[statusKey] || config.pending
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-medium border ${color}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded  text-[9px] font-medium border ${color}`}>
       <Icon size={10} />
       {label || s.toUpperCase()}
     </span>
@@ -790,7 +790,7 @@ const EntryCard = ({ item, statusKey = 'status' }) => {
     <Card className="p-4 border-none hover: hover:shadow-slate-200/50 bg-white rounded  group transition-all">
       <div className="flex justify-between items-start gap-3 mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded  bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+          <div className="w-6 h-6 rounded  bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
             <Package size={20} />
           </div>
           <div>
@@ -826,7 +826,7 @@ const CustomTooltip = ({ active, payload, label }) => {
           {payload.map((entry, index) => (
             <div key={index} className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                <div className="w-2 h-2 rounded " style={{ backgroundColor: entry.color }} />
                 <span className="text-xs   text-slate-500 text-xs">{entry.name}</span>
               </div>
               <span className="text-xs  text-slate-900">{entry.value}</span>
@@ -846,7 +846,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
         <h3 className="text-sm  text-slate-900 ">{title}</h3>
         {subtitle && <p className="text-xs  text-slate-400  mt-0.5">{subtitle}</p>}
       </div>
-      <div className="w-10 h-10 rounded  bg-white border border-slate-100 flex items-center justify-center text-indigo-600  ">
+      <div className="w-6 h-6 rounded  bg-white border border-slate-100 flex items-center justify-center text-indigo-600  ">
         <BarChart3 size={18} />
       </div>
     </div>
@@ -860,7 +860,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
     return (
       <div className="min-h-screen w-fullp-3   flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <div className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded  animate-spin mb-4"></div>
           <p className="text-gray-600">Loading dashboard...</p>
         </div>
       </div>
@@ -1243,7 +1243,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
           {dataEntries.workOrders.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <div className="w-1 h-4 bg-indigo-600 rounded-full" />
+                <div className="w-1 h-4 bg-indigo-600 rounded " />
                 <h3 className="text-xs   text-slate-900 ">Work Order Registry ({dataEntries.workOrders.length})</h3>
               </div>
               <div className="grid grid-cols-1 gap-4">
@@ -1332,7 +1332,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
           {dataEntries.boms.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <div className="w-1 h-4 bg-indigo-600 rounded-full" />
+                <div className="w-1 h-4 bg-indigo-600 rounded " />
                 <h3 className="text-xs   text-slate-900 ">BOM Repository ({dataEntries.boms.length})</h3>
               </div>
               <div className="grid grid-cols-1 gap-4">
@@ -1433,7 +1433,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
           {dataEntries.productionPlans.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <div className="w-1 h-4 bg-indigo-600 rounded-full" />
+                <div className="w-1 h-4 bg-indigo-600 rounded " />
                 <h3 className="text-xs   text-slate-900 ">Strategy Catalog ({dataEntries.productionPlans.length})</h3>
               </div>
               <div className="grid grid-cols-1 gap-4">
@@ -1545,7 +1545,7 @@ const ChartContainer = ({ children, title, subtitle }) => (
           {dataEntries.jobCards.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <div className="w-1 h-4 bg-indigo-600 rounded-full" />
+                <div className="w-1 h-4 bg-indigo-600 rounded " />
                 <h3 className="text-xs   text-slate-900 ">Job Card Ledger ({dataEntries.jobCards.length})</h3>
               </div>
               <div className="grid grid-cols-1 gap-4">

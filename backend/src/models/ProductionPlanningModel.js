@@ -23,7 +23,7 @@ export class ProductionPlanningModel {
   async getPlanById(plan_id) {
     try {
       const [plans] = await this.db.execute(
-        `SELECT pp.*, i.name as bom_product_name, b.item_code as bom_item_code, sso.project_name 
+        `SELECT pp.*, i.name as bom_product_name, b.item_code as bom_item_code, sso.project_name, sso.delivery_date as expected_delivery_date 
          FROM production_plan pp
          LEFT JOIN bom b ON pp.bom_id = b.bom_id
          LEFT JOIN item i ON b.item_code = i.item_code
@@ -42,7 +42,7 @@ export class ProductionPlanningModel {
          LEFT JOIN item i ON pg.item_code = i.item_code 
          WHERE pg.plan_id = ?`,
         [plan_id]
-      ).catch(() => [])
+      ).catch(() => [[]])
 
       const [subAssemblies] = await this.db.execute(
         `SELECT psa.*, i.name as item_name, psa.bom_no 
@@ -51,7 +51,7 @@ export class ProductionPlanningModel {
          WHERE psa.plan_id = ?
          ORDER BY psa.explosion_level DESC, psa.id ASC`,
         [plan_id]
-      ).catch(() => [])
+      ).catch(() => [[]])
 
       const [rawMaterials] = await this.db.execute(
         `SELECT prm.*, i.name as item_name 
@@ -59,14 +59,14 @@ export class ProductionPlanningModel {
          LEFT JOIN item i ON prm.item_code = i.item_code 
          WHERE prm.plan_id = ?`,
         [plan_id]
-      ).catch(() => [])
+      ).catch(() => [[]])
 
       const [operations] = await this.db.execute(
         `SELECT * FROM production_plan_operations 
          WHERE plan_id = ? 
          ORDER BY FIELD(operation_type, 'SA', 'IN_HOUSE', 'FG') ASC, CAST(SUBSTRING_INDEX(job_card_id, "-", -1) AS UNSIGNED) ASC`,
         [plan_id]
-      ).catch(() => [])
+      ).catch(() => [[]])
 
       const mappedSubAssemblies = subAssemblies.map(item => ({
         ...item,
@@ -151,7 +151,7 @@ export class ProductionPlanningModel {
   async getAllPlans() {
     try {
       const [plans] = await this.db.execute(
-        `SELECT pp.*, i.name as bom_product_name, b.item_code as bom_item_code, sso.project_name 
+        `SELECT pp.*, i.name as bom_product_name, b.item_code as bom_item_code, sso.project_name, sso.delivery_date as expected_delivery_date 
          FROM production_plan pp
          LEFT JOIN bom b ON pp.bom_id = b.bom_id
          LEFT JOIN item i ON b.item_code = i.item_code

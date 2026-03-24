@@ -111,7 +111,7 @@ export default function CashFlow() {
       <main className="flex-1 max-w-[1000px] w-full mx-auto px-4 lg:px-8 py-8 space-y-8">
         {/* Net Cash Flow Card */}
         <div className="bg-white border border-neutral-200 rounded  p-8 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full -mr-32 -mt-32 blur-3xl" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded  -mr-32 -mt-32 blur-3xl" />
           <div className="relative z-0">
             <h2 className="text-[11px]   tracking-[0.3em] text-neutral-400 mb-2">Net Cash Flow</h2>
             <div className="flex items-baseline gap-3">

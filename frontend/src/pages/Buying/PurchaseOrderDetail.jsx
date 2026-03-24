@@ -11,7 +11,7 @@ import { useToast } from '../../components/ToastContainer'
 import { 
   ArrowLeft, CheckCircle, XCircle, Clock, Package, User, ChevronRight, 
   Truck, FileCheck, IndianRupee, Send, Printer, Download, Edit2, 
-  Calendar, Building2, MapPin, CreditCard, Info, Receipt
+  Calendar, Building2, MapPin, CreditCard, Info, Receipt, ClipboardList
 } from 'lucide-react'
 import './Buying.css'
 
@@ -38,6 +38,7 @@ export default function PurchaseOrderDetail() {
     try {
       const res = await api.get(`/purchase-orders/${po_no}`)
       if (res.data.success) {
+        console.log('Fetched PO Details:', res.data.data)
         setPo(res.data.data)
       } else {
         setError(res.data.error || 'Failed to fetch Purchase Order')
@@ -97,7 +98,7 @@ export default function PurchaseOrderDetail() {
     return (
       <div className="py-12 text-center">
         <div className="inline-block">
-          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded  animate-spin"></div>
           <p className="text-neutral-600 dark:text-neutral-400 mt-2">Loading PO details...</p>
         </div>
       </div>
@@ -135,7 +136,7 @@ export default function PurchaseOrderDetail() {
             <Button
               variant="icon"
               onClick={() => navigate('/buying/purchase-orders')}
-              className="w-10 h-10 rounded  bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 border border-neutral-200 dark:border-neutral-700 transition-all active:scale-95"
+              className="w-6 h-6 rounded  bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 border border-neutral-200 dark:border-neutral-700 transition-all active:scale-95"
             >
               <ArrowLeft size={15} />
             </Button>
@@ -274,7 +275,7 @@ export default function PurchaseOrderDetail() {
                 const isActive = po.status === step.status
                 return (
                   <div key={idx} className="flex flex-col items-center gap-2 relative z-0 bg-white dark:bg-neutral-900 px-2">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${
+                    <div className={`w-8 h-8 rounded  flex items-center justify-center border-2 transition-all ${
                       isActive ? 'bg-indigo-600 border-indigo-200 dark:border-indigo-500/50 text-white' : 
                       isCompleted ? 'bg-emerald-500 border-emerald-100 dark:border-emerald-500/50 text-white' : 
                       'bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-400 dark:text-neutral-500'
@@ -292,11 +293,23 @@ export default function PurchaseOrderDetail() {
         </div>
 
         {/* KPI Summary Grid - Full Width */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
           <Card className="relative overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover: transition-all duration-300 group">
-            <div className="absolute -right-4 -top-4 p-3 text-neutral-500/10 dark:text-neutral-400/10 group-hover:scale-110 transition-transform duration-500">
-              <Building2 size={84} />
+            
+            <div className="p-2 relative z-0">
+              <p className="text-xs text-neutral-400 dark:text-neutral-500  mb-2">Finished Goods</p>
+              <h3 className="text-lg text-indigo-600 dark:text-indigo-400   " title={po.finished_goods_name || 'No FG Linked'}>
+                {po.finished_goods_name || 'Internal'}
+              </h3>
+              {/* <div className="mt-2 flex items-center gap-2 text-[10px] text-neutral-400 dark:text-neutral-500 bg-neutral-50 dark:bg-neutral-800/50 w-fit p-1 rounded border border-neutral-100 dark:border-neutral-800 ">
+                <Package size={12} />
+                PARENT PRODUCT
+              </div> */}
             </div>
+          </Card>
+
+          <Card className="relative overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover: transition-all duration-300 group">
+            
             <div className="p-2 relative z-0">
               <p className="text-xs text-neutral-400 dark:text-neutral-500  mb-2">Supplier</p>
               <h3 className="text-xl text-neutral-900 dark:text-white ">{po.supplier_name}</h3>
@@ -308,22 +321,18 @@ export default function PurchaseOrderDetail() {
           </Card>
 
           <Card className="relative overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover: transition-all duration-300 group">
-            <div className="absolute -right-4 -top-4 p-3 text-neutral-500/10 dark:text-neutral-400/10 group-hover:scale-110 transition-transform duration-500">
-              <IndianRupee size={84} />
-            </div>
+           
             <div className="p-2 relative z-0">
-              <p className="text-xs text-neutral-400 dark:text-neutral-500  mb-2">Total Value</p>
-              <h3 className="text-xl  text-neutral-900 dark:text-white ">₹{total.toLocaleString('en-IN')}</h3>
+              <p className="text-xs text-neutral-400 dark:text-neutral-500  mb-1">Total Value</p>
+              <h3 className="text-lg text-neutral-900 dark:text-white ">₹{total.toLocaleString('en-IN')}</h3>
               <p className="text-xs  text-emerald-600 dark:text-emerald-400 mt-2 flex items-center gap-2 ">
-                <CheckCircle size={12} /> INCL. ALL TAXES
+                <CheckCircle size={12} /> Incl. All Taxs
               </p>
             </div>
           </Card>
 
           <Card className="relative overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover: transition-all duration-300 group">
-            <div className="absolute -right-4 -top-4 p-3 text-neutral-500/10 dark:text-neutral-400/10 group-hover:scale-110 transition-transform duration-500">
-              <Calendar size={84} />
-            </div>
+            
             <div className="p-2 relative z-0">
               <p className="text-xs text-neutral-400 dark:text-neutral-500  mb-2">Expected By</p>
               <h3 className="text-lg  text-neutral-900 dark:text-white ">
@@ -349,8 +358,101 @@ export default function PurchaseOrderDetail() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-2">
             {/* Additional Info Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-              <Card className="p-0 overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 ">
+           
+
+            {/* Items Table */}
+            <Card className="overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-0  ">
+              <div className="bg-neutral-50 dark:bg-neutral-800/50 p-2 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center">
+                <h2 className="text-[10px]  text-neutral-900 dark:text-white flex items-center gap-2 ">
+                  <Package size={18} className="text-indigo-600 dark:text-indigo-400" /> Items List
+                </h2>
+                <span className="text-[10px]  text-neutral-400 dark:text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-3 py-1 rounded  ">
+                  {po.items?.length || 0} ITEMS
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left border-collapse">
+                  <thead>
+                    <tr className="bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-200 dark:border-neutral-800">
+                      <th className="p-2 text-xs text-neutral-400 dark:text-neutral-500 ">Item</th>
+                      <th className="p-2 text-xs text-neutral-400 dark:text-neutral-500  text-center">Quantity</th>
+                      <th className="p-2 text-xs text-neutral-400 dark:text-neutral-500  text-center">Received</th>
+                      <th className="p-2 text-xs text-neutral-400 dark:text-neutral-500  text-right">Rate</th>
+                      <th className="p-2 text-xs text-neutral-400 dark:text-neutral-500  text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                    {po.items?.map((item, idx) => {
+                      const received = item.received_qty || 0
+                      const progress = Math.min(100, Math.round((received / item.qty) * 100))
+                      
+                      return (
+                        <tr key={idx} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors group">
+                          <td className="p-2">
+                            <div className="text-xs  text-neutral-900 dark:text-white  group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{item.item_code}</div>
+                            <div className="text-xs text-neutral-400 dark:text-neutral-500  mt-0.5">{item.item_name}</div>
+                          </td>
+                          <td className="p-2 text-center">
+                            <div className="inline-flex gap-1 items-center justify-center min-w-[80px] items-center p-2 rounded  bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
+                              <span className="text-xs  text-neutral-900 dark:text-white leading-none">{(item.qty || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                              <span className="text-xs text-neutral-400 dark:text-neutral-500 ">{item.uom}</span>
+                            </div>
+                          </td>
+                          <td className="p-2">
+                            <div className="max-w-[140px] mx-auto">
+                              <div className="flex justify-between items-end mb-1.5">
+                                <div className="flex flex-col">
+                                  <span className={`text-[10px]    ${received > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-400 dark:text-neutral-500'}`}>
+                                    {(received || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {item.uom}
+                                  </span>
+                                </div>
+                                <span className="text-[10px]  text-neutral-900 dark:text-white bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded-md border border-neutral-200 dark:border-neutral-700">{progress}%</span>
+                              </div>
+                              <div className="w-full h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded  overflow-hidden border border-neutral-200 dark:border-neutral-700">
+                                <div 
+                                  className={`h-full transition-all duration-700 ease-out rounded  ${
+                                    progress === 100 ? 'bg-emerald-500' : 
+                                    progress > 0 ? 'bg-indigo-600' : 'bg-neutral-200 dark:bg-neutral-700'
+                                  }`}
+                                  style={{ width: `${progress}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-2 text-right">
+                            <span className="text-xs  text-neutral-600 dark:text-neutral-400">₹{(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                          </td>
+                          <td className="p-2 text-right">
+                            <span className="text-xs text-neutral-900 dark:text-white">₹{((item.qty || 0) * (item.rate || 0)).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot className="bg-neutral-50/50 dark:bg-neutral-800/30">
+                    <tr className="border-t border-neutral-200 dark:border-neutral-800">
+                      <td colSpan="4" className="p-2 text-right text-xs text-neutral-400 dark:text-neutral-500 ">Subtotal</td>
+                      <td className="p-2 text-right text-xs text-neutral-900 dark:text-white">₹{(subtotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</td>
+                    </tr>
+                    {po.tax_rate > 0 && (
+                      <tr className="border-t border-neutral-100 dark:border-neutral-800/50">
+                        <td colSpan="4" className="p-2 text-right text-xs text-neutral-400 dark:text-neutral-500 ">Tax ({po.tax_rate}%)</td>
+                        <td className="p-2 text-right text-sm  text-emerald-600 dark:text-emerald-400">+ ₹{(taxAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</td>
+                      </tr>
+                    )}
+                    <tr className="bg-indigo-600 dark:bg-indigo-600/10 border-t-2 border-indigo-200 dark:border-indigo-500/30">
+                      <td colSpan="4" className="p-2 text-right text-xs  text-white dark:text-indigo-400 ">Grand Total</td>
+                      <td className="p-2 text-right text-xl  text-white dark:text-indigo-400 ">₹{(total || 0).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </Card>
+          </div>
+
+          {/* Right Column - Meta & Quick Actions */}
+          <div className="">
+             <Card className="p-0 overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 ">
                 <div className="bg-neutral-50 dark:bg-neutral-800/50 p-2 border-b border-neutral-200 dark:border-neutral-800">
                   <h3 className="text-[10px]  text-neutral-900 dark:text-white flex items-center gap-2 ">
                     <MapPin size={16} className="text-indigo-600 dark:text-indigo-400" /> Shipping Details
@@ -405,100 +507,6 @@ export default function PurchaseOrderDetail() {
                   </div>
                 </div>
               </Card>
-            </div>
-
-            {/* Items Table */}
-            <Card className="overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-0  ">
-              <div className="bg-neutral-50 dark:bg-neutral-800/50 p-2 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center">
-                <h2 className="text-[10px]  text-neutral-900 dark:text-white flex items-center gap-2 ">
-                  <Package size={18} className="text-indigo-600 dark:text-indigo-400" /> Items List
-                </h2>
-                <span className="text-[10px]  text-neutral-400 dark:text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-3 py-1 rounded  ">
-                  {po.items?.length || 0} ITEMS
-                </span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left border-collapse">
-                  <thead>
-                    <tr className="bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-200 dark:border-neutral-800">
-                      <th className="p-2 text-xs text-neutral-400 dark:text-neutral-500 ">Item</th>
-                      <th className="p-2 text-xs text-neutral-400 dark:text-neutral-500  text-center">Quantity</th>
-                      <th className="p-2 text-xs text-neutral-400 dark:text-neutral-500  text-center">Received</th>
-                      <th className="p-2 text-xs text-neutral-400 dark:text-neutral-500  text-right">Rate</th>
-                      <th className="p-2 text-xs text-neutral-400 dark:text-neutral-500  text-right">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                    {po.items?.map((item, idx) => {
-                      const received = item.received_qty || 0
-                      const progress = Math.min(100, Math.round((received / item.qty) * 100))
-                      
-                      return (
-                        <tr key={idx} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors group">
-                          <td className="p-2">
-                            <div className="text-xs  text-neutral-900 dark:text-white  group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{item.item_code}</div>
-                            <div className="text-xs text-neutral-400 dark:text-neutral-500  mt-0.5">{item.item_name}</div>
-                          </td>
-                          <td className="p-2 text-center">
-                            <div className="inline-flex gap-1 items-center justify-center min-w-[80px] items-center p-2 rounded  bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
-                              <span className="text-xs  text-neutral-900 dark:text-white leading-none">{(item.qty || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                              <span className="text-xs text-neutral-400 dark:text-neutral-500 ">{item.uom}</span>
-                            </div>
-                          </td>
-                          <td className="p-2">
-                            <div className="max-w-[140px] mx-auto">
-                              <div className="flex justify-between items-end mb-1.5">
-                                <div className="flex flex-col">
-                                  <span className={`text-[10px]    ${received > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-neutral-400 dark:text-neutral-500'}`}>
-                                    {(received || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {item.uom}
-                                  </span>
-                                </div>
-                                <span className="text-[10px]  text-neutral-900 dark:text-white bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded-md border border-neutral-200 dark:border-neutral-700">{progress}%</span>
-                              </div>
-                              <div className="w-full h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden border border-neutral-200 dark:border-neutral-700">
-                                <div 
-                                  className={`h-full transition-all duration-700 ease-out rounded-full ${
-                                    progress === 100 ? 'bg-emerald-500' : 
-                                    progress > 0 ? 'bg-indigo-600' : 'bg-neutral-200 dark:bg-neutral-700'
-                                  }`}
-                                  style={{ width: `${progress}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-2 text-right">
-                            <span className="text-xs  text-neutral-600 dark:text-neutral-400">₹{(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                          </td>
-                          <td className="p-2 text-right">
-                            <span className="text-xs text-neutral-900 dark:text-white">₹{((item.qty || 0) * (item.rate || 0)).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</span>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                  <tfoot className="bg-neutral-50/50 dark:bg-neutral-800/30">
-                    <tr className="border-t border-neutral-200 dark:border-neutral-800">
-                      <td colSpan="4" className="p-2 text-right text-xs text-neutral-400 dark:text-neutral-500 ">Subtotal</td>
-                      <td className="p-2 text-right text-xs text-neutral-900 dark:text-white">₹{(subtotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</td>
-                    </tr>
-                    {po.tax_rate > 0 && (
-                      <tr className="border-t border-neutral-100 dark:border-neutral-800/50">
-                        <td colSpan="4" className="p-2 text-right text-xs text-neutral-400 dark:text-neutral-500 ">Tax ({po.tax_rate}%)</td>
-                        <td className="p-2 text-right text-sm  text-emerald-600 dark:text-emerald-400">+ ₹{(taxAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</td>
-                      </tr>
-                    )}
-                    <tr className="bg-indigo-600 dark:bg-indigo-600/10 border-t-2 border-indigo-200 dark:border-indigo-500/30">
-                      <td colSpan="4" className="p-2 text-right text-xs  text-white dark:text-indigo-400 ">Grand Total</td>
-                      <td className="p-2 text-right text-xl  text-white dark:text-indigo-400 ">₹{(total || 0).toLocaleString('en-IN', { minimumFractionDigits: 0 })}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </Card>
-          </div>
-
-          {/* Right Column - Meta & Quick Actions */}
-          <div className="space-y-2">
             <Card className="p-0 overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 ">
               <div className="bg-neutral-50 dark:bg-neutral-800/50 p-2 border-b border-neutral-200 dark:border-neutral-800">
                 <h3 className="text-[10px]  text-neutral-900 dark:text-white flex items-center gap-2 ">
@@ -507,7 +515,7 @@ export default function PurchaseOrderDetail() {
               </div>
               <div className="p-2 space-y-2">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded  bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
+                  <div className="w-6 h-6 rounded  bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
                     <User size={15} />
                   </div>
                   <div>
@@ -517,7 +525,7 @@ export default function PurchaseOrderDetail() {
                 </div>
                 
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded  bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
+                  <div className="w-6 h-6 rounded  bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
                     <Calendar size={15} />
                   </div>
                   <div>

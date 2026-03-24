@@ -399,7 +399,7 @@ export default function SalesOrder() {
             <div className="flex items-center gap-2 text-xs font-medium text-slate-400 mt-1">
               <Activity size={12} className="text-blue-500" />
               <span>Real-time Order Tracking</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+              <span className="w-1.5 h-1.5 rounded  bg-slate-200" />
               <span>{stats.total} Active Records</span>
             </div>
           </div>
@@ -435,10 +435,10 @@ export default function SalesOrder() {
         {/* Total Value Card */}
         <div className="bg-white rounded border border-slate-200 p-2 ">
           <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+            <div className="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
               <DollarSign size={20} />
             </div>
-            <div className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+            <div className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded ">
               <TrendingUp size={12} />
               {stats.growth}%
             </div>
@@ -459,10 +459,10 @@ export default function SalesOrder() {
         {/* Active Fulfillment Card */}
         <div className="bg-white rounded border border-slate-200 p-2">
           <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+            <div className="w-6 h-6 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
               <Clock size={20} />
             </div>
-            <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-600 text-[10px]   tracking-tight">Active</span>
+            <span className="px-2 py-1 rounded  bg-amber-50 text-amber-600 text-[10px]   tracking-tight">Active</span>
           </div>
           <div>
             <p className="text-slate-500 text-[10px] ">Active Fulfillment</p>
@@ -475,9 +475,9 @@ export default function SalesOrder() {
                 <span>Production Queue</span>
                 <span>{stats.under_production || 0} Units</span>
               </div>
-              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+              <div className="w-full bg-slate-100 h-1.5 rounded  overflow-hidden">
                 <div
-                  className="bg-amber-500 h-full rounded-full transition-all duration-1000"
+                  className="bg-amber-500 h-full rounded  transition-all duration-1000"
                   style={{ width: `${stats.total > 0 ? ((stats.under_production || 0) / stats.total * 100) : 0}%` }}
                 />
               </div>
@@ -488,11 +488,11 @@ export default function SalesOrder() {
         {/* Critical Alerts Card */}
         <div className="bg-white rounded border border-slate-200 p-2">
           <div className="flex items-center justify-between mb-4">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stats.overdue > 0 ? 'bg-rose-50 text-rose-600 animate-pulse' : 'bg-slate-50 text-slate-400'}`}>
+            <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${stats.overdue > 0 ? 'bg-rose-50 text-rose-600 animate-pulse' : 'bg-slate-50 text-slate-400'}`}>
               <AlertTriangle size={20} />
             </div>
             {stats.overdue > 0 && (
-              <span className="flex h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]"></span>
+              <span className="flex h-2 w-2 rounded  bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]"></span>
             )}
           </div>
           <div>
@@ -510,10 +510,10 @@ export default function SalesOrder() {
         {/* Successful Deliveries Card */}
         <div className="bg-white rounded border border-slate-200 p-2">
           <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+            <div className="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
               <CheckCircle size={20} />
             </div>
-            <span className="px-2 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px]   tracking-tight">Completed</span>
+            <span className="px-2 py-1 rounded  bg-emerald-50 text-emerald-600 text-[10px]   tracking-tight">Completed</span>
           </div>
           <div>
             <p className="text-slate-500 text-[10px] ">Successful Deliveries</p>
@@ -582,7 +582,7 @@ export default function SalesOrder() {
         {loading ? (
           <div className="glass-card flex flex-col items-center justify-center py-22 text-slate-400 border-none">
             <div className="relative mb-6">
-              <div className="h-20 w-20 animate-spin rounded-full border-4 border-slate-100 border-t-blue-600 shadow  shadow-blue-50"></div>
+              <div className="h-20 w-20 animate-spin rounded  border-4 border-slate-100 border-t-blue-600 shadow  shadow-blue-50"></div>
               <ShoppingCart size={32} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-600" />
             </div>
             <p className="text-xs animate-pulse">Syncing Operational Data...</p>

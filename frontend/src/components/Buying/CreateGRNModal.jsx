@@ -430,7 +430,7 @@ export default function CreateGRNModal({ isOpen, onClose, onSuccess, initialPoNo
 
               {grnItems.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-20 text-center px-10">
-                  <div className="w-16 h-16 bg-neutral-50 rounded-full flex items-center justify-center mb-4 border border-neutral-100">
+                  <div className="w-16 h-16 bg-neutral-50 rounded  flex items-center justify-center mb-4 border border-neutral-100">
                     <ClipboardList size={32} className="text-neutral-300" />
                   </div>
                   <h4 className="text-sm  text-neutral-800 mb-1">No Items Added</h4>

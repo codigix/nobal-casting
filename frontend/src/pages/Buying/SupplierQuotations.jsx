@@ -54,7 +54,7 @@ const KanbanView = ({ data, onAction, getStatusColor }) => {
         <div key={column.id} className="flex-1 min-w-[320px] bg-neutral-50/50 rounded border border-neutral-200 flex flex-col h-[calc(100vh-320px)]">
           <div className="p-3 border-b border-neutral-200 bg-white flex items-center justify-between">
             <h3 className="text-[11px]  text-neutral-600 flex items-center gap-2 ">
-              <span className={`w-1.5 h-1.5 rounded-full bg-${column.color}-500`} />
+              <span className={`w-1.5 h-1.5 rounded  bg-${column.color}-500`} />
               {column.title}
             </h3>
             <span className="text-[10px]  bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded">
@@ -578,7 +578,7 @@ export default function SupplierQuotations() {
             </div>
           ) : filteredQuotations.length === 0 ? (
             <div className="py-24 text-center px-4 bg-neutral-50/50">
-              <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6 border border-neutral-200">
+              <div className="w-16 h-16 bg-neutral-100 rounded  flex items-center justify-center mx-auto mb-6 border border-neutral-200">
                 <ClipboardList size={32} className="text-neutral-300" />
               </div>
               <h3 className="text-sm  text-neutral-900 mb-2  ">No Quotations Found</h3>

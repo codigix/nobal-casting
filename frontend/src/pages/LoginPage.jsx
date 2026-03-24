@@ -255,7 +255,7 @@ export default function LoginPage() {
             >
               {loading ? (
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded  animate-spin"></div>
                   <span>Processing...</span>
                 </div>
               ) : (

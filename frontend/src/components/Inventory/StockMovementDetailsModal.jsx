@@ -147,7 +147,7 @@ export default function StockMovementDetailsModal({ movement, onClose }) {
         {/* Audit Info */}
         <div className="border-t border-neutral-200 dark:border-neutral-800 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 rounded-full">
+            <div className="p-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 rounded ">
               <User size={14} />
             </div>
             <div className="flex flex-col">
@@ -157,7 +157,7 @@ export default function StockMovementDetailsModal({ movement, onClose }) {
           </div>
           {movement.approved_by_user && (
             <div className="flex items-center gap-3">
-              <div className="p-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 rounded-full">
+              <div className="p-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 rounded ">
                 <CheckCircle size={14} />
               </div>
               <div className="flex flex-col">

@@ -7,6 +7,7 @@ import {
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as productionService from '../../services/productionService'
 import CreateJobCardModal from '../../components/Production/CreateJobCardModal'
+import EditJobCardModal from '../../components/Production/EditJobCardModal'
 import ViewJobCardModal from '../../components/Production/ViewJobCardModal'
 import SubcontractDispatchModal from '../../components/Production/SubcontractDispatchModal'
 import SubcontractReceiptModal from '../../components/Production/SubcontractReceiptModal'
@@ -115,13 +116,11 @@ export default function JobCard() {
 
   // Modal and editing state
   const [showModal, setShowModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [preSelectedWorkOrderId, setPreSelectedWorkOrderId] = useState(null)
   const [viewingJobCardId, setViewingJobCardId] = useState(null)
   const [showViewModal, setShowViewModal] = useState(false)
-  const [inlineEditingId, setInlineEditingId] = useState(null)
-  const [inlineEditData, setInlineEditData] = useState({})
-  const [isInlineSaving, setIsInlineSaving] = useState(false)
 
   // Pre-selection states
   const [preSelectedMachine, setPreSelectedMachine] = useState(null)
@@ -228,127 +227,9 @@ export default function JobCard() {
     }
   }
 
-  // 3. Inline Editing Handlers
-  const handleInlineEdit = useCallback((card) => {
-    setInlineEditingId(card.job_card_id)
-
-    // Parse challan type from notes if it exists
-    let challanType = ''
-    let remainingNotes = card.notes || ''
-    if (card.notes?.startsWith('[Challan Type:')) {
-      const match = card.notes.match(/^\[Challan Type: ([^\]]+)\]\s*(.*)/)
-      if (match) {
-        challanType = match[1]
-        remainingNotes = match[2]
-      }
-    }
-
-    setInlineEditData({
-      operation: card.operation || '',
-      planned_quantity: parseFloat(card.planned_quantity) || 0,
-      produced_quantity: parseFloat(card.produced_quantity) || 0,
-      accepted_quantity: parseFloat(card.accepted_quantity) || 0,
-      machine_id: card.machine_id || '',
-      operator_id: card.operator_id || '',
-      vendor_id: card.vendor_id || '',
-      challan_type: challanType,
-      notes: remainingNotes,
-      status: card.status || 'draft',
-      execution_mode: card.execution_mode || 'IN_HOUSE',
-      scheduled_start_date: formatForDateTimeInput(card.scheduled_start_date),
-      scheduled_end_date: formatForDateTimeInput(card.scheduled_end_date)
-    })
-  }, [])
-
-  const handleInlineInputChange = (field, value) => {
-    setInlineEditData(prev => ({ ...prev, [field]: value }))
-  }
-
-  const handleInlineSave = useCallback(async (jobCardId) => {
-    if (isInlineSaving) return
-
-    try {
-      setIsInlineSaving(true)
-      const currentCard = jobCards.find(c => c.job_card_id === jobCardId)
-      const statusChanged = currentCard && (currentCard.status !== inlineEditData.status)
-
-      const updateData = { ...inlineEditData }
-
-      if (!statusChanged) {
-        delete updateData.status
-      }
-
-      // Timezone-safe formatting for dates before saving
-      if (updateData.scheduled_start_date) {
-        updateData.scheduled_start_date = formatToUTC(updateData.scheduled_start_date);
-      }
-      if (updateData.scheduled_end_date) {
-        updateData.scheduled_end_date = formatToUTC(updateData.scheduled_end_date);
-      }
-
-      // Convert empty strings to null for database compatibility
-      if (updateData.vendor_id === '') updateData.vendor_id = null
-      if (updateData.machine_id === '') updateData.machine_id = null
-      if (updateData.operator_id === '') updateData.operator_id = null
-
-      // Handle challan type for subcontracting
-      if (updateData.execution_mode === 'OUTSOURCE' && updateData.challan_type) {
-        updateData.notes = `[Challan Type: ${updateData.challan_type}] ${updateData.notes || ''}`
-      }
-      delete updateData.challan_type
-
-      await productionService.updateJobCard(jobCardId, updateData)
-
-      toast.addToast('Job card updated successfully', 'success')
-      setInlineEditingId(null)
-      setInlineEditData({})
-      fetchJobCards()
-    } catch (err) {
-      const errorData = err.response?.data;
-      const errorMsg = errorData?.message || err.message || 'Failed to update job card'
-
-      // Check if it's a scheduling conflict error (409) or includes conflict keywords
-      const isConflict = err.response?.status === 409 ||
-        errorData?.conflict === true ||
-        errorMsg.toLowerCase().includes('busy') ||
-        errorMsg.toLowerCase().includes('conflict') ||
-        errorMsg.toLowerCase().includes('already assigned') ||
-        errorMsg.toLowerCase().includes('already allocated') ||
-        errorMsg.toLowerCase().includes('must start after') ||
-        errorMsg.toLowerCase().includes('must finish before') ||
-        errorMsg.toLowerCase().includes('sequencing error') ||
-        errorMsg.toLowerCase().includes('engagement');
-
-      if (isConflict) {
-        const details = errorData?.details || {}
-        const conflictJcId = details.conflict_with || details.job_card_id
-        const conflictJc = conflictJcId ? jobCards.find(jc => jc.job_card_id === conflictJcId) : null
-
-        setConflictModalData({
-          ...details,
-          conflict_with: conflictJcId,
-          conflict_operation: details.conflict_operation || conflictJc?.operation,
-          conflict_work_order: details.conflict_work_order || conflictJc?.work_order_id,
-          conflict_item: details.conflict_item || conflictJc?.item_name,
-          conflict_planned_qty: details.conflict_planned_qty || conflictJc?.planned_quantity,
-          conflict_status: details.conflict_status || conflictJc?.status,
-          message: details.info || errorMsg,
-          jobCardId: jobCardId,
-          resource_id: details.resource_id || inlineEditData.machine_id || inlineEditData.operator_id,
-          resource_type: details.resource_type || (inlineEditData.machine_id ? 'machine' : 'operator')
-        })
-        setShowConflictModal(true)
-      } else {
-        toast.addToast(errorMsg, 'error')
-      }
-    } finally {
-      setIsInlineSaving(false)
-    }
-  }, [jobCards, inlineEditData, fetchJobCards, toast, isInlineSaving])
-
-  const handleInlineCancel = useCallback(() => {
-    setInlineEditingId(null)
-    setInlineEditData({})
+  const handleEditJobCard = useCallback((card) => {
+    setEditingId(card.job_card_id)
+    setShowEditModal(true)
   }, [])
 
   // 4. Operation Handlers
@@ -564,7 +445,7 @@ export default function JobCard() {
 
     return (
       <div className="bg-slate-50/50 p-2 rounded border border-gray-100 hover:transition-all group relative">
-        <div className="absolute -right-4 -top-4 w-24 h-24 bg-white rounded-full opacity-50 group-hover:scale-110 transition-transform" />
+        <div className="absolute -right-4 -top-4 w-24 h-24 bg-white rounded  opacity-50 group-hover:scale-110 transition-transform" />
         <div className="relative flex justify-between items-start">
           <div className="">
             <p className="text-xs text-gray-400">{label}</p>
@@ -592,66 +473,69 @@ export default function JobCard() {
     if (!conflictModalData) return null
 
     const handleApplySuggested = async () => {
+      if (!conflictModalData.next_available_slot || !conflictModalData.jobCardId) return;
+
       try {
-        const resourceId = conflictModalData.resource_id || inlineEditData.machine_id;
-        if (!resourceId) {
-          toast.addToast('Could not identify resource for slot suggestion', 'error');
-          return;
-        }
-
-        const duration = (new Date(inlineEditData.scheduled_end_date) - new Date(inlineEditData.scheduled_start_date)) / 60000
-        const suggested = await productionService.suggestSlot(resourceId, { duration })
-
-        if (suggested?.data?.available_slots?.length > 0) {
-          const slot = suggested.data.available_slots[0]
-          setInlineEditData(prev => ({
-            ...prev,
-            scheduled_start_date: formatForDateTimeInput(slot.start),
-            scheduled_end_date: formatForDateTimeInput(slot.end)
-          }))
-          setShowConflictModal(false)
-          setConflictModalData(null)
-          toast.addToast('Suggested slot applied. Click Save to confirm.', 'info')
-        } else if (suggested?.data?.start && suggested?.data?.end) {
-          // New format from backend
-          const slot = suggested.data
-          setInlineEditData(prev => ({
-            ...prev,
-            scheduled_start_date: formatForDateTimeInput(slot.start),
-            scheduled_end_date: formatForDateTimeInput(slot.end)
-          }))
-          setShowConflictModal(false)
-          setConflictModalData(null)
-          toast.addToast('Suggested slot applied. Click Save to confirm.', 'info')
-        } else {
-          toast.addToast('No alternative slots found for the requested duration', 'warning')
-        }
+        setLoading(true);
+        await productionService.updateJobCard(conflictModalData.jobCardId, {
+          scheduled_start_date: formatToUTC(parseUTCDate(conflictModalData.next_available_slot.start)),
+          scheduled_end_date: formatToUTC(parseUTCDate(conflictModalData.next_available_slot.end))
+        });
+        toast.addToast('Job card rescheduled successfully', 'success');
+        setShowConflictModal(false);
+        setShowEditModal(false);
+        setConflictModalData(null);
+        fetchJobCards();
       } catch (err) {
-        toast.addToast('Failed to get suggested slot', 'error')
+        toast.addToast(err.message || 'Failed to reschedule job card', 'error');
+      } finally {
+        setLoading(false);
       }
     }
 
-    const handleApplyAlternative = (resourceName) => {
-      if (conflictModalData.resource_type === 'machine') {
-        setInlineEditData(prev => ({ ...prev, machine_id: resourceName }))
-      } else {
-        setInlineEditData(prev => ({ ...prev, operator_id: resourceName }))
+    const handleApplyAlternative = async (resourceName) => {
+      if (!conflictModalData.jobCardId) return;
+
+      try {
+        setLoading(true);
+        const updateData = {};
+        if (conflictModalData.resource_type === 'machine') {
+          updateData.machine_id = resourceName;
+        } else {
+          updateData.operator_id = resourceName;
+        }
+
+        await productionService.updateJobCard(conflictModalData.jobCardId, updateData);
+        toast.addToast(`${conflictModalData.resource_type === 'machine' ? 'Machine' : 'Operator'} switched successfully`, 'success');
+        setShowConflictModal(false);
+        setShowEditModal(false);
+        setConflictModalData(null);
+        fetchJobCards();
+      } catch (err) {
+        toast.addToast(err.message || 'Failed to switch resource', 'error');
+      } finally {
+        setLoading(false);
       }
-      toast.addToast(`Switched to ${conflictModalData.resource_type === 'machine' ? 'machine' : 'operator'} ${resourceName}. Click Save to confirm.`, 'info')
-      setShowConflictModal(false)
-      setConflictModalData(null)
     }
 
-    const handleApplyNextAvailable = () => {
-      if (conflictModalData.next_available_slot) {
-        setInlineEditData(prev => ({
-          ...prev,
-          scheduled_start_date: formatForDateTimeInput(conflictModalData.next_available_slot.start),
-          scheduled_end_date: formatForDateTimeInput(conflictModalData.next_available_slot.end)
-        }))
-        setShowConflictModal(false)
-        setConflictModalData(null)
-        toast.addToast('Next available slot applied. Click Save to confirm.', 'info')
+    const handleApplyNextAvailable = async () => {
+      if (!conflictModalData.next_available_slot || !conflictModalData.jobCardId) return;
+
+      try {
+        setLoading(true);
+        await productionService.updateJobCard(conflictModalData.jobCardId, {
+          scheduled_start_date: formatToUTC(parseUTCDate(conflictModalData.next_available_slot.start)),
+          scheduled_end_date: formatToUTC(parseUTCDate(conflictModalData.next_available_slot.end))
+        });
+        toast.addToast('Job card updated to next available slot', 'success');
+        setShowConflictModal(false);
+        setShowEditModal(false);
+        setConflictModalData(null);
+        fetchJobCards();
+      } catch (err) {
+        toast.addToast(err.message || 'Failed to update job card', 'error');
+      } finally {
+        setLoading(false);
       }
     }
 
@@ -695,9 +579,10 @@ export default function JobCard() {
           <div className='flex gap-2'>
             <div className={`flex flex-col items-start gap-2 p-2 ${conflictModalData.conflict_with ? 'bg-indigo-50/40 border-indigo-100' : 'bg-amber-50 border-amber-100'} border rounded  overflow-hidden relative`}>
               {/* Background Accent */}
-              <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full ${conflictModalData.conflict_with ? 'bg-indigo-500/5' : 'bg-amber-500/5'}`} />
+              <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded  ${conflictModalData.conflict_with ? 'bg-indigo-500/5' : 'bg-amber-500/5'}`} />
 
-              <div className={`flex-shrink-0 p-2 rounded ${conflictModalData.conflict_with ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-amber-100 text-amber-600'} z-10`}>
+             <div className='flex gap-2 items-center'>
+               <div className={`flex-shrink-0 p-2 rounded ${conflictModalData.conflict_with ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-amber-100 text-amber-600'} z-10`}>
                 {conflictModalData.resource_type === 'machine' ? <Cpu size={15} strokeWidth={2.5} /> : (conflictModalData.resource_type === 'operator' ? <Users size={15} strokeWidth={2.5} /> : <AlertTriangle size={15} strokeWidth={2.5} />)}
               </div>
 
@@ -719,10 +604,11 @@ export default function JobCard() {
 
 
               </div>
+             </div>
 
             </div>
             {conflictModalData.conflict_with && (
-              <div className=" flex gap-3">
+              <div className=" flex gap-2">
                 <div className="bg-white/90 p-2 rounded border border-indigo-100 flex items-center gap-3  group hover:border-indigo-200 transition-colors">
                   <div className="p-1.5 bg-indigo-50 rounded text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                     <Clock size={15} />
@@ -751,7 +637,7 @@ export default function JobCard() {
             <div className="bg-white border border-slate-100 rounded  overflow-hidden">
               <div className="bg-slate-50/50 p-2 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white rounded border border-slate-100  text-slate-400">
+                  <div className="p-1 bg-white rounded border border-slate-100  text-slate-400">
                     <ClipboardList size={15} />
                   </div>
                   <h4 className="text-xs  text-slate-500  ">Currently Engaged Job Details</h4>
@@ -759,14 +645,14 @@ export default function JobCard() {
               </div>
 
               <div className="p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <span className="text-xs text-slate-400    block">Work Order</span>
                   <p className="text-xs  text-slate-700 break-all leading-tight">
                     {conflictModalData.conflict_work_order || 'N/A'}
                   </p>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <span className="text-xs text-slate-400    block">Operation</span>
                   <div className="flex items-center gap-2">
                     <Activity size={14} className="text-indigo-500" />
@@ -776,7 +662,7 @@ export default function JobCard() {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <span className="text-xs text-slate-400    block">Item</span>
                   <p className="text-sm  text-slate-800 line-clamp-2" title={conflictModalData.conflict_item}>
                     {conflictModalData.conflict_item || 'N/A'}
@@ -786,7 +672,7 @@ export default function JobCard() {
                 <div className="space-y-1.5">
                   <span className="text-xs text-slate-400    block">Planned Qty</span>
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-lg  text-slate-900 font-mono ">
+                    <span className="text-sm  text-slate-900 font-mono ">
                       {conflictModalData.conflict_planned_qty ? parseFloat(conflictModalData.conflict_planned_qty).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '0'}
                     </span>
                     <span className="text-xs text-slate-400  ">Units</span>
@@ -960,34 +846,6 @@ export default function JobCard() {
 
   // 7. Table Configuration
   const renderActions = useCallback((card) => {
-    const isEditing = inlineEditingId === card.job_card_id
-
-    if (isEditing) {
-      return (
-        <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
-          <button
-            onClick={() => handleInlineSave(card.job_card_id)}
-            disabled={isInlineSaving}
-            className={`p-1 rounded transition-all ${isInlineSaving ? 'text-gray-300 cursor-not-allowed' : 'text-emerald-600 hover:bg-emerald-50'}`}
-            title={isInlineSaving ? "Saving..." : "Save"}
-          >
-            {isInlineSaving ? (
-              <div className="w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <CheckCircle2 size={15} />
-            )}
-          </button>
-          <button
-            onClick={handleInlineCancel}
-            className="p-1 text-rose-600 hover:bg-rose-50 rounded transition-all"
-            title="Cancel"
-          >
-            <X size={15} />
-          </button>
-        </div>
-      )
-    }
-
     return (
       <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
         <button
@@ -1040,9 +898,9 @@ export default function JobCard() {
           </button>
         )}
         <button
-          onClick={() => handleInlineEdit(card)}
+          onClick={() => handleEditJobCard(card)}
           className="p-1 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded transition-all"
-          title="Quick Edit"
+          title="Edit Intelligence"
         >
           <Edit2 size={14} />
         </button>
@@ -1055,7 +913,7 @@ export default function JobCard() {
         </button>
       </div>
     )
-  }, [inlineEditingId, handleInlineSave, handleInlineCancel, handleViewJobCard, navigate, handleInlineEdit, handleDelete, handleStartJobCard, handleDispatch, handleOpenReceiptModal, isInlineSaving])
+  }, [handleViewJobCard, navigate, handleEditJobCard, handleDelete, handleStartJobCard, handleDispatch, handleOpenReceiptModal])
 
   const columns = useMemo(() => [
     {
@@ -1095,7 +953,7 @@ export default function JobCard() {
         }
         const color = priorityColors[val?.toLowerCase()] || priorityColors.medium
         return (
-          <span className={`px-2 py-0.5 rounded-full border text-xs    ${color}`}>
+          <span className={`px-2 py-0.5 rounded  border text-xs    ${color}`}>
             {val || 'Medium'}
           </span>
         )
@@ -1105,23 +963,6 @@ export default function JobCard() {
       key: 'operation',
       label: 'Operation',
       render: (val, row) => {
-        const isEditing = inlineEditingId === row.job_card_id
-        if (isEditing) {
-          return (
-            <div className="flex flex-col gap-1">
-              <SearchableSelect
-                value={inlineEditData.operation}
-                onChange={(val) => handleInlineInputChange('operation', val)}
-                options={getOperationOptions()}
-                placeholder="Select Operation"
-                width="w-32"
-                className="text-xs"
-              />
-              <span className="text-xs text-gray-400 truncate ">{row.item_name || 'Generic Item'}</span>
-            </div>
-          )
-        }
-
         return (
           <div className="flex flex-col">
             <span className="text-xs font-medium text-gray-900">{val}</span>
@@ -1135,21 +976,6 @@ export default function JobCard() {
       key: 'status',
       label: 'Status',
       render: (val, row) => {
-        const isEditing = inlineEditingId === row.job_card_id
-        if (isEditing) {
-          return (
-            <SearchableSelect
-              value={inlineEditData.status}
-              onChange={(val) => handleInlineInputChange('status', val)}
-              options={['draft', 'ready', 'pending', 'in-progress', 'hold', 'completed', 'cancelled'].map(s => ({
-                value: s,
-                label: s.charAt(0).toUpperCase() + s.slice(1)
-              }))}
-              width="w-32"
-              className="text-xs"
-            />
-          )
-        }
         return <StatusBadge status={val} />
       }
     },
@@ -1182,22 +1008,6 @@ export default function JobCard() {
       key: 'execution_mode',
       label: 'Execution Mode',
       render: (val, row) => {
-        const isEditing = inlineEditingId === row.job_card_id
-        if (isEditing) {
-          return (
-            <SearchableSelect
-              value={inlineEditData.execution_mode}
-              onChange={(val) => handleInlineInputChange('execution_mode', val)}
-              options={[
-                { value: 'IN_HOUSE', label: 'In-house' },
-                { value: 'OUTSOURCE', label: 'Subcontract' }
-              ]}
-              width="w-32"
-              className="text-xs"
-            />
-          )
-        }
-
         const isSubcontract = (val || '').toLowerCase() === 'outsource' || (val || '').toLowerCase() === 'subcontract'
         return (
           <span className={`text-xs font-medium ${isSubcontract
@@ -1217,36 +1027,6 @@ export default function JobCard() {
         const produced = parseFloat(row.produced_quantity) || 0
         const accepted = parseFloat(row.accepted_quantity) || 0
         const progress = target > 0 ? Math.min((produced / target) * 100, 100) : 0
-
-        const isEditing = inlineEditingId === row.job_card_id
-        if (isEditing) {
-          return (
-            <div className="flex flex-col gap-2 p-1.5 bg-gray-50/50 rounded-lg border border-gray-100">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-[10px] text-gray-500 font-semibold  tracking-wider">Target:</span>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={inlineEditData.planned_quantity}
-                    onChange={(e) => handleInlineInputChange('planned_quantity', e.target.value)}
-                    className="w-20 text-xs border border-gray-200 rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white transition-all shadow-sm"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-[10px] text-emerald-600 font-semibold  tracking-wider">Accepted:</span>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={inlineEditData.accepted_quantity}
-                    onChange={(e) => handleInlineInputChange('accepted_quantity', e.target.value)}
-                    className="w-20 text-xs border border-emerald-200 rounded-md px-2 py-1 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white transition-all shadow-sm"
-                  />
-                </div>
-              </div>
-            </div>
-          )
-        }
 
         return (
           <div className="flex flex-col gap-2  py-1">
@@ -1273,7 +1053,7 @@ export default function JobCard() {
               </div>
             </div>
 
-            <div className="relative w-full bg-gray-100 rounded-full h-2 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)]">
+            <div className="relative w-full bg-gray-100 rounded  h-2 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)]">
               <div
                 className={`h-full transition-all duration-700 cubic-bezier(0.4, 0, 0.2, 1) ${progress >= 100 ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]' :
                   progress > 50 ? 'bg-gradient-to-r from-indigo-500 to-blue-400 shadow-[0_0_12px_rgba(99,102,241,0.3)]' :
@@ -1293,7 +1073,7 @@ export default function JobCard() {
             {/* Quality Index */}
             {produced > 0 && (
               <div className="flex items-center gap-2 mt-0.5">
-                <div className="flex-1 h-1 bg-gray-50 rounded-full overflow-hidden flex">
+                <div className="flex-1 h-1 bg-gray-50 rounded  overflow-hidden flex">
                   <div
                     className="h-full bg-emerald-400"
                     style={{ width: `${(accepted / produced) * 100}%` }}
@@ -1314,52 +1094,8 @@ export default function JobCard() {
     },
     {
       key: 'machine_name',
-      label: inlineEditingId ? (inlineEditData.execution_mode === 'OUTSOURCE' ? 'Challan Type' : 'Workstation') : 'Workstation / Status',
+      label: 'Workstation / Status',
       render: (val, row) => {
-        const isEditing = inlineEditingId === row.job_card_id
-        if (isEditing) {
-          const isSubcontract = inlineEditData.execution_mode === 'OUTSOURCE'
-          if (isSubcontract) {
-            return (
-              <SearchableSelect
-                value={inlineEditData.challan_type || ''}
-                onChange={(val) => handleInlineInputChange('challan_type', val)}
-                options={[
-                  { value: 'Outward Challan', label: 'Outward Challan' },
-                  { value: 'Inward Challan', label: 'Inward Challan' }
-                ]}
-                placeholder="Select Challan Type"
-                width="w-32"
-                className="text-xs"
-              />
-            )
-          }
-          const machineConflict = checkMachineConflict(
-            inlineEditData.machine_id,
-            inlineEditData.scheduled_start_date,
-            inlineEditData.scheduled_end_date,
-            row.job_card_id
-          )
-
-          return (
-            <div className="flex flex-col gap-1">
-              <SearchableSelect
-                value={inlineEditData.machine_id}
-                onChange={(val) => handleInlineInputChange('machine_id', val)}
-                options={getWorkstationOptions()}
-                placeholder="Select Workstation"
-                width="w-32"
-                className={`text-xs ${machineConflict.hasConflict ? 'border-amber-300 bg-amber-50' : ''}`}
-              />
-              {machineConflict.hasConflict && (
-                <span className="text-[8px] text-amber-600 font-medium leading-tight">
-                  {machineConflict.message}
-                </span>
-              )}
-            </div>
-          )
-        }
-
         const isSubcontract = (row.execution_mode || '').toLowerCase() === 'outsource' || (row.execution_mode || '').toLowerCase() === 'subcontract'
         if (isSubcontract) {
           let challanType = ''
@@ -1380,7 +1116,7 @@ export default function JobCard() {
             <span className="text-xs text-gray-700 font-medium">{wsName}</span>
             {row.machine_id && (
               <div className="flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${isAllocated ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
+                <div className={`w-1.5 h-1.5 rounded  ${isAllocated ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
                 <span className={`text-xs font-medium ${isAllocated ? 'text-amber-600' : 'text-emerald-600'}`}>
                   {isAllocated ? 'Allocated' : 'Available'}
                 </span>
@@ -1397,33 +1133,6 @@ export default function JobCard() {
       key: 'operator_name',
       label: 'Assignee',
       render: (val, row) => {
-        const isEditing = inlineEditingId === row.job_card_id
-        if (isEditing) {
-          const isSubcontract = inlineEditData.execution_mode === 'OUTSOURCE'
-          if (isSubcontract) {
-            return (
-              <SearchableSelect
-                value={inlineEditData.vendor_id}
-                onChange={(val) => handleInlineInputChange('vendor_id', val)}
-                options={getVendorOptions()}
-                placeholder="Select Vendor"
-                width="w-32"
-                className="text-xs"
-              />
-            )
-          }
-          return (
-            <SearchableSelect
-              value={inlineEditData.operator_id}
-              onChange={(val) => handleInlineInputChange('operator_id', val)}
-              options={getOperatorOptions()}
-              placeholder="Select Operator"
-              width="w-32"
-              className="text-xs"
-            />
-          )
-        }
-
         const isSubcontract = (row.execution_mode || '').toLowerCase() === 'outsource' || (row.execution_mode || '').toLowerCase() === 'subcontract'
         if (isSubcontract) {
           return (
@@ -1442,51 +1151,6 @@ export default function JobCard() {
       key: 'scheduled_start_date',
       label: 'Schedule (Start - End)',
       render: (val, row) => {
-        const isEditing = inlineEditingId === row.job_card_id
-        const prevEnd = getPreviousOpEndTime(row)
-
-        if (isEditing) {
-          const machineConflict = checkMachineConflict(
-            inlineEditData.machine_id,
-            inlineEditData.scheduled_start_date,
-            inlineEditData.scheduled_end_date,
-            row.job_card_id
-          )
-
-          return (
-            <div className="flex flex-col gap-1">
-              <div className="flex flex-col">
-                <input
-                  type="datetime-local"
-                  value={inlineEditData.scheduled_start_date}
-                  onChange={(e) => handleInlineInputChange('scheduled_start_date', e.target.value)}
-                  className={`text-xs border rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500 ${(prevEnd && new Date(inlineEditData.scheduled_start_date) < parseUTCDate(prevEnd)) || machineConflict.hasConflict
-                      ? 'border-rose-300 bg-rose-50'
-                      : 'border-gray-200'
-                    }`}
-                />
-                {prevEnd && new Date(inlineEditData.scheduled_start_date) < parseUTCDate(prevEnd) && (
-                  <span className="text-[8px] text-rose-500 font-medium leading-tight mt-0.5">
-                    Must start after: {formatToLocalDisplay(prevEnd)}
-                  </span>
-                )}
-                {machineConflict.hasConflict && (
-                  <span className="text-[8px] text-amber-600 font-medium leading-tight mt-0.5">
-                    {machineConflict.message}
-                  </span>
-                )}
-              </div>
-              <input
-                type="datetime-local"
-                value={inlineEditData.scheduled_end_date}
-                onChange={(e) => handleInlineInputChange('scheduled_end_date', e.target.value)}
-                className={`text-xs border rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500 ${machineConflict.hasConflict ? 'border-rose-300 bg-rose-50' : 'border-gray-200'
-                  }`}
-              />
-            </div>
-          )
-        }
-
         if (!val && !row.scheduled_end_date) return <span className="text-xs text-gray-400">Not Scheduled</span>
 
         return (
@@ -1502,7 +1166,7 @@ export default function JobCard() {
       label: 'Actions',
       render: (_, row) => renderActions(row)
     }
-  ], [renderActions, inlineEditingId, inlineEditData])
+  ], [renderActions])
 
   // 8. Lifecycle Effects
   useEffect(() => {
@@ -1520,8 +1184,12 @@ export default function JobCard() {
 
   useEffect(() => {
     const filterWorkOrder = searchParams.get('filter_work_order')
+    const filterPlan = searchParams.get('filter_plan') || searchParams.get('filter_production_plan')
+    
     if (filterWorkOrder) {
       setFilters(prev => ({ ...prev, search: filterWorkOrder }))
+    } else if (filterPlan) {
+      setFilters(prev => ({ ...prev, production_plan_id: filterPlan }))
     }
   }, [searchParams])
 
@@ -1578,7 +1246,7 @@ export default function JobCard() {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 my-3 flex-shrink-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 my-3 flex-shrink-0">
           <StatCard
             label="Total Operations"
             value={stats.totalJobs}
@@ -1679,7 +1347,7 @@ export default function JobCard() {
             {loading ? (
               <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-[3rem] border border-gray-100">
                 <div className="relative">
-                  <div className="w-20 h-20 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
+                  <div className="w-20 h-20 border-4 border-indigo-100 border-t-indigo-600 rounded  animate-spin" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Activity className="w-8 h-8 text-indigo-600 animate-pulse" />
                   </div>
@@ -1742,10 +1410,37 @@ export default function JobCard() {
           setPreSelectedMachine(null)
           setPreSelectedStartTime(null)
         }}
-        editingId={editingId}
         preSelectedWorkOrderId={preSelectedWorkOrderId}
         preSelectedMachine={preSelectedMachine}
         preSelectedStartTime={preSelectedStartTime}
+        allJobCards={jobCards}
+        allWorkstations={workstations}
+        onConflict={(msg, id, details) => {
+          if (details) {
+            setConflictModalData({
+              ...details,
+              message: msg,
+              jobCardId: id
+            });
+          } else {
+            setConflictModalData({ message: msg, jobCardId: id });
+          }
+          setShowConflictModal(true);
+        }}
+      />
+
+      <EditJobCardModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false)
+          setEditingId(null)
+        }}
+        onSuccess={() => {
+          fetchJobCards()
+          setShowEditModal(false)
+          setEditingId(null)
+        }}
+        jobCardId={editingId}
         allJobCards={jobCards}
         allWorkstations={workstations}
         onConflict={(msg, id, details) => {

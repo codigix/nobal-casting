@@ -74,7 +74,7 @@ export class MaterialRequestController {
 
       const result = await MaterialRequestModel.create(db, {
         ...req.body,
-        created_by: req.user?.user_id || null
+        created_by: req.user?.user_id || req.body.created_by || null
       })
       res.status(201).json({ success: true, data: result })
     } catch (error) {

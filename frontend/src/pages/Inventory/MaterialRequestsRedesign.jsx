@@ -52,15 +52,15 @@ const MaterialGauge = ({ available, total }) => {
 };
 
 const KPICard = ({ label, value, status, icon: Icon, colorClass, trend }) => (
-  <Card className="p-4 bg-white border-slate-100 relative overflow-hidden group hover:shadow-lg transition-all duration-300">
-    <div className={`absolute top-0 right-0 w-20 h-20 opacity-[0.03] -mr-6 -mt-6 rounded-full transition-transform group-hover:scale-150 duration-700 ${colorClass.split(' ')[0].replace('text-', 'bg-')}`}></div>
+  <Card className="p-2 bg-white border-slate-100 relative overflow-hidden group hover: transition-all duration-300">
+    <div className={`absolute top-0 right-0 w-20 h-20 opacity-[0.03] -mr-6 -mt-6 rounded transition-transform group-hover:scale-150 duration-700 ${colorClass.split(' ')[0].replace('text-', 'bg-')}`}></div>
     
-    <div className="flex justify-between items-start mb-4 relative">
+    <div className="flex justify-between items-start mb-2 relative">
       <div className={`p-2 rounded ${colorClass.replace('text-', 'bg-').replace('-600', '-500/10')} ${colorClass}`}>
-        <Icon size={18} strokeWidth={2.5} />
+        <Icon size={10} strokeWidth={2.5} />
       </div>
       {status && (
-        <span className={`px-2 py-0.5 rounded-full text-[9px]   border ${colorClass.replace('text-', 'bg-').replace('-600', '-500/10')} ${colorClass.replace('text-', 'border-').replace('-600', '-500/20')}`}>
+        <span className={`p-1 rounded  text-[9px]   border ${colorClass.replace('text-', 'bg-').replace('-600', '-500/10')} ${colorClass.replace('text-', 'border-').replace('-600', '-500/20')}`}>
           {status}
         </span>
       )}
@@ -69,7 +69,7 @@ const KPICard = ({ label, value, status, icon: Icon, colorClass, trend }) => (
     <div className="relative">
       <p className="text-xs  text-slate-400   mb-1">{label}</p>
       <div className="flex items-baseline gap-2">
-        <h3 className="text-2xl  text-slate-900">{value}</h3>
+        <h3 className="text-xl  text-slate-900">{value}</h3>
         {trend && (
           <span className={`text-xs  flex items-center gap-0.5 ${trend >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
             {trend >= 0 ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
@@ -88,19 +88,19 @@ const SkeletonRow = () => (
         <div className="absolute top-0 left-0 w-full h-1 bg-slate-100"></div>
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded bg-slate-100"></div>
+            <div className="w-6 h-6 rounded bg-slate-100"></div>
             <div className="space-y-2">
               <div className="h-4 w-24 bg-slate-100 rounded"></div>
               <div className="h-2 w-16 bg-slate-50 rounded"></div>
             </div>
           </div>
-          <div className="w-10 h-10 rounded-full bg-slate-50"></div>
+          <div className="w-6 h-6 rounded  bg-slate-50"></div>
         </div>
         <div className="space-y-2 mb-2">
           <div className="h-12 w-full bg-slate-50 rounded"></div>
           <div className="flex justify-between px-1">
-            <div className="h-6 w-20 bg-slate-100 rounded-full"></div>
-            <div className="h-6 w-16 bg-slate-100 rounded-full"></div>
+            <div className="h-6 w-20 bg-slate-100 rounded "></div>
+            <div className="h-6 w-16 bg-slate-100 rounded "></div>
           </div>
         </div>
         <div className="flex gap-2 pt-2">
@@ -115,14 +115,14 @@ const SkeletonRow = () => (
 const FilterPill = ({ label, active, onClick, icon: Icon }) => (
   <button 
     onClick={onClick}
-    className={`flex items-center gap-2 px-4 py-2 rounded text-xs  transition-all border ${
+    className={`flex items-center gap-2 p-2 px-3 rounded text-xs  transition-all border ${
       active 
-        ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20' 
+        ? 'bg-blue-600 text-white border-blue-600  shadow-blue-600/20' 
         : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600'
     }`}
   >
     {Icon && <Icon size={14} />}
-    {label.toUpperCase()}
+    {label}
   </button>
 );
 
@@ -272,7 +272,8 @@ export default function MaterialRequestsRedesign() {
         r.mr_id?.toString().toLowerCase().includes(filters.search.toLowerCase()) || 
         r.project_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
         r.requested_by_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
-        r.department?.toLowerCase().includes(filters.search.toLowerCase())
+        r.department?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        r.finished_goods_name?.toLowerCase().includes(filters.search.toLowerCase())
       
       const matchesStatus = !filters.status || r.status === filters.status
       const matchesDept = !filters.department || r.department === filters.department
@@ -282,7 +283,7 @@ export default function MaterialRequestsRedesign() {
   }, [requests, filters])
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] pb-12">
+    <div className="min-h-screen bg-[#f8fafc] pb-12 p-2">
       {/* Header - Industrial Blue Theme */}
       <div className=" text-white p-2">
         <div className=" bg-white/5 rounded "></div>
@@ -291,17 +292,17 @@ export default function MaterialRequestsRedesign() {
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-2 bg-white/10 rounded backdrop-blur-md border border-white/20">
-                  <ClipboardList size={24} className="text-blue-200" />
+                  <ClipboardList size={24} className="text-blue-800" />
                 </div>
                 <div>
-                  <h1 className="text-2xl  ">Material Requisitions</h1>
-                  <div className="flex items-center gap-4 mt-1">
-                    <span className="text-xs text-blue-200 flex items-center gap-1.5 font-medium">
+                  <h1 className="text-xl  ">Material Requisitions</h1>
+                  <div className="flex items-center ga2 mt-1">
+                    <span className="text-xs text-blue-800 flex items-center gap-1.5 font-medium">
                       <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
                       Refreshed {refreshTime.toLocaleTimeString()}
                     </span>
-                    <span className="text-xs text-blue-200 flex items-center gap-1.5 font-medium">
-                      <Zap size={12} className="text-amber-400" />
+                    <span className="text-xs text-blue-800 flex items-center gap-1.5 font-medium">
+                      <Zap size={12} className="text-blue-800" />
                       Live Inventory Sync Active
                     </span>
                   </div>
@@ -313,24 +314,24 @@ export default function MaterialRequestsRedesign() {
               <div className="flex bg-black/20 p-1 rounded backdrop-blur-md border border-white/10">
                 <button 
                   onClick={() => setViewMode('grid')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded text-xs  transition-all ${viewMode === 'grid' ? 'bg-white text-[#1e3a8a] shadow-lg' : 'text-white/60 hover:text-white'}`}
+                  className={`flex items-center gap-2 p-2 rounded text-xs  transition-all ${viewMode === 'grid' ? 'bg-white text-[#1e3a8a] ' : 'text-white/60 hover:text-white'}`}
                 >
-                  <LayoutGrid size={14} /> GRID
+                  <LayoutGrid size={14} /> Grid
                 </button>
                 <button 
                   onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded text-xs  transition-all ${viewMode === 'list' ? 'bg-white text-[#1e3a8a] shadow-lg' : 'text-white/60 hover:text-white'}`}
+                  className={`flex items-center gap-2 p-2 rounded text-xs  transition-all ${viewMode === 'list' ? 'bg-white text-[#1e3a8a] ' : 'text-white/60 hover:text-white'}`}
                 >
-                  <List size={14} /> LIST
+                  <List size={14} /> List
                 </button>
               </div>
               
               <button 
                 onClick={() => setIsModalOpen(true)}
-                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2.5 rounded  text-xs shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 active:scale-95"
+                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white p-2 rounded  text-xs  shadow-emerald-500/20 transition-all hover:-translate-y-0.5 active:scale-95"
               >
                 <Plus size={18} strokeWidth={3} />
-                CREATE REQUISITION
+                Create Material Request
               </button>
             </div>
           </div>
@@ -339,7 +340,7 @@ export default function MaterialRequestsRedesign() {
 
       <div className=" relative">
         {/* KPI Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 ga2 mb-8">
           <KPICard label="Total Active" value={stats.total} icon={ClipboardList} colorClass="text-blue-600" status="ACTIVE" trend={12} />
           <KPICard label="Pending Approval" value={stats.draft} icon={Clock} colorClass="text-amber-600" status="DRAFT" trend={-5} />
           <KPICard label="Approved Requests" value={stats.approved} icon={ShieldCheck} colorClass="text-emerald-600" status="OPTIMAL" />
@@ -350,7 +351,7 @@ export default function MaterialRequestsRedesign() {
 
         {/* Search and Filters */}
         <div className="flex flex-col gap-6 mb-8">
-          <div className="bg-white rounded p-2 border border-slate-200  flex flex-col lg:flex-row items-center gap-2">
+          <div className="   flex flex-col lg:flex-row items-center gap-2">
             <div className="relative flex-1 w-full group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
               <input 
@@ -358,13 +359,13 @@ export default function MaterialRequestsRedesign() {
                 placeholder="Search by ID, Project, Department or Requester..."
                 value={filters.search}
                 onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                className="w-full pl-12 pr-4 py-3 rounded bg-slate-50 border-none focus:ring-2 focus:ring-blue-500/20 text-sm font-medium text-slate-700 placeholder:text-slate-400 transition-all"
+                className="w-full pl-12 pr-4 p-2 text-xs rounded bg-white border-none focus:ring-2 focus:ring-blue-500/20  text-slate-700 placeholder:text-slate-400 transition-all"
               />
             </div>
             
             <div className="flex items-center gap-2 w-full lg:w-auto px-2 border-l border-slate-100 pl-4">
-              <span className="text-xs  text-slate-400  tracking-widest mr-2">Dept:</span>
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-[400px]">
+              <span className="text-xs  text-slate-400   mr-2">Dept:</span>
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 ">
                 <FilterPill label="All" active={!filters.department} onClick={() => setFilters(prev => ({ ...prev, department: '' }))} />
                 {departments.map(dept => (
                   <FilterPill 
@@ -440,25 +441,41 @@ export default function MaterialRequestsRedesign() {
                       </div>
 
                       <div className="space-y-2 mb-2">
-                        <div className="bg-slate-50 rounded p-3 flex items-center justify-between border border-slate-100 group-hover:bg-blue-50/50 transition-colors">
+                        <div className="bg-slate-50 rounded p-3 flex flex-col gap-2 border border-slate-100 group-hover:bg-blue-50/50 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1 bg-white rounded border border-slate-200 text-blue-600 shadow-sm">
+                                <Package size={12} />
+                              </div>
+                              <div>
+                                <p className="text-[8px]  text-slate-400 uppercase tracking-tighter">Finished Goods</p>
+                                <p className="text-[11px] font-bold text-blue-700 truncate max-w-[140px]" title={row.finished_goods_name || 'Manual Requisition'}>
+                                  {row.finished_goods_name || 'MANUAL REQ'}
+                                </p>
+                              </div>
+                            </div>
+                          <div className="text-right">
+                            <p className="text-[8px]  text-slate-400 uppercase tracking-tighter">Requested By</p>
+                            <p className="text-[11px] font-bold text-slate-700">{row.required_by_date ? new Date(row.required_by_date).toLocaleDateString() : 'N/A'}</p>
+                          </div>
+                          </div>
+
+                          <div className="h-[1px] w-full bg-slate-200/50"></div>
+
                           <div className="flex items-center gap-3">
-                            <div className="p-1.5 bg-white rounded border border-slate-200 text-slate-400">
-                              <Building2 size={14} />
+                            <div className="p-1 bg-white rounded border border-slate-200 text-slate-400 shadow-sm">
+                              <Building2 size={12} />
                             </div>
                             <div>
-                              <p className="text-[9px]  text-slate-400 ">PROJECT</p>
-                              <p className="text-xs  text-slate-700 truncate max-w-[120px]">{row.project_name || 'INTERNAL OPS'}</p>
+                              <p className="text-[8px]  text-slate-400 uppercase tracking-tighter">PROJECT CONTEXT</p>
+                              <p className="text-[11px] font-bold text-slate-600 truncate max-w-[180px]">{row.project_name || 'INTERNAL OPERATIONS'}</p>
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-[9px]  text-slate-400 ">Requested By</p>
-                            <p className="text-xs  text-slate-700">{row.required_by_date ? new Date(row.required_by_date).toLocaleDateString() : 'N/A'}</p>
                           </div>
                         </div>
 
                         <div className="flex items-center justify-between px-1">
                           <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-xs  text-slate-500 overflow-hidden">
+                            <div className="w-6 h-6 rounded  bg-slate-200 border-2 border-white flex items-center justify-center text-xs  text-slate-500 overflow-hidden">
                               {row.requested_by_name?.charAt(0) || 'S'}
                             </div>
                             <span className="text-xs  text-slate-500">{row.requested_by_name?.split(' ')[0] || 'System'}</span>
@@ -492,12 +509,13 @@ export default function MaterialRequestsRedesign() {
               })}
             </div>
           ) : (
-            <div className="bg-white rounded border border-slate-200  overflow-hidden">
+            <div className="bg-white rounded border border-slate-200">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50/50">
                       <th className="p-2 text-xs  text-slate-400  ">Request Identifier</th>
+                      <th className="p-2 text-xs  text-slate-400  ">Finished Goods</th>
                       <th className="p-2 text-xs  text-slate-400  ">Project Context</th>
                       <th className="p-2 text-xs  text-slate-400   text-center">Fulfillment</th>
                       <th className="p-2 text-xs  text-slate-400  ">Requisition Status</th>
@@ -525,6 +543,12 @@ export default function MaterialRequestsRedesign() {
                           </td>
                           <td className="p-2">
                             <div className="flex flex-col">
+                              <span className="text-xs font-bold text-blue-700">{row.finished_goods_name || 'MANUAL REQUISITION'}</span>
+                              <span className="text-[10px] text-slate-400 uppercase tracking-tight">Parent Product</span>
+                            </div>
+                          </td>
+                          <td className="p-2">
+                            <div className="flex flex-col">
                               <span className="text-xs  text-slate-700">{row.project_name || 'Internal Operations'}</span>
                               <span className="text-xs  text-slate-400  ">{row.department}</span>
                             </div>
@@ -544,7 +568,7 @@ export default function MaterialRequestsRedesign() {
                             </div>
                           </td>
                           <td className="p-2">
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs  border ${config.bg} ${config.color} ${config.border.replace('border-', 'border-opacity-50 border-')}`}>
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded  text-xs  border ${config.bg} ${config.color} ${config.border.replace('border-', 'border-opacity-50 border-')}`}>
                               <StatusIcon size={12} />
                               {config.label}
                             </span>

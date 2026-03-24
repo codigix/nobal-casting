@@ -1885,6 +1885,10 @@ async deleteAllBOMRawMaterials(bom_id) {
         query += ' AND jc.work_order_id = ?'
         params.push(work_order_id)
       }
+      if (filters.production_plan_id) {
+        query += ' AND wo.production_plan_id = ?'
+        params.push(filters.production_plan_id)
+      }
       if (year && month && day) {
         const dateStr = `${year}-${month}-${day.toString().padStart(2, '0')}`;
         // Use CONVERT_TZ to find jobs whose LOCAL date (IST) matches the requested day.
@@ -2041,13 +2045,13 @@ async deleteAllBOMRawMaterials(bom_id) {
         const conflictInfo = `Busy with ${conflict.job_card_id} (${conflict.operation}) from ${this._format12Hour(conflict.scheduled_start_date)} to ${this._format12Hour(conflict.scheduled_end_date)}`;
         
         // Find other operators in same department
-        const [operatorInfo] = await db.query('SELECT department FROM employee WHERE employee_id = ?', [operator_id]);
+        const [operatorInfo] = await db.query('SELECT department FROM employee_master WHERE employee_id = ?', [operator_id]);
         const department = operatorInfo.length > 0 ? operatorInfo[0].department : null;
         
         let alternatives = [];
         if (department) {
           const [others] = await db.query(
-            `SELECT employee_id as name, name as workstation_name FROM employee 
+            `SELECT employee_id as name, CONCAT(first_name, ' ', last_name) as workstation_name FROM employee_master 
              WHERE department = ? AND employee_id != ? AND status = 'active'`,
             [department, operator_id]
           );
@@ -2230,25 +2234,6 @@ async deleteAllBOMRawMaterials(bom_id) {
 
       await connection.commit();
       
-      // Notify about resource availability if status is completed or cancelled
-      const statusValue = (data.status || '').toLowerCase().replace(/\s+/g, '-').trim()
-      if (statusValue === 'completed' || statusValue === 'cancelled') {
-        if (current[0].machine_id) {
-          await this.checkAndNotifyResourceAvailability('machine', current[0].machine_id);
-        }
-        if (current[0].operator_id) {
-          await this.checkAndNotifyResourceAvailability('operator', current[0].operator_id);
-        }
-      } else if (schedulingChanged) {
-        // If machine or operator changed, notify that the OLD one might be free now
-        if (data.machine_id !== undefined && current[0].machine_id && data.machine_id !== current[0].machine_id) {
-          await this.checkAndNotifyResourceAvailability('machine', current[0].machine_id);
-        }
-        if (data.operator_id !== undefined && current[0].operator_id && data.operator_id !== current[0].operator_id) {
-          await this.checkAndNotifyResourceAvailability('operator', current[0].operator_id);
-        }
-      }
-
       // Sync Work Order progress
       if (data.work_order_id) {
         await this.checkAndUpdateWorkOrderProgress(data.work_order_id);
@@ -2318,10 +2303,10 @@ async deleteAllBOMRawMaterials(bom_id) {
         fields.push('status = ?')
         values.push(statusValue)
       }
-      if (data.operator_id !== undefined) { fields.push('operator_id = ?'); values.push(data.operator_id) }
-      if (data.machine_id !== undefined) { fields.push('machine_id = ?'); values.push(data.machine_id) }
+      if (data.operator_id !== undefined) { fields.push('operator_id = ?'); values.push(data.operator_id || null) }
+      if (data.machine_id !== undefined) { fields.push('machine_id = ?'); values.push(data.machine_id || null) }
       if (data.execution_mode) { fields.push('execution_mode = ?'); values.push(data.execution_mode) }
-      if (data.vendor_id !== undefined) { fields.push('vendor_id = ?'); values.push(data.vendor_id) }
+      if (data.vendor_id !== undefined) { fields.push('vendor_id = ?'); values.push(data.vendor_id || null) }
       if (data.vendor_rate_per_unit !== undefined) { fields.push('vendor_rate_per_unit = ?'); values.push(data.vendor_rate_per_unit) }
       if (data.subcontract_status) { fields.push('subcontract_status = ?'); values.push(data.subcontract_status) }
       if (data.sent_qty !== undefined && data.sent_qty !== null) { fields.push('sent_qty = ?'); values.push(data.sent_qty) }
@@ -2367,6 +2352,24 @@ async deleteAllBOMRawMaterials(bom_id) {
           await this.checkAndUpdateWorkOrderProgress(workOrderId)
         } else if (statusValue === 'completed') {
           await this.checkAndUpdateWorkOrderCompletion(workOrderId)
+        }
+        
+        // Notify about resource availability if status is completed or cancelled
+        if (statusValue === 'completed' || statusValue === 'cancelled') {
+          if (current[0].machine_id) {
+            await this.checkAndNotifyResourceAvailability('machine', current[0].machine_id);
+          }
+          if (current[0].operator_id) {
+            await this.checkAndNotifyResourceAvailability('operator', current[0].operator_id);
+          }
+        } else if (schedulingChanged) {
+          // If machine or operator changed, notify that the OLD one might be free now
+          if (data.machine_id !== undefined && current[0].machine_id && data.machine_id !== current[0].machine_id) {
+            await this.checkAndNotifyResourceAvailability('machine', current[0].machine_id);
+          }
+          if (data.operator_id !== undefined && current[0].operator_id && data.operator_id !== current[0].operator_id) {
+            await this.checkAndNotifyResourceAvailability('operator', current[0].operator_id);
+          }
         }
       }
 

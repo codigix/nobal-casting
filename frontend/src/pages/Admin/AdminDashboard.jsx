@@ -25,14 +25,14 @@ import {
 
 const StatCard = ({ icon: Icon, label, value, trend, trendValue, color, bgColor, iconColor }) => (
   <div className="p-2 rounded border border-slate-200  hover:shadow-md transition-all group relative overflow-hidden" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
-    <div className={`absolute -right-4 -top-4 w-20 h-24 rounded-full ${bgColor} opacity-10 group-hover:opacity-20 transition-opacity`} />
+    <div className={`absolute -right-4 -top-4 w-20 h-24 rounded  ${bgColor} opacity-10 group-hover:opacity-20 transition-opacity`} />
     <div className="relative z-10">
       <div className="flex items-center justify-between mb-2">
         <div className={`p-3 rounded ${bgColor} ${iconColor}`}>
           <Icon size={15} />
         </div>
         {trend && (
-          <div className={`flex items-center gap-1 text-[11px]  p-2 rounded-full ${trend === 'up' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+          <div className={`flex items-center gap-1 text-[11px]  p-2 rounded  ${trend === 'up' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
             {trend === 'up' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
             {trendValue}
           </div>
@@ -97,7 +97,7 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center">
-        <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-4" />
+        <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-600 rounded  animate-spin mb-4" />
         <p className="font-medium animate-pulse" style={{ color: 'var(--text-secondary)' }}>Initializing Dashboard...</p>
       </div>
     )
@@ -274,13 +274,13 @@ export default function AdminDashboard() {
           <div className="mt-4 space-y-3">
             <div className="flex justify-between text-sm">
               <span className="flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
-                <div className="w-2 h-2 rounded-full bg-blue-500" /> Operational
+                <div className="w-2 h-2 rounded  bg-blue-500" /> Operational
               </span>
               <span className="" style={{ color: 'var(--text-primary)' }}>{machineStats.operational}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
-                <div className="w-2 h-2 rounded-full bg-emerald-500" /> Maintenance
+                <div className="w-2 h-2 rounded  bg-emerald-500" /> Maintenance
               </span>
               <span className="" style={{ color: 'var(--text-primary)' }}>{machineStats.maintenance}</span>
             </div>
@@ -321,7 +321,7 @@ export default function AdminDashboard() {
                       <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Due in {project.days_left} days</div>
                     </td>
                     <td className="p-2">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px]   ${
+                      <span className={`px-2.5 py-1 rounded  text-[10px]   ${
                         project.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
                         project.status === 'in_progress' ? 'bg-blue-50 text-blue-600' :
                         'bg-slate-100 text-slate-600'
@@ -332,9 +332,9 @@ export default function AdminDashboard() {
                     <td className="p-2 text-right">
                       <div className="flex flex-col items-end gap-1.5">
                         <span className="text-xs " style={{ color: 'var(--text-primary)' }}>{project.progress}%</span>
-                        <div className="w-24 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
+                        <div className="w-24 h-1.5 rounded  overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
                           <div 
-                            className={`h-full rounded-full ${project.progress > 80 ? 'bg-emerald-500' : project.progress > 40 ? 'bg-blue-500' : 'bg-amber-500'}`}
+                            className={`h-full rounded  ${project.progress > 80 ? 'bg-emerald-500' : project.progress > 40 ? 'bg-blue-500' : 'bg-amber-500'}`}
                             style={{ width: `${project.progress}%` }}
                           />
                         </div>
@@ -356,7 +356,7 @@ export default function AdminDashboard() {
                 <Shield size={16} className="text-blue-500" />
                 Security & System Alerts
               </h3>
-              <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full">
+              <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded ">
                 {notifications.length} NEW
               </span>
             </div>
@@ -407,9 +407,9 @@ export default function AdminDashboard() {
                     <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{machine.name}</span>
                     <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>Last: {machine.days_since_maintenance} days ago</span>
                   </div>
-                  <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
+                  <div className="w-full h-1.5 rounded  overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
                     <div 
-                      className={`h-full rounded-full ${machine.status === 'maintenance' ? 'bg-rose-500' : 'bg-amber-500'}`}
+                      className={`h-full rounded  ${machine.status === 'maintenance' ? 'bg-rose-500' : 'bg-amber-500'}`}
                       style={{ width: `${Math.min(100, (machine.days_since_maintenance / 60) * 100)}%` }}
                     />
                   </div>
