@@ -111,7 +111,13 @@ export class MaterialRequestController {
     try {
       const { db } = req.app.locals
       const { id } = req.params
-      const { approvedBy: approvedByFromBody, source_warehouse, itemsToProcess } = req.body
+      const { approvedBy: approvedByFromBody, itemsToProcess } = req.body
+      let { source_warehouse } = req.body
+
+      // Treat placeholder strings as null
+      if (source_warehouse === 'All Warehouses' || source_warehouse === 'warehouse' || !source_warehouse) {
+        source_warehouse = null
+      }
 
       const mrRequest = await MaterialRequestModel.getById(db, id)
       if (!mrRequest) {
@@ -119,24 +125,28 @@ export class MaterialRequestController {
       }
 
       const purpose = (mrRequest.purpose || '').toLowerCase().replace(/\s+/g, '_')
-      if (mrRequest.department === 'Production' && !['material_issue', 'purchase', 'material_transfer'].includes(purpose)) {
-        return res.status(400).json({ 
-          success: false, 
-          error: 'Production department requests must have purpose "material_issue", "purchase", or "material_transfer"' 
-        })
-      }
-
-      if (purpose === 'material_issue' && !source_warehouse && (!itemsToProcess || Object.keys(itemsToProcess).length === 0)) {
+      
+      // If we have itemsToProcess, we don't strictly need a global source_warehouse
+      const hasPerItemWarehouses = itemsToProcess && Object.keys(itemsToProcess).length > 0
+      
+      if (purpose === 'material_issue' && !source_warehouse && !mrRequest.source_warehouse && !hasPerItemWarehouses) {
         return res.status(400).json({ 
           success: false, 
           error: 'Source warehouse is required for Material Issue requests' 
         })
       }
 
-      if (purpose === 'material_transfer' && (!source_warehouse && (!itemsToProcess || Object.keys(itemsToProcess).length === 0)) || (purpose === 'material_transfer' && !mrRequest.target_warehouse)) {
+      if (purpose === 'material_transfer' && (!source_warehouse && !mrRequest.source_warehouse && !hasPerItemWarehouses)) {
         return res.status(400).json({ 
           success: false, 
-          error: 'Both source and target warehouses are required for Material Transfer requests' 
+          error: 'Source warehouse is required for Material Transfer requests' 
+        })
+      }
+
+      if (purpose === 'material_transfer' && !mrRequest.target_warehouse) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Target warehouse is required for Material Transfer requests' 
         })
       }
 

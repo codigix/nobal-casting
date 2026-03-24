@@ -91,6 +91,8 @@ export default function ProjectAnalysis() {
       const lowerSearch = searchTerm.toLowerCase()
       filtered = filtered.filter(p =>
         p.name?.toLowerCase().includes(lowerSearch) ||
+        p.project_name?.toLowerCase().includes(lowerSearch) ||
+        p.finished_goods?.toLowerCase().includes(lowerSearch) ||
         p.customer_name?.toLowerCase().includes(lowerSearch) ||
         p.id?.toString().includes(lowerSearch)
       )
@@ -287,6 +289,7 @@ export default function ProjectAnalysis() {
               <thead>
                 <tr className="bg-slate-50/50">
                   <th className="p-2 text-[11px]  text-slate-400   border-b border-slate-100">Project Identifier</th>
+
                   <th className="p-2 text-[11px]  text-slate-400   border-b border-slate-100">Execution Status</th>
                   <th className="p-2 text-[11px]  text-slate-400   border-b border-slate-100">Resource Matrix</th>
                   <th className="p-2 text-[11px]  text-slate-400   border-b border-slate-100">Production Yield</th>
@@ -304,7 +307,10 @@ export default function ProjectAnalysis() {
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <p className="text-xs  text-slate-900 m-0 truncate leading-none">{project.name}</p>
+                            <span className="text-xs text-slate-600 truncate max-w-[200px]" title={project.finished_goods}>
+                          {project.finished_goods || 'N/A'}
+                        </span>
+                            {/* <p className="text-xs  text-slate-900 m-0 truncate leading-none">{project.name}</p> */}
                             {project.segment === 'Premium' && (
                               <div className="p-1 bg-amber-50 rounded-md border border-amber-100">
                                 <Star size={10} className="text-amber-500 fill-amber-500" />
@@ -319,6 +325,12 @@ export default function ProjectAnalysis() {
                         </div>
                       </div>
                     </td>
+                    <td className="p-2">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-slate-900 ">{project.project_name || 'N/A'}</span>
+                      </div>
+                    </td>
+                   
                     <td className="p-2">
                       <StatusBadge status={project.status} />
                       <div className="mt-1.5 flex items-center gap-1.5 text-[10px] ">

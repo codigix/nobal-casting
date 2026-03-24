@@ -83,7 +83,12 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
           // If item-specific warehouse is selected, use it. 
           // Otherwise check all warehouses to find best match
           const itemSpecificWh = itemWarehouses[item.item_code]
-          const useGlobalWh = selectedSourceWarehouse || requestData?.source_warehouse
+          let useGlobalWh = selectedSourceWarehouse || requestData?.source_warehouse
+          
+          // Ignore "All Warehouses" or empty strings as global warehouse
+          if (useGlobalWh === 'All Warehouses' || useGlobalWh === 'warehouse' || !useGlobalWh) {
+            useGlobalWh = null
+          }
           
           // ALWAYS fetch all warehouses to get a breakdown for filtering dropdowns
           const params = {
@@ -167,12 +172,13 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
           const issuedQty = parseFloat(item.issued_qty || 0)
           const pendingQty = requestedQty - issuedQty
           
-          // Determine which warehouse name to show
+          // Determine which warehouse name to show - use suggested/active one
           let warehouseDisplayName = 'All Warehouses'
-          const activeWhId = itemSpecificWh || useGlobalWh
-          if (activeWhId) {
-            const whObj = warehouses.find(w => w.id == activeWhId || w.warehouse_id == activeWhId)
-            warehouseDisplayName = whObj ? whObj.warehouse_name : `WH: ${activeWhId}`
+          const finalActiveWhId = suggestedWarehouses[item.item_code] || useGlobalWh
+          
+          if (finalActiveWhId) {
+            const whObj = warehouses.find(w => w.id == finalActiveWhId || w.warehouse_id == finalActiveWhId)
+            warehouseDisplayName = whObj ? whObj.warehouse_name : `WH: ${finalActiveWhId}`
           }
           
           stockInfo[item.item_code] = {
@@ -513,7 +519,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                       }}
                       className="text-xs text-slate-700 bg-transparent border-none outline-none w-full p-0 h-4"
                     >
-                      <option value="">Select Store...</option>
+                      <option value="">{request?.source_warehouse_name || 'Select Store...'}</option>
                       {warehouses.map(w => (
                         <option key={w.id} value={w.id}>{w.warehouse_name}</option>
                       ))}
@@ -533,7 +539,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                         onChange={(e) => setSelectedTargetWarehouse(e.target.value)}
                         className="text-xs text-slate-700 bg-transparent border-none outline-none w-full p-0 h-4"
                       >
-                        <option value="">Select Store...</option>
+                        <option value="">{request?.target_warehouse_name || 'Select Store...'}</option>
                         {warehouses.map(w => (
                           <option key={w.id} value={w.id}>{w.warehouse_name}</option>
                         ))}
@@ -706,7 +712,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                                 <div className="flex flex-col items-center gap-1">
                                   <div className="flex items-center gap-1.5 text-slate-500">
                                     <Warehouse size={12} />
-                                    <span className="text-xs ">{stock?.warehouse || request?.source_warehouse_name || '---'}</span>
+                                    <span className="text-xs ">{stock?.warehouse || request?.source_warehouse_name || 'All Warehouses'}</span>
                                   </div>
                                 </div>
                               )}

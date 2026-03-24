@@ -53,11 +53,15 @@ export class MaterialRequestModel {
                  jc_wo.item_name, 
                  i_bom.name, 
                  mr.items_notes
-               ) as finished_goods_name
+               ) as finished_goods_name,
+               sw.warehouse_name as source_warehouse_name,
+               tw.warehouse_name as target_warehouse_name
         FROM material_request mr 
+        LEFT JOIN warehouses sw ON mr.source_warehouse = CAST(sw.id AS CHAR) COLLATE utf8mb4_unicode_ci OR mr.source_warehouse = sw.warehouse_code COLLATE utf8mb4_unicode_ci OR mr.source_warehouse = sw.warehouse_name COLLATE utf8mb4_unicode_ci
+        LEFT JOIN warehouses tw ON mr.target_warehouse = CAST(tw.id AS CHAR) COLLATE utf8mb4_unicode_ci OR mr.target_warehouse = tw.warehouse_code COLLATE utf8mb4_unicode_ci OR mr.target_warehouse = tw.warehouse_name COLLATE utf8mb4_unicode_ci
         LEFT JOIN employee_master em ON mr.requested_by_id = em.employee_id
         LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
-        LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
+        LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_unicode_ci OR mr.requested_by_id = u.full_name
         LEFT JOIN production_plan pp ON mr.production_plan_id = pp.plan_id
         LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
         LEFT JOIN bom b ON pp.bom_id = b.bom_id
@@ -167,11 +171,15 @@ export class MaterialRequestModel {
                   jc_wo.item_name, 
                   i_bom.name, 
                   mr.items_notes
-                ) as finished_goods_name
+                ) as finished_goods_name,
+                sw.warehouse_name as source_warehouse_name,
+                tw.warehouse_name as target_warehouse_name
          FROM material_request mr 
+         LEFT JOIN warehouses sw ON mr.source_warehouse = CAST(sw.id AS CHAR) COLLATE utf8mb4_unicode_ci OR mr.source_warehouse = sw.warehouse_code COLLATE utf8mb4_unicode_ci OR mr.source_warehouse = sw.warehouse_name COLLATE utf8mb4_unicode_ci
+         LEFT JOIN warehouses tw ON mr.target_warehouse = CAST(tw.id AS CHAR) COLLATE utf8mb4_unicode_ci OR mr.target_warehouse = tw.warehouse_code COLLATE utf8mb4_unicode_ci OR mr.target_warehouse = tw.warehouse_name COLLATE utf8mb4_unicode_ci
          LEFT JOIN employee_master em ON mr.requested_by_id = em.employee_id
          LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
-         LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
+         LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_unicode_ci OR mr.requested_by_id = u.full_name
          LEFT JOIN production_plan pp ON mr.production_plan_id = pp.plan_id
          LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
          LEFT JOIN bom b ON pp.bom_id = b.bom_id
@@ -826,7 +834,7 @@ export class MaterialRequestModel {
                 COALESCE(pp_fg.item_name, jc_wo.item_name) as finished_goods_name
          FROM material_request mr 
          LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
-         LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
+         LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_unicode_ci OR mr.requested_by_id = u.full_name
          LEFT JOIN production_plan pp ON mr.production_plan_id = pp.plan_id
          LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
          LEFT JOIN (
@@ -866,7 +874,7 @@ export class MaterialRequestModel {
                 COALESCE(pp_fg.item_name, jc_wo.item_name) as finished_goods_name
          FROM material_request mr 
          LEFT JOIN contact c ON mr.requested_by_id = c.contact_id 
-         LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_0900_ai_ci OR mr.requested_by_id = u.full_name
+         LEFT JOIN users u ON mr.requested_by_id = CAST(u.user_id AS CHAR) COLLATE utf8mb4_unicode_ci OR mr.requested_by_id = u.full_name
          LEFT JOIN production_plan pp ON mr.production_plan_id = pp.plan_id
          LEFT JOIN selling_sales_order sso ON pp.sales_order_id = sso.sales_order_id
          LEFT JOIN (

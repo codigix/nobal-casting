@@ -420,8 +420,8 @@ class ProductionModel {
   async createWorkOrder(data) {
     try {
       await this.db.query(
-        `INSERT INTO work_order (wo_id, item_code, quantity, priority, notes, status, sales_order_id, production_plan_id, bom_no, planned_start_date, planned_end_date, actual_start_date, actual_end_date, expected_delivery_date, parent_wo_id, target_warehouse)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO work_order (wo_id, item_code, quantity, priority, notes, status, sales_order_id, production_plan_id, bom_no, planned_start_date, planned_end_date, actual_start_date, actual_end_date, expected_delivery_date, parent_wo_id, target_warehouse, wip_warehouse)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [data.wo_id, data.item_code, data.quantity, data.priority || 'medium', data.notes || '', data.status, data.sales_order_id || null, data.production_plan_id || data.plan_id || null, data.bom_no || null, 
          this._formatMySQLDate(data.planned_start_date), 
          this._formatMySQLDate(data.planned_end_date), 
@@ -429,7 +429,8 @@ class ProductionModel {
          this._formatMySQLDate(data.actual_end_date), 
          this._formatMySQLDate(data.expected_delivery_date),
          data.parent_wo_id || null,
-         data.target_warehouse || null]
+         data.target_warehouse || null,
+         data.wip_warehouse || 'Work In Progress']
       )
       return { wo_id: data.wo_id, ...data }
     } catch (error) {
@@ -849,6 +850,7 @@ class ProductionModel {
       if (data.actual_start_date !== undefined) { fields.push('actual_start_date = ?'); values.push(this._formatMySQLDate(data.actual_start_date)) }
       if (data.actual_end_date !== undefined) { fields.push('actual_end_date = ?'); values.push(this._formatMySQLDate(data.actual_end_date)) }
       if (data.expected_delivery_date !== undefined) { fields.push('expected_delivery_date = ?'); values.push(this._formatMySQLDate(data.expected_delivery_date)) }
+      if (data.wip_warehouse !== undefined) { fields.push('wip_warehouse = ?'); values.push(data.wip_warehouse) }
 
       if (fields.length === 0) return false
 

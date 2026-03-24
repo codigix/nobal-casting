@@ -477,6 +477,8 @@ class MastersController {
       // 1. Fetch Sales Order Details
       const [orderRows] = await database.query(
         `SELECT sso.sales_order_id as id,
+                sso.project_name,
+                sso.items,
                 CONCAT(sso.sales_order_id, ' - SO') as name,
                 sso.status,
                 sso.order_amount as revenue,
@@ -497,7 +499,19 @@ class MastersController {
         return res.status(404).json({ success: false, message: 'Project not found' })
       }
       
-      const project = orderRows[0]
+      const rawProject = orderRows[0]
+      let finishedGoods = [];
+      try {
+        const items = rawProject.items ? (typeof rawProject.items === 'string' ? JSON.parse(rawProject.items) : rawProject.items) : [];
+        finishedGoods = items.map(i => i.item_name || i.name || i.item_code).filter(Boolean);
+      } catch (e) {
+        console.error('Error parsing project items in details:', e);
+      }
+      
+      const project = {
+        ...rawProject,
+        finished_goods: finishedGoods.join(', ')
+      }
       
       // 2. Fetch Production Plan
       const [planRows] = await database.query(
@@ -958,9 +972,12 @@ class MastersController {
       
       const [allProjects] = await database.query(
         `SELECT sso.sales_order_id as id, 
+                sso.project_name,
                 CONCAT(sso.sales_order_id, ' - SO') as name, 
                 sso.status, 
                 sso.order_amount as revenue,
+                sso.items,
+                sso.bom_finished_goods,
                 COALESCE(DATEDIFF(sso.delivery_date, NOW()), 0) as daysLeft,
                 sso.delivery_date as dueDate,
                 sso.customer_id as customer,
@@ -1029,9 +1046,26 @@ class MastersController {
         [revenueThreshold]
       )
       
+      const processedProjects = allProjects.map(p => {
+        let finishedGoods = [];
+        try {
+          const items = p.items ? (typeof p.items === 'string' ? JSON.parse(p.items) : p.items) : [];
+          const bomFG = p.bom_finished_goods ? (typeof p.bom_finished_goods === 'string' ? JSON.parse(p.bom_finished_goods) : p.bom_finished_goods) : [];
+          
+          finishedGoods = [...items, ...bomFG].map(i => i.item_name || i.name || i.component_name || i.item_code).filter(Boolean);
+        } catch (e) {
+          console.error('Error parsing project items:', e);
+        }
+        
+        return {
+          ...p,
+          finished_goods: finishedGoods.join(', ')
+        }
+      });
+      
       const segmentDistribution = [
-        { name: 'Premium', value: allProjects.filter(p => p.segment === 'Premium').length, color: '#fbbf24' },
-        { name: 'Other', value: allProjects.filter(p => p.segment === 'Other').length, color: '#3b82f6' }
+        { name: 'Premium', value: processedProjects.filter(p => p.segment === 'Premium').length, color: '#fbbf24' },
+        { name: 'Other', value: processedProjects.filter(p => p.segment === 'Other').length, color: '#3b82f6' }
       ]
       
       const [monthlyTimeline] = await database.query(
@@ -1109,7 +1143,7 @@ class MastersController {
           completionRate: parseFloat(completionRate) || 0,
           statusCounts: statusCounts || [],
           segmentDistribution: segmentDistribution || [],
-          projects: allProjects || [],
+          projects: processedProjects || [],
           monthlyTimeline: monthlyTimeline || [],
           trends
         },

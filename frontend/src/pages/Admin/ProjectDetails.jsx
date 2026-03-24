@@ -310,12 +310,15 @@ export default function ProjectDetails() {
           </button>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-md  text-slate-900 m-0">{project.name || 'Untitled Project'}</h1>
+              <h1 className="text-md  text-slate-900 m-0">{project.project_name || project.name || 'Untitled Project'}</h1>
               <StatusBadge status={project.status} />
             </div>
-            <p className="text-slate-500 font-medium m-0">
-              Customer: <span className="text-slate-900">{project.customer_name || 'Generic Customer'}</span> | 
-              ID: <span className="text-slate-900">{project.id || 'N/A'}</span>
+            <p className="text-slate-500 font-medium m-0 flex flex-wrap gap-x-4 gap-y-1">
+              <span>Customer: <span className="text-slate-900">{project.customer_name || 'Generic Customer'}</span></span>
+              <span>Project ID: <span className="text-slate-900">{project.id || 'N/A'}</span></span>
+              {project.finished_goods && (
+                <span>Finished Goods: <span className="text-slate-900">{project.finished_goods}</span></span>
+              )}
             </p>
           </div>
         </div>

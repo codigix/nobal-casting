@@ -1749,8 +1749,13 @@ export default function ProductionEntry() {
       
       // Strict date/time comparison
       if (entryStart && entryStart < scheduledStart) {
-        toast.addToast(`Entry start time (${entryStart.toLocaleString('en-IN')}) cannot be before the scheduled start (${scheduledStart.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })})`, 'error');
-        return;
+        const isJobInProgress = normalizeStatus(jobCardData?.status) === 'in-progress';
+        if (!isJobInProgress) {
+          toast.addToast(`Entry start time (${entryStart.toLocaleString('en-IN')}) cannot be before the scheduled start (${scheduledStart.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })})`, 'error');
+          return;
+        } else {
+          console.warn(`Production entry before schedule: ${entryStart.toLocaleString()} < ${scheduledStart.toLocaleString()}`);
+        }
       }
 
       if (scheduledEnd && entryEnd && entryEnd > scheduledEnd) {
@@ -1814,13 +1819,23 @@ export default function ProductionEntry() {
       entryDate.setHours(0, 0, 0, 0);
 
       if (entryDate < scheduledStart) {
-        toast.addToast(`Quality entry date cannot be before scheduled start date (${scheduledStart.toLocaleDateString()})`, 'error');
-        return;
+        const isJobInProgress = normalizeStatus(jobCardData?.status) === 'in-progress';
+        if (!isJobInProgress) {
+          toast.addToast(`Quality entry date cannot be before scheduled start date (${scheduledStart.toLocaleDateString()})`, 'error');
+          return;
+        } else {
+          console.warn(`Quality entry before schedule: ${entryDate.toLocaleDateString()} < ${scheduledStart.toLocaleDateString()}`);
+        }
       }
 
       if (scheduledEnd && entryDate > scheduledEnd) {
-        toast.addToast(`Quality entry date cannot be after scheduled end date (${scheduledEnd.toLocaleDateString()})`, 'error');
-        return;
+        const isJobInProgress = normalizeStatus(jobCardData?.status) === 'in-progress';
+        if (!isJobInProgress) {
+          toast.addToast(`Quality entry date cannot be after scheduled end date (${scheduledEnd.toLocaleDateString()})`, 'error');
+          return;
+        } else {
+          console.warn(`Quality entry after schedule: ${entryDate.toLocaleDateString()} > ${scheduledEnd.toLocaleDateString()}`);
+        }
       }
     }
 
@@ -1864,8 +1879,13 @@ export default function ProductionEntry() {
       const scheduledEnd = jobCardData?.scheduled_end_date ? new Date(jobCardData.scheduled_end_date) : null;
       
       if (entryStart && entryStart < scheduledStart) {
-        toast.addToast(`Downtime start time (${entryStart.toLocaleString('en-IN')}) cannot be before the scheduled start (${scheduledStart.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })})`, 'error');
-        return;
+        const isJobInProgress = normalizeStatus(jobCardData?.status) === 'in-progress';
+        if (!isJobInProgress) {
+          toast.addToast(`Downtime start time (${entryStart.toLocaleString('en-IN')}) cannot be before the scheduled start (${scheduledStart.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })})`, 'error');
+          return;
+        } else {
+          console.warn(`Downtime entry before schedule: ${entryStart.toLocaleString()} < ${scheduledStart.toLocaleString()}`);
+        }
       }
 
       if (scheduledEnd && entryEnd && entryEnd > scheduledEnd) {
@@ -2612,12 +2632,12 @@ export default function ProductionEntry() {
                       </FieldWrapper>
                     </div>
                     <div className="col-span-12 lg:col-span-2">
-                      <FieldWrapper label="Reason" required>
+                      <FieldWrapper label="Reason" required={parseFloat(rejectionForm.rejected_qty || 0) > 0 || parseFloat(rejectionForm.scrap_qty || 0) > 0}>
                         <select 
                           value={rejectionForm.reason} 
                           onChange={(e) => setRejectionForm({ ...rejectionForm, reason: e.target.value })} 
                           className="w-full p-2 bg-white border border-slate-200 rounded text-xs text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20" 
-                          required
+                          required={parseFloat(rejectionForm.rejected_qty || 0) > 0 || parseFloat(rejectionForm.scrap_qty || 0) > 0}
                         >
                           <option value="">Select Reason</option>
                           {rejectionReasons.map(r => <option key={r} value={r}>{r}</option>)}
