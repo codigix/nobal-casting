@@ -289,8 +289,6 @@ export default function ProjectAnalysis() {
               <thead>
                 <tr className="bg-slate-50/50">
                   <th className="p-2 text-[11px]  text-slate-400   border-b border-slate-100">Project Identifier</th>
-                  <th className="p-2 text-[11px]  text-slate-400   border-b border-slate-100">Project Name</th>
-                  <th className="p-2 text-[11px]  text-slate-400   border-b border-slate-100">Finished Goods</th>
                   <th className="p-2 text-[11px]  text-slate-400   border-b border-slate-100">Execution Status</th>
                   <th className="p-2 text-[11px]  text-slate-400   border-b border-slate-100">Resource Matrix</th>
                   <th className="p-2 text-[11px]  text-slate-400   border-b border-slate-100">Production Yield</th>
@@ -326,11 +324,11 @@ export default function ProjectAnalysis() {
                         </div>
                       </div>
                     </td>
-                    <td className="p-2">
+                    {/* <td className="p-2">
                       <div className="flex flex-col gap-1">
                         <span className="text-xs text-slate-900 ">{project.project_name || 'N/A'}</span>
                       </div>
-                    </td>
+                    </td> */}
                    
                     <td className="p-2">
                       <StatusBadge status={project.status} />
