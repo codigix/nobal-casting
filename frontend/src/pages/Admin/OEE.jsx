@@ -612,7 +612,7 @@ const MachineCard = ({ machine, onClick }) => {
           <div className="mb-3 px-3 py-1.5 bg-blue-50 rounded  border border-blue-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Activity size={12} className="text-blue-600" />
-              <span className="text-[10px]  text-blue-700 ">Active Production</span>
+              <span className="text-[10px]  text-blue-700 ">Active BOM's</span>
             </div>
             <span className="text-[10px]  text-blue-600">{machine.active_jobs} Jobs</span>
           </div>

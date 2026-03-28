@@ -13,7 +13,7 @@ import {
   FileText, Edit2, Send, Download, Eye, Package, AlertCircle, CheckCircle, XCircle,
   Clock, Plus, TrendingUp, AlertTriangle, RefreshCw, ClipboardList, IndianRupee,
   LayoutGrid, List, Search, Filter, ArrowRight, MoreVertical, Calendar, Building2,
-  ChevronRight, ArrowUpRight, History, Settings2, X
+  ChevronRight, ArrowUpRight, History, Settings2, X, Trash2
 } from 'lucide-react'
 import './Buying.css'
 
@@ -136,6 +136,28 @@ export default function PurchaseOrders() {
     } catch (err) {
       console.error('Error submitting PO:', err)
       toast.addToast('Error submitting PO', 'error')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleDeletePO = async (po_no) => {
+    if (!window.confirm(`Are you sure you want to delete Purchase Order ${po_no}?`)) return
+    
+    try {
+      setActionLoading(po_no)
+      const response = await api.delete(`/purchase-orders/${po_no}`)
+      const data = response.data
+
+      if (data.success) {
+        toast.addToast('Purchase Order deleted successfully', 'success')
+        fetchOrders()
+      } else {
+        toast.addToast(data.error || 'Failed to delete PO', 'error')
+      }
+    } catch (err) {
+      console.error('Error deleting PO:', err)
+      toast.addToast('Error deleting PO', 'error')
     } finally {
       setActionLoading(null)
     }
@@ -415,6 +437,19 @@ export default function PurchaseOrders() {
             variant="icon"
             onClick={(e) => {
               e.stopPropagation()
+              handleDeletePO(row.po_no)
+            }}
+            className="w-5 h-5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 border border-neutral-200 dark:border-neutral-700 transition-all active:scale-90"
+            disabled={actionLoading === row.po_no}
+            title="Delete Order"
+          >
+            <Trash2 size={12} className={actionLoading === row.po_no ? 'animate-pulse' : ''} />
+          </Button>
+          <Button
+            size="xs"
+            variant="icon"
+            onClick={(e) => {
+              e.stopPropagation()
               navigate(`/buying/purchase-orders/${row.po_no}/edit`)
             }}
             className="w-5 h-5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-emerald-600 dark:hover:text-emerald-400 border border-neutral-200 dark:border-neutral-700 transition-all active:scale-90"
@@ -444,10 +479,16 @@ export default function PurchaseOrders() {
           variant="icon"
           onClick={(e) => {
             e.stopPropagation()
+            if (row.receipt_count > 0 || row.pending_grn_count > 0) return
             handleReceiveMaterial(row)
           }}
-          className="w-5 h-5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 border border-neutral-200 dark:border-neutral-700 transition-all active:scale-90"
-          title="Receive Material"
+          className={`w-5 h-5 rounded border border-neutral-200 dark:border-neutral-700 transition-all active:scale-90 ${
+            row.receipt_count > 0 || row.pending_grn_count > 0
+              ? 'bg-neutral-50 dark:bg-neutral-900 text-neutral-300 dark:text-neutral-600 cursor-not-allowed'
+              : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400'
+          }`}
+          title={row.receipt_count > 0 || row.pending_grn_count > 0 ? "GRN Already Created" : "Receive Material"}
+          disabled={row.receipt_count > 0 || row.pending_grn_count > 0}
         >
           <Download size={12} />
         </Button>
@@ -682,19 +723,34 @@ export default function PurchaseOrders() {
 
                     <div className="flex items-center justify-between gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
                       {order.status === 'draft' ? (
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2  rounded  text-xs  "
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleSubmitPO(order.po_no)
-                          }}
-                          disabled={actionLoading === order.po_no}
-                        >
-                          <Send size={14} strokeWidth={3} />
-                          SUBMIT PO
-                        </Button>
+                        <div className="flex items-center gap-2 w-full">
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2  rounded  text-xs  "
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleSubmitPO(order.po_no)
+                            }}
+                            disabled={actionLoading === order.po_no}
+                          >
+                            <Send size={14} strokeWidth={3} />
+                            SUBMIT
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 rounded "
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeletePO(order.po_no)
+                            }}
+                            disabled={actionLoading === order.po_no}
+                            title="Delete PO"
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
                       ) : (order.status === 'submitted' || order.status === 'to_receive' || order.status === 'partially_received') ? (
                         <Button
                           variant="success"

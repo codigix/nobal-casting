@@ -1418,11 +1418,12 @@ export default function ProductionPlanningForm() {
         for (const item of itemsToCheck || []) {
           const itemBalances = balances.filter(b => b.item_code === item.item_code)
           const totalAvailable = itemBalances.reduce((sum, b) => sum + parseFloat(b.available_qty || b.current_qty || 0), 0)
+          const requested = item.requested_qty || item.qty || item.quantity || 0
 
           stockInfo[item.item_code] = {
             available: totalAvailable,
-            requested: item.qty || item.quantity || 0,
-            isAvailable: totalAvailable >= (item.qty || item.quantity || 0),
+            requested: requested,
+            isAvailable: totalAvailable >= requested,
             hasStock: totalAvailable > 0,
             warehouse: itemBalances.length > 0 ? itemBalances[0].warehouse_name || itemBalances[0].warehouse : '-'
           }
@@ -1527,6 +1528,7 @@ export default function ProductionPlanningForm() {
           item_code: m.item_code,
           item_name: m.item_name,
           qty: m.quantity,
+          requested_qty: m.quantity,
           uom: m.uom,
           warehouse: m.warehouse || 'Stores - NC',
           purpose: filterType === 'out_of_stock' ? 'purchase' : 'material_issue'
@@ -2903,6 +2905,7 @@ export default function ProductionPlanningForm() {
                       <tr>
                         <th className="p-3 text-xs  text-slate-500 ">Component Intelligence</th>
                         <th className="p-3 text-right text-xs  text-slate-500 ">Required</th>
+                        <th className="p-3 text-right text-xs  text-slate-500 w-28">To Request</th>
                         <th className="p-3 text-right text-xs  text-slate-500 ">Inventory</th>
                         <th className="p-3 text-center text-xs  text-slate-500 ">Status</th>
                       </tr>
@@ -2910,7 +2913,7 @@ export default function ProductionPlanningForm() {
                     <tbody className="divide-y divide-slate-100">
                       {materialRequestData.items.map((item, idx) => {
                         const stock = materialStockData[item.item_code]
-                        const isAvailable = stock?.isAvailable
+                        const isAvailableNow = stock && stock.available >= (item.requested_qty || 0)
                         return (
                           <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                             <td className="p-3">
@@ -2926,6 +2929,24 @@ export default function ProductionPlanningForm() {
                               <span className="text-[10px] text-slate-400 ml-1 ">{item.uom}</span>
                             </td>
                             <td className="p-3 text-right">
+                              <input
+                                type="number"
+                                value={item.requested_qty || 0}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0;
+                                  setMaterialRequestData(prev => ({
+                                    ...prev,
+                                    items: prev.items.map(it => 
+                                      it.item_code === item.item_code 
+                                        ? { ...it, requested_qty: val } 
+                                        : it
+                                    )
+                                  }));
+                                }}
+                                className="w-full p-1 text-right text-xs border border-slate-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                              />
+                            </td>
+                            <td className="p-3 text-right">
                               {checkingStock ? (
                                 <Loader size={12} className="animate-spin ml-auto text-slate-400" />
                               ) : (
@@ -2936,12 +2957,12 @@ export default function ProductionPlanningForm() {
                               {checkingStock ? (
                                 <span className="inline-block w-16 h-4 bg-slate-100 animate-pulse rounded" />
                               ) : (
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded  text-[10px]  border transition-all ${isAvailable
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded  text-[10px]  border transition-all ${isAvailableNow
                                     ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
                                     : 'bg-rose-50 text-rose-600 border-rose-100'
                                   }`}>
-                                  {isAvailable ? <Check size={10} /> : <AlertCircle size={10} />}
-                                  {isAvailable ? 'Fully Stocked' : 'Low Inventory'}
+                                  {isAvailableNow ? <Check size={10} /> : <AlertCircle size={10} />}
+                                  {isAvailableNow ? 'Fully Stocked' : 'Low Inventory'}
                                 </span>
                               )}
                             </td>

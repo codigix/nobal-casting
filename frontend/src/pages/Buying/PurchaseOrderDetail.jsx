@@ -11,7 +11,7 @@ import { useToast } from '../../components/ToastContainer'
 import { 
   ArrowLeft, CheckCircle, XCircle, Clock, Package, User, ChevronRight, 
   Truck, FileCheck, IndianRupee, Send, Printer, Download, Edit2, 
-  Calendar, Building2, MapPin, CreditCard, Info, Receipt, ClipboardList
+  Calendar, Building2, MapPin, CreditCard, Info, Receipt, ClipboardList, Trash2
 } from 'lucide-react'
 import './Buying.css'
 
@@ -65,6 +65,25 @@ export default function PurchaseOrderDetail() {
       }
     } catch (error) {
       toast.addToast('Error submitting purchase order', 'error')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Are you sure you want to delete Purchase Order ${po_no}?`)) return
+    
+    setActionLoading(true)
+    try {
+      const res = await api.delete(`/purchase-orders/${po_no}`)
+      if (res.data.success) {
+        toast.addToast('Purchase Order deleted successfully', 'success')
+        navigate('/buying/purchase-orders')
+      } else {
+        toast.addToast(res.data.error || 'Failed to delete PO', 'error')
+      }
+    } catch (error) {
+      toast.addToast('Error deleting purchase order', 'error')
     } finally {
       setActionLoading(false)
     }
@@ -185,11 +204,17 @@ export default function PurchaseOrderDetail() {
               <Button 
                 variant="primary" 
                 size="sm"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded   shadow-indigo-600/20 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] border-none text-[10px]  "
+                disabled={po.grn_request_count > 0 || po.grn_count > 0}
+                className={`px-6 py-3 rounded shadow-indigo-600/20 flex items-center gap-2 transition-all border-none text-[10px] ${
+                  (po.grn_request_count > 0 || po.grn_count > 0)
+                    ? 'bg-neutral-200 text-neutral-500 cursor-not-allowed shadow-none'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white hover:scale-[1.02] active:scale-[0.98]'
+                }`}
                 onClick={() => setShowGRNModal(true)}
+                title={po.grn_request_count > 0 || po.grn_count > 0 ? "GRN Request already created for this PO" : "Receive Material"}
               >
                 <Package size={18} strokeWidth={3} />
-                RECEIVE MATERIAL
+                {po.grn_request_count > 0 || po.grn_count > 0 ? 'GRN CREATED' : 'RECEIVE MATERIAL'}
               </Button>
             )}
             {po.status === 'draft' && (
@@ -202,6 +227,16 @@ export default function PurchaseOrderDetail() {
                 >
                   <Edit2 size={18} />
                   EDIT
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="bg-white dark:bg-neutral-800 text-rose-600 dark:text-rose-400 border border-neutral-200 dark:border-neutral-700 px-6 py-3 rounded  hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all text-[10px]   "
+                  onClick={handleDelete}
+                  loading={actionLoading}
+                >
+                  <Trash2 size={18} />
+                  DELETE
                 </Button>
                 <Button 
                   variant="primary" 

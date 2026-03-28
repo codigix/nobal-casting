@@ -30,7 +30,7 @@ const SectionTitle = ({ title, icon: Icon, badge }) => (
 )
 
 const FieldWrapper = ({ label, children, error, required }) => (
-  <div className=".5">
+  <div className="">
     <div className="flex items-center justify-between">
       <label className="text-xs   text-slate-400 text-xs flex items-center gap-1">
         {label}
@@ -64,7 +64,7 @@ const NavItem = ({ label, icon: Icon, section, isActive, onClick, themeColor = '
         : 'text-slate-500 hover:bg-white hover:text-slate-900 border border-transparent hover:border-slate-100'
         }`}
     >
-      <div className={`p-1.5 rounded transition-all duration-300 ${isActive ? 'bg-white scale-110' : 'bg-slate-50 group-hover:bg-white'}`}>
+      <div className={`p-1 rounded transition-all duration-300 ${isActive ? 'bg-white scale-110' : 'bg-slate-50 group-hover:bg-white'}`}>
         <Icon size={10} strokeWidth={isActive ? 2.5 : 2} className={isActive ? '' : 'opacity-60'} />
       </div>
       <span className="text-xs font-medium ">{label.split(' ').slice(1).join(' ')}</span>
@@ -1194,9 +1194,7 @@ export default function WorkOrderForm() {
       <div className="sticky top-0 bg-white/80 ">
         <div className="p-2 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-2 bg-indigo-600 rounded  shadow-indigo-200">
-              <Factory className="w-5 h-5 text-white" />
-            </div>
+           
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg  text-slate-900 ">
@@ -1279,7 +1277,7 @@ export default function WorkOrderForm() {
 
         <div className="hidden lg:flex items-center gap-4 bg-slate-900 p-2 rounded shadow-xl shrink-0">
           <div className="flex flex-col">
-            <div className="flex items-center justify-between text-[9px]   text-slate-400  mb-1">
+            <div className="flex items-center justify-between text-xs   text-slate-400  mb-1">
               <span className="opacity-60 ">Execution Pulse</span>
               <span className="text-indigo-400 ml-2">{((completionMetrics.totalCompleted / (formData.qty_to_manufacture || 1)) * 100).toFixed(0)}%</span>
             </div>
@@ -1350,7 +1348,7 @@ export default function WorkOrderForm() {
                             disabled={!isEditAllowed}
                             className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all "
                           />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px]  text-slate-400">UNIT</span>
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs  text-slate-400">UNIT</span>
                         </div>
                       </FieldWrapper>
 
@@ -1392,7 +1390,7 @@ export default function WorkOrderForm() {
                         onChange={handleInputChange}
                         disabled={isReadOnly}
                         placeholder="Add production notes, special instructions or constraints..."
-                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 min-h-[100px] transition-all resize-none"
+                        className="w-full p-2 col-span-2 bg-slate-50 border border-slate-200 rounded text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 min-h-[100px] transition-all resize-none"
                       />
                     </FieldWrapper>
                   </div>
@@ -1500,8 +1498,8 @@ export default function WorkOrderForm() {
                 <Card className="border-none bg-white ">
                   <div className="p-2 border-b border-slate-100 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-white text-indigo-600 rounded border border-slate-100  ">
-                        <Layers size={16} />
+                      <div className="p-1 bg-white text-indigo-600 rounded border border-slate-100  ">
+                        <Layers size={15} />
                       </div>
                       <h3 className="text-xs  text-slate-900  ">03 Operation Sequence</h3>
                     </div>
@@ -1576,7 +1574,7 @@ export default function WorkOrderForm() {
                                           {jc.execution_mode === 'OUTSOURCE' ? (jc.vendor_name || 'Vendor Assigned') : getWorkstationName(jc.workstation_type || jc.workstation)}
                                         </span>
                                       </div>
-                                      <span className={`text-[10px] px-1.5 py-0.5 rounded w-fit ${jc.execution_mode === 'OUTSOURCE' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                      <span className={`text-xs p-1 rounded w-fit ${jc.execution_mode === 'OUTSOURCE' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
                                         {jc.execution_mode === 'OUTSOURCE' ? 'OUTSOURCED' : 'IN-HOUSE'}
                                       </span>
                                     </div>
@@ -1585,7 +1583,7 @@ export default function WorkOrderForm() {
                                 <td className="p-2  text-right">
                                   <div className="flex flex-col items-end gap-0.5">
                                     <span className="text-xs text-slate-900 font-medium">{jc.operation_time || 0}m</span>
-                                    <span className="text-[10px] text-slate-400">₹{parseFloat(jc.operating_cost || 0).toLocaleString()}</span>
+                                    <span className="text-xs text-slate-400">₹{parseFloat(jc.operating_cost || 0).toLocaleString()}</span>
                                   </div>
                                 </td>
                                 <td className="p-2  text-right">
@@ -1618,7 +1616,7 @@ export default function WorkOrderForm() {
                                           <>
                                             {(jc.status || '').toLowerCase() === 'ready' || (jc.status || '').toLowerCase() === 'draft' ? (
                                               <button
-                                                className="flex items-center gap-1.5 px-2 py-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded text-[10px]  transition-all"
+                                                className="flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded text-xs  transition-all"
                                                 onClick={() => handleDispatch(jc.job_card_id || jc.id)}
                                               >
                                                 <Package size={12} />
@@ -1626,7 +1624,7 @@ export default function WorkOrderForm() {
                                               </button>
                                             ) : jc.subcontract_status === 'SENT_TO_VENDOR' || jc.subcontract_status === 'PARTIALLY_RECEIVED' ? (
                                               <button
-                                                className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded text-[10px]  transition-all"
+                                                className="flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded text-xs  transition-all"
                                                 onClick={() => handleOpenReceiptModal(jc)}
                                               >
                                                 <Package size={12} />
@@ -1670,7 +1668,7 @@ export default function WorkOrderForm() {
                             <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                               <td className="p-2 text-xs text-slate-900">{op.operation_name}</td>
                               <td className="p-2 text-xs">
-                                <span className={`px-2 py-0.5 rounded  text-[10px] ${op.execution_mode === 'OUTSOURCE' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                <span className={`px-2 py-0.5 rounded  text-xs ${op.execution_mode === 'OUTSOURCE' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
                                   {op.execution_mode === 'OUTSOURCE' ? 'Outsource' : 'In-House'}
                                 </span>
                               </td>
@@ -1698,7 +1696,7 @@ export default function WorkOrderForm() {
                   ) : (
                     <div className="p-2 text-center">
                       <div className="w-8 h-8 bg-slate-50 text-slate-200 rounded  flex items-center justify-center mx-auto mb-6 border border-slate-100">
-                        <Activity size={16} />
+                        <Activity size={15} />
                       </div>
                       <h4 className="text-sm  text-slate-900 mb-2 ">Production Logic Not Found</h4>
                       <p className="text-xs text-slate-500 font-medium max-w-[280px] mx-auto leading-relaxed">
@@ -1738,19 +1736,19 @@ export default function WorkOrderForm() {
                       </div>
                       <div className="grid mt-2 grid-cols-2 gap-2">
                         <div className="bg-white/5 p-2 rounded  border border-white/10 hover:bg-white/[0.08] transition-colors group/card">
-                          <p className="text-[10px] text-slate-500 mb-1 group-hover/card:text-indigo-400 transition-colors">Yield</p>
+                          <p className="text-xs text-slate-500 mb-1 group-hover/card:text-indigo-400 transition-colors">Yield</p>
                           <p className="text-sm font-semibold text-white">{completionMetrics.qualityScore}%</p>
                         </div>
                         <div className="bg-white/5 p-2 rounded  border border-white/10 hover:bg-white/[0.08] transition-colors group/card">
-                          <p className="text-[10px] text-slate-500 mb-1 group-hover/card:text-amber-400 transition-colors">Actual Hrs</p>
+                          <p className="text-xs text-slate-500 mb-1 group-hover/card:text-amber-400 transition-colors">Actual Hrs</p>
                           <p className="text-sm font-semibold text-white">{(completionMetrics.totalActualTime / 60).toFixed(1)}h</p>
                         </div>
                         <div className="bg-white/5 p-2 rounded  border border-white/10 hover:bg-white/[0.08] transition-colors group/card">
-                          <p className="text-[10px] text-slate-500 mb-1 group-hover/card:text-rose-400 transition-colors">Scrap Rate</p>
+                          <p className="text-xs text-slate-500 mb-1 group-hover/card:text-rose-400 transition-colors">Scrap Rate</p>
                           <p className="text-sm font-semibold text-white">{completionMetrics.scrapRate}%</p>
                         </div>
                         <div className="bg-white/5 p-2 rounded  border border-white/10 hover:bg-white/[0.08] transition-colors group/card">
-                          <p className="text-[10px] text-slate-500 mb-1 group-hover/card:text-emerald-400 transition-colors">Efficiency</p>
+                          <p className="text-xs text-slate-500 mb-1 group-hover/card:text-emerald-400 transition-colors">Efficiency</p>
                           <p className="text-sm font-semibold text-white">{completionMetrics.efficiency}%</p>
                         </div>
                       </div>
@@ -1770,8 +1768,8 @@ export default function WorkOrderForm() {
                 <Card className="border-none bg-white">
                   <div className="p-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-white text-emerald-600 rounded border border-slate-100  ">
-                        <Boxes size={16} />
+                      <div className="p-1 bg-white text-emerald-600 rounded border border-slate-100  ">
+                        <Boxes size={15} />
                       </div>
                       <h3 className="text-xs  text-slate-900  ">04 Required Inventory</h3>
                     </div>
@@ -1823,22 +1821,22 @@ export default function WorkOrderForm() {
                             return (
                               <tr key={mat.id} className="hover:bg-slate-50/50 transition-colors group">
                                 <td className="p-2 ">
-                                  <div className="flex flex-col gap-1.5">
+                                  <div className="flex flex-col gap-1">
                                     <div className="flex items-center gap-2">
                                       <span className="text-xs font-semibold text-slate-900">{mat.item_name || mat.description}</span>
                                       {isConsumable && (
-                                        <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 text-[9px] font-bold uppercase rounded border border-indigo-100">
+                                        <span className="p-1 bg-indigo-50 text-indigo-600 text-xs font-bold uppercase rounded border border-indigo-100">
                                           Consumable
                                         </span>
                                       )}
                                     </div>
                                     <div className="flex items-center gap-2">
-                                      <span className="text-[10px] text-slate-400 font-medium font-mono">{mat.item_code}</span>
+                                      <span className="text-xs text-slate-400 font-medium font-mono">{mat.item_code}</span>
                                       <select
                                         value={mat.source_warehouse || ''}
                                         onChange={(e) => updateMaterial(mat.id, 'source_warehouse', e.target.value)}
                                         disabled={isReadOnly || issued > 0}
-                                        className="text-[10px] bg-slate-50 border-none rounded px-1 py-0.5 text-slate-600 focus:ring-1 focus:ring-indigo-500 outline-none"
+                                        className="text-xs bg-slate-50 border-none rounded px-1 py-0.5 text-slate-600 focus:ring-1 focus:ring-indigo-500 outline-none"
                                       >
                                         <option value="">Select Warehouse</option>
                                         {warehouses.map(w => (
@@ -1851,7 +1849,7 @@ export default function WorkOrderForm() {
                                 <td className="p-2  text-right">
                                   <div className="flex flex-col items-end">
                                     <span className="text-xs  text-slate-900 font-medium">{mat.required_qty}</span>
-                                    <span className="text-[9px]  text-slate-400 ">{mat.uom}</span>
+                                    <span className="text-xs  text-slate-400 ">{mat.uom}</span>
                                   </div>
                                 </td>
                                 <td className="p-2  text-right">
@@ -1860,10 +1858,10 @@ export default function WorkOrderForm() {
                                       {issued.toFixed(2)}
                                     </span>
                                     {isShortage && issued > 0 && (
-                                      <span className="text-[9px] text-amber-500 font-medium italic">Partial</span>
+                                      <span className="text-xs text-amber-500 font-medium italic">Partial</span>
                                     )}
                                     {isShortage && issued === 0 && (
-                                      <span className="text-[9px] text-rose-500 font-medium italic">Not Issued</span>
+                                      <span className="text-xs text-rose-500 font-medium italic">Not Issued</span>
                                     )}
                                   </div>
                                 </td>
@@ -1880,7 +1878,7 @@ export default function WorkOrderForm() {
                                       {remaining.toFixed(2)}
                                     </span>
                                     {scrap > 0 && (
-                                      <span className="text-[9px] text-rose-500">
+                                      <span className="text-xs text-rose-500">
                                         Loss: {scrap.toFixed(2)}
                                       </span>
                                     )}
@@ -1895,7 +1893,7 @@ export default function WorkOrderForm() {
                   ) : (
                     <div className="p-2 text-center bg-slate-50/10">
                       <div className="w-8 h-8 bg-white border border-slate-100 text-slate-200 rounded  flex items-center justify-center mx-auto mb-6  ">
-                        <Boxes size={16} />
+                        <Boxes size={15} />
                       </div>
                       <h4 className="text-sm  text-slate-900 mb-2">Stock Requirements Empty</h4>
                       <p className="text-xs text-slate-500 font-medium max-w-[280px] mx-auto leading-relaxed">
@@ -1910,8 +1908,8 @@ export default function WorkOrderForm() {
                   <Card className="border-none bg-white mt-4">
                     <div className="p-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="p-1.5 bg-white text-indigo-600 rounded border border-slate-100">
-                          <Activity size={16} />
+                        <div className="p-1 bg-white text-indigo-600 rounded border border-slate-100">
+                          <Activity size={15} />
                         </div>
                         <h3 className="text-xs text-slate-900">Used Material (Operation-wise)</h3>
                       </div>
@@ -1933,12 +1931,12 @@ export default function WorkOrderForm() {
                             <tr key={usage.consumption_id || idx} className="hover:bg-slate-50/50 transition-colors">
                               <td className="p-2">
                                 <span className="text-xs font-medium text-slate-900">{usage.operation_name}</span>
-                                <div className="text-[10px] text-slate-400 font-mono">{usage.job_card_id}</div>
+                                <div className="text-xs text-slate-400 font-mono">{usage.job_card_id}</div>
                               </td>
                               <td className="p-2">
                                 <div className="flex flex-col">
                                   <span className="text-xs text-slate-900 font-medium">{usage.item_code}</span>
-                                  <span className="text-[10px] text-slate-400 truncate max-w-[180px]">{usage.item_name}</span>
+                                  <span className="text-xs text-slate-400 truncate max-w-[180px]">{usage.item_name}</span>
                                 </div>
                               </td>
                               <td className="p-2 text-right">
@@ -1952,15 +1950,15 @@ export default function WorkOrderForm() {
                                 </span>
                               </td>
                               <td className="p-2">
-                                <span className="text-[10px] text-slate-500 italic">
+                                <span className="text-xs text-slate-500 italic">
                                   {usage.waste_reason || '-'}
                                 </span>
                               </td>
                               <td className="p-2">
-                                <div className="text-[10px] text-slate-500">
+                                <div className="text-xs text-slate-500">
                                   {new Date(usage.tracked_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                                 </div>
-                                <div className="text-[9px] text-slate-400">
+                                <div className="text-xs text-slate-400">
                                   {new Date(usage.tracked_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                                 </div>
                               </td>
@@ -1981,7 +1979,7 @@ export default function WorkOrderForm() {
                     className="w-full flex items-center justify-between p-2  bg-indigo-50 text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 rounded  border border-indigo-100 transition-all group"
                   >
                     <div className="flex items-center gap-3">
-                      <Save size={16} />
+                      <Save size={15} />
                       <span className="text-xs  ">Commit Progress</span>
                     </div>
                     <ArrowRight size={14} className=" group-hover:translate-x-1 transition-all" />
@@ -1994,7 +1992,7 @@ export default function WorkOrderForm() {
                       className="w-full flex items-center justify-between p-2  bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 rounded  border border-emerald-100 transition-all group"
                     >
                       <div className="flex items-center gap-3">
-                        <ShieldCheck size={16} />
+                        <ShieldCheck size={15} />
                         <span className="text-xs">Finalize Inventory</span>
                       </div>
                       <CheckCircle size={14} className="group-hover:scale-110 transition-all" />
@@ -2007,7 +2005,7 @@ export default function WorkOrderForm() {
                     className="w-full flex items-center justify-between p-2  bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-30 rounded  transition-all group  shadow-slate-200"
                   >
                     <div className="flex items-center gap-3">
-                      <Layers size={16} />
+                      <Layers size={15} />
                       <span className="text-xs  ">Release job cards</span>
                     </div>
                     <Zap size={14} className="text-amber-400" />
@@ -2016,7 +2014,7 @@ export default function WorkOrderForm() {
                   {isReadOnly && (
                     <div className="p-4 bg-slate-50 border border-slate-100 rounded text-center">
                       <p className="text-xs text-slate-500 font-medium">Read-only Mode</p>
-                      <p className="text-[10px] text-slate-400 mt-1">Actions are disabled in view mode</p>
+                      <p className="text-xs text-slate-400 mt-1">Actions are disabled in view mode</p>
                     </div>
                   )}
                 </div>
@@ -2058,7 +2056,7 @@ export default function WorkOrderForm() {
                   </div>
                   <div className="relative z-0">
                     <div className="flex items-center gap-2 mb-3 text-slate-900">
-                      <Info size={16} />
+                      <Info size={15} />
                       <h4 className="text-xs  ">Yield Note</h4>
                     </div>
                     <p className="text-xs text-slate-500 font-medium leading-relaxed">
@@ -2077,8 +2075,8 @@ export default function WorkOrderForm() {
                 <Card className="border-none bg-white">
                   <div className="p-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-white text-cyan-600 rounded border border-slate-100">
-                        <FileText size={16} />
+                      <div className="p-1 bg-white text-cyan-600 rounded border border-slate-100">
+                        <FileText size={15} />
                       </div>
                       <h3 className="text-xs text-slate-900">05 Daily Production History</h3>
                     </div>
@@ -2149,7 +2147,7 @@ export default function WorkOrderForm() {
                 </div>
                 <div>
                   <h3 className="text-lg  text-slate-900 text-xs">Subcontract Receipt</h3>
-                  <p className="text-[10px] text-emerald-600   tracking-wider">{receivingJobCard?.job_card_id || receivingJobCard?.id}</p>
+                  <p className="text-xs text-emerald-600   tracking-wider">{receivingJobCard?.job_card_id || receivingJobCard?.id}</p>
                 </div>
               </div>
               <button onClick={() => setShowReceiptModal(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded  transition-all">
@@ -2160,17 +2158,17 @@ export default function WorkOrderForm() {
             <div className="p-6 space-y-5">
               <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded  border border-slate-100">
                 <div>
-                  <p className="text-[10px] text-slate-400    mb-1">Total Sent</p>
+                  <p className="text-xs text-slate-400    mb-1">Total Sent</p>
                   <p className="text-sm  text-slate-900">{receivingJobCard?.sent_qty || receivingJobCard?.planned_quantity} Units</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-slate-400    mb-1">Already Received</p>
+                  <p className="text-xs text-slate-400    mb-1">Already Received</p>
                   <p className="text-sm  text-slate-900">{receivingJobCard?.received_qty || 0} Units</p>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px]  text-slate-500  tracking-wider ml-1">Received Quantity</label>
+                <label className="text-xs  text-slate-500  tracking-wider ml-1">Received Quantity</label>
                 <div className="relative">
                   <input
                     type="number"
@@ -2187,7 +2185,7 @@ export default function WorkOrderForm() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px]  text-slate-500  tracking-wider ml-1">Accepted</label>
+                  <label className="text-xs  text-slate-500  tracking-wider ml-1">Accepted</label>
                   <input
                     type="number"
                     value={receiptData.accepted_qty}
@@ -2197,7 +2195,7 @@ export default function WorkOrderForm() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px]  text-slate-500  tracking-wider ml-1">Rejected</label>
+                  <label className="text-xs  text-slate-500  tracking-wider ml-1">Rejected</label>
                   <input
                     type="number"
                     value={receiptData.rejected_qty}
@@ -2211,7 +2209,7 @@ export default function WorkOrderForm() {
               {receiptData.accepted_qty + receiptData.rejected_qty > receiptData.received_qty && (
                 <div className="p-3 bg-rose-50 rounded  border border-rose-100 flex items-center gap-2 text-rose-600 animate-pulse">
                   <AlertCircle size={14} />
-                  <p className="text-[10px]   ">Accepted + Rejected cannot exceed Received</p>
+                  <p className="text-xs   ">Accepted + Rejected cannot exceed Received</p>
                 </div>
               )}
             </div>

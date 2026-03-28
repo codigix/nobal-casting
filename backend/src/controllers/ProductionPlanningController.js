@@ -10,6 +10,21 @@ export class ProductionPlanningController {
     this.productionModel = new ProductionModel(db)
   }
 
+  async regeneratePlan(req, res) {
+    try {
+      const { plan_id } = req.params
+      if (!plan_id) {
+        return res.status(400).json({ success: false, error: 'Plan ID is required' })
+      }
+
+      const result = await this.service.regenerateProductionPlan(plan_id)
+      res.json({ success: true, message: 'Production plan regenerated and synchronized successfully', data: result })
+    } catch (error) {
+      console.error('Error regenerating production plan:', error)
+      res.status(500).json({ success: false, error: error.message })
+    }
+  }
+
   async createPlan(req, res) {
     const connection = await this.db.getConnection()
     try {

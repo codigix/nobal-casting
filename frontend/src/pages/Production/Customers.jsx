@@ -157,10 +157,10 @@ export default function Customers() {
       {/* Sticky Top Header */}
       <div className="sticky top-0  bg-white/80 backdrop-blur-md border-b border-slate-200">
         <div className=" p-2 ">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div>
-                <h1 className="text-lg  text-slate-900">Customer Directory</h1>
+                <h1 className="text-lg  text-slate-900">Our Customer</h1>
                 <div className="flex items-center gap-2 text-xs  text-slate-500 font-medium text-xs ">
                   <span>Manufacturing</span>
                   <ChevronRight size={10} />

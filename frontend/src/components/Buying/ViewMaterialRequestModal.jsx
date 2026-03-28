@@ -22,6 +22,7 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
   const [stockData, setStockData] = useState({})
   const [itemWarehouses, setItemWarehouses] = useState({})
   const [checkingStock, setCheckingStock] = useState(false)
+  const [customQuantities, setCustomQuantities] = useState({})
 
   const [selectedSourceWarehouse, setSelectedSourceWarehouse] = useState(null)
   const [selectedTargetWarehouse, setSelectedTargetWarehouse] = useState(null)
@@ -168,9 +169,10 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
             }
           }
           
-          const requestedQty = parseFloat(item.qty || 0)
+          const totalQty = parseFloat(item.qty || 0)
+          const requestedQtyLimit = parseFloat(item.requested_qty || item.qty || 0)
           const issuedQty = parseFloat(item.issued_qty || 0)
-          const pendingQty = requestedQty - issuedQty
+          const pendingQty = requestedQtyLimit - issuedQty
           
           // Determine which warehouse name to show - use suggested/active one
           let warehouseDisplayName = 'All Warehouses'
@@ -183,7 +185,8 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
           
           stockInfo[item.item_code] = {
             available: totalAvailableQty,
-            requested: requestedQty,
+            totalRequested: totalQty,
+            requested: requestedQtyLimit,
             pending: pendingQty,
             isAvailable: itemExists && totalAvailableQty > 0 && (pendingQty <= 0 || totalAvailableQty >= pendingQty),
             hasStock: itemExists && totalAvailableQty > 0,
@@ -239,22 +242,29 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
       const isTransferOrIssue = ['material_transfer', 'material_issue'].includes(request?.purpose?.toLowerCase())
       
       // Identify available items to process if it's a stock transaction
-      let itemsToProcess = null
+      let itemsToProcess = []
       if (isTransferOrIssue) {
-        // Build a map of item_code -> warehouse_id for items that have stock and pending quantity
-        const processMap = {}
+        // Build a list of { item_code, warehouse_id, qty } for items to release
         request?.items?.forEach(item => {
           const stock = stockData[item.item_code]
-          const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
+          const requestedQtyLimit = Number(item.requested_qty || item.qty || 0)
+          const pendingQty = requestedQtyLimit - Number(item.issued_qty || 0)
           const whId = itemWarehouses[item.item_code] || selectedSourceWarehouse || request?.source_warehouse
           
-          if (stock && stock.hasStock && pendingQty > 0 && whId) {
-            processMap[item.item_code] = whId
+          // Get custom qty if set, otherwise use pendingQty
+          const releaseQty = customQuantities[item.item_code] !== undefined ? customQuantities[item.item_code] : pendingQty
+          
+          if (stock && stock.hasStock && releaseQty > 0 && whId) {
+            itemsToProcess.push({
+              item_code: item.item_code,
+              warehouse_id: whId,
+              qty: releaseQty
+            })
           }
         })
 
-        if (Object.keys(processMap).length === 0) {
-          setError('No available items with selected warehouses to release at this moment.')
+        if (itemsToProcess.length === 0) {
+          setError('No items with sufficient stock and valid quantities selected to release.')
           setLoading(false)
           return
         }
@@ -264,8 +274,6 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
           setLoading(false)
           return
         }
-        
-        itemsToProcess = processMap
       }
 
       const payload = { 
@@ -309,9 +317,25 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
         return
       }
 
+      // Get quantity to release
+      const item = request?.items?.find(i => i.item_code === itemCode)
+      const requestedQtyLimit = Number(item?.requested_qty || item?.qty || 0)
+      const pendingQty = requestedQtyLimit - Number(item?.issued_qty || 0)
+      const releaseQty = customQuantities[itemCode] !== undefined ? customQuantities[itemCode] : pendingQty
+
+      if (releaseQty <= 0) {
+        setError('Release quantity must be greater than 0.')
+        setLoading(false)
+        return
+      }
+
       const payload = { 
         approvedBy: user?.id || user?.user_id || 'User',
-        itemsToProcess: { [itemCode]: whId }
+        itemsToProcess: [{
+          item_code: itemCode,
+          warehouse_id: whId,
+          qty: releaseQty
+        }]
       }
       
       const response = await api.patch(`/material-requests/${mrId}/approve`, payload)
@@ -371,34 +395,18 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
     try {
       setLoading(true)
       setError(null)
-      const unavailableItems = request?.items?.filter(item => {
-        const stock = stockData[item.item_code]
-        const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
-        // Item is "unavailable" for PO if it's not fully in stock or stock info not yet loaded
-        return (!stock || !stock.isAvailable || !stock.foundInInventory) && pendingQty > 0
-      }) || []
 
-      if (unavailableItems.length === 0) {
-        setError('No unavailable items with pending quantity to purchase')
-        setLoading(false)
-        return
-      }
-
-      const itemsToOrder = unavailableItems.map(item => {
-        const stock = stockData[item.item_code]
-        const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
-        const availableQty = stock ? stock.available : 0
-        return {
-          item_code: item.item_code,
-          item_name: item.item_name,
-          qty: Math.max(0, pendingQty - availableQty), // Order only what's actually missing
-          uom: item.uom || 'Kg',
-          rate: parseFloat(item.rate || 0)
-        }
-      }).filter(i => i.qty > 0)
+      // send only total required items to purchase from vendor buy items for whole production
+      const itemsToOrder = request?.items?.map(item => ({
+        item_code: item.item_code,
+        item_name: item.item_name,
+        qty: Number(item.qty), // Total required for whole production
+        uom: item.uom || 'Kg',
+        rate: parseFloat(item.rate || 0)
+      })).filter(i => i.qty > 0) || []
 
       if (itemsToOrder.length === 0) {
-        setError('Pending quantities are already covered by available stock. Please release them instead.')
+        setError('No items found in this material request to purchase')
         setLoading(false)
         return
       }
@@ -436,13 +444,13 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
   const isTransferOrIssue = ['material_issue', 'material_transfer'].includes(request?.purpose?.toLowerCase())
   const anyAvailable = request?.items?.some(item => {
     const stock = stockData[item.item_code]
-    const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
+    const requestedQtyLimit = Number(item.requested_qty || item.qty || 0)
+    const pendingQty = requestedQtyLimit - Number(item.issued_qty || 0)
     return stock && stock.hasStock && (pendingQty > 0 || request?.status === 'completed')
   })
   const anyUnavailable = request?.items?.some(item => {
-    const stock = stockData[item.item_code]
     const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
-    return stock && (!stock.isAvailable || !stock.foundInInventory) && pendingQty > 0
+    return pendingQty > 0
   })
 
   if (!request && loading) {
@@ -619,7 +627,8 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                     <thead>
                       <tr className="bg-slate-50/80 border-b border-slate-100">
                         <th className="p-2 text-[10px]   text-slate-500 ">Item Details</th>
-                        <th className="p-2 text-[10px]   text-slate-500  text-center">Quantity</th>
+                        <th className="p-2 text-[10px]   text-slate-500  text-center">Total Required</th>
+                        <th className="p-2 text-[10px]   text-slate-500  text-center bg-indigo-50/50">To Request</th>
                         <th className="p-2 text-[10px]   text-slate-500  text-center">Fulfillment Store</th>
                         <th className="p-2 text-[10px]   text-slate-500  text-center">Available Stock</th>
                         <th className="p-2 text-[10px]   text-slate-500  text-right">Fulfillment Status</th>
@@ -630,7 +639,9 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                         const stock = stockData[item.item_code]
                         const isAvailable = stock?.isAvailable
                         const issuedQty = Number(item.issued_qty || 0)
-                        const pendingQty = Number(item.qty) - issuedQty
+                        const totalQty = Number(item.qty || 0)
+                        const requestedQty = Number(item.requested_qty || item.qty || 0)
+                        const pendingQty = requestedQty - issuedQty
                         const itemWarehouse = itemWarehouses[item.item_code] || request?.source_warehouse || ''
                         
                         return (
@@ -653,14 +664,38 @@ export default function ViewMaterialRequestModal({ isOpen, onClose, mrId, onStat
                               </div>
                             </td>
                             <td className="p-2 align-top text-center">
-                              <div className="flex flex-col items-center gap-1.5">
-                                <div className="inline-flex items-center  rounded text-[10px]  bg-slate-100 text-slate-700 border border-slate-200 ">
-                                  {item.qty} {item.uom}
-                                </div>
+                              <div className="flex flex-col items-center gap-1">
+                                <span className="text-xs font-medium text-slate-600">{totalQty}</span>
+                                <span className="text-[9px] text-slate-400">{item.uom}</span>
+                              </div>
+                            </td>
+                            <td className="p-2 align-top text-center bg-indigo-50/20">
+                              <div className="flex flex-col items-center gap-1">
+                                {isTransferOrIssue && item.status !== 'completed' ? (
+                                  <div className="flex flex-col items-center gap-1">
+                                    <input
+                                      type="number"
+                                      value={customQuantities[item.item_code] !== undefined ? customQuantities[item.item_code] : pendingQty}
+                                      onChange={(e) => {
+                                        const val = parseFloat(e.target.value) || 0
+                                        setCustomQuantities(prev => ({ ...prev, [item.item_code]: val }))
+                                      }}
+                                      className="w-16 p-1 text-xs font-bold text-center border-2 border-indigo-200 rounded text-indigo-700 bg-white outline-none focus:border-indigo-500 transition-all"
+                                      min="0"
+                                      max={pendingQty}
+                                    />
+                                    <span className="text-[9px] text-indigo-400">{item.uom}</span>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <span className="text-xs font-bold text-indigo-700">{pendingQty}</span>
+                                    <span className="text-[9px] text-indigo-400">{item.uom}</span>
+                                  </>
+                                )}
                                 {issuedQty > 0 && (
-                                  <div className="flex flex-col items-center">
-                                    <p className="text-[10px]  text-slate-400  tracking-tighter">Pending</p>
-                                    <p className="text-xs  text-slate-600">{pendingQty > 0 ? pendingQty : 0} {item.uom}</p>
+                                  <div className="mt-1 flex flex-col items-center border-t border-indigo-100 pt-1">
+                                    <p className="text-[8px] text-indigo-400 uppercase tracking-tighter">Remaining</p>
+                                    <p className="text-[10px] font-bold text-indigo-600">{Math.max(0, pendingQty)} {item.uom}</p>
                                   </div>
                                 )}
                               </div>

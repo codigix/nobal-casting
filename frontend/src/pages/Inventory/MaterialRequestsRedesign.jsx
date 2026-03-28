@@ -240,10 +240,12 @@ export default function MaterialRequestsRedesign() {
   const getStatusConfig = (status) => {
     const configs = {
       draft: { color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', icon: Clock, label: 'Draft' },
+      pending: { color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', icon: Clock, label: 'Pending' },
       approved: { color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', icon: CheckCircle2, label: 'Approved' },
       partial: { color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', icon: Activity, label: 'Partial' },
       completed: { color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', icon: ShieldCheck, label: 'Completed' },
-      cancelled: { color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', icon: XCircle, label: 'Cancelled' }
+      cancelled: { color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', icon: XCircle, label: 'Cancelled' },
+      rejected: { color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', icon: XCircle, label: 'Rejected' }
     }
     return configs[status] || configs.draft
   }
@@ -494,10 +496,11 @@ export default function MaterialRequestsRedesign() {
                         >
                           <Eye size={14} /> View Details
                         </button>
-                        {row.status === 'draft' && (
+                        {['draft', 'pending', 'rejected', 'cancelled'].includes(row.status) && (
                           <button 
                             onClick={() => handleDelete(row.mr_id)}
                             className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-all"
+                            title="Delete Requisition"
                           >
                             <Trash2 size={15} />
                           </button>
@@ -582,7 +585,7 @@ export default function MaterialRequestsRedesign() {
                               >
                                 <Eye size={15} />
                               </button>
-                              {row.status === 'draft' && (
+                              {['draft', 'pending', 'rejected', 'cancelled'].includes(row.status) && (
                                 <button 
                                   onClick={() => handleDelete(row.mr_id)}
                                   className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-all"

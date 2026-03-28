@@ -431,16 +431,12 @@ export default function BOM() {
         {/* Strategic Header Section */}
         <div className="mb-6 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-7 h-7 bg-indigo-600 rounded flex items-center justify-center shadow  shadow-indigo-100 rotate-3 group-hover:rotate-0 transition-transform duration-500">
-            <Layers size={16} className="text-white" strokeWidth={2.5} />
-          </div>
+          
           <div>
             <h1 className="text-xl  text-slate-800  flex items-center gap-3">
-              Formulation Intelligence
-              <span className="p-1 bg-indigo-50 text-indigo-600 text-xs  rounded border border-indigo-100 ">BOM Management</span>
+              BOM Creatation
             </h1>
             <p className="mt-1 text-xs font-medium text-slate-500 flex items-center gap-2">
-              <Database size={14} className="text-slate-300" />
               Strategic Recipe Management & Cost Analytics for Manufacturing
             </p>
           </div>
@@ -452,24 +448,24 @@ export default function BOM() {
             disabled={loading}
             className="inline-flex items-center gap-2 rounded bg-white p-2 text-xs  text-slate-700 ring-1 ring-inset ring-slate-200 hover:bg-slate-50 transition-all active:scale-95   hover: disabled:opacity-50"
           >
-            <RefreshCw size={18} className={`text-amber-500 ${loading ? 'animate-spin' : ''}`} />
-            Sync Lifecycle
+            <RefreshCw size={15} className={`text-amber-500 ${loading ? 'animate-spin' : ''}`} />
+           Refresh
           </button>
           
           <button 
             onClick={() => navigate('/manufacturing/bom/new')}
             className="inline-flex items-center gap-2 rounded bg-indigo-600 p-6  py-2  text-xs  text-white hover:bg-indigo-700 transition-all active:scale-95 shadow  shadow-indigo-100"
           >
-            <Plus size={18} strokeWidth={3} />
-            Initialize BOM
+            <Plus size={15} strokeWidth={3} />
+            Create BOM
           </button>
           
           <button 
             onClick={handleTruncate}
             className="inline-flex items-center gap-2 rounded bg-white p-2.5 text-xs  text-rose-600 ring-1 ring-inset ring-rose-100 hover:bg-rose-50 transition-all active:scale-95  "
           >
-            <Trash2 size={18} />
-            Reset System
+            <Trash2 size={15} />
+            Clear Data
           </button>
         </div>
       </div>
@@ -477,14 +473,14 @@ export default function BOM() {
       {/* High-Fidelity Stats Grid */}
       <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard 
-          label="Total Formulations" 
+          label="Total BOM's" 
           value={stats.totalBOMs} 
           icon={Database} 
           color="indigo" 
           subtitle="System-wide recipes"
         />
         <StatCard 
-          label="Active Production" 
+          label="Active BOM's" 
           value={stats.activeBOMs} 
           icon={Zap} 
           color="emerald" 
@@ -492,18 +488,18 @@ export default function BOM() {
           trend={12}
         />
         <StatCard 
-          label="In-Draft Specs" 
+          label="In-Draft BOM's" 
           value={stats.draftBOMs} 
           icon={Edit2} 
           color="amber" 
           subtitle="Pending validation"
         />
         <StatCard 
-          label="Valuation Intelligence" 
+          label="Total Valuation" 
           value={`₹${(stats.totalCost / 1000000).toFixed(2)}M`} 
           icon={TrendingUp} 
           color="cyan" 
-          subtitle="Aggregate manufacturing value"
+          subtitle=" manufacturing value"
         />
       </div>
 
@@ -517,7 +513,7 @@ export default function BOM() {
             <div className="relative z-0">
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-2 bg-indigo-500/20 rounded border border-indigo-400/30 text-indigo-400">
-                  <BarChart3 size={18} strokeWidth={2.5} />
+                  <BarChart3 size={15} strokeWidth={2.5} />
                 </div>
                 <h3 className="text-xs  text-indigo-400">Critical Cost Intelligence</h3>
               </div>
@@ -555,7 +551,7 @@ export default function BOM() {
               <div className="p-2 bg-indigo-50 rounded border border-indigo-100 text-indigo-600  ">
                 <Target size={15} strokeWidth={2.5} />
               </div>
-              <h3 className="text-xs  text-slate-800 ">Strategic Composition</h3>
+              <h3 className="text-xs  text-slate-800 ">Production Progress</h3>
             </div>
             
             <div className="space-y-2">
@@ -601,7 +597,7 @@ export default function BOM() {
       <div className="">
         {success && (
           <div className="flex items-center gap-3 rounded  border border-emerald-100 bg-emerald-50/50 p-4 text-xs text-emerald-800   animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="rounded bg-white p-2   text-emerald-600"><Check size={18} strokeWidth={3} /></div>
+            <div className="rounded bg-white p-2   text-emerald-600"><Check size={15} strokeWidth={3} /></div>
             <div>
               <p className="  text-xs">Strategic Success</p>
               <p className=" opacity-80">{success}</p>
@@ -611,7 +607,7 @@ export default function BOM() {
 
         {error && (
           <div className="flex items-center gap-3 rounded  border border-rose-100 bg-rose-50/50 p-4 text-xs text-rose-800   animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="rounded bg-white p-2   text-rose-600"><AlertCircle size={18} strokeWidth={3} /></div>
+            <div className="rounded bg-white p-2   text-rose-600"><AlertCircle size={15} strokeWidth={3} /></div>
             <div>
               <p className="  text-xs">Operational ror</p>
               <p className=" opacity-80">{error}</p>

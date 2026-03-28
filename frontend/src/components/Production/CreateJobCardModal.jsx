@@ -292,7 +292,27 @@ export default function CreateJobCardModal({
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value }
+      
+      // Auto-calculate end date based on operation time and quantity
+      if ((name === 'scheduled_start_date' || name === 'planned_quantity') && updated.execution_mode !== 'OUTSOURCE') {
+        const startTime = name === 'scheduled_start_date' ? value : prev.scheduled_start_date
+        const qty = parseFloat(name === 'planned_quantity' ? value : prev.planned_quantity) || 0
+        const opTime = parseFloat(updated.operation_time) || 0
+
+        if (startTime && qty > 0 && opTime > 0) {
+          const start = new Date(startTime)
+          if (!isNaN(start.getTime())) {
+            const totalMinutes = qty * opTime
+            const end = new Date(start.getTime() + (totalMinutes * 60000))
+            updated.scheduled_end_date = formatForDateTimeLocal(end)
+          }
+        }
+      }
+      
+      return updated
+    })
     setError(null)
   }
 
@@ -302,8 +322,10 @@ export default function CreateJobCardModal({
       return
     }
     
-    // Use operation_time if available, otherwise default to 60 mins
-    const duration = formData.operation_time || 60
+    // Use total operation time for duration
+    const qty = parseFloat(formData.planned_quantity) || 0
+    const opTime = parseFloat(formData.operation_time) || 0
+    const duration = (qty * opTime) || 60
     
     try {
       setLoading(true)
@@ -635,15 +657,32 @@ export default function CreateJobCardModal({
                   onChange={(e) => {
                     const val = e.target.value
                     const selectedOp = operations.find(op => op.value === val)
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      operation: val,
-                      operation_sequence: selectedOp?.sequence || null,
-                      operation_type: selectedOp?.operation_type || 'IN_HOUSE',
-                      hourly_rate: selectedOp?.hourly_rate || 0,
-                      operating_cost: selectedOp?.operating_cost || 0,
-                      operation_time: selectedOp?.operation_time || 0
-                    }))
+                    const opTime = selectedOp?.operation_time || 0
+                    
+                    setFormData(prev => {
+                      const updated = { 
+                        ...prev, 
+                        operation: val,
+                        operation_sequence: selectedOp?.sequence || null,
+                        operation_type: selectedOp?.operation_type || 'IN_HOUSE',
+                        hourly_rate: selectedOp?.hourly_rate || 0,
+                        operating_cost: selectedOp?.operating_cost || 0,
+                        operation_time: opTime
+                      }
+
+                      // Recalculate end date if start date is set
+                      if (updated.scheduled_start_date && updated.execution_mode !== 'OUTSOURCE' && opTime > 0) {
+                        const start = new Date(updated.scheduled_start_date)
+                        const qty = parseFloat(updated.planned_quantity) || 0
+                        if (!isNaN(start.getTime()) && qty > 0) {
+                          const totalMinutes = qty * opTime
+                          const end = new Date(start.getTime() + (totalMinutes * 60000))
+                          updated.scheduled_end_date = formatForDateTimeLocal(end)
+                        }
+                      }
+                      
+                      return updated
+                    })
                   }}
                   className="w-full px-4 py-2 border border-slate-200 rounded  focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-xs"
                   disabled={!formData.work_order_id}

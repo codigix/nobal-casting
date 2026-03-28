@@ -409,7 +409,20 @@ class OEEModel {
       
       if (jcRows.length === 0) return null;
       const jobCard = jcRows[0];
-      const idealCycleTime = parseFloat(jobCard.bom_ideal_cycle_time || jobCard.operation_time || 1);
+      
+      // Fix Requirement: idealCycleTime must be per-unit. 
+      // If bom_ideal_cycle_time is available, it's the source of truth (per-unit from BOM).
+      // Otherwise, we use job_card.operation_time, but we must handle cases where it stores batch time.
+      const plannedQty = parseFloat(jobCard.planned_quantity || 1);
+      let idealCycleTime = parseFloat(jobCard.bom_ideal_cycle_time || jobCard.operation_time || 1);
+      
+      // Heuristic: If operation_time is large and roughly corresponds to a shift but multiple units are planned,
+      // it's likely a batch time erroneously stored in the operation_time column.
+      if (!jobCard.bom_ideal_cycle_time && idealCycleTime > 60 && plannedQty > 5) {
+        // If idealCycleTime / plannedQty is a more reasonable per-unit time, use it.
+        // This is a safety measure for legacy data or unsynced plans.
+        idealCycleTime = idealCycleTime / plannedQty;
+      }
 
       // 2. Get Production and Time Logs for this shift
       const [timeLogs] = await this.db.query(`

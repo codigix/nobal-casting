@@ -745,9 +745,10 @@ export class ProductionPlanningModel {
 
       for (const material of rawMaterials) {
         const mr_item_id = 'MRI-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
+        const qtyToRequest = material.plan_to_request_qty || material.qty_as_per_bom || 0
         await this.db.execute(
-          'INSERT INTO material_request_item (mr_item_id, mr_id, item_code, qty, uom, purpose) VALUES (?, ?, ?, ?, ?, ?)',
-          [mr_item_id, mr_id, material.item_code, material.plan_to_request_qty || material.qty_as_per_bom || 0, 'Kg', null]
+          'INSERT INTO material_request_item (mr_item_id, mr_id, item_code, qty, requested_qty, uom, purpose) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [mr_item_id, mr_id, material.item_code, qtyToRequest, qtyToRequest, 'Kg', null]
         )
 
         await this.db.execute(

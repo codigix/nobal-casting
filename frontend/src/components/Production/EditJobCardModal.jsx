@@ -17,7 +17,7 @@ import {
   Hash, ClipboardList, CheckCircle2,
   Info, AlertCircle, Settings,
   UserCheck, Activity, Clock, ArrowRight,
-  TrendingUp, Layers, CheckSquare
+  TrendingUp, Layers, CheckSquare, Cpu
 } from 'lucide-react'
 
 const parseUTCDate = (dateStr) => {
@@ -58,6 +58,29 @@ const formatForDateTimeLocal = (date) => {
   const minutes = String(d.getMinutes()).padStart(2, '0')
   return `${year}-${month}-${day}T${hours}:${minutes}`
 }
+
+const formatDuration = (totalMinutes) => {
+  if (!totalMinutes || isNaN(totalMinutes)) return '0 Min';
+  
+  if (totalMinutes < 1440) { // Less than 24 hours
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = Math.round(totalMinutes % 60);
+    
+    if (hours === 0) return `${mins} Min`;
+    if (mins === 0) return `${hours} Hrs`;
+    return `${hours} Hrs ${mins} Min`;
+  } else { // 24 hours or more
+    const days = Math.floor(totalMinutes / 1440);
+    const remainingMinutesAfterDays = totalMinutes % 1440;
+    const hours = Math.floor(remainingMinutesAfterDays / 60);
+    const mins = Math.round(remainingMinutesAfterDays % 60);
+    
+    let result = `${days} Day${days > 1 ? 's' : ''}`;
+    if (hours > 0) result += ` ${hours} Hrs`;
+    if (mins > 0) result += ` ${mins} Min`;
+    return result;
+  }
+};
 
 export default function EditJobCardModal({
   isOpen,
@@ -143,7 +166,27 @@ export default function EditJobCardModal({
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value }
+      
+      // Auto-calculate end date based on operation time and quantity
+      if (name === 'scheduled_start_date' || name === 'planned_quantity') {
+        const startTime = name === 'scheduled_start_date' ? value : prev.scheduled_start_date
+        const qty = parseFloat(name === 'planned_quantity' ? value : prev.planned_quantity) || 0
+        const opTime = parseFloat(jobCard?.operation_time) || 0
+
+        if (startTime && qty > 0 && opTime > 0) {
+          const start = new Date(startTime)
+          if (!isNaN(start.getTime())) {
+            const totalMinutes = qty * opTime
+            const end = new Date(start.getTime() + (totalMinutes * 60000))
+            updated.scheduled_end_date = formatForDateTimeLocal(end)
+          }
+        }
+      }
+      
+      return updated
+    })
     setError(null)
   }
 
@@ -153,7 +196,9 @@ export default function EditJobCardModal({
       return
     }
 
-    const duration = jobCard?.operation_time || 60
+    const qty = parseFloat(formData.planned_quantity) || 0
+    const opTime = parseFloat(jobCard?.operation_time) || 0
+    const duration = (qty * opTime) || 60
 
     try {
       setLoading(true)
@@ -251,8 +296,8 @@ export default function EditJobCardModal({
             Resource Assignment
           </div>
 
-          <div className="my-4 space-y-4">
-            <div className="flex items-center gap-4 bg-slate-50 p-2 rounded border border-slate-100">
+          <div className="my-2">
+            <div className="flex items-center gap-2 bg-slate-50 p-2 rounded border border-slate-100">
               <label className="text-xs font-medium text-slate-600">Execution Mode:</label>
               <div className="flex gap-2">
                 <button
@@ -269,7 +314,7 @@ export default function EditJobCardModal({
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, execution_mode: 'OUTSOURCE' }))}
-                  className={`px-3 py-1 rounded text-xs font-medium transition-all ${
+                  className={`p-2 rounded text-xs font-medium transition-all ${
                     formData.execution_mode === 'OUTSOURCE'
                       ? 'bg-amber-600 text-white shadow-sm'
                       : 'bg-white text-slate-600 border border-slate-200 hover:border-amber-300'
@@ -408,8 +453,8 @@ export default function EditJobCardModal({
                       type="number"
                       name="produced_quantity"
                       value={formData.produced_quantity}
-                      onChange={handleInputChange}
-                      className="w-full p-2 bg-emerald-50 border border-emerald-100 rounded focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-xs text-emerald-700"
+                      readOnly
+                      className="w-full p-2 bg-emerald-50/50 border border-emerald-100 rounded outline-none transition-all text-xs text-emerald-700 cursor-not-allowed"
                     />
                   </div>
                   <div>
@@ -421,10 +466,9 @@ export default function EditJobCardModal({
                       type="number"
                       name="accepted_quantity"
                       value={formData.accepted_quantity}
-                      onChange={handleInputChange}
-                      className="w-full p-2 bg-blue-50 border border-blue-100 rounded focus:ring-2 focus:ring-blue-500 outline-none transition-all text-xs text-blue-700"
+                      readOnly
+                      className="w-full p-2 bg-blue-50/50 border border-blue-100 rounded outline-none transition-all text-xs text-blue-700 cursor-not-allowed"
                     />
-
                   </div>
 
                 </div>
@@ -465,7 +509,9 @@ export default function EditJobCardModal({
 
                   <div className="relative">
                     <label className="block text-xs  text-slate-500    flex justify-between items-center">
-                      End DateTime
+                      <div className="flex items-center gap-2">
+                        End DateTime
+                      </div>
                       <button
                         type="button"
                         onClick={handleSuggestSlot}
@@ -486,9 +532,24 @@ export default function EditJobCardModal({
                     </div>
                   </div>
 
-                  <div className="bg-indigo-50/50 mt-2 p-2 col-span-2 rounded border border-indigo-100/50 flex items-start gap-3">
+                  <div className="col-span-2 bg-slate-50 p-2 rounded border border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <Cpu size={14} className="text-indigo-500" />
+                      <span className="text-xs font-medium text-slate-600">Machine Engagement:</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="text-xs text-slate-400">
+                        {jobCard?.operation_time || 0} min/unit × {formData.planned_quantity || 0} units
+                      </div>
+                      <span className="text-xs bg-indigo-100 text-indigo-700 p-1">
+                        {formatDuration((parseFloat(formData.planned_quantity) || 0) * (parseFloat(jobCard?.operation_time) || 0))}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-indigo-50/50 mt-1 p-2 col-span-2 rounded border border-indigo-100/50 flex items-start gap-3">
                     <Info size={15} className="text-indigo-400 mt-0.5" />
-                    <p className="text-[11px] text-indigo-700 leading-relaxed font-medium">
+                    <p className="text-xs text-indigo-700 leading-relaxed font-medium">
                       Scheduled end time is calculated based on standard cycle time. Adjust manually if resource availability differs.
                     </p>
                   </div>

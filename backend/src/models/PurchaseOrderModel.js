@@ -103,6 +103,8 @@ export class PurchaseOrderModel {
                 mr.department, mr.purpose,
                 COALESCE(CONCAT_WS(' ', em.first_name, em.last_name), c.name, u.full_name, mr.requested_by_id) as requested_by_name,
                 COALESCE(po.project_name, sso.project_name) as project_name,
+                (SELECT COUNT(*) FROM purchase_receipt WHERE po_no = po.po_no) as grn_count,
+                (SELECT COUNT(*) FROM grn_requests WHERE po_no = po.po_no AND status != 'rejected') as grn_request_count,
                 COALESCE(
                   i_resolved.name,
                   pp_fg.item_name, 
@@ -173,6 +175,8 @@ export class PurchaseOrderModel {
                       COALESCE(CONCAT_WS(' ', em.first_name, em.last_name), c.name, u.full_name, mr.requested_by_id) as requested_by_name,
                       COALESCE(poi_agg.total_received_qty, 0) as total_received_qty,
                       COALESCE(poi_agg.total_ordered_qty, 0) as total_ordered_qty,
+                      COALESCE(pr_agg.receipt_count, 0) as receipt_count,
+                      COALESCE(grn_agg.pending_grn_count, 0) as pending_grn_count,
                       COALESCE(po.project_name, sso.project_name) as project_name,
                       COALESCE(
                         i_resolved.name,
@@ -220,6 +224,17 @@ export class PurchaseOrderModel {
                       FROM purchase_order_item
                       GROUP BY po_no
                    ) poi_agg ON po.po_no = poi_agg.po_no
+                   LEFT JOIN (
+                      SELECT po_no, COUNT(*) as receipt_count
+                      FROM purchase_receipt
+                      GROUP BY po_no
+                   ) pr_agg ON po.po_no = pr_agg.po_no
+                   LEFT JOIN (
+                      SELECT po_no, COUNT(*) as pending_grn_count
+                      FROM grn_requests
+                      WHERE status = 'pending'
+                      GROUP BY po_no
+                   ) grn_agg ON po.po_no = grn_agg.po_no
                    WHERE 1=1`
       const params = []
 
@@ -409,14 +424,75 @@ export class PurchaseOrderModel {
   }
 
   async delete(po_no) {
+    const connection = await this.db.getConnection()
     try {
+      await connection.beginTransaction()
+
+      // Get PO details first to check status and mr_id
+      const [poRows] = await connection.execute(
+        `SELECT status, mr_id FROM purchase_order WHERE po_no = ?`, 
+        [po_no]
+      )
+
+      if (poRows.length === 0) {
+        throw new Error('Purchase Order not found')
+      }
+
+      const po = poRows[0]
+      if (po.status !== 'draft') {
+        throw new Error('Only draft Purchase Orders can be deleted')
+      }
+
+      // Get items to reset MR item status if needed
+      const [poItems] = await connection.execute(
+        `SELECT item_code FROM purchase_order_item WHERE po_no = ?`,
+        [po_no]
+      )
+
       // Delete items first
-      await this.db.execute(`DELETE FROM purchase_order_item WHERE po_no = ?`, [po_no])
+      await connection.execute(`DELETE FROM purchase_order_item WHERE po_no = ?`, [po_no])
+      
       // Delete PO
-      await this.db.execute(`DELETE FROM purchase_order WHERE po_no = ?`, [po_no])
+      await connection.execute(`DELETE FROM purchase_order WHERE po_no = ?`, [po_no])
+
+      // If linked to MR, reset MR items status and MR overall status
+      if (po.mr_id) {
+        for (const item of poItems) {
+          await connection.execute(
+            'UPDATE material_request_item SET status = NULL WHERE mr_id = ? AND item_code = ?',
+            [po.mr_id, item.item_code]
+          )
+        }
+
+        // Recalculate MR status
+        const [mrItems] = await connection.execute(
+          'SELECT status FROM material_request_item WHERE mr_id = ?',
+          [po.mr_id]
+        )
+
+        const allCompleted = mrItems.every(i => i.status === 'completed')
+        const anyCompleted = mrItems.some(i => i.status === 'completed')
+        
+        let mrStatus = 'approved'
+        if (allCompleted && mrItems.length > 0) {
+          mrStatus = 'completed'
+        } else if (anyCompleted) {
+          mrStatus = 'partial'
+        }
+
+        await connection.execute(
+          'UPDATE material_request SET status = ?, updated_at = NOW() WHERE mr_id = ?',
+          [mrStatus, po.mr_id]
+        )
+      }
+
+      await connection.commit()
       return { success: true }
     } catch (error) {
+      await connection.rollback()
       throw new Error(`Failed to delete purchase order: ${error.message}`)
+    } finally {
+      connection.release()
     }
   }
 

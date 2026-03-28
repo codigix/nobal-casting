@@ -664,11 +664,7 @@ export class ProductionPlanningService {
 
       const createdWorkOrders = []
       
-      // 1. Process Finished Goods FIRST (Roots)
-      console.log(`[ProductionPlanningService] Starting Finished Goods batch... Count: ${allFGItems.length}`)
-      await processBatch(allFGItems, true)
-
-      // 2. Process Sub-Assemblies in order of explosion level
+      // 1. Process Sub-Assemblies FIRST in order of explosion level (Dependencies)
       // Note: We use dbSubAsms but we need to ensure they match allSubAsms used in previous logic
       const sortedSubAsmList = [...(dbSubAsms || allSubAsms)].sort((a, b) => 
         (parseInt(a.explosion_level || 0)) - (parseInt(b.explosion_level || 0))
@@ -676,6 +672,10 @@ export class ProductionPlanningService {
       
       console.log(`[ProductionPlanningService] Starting Sub-Assembly batch... Count: ${sortedSubAsmList.length}`)
       await processBatch(sortedSubAsmList, false)
+
+      // 2. Process Finished Goods LAST (Roots)
+      console.log(`[ProductionPlanningService] Starting Finished Goods batch... Count: ${allFGItems.length}`)
+      await processBatch(allFGItems, true)
 
       // Collect all generated IDs
       const allGeneratedIds = [...allFGItems, ...sortedSubAsmList]
@@ -770,6 +770,272 @@ export class ProductionPlanningService {
     } catch (error) {
       console.error('Error in getSalesOrderHierarchy:', error)
       throw error
+    }
+  }
+
+  async syncPlansForSalesOrder(salesOrderId) {
+    try {
+      const [plans] = await this.db.execute(
+        'SELECT plan_id FROM production_plan WHERE sales_order_id = ? AND status NOT IN ("completed", "cancelled")',
+        [salesOrderId]
+      )
+
+      for (const plan of plans) {
+        await this.regenerateProductionPlan(plan.plan_id)
+      }
+    } catch (error) {
+      console.error('Error syncing plans for sales order:', error)
+    }
+  }
+
+  async syncPlansForBOM(bomId) {
+    try {
+      const [plans] = await this.db.execute(
+        'SELECT plan_id FROM production_plan WHERE bom_id = ? AND status NOT IN ("completed", "cancelled")',
+        [bomId]
+      )
+
+      for (const plan of plans) {
+        await this.regenerateProductionPlan(plan.plan_id)
+      }
+    } catch (error) {
+      console.error('Error syncing plans for BOM:', error)
+    }
+  }
+
+  async regenerateProductionPlan(planId) {
+    try {
+      // 1. Get existing plan details
+      const [planRows] = await this.db.execute('SELECT * FROM production_plan WHERE plan_id = ?', [planId])
+      if (!planRows.length) return
+
+      const oldPlan = planRows[0]
+      const salesOrderId = oldPlan.sales_order_id
+
+      if (!salesOrderId) return
+
+      // 2. Generate new plan data from the same Sales Order (which now has updated items/BOM)
+      const newPlanData = await this.generateProductionPlanFromSalesOrder(salesOrderId)
+
+      // 3. Update the production_plan record
+      // We keep the same plan_id but refresh everything else
+      
+      // Clear old details (in a transaction for safety)
+      const connection = await this.db.getConnection()
+      try {
+        await connection.beginTransaction()
+
+        await connection.execute('DELETE FROM production_plan_fg WHERE plan_id = ?', [planId])
+        await connection.execute('DELETE FROM production_plan_sub_assembly WHERE plan_id = ?', [planId])
+        await connection.execute('DELETE FROM production_plan_raw_material WHERE plan_id = ?', [planId])
+        await connection.execute('DELETE FROM production_plan_operations WHERE plan_id = ?', [planId])
+
+        // 4. Save new data
+        await this.saveProductionPlan(newPlanData, planId, connection)
+
+        await connection.commit()
+        console.log(`Successfully regenerated Production Plan ${planId}`)
+        
+        // 5. Trigger Work Order sync if they exist
+        await this.syncWorkOrdersForPlan(planId)
+
+      } catch (err) {
+        await connection.rollback()
+        throw err
+      } finally {
+        connection.release()
+      }
+    } catch (error) {
+      console.error(`Error regenerating production plan ${planId}:`, error)
+    }
+  }
+
+  async syncWorkOrdersForPlan(planId) {
+    try {
+      const [workOrders] = await this.db.execute(
+        'SELECT wo_id, item_code, status FROM work_order WHERE production_plan_id = ? AND status NOT IN ("Completed", "Cancelled", "Closed")',
+        [planId]
+      )
+
+      if (!workOrders.length) return
+
+      // For existing work orders, we need to refresh their items and operations
+      // This is a partial sync - if the quantity changed, we update it.
+      // If the BOM changed, we might need more drastic measures.
+      
+      const [planFG] = await this.db.execute('SELECT * FROM production_plan_fg WHERE plan_id = ?', [planId])
+      const [planSA] = await this.db.execute('SELECT * FROM production_plan_sub_assembly WHERE plan_id = ?', [planId])
+
+      for (const wo of workOrders) {
+        // Find matching item in plan
+        const planItem = planFG.find(f => f.item_code === wo.item_code) || planSA.find(s => s.item_code === wo.item_code)
+        
+        if (planItem) {
+          // Update Work Order quantity if it changed
+          await this.db.execute(
+            'UPDATE work_order SET quantity = ?, updated_at = NOW() WHERE wo_id = ?',
+            [planItem.planned_qty, wo.wo_id]
+          )
+
+          // Refresh Items and Operations for this Work Order
+          // We use ProductionModel's internal logic for this
+          // (Assuming ProductionModel is available or we re-implement it)
+          // For now, we'll implement a basic refresh
+          await this.refreshWorkOrderFromBOM(wo.wo_id, planItem.bom_no, planItem.planned_qty)
+        }
+      }
+    } catch (error) {
+      console.error('Error syncing work orders for plan:', error)
+    }
+  }
+
+  async refreshWorkOrderFromBOM(woId, bomNo, quantity) {
+    try {
+      // Clear old items and operations if WO is still in Draft/Ready
+      const [wo] = await this.db.execute('SELECT status FROM work_order WHERE wo_id = ?', [woId])
+      if (!wo.length || ['completed', 'cancelled', 'closed'].includes(wo[0].status.toLowerCase())) return
+
+      // We only refresh if it's not started yet to avoid breaking WIP
+      if (wo[0].status.toLowerCase() !== 'draft' && wo[0].status.toLowerCase() !== 'ready') return
+
+      await this.db.execute('DELETE FROM work_order_item WHERE wo_id = ?', [woId])
+      await this.db.execute('DELETE FROM work_order_operation WHERE wo_id = ?', [woId])
+
+      if (!bomNo) return
+
+      const bomDetails = await this.getBOMDetails(bomNo)
+      if (!bomDetails) return
+
+      // Re-add items
+      for (const line of (bomDetails.lines || [])) {
+        const itemQty = (parseFloat(line.quantity) || 0) * quantity
+        await this.db.execute(
+          'INSERT INTO work_order_item (wo_id, item_code, required_qty, consumed_qty, uom) VALUES (?, ?, ?, 0, ?)',
+          [woId, line.component_code, itemQty, line.uom]
+        )
+      }
+
+      // Re-add operations
+      for (let i = 0; i < (bomDetails.operations || []).length; i++) {
+        const op = bomDetails.operations[i]
+        const opTime = parseFloat(op.operation_time || 0)
+        const hourlyRate = parseFloat(op.hourly_rate || 0)
+        const cost = (opTime / 60) * hourlyRate * quantity
+
+        await this.db.execute(
+          'INSERT INTO work_order_operation (wo_id, operation, sequence, workstation_type, time_in_minutes, hourly_rate, operating_cost, status) VALUES (?, ?, ?, ?, ?, ?, ?, "pending")',
+          [woId, op.operation_name, i + 1, op.workstation_type, opTime * quantity, hourlyRate, cost]
+        )
+      }
+
+      // Update Job Cards if they exist and are not started
+      await this.syncJobCardsForWorkOrder(woId)
+
+    } catch (error) {
+      console.error(`Error refreshing Work Order ${woId}:`, error)
+    }
+  }
+
+  async syncJobCardsForWorkOrder(woId) {
+    try {
+      const [jobCards] = await this.db.execute(
+        'SELECT job_card_id, status FROM job_card WHERE work_order_id = ? AND status IN ("draft", "ready", "open", "pending")',
+        [woId]
+      )
+
+      if (!jobCards.length) return
+
+      const [woOps] = await this.db.execute(
+        'SELECT * FROM work_order_operation WHERE wo_id = ? ORDER BY sequence',
+        [woId]
+      )
+
+      for (const jc of jobCards) {
+        // Find matching operation
+        const [jcDetails] = await this.db.execute('SELECT operation, operation_sequence FROM job_card WHERE job_card_id = ?', [jc.job_card_id])
+        const op = woOps.find(o => o.operation === jcDetails[0].operation && o.sequence === jcDetails[0].operation_sequence)
+        
+        if (op) {
+          const [wo] = await this.db.execute('SELECT quantity FROM work_order WHERE wo_id = ?', [woId])
+          const woQty = parseFloat(wo[0]?.quantity || 1)
+          const perUnitTime = (parseFloat(op.time_in_minutes) || 0) / woQty
+
+          await this.db.execute(
+            'UPDATE job_card SET planned_quantity = ?, operation_time = ?, operating_cost = ?, updated_at = NOW() WHERE job_card_id = ?',
+            [woQty, perUnitTime, op.operating_cost, jc.job_card_id]
+          )
+        }
+      }
+    } catch (error) {
+      console.error('Error syncing job cards:', error)
+    }
+  }
+
+  async saveProductionPlan(plan, planId, connection) {
+    const db = connection || this.db
+    
+    // Save FG Items
+    if (plan.finished_goods && Array.isArray(plan.finished_goods)) {
+      for (const item of plan.finished_goods) {
+        await db.execute(
+          `INSERT INTO production_plan_fg 
+           (plan_id, item_code, item_name, bom_no, planned_qty, uom, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [planId, item.item_code, item.item_name, plan.bom_id, item.planned_qty, item.uom || 'pcs', item.status || 'pending']
+        )
+      }
+    }
+
+    // Save Sub-Assemblies
+    if (plan.sub_assemblies && Array.isArray(plan.sub_assemblies)) {
+      for (const item of plan.sub_assemblies) {
+        await db.execute(
+          `INSERT INTO production_plan_sub_assembly 
+           (plan_id, item_code, explosion_level, item_name, parent_item_code, bom_no, planned_qty, planned_qty_before_scrap, scrap_percentage, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [planId, item.item_code, item.explosion_level || 0, item.item_name, item.parent_item_code, item.bom_no, item.planned_qty, item.planned_qty_before_scrap, item.scrap_percentage, item.status || 'pending']
+        )
+      }
+    }
+
+    // Save Raw Materials
+    if (plan.raw_materials && Array.isArray(plan.raw_materials)) {
+      for (const item of plan.raw_materials) {
+        await db.execute(
+          `INSERT INTO production_plan_raw_material 
+           (plan_id, item_code, item_name, item_type, item_group, plan_to_request_qty, qty_as_per_bom, rate, uom)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [planId, item.item_code, item.item_name, item.item_type, item.item_group, item.total_qty, item.qty_per_unit, item.rate, item.uom]
+        )
+      }
+    }
+
+    // Save Operations
+    const allOperations = [
+      ...(Array.isArray(plan.fg_operations) ? plan.fg_operations : []),
+      ...(Array.isArray(plan.operations) ? plan.operations : [])
+    ]
+
+    if (allOperations.length > 0) {
+      for (const op of allOperations) {
+        await db.execute(
+          'INSERT INTO production_plan_operations (plan_id, operation_name, workstation_type, total_time_minutes, total_hours, hourly_rate, total_cost, operation_type, execution_mode, vendor_id, vendor_rate_per_unit, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            planId, 
+            op.operation_name || op.operation || '', 
+            op.workstation_type || '', 
+            op.total_time || 0, 
+            op.total_hours || 0, 
+            op.hourly_rate || 0, 
+            op.total_cost || 0, 
+            op.operation_type || 'SA', 
+            op.execution_mode || 'IN_HOUSE', 
+            op.vendor_id || null, 
+            op.vendor_rate_per_unit || 0,
+            op.notes || ''
+          ]
+        )
+      }
     }
   }
 }

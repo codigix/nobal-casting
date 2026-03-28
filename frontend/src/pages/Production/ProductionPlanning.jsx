@@ -52,7 +52,7 @@ const StatCard = ({ label, value, icon: Icon, color, subtitle, trend }) => {
 
   return (
     <div className="bg-slate-50/50 p-2 rounded  border border-gray-100   hover: transition-all group  relative">
-      <div className="absolute -right-4 -top-4 w-24 h-24 bg-white rounded  opacity-50 group-hover:scale-110 transition-transform" />
+      <div className=" bg-white rounded  opacity-50 group-hover:scale-110 transition-transform" />
       <div className="relative flex justify-between items-start">
         <div className="">
           <p className="text-xs   text-gray-400 ">{label}</p>
@@ -150,7 +150,14 @@ const findBomForItem = async (itemCode, token, excludeBomId = null) => {
   return null
 }
 
-const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms = new Set()) => {
+const calculateQtyWithScrap = (baseQty, scrapPercentage) => {
+  if (scrapPercentage <= 0) return baseQty
+  const scrapFraction = scrapPercentage / 100
+  const plannedQty = baseQty / (1 - scrapFraction)
+  return Math.ceil(plannedQty * 1000000) / 1000000
+}
+
+const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms = new Set(), itemsMaster = []) => {
   if (!bomId || visitedBoms.has(bomId)) {
     return {}
   }
@@ -178,21 +185,24 @@ const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms 
       if (!itemCode) continue
 
       const baseQty = parseFloat(material.qty) || parseFloat(material.quantity) || parseFloat(material.bom_qty) || 1
-      const totalQty = baseQty * plannedQty
-
+      
       const isSubAssembly = isSubAssemblyGroup(material.item_group, material.item_code) ||
         material.fg_sub_assembly === 'Sub-Assembly' ||
         material.component_type === 'Sub-Assembly' ||
-        (itemCode && itemCode.startsWith('SA-'))
+        (itemCode && (itemCode.startsWith('SA-') || itemCode.startsWith('SA')))
 
       if (isSubAssembly) {
+        const itemInfo = itemsMaster.find(i => i.item_code === itemCode)
+        const scrapPercentage = parseFloat(itemInfo?.loss_percentage || material.loss_percentage || 0)
+        const totalQty = calculateQtyWithScrap(baseQty * plannedQty, scrapPercentage)
+
         let subBomId = material.bom_id
         if (!subBomId || subBomId === bomId) {
           subBomId = await findBomForItem(itemCode, token, bomId)
         }
 
         if (subBomId && subBomId !== bomId) {
-          const subMaterials = await collectAllRawMaterials(subBomId, totalQty, token, visitedBoms)
+          const subMaterials = await collectAllRawMaterials(subBomId, totalQty, token, visitedBoms, itemsMaster)
           for (const [subItemCode, subMaterial] of Object.entries(subMaterials)) {
             if (allRawMaterials[subItemCode]) {
               allRawMaterials[subItemCode].qty += subMaterial.qty
@@ -216,6 +226,7 @@ const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms 
           }
         }
       } else {
+        const totalQty = baseQty * plannedQty
         if (allRawMaterials[itemCode]) {
           allRawMaterials[itemCode].qty += totalQty
           allRawMaterials[itemCode].quantity += totalQty
@@ -237,7 +248,7 @@ const collectAllRawMaterials = async (bomId, plannedQty = 1, token, visitedBoms 
   return allRawMaterials
 }
 
-const collectAllOperations = async (bomId, token, visitedBoms = new Set(), depth = 0) => {
+const collectAllOperations = async (bomId, plannedQty = 1, token, workstations = [], visitedBoms = new Set(), depth = 0, itemsMaster = []) => {
   if (!bomId || visitedBoms.has(bomId)) {
     return []
   }
@@ -258,29 +269,49 @@ const collectAllOperations = async (bomId, token, visitedBoms = new Set(), depth
       const isSubAssembly = isSubAssemblyGroup(material.item_group, material.item_code) ||
         material.fg_sub_assembly === 'Sub-Assembly' ||
         material.component_type === 'Sub-Assembly' ||
-        (itemCode && itemCode.startsWith('SA-'))
+        (itemCode && (itemCode.startsWith('SA-') || itemCode.startsWith('SA')))
 
       if (isSubAssembly) {
+        const itemInfo = itemsMaster.find(i => i.item_code === itemCode)
+        const scrapPercentage = parseFloat(itemInfo?.loss_percentage || material.loss_percentage || 0)
+        const subPlannedQty = calculateQtyWithScrap((parseFloat(material.qty) || parseFloat(material.quantity) || 1) * plannedQty, scrapPercentage)
+
         let subBomId = material.bom_id
         if (!subBomId || subBomId === bomId) {
           subBomId = await findBomForItem(itemCode, token, bomId)
         }
 
         if (subBomId && subBomId !== bomId) {
-          const subOps = await collectAllOperations(subBomId, token, visitedBoms, depth + 1)
+          const subOps = await collectAllOperations(subBomId, subPlannedQty, token, workstations, visitedBoms, depth + 1, itemsMaster)
           allOperations = [...allOperations, ...subOps]
         }
       }
     }
 
     // Add current BOM's operations last (Finished Goods will be at the very end)
-    const operations = (bom.operations || []).map(op => ({
-      ...op,
-      bom_id: bomId,
-      item_code: bom.item_code,
-      item_name: bom.product_name || bom.item_code,
-      depth
-    }))
+    const operations = (bom.operations || []).map(op => {
+      const workstationType = op.workstation_type || op.workstation || ''
+      const workstation = workstations.find(ws => ws.workstation_name === workstationType || ws.id === workstationType)
+      
+      const hourlyRate = parseFloat(op.hourly_rate || workstation?.hour_rate || 0)
+      const opTimeMinutes = parseFloat(op.operation_time || op.time || 0)
+      const totalTimeMinutes = opTimeMinutes * plannedQty
+      const totalHours = totalTimeMinutes / 60
+      const totalCost = totalHours * hourlyRate
+
+      return {
+        ...op,
+        bom_id: bomId,
+        item_code: bom.item_code,
+        item_name: bom.product_name || bom.item_code,
+        depth,
+        planned_qty: plannedQty,
+        total_time: totalTimeMinutes,
+        total_hours: totalHours,
+        hourly_rate: hourlyRate,
+        total_cost: totalCost
+      }
+    })
     allOperations = [...allOperations, ...operations]
   } catch (err) {
     console.error(`Error fetching operations for BOM ${bomId}:`, err)
@@ -312,9 +343,18 @@ export default function ProductionPlanning() {
   const [mrActiveTab, setMrActiveTab] = useState('pending')
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const [selectedPlanForHistory, setSelectedPlanForHistory] = useState(null)
+  const [selectedPlanDetails, setSelectedPlanDetails] = useState(null)
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [activeTab, setActiveTab] = useState('all')
   const [currentTime, setCurrentTime] = useState(new Date())
+  
+  // State for manual item addition in MR modal
+  const [allItems, setAllItems] = useState([])
+  const [itemsMaster, setItemsMaster] = useState([])
+  const [workstations, setWorkstations] = useState([])
+  const [showAddItemDropdown, setShowAddItemDropdown] = useState(false)
+  const [itemSearchTerm, setItemSearchTerm] = useState('')
+  const [manuallyAddedItems, setManuallyAddedItems] = useState([])
 
   const renderHistoryCard = (mr, idx) => (
     <div key={mr.mr_id} className="border border-gray-100 rounded  overflow-hidden hover: transition-shadow">
@@ -342,23 +382,37 @@ export default function ProductionPlanning() {
       <div className="p-4 bg-white">
         <table className="w-full text-left">
           <thead>
-            <tr className="text-xs text-gray-400 border-b border-gray-50">
-              <th className="pb-2   ">Item Details</th>
-              <th className="pb-2 text-right">Requested Qty</th>
+            <tr className="text-[10px] text-gray-400 border-b border-gray-50 uppercase tracking-wider">
+              <th className="pb-2">Item Details</th>
+              <th className="pb-2 text-right">Requested</th>
+              <th className="pb-2 text-right">Received</th>
+              <th className="pb-2 text-right">Remaining</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {mr.items && mr.items.map((item, itemIdx) => (
-              <tr key={itemIdx} className="text-xs">
-                <td className="py-2">
-                  <p className="  text-gray-800">{item.item_code}</p>
-                  <p className="text-xs text-gray-400">{item.item_name}</p>
-                </td>
-                <td className="py-2 text-right font-medium text-gray-900">
-                  {item.qty} {item.uom}
-                </td>
-              </tr>
-            ))}
+            {mr.items && mr.items.map((item, itemIdx) => {
+              const totalQty = Number(item.qty || 0);
+              const receivedQty = Number(item.issued_qty || 0);
+              const remainingQty = Math.max(0, totalQty - receivedQty);
+              
+              return (
+                <tr key={itemIdx} className="text-xs">
+                  <td className="py-2">
+                    <p className="text-gray-800 font-medium">{item.item_code}</p>
+                    <p className="text-[10px] text-gray-400">{item.item_name}</p>
+                  </td>
+                  <td className="py-2 text-right font-medium text-gray-900">
+                    {totalQty.toFixed(2)} <span className="text-[10px] text-gray-400">{item.uom}</span>
+                  </td>
+                  <td className="py-2 text-right font-medium text-emerald-600">
+                    {receivedQty > 0 ? receivedQty.toFixed(2) : '-'}
+                  </td>
+                  <td className="py-2 text-right font-semibold text-indigo-600">
+                    {remainingQty > 0 ? remainingQty.toFixed(2) : <span className="text-emerald-500">Completed</span>}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -372,7 +426,22 @@ export default function ProductionPlanning() {
 
   useEffect(() => {
     fetchPlans()
+    fetchAllItems()
+    fetchMasterData()
   }, [])
+
+  const fetchMasterData = async () => {
+    try {
+      const [itemsRes, wsRes] = await Promise.all([
+        productionService.getItemsList(),
+        productionService.getWorkstationsList()
+      ])
+      setItemsMaster(Array.isArray(itemsRes) ? itemsRes : (itemsRes.data || []))
+      setWorkstations(Array.isArray(wsRes) ? wsRes : (wsRes.data || []))
+    } catch (err) {
+      console.error('Error fetching master data:', err)
+    }
+  }
 
   useEffect(() => {
     if (plans.length > 0) {
@@ -459,7 +528,16 @@ export default function ProductionPlanning() {
   const handleShowHistory = async (plan) => {
     setSelectedPlanForHistory(plan)
     setShowHistoryModal(true)
-    await fetchPlanMRHistory(plan.plan_id)
+    setLoadingHistory(true)
+    try {
+      const planDetails = await productionService.getProductionPlanDetails(plan.plan_id)
+      setSelectedPlanDetails(planDetails.data || planDetails)
+      await fetchPlanMRHistory(plan.plan_id)
+    } catch (err) {
+      console.error('Error fetching plan history data:', err)
+    } finally {
+      setLoadingHistory(false)
+    }
   }
 
   const fetchBOMProductName = async (bomId) => {
@@ -549,6 +627,31 @@ export default function ProductionPlanning() {
       console.error(err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchAllItems = async () => {
+    try {
+      const stockData = await productionService.getStockBalance()
+      const stockList = Array.isArray(stockData) ? stockData : (stockData.data || [])
+      
+      // Group by item_code to get unique items with aggregated stock
+      const uniqueItems = {}
+      stockList.forEach(item => {
+        if (!uniqueItems[item.item_code]) {
+          uniqueItems[item.item_code] = {
+            item_code: item.item_code,
+            item_name: item.item_name,
+            uom: item.uom || 'pcs',
+            available: 0
+          }
+        }
+        uniqueItems[item.item_code].available += parseFloat(item.available_qty || 0)
+      })
+      
+      setAllItems(Object.values(uniqueItems))
+    } catch (err) {
+      console.error('Error fetching all items:', err)
     }
   }
 
@@ -743,9 +846,9 @@ export default function ProductionPlanning() {
     let allOperations = []
 
     if (plan.bom_id) {
-      const rawMaterialsMap = await collectAllRawMaterials(plan.bom_id, plannedQty, token)
+      const rawMaterialsMap = await collectAllRawMaterials(plan.bom_id, plannedQty, token, new Set(), itemsMaster)
       allMaterials = Object.values(rawMaterialsMap)
-      allOperations = await collectAllOperations(plan.bom_id, token)
+      allOperations = await collectAllOperations(plan.bom_id, plannedQty, token, workstations, new Set(), 0, itemsMaster)
     }
 
     if (allMaterials.length > 0) {
@@ -852,6 +955,58 @@ export default function ProductionPlanning() {
     }
   }
 
+  const handleAddItem = (item) => {
+    if (!materialRequestData) return
+
+    // Check if item already exists
+    const exists = materialRequestData.items.some(it => it.item_code === item.item_code)
+    if (exists) {
+      toast.addToast('Item already in request list', 'warning')
+      return
+    }
+
+    const newItem = {
+      item_code: item.item_code,
+      item_name: item.item_name,
+      qty: 0,
+      quantity: 0,
+      requested_qty: 1, // Default quantity
+      uom: item.uom || 'pcs',
+      is_manual: true // Mark as manually added
+    }
+
+    setMaterialRequestData(prev => ({
+      ...prev,
+      items: [...prev.items, newItem]
+    }))
+
+    setManuallyAddedItems(prev => [...prev, item.item_code])
+    setShowAddItemDropdown(false)
+    setItemSearchTerm('')
+    
+    // Check stock for the newly added item
+    checkItemsStock([newItem], (newStockInfo) => {
+      setMaterialStockData(prev => ({
+        ...prev,
+        ...newStockInfo
+      }))
+    })
+    
+    toast.addToast('Item added to request', 'success')
+  }
+
+  const handleRemoveItem = (itemCode) => {
+    if (!materialRequestData) return
+
+    setMaterialRequestData(prev => ({
+      ...prev,
+      items: prev.items.filter(it => it.item_code !== itemCode)
+    }))
+
+    setManuallyAddedItems(prev => prev.filter(code => code !== itemCode))
+    toast.addToast('Item removed from request', 'info')
+  }
+
   const handleSendMaterialRequest = async (plan) => {
     let fgItems = plan.fg_items
     let fullPlan = plan
@@ -889,7 +1044,10 @@ export default function ProductionPlanning() {
         return
       }
 
-      const requiredItems = Object.values(allRawMaterials)
+      const requiredItems = Object.values(allRawMaterials).map(item => ({
+        ...item,
+        requested_qty: item.qty || item.quantity || 0
+      }))
 
       const seriesNo = `MR-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`
       const requiredByDate = new Date()
@@ -912,6 +1070,9 @@ export default function ProductionPlanning() {
       }
 
       setMaterialRequestData(mrData)
+      setManuallyAddedItems([])
+      setShowAddItemDropdown(false)
+      setItemSearchTerm('')
       setShowMaterialRequestModal(true)
       setSendingMaterialRequest(false)
 
@@ -919,6 +1080,18 @@ export default function ProductionPlanning() {
       if (mrItems.length > 0) {
         await checkItemsStock(mrItems, (stockInfo) => {
           setMaterialStockData(stockInfo)
+          
+          // Switch to complete tab if no items are pending
+          const pendingCount = mrItems.filter(item => {
+            const stock = stockInfo[item.item_code];
+            return !stock || !stock.isAvailable;
+          }).length;
+          
+          if (pendingCount === 0) {
+            setMrActiveTab('complete');
+          } else {
+            setMrActiveTab('pending');
+          }
         })
       }
     } catch (err) {
@@ -1068,11 +1241,12 @@ export default function ProductionPlanning() {
         for (const item of items || []) {
           const itemBalance = balances.find(b => b.item_code === item.item_code)
           const availableQty = itemBalance ? parseFloat(itemBalance.available_qty || itemBalance.current_qty || 0) : 0
+          const requested = item.requested_qty || item.quantity || item.qty || 0
 
           stockInfo[item.item_code] = {
             available: availableQty,
-            requested: item.quantity || item.qty || 0,
-            isAvailable: availableQty > 0 && availableQty >= (item.quantity || item.qty || 0),
+            requested: requested,
+            isAvailable: availableQty > 0 && availableQty >= requested,
             hasStock: availableQty > 0
           }
         }
@@ -1216,7 +1390,7 @@ export default function ProductionPlanning() {
         {plan.effectiveStatus !== 'completed' && (
           <button
             onClick={() => fetchPlanOperationProgress(plan.plan_id)}
-            className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-amber-600 hover:bg-amber-50"
+            className="p-1 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-amber-600 hover:bg-amber-50"
             title="Sync Progress"
           >
             <TrendingUp size={12} />
@@ -1225,7 +1399,7 @@ export default function ProductionPlanning() {
         {plan.effectiveStatus !== 'completed' && plan.woCount === 0 && (
           <button
             onClick={() => handleCreateWorkOrder(plan)}
-            className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"
+            className="p-1 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"
             title="Configure Strategy"
           >
             <Settings size={12} />
@@ -1235,7 +1409,7 @@ export default function ProductionPlanning() {
           <button
             onClick={() => handleSendMaterialRequest(plan)}
             disabled={sendingMaterialRequest}
-            className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
+            className="p-1 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
             title="Request Materials"
           >
             {sendingMaterialRequest ? <Loader size={12} className="animate-spin" /> : <Send size={12} />}
@@ -1244,7 +1418,7 @@ export default function ProductionPlanning() {
         {plan.effectiveStatus !== 'completed' && (
           <button
             onClick={() => handleEdit(plan)}
-            className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+            className="p-1 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
             title="Modify Strategy"
           >
             <Edit2 size={12} />
@@ -1252,12 +1426,12 @@ export default function ProductionPlanning() {
         )}
         <button
           onClick={() => handleShowHistory(plan)}
-          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all hover: bg-white border border-gray-50 relative"
+          className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all hover: bg-white border border-gray-50 relative"
           title="View Request History"
         >
           <FileText size={12} />
           {mrHistory[plan.plan_id] && mrHistory[plan.plan_id].length > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded  bg-indigo-600 text-xs text-white animate-in zoom-in duration-300">
+            <span className="absolute -top-3 -right-1 flex h-4 w-4 items-center justify-center rounded  bg-indigo-600 text-[10px] text-white animate-in zoom-in duration-300">
               {mrHistory[plan.plan_id].length}
             </span>
           )}
@@ -1265,7 +1439,7 @@ export default function ProductionPlanning() {
         {plan.effectiveStatus !== 'completed' && (
           <button
             onClick={() => handleDelete(plan.plan_id)}
-            className="p-2 rounded transition-all hover: bg-white border border-gray-50 text-gray-400 hover:text-rose-600 hover:bg-rose-50"
+            className="p-1 rounded transition-all text-gray-400 hover:text-rose-600 hover:bg-rose-50"
             title="Discard Plan"
           >
             <Trash2 size={12} />
@@ -1277,7 +1451,7 @@ export default function ProductionPlanning() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-2">
-      <div className="max-w-5xl mx-auto space-y-2">
+      <div className="mx-auto space-y-2">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
@@ -1287,7 +1461,7 @@ export default function ProductionPlanning() {
               </div> */}
               <div>
                 <h1 className=" text-xl  text-slate-900 ">
-                  Production <span className="text-indigo-600">Intelligence</span>
+                  Production <span className="text-indigo-600">Planning</span>
                 </h1>
                 <div className="flex items-center gap-2 text-xs   text-slate-400 ">
                   <Activity size={12} className="text-indigo-500" />
@@ -1308,22 +1482,21 @@ export default function ProductionPlanning() {
               className="group flex items-center gap-2 px-5 py-2 text-rose-600 hover:bg-rose-50 rounded  transition-all text-xs    border border-transparent hover:border-rose-100"
             >
               <Trash2 size={16} className="group-hover:rotate-12 transition-transform" />
-              Reset System
+              CLear Data
             </button>
             <button
               onClick={() => navigate('/manufacturing/production-planning/new')}
               className="flex items-center gap-2 p-2  bg-slate-900 text-white rounded hover:bg-slate-800 shadow  shadow-slate-200 hover: hover:-translate-y-1 transition-all text-xs   "
             >
               <Plus size={18} />
-              New Strategic Plan
-            </button>
+Create Production Plan            </button>
           </div>
         </div>
 
         {/* Intelligence Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard
-            label="Active Strategies"
+            label="Active Plan"
             value={stats.total}
             icon={Layers}
             color="indigo"
@@ -1337,14 +1510,14 @@ export default function ProductionPlanning() {
             subtitle="Plans in active production"
           />
           <StatCard
-            label="Optimization Complete"
+            label=" Completed Plan"
             value={stats.completed}
             icon={CheckCircle2}
             color="emerald"
             subtitle="Successfully closed plans"
           />
           <StatCard
-            label="Draft Formulation"
+            label="Draft Plan"
             value={stats.draft}
             icon={FileText}
             color="slate"
@@ -1393,15 +1566,7 @@ export default function ProductionPlanning() {
 
           {/* Dashboard Control Bar */}
           <div className="p-2 border-b border-gray-50 bg-gray-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4 ">
-            <div className="flex items-center gap-4">
-              <div className="bg-white p-2 rounded    border border-gray-100 text-indigo-600">
-                <BarChart3 size={20} />
-              </div>
-              <div>
-                <h3 className="text-xs  text-gray-900 ">Strategy Pipeline</h3>
-                <p className="text-xs   text-gray-400">Manage and monitor manufacturing execution</p>
-              </div>
-            </div>
+            
 
             <div className="flex items-center gap-4">
               <div className="relative group">
@@ -1486,7 +1651,7 @@ export default function ProductionPlanning() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="p-2 rounded   bg-gray-50 border border-gray-100">
                   <p className="text-xs   text-gray-400  mb-1">Item Code</p>
-                  <p className="text-sm  text-gray-900">{workOrderData.item_code}</p>
+                  <p className="text-sm  text-gray-900">{workOrderData.item_name}</p>
                 </div>
                 <div className="p-2 rounded   bg-gray-50 border border-gray-100">
                   <p className="text-xs   text-gray-400  mb-1">BOM Reference</p>
@@ -1514,19 +1679,20 @@ export default function ProductionPlanning() {
                     <table className="w-full text-left bg-white border-collapse">
                       <thead>
                         <tr className="bg-gray-50 border-b border-gray-100">
-                          <th className="p-2  text-xs   text-gray-400 ">Item / Operation</th>
-                          <th className="p-2  text-xs   text-gray-400 ">Workstation</th>
-                          <th className="p-2  text-xs   text-gray-400  text-right">Time (hrs)</th>
+                          <th className="p-2  text-[10px]   text-gray-400 uppercase tracking-wider">Item / Operation</th>
+                          <th className="p-2  text-[10px]   text-gray-400 uppercase tracking-wider">Workstation</th>
+                          <th className="p-2  text-[10px]   text-gray-400 uppercase tracking-wider text-right">Time (m/u)</th>
+                          <th className="p-2  text-[10px]   text-gray-400 uppercase tracking-wider text-right">Planned (hrs)</th>
+                          <th className="p-2  text-[10px]   text-gray-400 uppercase tracking-wider text-right">Rate/Hr</th>
+                          <th className="p-2  text-[10px]   text-gray-400 uppercase tracking-wider text-right">Total Cost</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
                         {(() => {
                           const sortedOps = [...(workOrderData.operations || [])].sort((a, b) => {
-                            // Sort by depth descending (deepest sub-assemblies first)
                             if ((b.depth || 0) !== (a.depth || 0)) {
                               return (b.depth || 0) - (a.depth || 0);
                             }
-                            // Keep relative order within same BOM
                             return 0;
                           });
                           
@@ -1536,7 +1702,7 @@ export default function ProductionPlanning() {
                               <React.Fragment key={idx}>
                                 {isNewGroup && (
                                   <tr className="bg-slate-50/50">
-                                    <td colSpan="3" className="p-2 py-1 text-[10px]  text-slate-500  tracking-wider flex items-center gap-2">
+                                    <td colSpan="6" className="p-2 py-1 text-[10px]  text-slate-500 font-semibold tracking-wider flex items-center gap-2">
                                       <div className={`w-2 h-2 rounded  ${op.depth === 0 ? 'bg-indigo-500' : 'bg-amber-500'}`} />
                                       {op.item_name || op.item_code} {op.depth === 0 ? '(Finished Good)' : '(Sub-Assembly)'}
                                     </td>
@@ -1545,37 +1711,52 @@ export default function ProductionPlanning() {
                                 <tr className="hover:bg-indigo-50/30 transition-colors">
                                   <td className="p-2  text-xs  text-gray-900 flex items-center gap-2">
                                     <div className="w-4 flex justify-center">
-                                      <div className="w-0.5 h-4 bg-gray-200" />
+                                      <div className="w-0.5 h-4 bg-gray-100" />
                                     </div>
                                     {op.operation_name || op.operation || '-'}
                                   </td>
                                   <td className="p-2  text-xs  text-gray-500">{op.workstation_type || op.workstation || '-'}</td>
-                                  <td className="p-2  text-right text-xs  text-indigo-600">{op.operation_time || op.time || 0}</td>
+                                  <td className="p-2  text-right text-xs  text-gray-400">{parseFloat(op.operation_time || op.time || 0).toFixed(2)}</td>
+                                  <td className="p-2  text-right text-xs  text-indigo-600 font-medium">{parseFloat(op.total_hours || 0).toFixed(2)}</td>
+                                  <td className="p-2  text-right text-xs  text-gray-500">₹{(op.hourly_rate || 0).toLocaleString()}</td>
+                                  <td className="p-2  text-right text-xs  text-emerald-600 font-semibold">₹{(op.total_cost || 0).toLocaleString()}</td>
                                 </tr>
                               </React.Fragment>
                             );
                           });
                         })()}
                       </tbody>
+                      <tfoot>
+                        <tr className="bg-gray-50 font-semibold border-t border-gray-100">
+                          <td colSpan="3" className="p-2 text-xs text-gray-500">Total Planned Operations</td>
+                          <td className="p-2 text-right text-xs text-indigo-600">
+                            {(workOrderData.operations || []).reduce((sum, op) => sum + parseFloat(op.total_hours || 0), 0).toFixed(2)} Hrs
+                          </td>
+                          <td className="p-2 text-right text-xs text-gray-500">Total Cost</td>
+                          <td className="p-2 text-right text-xs text-emerald-600">
+                            ₹{(workOrderData.operations || []).reduce((sum, op) => sum + (op.total_cost || 0), 0).toLocaleString()}
+                          </td>
+                        </tr>
+                      </tfoot>
                     </table>
                   </div>
                 </div>
               )}
 
-              {/* {(workOrderData.sub_assemblies?.length > 0 || workOrderData.required_items?.length > 0) && (
-                <div className="space-y-2">
+              {(workOrderData.sub_assemblies?.length > 0 || workOrderData.required_items?.length > 0) && (
+                <div className="space-y-2 mt-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-1.5 h-6 bg-indigo-600 rounded " />
+                    <div className="w-1.5 h-6 bg-emerald-600 rounded " />
                     <h3 className="text-xs  text-gray-900 ">Resource Allocation</h3>
                   </div>
                   <div className="rounded border border-gray-100 overflow-hidden  ">
                     <table className="w-full text-left bg-white border-collapse">
                       <thead>
                         <tr className="bg-gray-50 border-b border-gray-100">
-                          <th className="p-2  text-xs   text-gray-400 ">Component</th>
-                          <th className="p-2  text-xs   text-gray-400  text-right">Required</th>
-                          <th className="p-2  text-xs   text-gray-400  text-right">Available</th>
-                          <th className="p-2  text-xs   text-gray-400  text-center">Status</th>
+                          <th className="p-2  text-[10px]   text-gray-400 uppercase tracking-wider">Component</th>
+                          <th className="p-2  text-[10px]   text-gray-400 uppercase tracking-wider text-right">Required</th>
+                          <th className="p-2  text-[10px]   text-gray-400 uppercase tracking-wider text-right">Available</th>
+                          <th className="p-2  text-[10px]   text-gray-400 uppercase tracking-wider text-center">Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -1585,28 +1766,28 @@ export default function ProductionPlanning() {
                           return (
                             <tr key={idx} className={`hover:bg-indigo-50/30 transition-colors ${isLow ? 'bg-rose-50/50' : ''}`}>
                               <td className="p-2 ">
-                                <p className="text-xs  text-gray-900 ">{item.item_code}</p>
-                                <p className="text-xs   text-gray-400 mt-0.5">{item.item_name}</p>
+                                <p className="text-xs  text-gray-900 font-medium">{item.item_code}</p>
+                                <p className="text-[10px]   text-gray-400 mt-0.5">{item.item_name}</p>
+                              </td>
+                              <td className="p-2  text-right text-xs  text-gray-900 font-medium">
+                                {parseFloat(item.required_qty || item.qty || 0).toFixed(2)}
                               </td>
                               <td className="p-2  text-right text-xs  text-gray-900">
-                                {item.required_qty || item.qty || 0}
-                              </td>
-                              <td className="p-2  text-right text-xs  text-gray-900">
-                                {stock ? stock.available.toFixed(2) : '-'}
+                                {stock ? parseFloat(stock.available).toFixed(2) : '-'}
                               </td>
                               <td className="p-2  text-center">
                                 {stock ? (
                                   stock.isAvailable ? (
-                                    <div className="bg-emerald-50 text-emerald-600 p-1.5 rounded  inline-block">
-                                      <CheckCircle2 size={16} />
+                                    <div className="bg-emerald-50 text-emerald-600 p-1.5 rounded-full  inline-block">
+                                      <CheckCircle2 size={14} />
                                     </div>
                                   ) : (
-                                    <div className="bg-rose-50 text-rose-600 p-1.5 rounded  inline-block">
-                                      <AlertCircle size={16} />
+                                    <div className="bg-rose-50 text-rose-600 p-1.5 rounded-full  inline-block">
+                                      <AlertCircle size={14} />
                                     </div>
                                   )
                                 ) : (
-                                  <div className="w-5 h-5 rounded  border-2 border-slate-200 border-t-indigo-500 animate-spin mx-auto" />
+                                  <div className="w-4 h-4 rounded-full  border-2 border-slate-200 border-t-indigo-500 animate-spin mx-auto" />
                                 )}
                               </td>
                             </tr>
@@ -1616,7 +1797,7 @@ export default function ProductionPlanning() {
                     </table>
                   </div>
                 </div>
-              )} */}
+              )}
             </div>
 
             <div className="p-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
@@ -1743,11 +1924,67 @@ export default function ProductionPlanning() {
                       )}
                     </button>
                   </div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-1.5 h-6 bg-blue-600 rounded  transition-colors" />
-                    <h3 className="text-xs text-gray-900 ">
-                      Items to Request ({materialRequestData.items?.length || 0})
-                    </h3>
+                  <div className="flex items-center gap-4 mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-6 bg-blue-600 rounded  transition-colors" />
+                      <h3 className="text-xs text-gray-900 ">
+                        Items to Request ({materialRequestData.items?.length || 0})
+                      </h3>
+                    </div>
+                    
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowAddItemDropdown(!showAddItemDropdown)}
+                        className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-600 rounded border border-blue-100 hover:bg-blue-100 transition-all text-[10px] font-medium"
+                      >
+                        <Plus size={12} />
+                        Manual Override (Add Items)
+                      </button>
+
+                      {showAddItemDropdown && (
+                        <div className="absolute top-full left-[-26px] mt-1 w-fit bg-white border border-gray-200 rounded shadow-xl z-[110] p-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                          <div className="relative mb-2">
+                            <Search className="absolute left-2 top-1.5 text-gray-400" size={12} />
+                            <input
+                              autoFocus
+                              type="text"
+                              placeholder="Search item code/name..."
+                              value={itemSearchTerm}
+                              onChange={(e) => setItemSearchTerm(e.target.value)}
+                              className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-200 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                            />
+                          </div>
+                          
+                          <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
+                            {allItems
+                              .filter(item => 
+                                !materialRequestData.items.some(it => it.item_code === item.item_code) &&
+                                (item.item_code.toLowerCase().includes(itemSearchTerm.toLowerCase()) ||
+                                item.item_name.toLowerCase().includes(itemSearchTerm.toLowerCase()))
+                              )
+                              .slice(0, 50) // Limit display
+                              .map(item => (
+                                <button
+                                  key={item.item_code}
+                                  onClick={() => handleAddItem(item)}
+                                  className="w-full text-left p-2 hover:bg-blue-50 transition-colors group"
+                                >
+                                  <p className="text-[10px] font-medium text-gray-900 group-hover:text-blue-700">{item.item_name}</p>
+                                  <p className="text-[9px] text-gray-500 truncate">{item.item_code}</p>
+                                </button>
+                              ))
+                            }
+                            {allItems.filter(item => 
+                              !materialRequestData.items.some(it => it.item_code === item.item_code) &&
+                              (item.item_code.toLowerCase().includes(itemSearchTerm.toLowerCase()) ||
+                              item.item_name.toLowerCase().includes(itemSearchTerm.toLowerCase()))
+                            ).length === 0 && (
+                              <p className="text-[10px] text-gray-400 text-center py-4">No matching items found</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -1757,53 +1994,121 @@ export default function ProductionPlanning() {
                       <tr className="bg-gray-50 border-b border-gray-100">
                         <th className="p-2 text-xs text-gray-400 ">Component Intelligence</th>
                         <th className="p-2 text-xs text-gray-400 text-right">Required</th>
+                        <th className="p-2 text-xs text-gray-400 text-right w-24">To Request</th>
                         <th className="p-2 text-xs text-gray-400 text-right">Inventory</th>
                         <th className="p-2 text-xs text-gray-400 text-center">Status</th>
+                        <th className="p-2 text-xs text-gray-400 text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                      {materialRequestData.items?.filter(item => {
-                        const stock = materialStockData[item.item_code];
-                        if (mrActiveTab === 'pending') return !stock || !stock.isAvailable;
-                        return stock && stock.isAvailable;
-                      }).map((item, idx) => {
-                        const stock = materialStockData[item.item_code]
-                        const isLow = stock && !stock.isAvailable
-                        return (
-                          <tr key={idx} className={`hover:bg-blue-50/30 transition-colors ${isLow ? 'bg-rose-50/50' : ''}`}>
-                            <td className="p-2 ">
-                              <p className="text-xs text-gray-900 ">{item.item_name} ({item.item_code})</p>
-                              
-                            </td>
-                            <td className="p-2 text-right">
-                              <span className="text-xs text-gray-900">{item.qty || item.quantity || 0}</span>
-                              <span className="ml-1 text-xs text-slate-400 ">{item.uom || 'pcs'}</span>
-                            </td>
-                            <td className="p-2 text-right text-xs text-gray-900">
-                              {stock ? stock.available.toFixed(2) : '-'}
-                            </td>
-                            <td className="p-2 text-center">
-                              {stock ? (
-                                stock.isAvailable ? (
-                                  <div className=" text-emerald-600  text-[9px]  inline-flex items-center gap-1">
-                                    <Check size={12} /> Fully Stocked
+                      {(() => {
+                        const filteredItems = (materialRequestData.items?.filter(item => {
+                          const stock = materialStockData[item.item_code];
+                          if (mrActiveTab === 'pending') return !stock || !stock.isAvailable;
+                          return stock && stock.isAvailable;
+                        }) || []).sort((a, b) => {
+                          // Sort manually added items to the top
+                          const isAManual = a.is_manual || manuallyAddedItems.includes(a.item_code);
+                          const isBManual = b.is_manual || manuallyAddedItems.includes(b.item_code);
+                          if (isAManual && !isBManual) return -1;
+                          if (!isAManual && isBManual) return 1;
+                          return 0;
+                        });
+
+                        if (filteredItems.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan="5" className="p-8 text-center">
+                                <div className="flex flex-col items-center gap-2">
+                                  <div className={`p-3 rounded-full ${mrActiveTab === 'pending' ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500'}`}>
+                                    {mrActiveTab === 'pending' ? <Check size={24} /> : <XCircle size={24} />}
                                   </div>
-                                ) : stock.hasStock ? (
-                                  <div className=" text-amber-600  text-[9px]  inline-flex items-center gap-1">
-                                    <AlertCircle size={12} /> Partial Stock
-                                  </div>
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {mrActiveTab === 'pending' ? 'No items require attention' : 'No fully stocked items found'}
+                                  </p>
+                                  <p className="text-xs text-gray-500 max-w-[200px]">
+                                    {mrActiveTab === 'pending' 
+                                      ? 'All required components have sufficient inventory levels.' 
+                                      : 'All components for this plan need to be requested or replenished.'}
+                                  </p>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return filteredItems.map((item, idx) => {
+                          const stock = materialStockData[item.item_code]
+                          const isAvailableNow = stock && stock.available >= (item.requested_qty || 0)
+                          const isLow = stock && !isAvailableNow
+                          const isManual = item.is_manual || manuallyAddedItems.includes(item.item_code)
+
+                          return (
+                            <tr key={idx} className={`hover:bg-blue-50/30 transition-colors ${isManual ? 'bg-blue-50/50 border-l-2 border-blue-500' : isLow ? 'bg-rose-50/50' : ''}`}>
+                              <td className="p-2 ">
+                                <p className={`text-xs ${isManual ? 'text-blue-700 font-medium' : 'text-gray-900'} `}>{item.item_name} ({item.item_code})</p>
+                              </td>
+                              <td className="p-2 text-right">
+                                <span className="text-xs text-gray-900">{item.qty || item.quantity || 0}</span>
+                                <span className="ml-1 text-xs text-slate-400 ">{item.uom || 'pcs'}</span>
+                              </td>
+                              <td className="p-2 text-right">
+                                <input
+                                  type="number"
+                                  value={item.requested_qty || 0}
+                                  onChange={(e) => {
+                                    const val = parseFloat(e.target.value) || 0;
+                                    setMaterialRequestData(prev => ({
+                                      ...prev,
+                                      items: prev.items.map(it => 
+                                        it.item_code === item.item_code 
+                                          ? { ...it, requested_qty: val } 
+                                          : it
+                                      )
+                                    }));
+                                  }}
+                                  className="w-full p-1 text-right text-xs border border-gray-200 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                />
+                              </td>
+                              <td className="p-2 text-right text-xs text-gray-900">
+                                {stock ? stock.available.toFixed(2) : '-'}
+                              </td>
+                              <td className="p-2 text-center">
+                                {stock ? (
+                                  isAvailableNow ? (
+                                    <div className=" text-emerald-600  text-[9px]  inline-flex items-center gap-1">
+                                      <Check size={12} /> Fully Stocked
+                                    </div>
+                                  ) : stock.available > 0 ? (
+                                    <div className=" text-amber-600  text-[9px]  inline-flex items-center gap-1">
+                                      <AlertCircle size={12} /> Partial Stock
+                                    </div>
+                                  ) : (
+                                    <div className=" text-rose-600  text-[9px]  inline-flex items-center gap-1">
+                                      <X size={12} /> Zero Stock
+                                    </div>
+                                  )
                                 ) : (
-                                  <div className=" text-rose-600  text-[9px]  inline-flex items-center gap-1">
-                                    <X size={12} /> Zero Stock
-                                  </div>
-                                )
-                              ) : (
-                                <div className="w-5 h-5 rounded   animate-spin mx-auto" />
-                              )}
-                            </td>
-                          </tr>
-                        )
-                      })}
+                                  <div className="w-5 h-5 rounded   animate-spin mx-auto" />
+                                )}
+                              </td>
+                              <td className="p-2 text-center">
+                                {isManual ? (
+                                  <button
+                                    onClick={() => handleRemoveItem(item.item_code)}
+                                    className="p-1 text-rose-500 hover:bg-rose-50 rounded transition-colors"
+                                    title="Remove item"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                ) : (
+                                  <span className="text-[9px] text-gray-300 font-medium">LOCKED</span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>
@@ -1853,6 +2158,7 @@ export default function ProductionPlanning() {
                 onClick={() => {
                   setShowHistoryModal(false)
                   setSelectedPlanForHistory(null)
+                  setSelectedPlanDetails(null)
                 }}
                 className="p-2 text-gray-400 hover:text-gray-900 hover:bg-white rounded transition-all border border-transparent hover:border-gray-100"
               >
@@ -1868,6 +2174,65 @@ export default function ProductionPlanning() {
                 </div>
               ) : mrHistory[selectedPlanForHistory.plan_id] && mrHistory[selectedPlanForHistory.plan_id].length > 0 ? (
                 <div className="space-y-8">
+                  {/* Plan-Level Material Fulfillment Summary */}
+                  {selectedPlanDetails && (
+                    <div className="bg-indigo-50/30 rounded border border-indigo-100 p-4">
+                      <div className="flex items-center gap-2 text-indigo-700 mb-4">
+                        <Layers size={18} />
+                        <h3 className="text-[10px] font-bold uppercase tracking-wider">Overall Plan Fulfillment Summary</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {(selectedPlanDetails.raw_materials || []).map((rm, idx) => {
+                          const totalPlanQty = Number(rm.qty || rm.plan_to_request_qty || 0);
+                          // Sum up issued quantities for this item across ALL MRs in history
+                          const issuedAcrossAllMRs = mrHistory[selectedPlanForHistory.plan_id]?.reduce((sum, mr) => {
+                            const item = mr.items?.find(i => i.item_code === rm.item_code);
+                            return sum + Number(item?.issued_qty || 0);
+                          }, 0) || 0;
+                          
+                          const overallPending = Math.max(0, totalPlanQty - issuedAcrossAllMRs);
+                          const progressPercent = totalPlanQty > 0 ? Math.min(100, (issuedAcrossAllMRs / totalPlanQty) * 100) : 0;
+                          
+                          return (
+                            <div key={idx} className="bg-white p-3 rounded border border-indigo-100/50 shadow-sm hover:shadow-md transition-shadow">
+                              <div className="flex justify-between items-start mb-2">
+                                <div>
+                                  <p className="text-xs font-bold text-gray-900">{rm.item_code}</p>
+                                  <p className="text-[10px] text-gray-500 truncate w-40" title={rm.item_name}>{rm.item_name}</p>
+                                </div>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${progressPercent >= 100 ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                                  {Math.round(progressPercent)}%
+                                </span>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[10px]">
+                                  <span className="text-gray-400">Target Plan Req:</span>
+                                  <span className="font-medium text-gray-700">{totalPlanQty.toFixed(2)} {rm.uom}</span>
+                                </div>
+                                <div className="flex justify-between text-[10px]">
+                                  <span className="text-gray-400">Issued So Far:</span>
+                                  <span className="font-medium text-emerald-600">{issuedAcrossAllMRs.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between text-[10px] pt-1 border-t border-gray-50 mt-1">
+                                  <span className="text-gray-900 font-semibold">Net Plan Pending:</span>
+                                  <span className={`font-bold ${overallPending > 0 ? 'text-indigo-600' : 'text-emerald-500'}`}>
+                                    {overallPending > 0 ? overallPending.toFixed(2) : 'FULFILLED'}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="mt-2 w-full h-1 bg-gray-100 rounded-full overflow-hidden">
+                                <div 
+                                  className={`h-full transition-all duration-500 ${progressPercent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                                  style={{ width: `${progressPercent}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Pending/Active Requests Section */}
                   {mrHistory[selectedPlanForHistory.plan_id].some(mr => mr.status !== 'completed') && (
                     <div className="space-y-4">
@@ -1922,6 +2287,7 @@ export default function ProductionPlanning() {
                 onClick={() => {
                   setShowHistoryModal(false)
                   setSelectedPlanForHistory(null)
+                  setSelectedPlanDetails(null)
                 }}
                 className="p-2  bg-slate-900 text-white text-xs   rounded hover:bg-slate-800 transition-all  shadow-slate-200"
               >

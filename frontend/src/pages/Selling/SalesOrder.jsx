@@ -394,7 +394,7 @@ export default function SalesOrder() {
 
           <div>
             <h1 className="text-xl  text-slate-900 leading-tight ">
-              Sales Order Command
+              Sales Orders
             </h1>
             <div className="flex items-center gap-2 text-xs font-medium text-slate-400 mt-1">
               <Activity size={12} className="text-blue-500" />
@@ -425,7 +425,7 @@ export default function SalesOrder() {
             className="inline-flex items-center gap-2 rounded  bg-slate-900 p-2 text-xs  text-white shadow  shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95"
           >
             <Plus size={15} />
-            Initialize Order
+            Ceate Sales Order
           </button>
         </div>
       </div>
@@ -434,7 +434,7 @@ export default function SalesOrder() {
       <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Value Card */}
         <div className="bg-white rounded border border-slate-200 p-2 ">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <div className="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
               <DollarSign size={20} />
             </div>
@@ -449,7 +449,7 @@ export default function SalesOrder() {
               <span className="text-xl  text-slate-900">₹{(stats.total_value / 100000).toFixed(2)}L</span>
               <span className="text-[10px] font-medium text-slate-400">INR</span>
             </div>
-            <div className="mt-4 flex items-center justify-between text-[10px] border-t border-slate-50 pt-3">
+            <div className=" flex items-center justify-between text-[10px] border-t border-slate-50 pt-3">
               <span className="text-slate-400 font-medium">Fulfillment Rate</span>
               <span className=" text-blue-600">{stats.fulfillment_rate}%</span>
             </div>
@@ -458,7 +458,7 @@ export default function SalesOrder() {
 
         {/* Active Fulfillment Card */}
         <div className="bg-white rounded border border-slate-200 p-2">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <div className="w-6 h-6 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
               <Clock size={20} />
             </div>
@@ -470,7 +470,7 @@ export default function SalesOrder() {
               <span className="text-xl  text-slate-900">{(stats.under_production || 0) + (stats.confirmed || 0)}</span>
               <span className="text-[10px] font-medium text-slate-400">Orders</span>
             </div>
-            <div className="mt-4 space-y-1.5">
+            <div className=" space-y-1.5">
               <div className="flex justify-between text-[8px] text-slate-400   tracking-tighter">
                 <span>Production Queue</span>
                 <span>{stats.under_production || 0} Units</span>
@@ -487,7 +487,7 @@ export default function SalesOrder() {
 
         {/* Critical Alerts Card */}
         <div className="bg-white rounded border border-slate-200 p-2">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${stats.overdue > 0 ? 'bg-rose-50 text-rose-600 animate-pulse' : 'bg-slate-50 text-slate-400'}`}>
               <AlertTriangle size={20} />
             </div>
@@ -501,7 +501,7 @@ export default function SalesOrder() {
               <span className={`text-2xl  ${stats.overdue > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{stats.overdue}</span>
               <span className="text-[10px] font-medium text-slate-400">Overdue</span>
             </div>
-            <p className="mt-4 text-[9px] text-slate-400 border-t border-slate-50 pt-3 font-medium  tracking-tight">
+            <p className=" text-[9px] text-slate-400 border-t border-slate-50 pt-3 font-medium  tracking-tight">
               Requires immediate operational attention
             </p>
           </div>
@@ -509,7 +509,7 @@ export default function SalesOrder() {
 
         {/* Successful Deliveries Card */}
         <div className="bg-white rounded border border-slate-200 p-2">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <div className="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
               <CheckCircle size={20} />
             </div>
@@ -521,7 +521,7 @@ export default function SalesOrder() {
               <span className="text-xl  text-slate-900">{stats.delivered + stats.complete || 0}</span>
               <span className="text-[10px] font-medium text-slate-400">Success</span>
             </div>
-            <div className="mt-4 flex items-center gap-2 text-[10px]  text-emerald-600 border-t border-slate-50 pt-3  tracking-tight">
+            <div className=" flex items-center gap-2 text-[10px]  text-emerald-600 border-t border-slate-50 pt-3  tracking-tight">
               <TrendingUp size={12} />
               <span>+5.4% from last period</span>
             </div>
@@ -532,19 +532,19 @@ export default function SalesOrder() {
         {/* Intelligence Filters Section */}
       <div className="glass-filters p-2 mb-2  flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+          <Search className=" absolute z-10 top-2 left-2 text-gray-500" size={16} />
           <input
             type="text"
             placeholder="Query Intelligence Engine (ID, Customer, Item)..."
             value={filters.globalSearch}
             onChange={(e) => setFilters({ ...filters, globalSearch: e.target.value })}
-            className="glass-input w-full pl-10 border-none bg-white border "
+            className="glass-input w-full pl-10 text-xs border-none bg-white border "
           />
         </div>
 
         <div className="flex items-center gap-3">
           <div className="relative group">
-            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400">
+            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-800">
               <Filter size={14} />
             </div>
             <select

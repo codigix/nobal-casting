@@ -1,3 +1,5 @@
+import { ProductionPlanningService } from '../services/ProductionPlanningService.js'
+
 class ProductionController {
   constructor(productionModel) {
     this.productionModel = productionModel
@@ -1097,6 +1099,14 @@ class ProductionController {
         console.error('Error syncing BOM to sales orders:', syncErr)
       }
 
+      // Sync Production Plans if BOM changes
+      try {
+        const ppService = new ProductionPlanningService(this.productionModel.db)
+        await ppService.syncPlansForBOM(bom_id)
+      } catch (ppError) {
+        console.error('Error syncing production plans after BOM update:', ppError)
+      }
+
       res.status(200).json({
         success: true,
         message: 'BOM updated successfully and synced to all related sales orders',
@@ -2047,6 +2057,12 @@ class ProductionController {
         message: 'Operation ended successfully'
       })
     } catch (error) {
+      if (error.message.includes('Quality Validation Error')) {
+        return res.status(400).json({
+          success: false,
+          error: error.message
+        })
+      }
       res.status(500).json({
         success: false,
         error: error.message
@@ -2377,7 +2393,7 @@ class ProductionController {
         mr_id: card.mr_id,
         mr_status: mrStatus,
         material_received: card.material_status === 'received' || mrStatus === 'received' || mrStatus === 'completed',
-        can_start: !card.mr_id || mrStatus === 'received' || mrStatus === 'completed'
+        can_start: true
       };
 
       res.status(200).json({
@@ -2399,7 +2415,7 @@ class ProductionController {
       const { items = [] } = req.body;
 
       const [jobCard] = await this.productionModel.db.execute(
-        `SELECT jc.*, wo.item_code, wo.production_plan_id, wo.wip_warehouse FROM job_card jc 
+        `SELECT jc.*, wo.item_code, wo.production_plan_id, wo.wip_warehouse, wo.wo_id FROM job_card jc 
          LEFT JOIN work_order wo ON jc.work_order_id = wo.wo_id 
          WHERE jc.job_card_id = ?`,
         [job_card_id]
@@ -2417,11 +2433,39 @@ class ProductionController {
       const production_plan_id = card.production_plan_id || null;
       const target_warehouse = card.wip_warehouse || null;
       
-      const mrItems = items.length > 0 ? items : [{
-        item_code: card.item_code,
-        qty: card.planned_quantity || 1,
-        uom: 'pcs'
-      }];
+      let mrItems = items;
+      
+      // If no items provided, fetch from work_order_item (BOM components)
+      if (!items || items.length === 0) {
+        const [woItems] = await this.productionModel.db.execute(
+          'SELECT item_code, required_qty as qty, uom FROM work_order_item WHERE wo_id = ?',
+          [card.wo_id]
+        );
+        
+        if (woItems && woItems.length > 0) {
+          // Adjust quantity based on job card planned quantity vs total WO quantity
+          const [wo] = await this.productionModel.db.execute(
+            'SELECT quantity FROM work_order WHERE wo_id = ?',
+            [card.wo_id]
+          );
+          const totalWOQty = parseFloat(wo[0]?.quantity || 1);
+          const jcPlannedQty = parseFloat(card.planned_quantity || 0);
+          const ratio = totalWOQty > 0 ? (jcPlannedQty / totalWOQty) : 1;
+
+          mrItems = woItems.map(item => ({
+            item_code: item.item_code,
+            qty: parseFloat(item.qty) * ratio,
+            uom: item.uom || 'pcs'
+          }));
+        } else {
+          // Fallback to produced item if no components found (not ideal but better than nothing)
+          mrItems = [{
+            item_code: card.item_code,
+            qty: card.planned_quantity || 1,
+            uom: 'pcs'
+          }];
+        }
+      }
 
       await this.productionModel.db.execute(
         `INSERT INTO material_request 
@@ -2437,8 +2481,8 @@ class ProductionController {
       for (const item of mrItems) {
         const mr_item_id = 'MRI-' + Date.now() + '-' + Math.random();
         await this.productionModel.db.execute(
-          'INSERT INTO material_request_item (mr_item_id, mr_id, item_code, qty, uom, purpose) VALUES (?, ?, ?, ?, ?, ?)',
-          [mr_item_id, mr_id, item.item_code, item.qty, item.uom || 'pcs', 'material_issue']
+          'INSERT INTO material_request_item (mr_item_id, mr_id, item_code, qty, requested_qty, uom, purpose) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [mr_item_id, mr_id, item.item_code, item.qty, item.qty, item.uom || 'pcs', 'material_issue']
         );
       }
 
@@ -2501,28 +2545,6 @@ class ProductionController {
           body: {}
         }, res);
         return;
-      }
-
-      if (!card.mr_id) {
-        return res.status(400).json({
-          success: false,
-          message: 'Material request is required before starting job card',
-          requiresMaterialRequest: true,
-          data: { job_card_id }
-        });
-      }
-
-      if (card.mr_status !== 'received' && card.mr_status !== 'completed') {
-        return res.status(400).json({
-          success: false,
-          message: `Cannot start job card. Material request status is: ${card.mr_status}`,
-          message_type: 'material_not_received',
-          data: {
-            job_card_id,
-            mr_id: card.mr_id,
-            mr_status: card.mr_status
-          }
-        });
       }
 
       res.status(200).json({

@@ -38,15 +38,41 @@ const getDepth = (order, allOrders) => {
 
 const sortWorkOrders = (ordersData) => {
   return [...ordersData].sort((a, b) => {
+    // Priority 1: Type (Sub-Assembly before Finished Goods)
+    // Robust check for SA prefix
+    const isSA = (id) => (id || '').toUpperCase().includes('-SA-') || (id || '').toUpperCase().startsWith('WO-SA')
+    const typeA = isSA(a.wo_id) ? 0 : 1
+    const typeB = isSA(b.wo_id) ? 0 : 1
+    
+    if (typeA !== typeB) {
+      return typeA - typeB
+    }
+
+    // Priority 2: Depth (Root items first, then children - for SA)
+    // Wait, if we want Spindle (depth 1) before FG (depth 0), but FG is already type 1.
+    // So for both SA, depth 1 should come before depth 2?
     const depthA = getDepth(a, ordersData)
     const depthB = getDepth(b, ordersData)
     
-    // Root items (Depth 0) first, then children
     if (depthA !== depthB) {
       return depthA - depthB
     }
     
-    // For same depth, show newest ones first
+    // Priority 3: ID Suffix (e.g., -1, -2 before -4)
+    // Handle IDs like WO-SA-123-1
+    const getSuffix = (id) => {
+      const parts = (id || '').split('-')
+      const last = parts[parts.length - 1]
+      return parseInt(last) || 0
+    }
+    const suffixA = getSuffix(a.wo_id)
+    const suffixB = getSuffix(b.wo_id)
+    
+    if (suffixA !== suffixB) {
+      return suffixA - suffixB
+    }
+
+    // Default: Newest first
     return (b.created_at || '').localeCompare(a.created_at || '')
   })
 }
@@ -826,6 +852,7 @@ export default function WorkOrder() {
   return (
     <div className="min-h-screen bg-white p-2">
       {/* Modern Header */}
+    
       <div className="bg-white border-b border-gray-100 p-2">
         <div className="">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 ">
@@ -851,8 +878,8 @@ export default function WorkOrder() {
                 onClick={() => navigate('/manufacturing/work-orders/new')}
                 className="group flex items-center gap-2  p-2 bg-gray-900 text-white rounded hover:bg-indigo-600 transition-all duration-500  shadow-gray-200 hover:shadow-indigo-200"
               >
-                <Plus size={20} className="group-hover:rotate-90 transition-transform duration-500" />
-                <span className="text-xs  ">Create Order</span>
+                <Plus size={15} className="group-hover:rotate-90 transition-transform duration-500" />
+                <span className="text-xs  ">Create Work Order</span>
               </button>
               <button
                 onClick={handleTruncate}
@@ -895,28 +922,28 @@ export default function WorkOrder() {
         {/* Quick Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2  mb-2">
           <StatCard
-            label="Total Orders"
+            label="Total Work Orders"
             value={stats.totalOrders}
             icon={Layers}
             color="indigo"
             subtitle="Global manufacturing volume"
           />
           <StatCard
-            label="In Progress"
+            label="In Progress Work Order"
             value={stats.inProgress}
             icon={Activity}
             color="amber"
             subtitle="Active production lines"
           />
           <StatCard
-            label="Completed"
+            label="Completed Work Order"
             value={stats.completed}
             icon={CheckCircle2}
             color="emerald"
             subtitle="Ready for delivery"
           />
           <StatCard
-            label="Pending"
+            label="Pending Work Order"
             value={stats.pending}
             icon={Clock}
             color="blue"

@@ -165,7 +165,10 @@ export default function JobCard() {
     try {
       setLoading(true)
       const response = await productionService.getJobCards(filters)
-      const cards = response.data || []
+      let cards = response.data || []
+      
+      // We rely on the backend sort: Plan ID (DESC), Operation Type (SA before FG), Operation Sequence (ASC)
+      // This ensures manufacturing flow for recent projects appears correctly.
       setJobCards(cards)
 
       const inProgress = cards.filter(jc => (jc.status || '').toLowerCase() === 'in-progress' || (jc.status || '').toLowerCase() === 'in_progress').length
@@ -258,26 +261,20 @@ export default function JobCard() {
 
       const api = (await import('../../services/api')).default
 
-      toast.addToast('⏳ Checking material request status...', 'info')
+      toast.addToast('⏳ Checking material status...', 'info')
       const materialStatusRes = await api.get(`/production/job-cards/${jobCardId}/material-request-status`)
       const materialStatus = materialStatusRes.data?.data
 
-      if (!materialStatus.has_material_request) {
-        toast.addToast('❌ No material request found. Please create and send a material request first in the Material Requests page.', 'error')
-        setLoading(false)
-        return
-      }
-
-      if (materialStatus.mr_status !== 'received' && materialStatus.mr_status !== 'completed') {
+      if (materialStatus.has_material_request && materialStatus.mr_status !== 'received' && materialStatus.mr_status !== 'completed') {
         toast.addToast(
-          `⏳ Material request not received yet. Current status: ${materialStatus.mr_status.toUpperCase()}. Please check Material Requests page.`,
-          'warning'
+          `ℹ️ Material request status: ${materialStatus.mr_status.toUpperCase()}. Proceeding anyway...`,
+          'info'
         )
-        setLoading(false)
-        return
+      } else if (!materialStatus.has_material_request) {
+        toast.addToast('ℹ️ No material request found. Proceeding anyway...', 'info')
       }
 
-      toast.addToast('✅ Material received. Starting job card...', 'success')
+      toast.addToast('✅ Starting job card...', 'success')
       await productionService.updateJobCard(jobCardId, { status: 'in-progress' })
 
       setTimeout(() => {
@@ -694,7 +691,7 @@ export default function JobCard() {
               {/* Suggested Solution Section */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 px-1">
-                  <Zap size={18} className="text-amber-500" />
+                  <Zap size={15} className="text-amber-500" />
                   <h4 className="text-sm  text-slate-800  ">Easiest Fix</h4>
                 </div>
 
@@ -768,7 +765,7 @@ export default function JobCard() {
               {/* Alternatives Section */}
               <div className="space-y-5">
                 <div className="flex items-center gap-2 px-1">
-                  <Layers size={18} className="text-slate-500" />
+                  <Layers size={15} className="text-slate-500" />
                   <h4 className="text-sm  text-slate-800  ">Try Another {conflictModalData.resource_type === 'machine' ? 'Machine' : 'Operator'}</h4>
                 </div>
 
@@ -918,44 +915,31 @@ export default function JobCard() {
   const columns = useMemo(() => [
     {
       key: 'job_card_id',
-      label: 'ID / Project',
+      label: 'ID / Project / Priority',
       render: (val, row) => {
         const parts = (val || '').split('-')
         const displayId = parts.length > 4 ? `${parts[0]}-${parts[1]}-..${parts[parts.length - 2].slice(-4)}-${parts[parts.length - 1]}` : val
 
-        const woVal = row.work_order_id || ''
-        const woParts = woVal.split('-')
-        const displayWoId = woParts.length >= 4
-          ? `${woParts[0]}-${woParts[1]}-..${woParts[woParts.length - 2].slice(-4)}-${woParts[woParts.length - 1]}`
-          : woVal
-
-        return (
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[11px] font-mono text-indigo-600 " title={`Job Card: ${val}`}>
-              {displayId}
-            </span>
-            {/* <span className="text-xs font-mono text-slate-400 " title={`Work Order: ${woVal}`}>
-              WO: {displayWoId}
-            </span> */}
-            <span className="text-xs  text-slate-700 mt-1">{row.project_name || 'No Project'}</span>
-          </div>
-        )
-      }
-    },
-    {
-      key: 'priority',
-      label: 'Priority',
-      render: (val) => {
         const priorityColors = {
           high: 'bg-rose-50 text-rose-600 border-rose-200',
           medium: 'bg-amber-50 text-amber-600 border-amber-200',
           low: 'bg-blue-50 text-blue-600 border-blue-200'
         }
-        const color = priorityColors[val?.toLowerCase()] || priorityColors.medium
+        const priority = row.priority || 'Medium'
+        const color = priorityColors[priority.toLowerCase()] || priorityColors.medium
+
         return (
-          <span className={`px-2 py-0.5 rounded  border text-xs    ${color}`}>
-            {val || 'Medium'}
-          </span>
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-mono text-indigo-600 " title={`Job Card: ${val}`}>
+                {displayId}
+              </span>
+              <span className={`px-2 py-0.5 rounded border text-[10px] font-medium leading-none ${color}`}>
+                {priority}
+              </span>
+            </div>
+            <span className="text-xs text-slate-700 mt-1">{row.project_name || 'No Project'}</span>
+          </div>
         )
       }
     },
@@ -1204,9 +1188,7 @@ export default function JobCard() {
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="text-xl text-gray-900">Job Cards</h1>
-                <span className="bg-indigo-50 text-indigo-600 rounded text-xs p-1 border border-indigo-100">
-                  Live Operations
-                </span>
+                
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">Manufacturing Intelligence</span>
@@ -1230,8 +1212,8 @@ export default function JobCard() {
               onClick={handleTruncate}
               className="group flex items-center gap-2 p-2 py-2 text-rose-600 hover:bg-rose-50 rounded transition-all duration-300"
             >
-              <Trash size={18} className="group-hover:rotate-12 transition-transform" />
-              <span className="text-xs">Reset Queue</span>
+              <Trash size={15} className="group-hover:rotate-12 transition-transform" />
+              <span className="text-xs">Clear Data</span>
             </button>
             <button
               onClick={() => { setEditingId(null); setPreSelectedWorkOrderId(null); setShowModal(true) }}
@@ -1287,20 +1269,7 @@ export default function JobCard() {
         </div>
 
         {/* Tabs Switcher */}
-        <div className="flex items-center gap-1 bg-white p-1 rounded border border-gray-100 mb-4 w-fit ml-auto">
-          <button
-            onClick={() => setActiveTab('list')}
-            className={`px-4 py-1.5 text-xs    rounded transition-all ${activeTab === 'list' ? 'bg-gray-900 text-white ' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
-          >
-            List View
-          </button>
-          <button
-            onClick={() => setActiveTab('scheduling')}
-            className={`px-4 py-1.5 text-xs    rounded transition-all ${activeTab === 'scheduling' ? 'bg-gray-900 text-white ' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
-          >
-            Scheduling View
-          </button>
-        </div>
+        
 
         {activeTab === 'list' ? (
           <>
@@ -1322,7 +1291,7 @@ export default function JobCard() {
               <div className="flex items-center gap-4 w-full md:w-auto">
                 <div className="relative min-w-[240px] group">
                   <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none z-10">
-                    <Filter className="text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                    <Filter className="text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={15} />
                   </div>
                   <SearchableSelect
                     name="status"
@@ -1341,6 +1310,20 @@ export default function JobCard() {
                   />
                 </div>
               </div>
+              <div className="flex items-center gap-1 bg-white p-1 rounded border border-gray-100  w-fit ml-auto">
+          <button
+            onClick={() => setActiveTab('list')}
+            className={`px-4 py-1.5 text-xs    rounded transition-all ${activeTab === 'list' ? 'bg-gray-900 text-white ' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+          >
+            List View
+          </button>
+          <button
+            onClick={() => setActiveTab('scheduling')}
+            className={`px-4 py-1.5 text-xs    rounded transition-all ${activeTab === 'scheduling' ? 'bg-gray-900 text-white ' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+          >
+            Scheduling View
+          </button>
+        </div>
             </div>
 
             {/* Data Table */}

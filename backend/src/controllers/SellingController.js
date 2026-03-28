@@ -1,4 +1,5 @@
 import { SalesInvoiceModel } from '../models/SalesInvoiceModel.js'
+import { ProductionPlanningService } from '../services/ProductionPlanningService.js'
 
 export class SellingController {
   // ============================================
@@ -827,6 +828,14 @@ export class SellingController {
       console.log('UPDATE Values:', values)
       const result = await db.execute(query, values)
       console.log('UPDATE executed successfully', result)
+
+      // Sync Production Plans if Sales Order changes
+      try {
+        const ppService = new ProductionPlanningService(db)
+        await ppService.syncPlansForSalesOrder(id)
+      } catch (ppError) {
+        console.error('Error syncing production plans after sales order update:', ppError)
+      }
 
       // Fetch updated order with customer info
       const [updated] = await db.execute(

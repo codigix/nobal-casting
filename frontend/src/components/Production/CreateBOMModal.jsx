@@ -99,7 +99,7 @@ export default function CreateBOMModal({ isOpen, onClose, onSuccess, editingId }
         }
       }
     } catch (err) {
-      console.error('Failed to initialize BOM modal:', err)
+      console.error('Failed to Create BOM modal:', err)
       setError('Failed to load initial data')
     } finally {
       setFetchingData(false)

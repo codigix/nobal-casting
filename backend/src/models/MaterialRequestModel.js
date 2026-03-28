@@ -272,8 +272,8 @@ export class MaterialRequestModel {
         for (const item of items) {
           const mr_item_id = 'MRI-' + Date.now() + '-' + Math.random()
           await db.execute(
-            'INSERT INTO material_request_item (mr_item_id, mr_id, item_code, qty, uom, purpose) VALUES (?, ?, ?, ?, ?, ?)',
-            [mr_item_id, mr_id, item.item_code || null, item.qty || 0, item.uom || '', item.purpose || null]
+            'INSERT INTO material_request_item (mr_item_id, mr_id, item_code, qty, requested_qty, uom, purpose) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [mr_item_id, mr_id, item.item_code || null, item.qty || 0, item.requested_qty || null, item.uom || '', item.purpose || null]
           )
         }
       }
@@ -333,8 +333,8 @@ export class MaterialRequestModel {
         for (const item of items) {
           const mr_item_id = 'MRI-' + Date.now() + '-' + Math.random()
           await db.execute(
-            'INSERT INTO material_request_item (mr_item_id, mr_id, item_code, qty, uom, purpose) VALUES (?, ?, ?, ?, ?, ?)',
-            [mr_item_id, mrId, item.item_code, item.qty, item.uom, item.purpose]
+            'INSERT INTO material_request_item (mr_item_id, mr_id, item_code, qty, requested_qty, uom, purpose) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [mr_item_id, mrId, item.item_code, item.qty, item.requested_qty || null, item.uom, item.purpose]
           )
         }
       }
@@ -370,9 +370,12 @@ export class MaterialRequestModel {
       if (itemsToProcess) {
         if (Array.isArray(itemsToProcess)) {
           if (typeof itemsToProcess[0] === 'object' && itemsToProcess[0] !== null) {
-            // Array of objects [{ item_code, warehouse_id }]
+            // Array of objects [{ item_code, warehouse_id, qty }]
             itemsToProcess.forEach(itp => {
-              itemWarehouseMap[itp.item_code] = itp.warehouse_id
+              itemWarehouseMap[itp.item_code] = {
+                warehouse_id: itp.warehouse_id,
+                qty: itp.qty
+              }
             })
             items = items.filter(item => itemWarehouseMap[item.item_code])
           } else {
@@ -382,7 +385,10 @@ export class MaterialRequestModel {
         } else if (typeof itemsToProcess === 'object') {
           // Object { [item_code]: warehouse_id }
           itemWarehouseMap = itemsToProcess
-          items = items.filter(item => itemWarehouseMap[item.item_code])
+          items = items.filter(item => {
+            const entry = itemWarehouseMap[item.item_code]
+            return entry !== undefined
+          })
         }
       }
 
@@ -403,12 +409,15 @@ export class MaterialRequestModel {
       // STOCK CHECK for Issue/Transfer
       if (isStockTransaction) {
         for (const item of items) {
-          // Calculate pending quantity for this item
-          const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
-          if (pendingQty <= 0) continue // Already issued
+          const requestedQtyLimit = item.requested_qty ? Number(item.requested_qty) : Number(item.qty)
+          const pendingQty = requestedQtyLimit - Number(item.issued_qty || 0)
+          if (pendingQty <= 0) continue // Already issued up to request level
 
           // Use per-item warehouse if available, otherwise use common source warehouse
-          const itemWarehouse = itemWarehouseMap[item.item_code] || finalSourceWarehouse
+          const entry = itemWarehouseMap[item.item_code]
+          const itemWarehouse = entry?.warehouse_id || entry || finalSourceWarehouse
+          const specifiedQty = entry?.qty !== undefined ? Number(entry.qty) : null
+
           if (!itemWarehouse) {
             throw new Error(`Warehouse is missing for item ${item.item_code}`)
           }
@@ -423,6 +432,11 @@ export class MaterialRequestModel {
               throw new Error(`No stock available for item ${item.item_code} in warehouse ${itemWarehouse}.`)
             }
             continue // Skip if part of a bulk approval and not available
+          }
+
+          // Check if specified quantity is available
+          if (specifiedQty !== null && specifiedQty > availableQty) {
+            throw new Error(`Insufficient stock for item ${item.item_code} in warehouse ${itemWarehouse}. Requested: ${specifiedQty}, Available: ${availableQty}`)
           }
         }
       }
@@ -445,11 +459,15 @@ export class MaterialRequestModel {
         const targetWarehouseId = request.target_warehouse ? await this.getWarehouseId(connection, request.target_warehouse) : null
         
         for (const item of items) {
-          const pendingQty = Number(item.qty) - Number(item.issued_qty || 0)
+          const requestedQtyLimit = item.requested_qty ? Number(item.requested_qty) : Number(item.qty)
+          const pendingQty = requestedQtyLimit - Number(item.issued_qty || 0)
           if (pendingQty <= 0) continue
 
           // Use per-item warehouse if available, otherwise use common source warehouse
-          const itemWarehouse = itemWarehouseMap[item.item_code] || finalSourceWarehouse
+          const entry = itemWarehouseMap[item.item_code]
+          const itemWarehouse = entry?.warehouse_id || entry || finalSourceWarehouse
+          const specifiedQty = entry?.qty !== undefined ? Number(entry.qty) : null
+          
           const itemWarehouseId = await this.getWarehouseId(connection, itemWarehouse)
 
           const sourceBalance = await StockBalanceModel.getByItemAndWarehouse(item.item_code, itemWarehouseId, connection)
@@ -457,7 +475,14 @@ export class MaterialRequestModel {
           
           if (availableQty <= 0) continue
 
-          const qtyToIssue = Math.min(pendingQty, availableQty)
+          // Calculate quantity to issue:
+          // Use specifiedQty if provided, otherwise issue up to pendingQty but not more than available
+          let qtyToIssue = Math.min(pendingQty, availableQty)
+          if (specifiedQty !== null) {
+            qtyToIssue = Math.min(specifiedQty, availableQty)
+          }
+
+          if (qtyToIssue <= 0) continue
 
           // Get item's valuation method
           const [itemRows] = await connection.query('SELECT valuation_method FROM item WHERE item_code = ?', [item.item_code])
@@ -788,7 +813,9 @@ export class MaterialRequestModel {
     try {
       const [mr] = await db.execute('SELECT status FROM material_request WHERE mr_id = ?', [mrId])
       if (!mr.length) throw new Error('Material request not found')
-      if (mr[0].status !== 'draft') throw new Error('Can only delete draft material requests')
+      if (!['draft', 'pending', 'rejected', 'cancelled'].includes(mr[0].status)) {
+        throw new Error('Can only delete draft, pending, rejected or cancelled material requests')
+      }
 
       // Delete items first
       await db.execute('DELETE FROM material_request_item WHERE mr_id = ?', [mrId])

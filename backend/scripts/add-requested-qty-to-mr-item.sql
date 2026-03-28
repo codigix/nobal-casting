@@ -1,0 +1,1 @@
+ALTER TABLE material_request_item ADD COLUMN requested_qty DECIMAL(15,3) DEFAULT NULL AFTER qty;
