@@ -267,7 +267,7 @@ export default function JobCard() {
 
       if (materialStatus.has_material_request && materialStatus.mr_status !== 'received' && materialStatus.mr_status !== 'completed') {
         toast.addToast(
-          `ℹ️ Material request status: ${materialStatus.mr_status.toUpperCase()}. Proceeding anyway...`,
+          `ℹ️ Material request status: ${materialStatus.mr_status.to()}. Proceeding anyway...`,
           'info'
         )
       } else if (!materialStatus.has_material_request) {
@@ -423,7 +423,7 @@ export default function JobCard() {
     const Icon = config.icon
 
     return (
-      <span className={`flex items-center gap-1.5 text-xs font-medium ${config.color}`}>
+      <span className={`flex items-center gap-1.5 text-xs  ${config.color}`}>
         {/* <Icon size={12} className="stroke-[2.5]" /> */}
         {config.label || status}
       </span>
@@ -579,11 +579,11 @@ export default function JobCard() {
               <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded  ${conflictModalData.conflict_with ? 'bg-indigo-500/5' : 'bg-amber-500/5'}`} />
 
              <div className='flex gap-2 items-center'>
-               <div className={`flex-shrink-0 p-2 rounded ${conflictModalData.conflict_with ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-amber-100 text-amber-600'} z-10`}>
+               <div className={`flex-shrink-0 p-2 rounded ${conflictModalData.conflict_with ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-amber-100 text-amber-600'} `}>
                 {conflictModalData.resource_type === 'machine' ? <Cpu size={15} strokeWidth={2.5} /> : (conflictModalData.resource_type === 'operator' ? <Users size={15} strokeWidth={2.5} /> : <AlertTriangle size={15} strokeWidth={2.5} />)}
               </div>
 
-              <div className="flex-1 z-10">
+              <div className="flex-1 ">
                 <div>
                   <h3 className={`${conflictModalData.conflict_with ? 'text-indigo-900' : 'text-amber-900'}  text-sm  leading-none`}>
                     {conflictModalData.conflict_with
@@ -669,7 +669,7 @@ export default function JobCard() {
                 <div className="space-y-1.5">
                   <span className="text-xs text-slate-400    block">Planned Qty</span>
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-sm  text-slate-900 font-mono ">
+                    <span className="text-sm  text-slate-900  ">
                       {conflictModalData.conflict_planned_qty ? parseFloat(conflictModalData.conflict_planned_qty).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '0'}
                     </span>
                     <span className="text-xs text-slate-400  ">Units</span>
@@ -744,7 +744,7 @@ export default function JobCard() {
                     </div>
                     <div>
                       <h5 className="text-xs  text-white leading-tight ">Don't want to wait?</h5>
-                      <p className="text-xs text-indigo-200 font-medium">We'll alert you when it's free.</p>
+                      <p className="text-xs text-indigo-200 ">We'll alert you when it's free.</p>
                     </div>
                   </div>
                   <button
@@ -772,7 +772,7 @@ export default function JobCard() {
                 <div className="bg-slate-50 border border-slate-200 rounded p-2 flex flex-col">
                   {conflictModalData.alternatives && conflictModalData.alternatives.length > 0 ? (
                     <div className="space-y-4 flex-1">
-                      <p className="text-[11px]  text-slate-400   mb-3 px-1">
+                      <p className="text-xs  text-slate-400   mb-3 px-1">
                         Free {conflictModalData.resource_type === 'machine' ? 'machines of same type' : 'operators in same dept'}
                       </p>
                       {conflictModalData.alternatives.map(alt => (
@@ -918,7 +918,7 @@ export default function JobCard() {
       label: 'ID / Project / Priority',
       render: (val, row) => {
         const parts = (val || '').split('-')
-        const displayId = parts.length > 4 ? `${parts[0]}-${parts[1]}-..${parts[parts.length - 2].slice(-4)}-${parts[parts.length - 1]}` : val
+        const displayId = parts.length > 4 ? `${parts[0]}-${parts[4]}-..${parts[parts.length - 2].slice(-4)}-${parts[parts.length - 1]}` : val
 
         const priorityColors = {
           high: 'bg-rose-50 text-rose-600 border-rose-200',
@@ -930,37 +930,32 @@ export default function JobCard() {
 
         return (
           <div className="flex flex-col gap-0.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-mono text-indigo-600 " title={`Job Card: ${val}`}>
+            <div className="flex  flex-col justify-between gap-2">
+              <span className="text-xs  text-indigo-600 " title={`Job Card: ${val}`}>
                 {displayId}
               </span>
-              <span className={`px-2 py-0.5 rounded border text-[10px] font-medium leading-none ${color}`}>
+              <span className={`p-1 rounded w-fit border text-xs  leading-none ${color}`}>
                 {priority}
               </span>
             </div>
-            <span className="text-xs text-slate-700 mt-1">{row.project_name || 'No Project'}</span>
+            {/* <span className="text-xs text-slate-700 mt-1">{row.project_name || 'No Project'}</span> */}
           </div>
         )
       }
     },
     {
       key: 'operation',
-      label: 'Operation',
+      label: 'Operation & Status',
       render: (val, row) => {
         return (
-          <div className="flex flex-col">
-            <span className="text-xs font-medium text-gray-900">{val}</span>
-            <span className="text-xs text-gray-400 truncate">{row.item_name || 'Generic Item'}</span>
+          <div className="">
+            <div className="flex flex-col">
+              <span className="text-xs  text-gray-900">{val}</span>
+              <span className="text-[10px] text-gray-400 truncate max-w-[150px]">{row.item_name || 'Generic Item'}</span>
+            </div>
+            <StatusBadge status={row.status} />
           </div>
         )
-      }
-    },
-
-    {
-      key: 'status',
-      label: 'Status',
-      render: (val, row) => {
-        return <StatusBadge status={val} />
       }
     },
     // {
@@ -977,10 +972,10 @@ export default function JobCard() {
     //     const config = colorMap[mrStatus] || colorMap.pending
 
     //     return (
-    //       <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${config.bg} ${config.text}`}>
+    //       <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs  ${config.bg} ${config.text}`}>
     //         {config.label}
     //         {row.mr_id && (
-    //           <span className="text-xs font-mono opacity-75" title={row.mr_id}>
+    //           <span className="text-xs  opacity-75" title={row.mr_id}>
     //             ({row.mr_id.slice(-6)})
     //           </span>
     //         )}
@@ -994,7 +989,7 @@ export default function JobCard() {
       render: (val, row) => {
         const isSubcontract = (val || '').toLowerCase() === 'outsource' || (val || '').toLowerCase() === 'subcontract'
         return (
-          <span className={`text-xs font-medium ${isSubcontract
+          <span className={`text-xs  ${isSubcontract
               ? ' text-amber-600 '
               : ' text-blue-600 '
             }`}>
@@ -1013,23 +1008,23 @@ export default function JobCard() {
         const progress = target > 0 ? Math.min((produced / target) * 100, 100) : 0
 
         return (
-          <div className="flex flex-col gap-2  py-1">
+          <div className="flex flex-col gap-1  py-1">
             <div className="flex justify-between items-end">
               <div className="flex flex-col">
-                <span className="text-[9px] text-gray-400   tracking-widest mb-0.5">Yield Metrics</span>
+                <span className="text-[9px] text-gray-400    mb-0.5">Yield Metrics</span>
                 <div className="flex items-center gap-1.5">
                   <div className="flex items-baseline gap-0.5">
                     <span className="text-xs  text-slate-700" title="Produced">{formatQuantity(produced)}</span>
-                    <span className="text-[10px] text-slate-300 font-light">/</span>
+                    <span className="text-xs text-slate-300 font-light">/</span>
                     <span className="text-xs  text-emerald-600" title="Accepted">{formatQuantity(accepted)}</span>
-                    <span className="text-[10px] text-slate-300 font-light">/</span>
+                    <span className="text-xs text-slate-300 font-light">/</span>
                     <span className="text-xs  text-indigo-600" title="Target">{formatQuantity(target)}</span>
                   </div>
-                  <span className="text-[9px] text-gray-400 font-medium">units</span>
+                  <span className="text-[9px] text-gray-400 ">units</span>
                 </div>
               </div>
               <div className="flex flex-col items-end">
-                <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${progress >= 100 ? 'bg-emerald-100 text-emerald-700' :
+                <span className={`text-[10px]  p-1 rounded ${progress >= 100 ? 'bg-emerald-100 text-emerald-700' :
                   progress > 0 ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-100 text-gray-600'
                   }`}>
                   {Math.round(progress)}%
@@ -1037,7 +1032,7 @@ export default function JobCard() {
               </div>
             </div>
 
-            <div className="relative w-full bg-gray-100 rounded  h-2 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)]">
+            <div className="relative w-full bg-gray-100 rounded  h-1 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)]">
               <div
                 className={`h-full transition-all duration-700 cubic-bezier(0.4, 0, 0.2, 1) ${progress >= 100 ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]' :
                   progress > 50 ? 'bg-gradient-to-r from-indigo-500 to-blue-400 shadow-[0_0_12px_rgba(99,102,241,0.3)]' :
@@ -1067,7 +1062,7 @@ export default function JobCard() {
                     style={{ width: `${((produced - accepted) / produced) * 100}%` }}
                   />
                 </div>
-                <span className="text-[8px]  text-gray-400  ">
+                <span className="text-xs  text-gray-400  ">
                   Quality: {Math.round((accepted / produced) * 100)}%
                 </span>
               </div>
@@ -1088,7 +1083,7 @@ export default function JobCard() {
             if (match) challanType = match[1]
           }
           return (
-            <span className="text-xs text-purple-600 font-medium">{challanType || 'Subcontract'}</span>
+            <span className="text-xs text-purple-600 ">{challanType || 'Subcontract'}</span>
           )
         }
 
@@ -1097,11 +1092,11 @@ export default function JobCard() {
 
         return (
           <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-gray-700 font-medium">{wsName}</span>
+            <span className="text-xs text-gray-700 ">{wsName}</span>
             {row.machine_id && (
               <div className="flex items-center gap-1.5">
                 <div className={`w-1.5 h-1.5 rounded  ${isAllocated ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
-                <span className={`text-xs font-medium ${isAllocated ? 'text-amber-600' : 'text-emerald-600'}`}>
+                <span className={`text-xs  ${isAllocated ? 'text-amber-600' : 'text-emerald-600'}`}>
                   {isAllocated ? 'Allocated' : 'Available'}
                 </span>
                 {isAllocated && row.machine_current_jc && row.machine_current_jc !== row.job_card_id && (
@@ -1120,7 +1115,7 @@ export default function JobCard() {
         const isSubcontract = (row.execution_mode || '').toLowerCase() === 'outsource' || (row.execution_mode || '').toLowerCase() === 'subcontract'
         if (isSubcontract) {
           return (
-            <span className="text-xs font-medium text-purple-700">
+            <span className="text-xs  text-purple-700">
               {getVendorName(row.vendor_id, row) || 'Unassigned Vendor'}
             </span>
           )
@@ -1135,11 +1130,11 @@ export default function JobCard() {
       key: 'scheduled_start_date',
       label: 'Schedule (Start - End)',
       render: (val, row) => {
-        if (!val && !row.scheduled_end_date) return <span className="text-xs text-gray-400">Not Scheduled</span>
+        if (!val && !row.scheduled_end_date) return <span className="text-[10px] w-fit text-gray-400">Not Scheduled</span>
 
         return (
-          <div className="flex flex-col">
-            <span className="text-xs font-medium text-slate-600">S: {formatToLocalDisplay(val)}</span>
+          <div className="flex gap-2 flex-col w-full">
+            <span className="text-xs  text-slate-600">S: {formatToLocalDisplay(val)}</span> 
             <span className="text-xs text-slate-400">E: {formatToLocalDisplay(row.scheduled_end_date)}</span>
           </div>
         )
@@ -1290,7 +1285,7 @@ export default function JobCard() {
               </div>
               <div className="flex items-center gap-4 w-full md:w-auto">
                 <div className="relative min-w-[240px] group">
-                  <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none z-10">
+                  <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none ">
                     <Filter className="text-gray-400 group-focus-within:text-indigo-500 transition-colors" size={15} />
                   </div>
                   <SearchableSelect
@@ -1328,7 +1323,7 @@ export default function JobCard() {
 
             {/* Data Table */}
             {loading ? (
-              <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-[3rem] border border-gray-100">
+              <div className="flex-1 flex flex-col items-center justify-center bg-white rounded border border-gray-100">
                 <div className="relative">
                   <div className="w-20 h-20 border-4 border-indigo-100 border-t-indigo-600 rounded  animate-spin" />
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -1339,19 +1334,95 @@ export default function JobCard() {
                 <p className="mt-2 text-sm text-gray-400">Retrieving live operational data...</p>
               </div>
             ) : jobCards.length > 0 ? (
-              <div className="flex-1">
-                <DataTable
-                  data={jobCards}
-                  columns={columns}
-                  loading={loading}
-                  searchable={false}
-                  pagination={true}
-                  pageSize={20}
-                  pageSizeOptions={[10, 20, 50, 100]}
-                />
+              <div className="flex-1 overflow-auto pr-2 pb-4">
+                <div className="rounded border border-gray-100  bg-white ">
+                  <table className="w-full text-left border-collapse table-fixed">
+                    <thead className="bg-gray-50/50 backdrop-blur-md sticky top-0  border-b border-gray-100">
+                      <tr>
+                        {columns.map(col => (
+                          <th 
+                            key={col.key} 
+                            className={`p-1 text-xs text-slate-400  font-medium ${
+                              col.key === 'actions' 
+                                ? 'sticky right-0  bg-gray-50/95 backdrop-blur-md border-l border-gray-100 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]' 
+                                : ''
+                            }`}
+                            style={{ 
+                              width: col.key === 'actions' ? '120px' : 
+                                     col.key === 'job_card_id' ? '150px' :
+                                     col.key === 'operation' ? '180px' :
+                                     col.key === 'status' ? '100px' :
+                                     col.key === 'execution_mode' ? '80px' :
+                                     col.key === 'production_metrics' ? '200px' :
+                                     col.key === 'machine_name' ? '150px' :
+                                     col.key === 'operator_name' ? '100px' :
+                                     col.key === 'scheduled_start_date' ? '150px' : 'auto'
+                            }}
+                          >
+                            {col.label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {(() => {
+                        const rows = [];
+                        let lastWoId = null;
+                        
+                        jobCards.forEach((card, idx) => {
+                          if (card.work_order_id !== lastWoId) {
+                            const isSubAsm = (card.work_order_id || '').includes('-SA-');
+                            rows.push(
+                              <tr key={`header-${card.work_order_id}`} className="bg-slate-50/50">
+                                <td colSpan={columns.length} className="p-4 py-2 ">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-2.5 h-2.5 rounded-md ${isSubAsm ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]' : 'bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.3)]'}`} />
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs  text-slate-800 ">{card.item_name || card.item_code}</span>
+                                      <span className={`text-xs  p-1 rounded   ${isSubAsm ? 'bg-amber-100/50 text-amber-700' : 'bg-indigo-100/50 text-indigo-700'}`}>
+                                        {isSubAsm ? 'Sub-Assembly' : 'Finished Good'}
+                                      </span>
+                                      <div className="w-1 h-1 rounded bg-slate-300 mx-1" />
+                                      <span className="text-xs text-slate-400  er" title="Work Order Reference">{card.work_order_id}</span>
+                                      {card.project_name && (
+                                        <>
+                                          <div className="w-1 h-1 rounded bg-slate-300 mx-1" />
+                                          <span className="text-xs  text-indigo-500  ">{card.project_name}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                            lastWoId = card.work_order_id;
+                          }
+                          
+                          rows.push(
+                            <tr key={card.job_card_id} className="hover:bg-indigo-50/20 transition-all group">
+                              {columns.map(col => (
+                                <td 
+                                  key={col.key} 
+                                  className={`p-2 align-center m-auto border-l border-gray-50/50 first:border-l-0  ${
+                                    col.key === 'actions' 
+                                      ? 'sticky right-0  bg-white group-hover:bg-indigo-50/95 border-l border-gray-100 shadow-[-4px_0_10px_-4px_rgba(0,0,0,0.1)]' 
+                                      : ''
+                                  }`}
+                                >
+                                  {col.render ? col.render(card[col.key], card) : card[col.key]}
+                                </td>
+                              ))}
+                            </tr>
+                          );
+                        });
+                        return rows;
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ) : (
-              <div className="flex-1 bg-white rounded-[3rem] flex flex-col items-center justify-center p-24 text-center border border-gray-100">
+              <div className="flex-1 bg-white rounded flex flex-col items-center justify-center p-2 text-center border border-gray-100">
                 <div className="w-24 h-24 bg-gray-50 rounded flex items-center justify-center mx-auto mb-8">
                   <ClipboardList className="text-gray-300" size={48} />
                 </div>

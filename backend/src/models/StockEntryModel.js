@@ -225,6 +225,23 @@ class StockEntryModel {
 
         // Add items
         console.log('Processing items:', JSON.stringify(items, null, 2))
+        const uniqueItemCodes = [...new Set(items.map(item => item.item_code).filter(code => code))]
+        
+        if (uniqueItemCodes.length > 0) {
+          const [validItems] = await connection.query(
+            'SELECT item_code FROM item WHERE item_code IN (?)',
+            [uniqueItemCodes]
+          )
+          
+          const validItemSet = new Set(validItems.map(row => row.item_code))
+          for (const code of uniqueItemCodes) {
+            if (!validItemSet.has(code)) {
+              throw new Error(`Item not found with code: ${code}`)
+            }
+          }
+        }
+
+        const stockEntryItemsValues = []
         for (const item of items) {
           const qty = Number(item.qty) || 0
           const valuationRate = Number(item.valuation_rate) || 0
@@ -236,31 +253,31 @@ class StockEntryModel {
             throw new Error(`Item code is required`)
           }
 
-          const [itemRows] = await connection.query(
-            'SELECT item_code FROM item WHERE item_code = ?',
-            [item.item_code]
-          )
-          if (!itemRows[0]) {
-            throw new Error(`Item not found with code: ${item.item_code}`)
+          stockEntryItemsValues.push([
+            entryId,
+            item.item_code,
+            qty,
+            item.uom || 'Kg',
+            valuationRate,
+            itemValue,
+            item.batch_no || null,
+            item.serial_no || null,
+            item.remarks || null
+          ])
+        }
+
+        if (stockEntryItemsValues.length > 0) {
+          // Chunk bulk insert to avoid packet size limits
+          for (let i = 0; i < stockEntryItemsValues.length; i += 1000) {
+            const chunk = stockEntryItemsValues.slice(i, i + 1000)
+            await connection.query(
+              `INSERT INTO stock_entry_items (
+                stock_entry_id, item_code, qty, uom, valuation_rate, 
+                transaction_value, batch_no, serial_no, remarks
+              ) VALUES ?`,
+              [chunk]
+            )
           }
-          
-          await connection.query(
-            `INSERT INTO stock_entry_items (
-              stock_entry_id, item_code, qty, uom, valuation_rate, 
-              transaction_value, batch_no, serial_no, remarks
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              entryId,
-              item.item_code,
-              qty,
-              item.uom || 'Kg',
-              valuationRate,
-              itemValue,
-              item.batch_no || null,
-              item.serial_no || null,
-              item.remarks || null
-            ]
-          )
         }
 
         // Update total
@@ -489,8 +506,8 @@ class StockEntryModel {
 
         // 4. Bulk insert Stock Ledger entries
         if (ledgerEntries.length > 0) {
-          for (let i = 0; i < ledgerEntries.length; i += 100) {
-            const chunk = ledgerEntries.slice(i, i + 100)
+          for (let i = 0; i < ledgerEntries.length; i += 1000) {
+            const chunk = ledgerEntries.slice(i, i + 1000)
             await connection.query(
               `INSERT INTO stock_ledger (
                 item_code, warehouse_id, transaction_date, transaction_type, 
@@ -511,8 +528,8 @@ class StockEntryModel {
             u.last_receipt_date || null, u.last_issue_date || null
           ])
           
-          for (let i = 0; i < values.length; i += 100) {
-            const chunk = values.slice(i, i + 100)
+          for (let i = 0; i < values.length; i += 1000) {
+            const chunk = values.slice(i, i + 1000)
             await connection.query(
               `INSERT INTO stock_balance 
                 (item_code, warehouse_id, current_qty, reserved_qty, available_qty, valuation_rate, total_value, last_receipt_date, last_issue_date)
@@ -556,8 +573,8 @@ class StockEntryModel {
               ])
             }
 
-            for (let i = 0; i < values.length; i += 100) {
-              const chunk = values.slice(i, i + 100)
+            for (let i = 0; i < values.length; i += 1000) {
+              const chunk = values.slice(i, i + 1000)
               await connection.query(
                 `INSERT INTO stock_movements (
                   transaction_no, item_code, warehouse_id, source_warehouse_id, target_warehouse_id, 

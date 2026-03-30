@@ -1377,6 +1377,19 @@ export default function ProductionEntry() {
       )
     },
     {
+      label: 'Cost Var.',
+      key: 'cost_variance',
+      align: 'right',
+      render: (val) => (
+        <div className="flex flex-col items-end">
+          <span className={`font-semibold text-xs ${val > 0 ? 'text-rose-600' : val < 0 ? 'text-emerald-600' : 'text-slate-600'}`}>
+            {val > 0 ? '+' : ''}₹{Math.abs(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+          <span className="text-[8px] text-slate-400  tracking-tighter">+/- Cost</span>
+        </div>
+      )
+    },
+    {
       label: 'Performance',
       key: 'performance',
       align: 'center',
@@ -2782,6 +2795,7 @@ export default function ProductionEntry() {
       const varianceMins = totalMins - expectedMins;
       const hourlyRate = parseFloat(jobCardData?.hourly_rate || 0);
       const opCost = produced * (hourlyRate * (operationCycleTime || 0) / 60);
+      const costVariance = varianceMins * (hourlyRate / 60);
 
       reportRows.push({
         uniqueKey: `log_${log.time_log_id}`,
@@ -2802,6 +2816,7 @@ export default function ProductionEntry() {
         expected_mins: expectedMins,
         variance_mins: varianceMins,
         operation_cost: opCost,
+        cost_variance: costVariance,
         produced: produced,
         shiftProduced: metrics.produced,
         accepted: isFirstOfShift ? metrics.accepted : 0,
@@ -2860,7 +2875,7 @@ export default function ProductionEntry() {
 
   const downloadReport = () => {
     const data = generateDailyReport();
-    const headers = ['Date', 'Shift', 'Operator', 'Expected Mins', 'Actual Mins', 'Variance', 'Produced', 'Accepted', 'Rejected', 'Scrap', 'Downtime (min)', 'Operation Cost'];
+    const headers = ['Date', 'Shift', 'Operator', 'Expected Mins', 'Actual Mins', 'Variance', 'Produced', 'Accepted', 'Rejected', 'Scrap', 'Downtime (min)', 'Operation Cost', 'Cost Variance'];
     const csvContent = [
       headers.join(','),
       ...data.map(row => [
@@ -2875,7 +2890,8 @@ export default function ProductionEntry() {
         row.rejected.toFixed(2),
         row.scrap.toFixed(2),
         row.downtime.toFixed(0),
-        (row.operation_cost || 0).toFixed(2)
+        (row.operation_cost || 0).toFixed(2),
+        (row.cost_variance || 0).toFixed(2)
       ].join(','))
     ].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -3497,10 +3513,11 @@ export default function ProductionEntry() {
                   const totalDowntime = reportData.reduce((sum, row) => sum + (row.downtime || 0), 0);
                   const totalActual = productionMinutes + totalDowntime;
                   const totalOpCost = reportData.reduce((sum, row) => sum + (row.operation_cost || 0), 0);
-                  const totalVariance = productionMinutes - totalExpected;
+                  const totalVariance = totalActual - totalExpected;
+                  const costVariance = totalVariance * (parseFloat(jobCardData?.hourly_rate || 0) / 60);
 
                   return (
-                    <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded border border-slate-100">
+                    <div className="mt-6 grid grid-cols-1 md:grid-cols-5 gap-2 p-2 bg-slate-50 rounded border border-slate-100">
                       <div className="flex flex-col gap-1">
                         <span className="text-xs text-slate-400   ">Total Expected Time</span>
                         <div className="flex items-baseline gap-1.5">
@@ -3533,6 +3550,14 @@ export default function ProductionEntry() {
                         <div className="flex items-baseline gap-1.5">
                           <span className="text-lg  text-amber-600">
                             ₹{totalOpCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1 border-l border-slate-200 pl-4">
+                        <span className={`text-xs ${costVariance > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>{costVariance > 0 ? 'Cost Increase' : 'Cost Saving'}</span>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className={`text-lg ${costVariance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            {costVariance > 0 ? '+' : ''}₹{Math.abs(costVariance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                         </div>
                       </div>

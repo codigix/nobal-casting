@@ -672,7 +672,7 @@ class ProductionModel {
         params.push(filters.year)
       }
 
-      query += ' ORDER BY wo.created_at ASC'
+      query += ' ORDER BY wo.created_at DESC'
 
       const [workOrders] = await this.db.query(query, params)
       return (workOrders || []).map(wo => ({
@@ -1931,14 +1931,15 @@ async deleteAllBOMRawMaterials(bom_id) {
 
       query += `
         ORDER BY 
-          COALESCE(wo.production_plan_id, jc.work_order_id) DESC, 
+          COALESCE(wo.production_plan_id, jc.work_order_id) DESC,
           CASE 
             WHEN jc.work_order_id LIKE '%-SA-%' THEN 1 
             WHEN jc.work_order_id LIKE '%-FG-%' THEN 2 
             ELSE 3 
           END ASC,
-          CAST(SUBSTRING_INDEX(jc.work_order_id, '-', -1) AS UNSIGNED) ASC,
-          jc.operation_sequence ASC
+          jc.work_order_id ASC,
+          jc.operation_sequence ASC,
+          jc.created_at DESC
       `
       const [jobCards] = await this.db.query(query, params)
       return jobCards || []
@@ -3325,7 +3326,7 @@ async deleteAllBOMRawMaterials(bom_id) {
           operation_sequence: operation.sequence || opSeq,
           machine_id: operation.default_workstation || operation.workstation || operation.workstation_type || operation.machine_id || '',
           operator_id: null,
-          planned_quantity: plannedQty,
+          planned_quantity: isFirst ? plannedQty : 0,
           setup_time: setupTime,
           cycle_time: cycleTime,
           operation_time: effectiveOpTime,
