@@ -69,7 +69,7 @@ async function initializeDatabase() {
       enableKeepAlive: true,
       keepAliveInitialDelay: 10000,
       connectTimeout: 10000,
-      acquireTimeout: 10000
+      
     })
 
     // Add error handler to the pool
