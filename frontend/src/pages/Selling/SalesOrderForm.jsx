@@ -325,9 +325,12 @@ export default function SalesOrderForm() {
 
       const bomsData = bomRes.data.data || []
 
-      const finishedGoodsBoms = bomsData.filter(b =>
-        b.item_group === 'Finished Goods' || b.item_code?.startsWith('FG-')
-      )
+      const finishedGoodsBoms = bomsData.filter(b => {
+        const group = (b.item_group || '').trim().toLowerCase();
+        return ['finished goods', 'finished good', 'sub assemblies', 'sub-assembly'].includes(group) || 
+               b.item_code?.startsWith('FG-') || 
+               b.item_code?.startsWith('SA-');
+      })
 
       console.log('BOMs Data:', bomsData)
       console.log('Filtered Finished Goods BOMs:', finishedGoodsBoms)

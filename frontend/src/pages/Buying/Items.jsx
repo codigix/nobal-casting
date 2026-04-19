@@ -84,7 +84,10 @@ export default function Items() {
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {
-      const matchesGroup = activeGroup === 'All' || item.item_group === activeGroup
+      const itemGroup = (item.item_group || '').trim().toLowerCase();
+      const targetGroup = activeGroup.trim().toLowerCase();
+      
+      const matchesGroup = activeGroup === 'All' || itemGroup === targetGroup
       const matchesSearch = !searchTerm || 
         item.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         item.item_code?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -94,9 +97,12 @@ export default function Items() {
 
   const stats = useMemo(() => {
     const total = items.length
-    const finishedGoods = items.filter(i => i.item_group === 'Finished Goods').length
+    const finishedGoods = items.filter(i => {
+      const group = (i.item_group || '').trim().toLowerCase();
+      return ['finished goods', 'finished good'].includes(group);
+    }).length
     const lowStock = items.filter(i => (i.quantity || 0) <= 10).length
-    const activeGroups = new Set(items.map(i => i.item_group)).size
+    const activeGroups = new Set(items.map(i => (i.item_group || '').trim().toLowerCase())).size
     
     return { total, finishedGoods, lowStock, activeGroups }
   }, [items])

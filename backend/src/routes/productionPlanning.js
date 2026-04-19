@@ -28,6 +28,7 @@ export function createProductionPlanningRoutes(db) {
 
   router.patch('/:plan_id/submit', authMiddleware, controller.submitPlan.bind(controller))
   router.post('/:plan_id/regenerate', authMiddleware, controller.regeneratePlan.bind(controller))
+  router.post('/:plan_id/auto-arrange', authMiddleware, controller.autoArrangeSubAssemblies.bind(controller))
   router.post('/:plan_id/create-work-orders', authMiddleware, controller.createWorkOrders.bind(controller))
   router.delete('/:plan_id', authMiddleware, controller.deletePlan.bind(controller))
 

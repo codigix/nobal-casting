@@ -443,7 +443,7 @@ class ProductionModel {
 
   async createWorkOrderRecursive(data, createdBy = 1, recurse = true, skipDependency = false) {
     try {
-      const { wo_id, item_code, quantity, bom_no, priority, sales_order_id, production_plan_id, planned_start_date, planned_end_date, expected_delivery_date, parent_wo_id } = data;
+      const { wo_id, item_code, quantity, bom_no, priority, sales_order_id, production_plan_id, planned_start_date, planned_end_date, expected_delivery_date, parent_wo_id, skipJobCardGeneration, starting_plan_sequence } = data;
       
       // 1. Determine actual WO ID
       const finalWoId = wo_id || `WO-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -530,15 +530,35 @@ class ProductionModel {
       const bomDetails = actualBomNo ? await this.getBOMDetails(actualBomNo) : null;
       
       // Add items (prefer passed data.required_items)
-      const itemsToUse = (data.required_items && Array.isArray(data.required_items) && data.required_items.length > 0)
-        ? data.required_items
-        : (bomDetails && bomDetails.lines)
-          ? bomDetails.lines.map(line => ({
-              item_code: line.component_code,
-              item_type: line.item_type || line.component_type || 'Raw Material',
-              required_qty: (parseFloat(line.quantity) || 0) * quantity
-            }))
-          : [];
+      let itemsToUse = [];
+      if (data.required_items && Array.isArray(data.required_items) && data.required_items.length > 0) {
+        itemsToUse = data.required_items;
+      } else if (bomDetails) {
+        // Combine bom_line and bom_raw_material items
+        const bomLines = (bomDetails.lines || []).map(line => ({
+          item_code: line.component_code,
+          item_type: line.item_type || line.component_type || 'Raw Material',
+          required_qty: (parseFloat(line.quantity) || 0) * quantity
+        }));
+        
+        const bomRawMaterials = (bomDetails.rawMaterials || []).map(rm => ({
+          item_code: rm.item_code,
+          item_type: rm.item_type || 'Raw Material',
+          required_qty: (parseFloat(rm.qty || rm.quantity) || 0) * quantity
+        }));
+        
+        // Consolidate duplicates if they exist across both sources
+        const combined = [...bomLines, ...bomRawMaterials];
+        const consolidated = {};
+        for (const item of combined) {
+          if (consolidated[item.item_code]) {
+            consolidated[item.item_code].required_qty += item.required_qty;
+          } else {
+            consolidated[item.item_code] = { ...item };
+          }
+        }
+        itemsToUse = Object.values(consolidated);
+      }
 
       for (let i = 0; i < itemsToUse.length; i++) {
         const item = itemsToUse[i];
@@ -590,7 +610,9 @@ class ProductionModel {
       }
 
       // 6. Generate Job Cards
-      await this.generateJobCardsForWorkOrder(finalWoId, createdBy);
+      if (!skipJobCardGeneration) {
+        await this.generateJobCardsForWorkOrder(finalWoId, createdBy, starting_plan_sequence || 0);
+      }
 
       // 7. Material Allocation
       try {
@@ -801,7 +823,35 @@ class ProductionModel {
            ORDER BY bl.sequence ASC`,
           [bom_id]
         )
-        woItems = bomLines
+        
+        const [bomRawMaterials] = await this.db.query(
+          `SELECT 
+            brm.item_code, 
+            i.item_type,
+            brm.qty as required_qty, 
+            0 as issued_qty, 
+            0 as consumed_qty, 
+            0 as returned_qty, 
+            brm.sequence,
+            brm.operation
+           FROM bom_raw_material brm
+           LEFT JOIN item i ON brm.item_code = i.item_code
+           WHERE brm.bom_id = ? 
+           ORDER BY brm.sequence ASC`,
+          [bom_id]
+        )
+
+        // Consolidate duplicates
+        const combined = [...bomLines, ...bomRawMaterials]
+        const consolidated = {}
+        for (const item of combined) {
+          if (consolidated[item.item_code]) {
+            consolidated[item.item_code].required_qty += parseFloat(item.required_qty || 0)
+          } else {
+            consolidated[item.item_code] = { ...item }
+          }
+        }
+        woItems = Object.values(consolidated)
       }
 
       const mappedOperations = (operations || []).map(op => ({
@@ -1549,7 +1599,7 @@ class ProductionModel {
     let rawMaterials = []
     try {
       const [rawMats] = await this.db.query(`
-        SELECT brm.*, i.name as item_name, i.item_group 
+        SELECT brm.*, i.name as item_name, i.item_group, i.item_type
         FROM bom_raw_material brm 
         LEFT JOIN item i ON brm.item_code = i.item_code 
         WHERE brm.bom_id = ? 
@@ -3284,7 +3334,7 @@ async deleteAllBOMRawMaterials(bom_id) {
     }
   }
 
-  async generateJobCardsForWorkOrder(work_order_id, created_by = 1) {
+  async generateJobCardsForWorkOrder(work_order_id, created_by = 1, starting_plan_sequence = 0) {
     try {
       const workOrder = await this.getWorkOrderById(work_order_id)
       if (!workOrder) {
@@ -3349,11 +3399,12 @@ async deleteAllBOMRawMaterials(bom_id) {
       let opSeq = 1
       let isFirst = true
       for (const operation of workOrder.operations) {
-        // The user wants "JC - 1", "JC - 2" etc. for each Work Order.
-        // To ensure global uniqueness (since job_card_id is PK), we use JC-[OpSeq]-[WorkOrderID]. 
-        // We'll format it as "JC - [OpSeq] - [WorkOrderID]" so the readable part is at the beginning.
+        // Use global sequence if starting_plan_sequence is provided
+        const currentOpSeq = parseInt(starting_plan_sequence || 0) + opSeq
         
-        const job_card_id = `JC - ${opSeq} - ${work_order_id}`
+        // The user wants "JC - 1", "JC - 2" etc. to follow the manufacturing sequence.
+        // We use starting_plan_sequence + opSeq to ensure global uniqueness and proper ordering.
+        const job_card_id = `JC - ${currentOpSeq} - ${work_order_id}`
         
         const operationTime = parseFloat(operation.operation_time || operation.time || (operation.time_in_minutes ? operation.time_in_minutes / plannedQty : 0))
         const setupTime = parseFloat(operation.setup_time || 0)
@@ -3374,7 +3425,7 @@ async deleteAllBOMRawMaterials(bom_id) {
           job_card_id,
           work_order_id,
           operation: operation.operation_name || operation.name || operation.operation || '',
-          operation_sequence: operation.sequence || opSeq,
+          operation_sequence: currentOpSeq,
           machine_id: operation.default_workstation || operation.workstation || operation.workstation_type || operation.machine_id || '',
           operator_id: null,
           planned_quantity: plannedQty,

@@ -560,10 +560,12 @@ export default function WorkOrderForm() {
     try {
       const response = await productionService.getItems()
       const allItems = response.data || []
-      const fgItems = allItems.filter(item =>
-        ['Finished Good', 'Finished Goods', 'Sub Assembly', 'Sub Assemblies'].includes(item.item_group) ||
-        ['FG', 'SA'].includes(item.fg_sub_assembly)
-      )
+      const fgItems = allItems.filter(item => {
+        const group = (item.item_group || '').trim().toLowerCase();
+        const type = (item.fg_sub_assembly || '').trim().toUpperCase();
+        return ['finished good', 'finished goods', 'sub assembly', 'sub assemblies', 'sub-assembly'].includes(group) ||
+               ['FG', 'SA'].includes(type);
+      })
       setItems(fgItems)
     } catch (err) { console.error('Failed to fetch items:', err); setError('Failed to load items') }
   }
@@ -810,7 +812,22 @@ export default function WorkOrderForm() {
       })
 
       setBomOperations(operations)
-      setBomMaterials([...rawMaterials, ...bomLines])
+      
+      // Consolidate materials from both sources
+      const allMaterials = [...rawMaterials, ...bomLines]
+      const consolidatedMaterials = {}
+      
+      allMaterials.forEach(mat => {
+        if (consolidatedMaterials[mat.item_code]) {
+          consolidatedMaterials[mat.item_code].quantity += mat.quantity
+          consolidatedMaterials[mat.item_code].required_qty += mat.required_qty
+          consolidatedMaterials[mat.item_code].base_qty += mat.base_qty
+        } else {
+          consolidatedMaterials[mat.item_code] = { ...mat }
+        }
+      })
+      
+      setBomMaterials(Object.values(consolidatedMaterials))
       if (jobCards.length > 0 && operations.length > 0) populateWorkstationsForJobCards(jobCards, operations)
     } catch (err) { console.error('Failed to fetch BOM details:', err) }
     finally { setLoading(false) }

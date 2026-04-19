@@ -148,11 +148,12 @@ export const customersAPI = {
 
 // Sales Orders API
 export const salesOrdersAPI = {
-  list: () => api.get('/selling/sales-orders'),
+  list: (params) => api.get('/selling/sales-orders', { params }),
   get: (id) => api.get(`/selling/sales-orders/${id}`),
   create: (data) => api.post('/selling/sales-orders', data),
   update: (id, data) => api.put(`/selling/sales-orders/${id}`, data),
   delete: (id) => api.delete(`/selling/sales-orders/${id}`),
+  confirm: (id) => api.put(`/selling/sales-orders/${id}/confirm`),
 }
 
 // Delivery Notes API

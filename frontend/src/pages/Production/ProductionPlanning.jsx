@@ -1689,11 +1689,31 @@ Create Production Plan            </button>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
                         {(() => {
+                          const getPriority = (itemCode, itemName) => {
+                            const str = (itemCode + ' ' + itemName).toUpperCase()
+                            if (str.includes('RAW') || str.includes('CAST')) return 10
+                            if (str.includes('MACHIN')) return 20
+                            if (str.includes('FINISH') || str.includes('ASSY') || str.includes('ASSEMBL')) return 30
+                            return 25 // Default
+                          }
+
                           const sortedOps = [...(workOrderData.operations || [])].sort((a, b) => {
+                            // First sort by depth (descending - sub-assemblies first)
                             if ((b.depth || 0) !== (a.depth || 0)) {
                               return (b.depth || 0) - (a.depth || 0);
                             }
-                            return 0;
+
+                            // Same level, sort by keyword priority
+                            const pA = getPriority(a.item_code || '', a.item_name || '');
+                            const pB = getPriority(b.item_code || '', b.item_name || '');
+                            if (pA !== pB) return pA - pB;
+
+                            // Then sort by BOM ID to group operations of the same sub-assembly
+                            if (a.bom_id !== b.bom_id) {
+                              return a.bom_id < b.bom_id ? -1 : 1;
+                            }
+                            // Finally sort by operation sequence within the same BOM
+                            return (a.sequence || 0) - (b.sequence || 0);
                           });
                           
                           return sortedOps.map((op, idx) => {

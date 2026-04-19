@@ -11,6 +11,7 @@ import { useToast } from '../../components/ToastContainer'
 import SearchableSelect from '../../components/SearchableSelect'
 import Card from '../../components/Card/Card'
 import * as productionService from '../../services/productionService'
+import { salesOrdersAPI } from '../../services/api'
 
 const SectionTitle = ({ title, icon: Icon, badge }) => (
   <div className="flex items-center justify-between mb-6">
@@ -441,12 +442,8 @@ export default function ProductionPlanningForm() {
 
   const fetchItems = async () => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/items`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      const data = await response.json()
-      setItems(data.data || [])
+      const response = await productionService.getItems()
+      setItems(response.data || response || [])
     } catch (err) {
       console.error('Error fetching items:', err)
     }
@@ -454,12 +451,8 @@ export default function ProductionPlanningForm() {
 
   const fetchBOMs = async () => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/production/boms`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      const data = await response.json()
-      setBOMs(data.data || [])
+      const response = await productionService.getBOMs()
+      setBOMs(response.data || response || [])
     } catch (err) {
       console.error('Error fetching BOMs:', err)
     }
@@ -467,12 +460,8 @@ export default function ProductionPlanningForm() {
 
   const fetchWarehouses = async () => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/warehouses`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      const data = await response.json()
-      setWarehouses(data.data || [])
+      const response = await api.get('/stock/warehouses')
+      setWarehouses(response.data.data || response.data || [])
     } catch (err) {
       console.error('Error fetching warehouses:', err)
     }
@@ -480,12 +469,8 @@ export default function ProductionPlanningForm() {
 
   const fetchSalesOrders = async () => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/selling/sales-orders`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      const data = await response.json()
-      setSalesOrders(data.data || [])
+      const response = await salesOrdersAPI.list()
+      setSalesOrders(response.data.data || [])
     } catch (err) {
       console.error('Error fetching sales orders:', err)
     }
@@ -494,12 +479,8 @@ export default function ProductionPlanningForm() {
   const fetchBOMDetails = async (bomId) => {
     try {
       setFetchingBom(true)
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${bomId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      const data = await response.json()
-      const bomData = data.data || data
+      const response = await productionService.getBOMDetails(bomId)
+      const bomData = response.data || response
 
       if (bomData) {
         setBomFinishedGoods(bomData.lines || bomData.finished_goods || bomData.bom_finished_goods || [])
@@ -519,12 +500,8 @@ export default function ProductionPlanningForm() {
 
   const fetchSalesOrderDetails = async (salesOrderId) => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/selling/sales-orders/${salesOrderId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      const data = await response.json()
-      const soData = data.data || data
+      const response = await salesOrdersAPI.get(salesOrderId)
+      const soData = response.data.data || response.data || response
 
       try {
         if (soData.bom_raw_materials && typeof soData.bom_raw_materials === 'string') {
@@ -629,7 +606,7 @@ export default function ProductionPlanningForm() {
                 bom_no: mat.bom_no || null,
                 bom_id: mat.bom_no || null,
                 explosion_level: level + 1,
-                parent_code: itemCode
+                parent_item_code: itemCode
               };
               nextLevelItems.push(subAsmEntry);
               allDiscoveredSubAsms.push(subAsmEntry);
@@ -706,8 +683,8 @@ export default function ProductionPlanningForm() {
                 updated.push(discovered);
               }
             });
-            // Sort by explosion level descending so deeper sub-assemblies come first
-            return updated.sort((a, b) => (b.explosion_level || 0) - (a.explosion_level || 0));
+            // Sort by explosion level ascending (Level 1 base items first)
+            return updated.sort((a, b) => (a.explosion_level || 0) - (b.explosion_level || 0));
           });
         }
       }
@@ -974,7 +951,7 @@ export default function ProductionPlanningForm() {
               component_type: subAsmItem.component_type || 'Sub-Assembly',
               item_group: subAsmItem.item_group,
               explosion_level: 1,
-              parent_code: bomData?.item_code || itemCode,
+              parent_item_code: bomData?.item_code || itemCode,
               planned_start_date: new Date().toISOString().split('T')[0],
               planned_end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
             }
@@ -1489,6 +1466,126 @@ export default function ProductionPlanningForm() {
       setError(`Error: ${err.message}`)
     } finally {
       setCreatingMaterialRequest(false)
+    }
+  }
+
+  const handleAutoArrange = async () => {
+    if (subAssemblyItems.length === 0) return
+    
+    setFetchingSubAssemblyBoms(true)
+    try {
+      if (plan_id) {
+        // If we have a plan_id, use the backend API
+        const response = await productionService.autoArrangeSubAssemblies(plan_id)
+        if (response.success) {
+          const arranged = response.data || []
+          if (arranged.length > 0) {
+            setSubAssemblyItems(arranged)
+          } else {
+            // Refresh whole plan if data not returned directly
+            fetchProductionPlan(plan_id)
+          }
+          toast.addToast('Sub-assemblies rearranged by dependency successfully', 'success')
+          setExpandedSections(prev => ({ ...prev, subassembly: true }))
+          return
+        }
+      }
+      
+      // Fallback or NEW Plan: Frontend topological sort
+      console.log('=== STARTING FRONTEND AUTO-ARRANGE ===')
+      const token = localStorage.getItem('token')
+      const dependencyGraph = new Map() // item_code -> Set of child sub-assembly item_codes
+      const allItemCodes = new Set(subAssemblyItems.map(sa => sa.item_code))
+      
+      // Build the dependency graph by looking at BOMs of all sub-assemblies currently in the plan
+      for (const sa of subAssemblyItems) {
+        if (!dependencyGraph.has(sa.item_code)) {
+          dependencyGraph.set(sa.item_code, new Set())
+          
+          const bomId = sa.bom_no || sa.bom_id
+          if (bomId) {
+            const bomRes = await fetch(`${import.meta.env.VITE_API_URL}/production/boms/${bomId}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            })
+            
+            if (bomRes.ok) {
+              const bomData = await bomRes.json()
+              const bom = bomData.data || bomData
+              const lines = [
+                ...(bom.lines || []),
+                ...(bom.rawMaterials || []),
+                ...(bom.bom_raw_materials || [])
+              ]
+              
+              for (const line of lines) {
+                const childCode = line.component_code || line.item_code
+                const group = line.item_group || ''
+                const type = line.component_type || line.fg_sub_assembly || ''
+                
+                if (isSubAssemblyGroup(group, childCode, type)) {
+                  if (allItemCodes.has(childCode)) {
+                    dependencyGraph.get(sa.item_code).add(childCode)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      const levels = new Map() // item_code -> level
+      const visiting = new Set()
+      
+      const calculateLevel = (itemCode) => {
+        if (visiting.has(itemCode)) {
+          throw new Error(`Circular dependency detected involving item ${itemCode}`)
+        }
+        if (levels.has(itemCode)) return levels.get(itemCode)
+        
+        visiting.add(itemCode)
+        let maxChildLevel = 0
+        const dependencies = dependencyGraph.get(itemCode) || new Set()
+        
+        for (const depCode of dependencies) {
+          maxChildLevel = Math.max(maxChildLevel, calculateLevel(depCode))
+        }
+        
+        const currentLevel = maxChildLevel + 1
+        levels.set(itemCode, currentLevel)
+        visiting.delete(itemCode)
+        return currentLevel
+      }
+      
+      for (const itemCode of allItemCodes) {
+        calculateLevel(itemCode)
+      }
+      
+      // Update sub-assembly items with new levels and update scheduled dates accordingly
+      const startDateStr = planHeader.plan_date || new Date().toISOString().split('T')[0]
+      const startDate = new Date(startDateStr)
+      
+      const updatedSubAsms = subAssemblyItems.map(sa => {
+        const level = levels.get(sa.item_code) || 1
+        const scheduledDate = new Date(startDate)
+        // Offset scheduled date by level-1 days
+        scheduledDate.setDate(startDate.getDate() + (level - 1))
+        
+        return {
+          ...sa,
+          explosion_level: level,
+          planned_start_date: scheduledDate.toISOString().split('T')[0]
+        }
+      })
+      
+      setSubAssemblyItems(updatedSubAsms)
+      toast.addToast('Sub-assemblies rearranged by dependency successfully', 'success')
+      setExpandedSections(prev => ({ ...prev, subassembly: true }))
+      
+    } catch (err) {
+      console.error('Error auto-arranging sub-assemblies:', err)
+      toast.addToast(`Failed to arrange: ${err.message}`, 'error')
+    } finally {
+      setFetchingSubAssemblyBoms(false)
     }
   }
 
@@ -2235,6 +2332,19 @@ export default function ProductionPlanningForm() {
                   isExpanded={expandedSections.subassembly}
                   onToggle={() => toggleSection('subassembly')}
                   themeColor="rose"
+                  actions={
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleAutoArrange()
+                      }}
+                      disabled={fetchingSubAssemblyBoms}
+                      className="flex items-center gap-1.5 px-2 py-1 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded text-[10px] font-bold border border-rose-200 transition-all uppercase tracking-wider"
+                    >
+                      {fetchingSubAssemblyBoms ? <Loader size={12} className="animate-spin" /> : <Zap size={12} />}
+                      Auto Arrange
+                    </button>
+                  }
                 />
 
                 {expandedSections.subassembly && (
@@ -2285,6 +2395,14 @@ export default function ProductionPlanningForm() {
                                           <p className="text-[10px] text-slate-500 truncate max-w-[200px]">
                                             {item.item_name}
                                           </p>
+                                          {item.parent_item_code && item.parent_item_code !== fgItems[0]?.item_code && (
+                                            <div className="flex items-center gap-1 mt-0.5">
+                                              <span className="text-[8px] text-slate-400 font-medium">Source:</span>
+                                              <span className="text-[8px] text-rose-500 bg-rose-50 px-1 rounded font-bold uppercase tracking-tighter">
+                                                {item.parent_item_code}
+                                              </span>
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
                                     </td>
@@ -2403,7 +2521,24 @@ export default function ProductionPlanningForm() {
                               );
                             };
 
-                            return subAssemblyItems.map((item, index) => renderSubAssembly(item, index));
+                            const getPriority = (itemCode, itemName) => {
+                              const str = (itemCode + ' ' + itemName).toUpperCase()
+                              if (str.includes('FINISH') || str.includes('ASSY') || str.includes('ASSEMBL')) return 30
+                              if (str.includes('MACHIN')) return 20
+                              if (str.includes('RAW') || str.includes('CAST')) return 10
+                              return 25 // Default
+                            }
+
+                            const sortedSubAssemblies = [...subAssemblyItems].sort((a, b) => {
+                              // First sort by explosion level (ascending - Level 1 base items first)
+                              const levelDiff = (parseInt(a.explosion_level || 0)) - (parseInt(b.explosion_level || 0))
+                              if (levelDiff !== 0) return levelDiff
+
+                              // Same level, use keyword priority (Raw -> Machining -> Assembly)
+                              return getPriority(a.item_code, a.item_name) - getPriority(b.item_code, b.item_name)
+                            })
+
+                            return sortedSubAssemblies.map((item, index) => renderSubAssembly(item, index));
                           })()}
                         </tbody>
                       </table>
@@ -2802,13 +2937,50 @@ export default function ProductionPlanningForm() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-xs ">
-                        {workOrderData.operations.map((op, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50">
-                            <td className="p-2  text-slate-700">{op.operation}</td>
-                            <td className="p-2 text-slate-500  ">{op.workstation || '-'}</td>
-                            <td className="p-2 text-right  text-slate-900">{op.time || 0}</td>
-                          </tr>
-                        ))}
+                        {(() => {
+                          const getPriority = (itemCode, itemName) => {
+                            const str = (itemCode + ' ' + itemName).toUpperCase()
+                            if (str.includes('RAW') || str.includes('CAST')) return 10
+                            if (str.includes('MACHIN')) return 20
+                            if (str.includes('FINISH') || str.includes('ASSY') || str.includes('ASSEMBL')) return 30
+                            return 25 // Default
+                          }
+
+                          const sortedOps = [...(workOrderData.operations || [])].sort((a, b) => {
+                            // First sort by depth (descending - sub-assemblies first)
+                            if ((b.depth || 0) !== (a.depth || 0)) {
+                              return (b.depth || 0) - (a.depth || 0);
+                            }
+                            
+                            // Same level, sort by keyword priority
+                            const pA = getPriority(a.item_code || '', a.item_name || '');
+                            const pB = getPriority(b.item_code || '', b.item_name || '');
+                            if (pA !== pB) return pA - pB;
+
+                            // Then sort by BOM ID to group operations of the same sub-assembly
+                            if (a.bom_id !== b.bom_id) {
+                              return a.bom_id < b.bom_id ? -1 : 1;
+                            }
+                            // Finally sort by operation sequence within the same BOM
+                            return (a.sequence || 0) - (b.sequence || 0);
+                          });
+
+                          return sortedOps.map((op, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50/50">
+                              <td className="p-2  text-slate-700">
+                                <div className="flex items-center gap-2">
+                                  {op.depth > 0 && <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
+                                  {op.operation_name || op.operation}
+                                  <span className="text-[10px] text-slate-400 font-normal ml-auto">
+                                    {op.depth === 0 ? '(FG)' : `(SA L${op.depth})`}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="p-2 text-slate-500  ">{op.workstation_type || op.workstation || '-'}</td>
+                              <td className="p-2 text-right  text-slate-900">{parseFloat(op.total_hours || op.time || 0).toFixed(2)}</td>
+                            </tr>
+                          ));
+                        })()}
                       </tbody>
                     </table>
                   </div>

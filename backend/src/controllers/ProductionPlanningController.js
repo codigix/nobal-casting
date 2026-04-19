@@ -55,6 +55,14 @@ export class ProductionPlanningController {
       }
 
       if (sub_assemblies && Array.isArray(sub_assemblies)) {
+        // Validate dependencies before inserting
+        try {
+          await this.service.validatePlanDependencies(sub_assemblies)
+        } catch (valErr) {
+          await connection.rollback()
+          return res.status(400).json({ success: false, error: valErr.message })
+        }
+
         for (const item of sub_assemblies) {
           const scheduleDate = item.scheduled_date || item.schedule_date || null
           const requiredQty = item.required_qty || item.qty || item.quantity || 0
@@ -177,6 +185,14 @@ export class ProductionPlanningController {
       }
 
       if (sub_assemblies && Array.isArray(sub_assemblies)) {
+        // Validate dependencies before inserting
+        try {
+          await this.service.validatePlanDependencies(sub_assemblies)
+        } catch (valErr) {
+          await connection.rollback()
+          return res.status(400).json({ success: false, error: valErr.message })
+        }
+
         for (const item of sub_assemblies) {
           const scheduleDate = item.scheduled_date || item.schedule_date || null
           const requiredQty = item.required_qty || item.qty || item.quantity || 0
@@ -471,6 +487,21 @@ export class ProductionPlanningController {
       })
     } catch (error) {
       console.error('Error generating production plan from sales order:', error)
+      res.status(500).json({ success: false, error: error.message })
+    }
+  }
+
+  async autoArrangeSubAssemblies(req, res) {
+    try {
+      const { plan_id } = req.params
+      if (!plan_id) {
+        return res.status(400).json({ success: false, error: 'Plan ID is required' })
+      }
+
+      const result = await this.service.autoArrangeSubAssemblies(plan_id)
+      res.json({ success: true, message: 'Sub-assemblies auto-arranged by dependency successfully', data: result })
+    } catch (error) {
+      console.error('Error auto-arranging sub-assemblies:', error)
       res.status(500).json({ success: false, error: error.message })
     }
   }

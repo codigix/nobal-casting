@@ -34,6 +34,16 @@ export class ProductionPlanningService {
 
       await this.processFinishedGoodsBOM(bomData, fgQuantity, plan)
 
+      // Auto-arrange sub-assemblies by dependency level
+      if (plan.sub_assemblies && plan.sub_assemblies.length > 0) {
+        try {
+          plan.sub_assemblies = await this.autoArrangeSubAssembliesByDependency(plan.sub_assemblies)
+        } catch (sortError) {
+          console.warn('Warning: Could not auto-arrange sub-assemblies by dependency:', sortError.message)
+          // Fallback to original order if sorting fails (e.g. circular dependency)
+        }
+      }
+
       return plan
     } catch (error) {
       throw error
@@ -325,6 +335,177 @@ export class ProductionPlanningService {
     return Math.ceil(plannedQty * 1000000) / 1000000
   }
 
+  async autoArrangeSubAssemblies(planId) {
+    try {
+      const [plans] = await this.db.execute(
+        'SELECT plan_date, expected_completion_date FROM production_plan WHERE plan_id = ?',
+        [planId]
+      )
+
+      if (!plans || plans.length === 0) throw new Error(`Plan ${planId} not found`)
+      const plan = plans[0]
+
+      const [subAssemblies] = await this.db.execute(
+        'SELECT * FROM production_plan_sub_assembly WHERE plan_id = ?',
+        [planId]
+      )
+
+      if (!subAssemblies || subAssemblies.length === 0) return []
+
+      const arranged = await this.autoArrangeSubAssembliesByDependency(subAssemblies)
+
+      // Update scheduling dates
+      const startDate = plan.plan_date ? new Date(plan.plan_date) : new Date()
+      
+      for (const sa of arranged) {
+        const level = sa.explosion_level
+        // Simple logic: Level 1 starts at startDate, Level 2 at startDate + (level-1) days
+        // This ensures upstream (Level 1) is planned earlier than downstream (Level N)
+        const scheduledDate = new Date(startDate)
+        scheduledDate.setDate(startDate.getDate() + (level - 1))
+        
+        const formattedDate = scheduledDate.toISOString().split('T')[0]
+
+        await this.db.execute(
+          'UPDATE production_plan_sub_assembly SET explosion_level = ?, schedule_date = ? WHERE id = ?',
+          [level, formattedDate, sa.id]
+        )
+        
+        // Update local object to reflect changes in response
+        sa.schedule_date = formattedDate
+      }
+
+      return arranged
+    } catch (error) {
+      console.error(`Error auto-arranging sub-assemblies for plan ${planId}:`, error)
+      throw error
+    }
+  }
+
+  async autoArrangeSubAssembliesByDependency(subAssemblies) {
+    if (!subAssemblies || subAssemblies.length === 0) return []
+
+    const dependencyGraph = new Map() // item_code -> Set of its sub-assembly component item_codes
+    const allItemCodes = new Set(subAssemblies.map(sa => sa.item_code))
+
+    // Build the dependency graph by looking at BOMs of all sub-assemblies in the plan
+    for (const sa of subAssemblies) {
+      if (!dependencyGraph.has(sa.item_code)) {
+        dependencyGraph.set(sa.item_code, new Set())
+        
+        const bomId = sa.bom_no
+        if (bomId) {
+          const bomData = await this.getBOMDetails(bomId)
+          if (bomData && (bomData.lines || bomData.raw_materials)) {
+            const allLines = [...(bomData.lines || []), ...(bomData.raw_materials || [])]
+            for (const line of allLines) {
+              const isSA = await this.isSubAssembly(line)
+              if (isSA) {
+                const childCode = line.component_code || line.item_code
+                // Only care about dependencies that are part of THIS plan
+                if (allItemCodes.has(childCode)) {
+                  dependencyGraph.get(sa.item_code).add(childCode)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const levels = new Map() // item_code -> level (1-based, Level 1 has no SA dependencies)
+    const visiting = new Set()
+
+    const calculateLevel = (itemCode) => {
+      if (visiting.has(itemCode)) {
+        throw new Error(`Circular dependency detected involving item ${itemCode}`)
+      }
+      if (levels.has(itemCode)) {
+        return levels.get(itemCode)
+      }
+
+      visiting.add(itemCode)
+      let maxChildLevel = 0;
+      const dependencies = dependencyGraph.get(itemCode) || new Set()
+
+      for (const depCode of dependencies) {
+        maxChildLevel = Math.max(maxChildLevel, calculateLevel(depCode))
+      }
+
+      const currentLevel = maxChildLevel + 1
+      levels.set(itemCode, currentLevel)
+      visiting.delete(itemCode)
+      return currentLevel
+    }
+
+    for (const itemCode of allItemCodes) {
+      calculateLevel(itemCode)
+    }
+
+    // Now assign levels back to the sub-assemblies and sort them
+    const arrangedSubAssemblies = subAssemblies.map(sa => ({
+      ...sa,
+      explosion_level: levels.get(sa.item_code) || 1
+    }))
+
+    arrangedSubAssemblies.sort((a, b) => {
+      if (a.explosion_level !== b.explosion_level) {
+        return a.explosion_level - b.explosion_level
+      }
+      return a.item_code.localeCompare(b.item_code)
+    })
+
+    return arrangedSubAssemblies
+  }
+
+  async validatePlanDependencies(subAssemblies) {
+    if (!subAssemblies || subAssemblies.length === 0) return true
+
+    const levels = new Map() // item_code -> level
+    const dates = new Map() // item_code -> date object
+    
+    for (const sa of subAssemblies) {
+      levels.set(sa.item_code, parseInt(sa.explosion_level || 0))
+      if (sa.schedule_date) {
+        dates.set(sa.item_code, new Date(sa.schedule_date))
+      }
+    }
+
+    for (const sa of subAssemblies) {
+      const bomId = sa.bom_no
+      if (bomId) {
+        const bomData = await this.getBOMDetails(bomId)
+        if (bomData && (bomData.lines || bomData.raw_materials)) {
+          const allLines = [...(bomData.lines || []), ...(bomData.raw_materials || [])]
+          for (const line of allLines) {
+            const isSA = await this.isSubAssembly(line)
+            if (isSA) {
+              const childCode = line.component_code || line.item_code
+              
+              // If child is also in the plan, it must be at a lower level or earlier date
+              if (levels.has(childCode)) {
+                const parentLevel = levels.get(sa.item_code)
+                const childLevel = levels.get(childCode)
+                
+                if (childLevel >= parentLevel && parentLevel !== 0) {
+                  throw new Error(`Invalid sequencing: ${sa.item_code} (Level ${parentLevel}) depends on ${childCode} (Level ${childLevel}). Dependencies must have a lower level.`)
+                }
+
+                const parentDate = dates.get(sa.item_code)
+                const childDate = dates.get(childCode)
+                if (parentDate && childDate && childDate > parentDate) {
+                  throw new Error(`Invalid scheduling: ${sa.item_code} scheduled on ${sa.schedule_date} depends on ${childCode} scheduled on ${childDate.toISOString().split('T')[0]}. Dependencies must be scheduled earlier or on the same day.`)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return true
+  }
+
   async getSubAssemblyBOM(itemCode, bomId = null) {
     try {
       if (bomId) {
@@ -483,7 +664,28 @@ export class ProductionPlanningService {
         )
       }
 
-      for (const sa of planData.sub_assemblies) {
+      // Define priority for keyword-based sorting (lower number = higher priority)
+      const getPriority = (itemCode, itemName) => {
+        const str = (itemCode + ' ' + itemName).toUpperCase()
+        if (str.includes('RAW') || str.includes('CAST')) return 10
+        if (str.includes('MACHIN')) return 20
+        if (str.includes('FINISH') || str.includes('ASSY') || str.includes('ASSEMBL')) return 30
+        return 25 // Default
+      }
+
+      // Sort sub-assemblies by dependency level (ascending) 
+      // Level 1: No dependencies (Base items)
+      // Level 2: Depends on Level 1, etc.
+      // Final manufacturing flow is Level 1 -> Level N
+      const sortedSubAssemblies = [...planData.sub_assemblies].sort((a, b) => {
+        const levelDiff = (parseInt(a.explosion_level || 0)) - (parseInt(b.explosion_level || 0))
+        if (levelDiff !== 0) return levelDiff
+
+        // Same level, use keyword priority
+        return getPriority(a.item_code, a.item_name) - getPriority(b.item_code, b.item_name)
+      })
+
+      for (const sa of sortedSubAssemblies) {
         // Automatically find BOM for sub-assembly if not present
         let saBomNo = sa.bom_no
         if (!saBomNo) {
@@ -656,7 +858,8 @@ export class ProductionPlanningService {
               const actualWoId = createdIds[0]
               itemCodeToWoIdMap[item.item_code] = actualWoId
               item.generated_wo_id = actualWoId
-              console.log(`[ProductionPlanningService] Successfully created WO ${actualWoId} for ${item.item_code}`)
+              item.starting_plan_sequence = woData.starting_plan_sequence
+              console.log(`[ProductionPlanningService] Successfully created WO ${actualWoId} for ${item.item_code} (Sequence: ${woData.starting_plan_sequence})`)
             }
 
             // Add a small delay to ensure unique timestamps and sequential creation
@@ -669,11 +872,24 @@ export class ProductionPlanningService {
 
       const createdWorkOrders = []
       
-      // 1. Process Sub-Assemblies FIRST in order of explosion level (Dependencies)
-      // Note: We use dbSubAsms but we need to ensure they match allSubAsms used in previous logic
-      const sortedSubAsmList = [...(dbSubAsms || allSubAsms)].sort((a, b) => 
-        (parseInt(b.explosion_level || 0)) - (parseInt(a.explosion_level || 0))
-      )
+      // Helper for priority-based sorting
+      const getPriority = (itemCode, itemName) => {
+        const str = (itemCode + ' ' + itemName).toUpperCase()
+        if (str.includes('RAW') || str.includes('CAST')) return 10
+        if (str.includes('MACHIN')) return 20
+        if (str.includes('FINISH') || str.includes('ASSY') || str.includes('ASSEMBL')) return 30
+        return 25 // Default
+      }
+
+      // 1. Process Sub-Assemblies FIRST in order of dependency level (Level 1 -> Level N)
+      // Level 1 items have no dependencies in this plan and should be started first
+      const sortedSubAsmList = [...(dbSubAsms || allSubAsms)].sort((a, b) => {
+        const levelDiff = (parseInt(a.explosion_level || 0)) - (parseInt(b.explosion_level || 0))
+        if (levelDiff !== 0) return levelDiff
+        
+        // Same level, use keyword priority
+        return getPriority(a.item_code, a.item_name) - getPriority(b.item_code, b.item_name)
+      })
       
       console.log(`[ProductionPlanningService] Starting Sub-Assembly batch... Count: ${sortedSubAsmList.length}`)
       await processBatch(sortedSubAsmList, false)
@@ -717,21 +933,25 @@ export class ProductionPlanningService {
       // This ensures child job cards exist when parent buffers are linked.
       console.log(`[ProductionPlanningService] PASS 3: Generating Job Cards Bottom-Up...`)
       
-      const bottomUpList = [...(dbSubAsms || allSubAsms)].sort((a, b) => 
-        (parseInt(b.explosion_level || 0)) - (parseInt(a.explosion_level || 0))
-      )
+      const bottomUpList = [...(dbSubAsms || allSubAsms)].sort((a, b) => {
+        const levelDiff = (parseInt(b.explosion_level || 0)) - (parseInt(a.explosion_level || 0))
+        if (levelDiff !== 0) return levelDiff
+        
+        // Same level, use keyword priority
+        return getPriority(a.item_code, a.item_name) - getPriority(b.item_code, b.item_name)
+      })
 
       for (const item of bottomUpList) {
         if (item.generated_wo_id) {
-          console.log(`[ProductionPlanningService] Pass 3: Generating Job Cards for Child WO ${item.generated_wo_id} (${item.item_code})`)
-          await productionModel.generateJobCardsForWorkOrder(item.generated_wo_id, userId || 1)
+          console.log(`[ProductionPlanningService] Pass 3: Generating Job Cards for Child WO ${item.generated_wo_id} (${item.item_code}) at Sequence ${item.starting_plan_sequence || 0}`)
+          await productionModel.generateJobCardsForWorkOrder(item.generated_wo_id, userId || 1, item.starting_plan_sequence || 0)
         }
       }
 
       for (const item of allFGItems) {
         if (item.generated_wo_id) {
-          console.log(`[ProductionPlanningService] Pass 3: Generating Job Cards for Root FG WO ${item.generated_wo_id} (${item.item_code})`)
-          await productionModel.generateJobCardsForWorkOrder(item.generated_wo_id, userId || 1)
+          console.log(`[ProductionPlanningService] Pass 3: Generating Job Cards for Root FG WO ${item.generated_wo_id} (${item.item_code}) at Sequence ${item.starting_plan_sequence || 0}`)
+          await productionModel.generateJobCardsForWorkOrder(item.generated_wo_id, userId || 1, item.starting_plan_sequence || 0)
         }
       }
 

@@ -71,7 +71,12 @@ export default function CreateMaterialRequestModal({ isOpen, onClose, onSuccess 
       setItems(itemsData)
       
       // Filtering for raw materials if purpose is issue
-      const stockRes = itemsData.filter(item => item.item_type === 'Raw Material')
+      // Using robust filtering for case sensitivity and trailing spaces
+      const stockRes = itemsData.filter(item => {
+        const type = (item.item_type || '').trim().toLowerCase();
+        const group = (item.item_group || '').trim().toLowerCase();
+        return type === 'raw material' || group === 'raw material';
+      })
       setStockItems(stockRes.length > 0 ? stockRes : itemsData)
     } catch (err) {
       console.error('Failed to fetch items:', err)

@@ -8,6 +8,7 @@ export default function ViewProductionPlanModal({ isOpen, onClose, planId }) {
   const [error, setError] = useState(null)
   const [plan, setPlan] = useState(null)
   const [workOrders, setWorkOrders] = useState([])
+  const [arranging, setArranging] = useState(false)
   const [jobCardsByWO, setJobCardsByWO] = useState({})
   const [expandedWOs, setExpandedWOs] = useState({})
   const [expandedSubAsms, setExpandedSubAsms] = useState({})
@@ -38,6 +39,25 @@ export default function ViewProductionPlanModal({ isOpen, onClose, planId }) {
       setPlan(null)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleAutoArrange = async () => {
+    try {
+      setArranging(true)
+      setError(null)
+      const response = await productionService.autoArrangeSubAssemblies(planId)
+      if (response.success) {
+        // Refresh plan details to see the new order and dates
+        await fetchPlanDetails()
+      } else {
+        setError(response.error || 'Failed to auto-arrange sub-assemblies')
+      }
+    } catch (err) {
+      console.error('Error auto-arranging sub-assemblies:', err)
+      setError(err.message || 'Failed to auto-arrange sub-assemblies')
+    } finally {
+      setArranging(false)
     }
   }
 
@@ -232,9 +252,37 @@ export default function ViewProductionPlanModal({ isOpen, onClose, planId }) {
                 {/* Sub-Assemblies Section */}
                 {plan?.sub_assemblies?.length > 0 && (
                   <div>
-                    <h4 style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b', marginBottom: '10px', textTransform: '', letterSpacing: '0.025em' }}>
-                      Sub-Assembly Hierarchy
-                    </h4>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <h4 style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b', margin: 0, textTransform: '', letterSpacing: '0.025em' }}>
+                        Sub-Assembly Hierarchy
+                      </h4>
+                      <button
+                        onClick={handleAutoArrange}
+                        disabled={arranging}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 12px',
+                          background: '#fef2f2',
+                          color: '#e11d48',
+                          border: '1px solid #fecdd3',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          cursor: arranging ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s',
+                          opacity: arranging ? 0.7 : 1
+                        }}
+                      >
+                        {arranging ? (
+                          <Activity size={14} className="animate-spin" />
+                        ) : (
+                          <Zap size={14} />
+                        )}
+                        {arranging ? 'Arranging...' : 'Auto Arrange by Dependency'}
+                      </button>
+                    </div>
                     <div style={{ background: '#fff', borderRadius: '6px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                         <thead style={{ background: '#fff1f2', borderBottom: '1px solid #fecdd3' }}>
@@ -242,12 +290,18 @@ export default function ViewProductionPlanModal({ isOpen, onClose, planId }) {
                             <th style={{ padding: '10px 15px', color: '#9f1239', fontWeight: '600', width: '60px' }}>Seq.</th>
                             <th style={{ padding: '10px 15px', color: '#9f1239', fontWeight: '600', width: '60px' }}>Lvl.</th>
                             <th style={{ padding: '10px 15px', color: '#9f1239', fontWeight: '600' }}>Sub Assembly Item</th>
+                            <th style={{ padding: '10px 15px', color: '#9f1239', fontWeight: '600' }}>Schedule Date</th>
                             <th style={{ padding: '10px 15px', color: '#9f1239', fontWeight: '600' }}>BOM No</th>
                             <th style={{ padding: '10px 15px', color: '#9f1239', fontWeight: '600', textAlign: 'right' }}>Planned Qty</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {(plan.sub_assemblies || []).sort((a, b) => (b.explosion_level || 0) - (a.explosion_level || 0)).map((item, idx) => (
+                          {(plan.sub_assemblies || []).sort((a, b) => {
+                            if (a.explosion_level !== b.explosion_level) {
+                              return (a.explosion_level || 0) - (b.explosion_level || 0)
+                            }
+                            return (a.item_code || '').localeCompare(b.item_code || '')
+                          }).map((item, idx) => (
                             <tr 
                               key={item.id || idx}
                               style={{ 
@@ -271,7 +325,21 @@ export default function ViewProductionPlanModal({ isOpen, onClose, planId }) {
                                   <div>
                                     <div style={{ fontWeight: '600', color: '#1e293b' }}>{item.item_code}</div>
                                     <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{item.item_name}</div>
+                                    {item.parent_item_code && item.parent_item_code !== (plan.fg_items?.[0]?.item_code || plan.bom_item_code) && (
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                                        <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: '500' }}>Source:</span>
+                                        <span style={{ fontSize: '0.65rem', color: '#e11d48', background: '#fff1f2', padding: '1px 4px', borderRadius: '3px', fontWeight: '700', textTransform: 'uppercase' }}>
+                                          {item.parent_item_code}
+                                        </span>
+                                      </div>
+                                    )}
                                   </div>
+                                </div>
+                              </td>
+                              <td style={{ padding: '10px 15px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b' }}>
+                                  <Calendar size={14} />
+                                  <span>{item.schedule_date ? new Date(item.schedule_date).toLocaleDateString() : 'Not Set'}</span>
                                 </div>
                               </td>
                               <td style={{ padding: '10px 15px' }}>

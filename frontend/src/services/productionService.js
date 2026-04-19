@@ -175,6 +175,11 @@ export const createWorkOrdersFromPlan = async (plan_id, data = {}) => {
   return response.data
 }
 
+export const autoArrangeSubAssemblies = async (plan_id) => {
+  const response = await api.post(`/production-planning/${plan_id}/auto-arrange`)
+  return response.data
+}
+
 // Production Plans (extended)
 export const updateProductionPlan = async (plan_id, data) => {
   const response = await api.put(`/production/plans/${plan_id}`, data)

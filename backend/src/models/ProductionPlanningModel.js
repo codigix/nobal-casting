@@ -50,7 +50,7 @@ export class ProductionPlanningModel {
          FROM production_plan_sub_assembly psa 
          LEFT JOIN item i ON psa.item_code = i.item_code 
          WHERE psa.plan_id = ?
-         ORDER BY psa.explosion_level DESC, psa.id ASC`,
+         ORDER BY psa.explosion_level ASC, psa.id ASC`,
         [plan_id]
       ).catch(() => [[]])
 
@@ -191,7 +191,7 @@ export class ProductionPlanningModel {
                FROM production_plan_sub_assembly psa 
                LEFT JOIN item i ON psa.item_code = i.item_code 
                WHERE psa.plan_id = ?
-               ORDER BY psa.explosion_level DESC, psa.id ASC`,
+               ORDER BY psa.explosion_level ASC, psa.id ASC`,
               [plan.plan_id]
             ).then(([rows]) => rows.map(item => ({
               ...item,
